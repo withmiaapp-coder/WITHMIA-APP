@@ -1,0 +1,26 @@
+﻿/* FORZAR ELIMINACIÓN DE RESIZE EN TEXTAREAS */
+textarea {
+    resize: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: textfield !important;
+    overflow: auto !important;
+}
+
+textarea::-webkit-resizer {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+textarea::-moz-resizer {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Específico para el textarea de descripción */
+textarea[placeholder*="Describe"] {
+    resize: none !important;
+    max-width: 100% !important;
+    max-height: 150px !important;
+}

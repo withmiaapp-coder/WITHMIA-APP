@@ -1,0 +1,456 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\Controller;
+use App\Events\NewMessageReceived;
+use App\Events\ConversationUpdated;
+use App\Services\ConversationDeduplicationService;
+
+class ChatwootWebhookController extends Controller
+{
+    private $deduplicationService;
+    private $chatwootBaseUrl;
+    private $chatwootToken;
+
+    public function __construct(ConversationDeduplicationService $deduplicationService)
+    {
+        $this->deduplicationService = $deduplicationService;
+        $this->chatwootBaseUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+        $this->chatwootToken = config('services.chatwoot.api_token');
+    }
+
+    /**
+     * Recibir eventos de Chatwoot y notificar al frontend
+     * ✅ NUEVO: PREVENIR duplicados ANTES de propagar el evento
+     */
+    public function handleWebhook(Request $request)
+    {
+        $event = $request->input('event');
+        $data = $request->all();
+
+        Log::info('🎯 Chatwoot Webhook Received', [
+            'event' => $event,
+            'conversation_id' => $data['conversation']['id'] ?? null,
+            'message_id' => $data['id'] ?? null,
+            'account_id' => $data['account']['id'] ?? null,
+            'inbox_id' => $data['conversation']['inbox_id'] ?? null,
+            'identifier' => $data['conversation']['meta']['sender']['identifier'] ?? null
+        ]);
+
+        // Validar que sea una solicitud válida de Chatwoot
+        if (!$event || !isset($data['account'])) {
+            Log::warning('Invalid webhook payload received');
+            return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 400);
+        }
+
+        // Obtener inbox_id y account_id
+        $inboxId = $data['conversation']['inbox_id'] ?? null;
+        $accountId = $data['account']['id'] ?? null;
+
+        // 🔍 NUEVO: PREVENIR DUPLICADOS - Interceptar conversation_created
+        if ($event === 'conversation_created' && $inboxId) {
+            $preventionResult = $this->preventDuplicateConversation($data, $inboxId, $accountId);
+            
+            if ($preventionResult['prevented']) {
+                Log::info('✅ Conversación duplicada PREVENIDA', $preventionResult);
+                
+                // No propagar este evento al WebSocket
+                // Retornar éxito para que Chatwoot no reintente
+                return response()->json([
+                    'status' => 'success',
+                    'prevented' => true,
+                    'message' => 'Duplicate conversation prevented'
+                ]);
+            }
+        }
+
+        // ✅ NUEVO: Disparar eventos de Broadcasting en tiempo real
+        try {
+            if ($event === 'message_created' && $inboxId && $accountId) {
+                // Broadcast mensaje nuevo
+                broadcast(new NewMessageReceived(
+                    $data,
+                    $data['conversation']['id'] ?? null,
+                    $inboxId,
+                    $accountId
+                ))->toOthers();
+
+                Log::info('NewMessageReceived event broadcasted', [
+                    'inbox_id' => $inboxId,
+                    'conversation_id' => $data['conversation']['id'] ?? null
+                ]);
+            }
+
+            if (in_array($event, ['conversation_updated', 'conversation_status_changed', 'conversation_created']) && $inboxId && $accountId) {
+                // Broadcast actualización de conversación
+                broadcast(new ConversationUpdated(
+                    $data['conversation'] ?? $data,
+                    $inboxId,
+                    $accountId
+                ))->toOthers();
+
+                Log::info('ConversationUpdated event broadcasted', [
+                    'event' => $event,
+                    'inbox_id' => $inboxId,
+                    'conversation_id' => $data['conversation']['id'] ?? null
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error broadcasting event', [
+                'event' => $event,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        // 🗑️ INVALIDAR CACHÉ DE CONVERSACIONES cuando llega un mensaje nuevo
+        if ($event === 'message_created' && $inboxId) {
+            $lastMessageCacheKey = "last_message_inbox_{$inboxId}";
+            Cache::put($lastMessageCacheKey, now()->timestamp, now()->addMinutes(60));
+
+            Log::info('🗑️ Caché de conversaciones marcado para invalidación', [
+                'inbox_id' => $inboxId,
+                'last_message_key' => $lastMessageCacheKey,
+                'timestamp' => now()->timestamp
+            ]);
+        }
+
+        // Guardar evento en cache para que el frontend lo consuma (FALLBACK polling)
+        $cacheKey = 'chatwoot_events_' . $accountId;
+        $events = Cache::get($cacheKey, []);
+
+        $events[] = [
+            'event' => $event,
+            'data' => $data,
+            'timestamp' => now()->timestamp,
+            'received_at' => now()->toISOString()
+        ];
+
+        // Mantener solo los últimos 100 eventos
+        $events = array_slice($events, -100);
+        Cache::put($cacheKey, $events, now()->addMinutes(30));
+
+        return response()->json(['status' => 'success']);
+    }
+
+    /**
+     * 🔥 NUEVO: Prevenir creación de conversaciones duplicadas
+     * Esta función se ejecuta ANTES de propagar el evento al frontend
+     */
+    private function preventDuplicateConversation(array $data, int $inboxId, int $accountId): array
+    {
+        try {
+            $conversationId = $data['conversation']['id'] ?? null;
+            $identifier = $data['conversation']['meta']['sender']['identifier'] ?? '';
+            $contactId = $data['conversation']['contact_id'] ?? null;
+
+            if (empty($identifier) || !$conversationId) {
+                return ['prevented' => false, 'reason' => 'Missing identifier or conversation_id'];
+            }
+
+            Log::info('🔍 Verificando si hay duplicados', [
+                'conversation_id' => $conversationId,
+                'identifier' => $identifier,
+                'inbox_id' => $inboxId
+            ]);
+
+            // Extraer número base del identifier
+            $phoneBase = $this->extractPhoneBase($identifier);
+
+            if (empty($phoneBase)) {
+                return ['prevented' => false, 'reason' => 'Could not extract phone base'];
+            }
+
+            // Buscar si ya existe una conversación con el número real (@s.whatsapp.net)
+            $existingConversation = $this->findExistingConversationByPhone($phoneBase, $inboxId, $accountId, $conversationId);
+
+            if ($existingConversation) {
+                Log::info('🎯 Conversación existente encontrada', [
+                    'new_conversation_id' => $conversationId,
+                    'existing_conversation_id' => $existingConversation['id'],
+                    'new_identifier' => $identifier,
+                    'existing_identifier' => $existingConversation['meta']['sender']['identifier'] ?? 'N/A',
+                    'phone_base' => $phoneBase
+                ]);
+
+                // Determinar cuál debe ser eliminada
+                $isNewLid = strpos($identifier, '@lid') !== false;
+                $isExistingReal = strpos($existingConversation['meta']['sender']['identifier'] ?? '', '@s.whatsapp.net') !== false;
+
+                // Si la nueva es @lid y la existente es @s.whatsapp.net, eliminar la nueva
+                if ($isNewLid && $isExistingReal) {
+                    // Intentar fusionar mensajes si los hay
+                    $this->mergeMessagesBeforeDelete($conversationId, $existingConversation['id'], $accountId);
+
+                    // Eliminar la conversación duplicada (la nueva con @lid)
+                    $this->deleteConversationFromChatwoot($conversationId, $accountId);
+
+                    return [
+                        'prevented' => true,
+                        'reason' => 'Duplicate LID conversation detected and deleted',
+                        'kept_conversation_id' => $existingConversation['id'],
+                        'deleted_conversation_id' => $conversationId,
+                        'phone_base' => $phoneBase
+                    ];
+                }
+
+                // Si ambas son @lid o ambas son reales, mantener la más antigua
+                $newTimestamp = strtotime($data['conversation']['created_at'] ?? 'now');
+                $existingTimestamp = strtotime($existingConversation['created_at'] ?? '0');
+
+                if ($newTimestamp > $existingTimestamp) {
+                    // La nueva es más reciente, eliminarla
+                    $this->mergeMessagesBeforeDelete($conversationId, $existingConversation['id'], $accountId);
+                    $this->deleteConversationFromChatwoot($conversationId, $accountId);
+
+                    return [
+                        'prevented' => true,
+                        'reason' => 'Newer duplicate conversation deleted',
+                        'kept_conversation_id' => $existingConversation['id'],
+                        'deleted_conversation_id' => $conversationId
+                    ];
+                }
+            }
+
+            return ['prevented' => false, 'reason' => 'No duplicate found'];
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error en preventDuplicateConversation', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // En caso de error, no prevenir (para no bloquear el flujo normal)
+            return ['prevented' => false, 'reason' => 'Error: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Buscar conversación existente por número de teléfono
+     */
+    private function findExistingConversationByPhone(string $phoneBase, int $inboxId, int $accountId, int $excludeConvId): ?array
+    {
+        try {
+            // Obtener todas las conversaciones del inbox
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $accountId . '/conversations', [
+                'inbox_id' => $inboxId,
+                'status' => 'all',
+                'per_page' => 100
+            ]);
+
+            if (!$response->successful()) {
+                Log::warning('No se pudo obtener conversaciones para verificar duplicados', [
+                    'status' => $response->status()
+                ]);
+                return null;
+            }
+
+            $conversations = $response->json()['data']['payload'] ?? [];
+
+            // Buscar conversación con el mismo número base
+            foreach ($conversations as $conv) {
+                if ($conv['id'] === $excludeConvId) {
+                    continue; // Excluir la conversación actual
+                }
+
+                $convIdentifier = $conv['meta']['sender']['identifier'] ?? '';
+                $convPhoneBase = $this->extractPhoneBase($convIdentifier);
+
+                if ($convPhoneBase === $phoneBase) {
+                    return $conv;
+                }
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Error buscando conversación existente', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Fusionar mensajes de una conversación a otra antes de eliminar
+     */
+    private function mergeMessagesBeforeDelete(int $fromConvId, int $toConvId, int $accountId): bool
+    {
+        try {
+            // Obtener mensajes de la conversación a eliminar
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $fromConvId . '/messages');
+
+            if (!$response->successful()) {
+                Log::warning('No se pudieron obtener mensajes para fusionar', [
+                    'from_conv_id' => $fromConvId,
+                    'status' => $response->status()
+                ]);
+                return false;
+            }
+
+            $messages = $response->json()['payload'] ?? [];
+
+            if (empty($messages)) {
+                Log::info('No hay mensajes para fusionar');
+                return true; // No hay mensajes, OK
+            }
+
+            Log::info('🔀 Fusionando mensajes', [
+                'from_conv_id' => $fromConvId,
+                'to_conv_id' => $toConvId,
+                'message_count' => count($messages)
+            ]);
+
+            // Usar el servicio de deduplicación para fusionar a nivel de BD
+            $this->deduplicationService->autoMergeDuplicates($accountId);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Error fusionando mensajes', [
+                'from_conv_id' => $fromConvId,
+                'to_conv_id' => $toConvId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Eliminar conversación duplicada de Chatwoot
+     */
+    private function deleteConversationFromChatwoot(int $conversationId, int $accountId): bool
+    {
+        try {
+            // Chatwoot no tiene endpoint público DELETE para conversaciones
+            // Alternativa: Marcar como resuelta y archivar
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId . '/toggle_status');
+
+            if ($response->successful()) {
+                Log::info('✅ Conversación duplicada archivada', [
+                    'conversation_id' => $conversationId
+                ]);
+                return true;
+            } else {
+                Log::warning('No se pudo archivar conversación duplicada', [
+                    'conversation_id' => $conversationId,
+                    'status' => $response->status()
+                ]);
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error archivando conversación duplicada', [
+                'conversation_id' => $conversationId,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Extraer número base del identifier
+     */
+    private function extractPhoneBase(string $identifier): string
+    {
+        if (strpos($identifier, '@s.whatsapp.net') !== false) {
+            return str_replace('@s.whatsapp.net', '', $identifier);
+        } elseif (strpos($identifier, '@lid') !== false) {
+            $phoneBase = preg_replace('/@lid.*$/', '', $identifier);
+            return preg_replace('/:\d+$/', '', $phoneBase);
+        }
+        return '';
+    }
+
+    /**
+     * Endpoint para que el frontend consuma los eventos mediante polling
+     */
+    public function pollEvents(Request $request)
+    {
+        $accountId = $request->input('account_id', 2);
+        $lastTimestamp = $request->input('last_timestamp', 0);
+
+        $cacheKey = 'chatwoot_events_' . $accountId;
+        $events = Cache::get($cacheKey, []);
+
+        // Filtrar solo eventos nuevos desde el último timestamp
+        $newEvents = array_filter($events, function($event) use ($lastTimestamp) {
+            return $event['timestamp'] > $lastTimestamp;
+        });
+
+        $currentTimestamp = now()->timestamp;
+
+        return response()->json([
+            'success' => true,
+            'events' => array_values($newEvents),
+            'timestamp' => $currentTimestamp,
+            'has_new_events' => count($newEvents) > 0,
+            'total_cached_events' => count($events)
+        ]);
+    }
+
+    /**
+     * Limpiar eventos antiguos manualmente
+     */
+    public function clearEvents(Request $request)
+    {
+        $accountId = $request->input('account_id', 2);
+        $cacheKey = 'chatwoot_events_' . $accountId;
+
+        Cache::forget($cacheKey);
+
+        Log::info('Chatwoot events cleared', ['account_id' => $accountId]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Events cleared successfully'
+        ]);
+    }
+
+    /**
+     * Obtener estadísticas de eventos
+     */
+    public function getEventStats(Request $request)
+    {
+        $accountId = $request->input('account_id', 2);
+        $cacheKey = 'chatwoot_events_' . $accountId;
+        $events = Cache::get($cacheKey, []);
+
+        $stats = [
+            'total_events' => count($events),
+            'event_types' => [],
+            'oldest_event' => null,
+            'newest_event' => null
+        ];
+
+        if (count($events) > 0) {
+            foreach ($events as $event) {
+                $eventType = $event['event'] ?? 'unknown';
+                if (!isset($stats['event_types'][$eventType])) {
+                    $stats['event_types'][$eventType] = 0;
+                }
+                $stats['event_types'][$eventType]++;
+            }
+
+            $stats['oldest_event'] = $events[0]['received_at'] ?? null;
+            $stats['newest_event'] = end($events)['received_at'] ?? null;
+        }
+
+        return response()->json([
+            'success' => true,
+            'stats' => $stats
+        ]);
+    }
+}

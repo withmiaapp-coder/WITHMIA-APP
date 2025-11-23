@@ -1,0 +1,1 @@
+<?php require " bootstrap/app.php\; \->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \ = App\\Models\\User::find(8); echo \User ID: \.\->id.PHP_EOL; echo \User Name: \.\->name.PHP_EOL; echo \User Email: \.\->email.PHP_EOL; if(property_exists(\, \company_id\) && \->company_id) { echo \Company ID: \.\->company_id.PHP_EOL; }

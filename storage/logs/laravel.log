@@ -1,0 +1,55 @@
+[2025-11-23 14:01:32] production.ERROR: read error on connection to 127.0.0.1:6379 {"exception":"[object] (RedisException(code: 0): read error on connection to 127.0.0.1:6379 at /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:111)
+[stacktrace]
+#0 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(111): Redis->auth()
+#1 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Support/helpers.php(390): Illuminate\\Redis\\Connectors\\PhpRedisConnector->Illuminate\\Redis\\Connectors\\{closure}()
+#2 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(80): tap()
+#3 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(34): Illuminate\\Redis\\Connectors\\PhpRedisConnector->createClient()
+#4 [internal function]: Illuminate\\Redis\\Connectors\\PhpRedisConnector->Illuminate\\Redis\\Connectors\\{closure}()
+#5 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connections/PhpRedisConnection.php(534): call_user_func()
+#6 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Redis/Connections/PhpRedisConnection.php(54): Illuminate\\Redis\\Connections\\PhpRedisConnection->command()
+#7 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Cache/RedisStore.php(72): Illuminate\\Redis\\Connections\\PhpRedisConnection->get()
+#8 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Cache/Repository.php(119): Illuminate\\Cache\\RedisStore->get()
+#9 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Worker.php(736): Illuminate\\Cache\\Repository->get()
+#10 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Worker.php(725): Illuminate\\Queue\\Worker->getTimestampOfLastQueueRestart()
+#11 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Worker.php(318): Illuminate\\Queue\\Worker->queueShouldRestart()
+#12 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Worker.php(203): Illuminate\\Queue\\Worker->stopIfNecessary()
+#13 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Console/WorkCommand.php(148): Illuminate\\Queue\\Worker->daemon()
+#14 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Queue/Console/WorkCommand.php(131): Illuminate\\Queue\\Console\\WorkCommand->runWorker()
+#15 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Illuminate\\Queue\\Console\\WorkCommand->handle()
+#16 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+#17 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate\\Container\\Util::unwrapIfClosure()
+#18 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod()
+#19 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Container/Container.php(836): Illuminate\\Container\\BoundMethod::call()
+#20 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call()
+#21 /var/www/mia-app/vendor/symfony/console/Command/Command.php(318): Illuminate\\Console\\Command->execute()
+#22 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run()
+#23 /var/www/mia-app/vendor/symfony/console/Application.php(1110): Illuminate\\Console\\Command->run()
+#24 /var/www/mia-app/vendor/symfony/console/Application.php(359): Symfony\\Component\\Console\\Application->doRunCommand()
+#25 /var/www/mia-app/vendor/symfony/console/Application.php(194): Symfony\\Component\\Console\\Application->doRun()
+#26 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(197): Symfony\\Component\\Console\\Application->run()
+#27 /var/www/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate\\Foundation\\Console\\Kernel->handle()
+#28 /var/www/mia-app/artisan(16): Illuminate\\Foundation\\Application->handleCommand()
+#29 {main}
+"} 
+[2025-11-23 14:12:40] production.INFO: Evolution API Webhook received {"event":"connection.update","instance":"with-mia-cqwp4d","data":{"instance":"with-mia-cqwp4d","state":"connecting","statusReason":200}} 
+[2025-11-23 14:12:40] production.INFO: Evolution API Webhook received {"event":"connection.update","instance":"atlantis-producciones-pslmxp","data":{"instance":"atlantis-producciones-pslmxp","state":"connecting","statusReason":200}} 
+[2025-11-23 14:12:40] production.INFO: Reenviando a n8n {"url":"http://172.17.0.3:5678/webhook/whatsapp-user-1"} 
+[2025-11-23 14:12:40] production.INFO: Reenviando a n8n {"url":"http://172.17.0.3:5678/webhook/whatsapp-user-3"} 
+[2025-11-23 14:12:42] production.INFO: ???? Cambio de conexi??n {"instance":"with-mia-cqwp4d","state":"connecting","data":{"instance":"with-mia-cqwp4d","state":"connecting","statusReason":200}} 
+[2025-11-23 14:12:42] production.INFO: ???? Cambio de conexi??n {"instance":"atlantis-producciones-pslmxp","state":"connecting","data":{"instance":"atlantis-producciones-pslmxp","state":"connecting","statusReason":200}} 
+[2025-11-23 14:12:42] production.INFO: ??? Evento de conexi??n broadcasted  
+[2025-11-23 14:12:42] production.INFO: ??? Evento de conexi??n broadcasted  
+[2025-11-23 14:12:50] production.INFO: Dashboard Data Debug: {"user_id":1,"inbox_id":1,"chatwoot_status":{"provisioned":1,"account_id":"1","inbox_id":1,"provisioned_at":"2025-10-26 00:29:48","available":true,"auto_provision":true}} 
+[2025-11-23 14:12:50] production.INFO: WhatsApp Status Check {"instanceName":"with-mia-cqwp4d"} 
+[2025-11-23 14:12:50] production.INFO: ChatwootController initialized {"user_id":1,"email":"withmia.app@gmail.com","company_slug":"with-mia-cqwp4d","account_id":"1","inbox_id":1} 
+[2025-11-23 14:12:50] production.INFO: WhatsApp status cached {"instance":"with-mia-cqwp4d","ttl":30} 
+[2025-11-23 14:12:50] production.INFO: WhatsApp Status Result {"result":{"success":true,"connected":false,"state":"connecting","data":{"instance":{"instanceName":"with-mia-cqwp4d","state":"connecting"}}}} 
+[2025-11-23 14:12:50] production.INFO: ChatwootController initialized {"user_id":1,"email":"withmia.app@gmail.com","company_slug":"with-mia-cqwp4d","account_id":"1","inbox_id":1} 
+[2025-11-23 14:12:50] production.INFO: Starting infinite pagination for conversations {"user_id":1,"account_id":"1","inbox_id":1,"base_params":{"per_page":100,"inbox_id":1}} 
+[2025-11-23 14:12:50] production.INFO: getOnboardingData - User ID: 1, Company Slug: with-mia-cqwp4d  
+[2025-11-23 14:12:50] production.INFO: getOnboardingData - Response: {"company_name":"WITHMIA","company_description":"Empresa líder en soluciones de integración empresarial a través de avanzadas plataformas de CRM, permitiendo una conexión eficiente y efectiva con otras organizaciones para potenciar el crecimiento y la productividad.","has_website":true,"website":"https://withmia.com/","client_type":"interno"} 
+[2025-11-23 14:13:04] production.INFO: Page fetched and filtered {"page":1,"conversations_in_page":25,"after_inbox_filter":25,"total_so_far":25,"evolutionapi_filtered":true} 
+[2025-11-23 14:13:08] production.INFO: Page fetched and filtered {"page":2,"conversations_in_page":25,"after_inbox_filter":25,"total_so_far":50,"evolutionapi_filtered":true} 
+[2025-11-23 14:13:09] production.INFO: Page fetched and filtered {"page":3,"conversations_in_page":16,"after_inbox_filter":16,"total_so_far":66,"evolutionapi_filtered":true} 
+[2025-11-23 14:13:09] production.INFO: All conversations fetched successfully {"user_id":1,"total_pages":4,"total_conversations":66} 
+[2025-11-23 14:13:09] production.INFO: 💾 Conversations saved to CACHE {"cache_key":"conversations_user_1_inbox_1","ttl_seconds":60,"timestamp":1763917989,"total":66} 

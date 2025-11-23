@@ -1,0 +1,486 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use App\Models\User;
+
+class EvolutionInstanceManager
+{
+    private $evolutionApiUrl;
+    private $evolutionApiKey;
+
+    public function __construct()
+    {
+        // FORZAR localhost para uso interno del servidor
+        $this->evolutionApiUrl = config('evolution.api_url');
+        $this->evolutionApiKey = config('evolution.api_key');
+    }
+
+    /**
+     * Crear instancia solo si el usuario no tiene una (para dashboard)
+     */
+    public function ensureInstanceForUser(User $user)
+    {
+        try {
+            // Si usuario ya completó onboarding Y no tiene instancia, crear una
+            if (!$user->company_slug) {
+                Log::info("Usuario no ha completado onboarding, saltando creación instancia:", [
+                    'user_id' => $user->id
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Usuario no ha completado onboarding'
+                ];
+            }
+
+            // Verificar si ya tiene instancia asignada
+            if (!empty($user->whatsapp_instance_id)) {
+                Log::info("Usuario ya tiene instancia, verificando que existe:", [
+                    'user_id' => $user->id,
+                    'existing_instance' => $user->whatsapp_instance_id
+                ]);
+                
+                // Verificar que la instancia realmente exista en Evolution API
+                if ($this->instanceExists($user->whatsapp_instance_id)) {
+                    return [
+                        'success' => true,
+                        'instance_name' => $user->whatsapp_instance_id,
+                        'message' => 'Usuario ya tiene instancia válida'
+                    ];
+                } else {
+                    Log::warning("Instancia asignada no existe en Evolution API, creando nueva:", [
+                        'user_id' => $user->id,
+                        'missing_instance' => $user->whatsapp_instance_id
+                    ]);
+                    // La instancia no existe, crear una nueva
+                    $user->update(['whatsapp_instance_id' => null]);
+                }
+            }
+
+            // Crear nueva instancia
+            return $this->createInstanceForUser($user);
+            
+        } catch (\Exception $e) {
+            Log::error("Error en ensureInstanceForUser:", [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Verificar si una instancia existe en Evolution API
+     */
+    private function instanceExists($instanceName)
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->evolutionApiKey
+            ])->get($this->evolutionApiUrl . '/instance/fetchInstances');
+
+            if ($response->successful()) {
+                $instances = $response->json();
+                foreach ($instances as $instance) {
+                    if ($instance['name'] === $instanceName) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        } catch (\Exception $e) {
+            Log::error("Error verificando instancia:", [
+                'instance_name' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Crear instancia automáticamente cuando usuario complete onboarding
+     */
+    public function createInstanceForUser(User $user)
+    {
+        try {
+            // Verificar que el usuario no tenga ya una instancia
+            if (!empty($user->whatsapp_instance_id)) {
+                Log::info("Usuario ya tiene instancia, saltando creación:", [
+                    'user_id' => $user->id,
+                    'existing_instance' => $user->whatsapp_instance_id
+                ]);
+                
+                return [
+                    'success' => true,
+                    'instance_name' => $user->whatsapp_instance_id,
+                    'message' => 'Usuario ya tiene instancia asignada'
+                ];
+            }
+            
+            $instanceName = $this->generateInstanceName($user);
+            
+            Log::info("Creando instancia Evolution API para usuario:", [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'company_slug' => $user->company_slug,
+                'instance_name' => $instanceName
+            ]);
+
+            // Crear instancia en Evolution API
+            $instanceData = $this->createEvolutionInstance($instanceName, $user);
+            
+            if ($instanceData['success']) {
+                // Actualizar usuario con la instancia creada
+                $user->update([
+                    'whatsapp_instance_id' => $instanceName,
+                    'whatsapp_instance_data' => json_encode($instanceData['data'])
+                ]);
+
+                Log::info("Instancia creada exitosamente:", [
+                    'user_id' => $user->id,
+                    'instance_name' => $instanceName,
+                    'instance_data' => $instanceData['data']
+                ]);
+
+                return [
+                    'success' => true,
+                    'instance_name' => $instanceName,
+                    'instance_data' => $instanceData['data'],
+                    'message' => 'Instancia de WhatsApp creada exitosamente'
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Error creando instancia: ' . ($instanceData['message'] ?? 'Error desconocido')
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error creando instancia para usuario:', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error interno creando instancia'
+            ];
+        }
+    }
+
+    /**
+     * Generar nombre único para la instancia basado en el usuario
+     */
+	private function generateInstanceName(User $user)
+	{
+	    // Usar directamente el company_slug
+	    return $user->company_slug ?? 'user_' . $user->id;
+	}
+     * Crear instancia en Evolution API
+     */
+    private function createEvolutionInstance($instanceName, User $user)
+    {
+        try {
+            // Datos mínimos para crear instancia
+            $payload = [
+                'instanceName' => $instanceName,
+                'qrcode' => true,
+                'integration' => 'WHATSAPP-BAILEYS'
+            ];
+
+            Log::info('Enviando payload a Evolution API:', $payload);
+
+            $response = Http::withHeaders([
+                'apikey' => $this->evolutionApiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->evolutionApiUrl}/instance/create", $payload);
+
+            Log::info('Respuesta de Evolution API:', [
+                'status' => $response->status(),
+                'response' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                return [
+                    'success' => true,
+                    'data' => [
+                        'instance_name' => $instanceName,
+                        'instance_id' => $data['instance']['instanceId'] ?? $instanceName,
+                        'status' => $data['instance']['status'] ?? 'created',
+                        'qr_code' => $data['qrcode'] ?? null,
+                        'created_at' => now()->toISOString()
+                    ]
+                ];
+            }
+
+            Log::error('Error en respuesta de Evolution API:', [
+                'status' => $response->status(),
+                'response' => $response->body(),
+                'instance_name' => $instanceName
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error en API de Evolution: ' . $response->status() . ' - ' . $response->body()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Excepción creando instancia en Evolution API:', [
+                'error' => $e->getMessage(),
+                'instance_name' => $instanceName
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error de conexión con Evolution API'
+            ];
+        }
+    }
+
+    /**
+     * Obtener información de la instancia del usuario
+     */
+    public function getInstanceInfo($instanceName)
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->evolutionApiKey,
+                'Content-Type' => 'application/json'
+            ])->get("{$this->evolutionApiUrl}/instance/fetchInstances", [
+                'instanceName' => $instanceName
+            ]);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json()
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Instancia no encontrada'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo info de instancia:', [
+                'instance_name' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error consultando instancia'
+            ];
+        }
+    }
+
+    /**
+     * Obtener QR code de la instancia
+     */
+    public function getInstanceQR($instanceName)
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->evolutionApiKey,
+                'Content-Type' => 'application/json'
+            ])->get("{$this->evolutionApiUrl}/instance/connect/{$instanceName}");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                return [
+                    'success' => true,
+                    'qr_code' => $data['base64'] ?? null,
+                    'status' => $data['instance']['state'] ?? 'disconnected'
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'No se pudo obtener QR'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo QR:', [
+                'instance_name' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error obteniendo QR'
+            ];
+        }
+    }
+
+    /**
+     * Eliminar instancia (si es necesario)
+     */
+    public function deleteInstance($instanceName)
+    {
+        Log::info("🔥 EvolutionInstanceManager::deleteInstance() INICIO", [
+            'instanceName' => $instanceName,
+            'evolutionApiUrl' => $this->evolutionApiUrl,
+            'evolutionApiKey' => substr($this->evolutionApiKey, 0, 10) . '...'
+        ]);
+
+        try {
+            $url = "{$this->evolutionApiUrl}/instance/delete/{$instanceName}";
+            Log::info("📡 Enviando DELETE request", ['url' => $url]);
+
+            $response = Http::withHeaders([
+                'apikey' => $this->evolutionApiKey,
+                'Content-Type' => 'application/json'
+            ])->delete($url);
+
+            Log::info("📨 Respuesta recibida", [
+                'status_code' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $response->body()
+            ]);
+
+            if ($response->successful()) {
+                Log::info("✅ DELETE exitoso");
+                return [
+                    'success' => true,
+                    'message' => 'Instancia eliminada'
+                ];
+            }
+
+            Log::error("❌ DELETE falló - response no successful", [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => "Error HTTP {$response->status()}: {$response->body()}"
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('💥 EXCEPCIÓN en deleteInstance', [
+                'instance_name' => $instanceName,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Excepción: ' . $e->getMessage()
+            ];
+        }
+    }
+    /**
+     * Desconectar instancia WhatsApp (logout sin eliminar)
+     */
+    /**
+     * Desconectar instancia WhatsApp (logout sin eliminar)
+     */
+    public function disconnectInstance($instanceName)
+    {
+        Log::info("🔌 EvolutionInstanceManager::disconnectInstance() INICIO", [
+            "instanceName" => $instanceName,
+            "evolutionApiUrl" => $this->evolutionApiUrl
+        ]);
+
+        try {
+            // Paso 1: Logout
+            $logoutUrl = "{$this->evolutionApiUrl}/instance/logout/{$instanceName}";
+            Log::info("🔄 Enviando DELETE logout request", ["url" => $logoutUrl]);
+
+            $logoutResponse = Http::withHeaders([
+                "apikey" => $this->evolutionApiKey,
+                "Content-Type" => "application/json"
+            ])->delete($logoutUrl);
+
+            Log::info("📡 Respuesta logout recibida", [
+                "status_code" => $logoutResponse->status(),
+                "successful" => $logoutResponse->successful(),
+                "body" => $logoutResponse->body()
+            ]);
+
+            if ($logoutResponse->successful()) {
+                Log::info("✅ Logout exitoso, procediendo a resetear instancia");
+                
+                // Paso 2: Eliminar instancia completamente
+                $deleteUrl = "{$this->evolutionApiUrl}/instance/delete/{$instanceName}";
+                Log::info("🗑️ Eliminando instancia", ["url" => $deleteUrl]);
+                
+                $deleteResponse = Http::withHeaders([
+                    "apikey" => $this->evolutionApiKey,
+                    "Content-Type" => "application/json"
+                ])->delete($deleteUrl);
+                
+                if ($deleteResponse->successful()) {
+                    Log::info("✅ Instancia eliminada, recreando limpia");
+                    
+                    // Paso 3: Recrear instancia limpia
+                    $createUrl = "{$this->evolutionApiUrl}/instance/create";
+                    $createPayload = [
+                        "instanceName" => $instanceName,
+                        "integration" => "WHATSAPP-BAILEYS",
+                        "qrcode" => false  // No generar QR automáticamente
+                    ];
+                    
+                    $createResponse = Http::withHeaders([
+                        "apikey" => $this->evolutionApiKey,
+                        "Content-Type" => "application/json"
+                    ])->post($createUrl, $createPayload);
+                    
+                    if ($createResponse->successful()) {
+                        Log::info("✅ Instancia recreada exitosamente");
+                        return [
+                            "success" => true,
+                            "message" => "WhatsApp desconectado y resetado correctamente"
+                        ];
+                    } else {
+                        Log::error("❌ Error recreando instancia", [
+                            "status" => $createResponse->status(),
+                            "body" => $createResponse->body()
+                        ]);
+                    }
+                } else {
+                    Log::error("❌ Error eliminando instancia", [
+                        "status" => $deleteResponse->status(),
+                        "body" => $deleteResponse->body()
+                    ]);
+                }
+                
+                // Si llegamos aquí, logout fue exitoso pero reset falló
+                return [
+                    "success" => true,
+                    "message" => "WhatsApp desconectado (reset falló pero logout exitoso)"
+                ];
+            }
+
+            Log::error("❌ Logout falló", [
+                "status" => $logoutResponse->status(),
+                "body" => $logoutResponse->body()
+            ]);
+
+            return [
+                "success" => false,
+                "message" => "Error al desconectar: " . $logoutResponse->status()
+            ];
+        } catch (\Exception $e) {
+            Log::error("💥 Excepción en disconnectInstance", [
+                "error" => $e->getMessage(),
+                "instanceName" => $instanceName
+            ]);
+
+            return [
+                "success" => false,
+                "message" => "Error: " . $e->getMessage()
+            ];
+        }
+    }}
