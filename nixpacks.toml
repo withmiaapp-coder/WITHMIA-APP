@@ -6,13 +6,13 @@
   cmds = [
     'composer update --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs',
     'npm ci --prefer-offline --no-audit',
-    'npm run build',
-    'chmod +x railway-init.sh'
+    'npm run build'
   ]
 
 [phases.build]
   cmds = [
-    'bash railway-init.sh'
+    'php artisan storage:link || true',
+    'php artisan optimize:clear'
   ]
 
 [start]

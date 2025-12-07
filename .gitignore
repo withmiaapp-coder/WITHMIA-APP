@@ -65,6 +65,4 @@ create_instance.json
 instance_create.json
 
 # Scripts de deployment duplicados
-commit-railway.*
-railway-init.sh
-railway-deploy.sh
+commit-railway.sh
