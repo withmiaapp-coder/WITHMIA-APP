@@ -9,9 +9,10 @@ if [ -z "$APP_KEY" ]; then
     php artisan key:generate --force --no-interaction
 fi
 
-# Limpiar caches previos (sin Redis aún)
+# Limpiar caches previos
 echo "🧹 Limpiando caches..."
 php artisan config:clear
+php artisan cache:clear
 php artisan view:clear
 php artisan route:clear
 
