@@ -4,7 +4,7 @@
 
 [phases.install]
   cmds = [
-    'composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs',
+    'composer update --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs',
     'npm ci --prefer-offline --no-audit',
     'npm run build',
     'chmod +x railway-init.sh'
