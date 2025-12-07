@@ -56,12 +56,23 @@ class OnboardingController extends Controller
                         $request->header('Accept') === 'application/json' || 
                         $request->header('X-Requested-With') === 'XMLHttpRequest';
 
+        \Log::info('OnboardingController@store START', [
+            'step' => $request->input('step'),
+            'is_json' => $isJsonRequest,
+            'auth_check' => auth()->check(),
+            'user_id' => auth()->id()
+        ]);
+
         try {
             if (!auth()->check()) {
-                $user = \App\Models\User::first();
-            } else {
-                $user = auth()->user();
+                \Log::error('User not authenticated in onboarding');
+                if ($isJsonRequest) {
+                    return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
+                }
+                return redirect()->route('login');
             }
+            
+            $user = auth()->user();
 
             if (!$user) {
                 if ($isJsonRequest) {
