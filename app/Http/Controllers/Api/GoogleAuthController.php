@@ -62,6 +62,8 @@ class GoogleAuthController extends Controller
             }
 
             // 🎯 TRACKING LOGIN: Actualizar last_login_at y login_ip
+            // Comentado temporalmente hasta que se agreguen las columnas
+            /*
             $loginIp = $request->getClientIp() ?? $request->ip() ?? 'unknown';
             
             $user->update([
@@ -70,6 +72,7 @@ class GoogleAuthController extends Controller
             ]);
             
             error_log('Login tracking updated - IP: ' . $loginIp . ', Time: ' . now());
+            */
 
             Auth::login($user, true);
 
