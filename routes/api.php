@@ -1,9 +1,31 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
+
+// Health check endpoint for Railway
+Route::get('/health', function () {
+    try {
+        // Verificar conexión a base de datos
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        
+        return response()->json([
+            'status' => 'healthy',
+            'timestamp' => now()->toIso8601String(),
+            'app' => config('app.name'),
+            'environment' => config('app.env'),
+            'database' => 'connected'
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'unhealthy',
+            'timestamp' => now()->toIso8601String(),
+            'error' => $e->getMessage()
+        ], 503);
+    }
+});
 
 // Habilitar autenticación de canales de broadcasting
 
@@ -123,7 +145,6 @@ Route::get('/whatsapp/instance/{instanceName}/company', [\App\Http\Controllers\A
 Route::middleware(['web', 'auth'])->group(function () {
     
 });
-
 
 // N8n Workflow Management
 Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany'])->middleware('auth:sanctum');

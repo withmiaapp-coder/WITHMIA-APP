@@ -1,0 +1,63 @@
+# COPIAR/PEGAR EN RAILWAY - Variables de Entorno
+
+## 📋 Ir a: Settings → Variables → Raw Editor
+
+Copia y pega TODO esto en el "Raw Editor" de Railway:
+
+```env
+APP_KEY=base64:fW9jZGRkNWE2MTg5NTQyZjFhMzBmNjA4YjQ5YWRlNGQyZDg3MzNiNGFiZDc5MThjZThhOTNlODU3YWE1ZDEx
+APP_NAME=MIA App
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://app.withmia.com
+DB_CONNECTION=mysql
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+LOG_CHANNEL=stack
+LOG_LEVEL=error
+SESSION_DOMAIN=.withmia.com
+SESSION_SECURE_COOKIE=true
+BROADCAST_CONNECTION=reverb
+FILESYSTEM_DISK=local
+REVERB_APP_ID=local
+REVERB_APP_KEY=local
+REVERB_APP_SECRET=local
+```
+
+## ⚠️ IMPORTANTE
+- Railway ya configura automáticamente `DATABASE_URL` cuando agregas MySQL
+- Railway ya configura automáticamente `PORT`
+- NO necesitas agregar esas dos variables manualmente
+
+## 🔑 Si necesitas agregar después (OPCIONAL):
+
+### OpenAI (para funciones de IA)
+```env
+OPENAI_API_KEY=sk-proj-xxxxxx
+```
+
+### Email (Gmail/SMTP)
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=tu_email@gmail.com
+MAIL_PASSWORD=tu_app_password_de_aplicacion
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=tu_email@gmail.com
+```
+
+### Pusher (si usas en lugar de Reverb)
+```env
+BROADCAST_CONNECTION=pusher
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_APP_CLUSTER=mt1
+```
+
+## ✅ Después de pegar las variables:
+1. Click **"Update Variables"** o **"Deploy"**
+2. Railway reiniciará el servicio automáticamente
