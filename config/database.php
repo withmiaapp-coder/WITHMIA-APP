@@ -31,15 +31,12 @@ return [
 
     'connections' => [
 
-        'mysql' => [
-            'driver' => 'mysql',
+        'sqlite' => [
+            'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.mysql')),
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
         ],
 
         'mysql' => [
@@ -64,11 +61,11 @@ return [
 
         'chatwoot' => [
             'driver' => 'pgsql',
-            'host' => 'localhost',
-            'port' => '5432',
-            'database' => 'chatwoot_production',
-            'username' => 'postgres',
-            'password' => '733b40439de8301feb9cfa517c00cdb7',
+            'host' => env('CHATWOOT_DB_HOST', 'localhost'),
+            'port' => env('CHATWOOT_DB_PORT', '5432'),
+            'database' => env('CHATWOOT_DB_DATABASE', 'chatwoot_production'),
+            'username' => env('CHATWOOT_DB_USERNAME', 'postgres'),
+            'password' => env('CHATWOOT_DB_PASSWORD', ''),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
