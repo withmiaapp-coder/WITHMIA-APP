@@ -17,6 +17,7 @@
         "laravel/tinker": "^2.10.1",
         "openai-php/client": "^0.16.1",
         "phpoffice/phpspreadsheet": "^5.1",
+        "predis/predis": "^2.2",
         "pusher/pusher-php-server": "^7.2",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^6.21",
