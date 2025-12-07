@@ -27,9 +27,19 @@ Route::get('/fix-user-columns', function () {
             DB::statement('ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL AFTER email');
         }
         
+        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'onboarding_step'");
+        if (empty($columns)) {
+            DB::statement('ALTER TABLE users ADD COLUMN onboarding_step INT DEFAULT 0 AFTER email_verified_at');
+        }
+        
+        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'onboarding_completed'");
+        if (empty($columns)) {
+            DB::statement('ALTER TABLE users ADD COLUMN onboarding_completed TINYINT(1) DEFAULT 0 AFTER onboarding_step');
+        }
+        
         return response()->json([
             'success' => true,
-            'message' => 'Columnas verificadas y agregadas correctamente'
+            'message' => 'Todas las columnas verificadas y agregadas correctamente'
         ]);
     } catch (\Exception $e) {
         return response()->json([
