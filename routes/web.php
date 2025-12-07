@@ -15,6 +15,16 @@ Broadcast::routes(['middleware' => ['web', 'auth']]);
 
 
 Route::get('/', function () {
+    // Si no hay sesión, mostrar mensaje de bienvenida en producción
+    if (!Auth::check() && env('APP_ENV') === 'production') {
+        return response()->json([
+            'app' => 'WithMIA',
+            'status' => 'running',
+            'environment' => env('APP_ENV'),
+            'message' => 'Application is running successfully'
+        ]);
+    }
+    
     if (Auth::check()) {
         // Verificar si el usuario ha completado el onboarding
         $user = Auth::user();
