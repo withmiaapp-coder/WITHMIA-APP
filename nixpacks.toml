@@ -1,5 +1,5 @@
 [phases.setup]
-  nixPkgs = ['php83', 'php83Packages.composer', 'php83Extensions.pdo', 'php83Extensions.pdo_mysql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.redis', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif', 'nodejs', 'npm']
+  nixPkgs = ['nodejs', 'php83', 'php83Packages.composer', 'php83Extensions.pdo', 'php83Extensions.pdo_mysql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.redis', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif']
   nixLibs = ['libjpeg', 'libpng', 'freetype', 'zlib']
 
 [phases.install]
