@@ -44,7 +44,7 @@ export class NotificationService {
 
     const notification = new Notification(title, {
       body: options?.body,
-      icon: options?.icon || '/logo-withmia.png',
+      icon: options?.icon || '/logo-withmia.webp',
       tag: options?.tag || 'chatwoot-notification',
       requireInteraction: false,
       silent: false,

@@ -757,7 +757,7 @@ export default function Dashboard({ user, company, stats, onboardingData, compan
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'}`}>
               <div className="relative cursor-pointer" onClick={() => setSidebarCollapsed(false)} title="Expandir sidebar">
                 <img
-                  src="/logo-withmia.png"
+                  src="/logo-withmia.webp"
                   alt="WITHMIA Logo"
                   className="w-12 h-12 rounded-lg object-contain shadow-md hover:scale-105 transition-transform"
                 />

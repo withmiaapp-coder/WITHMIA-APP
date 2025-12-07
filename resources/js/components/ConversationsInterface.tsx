@@ -2865,7 +2865,7 @@ const ConversationsInterface: React.FC = () => {
             <div className="text-center">
               <div className="mx-auto mb-6">
                 <img 
-                  src="/logo-withmia.png" 
+                  src="/logo-withmia.webp" 
                   alt="WITHMIA Logo" 
                   className="w-40 h-40 mx-auto hover:scale-110 transition-transform duration-300"
                 />

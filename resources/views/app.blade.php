@@ -36,9 +36,9 @@
 
         <title inertia>@yield('title', 'WITHMIA')</title>
 
-        <link rel="icon" href="/logo-withmia.png" sizes="any">
-        <link rel="icon" href="/logo-withmia.png" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/logo-withmia.png">
+        <link rel="icon" href="/logo-withmia.webp" sizes="any">
+        <link rel="icon" href="/logo-withmia.webp" type="image/webp">
+        <link rel="apple-touch-icon" href="/logo-withmia.webp">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
