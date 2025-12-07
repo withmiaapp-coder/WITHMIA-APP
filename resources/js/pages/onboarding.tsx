@@ -531,6 +531,7 @@ export default function Onboarding({
                 border: "2px solid #f1f5f9",
                 borderRadius: "24px",
                 fontSize: "18px",
+                color: "#1a202c",
                 backgroundColor: "rgba(255,255,255,0.9)",
                 boxSizing: "border-box",
               }}
@@ -563,6 +564,7 @@ export default function Onboarding({
                   border: "2px solid #f1f5f9",
                   borderRadius: "12px",
                   fontSize: "14px",
+                  color: "#1a202c",
                   backgroundColor: "rgba(255,255,255,0.9)",
                   boxSizing: "border-box",
                   minHeight: "120px",
@@ -725,6 +727,7 @@ export default function Onboarding({
                   border: "2px solid #f1f5f9",
                   borderRadius: "24px",
                   fontSize: "18px",
+                  color: "#1a202c",
                   backgroundColor: "rgba(255,255,255,0.9)",
                   boxSizing: "border-box",
                 }}
