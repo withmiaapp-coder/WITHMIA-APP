@@ -34,29 +34,13 @@ git push origin main
 ### C. Configurar Variables de Entorno
 1. Click en tu servicio (mia-app)
 2. Ve a **"Settings"** → **"Variables"**
-3. Click **"+ New Variable"**
-4. Copia y pega TODAS estas variables (una por una o usa "Raw Editor"):
+3. Click **"Raw Editor"** (esquina superior derecha)
+4. **BORRA TODAS las variables actuales** (selecciona todo y borra)
+5. Abre el archivo **`RAILWAY_VARIABLES_ACTUALIZADO.txt`** en tu proyecto
+6. **Copia TODO el contenido** y pégalo en el Raw Editor
+7. Click **"Update Variables"**
 
-```bash
-APP_KEY=base64:fW9jZGRkNWE2MTg5NTQyZjFhMzBmNjA4YjQ5YWRlNGQyZDg3MzNiNGFiZDc5MThjZThhOTNlODU3YWE1ZDEx
-APP_NAME=MIA App
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://app.withmia.com
-DB_CONNECTION=mysql
-SESSION_DRIVER=database
-SESSION_LIFETIME=120
-CACHE_STORE=database
-QUEUE_CONNECTION=database
-LOG_CHANNEL=stack
-LOG_LEVEL=error
-SESSION_DOMAIN=.withmia.com
-SESSION_SECURE_COOKIE=true
-BROADCAST_CONNECTION=reverb
-FILESYSTEM_DISK=local
-```
-
-5. Click **"Add"** o **"Deploy"**
+**IMPORTANTE:** Las variables `${MYSQLHOST}`, `${REDISHOST}`, etc. son referencias a las variables que Railway crea automáticamente cuando agregas MySQL y Redis. No las cambies.
 
 ---
 

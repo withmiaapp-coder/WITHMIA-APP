@@ -12,7 +12,7 @@ fi
 # Limpiar caches previos
 echo "🧹 Limpiando caches..."
 php artisan config:clear
-php artisan cache:clear
+php artisan cache:clear || echo "⚠️  Cache clear falló (posiblemente Redis no disponible aún)"
 php artisan view:clear
 php artisan route:clear
 
@@ -33,6 +33,12 @@ echo "⚡ Optimizando para producción..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+
+# Verificar conexión a Redis (si está configurado)
+if [ ! -z "$REDIS_HOST" ]; then
+    echo "🔴 Verificando conexión a Redis..."
+    php artisan tinker --execute="Redis::connection()->ping();" || echo "⚠️  Redis no disponible, continuando..."
+fi
 
 # Verificar que la aplicación está lista
 echo "✅ Aplicación lista para deployment"
