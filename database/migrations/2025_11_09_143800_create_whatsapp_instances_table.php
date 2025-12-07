@@ -21,15 +21,17 @@ return new class extends Migration
             $table->index('instance_name');
         });
         
-        // Insert default mapping for company 1
-        DB::table('whatsapp_instances')->insert([
-            'company_id' => 1,
-            'instance_name' => 'with-mia-cqwp4d',
-            'instance_url' => 'http://evolution_api:8080',
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        // Insert default mapping for company 1 only if company exists
+        if (DB::table('companies')->where('id', 1)->exists()) {
+            DB::table('whatsapp_instances')->insertOrIgnore([
+                'company_id' => 1,
+                'instance_name' => 'with-mia-cqwp4d',
+                'instance_url' => 'http://evolution_api:8080',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
     }
 
     public function down(): void
