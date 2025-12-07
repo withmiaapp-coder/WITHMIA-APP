@@ -682,7 +682,7 @@ export default function Onboarding({
                   alignItems: "center",
                   cursor: "pointer",
                   fontSize: "16px",
-                  color: "#1a202c",
+                  color: "#4a5568",
                   fontWeight: "500"
                 }}
               >
@@ -701,7 +701,7 @@ export default function Onboarding({
                   alignItems: "center",
                   cursor: "pointer",
                   fontSize: "16px",
-                  color: "#1a202c",
+                  color: "#4a5568",
                   fontWeight: "500"
                 }}
               >
