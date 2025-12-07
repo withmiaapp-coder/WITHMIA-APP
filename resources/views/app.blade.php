@@ -6,7 +6,6 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="user-id" content="{{ auth()->id() ?? '' }}">
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*;">
-        <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
         <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}

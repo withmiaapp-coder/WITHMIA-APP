@@ -81,7 +81,12 @@ class GoogleAuthController extends Controller
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false, 
+                'error' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
         }
     }
 
