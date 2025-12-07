@@ -11,14 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Forzar la creación de columnas usando SQL directo para evitar problemas con Schema::hasColumn
+        DB::statement('ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255) NULL AFTER name');
+        DB::statement('ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NULL AFTER email');
+        
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'full_name')) {
-                $table->string('full_name')->nullable()->after('name');
-            }
-            
-            if (!Schema::hasColumn('users', 'phone')) {
-                $table->string('phone', 20)->nullable()->after('email');
-            }
             
             if (!Schema::hasColumn('users', 'onboarding_step')) {
                 $table->integer('onboarding_step')->default(0)->after('email_verified_at');
