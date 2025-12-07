@@ -51,19 +51,20 @@ class OnboardingController extends Controller
 
     public function store(Request $request)
     {
-        $isJsonRequest = $request->expectsJson() || $request->wantsJson() || $request->ajax() || 
-                        $request->header('Content-Type') === 'application/json' || 
-                        $request->header('Accept') === 'application/json' || 
-                        $request->header('X-Requested-With') === 'XMLHttpRequest';
-
-        \Log::info('OnboardingController@store START', [
-            'step' => $request->input('step'),
-            'is_json' => $isJsonRequest,
-            'auth_check' => auth()->check(),
-            'user_id' => auth()->id()
-        ]);
-
         try {
+            $isJsonRequest = $request->expectsJson() || $request->wantsJson() || $request->ajax() || 
+                            $request->header('Content-Type') === 'application/json' || 
+                            $request->header('Accept') === 'application/json' || 
+                            $request->header('X-Requested-With') === 'XMLHttpRequest';
+
+            \Log::info('OnboardingController@store START', [
+                'step' => $request->input('step'),
+                'all_input' => $request->all(),
+                'is_json' => $isJsonRequest,
+                'auth_check' => auth()->check(),
+                'user_id' => auth()->id()
+            ]);
+
             if (!auth()->check()) {
                 \Log::error('User not authenticated in onboarding');
                 if ($isJsonRequest) {
@@ -207,15 +208,36 @@ class OnboardingController extends Controller
 
     private function saveUserData(Request $request, User $user)
     {
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+        \Log::info('saveUserData START', [
+            'user_id' => $user->id,
+            'request_data' => $request->all()
         ]);
 
-        $user->update([
-            'full_name' => $request->full_name,
-            'phone' => $request->phone,
-        ]);
+        try {
+            $validated = $request->validate([
+                'full_name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+            ]);
+
+            \Log::info('saveUserData validation passed', ['validated' => $validated]);
+
+            $user->update([
+                'full_name' => $request->full_name,
+                'phone' => $request->phone,
+            ]);
+
+            \Log::info('saveUserData update completed', [
+                'user_id' => $user->id,
+                'full_name' => $user->full_name,
+                'phone' => $user->phone
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('saveUserData EXCEPTION', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     private function saveCompanyData(Request $request, User $user)
