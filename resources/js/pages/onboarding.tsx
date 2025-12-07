@@ -585,7 +585,13 @@ export default function Onboarding({
                   try {
                     const response = await fetch("/api/improve-description", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json" },
+                      headers: { 
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN":
+                          document
+                            .querySelector('meta[name="csrf-token"]')
+                            ?.getAttribute("content") || "",
+                      },
                       body: JSON.stringify({
                         description: formData.company_description,
                       }),
@@ -596,11 +602,12 @@ export default function Onboarding({
                         "company_description",
                         data.improved_description
                       );
+                      alert("¡Descripción mejorada exitosamente!");
                     } else {
                       alert("Error: " + (data.error || "No se pudo mejorar"));
                     }
                   } catch (error) {
-                    alert("Error de conexión");
+                    alert("Error de conexión: " + error);
                     console.error(error);
                   }
                 }}
@@ -674,6 +681,9 @@ export default function Onboarding({
                   display: "flex",
                   alignItems: "center",
                   cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#1a202c",
+                  fontWeight: "500"
                 }}
               >
                 <input
@@ -690,6 +700,9 @@ export default function Onboarding({
                   display: "flex",
                   alignItems: "center",
                   cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#1a202c",
+                  fontWeight: "500"
                 }}
               >
                 <input
