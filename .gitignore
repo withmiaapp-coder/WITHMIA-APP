@@ -23,3 +23,48 @@ yarn-error.log
 /.vscode
 /.zed
 /.vs
+
+# Backups y archivos temporales
+/backups/
+*.backup
+*.original
+*.before-auth-fix
+*.old
+*_backup.*
+
+# Archivos de debug y testing temporal
+debug_*.php
+test_*.php
+diagnose_*.php
+configure-*.php
+update_*.php
+composer-setup.php
+show_complete_data.php
+reconfigure_*.php
+*-fix-*.php
+temp_*.js
+generate-key.js
+generate-key.php
+new_filtered_conversations.js
+
+# Archivos de documentación temporal
+DIAGNOSTICO_*.md
+SOLUCION_*.md
+HAZLO_AHORA.md
+QUE_HACER_AHORA.md
+PASOS_RAPIDOS.md
+ACTUALIZACION_VARIABLES.md
+COMO_HACER_COMMIT.md
+ESTADO_FUNCIONAL.md
+
+# Variables y configuraciones temporales
+RAILWAY_VARIABLES*.txt
+cookies.txt
+*.json.backup
+create_instance.json
+instance_create.json
+
+# Scripts de deployment duplicados
+commit-railway.*
+railway-init.sh
+railway-deploy.sh
