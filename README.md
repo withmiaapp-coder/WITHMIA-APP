@@ -2,9 +2,9 @@
 
 CRM integrado con Chatwoot para gestión de conversaciones y clientes.
 
-## Deploy Automático
+## Deploy Automático en Railway
 
-Este repositorio está configurado con GitHub Actions para deploy automático al hacer push a la rama main.
+Este repositorio se despliega automáticamente en Railway al hacer push a la rama main.
 
 ## Stack Tecnológico
 
@@ -13,16 +13,17 @@ Este repositorio está configurado con GitHub Actions para deploy automático al
 - **Base de datos:** MySQL
 - **Cache/Queue:** Redis
 - **Mensajería:** Chatwoot + Evolution API (WhatsApp)
+- **Hosting:** Railway
 
 ## Deployment
 
-Cada push a main dispara automáticamente:
-1. Git pull en el servidor
+Cada push a main dispara automáticamente en Railway:
+1. Build con Nixpacks (PHP 8.3 + Node.js)
 2. Instalación de dependencias (Composer + NPM)
-3. Build de assets
+3. Build de assets con Vite
 4. Migraciones de base de datos
-5. Cache de configuración/rutas/vistas
-6. Reinicio de PHP-FPM
+5. Optimización de Laravel (config, routes, views)
+6. Healthcheck en `/up`
 
 ---
 **Desarrollado por WithMia Team**

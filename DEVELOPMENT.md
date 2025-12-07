@@ -65,23 +65,28 @@ El archivo \.env\ está en el servidor y NO se versiona en Git (por seguridad).
 
 - \eat: nueva funcionalidad\
 - \ix: corrección de bug\
-- \efactor: refactorización de código\
+- \
+efactor: refactorización de código\
 - \docs: documentación\
 - \style: formato/estilo\
 
 ## Debugging
 
-Ver logs en el servidor:
-\\\ash
-ssh -i key.pem -p 2222 ubuntu@18.231.188.244
-tail -f /var/www/mia-app/storage/logs/laravel.log
+Ver logs en Railway:
+1. Abre el proyecto en Railway
+2. Selecciona tu servicio
+3. Ve a la pestaña **Deployments** → **View Logs**
+
+Ver logs locales:
+\\\ash
+tail -f storage/logs/laravel.log
 \\\
 
 ## Monitoreo
 
 - **Aplicación:** https://app.withmia.com
-- **GitHub Actions:** https://github.com/withmiaapp-coder/mia-app/actions
-- **Servidor:** 18.231.188.244:2222
+- **GitHub:** https://github.com/withmiaapp-coder/mia-app
+- **Railway:** https://railway.app (deployment automático)
 
 ## Soporte
 
