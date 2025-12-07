@@ -11,9 +11,8 @@
 
 [phases.build]
   cmds = [
-    'php artisan storage:link || true',
-    'php artisan optimize:clear'
+    'php artisan storage:link || true'
   ]
 
 [start]
-  cmd = 'php artisan migrate --force 2>&1 || true && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}'
+  cmd = 'php artisan optimize:clear && php artisan migrate --force 2>&1 || true && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}'
