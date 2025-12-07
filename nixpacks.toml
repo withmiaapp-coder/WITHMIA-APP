@@ -1,7 +1,6 @@
 [phases.setup]
-  nixPkgs = ['nodejs', 'php83', 'php83Packages.composer', 'php83Packages.redis', 'php83Extensions.pdo', 'php83Extensions.pdo_mysql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.redis', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif']
+  nixPkgs = ['nodejs', 'php83', 'php83Packages.composer', 'php83Extensions.pdo', 'php83Extensions.pdo_mysql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.redis', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif']
   nixLibs = ['libjpeg', 'libpng', 'freetype', 'zlib']
-  aptPkgs = ['php-redis']
 
 [phases.install]
   cmds = [
