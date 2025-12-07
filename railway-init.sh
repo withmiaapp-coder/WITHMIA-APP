@@ -14,15 +14,16 @@ echo "🧹 Limpiando caches..."
 php artisan config:clear
 php artisan view:clear
 php artisan route:clear
+php artisan cache:clear
 rm -rf bootstrap/cache/*.php || true
+rm -rf storage/framework/views/*.php || true
 
-# Ejecutar migraciones (solo si DATABASE_URL está configurado)
-if [ ! -z "$MYSQLHOST" ] || [ ! -z "$DB_HOST" ]; then
-    echo "📊 Ejecutando migraciones..."
-    php artisan migrate --force --no-interaction || echo "⚠️  Migraciones fallaron (posiblemente ya ejecutadas)"
-else
-    echo "⚠️  No hay base de datos configurada, saltando migraciones"
-fi
+# Ejecutar migraciones
+echo "📊 Ejecutando migraciones..."
+php artisan migrate --force --no-interaction --seed || {
+    echo "⚠️  Error en migraciones, intentando crear base de datos..."
+    php artisan migrate:fresh --force --no-interaction --seed || echo "❌ Migraciones fallaron completamente"
+}
 
 # Storage link
 echo "🔗 Creando storage link..."
