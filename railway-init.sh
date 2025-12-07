@@ -27,6 +27,13 @@ fi
 echo "🔗 Creando storage link..."
 php artisan storage:link --force || echo "✓ Storage link ya existe"
 
+# Crear directorios necesarios para sessions y cache
+echo "📁 Creando directorios de almacenamiento..."
+mkdir -p storage/framework/sessions
+mkdir -p storage/framework/cache/data
+mkdir -p storage/framework/views
+chmod -R 775 storage/framework
+
 # Optimizar para producción
 echo "⚡ Optimizando para producción..."
 php artisan config:cache
