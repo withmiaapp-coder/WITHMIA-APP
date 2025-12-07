@@ -9,15 +9,14 @@ if [ -z "$APP_KEY" ]; then
     php artisan key:generate --force --no-interaction
 fi
 
-# Limpiar caches previos
+# Limpiar caches previos (sin Redis aún)
 echo "🧹 Limpiando caches..."
 php artisan config:clear
-php artisan cache:clear || echo "⚠️  Cache clear falló (posiblemente Redis no disponible aún)"
 php artisan view:clear
 php artisan route:clear
 
 # Ejecutar migraciones (solo si DATABASE_URL está configurado)
-if [ ! -z "$DATABASE_URL" ] || [ ! -z "$DB_CONNECTION" ]; then
+if [ ! -z "$MYSQLHOST" ] || [ ! -z "$DB_HOST" ]; then
     echo "📊 Ejecutando migraciones..."
     php artisan migrate --force --no-interaction || echo "⚠️  Migraciones fallaron (posiblemente ya ejecutadas)"
 else
@@ -33,12 +32,6 @@ echo "⚡ Optimizando para producción..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-
-# Verificar conexión a Redis (si está configurado)
-if [ ! -z "$REDIS_HOST" ]; then
-    echo "🔴 Verificando conexión a Redis..."
-    php artisan tinker --execute="Redis::connection()->ping();" || echo "⚠️  Redis no disponible, continuando..."
-fi
 
 # Verificar que la aplicación está lista
 echo "✅ Aplicación lista para deployment"
