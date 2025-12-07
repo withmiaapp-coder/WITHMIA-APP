@@ -12,9 +12,9 @@ fi
 # Limpiar caches previos
 echo "🧹 Limpiando caches..."
 php artisan config:clear
-php artisan cache:clear
 php artisan view:clear
 php artisan route:clear
+rm -rf bootstrap/cache/*.php || true
 
 # Ejecutar migraciones (solo si DATABASE_URL está configurado)
 if [ ! -z "$MYSQLHOST" ] || [ ! -z "$DB_HOST" ]; then
@@ -35,14 +35,12 @@ mkdir -p storage/framework/cache/data
 mkdir -p storage/framework/views
 chmod -R 775 storage/framework
 
-# Optimizar para producción
-echo "⚡ Optimizando para producción..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# NO optimizar durante el build - Redis no está disponible aún
+echo "⚠️  Saltando config:cache durante build (se ejecutará en runtime)"
+# NO optimizar durante el build - Redis no está disponible aún
+echo "⚠️  Saltando config:cache durante build (se ejecutará en runtime)"
 
 # Verificar que la aplicación está lista
 echo "✅ Aplicación lista para deployment"
-php artisan about || true
 
 echo "🎉 Deployment completado!"
