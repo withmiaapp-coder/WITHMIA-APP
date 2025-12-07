@@ -3,7 +3,7 @@
 
 [phases.install]
   cmds = [
-    'composer install --no-dev --optimize-autoloader --no-interaction',
+    'composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-gd',
     'npm ci',
     'npm run build'
   ]
