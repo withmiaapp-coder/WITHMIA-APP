@@ -13,11 +13,17 @@ export function useReverb() {
     useEffect(() => {
         if (typeof window !== 'undefined' && !window.Echo) {
             // Validar que existan las variables de entorno requeridas
-            const appKey = import.meta.env.VITE_REVERB_APP_KEY;
+            const appKey = import.meta.env.VITE_PUSHER_APP_KEY;
+            const cluster = import.meta.env.VITE_PUSHER_APP_CLUSTER;
             
             if (!appKey) {
-                console.warn('⚠️ VITE_REVERB_APP_KEY no está configurado. WebSocket deshabilitado.');
-                console.warn('📋 Configura las variables en Railway según RAILWAY_REVERB_VARIABLES.md');
+                console.warn('⚠️ VITE_PUSHER_APP_KEY no está configurado. WebSocket deshabilitado.');
+                console.warn('📋 Configura Pusher en Railway - Ver PUSHER_SETUP.md');
+                return;
+            }
+
+            if (!cluster) {
+                console.warn('⚠️ VITE_PUSHER_APP_CLUSTER no está configurado. WebSocket deshabilitado.');
                 return;
             }
 
@@ -26,20 +32,21 @@ export function useReverb() {
             window.Echo = new Echo({
                 broadcaster: 'pusher',
                 key: appKey,
-                wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-                wsPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-                wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-                forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-                enabledTransports: ['ws', 'wss'],
+                cluster: cluster,
+                forceTLS: true,
+                encrypted: true,
                 disableStats: true,
-                cluster: 'mt1', // Requerido por Pusher, pero no usado con host personalizado
             });
 
-            console.log('✅ Echo connected successfully');
+            console.log('✅ Echo conectado a Pusher exitosamente');
+            console.log('📍 Cluster:', cluster);
         }
 
         return () => {
-            // Cleanup al desmontar (opcional)
+            // Cleanup al desmontar
+            if (window.Echo) {
+                window.Echo.disconnect();
+            }
         };
     }, []);
 

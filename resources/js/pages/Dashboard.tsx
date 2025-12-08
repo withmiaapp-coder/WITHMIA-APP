@@ -76,11 +76,19 @@ interface User {
   email: string;
   company_name?: string;
   company_slug?: string;
+  chatwoot_inbox_id?: number;
 }
 
 interface Company {
   name: string;
   email?: string;
+}
+
+interface Chatwoot {
+  account_id?: number;
+  inbox_id?: number;
+  provisioned_at?: string;
+  available?: boolean;
 }
 
 interface Stats {
@@ -93,6 +101,7 @@ interface Stats {
 interface Props {
   user: User;
   company?: Company;
+  chatwoot?: Chatwoot;
   stats?: Stats;
   onboardingData?: any;
   companySlug: string;
@@ -383,10 +392,21 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
   );
 }
 
-export default function Dashboard({ user, company, stats, onboardingData, companySlug }: Props) {
+export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug }: Props) {
   
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
+  
+  // ====== INBOX ID ======
+  const inboxId = chatwoot?.inbox_id || user.chatwoot_inbox_id || null;
+  
+  useEffect(() => {
+    if (inboxId) {
+      console.log('✅ Inbox ID disponible:', inboxId);
+    } else {
+      console.warn('⚠️ No se encontró inbox_id. El WebSocket de conversaciones no estará disponible.');
+    }
+  }, [inboxId]);
   
   // ====== VALIDACIÓN DE SEGURIDAD ======
   useEffect(() => {
