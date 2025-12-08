@@ -7,7 +7,7 @@ import WhatsAppQRModal from '../components/WhatsAppQRModal';
 import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
-import {
+import { useReverb } from "../hooks/useReverb";
   MessageCircle,
   Users,
   TrendingUp,
@@ -384,6 +384,9 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
 
 export default function Dashboard({ user, company, stats, onboardingData, companySlug }: Props) {
   
+  // ====== REVERB WEBSOCKETS ======
+  const { subscribe, leave } = useReverb();
+  
   // ====== VALIDACIÓN DE SEGURIDAD ======
   useEffect(() => {
     // Validar companySlug
@@ -580,13 +583,26 @@ export default function Dashboard({ user, company, stats, onboardingData, compan
     return () => clearInterval(timer);
   }, []);
 
-  // Verificar status de WhatsApp al cargar
+  // Verificar status de WhatsApp con Reverb (WebSocket en tiempo real)
   useEffect(() => {
+    // Carga inicial
     checkWhatsAppStatus();
-    // Verificar cada 3 segundos (tiempo real)
-    const interval = setInterval(checkWhatsAppStatus, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Subscribirse a eventos de WhatsApp en tiempo real
+    const channelName = `company.${companySlug}.whatsapp`;
+    subscribe(channelName, 'WhatsAppStatusChanged', (data: any) => {
+      console.log('📡 WhatsApp status actualizado vía WebSocket:', data);
+      // Actualizar estado directamente sin hacer request
+      if (data.status) {
+        setWhatsappConnected(data.status.connected || false);
+        setWhatsappQr(data.status.qrCode || null);
+      }
+    });
+    
+    return () => {
+      leave(channelName);
+    };
+  }, [companySlug, subscribe, leave]);
 
   // Guardar estado del sidebar en localStorage
   useEffect(() => {

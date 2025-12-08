@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
+use App\Events\WhatsAppStatusChanged;
 
 class EvolutionApiController extends Controller
 {
@@ -106,6 +107,24 @@ class EvolutionApiController extends Controller
         Log::info('WhatsApp Status Check', ['instanceName' => $instanceName]);
         $result = $this->evolutionApi->getStatus($instanceName);
         Log::info('WhatsApp Status Result', ['result' => $result]);
+
+        // Broadcast status change to all connected clients
+        if ($result['success'] ?? false) {
+            try {
+                $user = $request->user();
+                if ($user && $user->company_slug) {
+                    broadcast(new WhatsAppStatusChanged(
+                        $user->company_slug,
+                        $instanceName,
+                        $result['state'] ?? 'unknown',
+                        $result['qrCode'] ?? null,
+                        $result['profileInfo'] ?? null
+                    ));
+                }
+            } catch (\Exception $e) {
+                Log::error('Error broadcasting status check', ['error' => $e->getMessage()]);
+            }
+        }
 
         return response()->json($result);
     }
@@ -513,6 +532,32 @@ class EvolutionApiController extends Controller
         ]);
 
         try {
+            // Obtener company_slug desde la instancia
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->where('is_active', 1)
+                ->first();
+
+            if ($instance) {
+                $companySlug = $instance->company_slug ?? $instance->company_id;
+                
+                // Disparar evento de WhatsApp con el company_slug correcto
+                broadcast(new WhatsAppStatusChanged(
+                    $companySlug,
+                    $instanceName,
+                    $state,
+                    $data['qrcode'] ?? null,
+                    $data['profileInfo'] ?? null
+                ));
+
+                Log::info('??? WhatsAppStatusChanged event broadcasted', [
+                    'company' => $companySlug,
+                    'instance' => $instanceName,
+                    'state' => $state
+                ]);
+            }
+
+            // Mantener el evento legacy para compatibilidad
             broadcast(new ConversationUpdated(
                 ['state' => $state, 'instance' => $instanceName],  // conversation data
                 5,      // inboxId
