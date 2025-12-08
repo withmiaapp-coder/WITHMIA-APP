@@ -169,11 +169,14 @@ export const useConversations = () => {
           const data = await result.json();
           const inboxId = data.user?.company?.chatwoot_inbox_id || data.chatwoot_inbox_id || null;
           
-          console.log('✅ User inbox_id obtenido:', inboxId);
+          // Solo loguear si realmente obtuvimos un inbox_id
+          if (inboxId) {
+            console.log('✅ User inbox_id obtenido:', inboxId);
+          }
           setUserInboxId(inboxId);
         }
       } catch (err) {
-        console.error('Error obteniendo inbox_id del usuario:', err);
+        // Silenciar error - el inbox_id se obtiene desde las props del Dashboard
       }
     };
 
