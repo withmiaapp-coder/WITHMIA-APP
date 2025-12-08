@@ -32,6 +32,7 @@ export function useReverb() {
                 forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
                 enabledTransports: ['ws', 'wss'],
                 disableStats: true,
+                cluster: 'mt1', // Requerido por Pusher, pero no usado con host personalizado
             });
 
             console.log('✅ Echo connected successfully');
