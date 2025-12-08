@@ -89,9 +89,14 @@ Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
 Route::get('/check-session', [GoogleAuthController::class, 'checkSession'])->name('auth.check');
 
 Route::get('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
+    try {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+    } catch (\Exception $e) {
+        // Si falla, igual redirigir
+        \Log::error('Logout error: ' . $e->getMessage());
+    }
     return redirect('/login')->with('logout', true);
 })->name('logout.get');
 
