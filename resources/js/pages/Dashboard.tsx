@@ -8,6 +8,7 @@ import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
+import {
   MessageCircle,
   Users,
   TrendingUp,
@@ -30,7 +31,7 @@ import { useReverb } from "../hooks/useReverb";
   Coffee,
   Sparkles,
   ArrowRight,
-  _Eye,
+  Eye,
   MessageSquare,
   UserPlus,
   Activity,
@@ -38,7 +39,7 @@ import { useReverb } from "../hooks/useReverb";
   Award,
   Lightbulb,
   Rocket,
-  _Shield,
+  Shield,
   Globe,
   Wifi,
   Battery,
