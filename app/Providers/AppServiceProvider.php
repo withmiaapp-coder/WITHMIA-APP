@@ -21,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Disable observer en logout para mayor rapidez
+        if (request()->is('logout')) {
+            return;
+        }
+        
         // Registrar Observer para el modelo User
         User::observe(UserObserver::class);
     }

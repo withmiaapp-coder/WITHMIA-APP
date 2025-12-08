@@ -90,14 +90,16 @@ Route::get('/check-session', [GoogleAuthController::class, 'checkSession'])->nam
 
 Route::get('/logout', function () {
     try {
-        Auth::logout();
-        request()->session()->invalidate();
+        // Borrar cookies localmente sin esperar al servidor
+        Auth::guard('web')->logout();
+        request()->session()->flush();
         request()->session()->regenerateToken();
     } catch (\Exception $e) {
-        // Si falla, igual redirigir
         \Log::error('Logout error: ' . $e->getMessage());
     }
-    return redirect('/login')->with('logout', true);
+    
+    // Redirigir inmediatamente sin esperar nada más
+    return redirect('/login')->with('logout', true)->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 })->name('logout.get');
 
 // Onboarding POST route - outside auth middleware to avoid CSRF issues
