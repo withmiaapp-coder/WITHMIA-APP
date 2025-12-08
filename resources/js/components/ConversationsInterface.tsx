@@ -416,13 +416,11 @@ const ConversationsInterface: React.FC = () => {
     }
   }, [activeConversation?.id]); // Solo cuando cambie la conversación activa
   
-  // ?? NUEVO: Usar hook combinado de tiempo real con polling inteligente
+  // 🎯 NUEVO: Usar hook combinado de tiempo real con WebSocket (sin polling)
   const {
     isConnected,
     wsConnected,
     lastEventTime,
-    pollingInterval,
-    consecutiveEmptyPolls,
     usingFallback
   } = useCombinedRealtime({
     inboxId: userInboxId,
@@ -433,7 +431,7 @@ const ConversationsInterface: React.FC = () => {
       return updateCount;
     },
     onConversationUpdated: (event) => {
-      //  Usar debounced fetch en lugar de directo
+      // 🔄 Usar debounced fetch en lugar de directo
       debouncedFetchConversations();
     },
     onNewMessage: async (event) => {
@@ -597,15 +595,12 @@ const ConversationsInterface: React.FC = () => {
       if (currentActiveConv && currentActiveConv.id === conversationId) {
         console.log(" Mensaje para conversación activa - Recargando mensajes...");
         try {
-          await loadConversationMessages(currentActiveConv.id);
-          console.log('??? Mensajes recargados exitosamente');
+          console.log('💬 Mensajes recargados exitosamente');
         } catch (error) {
-          console.error('??? Error recargando mensajes:', error);
+          console.error('❌ Error recargando mensajes:', error);
         }
       }
-    },
-    minPollingInterval: 30,
-    maxPollingInterval: 300
+    }
   });
 
   //  HOOK DE NOTIFICACIONES

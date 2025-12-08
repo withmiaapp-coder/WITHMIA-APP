@@ -209,43 +209,15 @@ export const useConversations = () => {
     }
   }, [apiCall, fetchConversations]);
 
-  // 🔄 Auto-refresh conversations (optimizado para rendimiento)
+  // Carga inicial de conversaciones (WebSocket manejará las actualizaciones)
   useEffect(() => {
-    // Cargar conversaciones inmediatamente
     fetchConversations();
-    
-    let intervalId: any;
-    
-    // Esperar 2 segundos antes de iniciar polling (para que cargue la UI primero)
-    const timeoutId = setTimeout(() => {
-      intervalId = setInterval(() => {
-        // Solo hacer polling si la pestaña está activa
-        if (!document.hidden) {
-          fetchConversations();
-        }
-      }, 10000); // Poll cada 10 segundos (optimizado desde 5s)
-    }, 2000);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      if (intervalId) clearInterval(intervalId);
-    };
   }, [fetchConversations]);
 
-  // 🔄 Auto-refresh active conversation messages (optimizado)
+  // Carga inicial de mensajes (WebSocket manejará las actualizaciones)
   useEffect(() => {
     if (activeConversation && activeConversation.id) {
-      let intervalId: any;
-      
-      // Esperar 1 segundo antes de iniciar polling de mensajes
-      const timeoutId = setTimeout(() => {
-        intervalId = setInterval(() => {
-          // Solo hacer polling si la pestaña está activa
-          if (!document.hidden) {
-            loadConversationMessages(activeConversation.id);
-          }
-        }, 5000); // Poll cada 5 segundos (optimizado desde 3s)
-      }, 1000);
+      loadConversationMessages(activeConversation.id);
       
       return () => {
         clearTimeout(timeoutId);
@@ -286,10 +258,7 @@ export const useUserStats = () => {
 
   useEffect(() => {
     fetchStats();
-
-    // Actualizar cada 30 segundos
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+    // WebSocket manejará las actualizaciones en tiempo real
   }, []);
 
   return { stats, loading, error, fetchStats };
