@@ -14,7 +14,7 @@
 <body>
     <div class= container>
         <div class=header>
-            <img src="https://app.withmia.com/logo-mia-original.png" alt="WITHMIA Logo" class="logo">
+            <img src="https://app.withmia.com/logo-mia-original.webp" alt="WITHMIA Logo" class="logo">
             <h1>¡Bienvenido a WITHMIA!</h1>
         </div>
         <div class=content>

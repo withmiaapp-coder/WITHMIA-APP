@@ -1663,7 +1663,7 @@ export default function Onboarding({
             }}
           >
             <img
-              src="/logo-mia-original.png?v=2025-withmia"
+              src="/logo-mia-original.webp?v=2025-withmia"
               alt="WITHMIA Logo"
               style={{ height: "90px", marginBottom: "-1rem" }}
             />
