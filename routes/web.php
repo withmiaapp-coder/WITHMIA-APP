@@ -49,6 +49,27 @@ Route::get('/fix-user-columns', function () {
     }
 });
 
+// Ruta temporal para crear DB de Chatwoot
+Route::get('/admin/create-chatwoot-db', function () {
+    try {
+        $pdo = new PDO(
+            'pgsql:host=postgres.railway.internal;port=5432;dbname=railway',
+            'postgres',
+            'dzMmfzVhEDLgeRIAvRlWofFnagOyItjs',
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        $stmt = $pdo->query("SELECT 1 FROM pg_database WHERE datname = 'chatwoot'");
+        if ($stmt->fetchColumn()) {
+            return response()->json(['status' => 'exists', 'message' => 'Database chatwoot already exists']);
+        }
+        
+        $pdo->exec("CREATE DATABASE chatwoot");
+        return response()->json(['status' => 'created', 'message' => 'Database chatwoot created successfully']);
+    } catch (PDOException $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});
 
 Route::get('/', function () {
     if (Auth::check()) {
