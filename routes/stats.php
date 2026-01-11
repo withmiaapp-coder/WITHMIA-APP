@@ -6,7 +6,7 @@ use App\Models\Company;
 use App\Models\KnowledgeDocument;
 use Illuminate\Support\Facades\DB;
 
-Route::get('/api/admin/stats', function () {
+Route::get('/admin/stats', function () {
     try {
         // Verificar conexión a BD
         DB::connection()->getPdo();
