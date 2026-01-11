@@ -1,10 +1,10 @@
 <?php
 // Script para crear la base de datos chatwoot en Railway PostgreSQL
 
-$host = getenv('PGHOST') ?: 'postgres.railway.internal';
-$port = getenv('PGPORT') ?: '5432';
-$user = getenv('PGUSER') ?: 'postgres';
-$password = getenv('PGPASSWORD');
+$host = 'postgres.railway.internal';
+$port = '5432';
+$user = 'postgres';
+$password = 'dzMmfzVhEDLgeRIAvRlWofFnagOyItjs';
 $database = 'railway'; // Conectar a la DB por defecto primero
 
 echo "Conectando a PostgreSQL...\n";
