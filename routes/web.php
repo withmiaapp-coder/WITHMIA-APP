@@ -51,16 +51,6 @@ Route::get('/fix-user-columns', function () {
 
 
 Route::get('/', function () {
-    // Si no hay sesión, mostrar mensaje de bienvenida en producción
-    if (!Auth::check() && env('APP_ENV') === 'production') {
-        return response()->json([
-            'app' => 'WithMIA',
-            'status' => 'running',
-            'environment' => env('APP_ENV'),
-            'message' => 'Application is running successfully'
-        ]);
-    }
-    
     if (Auth::check()) {
         // Verificar si el usuario ha completado el onboarding
         $user = Auth::user();
@@ -70,7 +60,7 @@ Route::get('/', function () {
         }
         return redirect('/onboarding');
     }
-    return redirect('/login')->with('logout', true);
+    return redirect('/login');
 });
 
 // Login route - redirect if already authenticated
