@@ -71,6 +71,30 @@ Route::get('/admin/create-chatwoot-db', function () {
     }
 });
 
+// Ruta temporal para habilitar pgvector en Chatwoot
+Route::get('/admin/enable-pgvector', function () {
+    try {
+        $pdo = new PDO(
+            'pgsql:host=postgres.railway.internal;port=5432;dbname=chatwoot',
+            'postgres',
+            'dzMmfzVhEDLgeRIAvRlWofFnagOyItjs',
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        // Verificar si la extensión ya existe
+        $stmt = $pdo->query("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
+        if ($stmt->fetchColumn()) {
+            return response()->json(['status' => 'exists', 'message' => 'Extension vector already enabled']);
+        }
+        
+        // Habilitar la extensión
+        $pdo->exec("CREATE EXTENSION vector");
+        return response()->json(['status' => 'created', 'message' => 'Extension vector enabled successfully']);
+    } catch (PDOException $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});
+
 Route::get('/', function () {
     if (Auth::check()) {
         // Verificar si el usuario ha completado el onboarding
