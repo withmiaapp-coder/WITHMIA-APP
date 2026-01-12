@@ -499,7 +499,16 @@ class ChatwootController extends Controller
     }
 
     /**
-     * Enviar mensaje a una conversación - CON VALIDACIÓN DE SEGURIDAD
+     * Enviar mensaje a una conversación - VIA EVOLUTION API (SIN DUPLICADOS)
+     * 
+     * FLUJO CORRECTO:
+     * 1. App → Evolution API → WhatsApp
+     * 2. Evolution → Chatwoot (un solo mensaje con source_id)
+     * 
+     * ANTES (con duplicados):
+     * 1. App → Chatwoot API (mensaje sin source_id)
+     * 2. App → Evolution → WhatsApp
+     * 3. Evolution → Chatwoot (mensaje CON source_id) = DUPLICADO
      */
     public function sendMessage(Request $request, $id)
     {
@@ -551,41 +560,59 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 3: Si pasa la validación, guardar mensaje en Chatwoot
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages', [
-                'content' => $request->input('content'),
-                'message_type' => $request->input('message_type', 'outgoing'),
-                'private' => $request->input('private', false)
-            ]);
+            // PASO 3: Obtener el teléfono del contacto para enviar via Evolution
+            $contactPhone = $conversation['meta']['sender']['phone_number'] ?? null;
+            $contactIdentifier = $conversation['meta']['sender']['identifier'] ?? null;
+            
+            // Intentar obtener el teléfono del identifier si no está en phone_number
+            if (!$contactPhone && $contactIdentifier) {
+                // Formato: 56975235071@s.whatsapp.net o similar
+                $contactPhone = preg_replace('/@.*$/', '', $contactIdentifier);
+            }
 
-            if ($response->successful()) {
-                $messageData = $response->json();
+            if (!$contactPhone) {
+                Log::error('No se pudo obtener teléfono del contacto', [
+                    'conversation_id' => $id,
+                    'meta' => $conversation['meta'] ?? null
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo obtener el teléfono del contacto'
+                ], 400);
+            }
 
-                Log::info('Mensaje enviado exitosamente', [
+            // PASO 4: Enviar DIRECTAMENTE a Evolution API (Evolution guardará en Chatwoot)
+            $messageContent = $request->input('content');
+            $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
+
+            if ($evolutionResult) {
+                Log::info('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id,
-                    'message_id' => $messageData['id'] ?? null
+                    'phone' => $contactPhone
                 ]);
 
-                // Enviar a WhatsApp vía Evolution API
-                $contactPhone = $conversation['meta']['sender']['phone_number'] ?? null;
-                if ($contactPhone) {
-                    $this->sendToEvolutionAPI($contactPhone, $request->input('content'));
-                }
-
+                // Devolver respuesta optimista - Evolution guardará el mensaje real en Chatwoot
                 return response()->json([
                     'success' => true,
-                    'payload' => $messageData
+                    'payload' => [
+                        'id' => 'pending-' . time(), // ID temporal
+                        'content' => $messageContent,
+                        'created_at' => now()->toISOString(),
+                        'message_type' => 1, // outgoing
+                        'status' => 'sent',
+                        'sender' => [
+                            'name' => auth()->user()->name ?? 'Agent'
+                        ]
+                    ]
                 ]);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'No se pudo enviar el mensaje'
-            ], $response->status());
+                'message' => 'No se pudo enviar el mensaje a WhatsApp'
+            ], 500);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Send Message Error: ' . $e->getMessage(), [

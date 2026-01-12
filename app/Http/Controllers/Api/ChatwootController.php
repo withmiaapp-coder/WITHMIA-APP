@@ -561,7 +561,16 @@ class ChatwootController extends Controller
     }
 
     /**
-     * Enviar mensaje a una conversación - CON VALIDACIÓN DE SEGURIDAD
+     * Enviar mensaje a una conversación - VIA EVOLUTION API (SIN DUPLICADOS)
+     * 
+     * FLUJO CORRECTO:
+     * 1. App → Evolution API → WhatsApp
+     * 2. Evolution → Chatwoot (un solo mensaje con source_id)
+     * 
+     * ANTES (con duplicados):
+     * 1. App → Chatwoot API (mensaje sin source_id)
+     * 2. App → Evolution → WhatsApp
+     * 3. Evolution → Chatwoot (mensaje CON source_id) = DUPLICADO
      */
     public function sendMessage(Request $request, $id)
     {
@@ -613,76 +622,64 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 3: Enviar SOLO a Evolution API (evita duplicación)
-            // Evolution enviará webhook a Chatwoot con source_id correcto
+            // PASO 3: Obtener el teléfono del contacto para enviar via Evolution
             $contactPhone = $conversation['meta']['sender']['phone_number'] ?? null;
+            $contactIdentifier = $conversation['meta']['sender']['identifier'] ?? null;
             
+            // Intentar obtener el teléfono del identifier si no está en phone_number
+            if (!$contactPhone && $contactIdentifier) {
+                // Formato: 56975235071@s.whatsapp.net o similar
+                $contactPhone = preg_replace('/@.*$/', '', $contactIdentifier);
+            }
+
             if (!$contactPhone) {
+                Log::error('No se pudo obtener teléfono del contacto', [
+                    'conversation_id' => $id,
+                    'meta' => $conversation['meta'] ?? null
+                ]);
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'No se encontró número de teléfono del contacto'
+                    'message' => 'No se pudo obtener el teléfono del contacto'
                 ], 400);
             }
 
-            // Enviar a WhatsApp vía Evolution API
-            $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $request->input('content'));
-            
-            if (!$evolutionResult) {
+            // PASO 4: Enviar DIRECTAMENTE a Evolution API (Evolution guardará en Chatwoot)
+            // ⚡ NO guardar en Chatwoot aquí - Evolution lo hará automáticamente
+            $messageContent = $request->input('content');
+            $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
+
+            if ($evolutionResult) {
+                Log::info('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
+                    'user_id' => $this->userId,
+                    'conversation_id' => $id,
+                    'phone' => $contactPhone
+                ]);
+
+                // 🗑️ INVALIDAR CACHÉ
+                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
+                Cache::forget($cacheKey);
+
+                // Devolver respuesta optimista - Evolution guardará el mensaje real en Chatwoot
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Error al enviar mensaje a WhatsApp'
-                ], 500);
-            }
-
-            Log::info('✅ Mensaje enviado a WhatsApp - Webhook creará entrada en Chatwoot', [
-                'user_id' => $this->userId,
-                'conversation_id' => $id,
-                'phone' => $contactPhone
-            ]);
-
-            // ✅ NUEVO: También guardar mensaje en Chatwoot directamente
-            try {
-                $chatwootResponse = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->post(
-                    "{$this->chatwootBaseUrl}/api/v1/accounts/{$this->accountId}/conversations/{$id}/messages",
-                    [
-                        'content' => $request->input('content'),
-                        'message_type' => 'outgoing',
-                        'private' => false
+                    'success' => true,
+                    'payload' => [
+                        'id' => 'pending-' . time(), // ID temporal
+                        'content' => $messageContent,
+                        'created_at' => now()->toISOString(),
+                        'message_type' => 1, // outgoing
+                        'status' => 'sent',
+                        'sender' => [
+                            'name' => auth()->user()->name ?? 'Agent'
+                        ]
                     ]
-                );
-
-                if ($chatwootResponse->successful()) {
-                    $chatwootMessage = $chatwootResponse->json();
-                    Log::info('✅ Mensaje también guardado en Chatwoot', [
-                        'message_id' => $chatwootMessage['id'] ?? 'unknown'
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::warning('⚠️ No se pudo guardar en Chatwoot: ' . $e->getMessage());
+                ]);
             }
 
-            // 🗑️ INVALIDAR CACHÉ: Limpiar caché de conversaciones para este usuario
-            $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-            Cache::forget($cacheKey);
-            
-            Log::info('🗑️ Caché invalidado después de enviar mensaje', [
-                'cache_key' => $cacheKey,
-                'user_id' => $this->userId
-            ]);
-
-            // Retornar éxito inmediato
             return response()->json([
-                'success' => true,
-                'payload' => [
-                    'id' => time(),
-                    'content' => $request->input('content'),
-                    'message_type' => 1,
-                    'created_at' => now()->toISOString()
-                ]
-            ]);
+                'success' => false,
+                'message' => 'No se pudo enviar el mensaje a WhatsApp'
+            ], 500);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Send Message Error: ' . $e->getMessage(), [
