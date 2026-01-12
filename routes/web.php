@@ -266,6 +266,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // WEBHOOKS MANAGEMENT (Enterprise)
     Route::get('/api/chatwoot/webhooks', [App\Http\Controllers\ChatwootEnterpriseController::class, 'getWebhooks']);
     Route::post('/api/chatwoot/webhooks', [App\Http\Controllers\ChatwootEnterpriseController::class, 'createWebhook']);
+    Route::delete('/api/chatwoot/webhooks/{webhookId}', [App\Http\Controllers\ChatwootEnterpriseController::class, 'deleteWebhook']);
     
 });
 // ============================================================================

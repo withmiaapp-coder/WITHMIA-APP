@@ -453,9 +453,22 @@ const ConversationsInterface: React.FC = () => {
 
       processedEventsRef.current.add(eventId);
       
-      // ⚠️ NO FILTRAR NADA - Dejar que Laravel maneje los filtros
+      // 🧪 FILTRAR MENSAJES DE PRUEBA - No crear conversaciones falsas
+      if (event?.message?.test === true || event?.test === true) {
+        console.log('🧪 Mensaje de PRUEBA detectado - ignorando para evitar conversaciones falsas');
+        return;
+      }
+      
+      // 🔢 Verificar que conversation_id sea válido (no IDs de prueba como 999)
+      const convId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;
+      if (!convId || convId <= 0) {
+        console.log('⚠️ conversation_id inválido:', convId, '- ignorando');
+        return;
+      }
+      
+      // ⚠️ NO FILTRAR NADA MÁS - Dejar que Laravel maneje los filtros
       // El backend ya filtra mensajes fromMe, aquí solo procesamos
-      console.log(' ✅ Procesando evento normalmente (filtros en backend)');
+      console.log('✅ Procesando evento normalmente (filtros en backend)');
 
       // Obtener el conversation_id del evento
       const conversationId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;

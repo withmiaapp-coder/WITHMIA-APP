@@ -92,6 +92,40 @@ Route::get('/test-laravel-broadcast/{inboxId}', function ($inboxId) {
     }
 });
 
+// Test endpoint para simular mensaje REAL (sin flag test) - para debugging
+Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId, $conversationId) {
+    try {
+        // Simular un mensaje real de Chatwoot
+        broadcast(new \App\Events\NewMessageReceived(
+            [
+                'id' => rand(10000, 99999),
+                'content' => '🔔 Mensaje de prueba REAL ' . now()->format('H:i:s'),
+                'message_type' => 0, // incoming
+                'created_at' => now()->toIso8601String(),
+                'sender' => [
+                    'id' => 1,
+                    'name' => 'Test Contact',
+                    'type' => 'contact'
+                ]
+            ],
+            (int)$conversationId,
+            (int)$inboxId,
+            1
+        ));
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => "Broadcast REAL enviado a inbox.{$inboxId} para conversación {$conversationId}",
+            'broadcast_driver' => config('broadcasting.default'),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
+
 // Habilitar autenticación de canales de broadcasting
 
 // API routes go here - using dedicated API controller without auth

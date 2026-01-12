@@ -639,4 +639,160 @@ class ChatwootEnterpriseController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener webhooks configurados en Chatwoot
+     */
+    public function getWebhooks(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $company = $user->companies()->first();
+
+            if (!$company || !$company->chatwoot_account_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Empresa no tiene cuenta de Chatwoot'
+                ], 400);
+            }
+
+            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+            // Usar token del usuario (tiene permisos de agente/admin)
+            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks");
+
+            return response()->json([
+                'success' => true,
+                'webhooks' => $response->json()['payload'] ?? $response->json(),
+                'debug' => [
+                    'account_id' => $company->chatwoot_account_id,
+                    'user_has_token' => !empty($user->chatwoot_agent_token)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear webhook en Chatwoot para recibir eventos en tiempo real
+     */
+    public function createWebhook(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $company = $user->companies()->first();
+
+            if (!$company || !$company->chatwoot_account_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Empresa no tiene cuenta de Chatwoot'
+                ], 400);
+            }
+
+            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+            // Usar token del usuario (tiene permisos de agente/admin)
+            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+            
+            // URL del webhook de Laravel (donde Chatwoot enviará los eventos)
+            $appUrl = config('app.url', 'https://app.withmia.com');
+            $webhookUrl = $request->input('url', "{$appUrl}/api/chatwoot/webhook");
+
+            // Eventos que queremos recibir
+            $subscriptions = $request->input('subscriptions', [
+                'message_created',
+                'message_updated',
+                'conversation_created',
+                'conversation_updated',
+                'conversation_status_changed'
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks", [
+                'webhook' => [
+                    'url' => $webhookUrl,
+                    'subscriptions' => $subscriptions
+                ]
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error creando webhook: ' . $response->body(),
+                    'status' => $response->status()
+                ], $response->status());
+            }
+
+            Log::info('✅ Webhook de Chatwoot creado exitosamente', [
+                'company_id' => $company->id,
+                'webhook_url' => $webhookUrl,
+                'subscriptions' => $subscriptions
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'webhook' => $response->json(),
+                'message' => 'Webhook creado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar webhook de Chatwoot
+     */
+    public function deleteWebhook(Request $request, $webhookId)
+    {
+        try {
+            $user = auth()->user();
+            $company = $user->companies()->first();
+
+            if (!$company || !$company->chatwoot_account_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Empresa no tiene cuenta de Chatwoot'
+                ], 400);
+            }
+
+            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+            // Usar token del usuario
+            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->delete("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks/{$webhookId}");
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error eliminando webhook: ' . $response->body()
+                ], $response->status());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Webhook eliminado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

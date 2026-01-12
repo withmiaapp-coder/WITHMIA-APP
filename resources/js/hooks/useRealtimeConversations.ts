@@ -57,6 +57,20 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
         // Listener: Nuevo mensaje recibido
         channel.listen('.message.received', (event: any) => {
           console.log('📩 Nuevo mensaje recibido:', event);
+          
+          // 🧪 FILTRAR MENSAJES DE PRUEBA
+          if (event?.message?.test === true || event?.test === true) {
+            console.log('🧪 [WS] Mensaje de PRUEBA detectado - ignorando');
+            return;
+          }
+          
+          // 🔢 Verificar conversation_id válido
+          const convId = event?.conversation_id || event?.conversation?.id;
+          if (!convId || convId <= 0) {
+            console.log('⚠️ [WS] conversation_id inválido:', convId, '- ignorando');
+            return;
+          }
+          
           setLastEventTime(new Date());
 
           if (config.onNewMessage) {
