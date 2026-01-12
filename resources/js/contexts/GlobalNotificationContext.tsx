@@ -36,7 +36,8 @@ interface GlobalNotificationContextType {
   updateSettings: (settings: Partial<NotificationSettings>) => void;
   playNotificationSound: () => void;
   removeNotification: (id: string) => void;
-  removeNotificationsByConversation: (conversationId: number) => void;  showDesktopNotification: (title: string, body: string) => void;
+  removeNotificationsByConversation: (conversationId: number) => void;
+  showDesktopNotification: (title: string, body: string) => void;
 }
 
 const GlobalNotificationContext = createContext<GlobalNotificationContextType | undefined>(undefined);
@@ -197,6 +198,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     setNotifications([]);
     setUnreadCount(0);
     localStorage.removeItem('globalNotifications');
+  }, []);
 
   // Remover notificación por ID
   const removeNotification = useCallback((id: string) => {
