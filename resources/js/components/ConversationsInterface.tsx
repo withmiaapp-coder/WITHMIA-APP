@@ -604,9 +604,13 @@ const ConversationsInterface: React.FC = () => {
       }
 
       // Si el mensaje es para la conversación activa, agregar mensaje en tiempo real
+      // ⚠️ SOLO AGREGAR MENSAJES INCOMING (no outgoing que ya se agregaron al enviar)
       const currentActiveConv = activeConversationRef.current;
-      if (currentActiveConv && currentActiveConv.id === conversationId) {
-        console.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
+      const msgType = event.message?.message_type;
+      const isOutgoingMessage = msgType === 1 || msgType === 'outgoing';
+      
+      if (currentActiveConv && currentActiveConv.id === conversationId && !isOutgoingMessage) {
+        console.log("💬 Mensaje INCOMING para conversación activa - Agregando en tiempo real...");
         try {
           // Construir el nuevo mensaje desde el evento
           const newMessage = {
@@ -646,6 +650,8 @@ const ConversationsInterface: React.FC = () => {
         } catch (error) {
           console.error('❌ Error agregando mensaje al chat:', error);
         }
+      } else if (isOutgoingMessage) {
+        console.log('⏭️ Mensaje OUTGOING ignorado (ya se agregó al enviar)');
       }
     }
   });
