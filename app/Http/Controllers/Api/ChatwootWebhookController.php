@@ -51,25 +51,36 @@ class ChatwootWebhookController extends Controller
             }
         }
 
-        // ✅ Disparar eventos de Broadcasting en tiempo real
+        // ✅ Disparar eventos de Broadcasting en tiempo real (OPTIMIZADO - ambos sincronizados)
         try {
             if ($event === 'message_created' && $inboxId && $accountId) {
-                // Broadcast mensaje nuevo (sin toOthers porque viene de webhook externo)
+                $conversationId = $data['conversation']['id'] ?? null;
+                
+                // 1️⃣ Broadcast mensaje nuevo al chat
                 $messageEvent = new NewMessageReceived(
                     $data,
-                    $data['conversation']['id'] ?? null,
+                    $conversationId,
                     $inboxId,
                     $accountId
                 );
                 broadcast($messageEvent);
 
-                Log::info('📤 NewMessageReceived event broadcasted', [
+                // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
+                $convEvent = new ConversationUpdated(
+                    $data['conversation'] ?? $data,
+                    $inboxId,
+                    $accountId
+                );
+                broadcast($convEvent);
+
+                Log::info('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
                     'inbox_id' => $inboxId,
-                    'conversation_id' => $data['conversation']['id'] ?? null,
+                    'conversation_id' => $conversationId,
                     'message_content' => substr($data['content'] ?? '', 0, 50)
                 ]);
             }
 
+            // Solo para eventos que NO son message_created (evitar duplicado)
             if (in_array($event, ['conversation_updated', 'conversation_status_changed', 'conversation_created']) && $inboxId && $accountId) {
                 // Broadcast actualización de conversación
                 $convEvent = new ConversationUpdated(
