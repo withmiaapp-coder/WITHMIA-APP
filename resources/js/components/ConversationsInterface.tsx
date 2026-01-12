@@ -743,16 +743,53 @@ const ConversationsInterface: React.FC = () => {
           _setActiveConversation((prev: any) => {
             if (!prev || prev.id !== conversationId) return prev;
             
-            // Verificar si el mensaje ya existe (evitar duplicados por ID o contenido+timestamp)
+            // Verificar si el mensaje ya existe (evitar duplicados)
             const existingMessages = prev.messages || [];
-            const messageExists = existingMessages.some((m: any) => 
-              m.id === newMessage.id || 
-              (m.content === newMessage.content && m.id?.toString().startsWith('temp-'))
-            );
+            
+            // Buscar duplicado por:
+            // 1. Mismo ID numérico
+            // 2. Mensaje optimista/pending con mismo contenido (para mensajes outgoing recientes)
+            const messageExists = existingMessages.some((m: any) => {
+              // Duplicado exacto por ID
+              if (m.id === newMessage.id) return true;
+              
+              // Para mensajes outgoing, verificar si hay un mensaje optimista/pending con mismo contenido
+              if (newMessage.message_type === 1 || newMessage.sender === 'agent') {
+                const isOptimisticOrPending = (
+                  m._isOptimistic || 
+                  m.status === 'sending' || 
+                  m.status === 'sent' ||
+                  String(m.id).startsWith('temp-') || 
+                  String(m.id).startsWith('pending-')
+                );
+                
+                if (isOptimisticOrPending && m.content === newMessage.content) {
+                  console.log('🔄 Detectado mensaje duplicado (optimista→real):', m.id, '→', newMessage.id);
+                  return true;
+                }
+              }
+              
+              return false;
+            });
             
             if (messageExists) {
               console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
-              return prev;
+              // En lugar de ignorar, reemplazar el mensaje optimista con el real
+              return {
+                ...prev,
+                messages: existingMessages.map((m: any) => {
+                  // Reemplazar mensaje optimista/pending con el mensaje real
+                  if (
+                    (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) &&
+                    m.content === newMessage.content &&
+                    (newMessage.message_type === 1 || newMessage.sender === 'agent')
+                  ) {
+                    console.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
+                    return { ...newMessage, _isOptimistic: false };
+                  }
+                  return m;
+                })
+              };
             }
             
             console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
@@ -784,20 +821,37 @@ const ConversationsInterface: React.FC = () => {
     const allMessages = activeConversation.messages || [];
     
     // Obtener contenidos de mensajes reales (no optimistas)
+    // Un mensaje es "real" si tiene ID numérico y NO tiene flags optimistas
     const realMessageContents = new Set(
       allMessages
-        .filter((m: any) => !m._isOptimistic && typeof m.id === 'number')
+        .filter((m: any) => {
+          const isReal = (
+            typeof m.id === 'number' &&
+            !m._isOptimistic &&
+            !String(m.id).startsWith('temp-') &&
+            !String(m.id).startsWith('pending-')
+          );
+          return isReal;
+        })
         .map((m: any) => m.content?.trim())
     );
     
-    // Filtrar: excluir mensajes optimistas cuyo contenido ya existe en mensajes reales
+    // Filtrar: excluir mensajes optimistas/pending cuyo contenido ya existe en mensajes reales
     const deduplicatedMessages = allMessages.filter((m: any) => {
-      // Si es mensaje real, siempre incluir
-      if (!m._isOptimistic && typeof m.id === 'number') {
+      // Si es mensaje real (ID numérico, no flags), siempre incluir (excepto privados)
+      const isRealMessage = (
+        typeof m.id === 'number' &&
+        !m._isOptimistic &&
+        !String(m.id).startsWith('temp-') &&
+        !String(m.id).startsWith('pending-')
+      );
+      
+      if (isRealMessage) {
         return !m.private;
       }
-      // Si es optimista, solo incluir si su contenido NO existe ya en mensajes reales
-      if (m._isOptimistic) {
+      
+      // Si es optimista o pending, solo incluir si su contenido NO existe ya en mensajes reales
+      if (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) {
         const contentExists = realMessageContents.has(m.content?.trim());
         if (contentExists) {
           console.log('🔄 Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
