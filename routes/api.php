@@ -29,7 +29,7 @@ Route::get('/health', function () {
     }
 });
 
-// 🔧 DEBUG: Test broadcast endpoint
+// 🔧 DEBUG: Test broadcast endpoint with detailed Pusher response
 Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
     try {
         $testMessage = [
@@ -42,33 +42,40 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
             'created_at' => now()->timestamp,
         ];
         
-        Log::info('🧪 TEST: Broadcasting test message', ['inbox_id' => $inboxId]);
-        
-        $event = new NewMessageReceived(
-            $testMessage,
-            1,
-            (int) $inboxId,
-            1
+        // Intentar broadcast directo con Pusher para ver errores
+        $pusher = new \Pusher\Pusher(
+            config('broadcasting.connections.pusher.key'),
+            config('broadcasting.connections.pusher.secret'),
+            config('broadcasting.connections.pusher.app_id'),
+            [
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+                'useTLS' => true,
+            ]
         );
         
-        broadcast($event);
+        $channelName = 'private-inbox.' . $inboxId;
+        $eventName = 'message.received';
         
-        Log::info('🧪 TEST: Broadcast sent successfully', ['inbox_id' => $inboxId]);
+        $result = $pusher->trigger($channelName, $eventName, [
+            'message' => $testMessage,
+            'conversation_id' => 1,
+            'inbox_id' => (int) $inboxId,
+            'account_id' => 1,
+            'timestamp' => now()->toIso8601String(),
+        ]);
         
         return response()->json([
             'status' => 'success',
-            'message' => 'Broadcast event sent',
-            'channel' => 'private-inbox.' . $inboxId,
+            'message' => 'Broadcast sent directly via Pusher',
+            'channel' => $channelName,
+            'event' => $eventName,
+            'pusher_result' => $result,
             'broadcast_driver' => config('broadcasting.default'),
             'pusher_key' => config('broadcasting.connections.pusher.key'),
             'pusher_cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            'pusher_app_id' => config('broadcasting.connections.pusher.app_id'),
         ]);
     } catch (\Exception $e) {
-        Log::error('🧪 TEST: Broadcast failed', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
