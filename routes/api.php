@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
+use App\Events\NewMessageReceived;
 
 // Health check endpoint for Railway
 Route::get('/health', function () {
@@ -24,6 +26,54 @@ Route::get('/health', function () {
             'timestamp' => now()->toIso8601String(),
             'error' => $e->getMessage()
         ], 503);
+    }
+});
+
+// 🔧 DEBUG: Test broadcast endpoint
+Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
+    try {
+        $testMessage = [
+            'id' => 9999,
+            'content' => 'Test broadcast message at ' . now()->toIso8601String(),
+            'conversation_id' => 1,
+            'inbox_id' => (int) $inboxId,
+            'account_id' => 1,
+            'message_type' => 0,
+            'created_at' => now()->timestamp,
+        ];
+        
+        Log::info('🧪 TEST: Broadcasting test message', ['inbox_id' => $inboxId]);
+        
+        $event = new NewMessageReceived(
+            $testMessage,
+            1,
+            (int) $inboxId,
+            1
+        );
+        
+        broadcast($event);
+        
+        Log::info('🧪 TEST: Broadcast sent successfully', ['inbox_id' => $inboxId]);
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Broadcast event sent',
+            'channel' => 'private-inbox.' . $inboxId,
+            'broadcast_driver' => config('broadcasting.default'),
+            'pusher_key' => config('broadcasting.connections.pusher.key'),
+            'pusher_cluster' => config('broadcasting.connections.pusher.options.cluster'),
+        ]);
+    } catch (\Exception $e) {
+        Log::error('🧪 TEST: Broadcast failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
     }
 });
 
