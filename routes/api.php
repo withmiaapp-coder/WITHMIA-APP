@@ -180,28 +180,12 @@ Route::get('/recreate-chatwoot-webhook', function () {
         $appUrl = config('app.url', 'https://app.withmia.com');
         $webhookUrl = "{$appUrl}/api/chatwoot/webhook";
         
-        // 1. Obtener webhooks existentes
-        $existingResponse = \Illuminate\Support\Facades\Http::withHeaders([
-            'api_access_token' => $apiKey
-        ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
-        
-        $webhooks = $existingResponse->json()['payload']['webhooks'] ?? $existingResponse->json()['webhooks'] ?? [];
-        
-        // 2. Eliminar TODOS los webhooks existentes
-        $deleted = [];
-        foreach ($webhooks as $wh) {
-            if (isset($wh['id'])) {
-                $deleteResponse = \Illuminate\Support\Facades\Http::withHeaders([
-                    'api_access_token' => $apiKey
-                ])->delete("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks/{$wh['id']}");
-                $deleted[] = ['id' => $wh['id'], 'status' => $deleteResponse->status()];
-            }
-        }
-        
-        // 3. Resetear la secuencia de IDs en la base de datos de Chatwoot
-        $chatwootDbUrl = env('CHATWOOT_DATABASE_URL', 'postgresql://postgres:dzMmfzVhEDLgeRIAvRlWofFnagOyItjs@postgres.railway.internal:5432/chatwoot');
+        // 1. Conectar a la base de datos de Chatwoot y limpiar webhooks + resetear secuencia
         $sequenceReset = false;
+        $dbError = null;
         try {
+            // Usar la URL de Railway interna o externa según disponibilidad
+            $chatwootDbUrl = env('CHATWOOT_DATABASE_URL', 'postgresql://postgres:dzMmfzVhEDLgeRIAvRlWofFnagOyItjs@postgres.railway.internal:5432/chatwoot');
             $parsed = parse_url($chatwootDbUrl);
             $chatwootPdo = new \PDO(
                 "pgsql:host={$parsed['host']};port={$parsed['port']};dbname=" . ltrim($parsed['path'], '/'),
@@ -213,10 +197,25 @@ Route::get('/recreate-chatwoot-webhook', function () {
             $chatwootPdo->exec("ALTER SEQUENCE webhooks_id_seq RESTART WITH 1");
             $sequenceReset = true;
         } catch (\Exception $e) {
-            $sequenceReset = 'error: ' . $e->getMessage();
+            $dbError = $e->getMessage();
+            
+            // Fallback: Eliminar via API si no podemos acceder a la DB directamente
+            $existingResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
+            
+            $webhooks = $existingResponse->json()['payload']['webhooks'] ?? $existingResponse->json()['webhooks'] ?? [];
+            
+            foreach ($webhooks as $wh) {
+                if (isset($wh['id'])) {
+                    \Illuminate\Support\Facades\Http::withHeaders([
+                        'api_access_token' => $apiKey
+                    ])->delete("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks/{$wh['id']}");
+                }
+            }
         }
         
-        // 4. Crear nuevo webhook (ahora será ID=1)
+        // 2. Crear nuevo webhook (será ID=1 si el reset funcionó)
         $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
             'api_access_token' => $apiKey,
             'Content-Type' => 'application/json'
@@ -228,9 +227,9 @@ Route::get('/recreate-chatwoot-webhook', function () {
         ]);
         
         return response()->json([
-            'status' => $createResponse->successful() ? 'recreated_with_id_1' : 'error',
-            'deleted_webhooks' => $deleted,
+            'status' => $createResponse->successful() ? ($sequenceReset ? 'recreated_with_id_1' : 'recreated_no_reset') : 'error',
             'sequence_reset' => $sequenceReset,
+            'db_error' => $dbError,
             'new_webhook' => $createResponse->json(),
             'webhook_url' => $webhookUrl
         ]);
