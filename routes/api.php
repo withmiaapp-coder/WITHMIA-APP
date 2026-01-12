@@ -168,7 +168,7 @@ Route::get('/setup-chatwoot-webhook', function () {
     }
 });
 
-// 🔧 RECREAR webhook de Chatwoot (elimina el viejo y crea uno nuevo)
+// 🔧 RECREAR webhook de Chatwoot con ID=1 (elimina todos, resetea secuencia, crea nuevo)
 Route::get('/recreate-chatwoot-webhook', function () {
     try {
         $user = \App\Models\User::first();
@@ -187,7 +187,7 @@ Route::get('/recreate-chatwoot-webhook', function () {
         
         $webhooks = $existingResponse->json()['payload']['webhooks'] ?? $existingResponse->json()['webhooks'] ?? [];
         
-        // 2. Eliminar webhooks existentes
+        // 2. Eliminar TODOS los webhooks existentes
         $deleted = [];
         foreach ($webhooks as $wh) {
             if (isset($wh['id'])) {
@@ -198,7 +198,25 @@ Route::get('/recreate-chatwoot-webhook', function () {
             }
         }
         
-        // 3. Crear nuevo webhook
+        // 3. Resetear la secuencia de IDs en la base de datos de Chatwoot
+        $chatwootDbUrl = env('CHATWOOT_DATABASE_URL', 'postgresql://postgres:dzMmfzVhEDLgeRIAvRlWofFnagOyItjs@postgres.railway.internal:5432/chatwoot');
+        $sequenceReset = false;
+        try {
+            $parsed = parse_url($chatwootDbUrl);
+            $chatwootPdo = new \PDO(
+                "pgsql:host={$parsed['host']};port={$parsed['port']};dbname=" . ltrim($parsed['path'], '/'),
+                $parsed['user'],
+                $parsed['pass']
+            );
+            // Eliminar todos los webhooks directamente y resetear secuencia
+            $chatwootPdo->exec("DELETE FROM webhooks");
+            $chatwootPdo->exec("ALTER SEQUENCE webhooks_id_seq RESTART WITH 1");
+            $sequenceReset = true;
+        } catch (\Exception $e) {
+            $sequenceReset = 'error: ' . $e->getMessage();
+        }
+        
+        // 4. Crear nuevo webhook (ahora será ID=1)
         $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
             'api_access_token' => $apiKey,
             'Content-Type' => 'application/json'
@@ -210,8 +228,9 @@ Route::get('/recreate-chatwoot-webhook', function () {
         ]);
         
         return response()->json([
-            'status' => $createResponse->successful() ? 'recreated' : 'error',
+            'status' => $createResponse->successful() ? 'recreated_with_id_1' : 'error',
             'deleted_webhooks' => $deleted,
+            'sequence_reset' => $sequenceReset,
             'new_webhook' => $createResponse->json(),
             'webhook_url' => $webhookUrl
         ]);
