@@ -499,38 +499,53 @@ export const useConversations = () => {
           status: msg.status || 'sent',
           attachments: msg.attachments || [],
           sender_name: msg.sender?.name || 'Usuario',
+          source_id: msg.source_id || null, // ⚡ Guardar source_id para deduplicación
           isOptimistic: false, // Mensajes del servidor NO son optimistas
           _isOptimistic: false // Flag adicional para compatibilidad
         }));
 
-        // ⚡ DEDUPLICACIÓN MEJORADA: Detectar mensajes con mismo contenido y timestamp cercano
-        // Esto previene duplicados de Evolution-Chatwoot (mensaje sin source_id + mensaje con WAID)
-        const deduplicatedMessages: any[] = [];
-        const seenContentKeys = new Map<string, any>(); // key: "content|approxTimestamp" -> mensaje
+        // ⚡ DEDUPLICACIÓN INTELIGENTE: Solo filtrar duplicados de Evolution-Chatwoot
+        // Criterio: Mismo contenido + timestamps cercanos + UNO tiene source_id y OTRO no
+        // Esto NO afecta mensajes legítimos repetidos por el usuario
+        const messagesById = new Map(chatwootMessages.map((m: any) => [m.id, m]));
+        const duplicateIds = new Set<number>();
         
+        // Agrupar mensajes por contenido y ventana de tiempo
+        const contentGroups = new Map<string, any[]>();
         for (const msg of chatwootMessages) {
           const msgTimestamp = typeof msg.timestamp === 'string' 
             ? new Date(msg.timestamp).getTime() 
             : msg.timestamp * 1000;
-          // Redondear timestamp a ventana de 5 segundos para detectar duplicados cercanos
-          const approxTimestamp = Math.floor(msgTimestamp / 5000);
-          const contentKey = `${msg.content?.trim()}|${approxTimestamp}|${msg.message_type}`;
+          const approxTimestamp = Math.floor(msgTimestamp / 3000); // Ventana de 3 segundos
+          const groupKey = `${msg.content?.trim()}|${approxTimestamp}|${msg.message_type}`;
           
-          if (seenContentKeys.has(contentKey)) {
-            // Duplicado detectado - mantener el que tiene ID menor (el original)
-            const existing = seenContentKeys.get(contentKey);
-            if (msg.id < existing.id) {
-              // Este mensaje es más antiguo, reemplazar
-              seenContentKeys.set(contentKey, msg);
+          if (!contentGroups.has(groupKey)) {
+            contentGroups.set(groupKey, []);
+          }
+          contentGroups.get(groupKey)!.push(msg);
+        }
+        
+        // Detectar duplicados de Evolution: grupos con 2+ mensajes donde uno tiene source_id y otro no
+        for (const [key, group] of contentGroups) {
+          if (group.length >= 2) {
+            const withSourceId = group.filter((m: any) => m.source_id && m.source_id.startsWith('WAID:'));
+            const withoutSourceId = group.filter((m: any) => !m.source_id);
+            
+            // Solo es duplicado de Evolution si hay exactamente un par: uno con WAID y uno sin
+            if (withSourceId.length >= 1 && withoutSourceId.length >= 1) {
+              // Mantener el mensaje SIN source_id (el original de la app) y filtrar el de Evolution
+              for (const dupMsg of withSourceId) {
+                duplicateIds.add(dupMsg.id);
+                console.log('🔄 Duplicado Evolution filtrado:', dupMsg.content?.substring(0, 30), 'ID:', dupMsg.id);
+              }
             }
-            console.log('🔄 Mensaje duplicado filtrado:', msg.content?.substring(0, 30), 'ID:', msg.id);
-          } else {
-            seenContentKeys.set(contentKey, msg);
+            // Si ambos tienen source_id o ambos no tienen, son mensajes legítimos - NO filtrar
           }
         }
         
-        const uniqueMessages = Array.from(seenContentKeys.values())
-          .sort((a, b) => {
+        const uniqueMessages = chatwootMessages
+          .filter((m: any) => !duplicateIds.has(m.id))
+          .sort((a: any, b: any) => {
             const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
             const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
             return timeA - timeB;
