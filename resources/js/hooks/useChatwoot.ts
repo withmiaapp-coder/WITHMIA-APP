@@ -615,6 +615,28 @@ export const useConversations = () => {
           const existingIds = new Set(cached.messages.map((m: any) => m.id));
           const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
           uniqueMessages = [...newOlderMessages, ...cached.messages];
+        } else if (cached?.messages) {
+          // ✅ FIX: Preservar mensajes optimistas/pendientes que aún no están en API
+          const optimisticMessages = cached.messages.filter((m: any) => 
+            m._isOptimistic || 
+            String(m.id).startsWith('temp-') || 
+            String(m.id).startsWith('pending-') ||
+            m.status === 'sending'
+          );
+          
+          if (optimisticMessages.length > 0) {
+            console.log(`💾 Preservando ${optimisticMessages.length} mensajes optimistas pendientes`);
+            // Agregar mensajes optimistas que no están en la respuesta de API
+            const apiMessageContents = new Set(uniqueMessages.map((m: any) => m.content?.trim()));
+            const pendingToKeep = optimisticMessages.filter((m: any) => 
+              !apiMessageContents.has(m.content?.trim())
+            );
+            
+            if (pendingToKeep.length > 0) {
+              uniqueMessages = [...uniqueMessages, ...pendingToKeep];
+              console.log(`📝 Agregados ${pendingToKeep.length} mensajes pendientes a la lista`);
+            }
+          }
         }
 
         // 🚀 Guardar en cache local
