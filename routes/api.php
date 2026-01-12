@@ -128,7 +128,7 @@ Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId
 
 // Habilitar autenticación de canales de broadcasting
 
-// 🔧 SETUP: Configurar webhook de Chatwoot automáticamente (temporal - eliminar después de usar)
+// 🔧 SETUP: Ver webhooks de Chatwoot existentes
 Route::get('/setup-chatwoot-webhook', function () {
     try {
         $user = \App\Models\User::first();
@@ -144,49 +144,20 @@ Route::get('/setup-chatwoot-webhook', function () {
         $appUrl = config('app.url', 'https://app.withmia.com');
         $webhookUrl = "{$appUrl}/api/chatwoot/webhook";
         
-        // 1. Primero ver webhooks existentes
+        // Ver webhooks existentes
         $existingResponse = \Illuminate\Support\Facades\Http::withHeaders([
             'api_access_token' => $apiKey
         ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
         
         $existingWebhooks = $existingResponse->json()['payload'] ?? $existingResponse->json() ?? [];
         
-        // Verificar si ya existe
-        $alreadyExists = false;
-        foreach ($existingWebhooks as $wh) {
-            if (isset($wh['url']) && strpos($wh['url'], 'chatwoot/webhook') !== false) {
-                $alreadyExists = true;
-                break;
-            }
-        }
-        
-        if ($alreadyExists) {
-            return response()->json([
-                'status' => 'already_exists',
-                'message' => 'Webhook ya existe',
-                'existing_webhooks' => $existingWebhooks
-            ]);
-        }
-        
-        // 2. Crear webhook
-        $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
-            'api_access_token' => $apiKey,
-            'Content-Type' => 'application/json'
-        ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks", [
-            'webhook' => [
-                'url' => $webhookUrl,
-                'subscriptions' => ['message_created', 'message_updated', 'conversation_created', 'conversation_updated', 'conversation_status_changed']
-            ]
-        ]);
-        
         return response()->json([
-            'status' => $createResponse->successful() ? 'created' : 'error',
-            'webhook_url' => $webhookUrl,
+            'status' => 'ok',
             'chatwoot_url' => $chatwootUrl,
             'account_id' => $accountId,
+            'expected_webhook_url' => $webhookUrl,
+            'existing_webhooks' => $existingWebhooks,
             'api_key_used' => substr($apiKey, 0, 10) . '...',
-            'response' => $createResponse->json(),
-            'http_status' => $createResponse->status()
         ]);
         
     } catch (\Exception $e) {
