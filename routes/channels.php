@@ -19,8 +19,23 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 // ✅ NUEVO: Canal privado por inbox - SEGURIDAD MULTI-TENANT
 Broadcast::channel('inbox.{inboxId}', function ($user, $inboxId) {
-    // Solo permitir acceso si el inbox del usuario coincide
-    return $user && $user->chatwoot_inbox_id === (int) $inboxId;
+    // Verificar inbox del usuario directamente o a través de la company
+    $userInboxId = $user->chatwoot_inbox_id;
+    
+    // Si el usuario no tiene inbox directo, buscar en su company
+    if (!$userInboxId && $user->company) {
+        $userInboxId = $user->company->chatwoot_inbox_id;
+    }
+    
+    // Log para debug
+    \Illuminate\Support\Facades\Log::info('🔐 Broadcasting auth check', [
+        'user_id' => $user->id,
+        'user_inbox_id' => $userInboxId,
+        'requested_inbox_id' => $inboxId,
+        'match' => $userInboxId === (int) $inboxId
+    ]);
+    
+    return $userInboxId === (int) $inboxId;
 });
 
 // Canal para conversaciones de un usuario específico (LEGACY - puede eliminarse)
