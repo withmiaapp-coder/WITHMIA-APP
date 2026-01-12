@@ -77,6 +77,7 @@ interface User {
   company_name?: string;
   company_slug?: string;
   chatwoot_inbox_id?: number;
+  role?: string;
 }
 
 interface Company {
@@ -635,6 +636,12 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Función para manejar navegación (mantener embed dentro del dashboard)
   // OPTIMIZADO: flushSync para forzar actualización COMPLETAMENTE síncrona
   const handleNavigation = useCallback((itemId: string) => {
+    // Si es admin, navegar a la página externa
+    if (itemId === 'admin') {
+      window.location.href = '/admin/dashboard';
+      return;
+    }
+    
     // Prevenir clicks duplicados si ya estamos en esa sección
     if (itemId === activeSection) return;
     
@@ -760,7 +767,17 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       icon: Package, 
       count: null,
       gradient: 'from-orange-500 to-red-500'
-    }
+    },
+    // Admin Panel - solo visible para admins
+    ...(user?.role === 'admin' ? [{
+      id: 'admin',
+      label: 'Admin',
+      icon: Shield,
+      count: null,
+      gradient: 'from-purple-600 to-indigo-600',
+      isExternal: true,
+      href: '/admin/dashboard'
+    }] : [])
   ];
 
   if (!mounted) {
@@ -987,7 +1004,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       <div className="text-center mb-2">
                         <div className="mx-auto w-fit mb-2">
                           <img 
-                            src="/icons/whatsapp.png" 
+                            src="/icons/whatsapp.webp" 
                             alt="WhatsApp" 
                             className="w-12 h-12 transition-transform duration-150 group-hover:scale-110"
                             onError={(e) => {
@@ -1034,7 +1051,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       <div className="text-center mb-2">
                         <div className="p-3 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl shadow-lg mx-auto w-fit mb-2 transition-all duration-150 group-hover:scale-110">
                           <img 
-                            src="/icons/instagram-new.png" 
+                            src="/icons/instagram-new.webp" 
                             alt="Instagram" 
                             className="w-6 h-6"
                             onError={(e) => {
@@ -1065,7 +1082,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       <div className="text-center mb-2">
                         <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500  shadow-lg mx-auto w-fit mb-2 group-hover:opacity-95 transition-transform duration-50">
                           <img 
-                            src="/icons/facebook-new.png" 
+                            src="/icons/facebook-new.webp" 
                             alt="Messenger" 
                             className="w-6 h-6"
                             onError={(e) => {
