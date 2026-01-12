@@ -29,7 +29,7 @@ Route::get('/health', function () {
     }
 });
 
-// 🔧 DEBUG: Test broadcast endpoint with detailed Pusher response
+// 🔧 DEBUG: Test broadcast endpoint - CANAL PÚBLICO para debug
 Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
     try {
         $testMessage = [
@@ -47,7 +47,7 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
         $appId = config('broadcasting.connections.pusher.app_id');
         $cluster = config('broadcasting.connections.pusher.options.cluster');
         
-        // Intentar broadcast directo con Pusher para ver errores
+        // Intentar broadcast directo con Pusher
         $pusher = new \Pusher\Pusher(
             $key,
             $secret,
@@ -55,54 +55,44 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
             [
                 'cluster' => $cluster,
                 'useTLS' => true,
-                'debug' => true,
             ]
         );
         
-        $channelName = 'private-inbox.' . $inboxId;
-        $eventName = 'message.received';
+        // Probar con CANAL PÚBLICO primero
+        $publicChannel = 'test-channel';
+        $privateChannel = 'private-inbox.' . $inboxId;
+        $eventName = 'test-event';
         
         $payload = [
             'message' => $testMessage,
-            'conversation_id' => 1,
-            'inbox_id' => (int) $inboxId,
-            'account_id' => 1,
-            'timestamp' => now()->toIso8601String(),
+            'test' => 'This is a test at ' . now()->toIso8601String(),
         ];
         
-        $result = $pusher->trigger($channelName, $eventName, $payload);
+        // Enviar a canal público
+        $publicResult = $pusher->trigger($publicChannel, $eventName, $payload);
         
-        // Verificar si hay errores
-        $pusherErrors = [];
-        try {
-            // Intentar obtener info del canal para ver si las credenciales son válidas
-            $channelInfo = $pusher->getChannelInfo($channelName);
-        } catch (\Exception $e) {
-            $pusherErrors[] = 'Channel info error: ' . $e->getMessage();
-        }
+        // Enviar a canal privado
+        $privateResult = $pusher->trigger($privateChannel, 'message.received', $payload);
         
         return response()->json([
             'status' => 'success',
-            'message' => 'Broadcast sent directly via Pusher',
-            'channel' => $channelName,
-            'event' => $eventName,
-            'pusher_result' => $result,
-            'pusher_result_type' => gettype($result),
-            'pusher_errors' => $pusherErrors,
+            'public_channel' => $publicChannel,
+            'private_channel' => $privateChannel,
+            'public_result' => $publicResult,
+            'private_result' => $privateResult,
             'config' => [
                 'key' => $key,
-                'secret_length' => strlen($secret ?? ''),
+                'secret_first_4' => substr($secret ?? '', 0, 4) . '...',
                 'app_id' => $appId,
                 'cluster' => $cluster,
             ],
-            'payload_size' => strlen(json_encode($payload)),
+            'instructions' => 'Ejecuta en consola: window.Echo.channel("test-channel").listen("test-event", e => console.log("RECIBIDO!", e))'
         ]);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
             'exception_class' => get_class($e),
-            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });
