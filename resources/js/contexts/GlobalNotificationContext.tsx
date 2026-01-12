@@ -219,7 +219,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       return prev.filter(n => n.conversationId !== conversationId);
     });
   }, []);
-  }, []);
 
   // Actualizar configuración
   const updateSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
