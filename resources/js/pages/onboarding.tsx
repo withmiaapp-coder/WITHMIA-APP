@@ -590,7 +590,8 @@ export default function Onboarding({
                 maxLength={1000}
               />
               <button
-                onClick={async () => {
+                onClick={async (e) => {
+                  const btn = e.currentTarget;
                   if (
                     !formData.company_description ||
                     !formData.company_description.trim()
@@ -598,6 +599,11 @@ export default function Onboarding({
                     showNotification("Escribe una descripción primero", "info");
                     return;
                   }
+                  
+                  // Disable button and show loading
+                  btn.disabled = true;
+                  btn.textContent = "✨ Mejorando...";
+                  
                   try {
                     const response = await fetch("/api/improve-description", {
                       method: "POST",
@@ -613,18 +619,21 @@ export default function Onboarding({
                       }),
                     });
                     const data = await response.json();
-                    if (data.success) {
+                    if (data.success && data.improved_description) {
                       updateFormData(
                         "company_description",
                         data.improved_description
                       );
-                      showNotification("¡Descripción mejorada exitosamente!", "success");
+                      showNotification("¡Descripción mejorada con IA!", "success");
                     } else {
                       showNotification(data.error || "No se pudo mejorar la descripción", "error");
                     }
                   } catch (error) {
                     showNotification("Error de conexión. Intenta de nuevo.", "error");
                     console.error(error);
+                  } finally {
+                    btn.disabled = false;
+                    btn.textContent = "✨ Mejorar con WITHMIA";
                   }
                 }}
                 style={{
@@ -657,7 +666,7 @@ export default function Onboarding({
                     "0 2px 8px rgba(102, 126, 234, 0.3)";
                 }}
               >
-                Mejorar con WITHMIA
+                ✨ Mejorar con WITHMIA
               </button>
             </div>
           </div>
