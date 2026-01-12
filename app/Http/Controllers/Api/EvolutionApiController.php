@@ -95,18 +95,42 @@ class EvolutionApiController extends Controller
         // Si existe pero no está conectada, eliminarla primero para generar QR limpio
         $this->cleanupIfNotConnected($instanceName);
 
+        // Paso 1: Crear la instancia
         $createResult = $this->evolutionApi->createInstance($instanceName);
 
         Log::info('📦 Create instance result', [
             'instance' => $instanceName,
             'success' => $createResult['success'] ?? false,
-            'error' => $createResult['error'] ?? null
+            'error' => $createResult['error'] ?? null,
+            'details' => $createResult['details'] ?? null
         ]);
 
-        if (!$createResult['success'] && !str_contains($createResult['error'] ?? '', 'already in use')) {
-            Log::warning('Failed to create instance', ['instance' => $instanceName, 'error' => $createResult]);
+        // Si la creación falló y NO es porque ya existe, devolver error
+        $alreadyExists = str_contains($createResult['error'] ?? '', 'already in use') || 
+                         str_contains($createResult['error'] ?? '', 'already exists');
+        
+        if (!$createResult['success'] && !$alreadyExists) {
+            Log::error('Failed to create instance', ['instance' => $instanceName, 'error' => $createResult]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to create Evolution instance: ' . ($createResult['error'] ?? 'Unknown error'),
+                'details' => $createResult['details'] ?? null,
+                'debug' => [
+                    'instance_name' => $instanceName,
+                    'evolution_url' => config('evolution.api_url'),
+                    'create_result' => $createResult,
+                    'timestamp' => now()->toIso8601String()
+                ]
+            ], 400);
         }
 
+        // Pequeña pausa para asegurar que la instancia está lista
+        if ($createResult['success']) {
+            usleep(500000); // 0.5 segundos
+        }
+
+        // Paso 2: Conectar y obtener QR
         $result = $this->evolutionApi->connect($instanceName);
 
         Log::info('🔌 Connect result', [
@@ -126,6 +150,7 @@ class EvolutionApiController extends Controller
             $result['debug'] = [
                 'instance_name' => $instanceName,
                 'evolution_url' => config('evolution.api_url'),
+                'create_success' => $createResult['success'] ?? false,
                 'timestamp' => now()->toIso8601String()
             ];
         }

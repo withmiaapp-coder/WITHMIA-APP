@@ -31,6 +31,11 @@ class EvolutionApiService
     public function createInstance(string $instanceName, ?string $webhookUrl = null, bool $enableChatwoot = true): array
     {
         try {
+            Log::info('🆕 Creating Evolution instance', [
+                'instance' => $instanceName,
+                'url' => "{$this->baseUrl}/instance/create"
+            ]);
+
             $payload = [
                 'instanceName' => $instanceName,
                 'qrcode' => true,
@@ -81,7 +86,13 @@ class EvolutionApiService
             $response = Http::withHeaders([
                 'apikey' => $this->apiKey,
                 'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/instance/create", $payload);
+            ])->timeout(30)->post("{$this->baseUrl}/instance/create", $payload);
+
+            Log::info('📦 Create instance response', [
+                'instance' => $instanceName,
+                'status' => $response->status(),
+                'body' => substr($response->body(), 0, 500)
+            ]);
 
             if (!$response->successful()) {
                 Log::error('Evolution API createInstance error', [
@@ -91,9 +102,13 @@ class EvolutionApiService
                 
                 return [
                     'success' => false,
-                    'error' => $response->json()['message'] ?? 'Failed to create instance'
+                    'error' => $response->json()['message'] ?? $response->json()['error'] ?? 'Failed to create instance',
+                    'details' => $response->body(),
+                    'status' => $response->status()
                 ];
             }
+
+            Log::info('✅ Instance created successfully', ['instance' => $instanceName]);
 
             // CRITICAL: Enable readMessages immediately after instance creation
             // Evolution API creates instances with readMessages=false by default
@@ -183,19 +198,6 @@ class EvolutionApiService
                     'body' => $errorBody,
                     'json' => $errorJson
                 ]);
-
-                // Si la instancia no existe, intentar crearla primero
-                if ($response->status() === 404 || str_contains($errorBody, 'not found') || str_contains($errorBody, 'does not exist')) {
-                    Log::info('Instance not found, creating first', ['instance' => $instanceName]);
-                    
-                    $createResult = $this->createInstance($instanceName);
-                    
-                    if ($createResult['success']) {
-                        // Reintentar connect después de crear
-                        sleep(1);
-                        return $this->connect($instanceName);
-                    }
-                }
 
                 return [
                     'success' => false,
