@@ -65,22 +65,35 @@ class EvolutionApiService
             // CONFIGURACIÓN CHATWOOT: Incluir desde la creación de la instancia
             // Según documentación oficial: https://doc.evolution-api.com/v2/en/integrations/chatwoot
             if ($enableChatwoot) {
-                $payload['chatwootAccountId'] = config('chatwoot.account_id', '1');
-                $payload['chatwootToken'] = config('chatwoot.token', 'n88kRvouwD41QhiXZ1nRmaqY');
-                $payload['chatwootUrl'] = config('chatwoot.url', 'http://localhost:3000');
-                $payload['chatwootSignMsg'] = config('chatwoot.sign_msg', false);
-                $payload['chatwootReopenConversation'] = config('chatwoot.reopen_conversation', false);
-                $payload['chatwootConversationPending'] = config('chatwoot.conversation_pending', false);
-                $payload['chatwootNameInbox'] = "WhatsApp {$instanceName}";
-                $payload['chatwootMergeBrazilContacts'] = config('chatwoot.merge_brazil_contacts', false);
-                $payload['chatwootImportContacts'] = config('chatwoot.import_contacts', false);
-                $payload['chatwootImportMessages'] = config('chatwoot.import_messages', false);
-                $payload['chatwootAutoCreate'] = config('chatwoot.auto_create', true);
+                $chatwootToken = config('chatwoot.token');
+                $chatwootUrl = config('chatwoot.url');
                 
-                Log::info('Creating instance with Chatwoot integration', [
-                    'instance' => $instanceName,
-                    'account_id' => $payload['chatwootAccountId']
-                ]);
+                // Solo incluir Chatwoot si tenemos token configurado
+                if ($chatwootToken && $chatwootUrl) {
+                    $payload['chatwootAccountId'] = config('chatwoot.account_id', '1');
+                    $payload['chatwootToken'] = $chatwootToken;
+                    $payload['chatwootUrl'] = $chatwootUrl;
+                    $payload['chatwootSignMsg'] = config('chatwoot.sign_msg', false);
+                    $payload['chatwootReopenConversation'] = config('chatwoot.reopen_conversation', true);
+                    $payload['chatwootConversationPending'] = config('chatwoot.conversation_pending', false);
+                    $payload['chatwootNameInbox'] = "WhatsApp {$instanceName}";
+                    $payload['chatwootMergeBrazilContacts'] = config('chatwoot.merge_brazil_contacts', true);
+                    $payload['chatwootImportContacts'] = config('chatwoot.import_contacts', false);
+                    $payload['chatwootImportMessages'] = config('chatwoot.import_messages', false);
+                    $payload['chatwootAutoCreate'] = config('chatwoot.auto_create', true);
+                    
+                    Log::info('Creating instance with Chatwoot integration', [
+                        'instance' => $instanceName,
+                        'account_id' => $payload['chatwootAccountId'],
+                        'url' => $chatwootUrl
+                    ]);
+                } else {
+                    Log::warning('Chatwoot integration requested but token/url not configured', [
+                        'instance' => $instanceName,
+                        'has_token' => !empty($chatwootToken),
+                        'has_url' => !empty($chatwootUrl)
+                    ]);
+                }
             }
 
             $response = Http::withHeaders([

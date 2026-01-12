@@ -5,6 +5,7 @@ return [
     'api_key' => env('CHATWOOT_API_KEY'),
     'api_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
     'platform_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
+    'token' => env('CHATWOOT_PLATFORM_API_TOKEN'), // Token para Evolution API
     'url' => env('CHATWOOT_URL', 'http://localhost:3000'),
     'base_url' => env('CHATWOOT_API_BASE_URL', 'http://localhost:3000'),
     

@@ -95,8 +95,8 @@ class EvolutionApiController extends Controller
         // Si existe pero no está conectada, eliminarla primero para generar QR limpio
         $this->cleanupIfNotConnected($instanceName);
 
-        // Paso 1: Crear la instancia (SIN Chatwoot - se configura después si es necesario)
-        $createResult = $this->evolutionApi->createInstance($instanceName, null, false);
+        // Paso 1: Crear la instancia (con Chatwoot si está configurado)
+        $createResult = $this->evolutionApi->createInstance($instanceName);
 
         Log::info('📦 Create instance result', [
             'instance' => $instanceName,
