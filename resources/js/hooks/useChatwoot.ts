@@ -463,7 +463,7 @@ export const useConversations = () => {
         };
         
         // Agregar mensaje al activeConversation
-        setActiveConversation((prev: any) => {
+        setActiveConversationState((prev: any) => {
           if (!prev || prev.id !== conversationId) return prev;
           
           const existingMessages = prev.messages || [];
@@ -497,7 +497,7 @@ export const useConversations = () => {
       console.error('Error enviando mensaje:', err);
       throw err;
     }
-  }, [apiCall, setActiveConversation]);
+  }, [apiCall]);
 
   // ========================================
   // Cargar mensajes de conversación
