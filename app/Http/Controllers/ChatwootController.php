@@ -1108,26 +1108,36 @@ class ChatwootController extends Controller
 
             // Active Storage de Rails usa redirecciones, necesitamos seguirlas
             // Usar withOptions para configurar Guzzle y seguir redirects
-            $response = Http::withOptions([
-                'allow_redirects' => [
-                    'max' => 5,
-                    'strict' => false,
-                    'referer' => true,
-                    'protocols' => ['http', 'https'],
-                    'track_redirects' => true
-                ],
-                'verify' => false, // Desactivar verificación SSL si hay problemas
-            ])
-            ->timeout(30)
-            ->get($url);
-
-            if (!$response->successful()) {
-                Log::error('Error al obtener archivo de Chatwoot', [
+            try {
+                $response = Http::withOptions([
+                    'allow_redirects' => [
+                        'max' => 5,
+                        'strict' => false,
+                        'referer' => true,
+                        'protocols' => ['http', 'https'],
+                        'track_redirects' => true
+                    ],
+                    'verify' => false, // Desactivar verificación SSL si hay problemas
+                    'http_errors' => false, // No lanzar excepciones en errores HTTP
+                ])
+                ->timeout(15)
+                ->get($url);
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                // El servidor de Chatwoot no existe o no responde
+                Log::warning('Servidor Chatwoot no disponible', [
                     'url' => $url,
-                    'status' => $response->status(),
-                    'body' => substr($response->body(), 0, 500)
+                    'error' => $e->getMessage()
                 ]);
-                return response()->json(['error' => 'No se pudo obtener el archivo'], $response->status());
+                return response()->json(['error' => 'Servidor no disponible'], 404);
+            }
+
+            // Si el servidor devuelve error (404, 500, etc.), retornar 404
+            if (!$response->successful()) {
+                Log::info('Archivo no encontrado en Chatwoot', [
+                    'url' => $url,
+                    'status' => $response->status()
+                ]);
+                return response()->json(['error' => 'Archivo no disponible'], 404);
             }
 
             // Detectar el tipo de contenido
@@ -1151,11 +1161,11 @@ class ChatwootController extends Controller
         } catch (\Exception $e) {
             Log::error('Error en proxy de attachment', [
                 'url' => $request->input('url'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             
-            return response()->json(['error' => 'Error al procesar la solicitud'], 500);
+            // Retornar 404 en lugar de 500 para que el frontend muestre el placeholder
+            return response()->json(['error' => 'Archivo no disponible'], 404);
         }
     }
 }
