@@ -106,11 +106,16 @@ class EvolutionApiController extends Controller
                 ? "WhatsApp {$user->company_slug}" 
                 : "WhatsApp {$company->name}";
             
+            // Si la empresa ya tiene chatwoot_inbox_id, usar autoCreate=false
+            // para evitar crear inboxes duplicados al reconectar
+            $autoCreate = empty($company->chatwoot_inbox_id);
+            
             return [
                 'account_id' => $company->chatwoot_account_id,
                 'token' => $company->chatwoot_api_key,
                 'url' => config('chatwoot.url'),
-                'inbox_name' => $inboxName
+                'inbox_name' => $inboxName,
+                'auto_create' => $autoCreate
             ];
         }
 

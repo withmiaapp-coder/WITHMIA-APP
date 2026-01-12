@@ -72,12 +72,14 @@ class EvolutionApiService
                     $chatwootUrl = $enableChatwoot['url'] ?? config('chatwoot.url');
                     $chatwootAccountId = $enableChatwoot['account_id'] ?? null;
                     $chatwootInboxName = $enableChatwoot['inbox_name'] ?? "WhatsApp {$instanceName}";
+                    $chatwootAutoCreate = $enableChatwoot['auto_create'] ?? config('chatwoot.auto_create', true);
                 } else {
                     // Usar config global (fallback)
                     $chatwootToken = config('chatwoot.token');
                     $chatwootUrl = config('chatwoot.url');
                     $chatwootAccountId = config('chatwoot.account_id', '1');
                     $chatwootInboxName = "WhatsApp {$instanceName}";
+                    $chatwootAutoCreate = config('chatwoot.auto_create', true);
                 }
                 
                 // Solo incluir Chatwoot si tenemos token y account_id configurados
@@ -92,12 +94,13 @@ class EvolutionApiService
                     $payload['chatwootMergeBrazilContacts'] = config('chatwoot.merge_brazil_contacts', true);
                     $payload['chatwootImportContacts'] = config('chatwoot.import_contacts', false);
                     $payload['chatwootImportMessages'] = config('chatwoot.import_messages', false);
-                    $payload['chatwootAutoCreate'] = config('chatwoot.auto_create', true);
+                    $payload['chatwootAutoCreate'] = $chatwootAutoCreate;
                     
                     Log::info('Creating instance with Chatwoot integration (multi-tenant)', [
                         'instance' => $instanceName,
                         'account_id' => $payload['chatwootAccountId'],
                         'inbox_name' => $chatwootInboxName,
+                        'auto_create' => $chatwootAutoCreate,
                         'url' => $chatwootUrl
                     ]);
                 } else {
