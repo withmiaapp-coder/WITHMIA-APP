@@ -1,0 +1,137 @@
+{
+  "name": "RAG Documents Processor - WITHMIA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "documents-upload",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-280, 260],
+      "id": "webhook-documents",
+      "name": "Webhook Upload",
+      "webhookId": "rag-documents-withmia"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {"id": "1", "name": "company_id", "value": "={{ $json.body.company_id }}", "type": "number"},
+            {"id": "2", "name": "filename", "value": "={{ $json.body.filename }}", "type": "string"},
+            {"id": "3", "name": "category", "value": "={{ $json.body.category }}", "type": "string"},
+            {"id": "4", "name": "file_url", "value": "={{ $json.body.file_url }}", "type": "string"}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-80, 260],
+      "id": "normalize-input",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.file_url }}",
+        "options": {"response": {"response": {"responseFormat": "file"}}}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [120, 260],
+      "id": "download-file",
+      "name": "Download File"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [320, 260],
+      "id": "extract-text",
+      "name": "Extract Text"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "options": {"metadata": {"metadataValues": [
+          {"name": "company_id", "value": "={{ $('Normalize Input').item.json.company_id }}"},
+          {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
+          {"name": "category", "value": "={{ $('Normalize Input').item.json.category }}"}
+        ]}}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [520, 260],
+      "id": "chunk-text",
+      "name": "Chunk Document"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v3.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [720, 400],
+      "id": "embeddings",
+      "name": "Cohere Embeddings",
+      "credentials": {"cohereApi": {"id": "cohere-cred", "name": "Cohere API"}}
+    },
+    {
+      "parameters": {
+        "qdrantCollection": "company_{{ $('Normalize Input').item.json.company_id }}_knowledge",
+        "qdrantUrl": "http://qdrant.railway.internal:6333",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [720, 260],
+      "id": "store-qdrant",
+      "name": "Store in Qdrant",
+      "credentials": {"qdrantApi": {"id": "qdrant-cred", "name": "Qdrant"}}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mia-app-production.up.railway.app/api/knowledge/update-vector-ids",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{"name": "X-N8N-Secret", "value": "withmia_n8n_secret_2024"}]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "company_id", "value": "={{ $('Normalize Input').item.json.company_id }}"},
+            {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
+            {"name": "vector_ids", "value": "={{ $json.vector_ids }}"},
+            {"name": "chunks_created", "value": "={{ $json.chunks_count }}"},
+            {"name": "secret_token", "value": "withmia_n8n_secret_2024"}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 260],
+      "id": "notify-laravel",
+      "name": "Notify Laravel"
+    }
+  ],
+  "connections": {
+    "Webhook Upload": {"main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]},
+    "Normalize Input": {"main": [[{"node": "Download File", "type": "main", "index": 0}]]},
+    "Download File": {"main": [[{"node": "Extract Text", "type": "main", "index": 0}]]},
+    "Extract Text": {"main": [[{"node": "Chunk Document", "type": "main", "index": 0}]]},
+    "Chunk Document": {"main": [[{"node": "Store in Qdrant", "type": "main", "index": 0}]]},
+    "Cohere Embeddings": {"ai_embedding": [[{"node": "Store in Qdrant", "type": "ai_embedding", "index": 0}]]},
+    "Store in Qdrant": {"main": [[{"node": "Notify Laravel", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "updated-2026-01-11",
+  "meta": {"templateCredsSetupCompleted": false},
+  "id": "rag-documents-withmia",
+  "tags": ["RAG", "Qdrant", "Documents"]
+}

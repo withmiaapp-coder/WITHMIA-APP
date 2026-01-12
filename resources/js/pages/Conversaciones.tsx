@@ -68,7 +68,7 @@ export default function Conversaciones({ user, company }: Props) {
                 <p className="text-blue-700 text-sm">
                   Gestiona todas tus conversaciones desde aquí. Conectado a: 
                   <span className="font-mono ml-1 bg-blue-100 px-2 py-1 rounded">
-                    chatwoot-admin.withmia.com
+                    chatwoot-production-e86a.up.railway.app
                   </span>
                 </p>
               </div>
@@ -77,7 +77,7 @@ export default function Conversaciones({ user, company }: Props) {
 
           {/* Widget de Chatwoot */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <ChatwootWidget chatwootUrl="https://chatwoot-admin.withmia.com" />
+            <ChatwootWidget chatwootUrl="https://chatwoot-production-e86a.up.railway.app" />
           </div>
         </div>
       </div>

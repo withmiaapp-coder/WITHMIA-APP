@@ -306,3 +306,28 @@ Route::middleware(['auth', 'verified'])->get('/chatwoot/enterprise', function ()
 // WhatsApp Integration Routes
 Route::middleware(['auth', 'verified'])->prefix('whatsapp')->group(function () {
 });
+
+// ============================================================================
+// ADMIN PANEL ROUTES
+// ============================================================================
+Route::middleware(['auth'])->prefix('admin')->group(function () {
+    // Admin Pages
+    Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'dashboard'])
+        ->name('admin.dashboard');
+    Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])
+        ->name('admin.users');
+    Route::get('/companies', [App\Http\Controllers\AdminController::class, 'companies'])
+        ->name('admin.companies');
+    
+    // Admin API Endpoints
+    Route::get('/api/users', [App\Http\Controllers\AdminController::class, 'apiUsers'])
+        ->name('admin.api.users');
+    Route::get('/api/companies', [App\Http\Controllers\AdminController::class, 'apiCompanies'])
+        ->name('admin.api.companies');
+    Route::patch('/api/users/{id}/role', [App\Http\Controllers\AdminController::class, 'updateUserRole'])
+        ->name('admin.api.users.role');
+    Route::delete('/api/users/{id}', [App\Http\Controllers\AdminController::class, 'deleteUser'])
+        ->name('admin.api.users.delete');
+    Route::get('/api/stats', [App\Http\Controllers\AdminController::class, 'stats'])
+        ->name('admin.api.stats');
+});

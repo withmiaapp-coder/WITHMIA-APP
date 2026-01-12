@@ -89,6 +89,9 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     
     // Contactos
     Route::put('/contacts/{contactId}', [ChatwootController::class, 'updateContact']);
+    
+    // Configuración
+    Route::get('/config', [ChatwootController::class, 'getConfig']);
 });
 
 // ============= BAILEYS WHATSAPP API ROUTES =============

@@ -1,44 +1,62 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Models\User;
-use App\Models\Company;
-use App\Models\KnowledgeDocument;
 use Illuminate\Support\Facades\DB;
 
 Route::get('/admin/stats', function () {
     try {
-        // Verificar conexión a BD
-        DB::connection()->getPdo();
+        // Consulta directa SQL para evitar problemas con modelos
+        $users = DB::select("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC LIMIT 20");
+        $userCount = DB::table('users')->count();
         
-        $stats = [
-            'database' => [
-                'connected' => true,
-                'users' => User::count(),
-                'companies' => Company::count(),
-                'knowledge_docs' => KnowledgeDocument::count(),
-            ],
-            'users_details' => [
-                'total' => User::count(),
-                'with_whatsapp' => User::whereNotNull('whatsapp_instance_id')->count(),
-                'with_chatwoot' => User::whereNotNull('chatwoot_agent_id')->count(),
-                'onboarding_completed' => User::where('onboarding_completed', 1)->count(),
-            ],
-            'companies_details' => [
-                'total' => Company::count(),
-                'active' => Company::where('is_active', 1)->count(),
-                'with_chatwoot' => Company::whereNotNull('chatwoot_inbox_id')->count(),
-            ],
-            'recent_users' => User::latest()->take(5)->get(['id', 'name', 'email', 'created_at'])->toArray(),
-            'recent_companies' => Company::latest()->take(5)->get(['id', 'name', 'slug', 'created_at'])->toArray(),
+        $companies = [];
+        $companyCount = 0;
+        try {
+            $companies = DB::select("SELECT id, name, slug, created_at FROM companies ORDER BY created_at DESC LIMIT 10");
+            $companyCount = DB::table('companies')->count();
+        } catch (\Exception $e) {
+            // Tabla companies puede no existir
+        }
+        
+        return response()->json([
+            'total_users' => $userCount,
+            'total_companies' => $companyCount,
+            'users' => $users,
+            'companies' => $companies,
             'timestamp' => now()->toIso8601String(),
-        ];
-        
-        return response()->json($stats, 200);
+        ], 200);
     } catch (\Exception $e) {
         return response()->json([
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});
+
+// Endpoint temporal para hacer admin al primer usuario
+Route::get('/admin/make-admin/{email}', function ($email) {
+    try {
+        $affected = DB::table('users')
+            ->where('email', $email)
+            ->update(['role' => 'admin']);
+        
+        if ($affected > 0) {
+            $user = DB::table('users')->where('email', $email)->first(['id', 'name', 'email', 'role']);
+            return response()->json([
+                'success' => true,
+                'message' => "Usuario {$email} ahora es admin",
+                'user' => $user
+            ], 200);
+        }
+        
+        return response()->json([
+            'success' => false,
+            'message' => "Usuario {$email} no encontrado"
+        ], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
         ], 500);
     }
 });

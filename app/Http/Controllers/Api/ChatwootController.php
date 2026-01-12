@@ -1278,4 +1278,36 @@ class ChatwootController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener configuración de Chatwoot para el usuario actual
+     */
+    public function getConfig(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $company = $user ? $user->company : null;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'base_url' => $this->chatwootBaseUrl,
+                    'account_id' => $this->accountId,
+                    'inbox_id' => $this->inboxId,
+                    'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
+                    'configured' => !empty($this->chatwootToken) && !empty($this->inboxId),
+                    'company_name' => $company ? $company->name : null
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting Chatwoot config', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener configuración'
+            ], 500);
+        }
+    }
 }

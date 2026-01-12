@@ -10,7 +10,12 @@ use Illuminate\Support\Facades\Http;
 
 class KnowledgeController extends Controller
 {
-    private $qdrantHost = 'http://172.17.0.1:6333';
+    private $qdrantHost;
+
+    public function __construct()
+    {
+        $this->qdrantHost = rtrim(env('QDRANT_HOST', 'http://localhost:6333'), '/');
+    }
 
     /**
      * Ensure Qdrant collection exists for company, create if not
