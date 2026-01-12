@@ -500,6 +500,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         {
           method: 'GET',
           requireCsrf: false,
+          timeout: 20000, // 20 segundos para Evolution API
           rateLimitKey: `whatsapp-status-${companySlug}`,
           rateLimitConfig: {
             maxCalls: 10,
@@ -583,7 +584,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     try {
       const response = await secureFetch(
         `/api/evolution-whatsapp/settings/${companySlug}`,
-        { method: 'GET', requireCsrf: false }
+        { method: 'GET', requireCsrf: false, timeout: 20000 }
       );
       const data = await response.json();
       if (data.success && data.settings) {

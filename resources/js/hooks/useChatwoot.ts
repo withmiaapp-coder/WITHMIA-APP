@@ -16,10 +16,15 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
     setLoading(true);
     setError(null);
 
+    // ⚡ Timeout de 20 segundos para Railway
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
     try {
       const requestConfig: RequestInit = {
         method,
         credentials: 'include',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -32,6 +37,7 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
       }
 
       const response = await fetch(endpoint, requestConfig);
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -41,8 +47,14 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
       const result = await response.json();
       return result;
     } catch (err: any) {
-      setError(err.message);
-      console.error('Chatwoot API Error:', err);
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setError('La solicitud tardó demasiado. Intenta de nuevo.');
+        console.warn('⏱️ Timeout en llamada API:', endpoint);
+      } else {
+        setError(err.message);
+        console.error('Chatwoot API Error:', err);
+      }
       throw err;
     } finally {
       setLoading(false);

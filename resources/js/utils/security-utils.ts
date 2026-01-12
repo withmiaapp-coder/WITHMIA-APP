@@ -341,7 +341,7 @@ export const secureFetch = async (
     requireCsrf = true,
     rateLimitKey,
     rateLimitConfig,
-    timeout = 5000,
+    timeout = 15000, // 15 segundos para Railway
     headers = {},
     ...fetchOptions
   } = options;
