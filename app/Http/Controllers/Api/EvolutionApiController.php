@@ -698,14 +698,16 @@ class EvolutionApiController extends Controller
             return;
         }
 
-        // ???? CREAR CONVERSACI??N EN CHATWOOT
+        // 🔄 CREAR CONVERSACIÓN EN CHATWOOT
+        $conversation = null; // Inicializar para que esté disponible en el broadcast
+        $inboxId = 1; // Fallback por defecto
         try {
             $chatwootBaseUrl = env('CHATWOOT_URL', 'http://chatwoot-rails-1:3000');
             $chatwootToken = env('CHATWOOT_TOKEN', 'UV3DeqL7tSiQzRMQcAgHNGVR');
-            // $instanceName ya est?? disponible como par??metro de la funci??n
-            $inboxId = null;
+            // $instanceName ya está disponible como parámetro de la función
             
             // Buscar inbox en Chatwoot basado en el nombre de la instancia
+            $foundInbox = false;
             if ($instanceName) {
                 try {
                     $inboxesResponse = Http::withHeaders([
@@ -714,33 +716,36 @@ class EvolutionApiController extends Controller
                     
                     if ($inboxesResponse->successful()) {
                         $inboxes = $inboxesResponse->json()['payload'] ?? [];
-                        Log::info("???? Inboxes disponibles", ['count' => count($inboxes), 'inboxes' => array_map(fn($i) => ['id' => $i['id'], 'name' => $i['name']], $inboxes)]);
+                        Log::info("📦 Inboxes disponibles", ['count' => count($inboxes), 'inboxes' => array_map(fn($i) => ['id' => $i['id'], 'name' => $i['name']], $inboxes)]);
                         
                         foreach ($inboxes as $inbox) {
                             if (str_contains($inbox['name'] ?? '', $instanceName)) {
                                 $inboxId = $inbox['id'];
-                                Log::info("??? Inbox encontrado para $instanceName", ['inbox_id' => $inboxId]);
+                                $foundInbox = true;
+                                Log::info("✅ Inbox encontrado para $instanceName", ['inbox_id' => $inboxId]);
                                 break;
                             }
                         }
                         
-                        // Si no se encontr?? por nombre, usar el primer inbox disponible
-                        if ($inboxId === null && count($inboxes) > 0) {
+                        // Si no se encontró por nombre, usar el primer inbox disponible
+                        if (!$foundInbox && count($inboxes) > 0) {
                             $inboxId = $inboxes[0]['id'];
-                            Log::warning("?????? Inbox no encontrado por nombre, usando primer inbox disponible", ['inbox_id' => $inboxId, 'inbox_name' => $inboxes[0]['name']]);
+                            $foundInbox = true;
+                            Log::warning("⚠️ Inbox no encontrado por nombre, usando primer inbox disponible", ['inbox_id' => $inboxId, 'inbox_name' => $inboxes[0]['name']]);
                         }
                     }
                 } catch (\Exception $e) {
                     Log::error("Error buscando inbox: " . $e->getMessage());
                 }
                 
-                // Si a??n no hay inbox_id, intentar obtener del usuario
-                if ($inboxId === null) {
+                // Si aún no hay inbox, intentar obtener del usuario
+                if (!$foundInbox) {
                     try {
                         $user = \App\Models\User::where('company_slug', $instanceName)->first();
                         if ($user && $user->chatwoot_inbox_id) {
                             $inboxId = $user->chatwoot_inbox_id;
-                            Log::info("??? Inbox obtenido del usuario", ['inbox_id' => $inboxId]);
+                            $foundInbox = true;
+                            Log::info("✅ Inbox obtenido del usuario", ['inbox_id' => $inboxId]);
                         }
                     } catch (\Exception $e) {
                         Log::error("Error obteniendo inbox del usuario: " . $e->getMessage());
@@ -748,10 +753,9 @@ class EvolutionApiController extends Controller
                 }
             }
 
-            // Fallback final: usar inbox_id 1 si no se pudo obtener
-            if ($inboxId === null) {
-                $inboxId = 1;
-                Log::warning("?????? No se encontr?? inbox_id, usando valor por defecto: 1");
+            // Log del inbox_id final
+            if (!$foundInbox) {
+                Log::warning("⚠️ No se encontró inbox_id, usando valor por defecto: 1");
             }
             
             // 1. Buscar o crear contacto
@@ -839,8 +843,33 @@ class EvolutionApiController extends Controller
             Log::error('??? Error con Chatwoot', ['error' => $e->getMessage()]);
         }
         
-        // Broadcast: notificar que hay que refrescar
+        // Broadcast: notificar nuevo mensaje entrante
         try {
+            // Obtener el ID de conversación de Chatwoot si lo tenemos
+            $conversationId = $conversation['id'] ?? null;
+            
+            // 🔊 Broadcast NewMessageReceived para que el frontend reciba el mensaje
+            broadcast(new \App\Events\NewMessageReceived(
+                [
+                    'content' => $messageText,
+                    'phone' => $cleanPhone,
+                    'from_me' => $fromMe,
+                    'instance' => $instanceName,
+                    'timestamp' => now()->toIso8601String(),
+                ],
+                $conversationId,
+                $inboxId,
+                1   // accountId
+            )); // Sin ->toOthers() - webhook no tiene socket asociado
+
+            Log::info('📡 NewMessageReceived BROADCAST enviado', [
+                'inbox_id' => $inboxId,
+                'conversation_id' => $conversationId,
+                'phone' => $cleanPhone,
+                'message_preview' => substr($messageText, 0, 50)
+            ]);
+            
+            // También enviar ConversationUpdated para actualizar la lista
             broadcast(new ConversationUpdated(
                 [
                     'action' => 'new_message',
@@ -850,19 +879,19 @@ class EvolutionApiController extends Controller
                     'instance' => $instanceName,
                     'should_refresh' => true
                 ],
-                $inboxId,  // Usar inbox din??mico
-                1   // accountId
-            ))->toOthers();
+                $inboxId,
+                1
+            )); // Sin ->toOthers()
 
-            Log::info('??? Se??al de nuevo mensaje broadcasted', [
-                'phone' => $cleanPhone,
+            Log::info('📡 ConversationUpdated BROADCAST enviado', [
+                'inbox_id' => $inboxId,
                 'action' => 'new_message'
             ]);
 
-            // ???? INVALIDAR CACH?? de conversaciones para forzar refresh
+            // 🗑️ INVALIDAR CACHÉ de conversaciones para forzar refresh
             $cacheKey = 'conversations_user_1_inbox_' . $inboxId;
             Cache::forget($cacheKey);
-            Log::info('??????? Cach?? de conversaciones invalidado', ['cache_key' => $cacheKey]);
+            Log::info('🗑️ Caché de conversaciones invalidado', ['cache_key' => $cacheKey]);
 
         } catch (\Exception $e) {
             Log::error('Error broadcasting message signal', [
