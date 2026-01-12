@@ -152,11 +152,44 @@ export const useConversations = () => {
   const activeConversationRef = useRef<any | null>(null);
   
   // ✅ NUEVO: Flag para evitar cargas concurrentes de mensajes
-  const isLoadingMessagesRef = useRef<Set<number>>(new Set());
+  const isLoadingMessagesRef = useRef<Set<string>>(new Set());
   
-  // 🚀 NUEVO: Cache local de mensajes (sessionStorage - se limpia al cerrar pestaña)
+  // 🚀 Cache local de mensajes con persistencia en sessionStorage
   const messagesLocalCache = useRef<Map<number, { messages: any[], timestamp: number, hasMore: boolean }>>(new Map());
   const LOCAL_CACHE_TTL = 5 * 60 * 1000; // 5 minutos en ms
+  
+  // ✅ NUEVO: Cargar caché desde sessionStorage al iniciar
+  useEffect(() => {
+    try {
+      const savedCache = sessionStorage.getItem('chatwoot_messages_cache');
+      if (savedCache) {
+        const parsed = JSON.parse(savedCache);
+        const now = Date.now();
+        // Solo restaurar mensajes que no hayan expirado
+        Object.entries(parsed).forEach(([convId, data]: [string, any]) => {
+          if (now - data.timestamp < LOCAL_CACHE_TTL) {
+            messagesLocalCache.current.set(parseInt(convId), data);
+            console.log(`📥 Restaurada caché de conversación ${convId} desde sessionStorage`);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Error restaurando caché de mensajes:', e);
+    }
+  }, []);
+  
+  // ✅ NUEVO: Función para guardar caché en sessionStorage
+  const persistMessagesCache = useCallback(() => {
+    try {
+      const cacheObj: Record<string, any> = {};
+      messagesLocalCache.current.forEach((value, key) => {
+        cacheObj[key] = value;
+      });
+      sessionStorage.setItem('chatwoot_messages_cache', JSON.stringify(cacheObj));
+    } catch (e) {
+      console.warn('Error guardando caché de mensajes:', e);
+    }
+  }, []);
   
   // 🚀 NUEVO: Prefetch queue
   const prefetchedConversations = useRef<Set<number>>(new Set());
@@ -645,6 +678,7 @@ export const useConversations = () => {
           timestamp: now,
           hasMore: meta.has_more ?? false
         });
+        persistMessagesCache(); // ✅ Persistir en sessionStorage
 
         const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
         if (conversation) {
@@ -731,6 +765,7 @@ export const useConversations = () => {
                   timestamp: Date.now(),
                   hasMore: result?.meta?.has_more ?? false
                 });
+                persistMessagesCache(); // ✅ Persistir en sessionStorage
                 console.log(`✅ Prefetch completado para conversación ${conv.id}`);
               }
             })
@@ -807,8 +842,9 @@ export const useConversations = () => {
       timestamp: Date.now(),
       hasMore: existingCache?.hasMore ?? false
     });
+    persistMessagesCache(); // ✅ Persistir en sessionStorage
     console.log(`💾 Caché de mensajes actualizada para conversación ${conversationId} (${messages.length} mensajes)`);
-  }, []);
+  }, [persistMessagesCache]);
 
   // ========================================
   // ✅ NUEVO: Función para agregar mensaje a caché existente
@@ -831,10 +867,11 @@ export const useConversations = () => {
           timestamp: Date.now(),
           hasMore: existingCache.hasMore
         });
+        persistMessagesCache(); // ✅ Persistir en sessionStorage
         console.log(`💾 Mensaje agregado a caché para conversación ${conversationId}`);
       }
     }
-  }, []);
+  }, [persistMessagesCache]);
 
   // ========================================
   // ✅ NUEVO: Cargar TODAS las conversaciones inicialmente
