@@ -25,21 +25,23 @@ class EvolutionApiController extends Controller
 
     /**
      * Obtener el nombre de instancia basado en el usuario/empresa actual
+     * SIEMPRE usa el company_slug del usuario autenticado para consistencia
      */
     private function getInstanceName(Request $request): string
     {
-        if ($request->has('instance_name')) {
-            return $request->input('instance_name');
-        }
-
         $user = $request->user();
 
-        if ($user && $user->company_id) {
-            return config('evolution.instance_naming') === 'company_slug' && $user->company_slug
-                ? $user->company_slug
-                : "company_{$user->company_id}";
+        // Prioridad: company_slug del usuario (coincide con URL del perfil)
+        if ($user && $user->company_slug) {
+            return $user->company_slug;
         }
 
+        // Fallback: company_id si no hay slug
+        if ($user && $user->company_id) {
+            return "company_{$user->company_id}";
+        }
+
+        // Último recurso: user_id
         return "user_{$user->id}";
     }
 
