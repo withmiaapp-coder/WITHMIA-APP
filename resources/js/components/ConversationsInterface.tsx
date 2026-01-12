@@ -362,7 +362,7 @@ const ConversationsInterface: React.FC = () => {
   // 6. Pinned Messages (Mensajes fijados)
   const [pinnedMessage, setPinnedMessage] = useState<any | null>(null);
   
-  // 7. Contact Info Panel (Panel de informaci??n)
+  // 7. Contact Info Panel (Panel de informacion)
   const [showContactInfo, setShowContactInfo] = useState(false);
   
   // 8. Muted Conversations (Silenciadas)
@@ -1999,24 +1999,24 @@ const ConversationsInterface: React.FC = () => {
       // Crear workbook
       const wb = XLSX.utils.book_new();
       
-      // ===== HOJA 1: INFORMACI?N GENERAL =====
+      // ===== HOJA 1: INFORMACION GENERAL =====
       const contacto = activeConversation.meta?.sender || activeConversation.contact || {};
       const telefono = contacto.phone_number || contacto.identifier || 'N/A';
       const email = contacto.email || 'N/A';
       
       const infoData = [
-        ['INFORMACI?N DE LA CONVERSACI?N'],
+        ['INFORMACION DE LA CONVERSACION'],
         [''],
-        ['ID Conversaci??n:', activeConversation.id],
+        ['ID Conversacion:', activeConversation.id],
         ['Contacto:', activeConversation.contact?.name || 'Sin nombre'],
         ['Email:', email],
-        ['Tel??fono:', telefono],
+        ['Telefono:', telefono],
         ['Estado:', activeConversation.status === 'open' ? 'Abierta' : activeConversation.status === 'resolved' ? 'Resuelta' : activeConversation.status],
         ['Prioridad:', activeConversation.priority || 'Normal'],
         ['Agente asignado:', activeConversation.assignee?.name || 'No asignado'],
-        ['Mensajes no le??dos:', activeConversation.unread_count || 0],
+        ['Mensajes no leidos:', activeConversation.unread_count || 0],
         ['Total de mensajes:', activeConversation.messages?.length || 0],
-        ['Fecha de exportaci??n:', new Date().toLocaleString('es-ES')],
+        ['Fecha de exportacion:', new Date().toLocaleString('es-ES')],
         [''],
         ['Etiquetas:', activeConversation.labels?.join(', ') || 'Sin etiquetas']
       ];
@@ -2166,7 +2166,7 @@ const ConversationsInterface: React.FC = () => {
       // Fase 2: Processing (30-60%)
       setDownloadPhase('processing');
       setDownloadProgress(35);
-      setDownloadStatus('Organizando informaci??n de contactos...');
+      setDownloadStatus('Organizando informacion de contactos...');
       
       const wb = XLSX.utils.book_new();
 
@@ -3464,7 +3464,7 @@ const ConversationsInterface: React.FC = () => {
         </div>
       )}
 
-      {/* Panel Derecho - Informaci??n del Contacto */}
+      {/* Panel Derecho - Informacion del Contacto */}
       {isRightPanelVisible && (
         <div className="w-80 bg-white/20 backdrop-blur-2xl p-4 space-y-6 animate-slide-in-right relative">
           <button
@@ -3545,7 +3545,7 @@ const ConversationsInterface: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
                   <User className="w-4 h-4 mr-2" />
-                  Informaci??n
+                  Informacion
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -3564,7 +3564,7 @@ const ConversationsInterface: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="font-semibold text-gray-800 mb-3">Acciones R?pidas</h4>
+                <h4 className="font-semibold text-gray-800 mb-3">Acciones Rapidas</h4>
                 <div className="space-y-2">
                   <button className="w-full p-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm text-gray-700 transition-colors flex items-center">
                     <Archive className="w-4 h-4 mr-2" />
@@ -3576,7 +3576,7 @@ const ConversationsInterface: React.FC = () => {
                   </button>
                   <button className="w-full p-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm text-gray-700 transition-colors flex items-center">
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Resolver Conversaci??n
+                    Resolver Conversacion
                   </button>
                 </div>
               </div>
