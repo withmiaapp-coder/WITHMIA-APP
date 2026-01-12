@@ -29,70 +29,34 @@ Route::get('/health', function () {
     }
 });
 
-// 🔧 DEBUG: Test broadcast endpoint - CANAL PÚBLICO para debug
+// 🔧 DEBUG: Test broadcast - Solo verificar que Pusher funciona (no crea conversaciones)
 Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
     try {
-        $testMessage = [
-            'id' => 9999,
-            'content' => 'Test broadcast message at ' . now()->toIso8601String(),
-            'conversation_id' => 1,
-            'inbox_id' => (int) $inboxId,
-            'account_id' => 1,
-            'message_type' => 0,
-            'created_at' => now()->timestamp,
-        ];
-        
         $key = config('broadcasting.connections.pusher.key');
         $secret = config('broadcasting.connections.pusher.secret');
         $appId = config('broadcasting.connections.pusher.app_id');
         $cluster = config('broadcasting.connections.pusher.options.cluster');
         
-        // Intentar broadcast directo con Pusher
-        $pusher = new \Pusher\Pusher(
-            $key,
-            $secret,
-            $appId,
-            [
-                'cluster' => $cluster,
-                'useTLS' => true,
-            ]
-        );
+        $pusher = new \Pusher\Pusher($key, $secret, $appId, [
+            'cluster' => $cluster,
+            'useTLS' => true,
+        ]);
         
-        // Probar con CANAL PÚBLICO primero
-        $publicChannel = 'test-channel';
-        $privateChannel = 'private-inbox.' . $inboxId;
-        $eventName = 'test-event';
-        
-        $payload = [
-            'message' => $testMessage,
-            'test' => 'This is a test at ' . now()->toIso8601String(),
-        ];
-        
-        // Enviar a canal público
-        $publicResult = $pusher->trigger($publicChannel, $eventName, $payload);
-        
-        // Enviar a canal privado
-        $privateResult = $pusher->trigger($privateChannel, 'message.received', $payload);
+        // Solo enviar ping de prueba, no simular mensaje real
+        $result = $pusher->trigger('private-inbox.' . $inboxId, 'ping', [
+            'test' => true,
+            'timestamp' => now()->toIso8601String(),
+        ]);
         
         return response()->json([
             'status' => 'success',
-            'public_channel' => $publicChannel,
-            'private_channel' => $privateChannel,
-            'public_result' => $publicResult,
-            'private_result' => $privateResult,
-            'config' => [
-                'key' => $key,
-                'secret_first_4' => substr($secret ?? '', 0, 4) . '...',
-                'app_id' => $appId,
-                'cluster' => $cluster,
-            ],
-            'instructions' => 'Ejecuta en consola: window.Echo.channel("test-channel").listen("test-event", e => console.log("RECIBIDO!", e))'
+            'message' => 'Ping sent to private-inbox.' . $inboxId,
+            'pusher_working' => true,
         ]);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
-            'exception_class' => get_class($e),
         ], 500);
     }
 });
