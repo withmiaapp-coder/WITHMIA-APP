@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
+use App\Jobs\CleanupUnconnectedInstance;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -94,6 +95,28 @@ class EvolutionApiController extends Controller
         }
 
         $result = $this->evolutionApi->connect($instanceName);
+
+        // 🧹 AUTO-LIMPIEZA: Programar verificación de conexión en 5 minutos
+        // Si no se conecta en 5 minutos, la instancia se eliminará automáticamente
+        if ($result['success']) {
+            $connectionRequestedAt = time();
+            
+            // Guardar timestamp del intento de conexión para evitar limpiezas duplicadas
+            Cache::put(
+                "whatsapp:connection_attempt:{$instanceName}",
+                $connectionRequestedAt,
+                now()->addMinutes(10) // Mantener por 10 minutos
+            );
+
+            // Programar Job de limpieza para ejecutarse en 5 minutos
+            CleanupUnconnectedInstance::dispatch($instanceName, $connectionRequestedAt)
+                ->delay(now()->addMinutes(5));
+
+            Log::info('🧹 Cleanup job programado para 5 minutos', [
+                'instance' => $instanceName,
+                'scheduled_at' => now()->addMinutes(5)->toDateTimeString()
+            ]);
+        }
 
         return response()->json($result, $result['success'] ? 200 : 400);
     }
@@ -530,6 +553,22 @@ class EvolutionApiController extends Controller
             'state' => $state,
             'data' => $data
         ]);
+
+        // 🧹 AUTO-LIMPIEZA: Si la conexión fue exitosa, cancelar el Job de limpieza
+        // Actualizamos el timestamp para que el Job programado detecte que hay un intento más reciente
+        if ($state === 'open') {
+            // Marcar la conexión como exitosa para evitar que el cleanup elimine la instancia
+            Cache::put(
+                "whatsapp:connection_attempt:{$instanceName}",
+                time() + 86400, // Timestamp futuro para invalidar cualquier job pendiente
+                now()->addHours(24)
+            );
+            
+            Log::info('✅ Conexión exitosa, cleanup job será cancelado', [
+                'instance' => $instanceName,
+                'state' => $state
+            ]);
+        }
 
         try {
             // Obtener company_slug desde la instancia

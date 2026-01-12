@@ -10,7 +10,9 @@ class EvolutionApiService
 {
     private string $baseUrl;
     private string $apiKey;
-    private int $cacheTtl = 30; // Tiempo de vida del caché en segundos
+    private int $cacheTtl = 60; // Tiempo de vida del caché en segundos (aumentado)
+    private int $timeout = 5; // Timeout en segundos para evitar bloqueos
+    private int $connectTimeout = 3; // Timeout de conexión
 
     public function __construct()
     {
@@ -290,11 +292,13 @@ class EvolutionApiService
             Log::warning("Redis cache read failed, fetching from API", ['error' => $e->getMessage()]);
         }
 
-        // Si no está en caché, consultar la API
+        // Si no está en caché, consultar la API con timeout corto
         try {
             $response = Http::withHeaders([
                 'apikey' => $this->apiKey
-            ])->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
+            ])->timeout($this->timeout)
+              ->connectTimeout($this->connectTimeout)
+              ->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
 
             if (!$response->successful()) {
                 $result = [
