@@ -555,7 +555,8 @@ export const useConversations = () => {
         if (conversation) {
           setActiveConversationState({
             ...conversation,
-            messages: uniqueMessages // ✅ Solo mensajes reales del servidor
+            messages: uniqueMessages, // ✅ Solo mensajes reales del servidor
+            _isLoading: false // 🚀 Remover flag de carga
           });
 
           // ✅ ARREGLADO: Marcar como leído INMEDIATAMENTE (visual instantáneo)

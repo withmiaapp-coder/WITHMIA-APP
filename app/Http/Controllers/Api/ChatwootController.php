@@ -392,7 +392,7 @@ class ChatwootController extends Controller
     }
 
     /**
-     * Obtener mensajes de una conversación específica - CON VALIDACIÓN DE SEGURIDAD
+     * Obtener mensajes de una conversación específica - CON VALIDACIÓN DE SEGURIDAD Y CACHE
      */
     public function getConversationMessages($id)
     {
@@ -410,45 +410,69 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 1: Obtener la conversación para validar permisos
-            $convResponse = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
+            // 🚀 OPTIMIZACIÓN: Cache key para mensajes
+            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$id}";
+            $cacheTTL = 30; // 30 segundos (los mensajes se actualizan por WebSocket)
+            
+            // 🚀 OPTIMIZACIÓN: Cache de validación de conversaciones (evita doble llamada)
+            $validationCacheKey = "conv_valid:inbox:{$this->inboxId}:conv:{$id}";
+            $isValidated = \Illuminate\Support\Facades\Cache::get($validationCacheKey);
+            
+            // Si ya validamos esta conversación recientemente, saltamos la verificación
+            if (!$isValidated) {
+                // PASO 1: Obtener la conversación para validar permisos
+                $convResponse = Http::timeout(5)->withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                    'Content-Type' => 'application/json'
+                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
 
-            if (!$convResponse->successful()) {
-                Log::warning('Conversación no encontrada', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'status' => $convResponse->status()
-                ]);
+                if (!$convResponse->successful()) {
+                    Log::warning('Conversación no encontrada', [
+                        'user_id' => $this->userId,
+                        'conversation_id' => $id,
+                        'status' => $convResponse->status()
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Conversación no encontrada'
+                    ], 404);
+                }
+
+                $conversation = $convResponse->json();
+
+                // PASO 2: VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
+                if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {
+                    Log::warning('Intento de acceso no autorizado a conversación', [
+                        'user_id' => $this->userId,
+                        'conversation_id' => $id,
+                        'conversation_inbox_id' => $conversation['inbox_id'] ?? 'null',
+                        'user_inbox_id' => $this->inboxId,
+                        'account_id' => $this->accountId
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tienes permiso para ver esta conversación'
+                    ], 403);
+                }
                 
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Conversación no encontrada'
-                ], 404);
+                // 🚀 Guardar validación en cache por 5 minutos
+                \Illuminate\Support\Facades\Cache::put($validationCacheKey, true, 300);
             }
 
-            $conversation = $convResponse->json();
-
-            // PASO 2: VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
-            if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {
-                Log::warning('Intento de acceso no autorizado a conversación', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'conversation_inbox_id' => $conversation['inbox_id'] ?? 'null',
-                    'user_inbox_id' => $this->inboxId,
-                    'account_id' => $this->accountId
-                ]);
-                
+            // 🚀 Intentar obtener mensajes desde cache
+            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($cached) {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permiso para ver esta conversación'
-                ], 403);
+                    'success' => true,
+                    'payload' => $cached,
+                    'from_cache' => true
+                ]);
             }
 
             // PASO 3: Si pasa la validación, obtener los mensajes
-            $response = Http::withHeaders([
+            $response = Http::timeout(8)->withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json'
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages');
@@ -479,18 +503,15 @@ class ChatwootController extends Controller
                     
                     // Reindexar el array para evitar huecos en los índices
                     $messagesData['payload'] = array_values($filteredMessages);
-                    
-                    Log::info('Mensajes obtenidos y filtrados exitosamente', [
-                        'user_id' => $this->userId,
-                        'conversation_id' => $id,
-                        'total_messages' => count($response->json()['payload'] ?? []),
-                        'filtered_messages' => count($filteredMessages)
-                    ]);
                 }
+                
+                // 🚀 Guardar mensajes en cache
+                \Illuminate\Support\Facades\Cache::put($cacheKey, $messagesData, $cacheTTL);
                 
                 return response()->json([
                     'success' => true,
-                    'payload' => $messagesData
+                    'payload' => $messagesData,
+                    'from_cache' => false
                 ]);
             }
 

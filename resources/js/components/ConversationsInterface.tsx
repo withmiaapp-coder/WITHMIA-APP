@@ -998,12 +998,22 @@ const ConversationsInterface: React.FC = () => {
   });
 
   const handleSelectConversation = async (conversation: Conversation) => {
-    await loadConversationMessages(conversation.id);
+    // 🚀 OPTIMIZACIÓN: Mostrar conversación INMEDIATAMENTE con loading state
+    // Esto elimina el delay de 3 segundos percibido por el usuario
+    _setActiveConversation({
+      ...conversation,
+      messages: [], // Array vacío mientras carga
+      _isLoading: true // Flag para mostrar skeleton
+    });
     
-    // ✅ Marcar como leída inmediatamente en el servidor
+    // Cargar mensajes en background (no bloqueante)
+    loadConversationMessages(conversation.id);
+    
+    // Marcar como leída en background (no bloqueante)
     if (markConversationAsRead) {
-      await markConversationAsRead(conversation.id);
-      console.log('✅ Conversación marcada como leída en servidor');
+      markConversationAsRead(conversation.id).then(() => {
+        console.log('✅ Conversación marcada como leída en servidor');
+      });
     }
   };
 
@@ -2665,7 +2675,41 @@ const ConversationsInterface: React.FC = () => {
                 </div>
               )}
 
-              {/* ?? Renderizar mensajes (sin duplicados) */}
+              {/* 🚀 SKELETON LOADER mientras cargan mensajes */}
+              {activeConversation?._isLoading && filteredMessages.length === 0 && (
+                <div className="space-y-4 animate-pulse">
+                  {/* Mensaje del contacto (izquierda) */}
+                  <div className="flex justify-start">
+                    <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl bg-gray-200/50">
+                      <div className="h-4 bg-gray-300/60 rounded w-48 mb-2"></div>
+                      <div className="h-3 bg-gray-300/40 rounded w-32"></div>
+                    </div>
+                  </div>
+                  {/* Mensaje del agente (derecha) */}
+                  <div className="flex justify-end">
+                    <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl bg-blue-200/50">
+                      <div className="h-4 bg-blue-300/60 rounded w-56 mb-2"></div>
+                      <div className="h-3 bg-blue-300/40 rounded w-24"></div>
+                    </div>
+                  </div>
+                  {/* Mensaje del contacto (izquierda) */}
+                  <div className="flex justify-start">
+                    <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl bg-gray-200/50">
+                      <div className="h-4 bg-gray-300/60 rounded w-40 mb-2"></div>
+                      <div className="h-4 bg-gray-300/50 rounded w-52 mb-2"></div>
+                      <div className="h-3 bg-gray-300/40 rounded w-20"></div>
+                    </div>
+                  </div>
+                  {/* Mensaje del agente (derecha) */}
+                  <div className="flex justify-end">
+                    <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl bg-blue-200/50">
+                      <div className="h-4 bg-blue-300/60 rounded w-44"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ✨ Renderizar mensajes (sin duplicados) */}
               {filteredMessages.map((message: any, index: number) => (
                 <React.Fragment key={message.id}>
                   {/* Separador de "Nuevos mensajes" */}
