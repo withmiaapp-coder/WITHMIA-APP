@@ -503,11 +503,38 @@ export const useConversations = () => {
           _isOptimistic: false // Flag adicional para compatibilidad
         }));
 
-        // ✅ Eliminar duplicados por ID (usar Map para mantener solo el último)
-        // ⚡ IMPORTANTE: Los mensajes del servidor REEMPLAZAN cualquier mensaje optimista
-        const uniqueMessages = Array.from(
-          new Map(chatwootMessages.map((msg: any) => [msg.id, msg])).values()
-        );
+        // ⚡ DEDUPLICACIÓN MEJORADA: Detectar mensajes con mismo contenido y timestamp cercano
+        // Esto previene duplicados de Evolution-Chatwoot (mensaje sin source_id + mensaje con WAID)
+        const deduplicatedMessages: any[] = [];
+        const seenContentKeys = new Map<string, any>(); // key: "content|approxTimestamp" -> mensaje
+        
+        for (const msg of chatwootMessages) {
+          const msgTimestamp = typeof msg.timestamp === 'string' 
+            ? new Date(msg.timestamp).getTime() 
+            : msg.timestamp * 1000;
+          // Redondear timestamp a ventana de 5 segundos para detectar duplicados cercanos
+          const approxTimestamp = Math.floor(msgTimestamp / 5000);
+          const contentKey = `${msg.content?.trim()}|${approxTimestamp}|${msg.message_type}`;
+          
+          if (seenContentKeys.has(contentKey)) {
+            // Duplicado detectado - mantener el que tiene ID menor (el original)
+            const existing = seenContentKeys.get(contentKey);
+            if (msg.id < existing.id) {
+              // Este mensaje es más antiguo, reemplazar
+              seenContentKeys.set(contentKey, msg);
+            }
+            console.log('🔄 Mensaje duplicado filtrado:', msg.content?.substring(0, 30), 'ID:', msg.id);
+          } else {
+            seenContentKeys.set(contentKey, msg);
+          }
+        }
+        
+        const uniqueMessages = Array.from(seenContentKeys.values())
+          .sort((a, b) => {
+            const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
+            const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
+            return timeA - timeB;
+          });
 
         // Usar ref para evitar stale closure
         const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
