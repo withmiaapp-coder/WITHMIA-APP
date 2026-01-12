@@ -168,6 +168,59 @@ Route::get('/setup-chatwoot-webhook', function () {
     }
 });
 
+// 🔧 RECREAR webhook de Chatwoot (elimina el viejo y crea uno nuevo)
+Route::get('/recreate-chatwoot-webhook', function () {
+    try {
+        $user = \App\Models\User::first();
+        $company = $user->company;
+        
+        $chatwootUrl = config('services.chatwoot.base_url', 'https://chatwoot.withmia.com');
+        $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+        $accountId = $company->chatwoot_account_id;
+        $appUrl = config('app.url', 'https://app.withmia.com');
+        $webhookUrl = "{$appUrl}/api/chatwoot/webhook";
+        
+        // 1. Obtener webhooks existentes
+        $existingResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $apiKey
+        ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
+        
+        $webhooks = $existingResponse->json()['payload']['webhooks'] ?? $existingResponse->json()['webhooks'] ?? [];
+        
+        // 2. Eliminar webhooks existentes
+        $deleted = [];
+        foreach ($webhooks as $wh) {
+            if (isset($wh['id'])) {
+                $deleteResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api_access_token' => $apiKey
+                ])->delete("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks/{$wh['id']}");
+                $deleted[] = ['id' => $wh['id'], 'status' => $deleteResponse->status()];
+            }
+        }
+        
+        // 3. Crear nuevo webhook
+        $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $apiKey,
+            'Content-Type' => 'application/json'
+        ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks", [
+            'webhook' => [
+                'url' => $webhookUrl,
+                'subscriptions' => ['message_created', 'message_updated', 'conversation_created', 'conversation_updated', 'conversation_status_changed']
+            ]
+        ]);
+        
+        return response()->json([
+            'status' => $createResponse->successful() ? 'recreated' : 'error',
+            'deleted_webhooks' => $deleted,
+            'new_webhook' => $createResponse->json(),
+            'webhook_url' => $webhookUrl
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // API routes go here - using dedicated API controller without auth
 
 // Onboarding API route - no authentication required
