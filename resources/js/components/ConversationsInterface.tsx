@@ -3005,29 +3005,37 @@ const ConversationsInterface: React.FC = () => {
                         
                         <p className="text-sm">{searchTerm && searchResults ? highlightSearchTerm(message.content, searchTerm, index) : message.content}</p>
 
-                        {/*  Renderizar archivos adjuntos (im?genes, audios, documentos) */}
+                        {/* Renderizar archivos adjuntos (imágenes, audios, documentos) */}
                         {message.attachments && message.attachments.length > 0 && (
                           <div className="mt-2 space-y-2">
-                            {message.attachments.map((att: any, idx: number) => (
+                            {message.attachments.map((att: any, idx: number) => {
+                              // ✅ Chatwoot usa file_url, también soportar data_url como fallback
+                              const attachmentUrl = att.file_url || att.data_url || att.url || '';
+                              const fileType = att.file_type || att.content_type || '';
+                              
+                              return (
                               <div key={idx}>
-                                {att.file_type?.includes('image') ? (
+                                {fileType.includes('image') ? (
                                   <img 
-                                    src={att.data_url} 
+                                    src={attachmentUrl} 
                                     alt="Imagen adjunta" 
                                     className="max-w-full max-h-64 rounded-lg cursor-pointer shadow-md hover:shadow-lg transition-shadow"
-                                    
+                                    onError={(e) => {
+                                      console.warn('Error cargando imagen:', attachmentUrl);
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
                                     title="Imagen adjunta"
                                   />
-                                ) : att.file_type?.includes('audio') ? (
+                                ) : fileType.includes('audio') ? (
                                   <div className="bg-white/40 p-2 rounded-lg">
                                     <audio controls className="w-full max-w-xs">
-                                      <source src={att.data_url} type={att.file_type} />
+                                      <source src={attachmentUrl} type={fileType} />
                                       Tu navegador no soporta el elemento de audio.
                                     </audio>
                                   </div>
-                                ) : (
+                                ) : attachmentUrl ? (
                                   <a 
-                                    href={att.data_url} 
+                                    href={attachmentUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="flex items-center space-x-2 p-2 bg-white/50 rounded-lg hover:bg-white/70 transition-colors"
@@ -3035,11 +3043,12 @@ const ConversationsInterface: React.FC = () => {
                                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <span className="text-xs font-medium text-gray-700">{att.file_name || 'Archivo adjunto'}</span>
+                                    <span className="text-xs font-medium text-gray-700">{att.file_name || att.name || 'Archivo adjunto'}</span>
                                   </a>
-                                )}
+                                ) : null}
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                         <div className="flex items-center justify-end space-x-1 mt-1">
@@ -3345,14 +3354,15 @@ const ConversationsInterface: React.FC = () => {
                 if (mediaFilter === 'images' || mediaFilter === 'all') {
                   return (
                     <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Im?genes ({images.length})</h4>
+                      <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3 mb-6">
                         {images.map((img, idx) => (
                           <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all cursor-pointer">
                             <img 
-                              src={img.data_url || img.file_url} 
+                              src={img.file_url || img.data_url || img.url} 
                               alt="Media"
                               className="w-full h-full object-cover"
+                              onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                             />
                           </div>
                         ))}
@@ -3370,11 +3380,11 @@ const ConversationsInterface: React.FC = () => {
                           <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <File className="w-8 h-8 text-gray-500" />
                             <div className="flex-1">
-                              <p className="font-medium text-gray-800">{file.file_name || 'Archivo'}</p>
-                              <p className="text-sm text-gray-500">{(file.file_size / 1024).toFixed(2)} KB</p>
+                              <p className="font-medium text-gray-800">{file.file_name || file.name || 'Archivo'}</p>
+                              <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
                             </div>
                             <a 
-                              href={file.data_url || file.file_url} 
+                              href={file.file_url || file.data_url || file.url} 
                               download
                               className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
                             >
