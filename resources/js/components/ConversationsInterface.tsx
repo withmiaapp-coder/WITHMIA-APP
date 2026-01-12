@@ -604,13 +604,11 @@ const ConversationsInterface: React.FC = () => {
       }
 
       // Si el mensaje es para la conversación activa, agregar mensaje en tiempo real
-      // ⚠️ SOLO AGREGAR MENSAJES INCOMING (no outgoing que ya se agregaron al enviar)
+      // ✅ AGREGAR TODOS los mensajes (incoming y outgoing) - verificar duplicados por ID
       const currentActiveConv = activeConversationRef.current;
-      const msgType = event.message?.message_type;
-      const isOutgoingMessage = msgType === 1 || msgType === 'outgoing';
       
-      if (currentActiveConv && currentActiveConv.id === conversationId && !isOutgoingMessage) {
-        console.log("💬 Mensaje INCOMING para conversación activa - Agregando en tiempo real...");
+      if (currentActiveConv && currentActiveConv.id === conversationId) {
+        console.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
         try {
           // Construir el nuevo mensaje desde el evento
           const newMessage = {
@@ -630,16 +628,19 @@ const ConversationsInterface: React.FC = () => {
           _setActiveConversation((prev: any) => {
             if (!prev || prev.id !== conversationId) return prev;
             
-            // Verificar si el mensaje ya existe (evitar duplicados)
+            // Verificar si el mensaje ya existe (evitar duplicados por ID o contenido+timestamp)
             const existingMessages = prev.messages || [];
-            const messageExists = existingMessages.some((m: any) => m.id === newMessage.id);
+            const messageExists = existingMessages.some((m: any) => 
+              m.id === newMessage.id || 
+              (m.content === newMessage.content && m.id?.toString().startsWith('temp-'))
+            );
             
             if (messageExists) {
-              console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado');
+              console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
               return prev;
             }
             
-            console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id);
+            console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
             return {
               ...prev,
               messages: [...existingMessages, newMessage]
@@ -650,8 +651,6 @@ const ConversationsInterface: React.FC = () => {
         } catch (error) {
           console.error('❌ Error agregando mensaje al chat:', error);
         }
-      } else if (isOutgoingMessage) {
-        console.log('⏭️ Mensaje OUTGOING ignorado (ya se agregó al enviar)');
       }
     }
   });
