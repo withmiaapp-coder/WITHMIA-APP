@@ -159,19 +159,49 @@ class EvolutionApiService
     public function connect(string $instanceName): array
     {
         try {
+            Log::info('Evolution API connect attempt', [
+                'instance' => $instanceName,
+                'url' => "{$this->baseUrl}/instance/connect/{$instanceName}"
+            ]);
+
             $response = Http::withHeaders([
                 'apikey' => $this->apiKey
-            ])->get("{$this->baseUrl}/instance/connect/{$instanceName}");
+            ])->timeout(30)->get("{$this->baseUrl}/instance/connect/{$instanceName}");
+
+            Log::info('Evolution API connect response', [
+                'instance' => $instanceName,
+                'status' => $response->status(),
+                'body_length' => strlen($response->body())
+            ]);
 
             if (!$response->successful()) {
+                $errorBody = $response->body();
+                $errorJson = $response->json();
+                
                 Log::error('Evolution API connect error', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $errorBody,
+                    'json' => $errorJson
                 ]);
+
+                // Si la instancia no existe, intentar crearla primero
+                if ($response->status() === 404 || str_contains($errorBody, 'not found') || str_contains($errorBody, 'does not exist')) {
+                    Log::info('Instance not found, creating first', ['instance' => $instanceName]);
+                    
+                    $createResult = $this->createInstance($instanceName);
+                    
+                    if ($createResult['success']) {
+                        // Reintentar connect después de crear
+                        sleep(1);
+                        return $this->connect($instanceName);
+                    }
+                }
 
                 return [
                     'success' => false,
-                    'error' => $response->json()['message'] ?? 'Failed to connect'
+                    'error' => $errorJson['message'] ?? $errorJson['error'] ?? 'Failed to connect',
+                    'details' => $errorBody,
+                    'status' => $response->status()
                 ];
             }
 
@@ -199,7 +229,9 @@ class EvolutionApiService
 
         } catch (\Exception $e) {
             Log::error('Evolution API connect exception', [
-                'message' => $e->getMessage()
+                'instance' => $instanceName,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return [

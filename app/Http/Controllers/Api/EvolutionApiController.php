@@ -113,12 +113,22 @@ class EvolutionApiController extends Controller
             'instance' => $instanceName,
             'success' => $result['success'] ?? false,
             'has_qr' => isset($result['qr']),
-            'error' => $result['error'] ?? null
+            'error' => $result['error'] ?? null,
+            'details' => $result['details'] ?? null
         ]);
 
         // Devolver 200 si tenemos QR, aunque success sea false
         $hasQr = isset($result['qr']) && !empty($result['qr']);
         $statusCode = ($result['success'] || $hasQr) ? 200 : 400;
+
+        // Incluir más información en caso de error
+        if ($statusCode === 400) {
+            $result['debug'] = [
+                'instance_name' => $instanceName,
+                'evolution_url' => config('evolution.api_url'),
+                'timestamp' => now()->toIso8601String()
+            ];
+        }
 
         return response()->json($result, $statusCode);
     }
