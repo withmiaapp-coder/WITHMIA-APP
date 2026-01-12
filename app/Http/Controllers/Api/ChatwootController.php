@@ -394,9 +394,13 @@ class ChatwootController extends Controller
     /**
      * Obtener mensajes de una conversación específica - CON VALIDACIÓN DE SEGURIDAD Y CACHE
      */
-    public function getConversationMessages($id)
+    public function getConversationMessages($id, Request $request = null)
     {
         try {
+            // 🚀 PAGINACIÓN: Límite de mensajes (default 50, max 200)
+            $limit = min((int)($request?->query('limit', 50) ?? 50), 200);
+            $before = $request?->query('before'); // ID del mensaje más antiguo para cargar más
+            
             // SEGURIDAD: Validar que el usuario tenga inbox asignado
             if (!$this->inboxId) {
                 Log::warning('Usuario sin inbox_id intentó acceder a mensajes', [
@@ -410,9 +414,9 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // 🚀 OPTIMIZACIÓN: Cache key para mensajes
-            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$id}";
-            $cacheTTL = 30; // 30 segundos (los mensajes se actualizan por WebSocket)
+            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (incluye limit para diferentes páginas)
+            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$id}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
+            $cacheTTL = 120; // ✅ 2 minutos (los mensajes nuevos llegan por WebSocket)
             
             // 🚀 OPTIMIZACIÓN: Cache de validación de conversaciones (evita doble llamada)
             $validationCacheKey = "conv_valid:inbox:{$this->inboxId}:conv:{$id}";
@@ -466,16 +470,22 @@ class ChatwootController extends Controller
             if ($cached) {
                 return response()->json([
                     'success' => true,
-                    'payload' => $cached,
+                    'payload' => $cached['payload'],
+                    'meta' => $cached['meta'] ?? [],
                     'from_cache' => true
                 ]);
             }
 
             // PASO 3: Si pasa la validación, obtener los mensajes
+            $queryParams = [];
+            if ($before) {
+                $queryParams['before'] = $before;
+            }
+            
             $response = Http::timeout(8)->withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages');
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages', $queryParams);
 
             if ($response->successful()) {
                 $messagesData = $response->json();
@@ -505,12 +515,38 @@ class ChatwootController extends Controller
                     $messagesData['payload'] = array_values($filteredMessages);
                 }
                 
+                // 🚀 PAGINACIÓN: Limitar mensajes y agregar metadata
+                $allMessages = $messagesData['payload'] ?? [];
+                $totalMessages = count($allMessages);
+                
+                // Ordenar por ID descendente (más recientes primero) y tomar los últimos N
+                usort($allMessages, fn($a, $b) => $b['id'] - $a['id']);
+                $limitedMessages = array_slice($allMessages, 0, $limit);
+                
+                // Revertir para mostrar en orden cronológico (más antiguos primero)
+                $limitedMessages = array_reverse($limitedMessages);
+                
+                $messagesData['payload'] = $limitedMessages;
+                $hasMore = $totalMessages > $limit;
+                $oldestMessageId = !empty($limitedMessages) ? $limitedMessages[0]['id'] : null;
+                
+                $meta = [
+                    'total' => $totalMessages,
+                    'returned' => count($limitedMessages),
+                    'has_more' => $hasMore,
+                    'oldest_id' => $oldestMessageId
+                ];
+                
                 // 🚀 Guardar mensajes en cache
-                \Illuminate\Support\Facades\Cache::put($cacheKey, $messagesData, $cacheTTL);
+                \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                    'payload' => $messagesData,
+                    'meta' => $meta
+                ], $cacheTTL);
                 
                 return response()->json([
                     'success' => true,
                     'payload' => $messagesData,
+                    'meta' => $meta,
                     'from_cache' => false
                 ]);
             }

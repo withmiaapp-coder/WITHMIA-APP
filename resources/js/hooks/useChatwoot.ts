@@ -142,6 +142,13 @@ export const useConversations = () => {
   // ✅ NUEVO: Flag para evitar cargas concurrentes de mensajes
   const isLoadingMessagesRef = useRef<Set<number>>(new Set());
   
+  // 🚀 NUEVO: Cache local de mensajes (sessionStorage - se limpia al cerrar pestaña)
+  const messagesLocalCache = useRef<Map<number, { messages: any[], timestamp: number, hasMore: boolean }>>(new Map());
+  const LOCAL_CACHE_TTL = 5 * 60 * 1000; // 5 minutos en ms
+  
+  // 🚀 NUEVO: Prefetch queue
+  const prefetchedConversations = useRef<Set<number>>(new Set());
+  
   // Mantener refs actualizadas
   useEffect(() => {
     conversationsRef.current = conversations;
@@ -471,51 +478,84 @@ export const useConversations = () => {
   }, [apiCall]);
 
   // ========================================
-  // Cargar mensajes de conversación
+  // Cargar mensajes de conversación - CON CACHE LOCAL + PAGINACIÓN
   // ========================================
-  const loadConversationMessages = useCallback(async (conversationId: number) => {
+  const loadConversationMessages = useCallback(async (conversationId: number, loadMore: boolean = false) => {
     // ✅ Evitar cargas concurrentes de la misma conversación
     if (isLoadingMessagesRef.current.has(conversationId)) {
       console.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId}, omitiendo...`);
       return;
     }
     
+    // 🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
+    const cached = messagesLocalCache.current.get(conversationId);
+    const now = Date.now();
+    
+    if (cached && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
+      console.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
+      const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
+      if (conversation) {
+        setActiveConversationState({
+          ...conversation,
+          messages: cached.messages,
+          _isLoading: false,
+          _hasMoreMessages: cached.hasMore
+        });
+        
+        // Actualizar unread_count local
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+          )
+        );
+        
+        // 🚀 PREFETCH: Precargar siguientes conversaciones en background
+        prefetchNextConversations(conversationId);
+        return;
+      }
+    }
+    
     isLoadingMessagesRef.current.add(conversationId);
     
     try {
-      const result = await apiCall(`/api/chatwoot-proxy/conversations/${conversationId}/messages`);
-
+      // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo
+      let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=50`;
+      if (loadMore && cached?.messages?.length > 0) {
+        const oldestId = cached.messages[0]?.id;
+        if (oldestId) {
+          url += `&before=${oldestId}`;
+        }
+      }
+      
+      const result = await apiCall(url);
       const messagesArray = result?.payload?.payload || result?.payload || [];
+      const meta = result?.meta || {};
 
       if (Array.isArray(messagesArray)) {
         const chatwootMessages = messagesArray.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           timestamp: msg.created_at,
-          created_at: msg.created_at, // ⚡ Agregar created_at para compatibilidad
+          created_at: msg.created_at,
           sender: msg.message_type === 0 ? 'contact' : 'agent',
-          message_type: msg.message_type === 0 ? 'incoming' : 'outgoing', // ⚡ Normalizar message_type
+          message_type: msg.message_type === 0 ? 'incoming' : 'outgoing',
           status: msg.status || 'sent',
           attachments: msg.attachments || [],
           sender_name: msg.sender?.name || 'Usuario',
-          source_id: msg.source_id || null, // ⚡ Guardar source_id para deduplicación
-          isOptimistic: false, // Mensajes del servidor NO son optimistas
-          _isOptimistic: false // Flag adicional para compatibilidad
+          source_id: msg.source_id || null,
+          isOptimistic: false,
+          _isOptimistic: false
         }));
 
-        // ⚡ DEDUPLICACIÓN INTELIGENTE: Solo filtrar duplicados de Evolution-Chatwoot
-        // Criterio: Mismo contenido + timestamps cercanos + UNO tiene source_id y OTRO no
-        // Esto NO afecta mensajes legítimos repetidos por el usuario
-        const messagesById = new Map(chatwootMessages.map((m: any) => [m.id, m]));
+        // Deduplicación Evolution
         const duplicateIds = new Set<number>();
-        
-        // Agrupar mensajes por contenido y ventana de tiempo
         const contentGroups = new Map<string, any[]>();
+        
         for (const msg of chatwootMessages) {
           const msgTimestamp = typeof msg.timestamp === 'string' 
             ? new Date(msg.timestamp).getTime() 
             : msg.timestamp * 1000;
-          const approxTimestamp = Math.floor(msgTimestamp / 3000); // Ventana de 3 segundos
+          const approxTimestamp = Math.floor(msgTimestamp / 3000);
           const groupKey = `${msg.content?.trim()}|${approxTimestamp}|${msg.message_type}`;
           
           if (!contentGroups.has(groupKey)) {
@@ -524,25 +564,20 @@ export const useConversations = () => {
           contentGroups.get(groupKey)!.push(msg);
         }
         
-        // Detectar duplicados de Evolution: grupos con 2+ mensajes donde uno tiene source_id y otro no
         for (const [key, group] of contentGroups) {
           if (group.length >= 2) {
-            const withSourceId = group.filter((m: any) => m.source_id && m.source_id.startsWith('WAID:'));
+            const withSourceId = group.filter((m: any) => m.source_id?.startsWith('WAID:'));
             const withoutSourceId = group.filter((m: any) => !m.source_id);
             
-            // Solo es duplicado de Evolution si hay exactamente un par: uno con WAID y uno sin
             if (withSourceId.length >= 1 && withoutSourceId.length >= 1) {
-              // Mantener el mensaje SIN source_id (el original de la app) y filtrar el de Evolution
               for (const dupMsg of withSourceId) {
                 duplicateIds.add(dupMsg.id);
-                console.log('🔄 Duplicado Evolution filtrado:', dupMsg.content?.substring(0, 30), 'ID:', dupMsg.id);
               }
             }
-            // Si ambos tienen source_id o ambos no tienen, son mensajes legítimos - NO filtrar
           }
         }
         
-        const uniqueMessages = chatwootMessages
+        let uniqueMessages = chatwootMessages
           .filter((m: any) => !duplicateIds.has(m.id))
           .sort((a: any, b: any) => {
             const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
@@ -550,50 +585,115 @@ export const useConversations = () => {
             return timeA - timeB;
           });
 
-        // Usar ref para evitar stale closure
+        // 🚀 Si es loadMore, combinar con mensajes existentes
+        if (loadMore && cached?.messages) {
+          const existingIds = new Set(cached.messages.map((m: any) => m.id));
+          const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
+          uniqueMessages = [...newOlderMessages, ...cached.messages];
+        }
+
+        // 🚀 Guardar en cache local
+        messagesLocalCache.current.set(conversationId, {
+          messages: uniqueMessages,
+          timestamp: now,
+          hasMore: meta.has_more ?? false
+        });
+
         const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
         if (conversation) {
           setActiveConversationState({
             ...conversation,
-            messages: uniqueMessages, // ✅ Solo mensajes reales del servidor
-            _isLoading: false // 🚀 Remover flag de carga
+            messages: uniqueMessages,
+            _isLoading: false,
+            _hasMoreMessages: meta.has_more ?? false
           });
 
-          // ✅ ARREGLADO: Marcar como leído INMEDIATAMENTE (visual instantáneo)
-          // 1. Actualizar estado local primero para feedback visual instantáneo
           setConversations(prev =>
             prev.map(conv =>
               conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
             )
           );
 
-          // 2. Actualizar conversación activa
           setActiveConversationState(prev =>
             prev ? { ...prev, unread_count: 0 } : prev
           );
 
-          // 3. Sincronizar con backend en segundo plano (sin bloquear UI)
           setTimeout(() => {
             markConversationAsRead(conversationId);
           }, 300);
+          
+          // 🚀 PREFETCH: Precargar siguientes conversaciones en background
+          if (!loadMore) {
+            prefetchNextConversations(conversationId);
+          }
         }
       }
     } catch (err) {
       console.error('Error cargando mensajes:', err);
-      // Usar ref para evitar stale closure
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
       if (conversation) {
         setActiveConversationState({
           ...conversation,
-          messages: []
+          messages: [],
+          _isLoading: false
         });
       }
     } finally {
-      // ✅ Remover flag después de completar (con pequeño delay)
       setTimeout(() => {
         isLoadingMessagesRef.current.delete(conversationId);
       }, 500);
     }
+  }, [apiCall]);
+
+  // 🚀 PREFETCH: Precargar mensajes de las siguientes 2 conversaciones
+  const prefetchNextConversations = useCallback((currentConversationId: number) => {
+    const currentIndex = conversationsRef.current.findIndex(c => c.id === currentConversationId);
+    if (currentIndex === -1) return;
+    
+    // Obtener las siguientes 2 conversaciones
+    const nextConversations = conversationsRef.current.slice(currentIndex + 1, currentIndex + 3);
+    
+    nextConversations.forEach(conv => {
+      // Solo prefetch si no está en cache
+      if (!messagesLocalCache.current.has(conv.id) && !prefetchedConversations.current.has(conv.id)) {
+        prefetchedConversations.current.add(conv.id);
+        
+        // Cargar en background con delay para no saturar
+        setTimeout(() => {
+          console.log(`🔮 Prefetching mensajes para conversación ${conv.id}`);
+          apiCall(`/api/chatwoot-proxy/conversations/${conv.id}/messages?limit=50`)
+            .then(result => {
+              const messagesArray = result?.payload?.payload || result?.payload || [];
+              if (Array.isArray(messagesArray)) {
+                const chatwootMessages = messagesArray.map((msg: any) => ({
+                  id: msg.id,
+                  content: msg.content,
+                  timestamp: msg.created_at,
+                  created_at: msg.created_at,
+                  sender: msg.message_type === 0 ? 'contact' : 'agent',
+                  message_type: msg.message_type === 0 ? 'incoming' : 'outgoing',
+                  status: msg.status || 'sent',
+                  attachments: msg.attachments || [],
+                  sender_name: msg.sender?.name || 'Usuario',
+                  source_id: msg.source_id || null,
+                  isOptimistic: false,
+                  _isOptimistic: false
+                }));
+                
+                messagesLocalCache.current.set(conv.id, {
+                  messages: chatwootMessages,
+                  timestamp: Date.now(),
+                  hasMore: result?.meta?.has_more ?? false
+                });
+                console.log(`✅ Prefetch completado para conversación ${conv.id}`);
+              }
+            })
+            .catch(() => {
+              // Silenciar errores de prefetch
+            });
+        }, 500);
+      }
+    });
   }, [apiCall]);
 
   // ========================================

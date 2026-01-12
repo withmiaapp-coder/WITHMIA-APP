@@ -2709,6 +2709,21 @@ const ConversationsInterface: React.FC = () => {
                 </div>
               )}
 
+              {/* 🚀 BOTÓN CARGAR MÁS MENSAJES */}
+              {activeConversation?._hasMoreMessages && !activeConversation?._isLoading && (
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => loadConversationMessages(activeConversation.id, true)}
+                    className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    Cargar mensajes anteriores
+                  </button>
+                </div>
+              )}
+
               {/* ✨ Renderizar mensajes (sin duplicados) */}
               {filteredMessages.map((message: any, index: number) => (
                 <React.Fragment key={message.id}>
