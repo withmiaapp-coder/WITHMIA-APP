@@ -1078,6 +1078,7 @@ class ChatwootController extends Controller
     /**
      * Proxy para archivos/imágenes de Chatwoot
      * Evita problemas de CORS al cargar imágenes desde Active Storage de Rails
+     * NOTA: Este método NO requiere autenticación - la validación es por URL
      */
     public function proxyAttachment(Request $request)
     {
@@ -1091,11 +1092,9 @@ class ChatwootController extends Controller
             // Validar que la URL sea de Chatwoot (puede tener diferentes subdominios en Railway)
             $urlHost = parse_url($url, PHP_URL_HOST);
             
-            // Permitir cualquier URL de Chatwoot en Railway o el dominio configurado
+            // Permitir cualquier URL de Chatwoot en Railway (no depende de autenticación)
             $isValidChatwootUrl = (
-                str_contains($urlHost, 'chatwoot') && str_contains($urlHost, 'railway.app')
-            ) || (
-                $urlHost === parse_url($this->chatwootBaseUrl, PHP_URL_HOST)
+                $urlHost && str_contains($urlHost, 'chatwoot') && str_contains($urlHost, 'railway.app')
             );
             
             if (!$isValidChatwootUrl) {
