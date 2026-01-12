@@ -1101,15 +1101,26 @@ class ChatwootController extends Controller
                 return response()->json(['error' => 'URL no autorizada'], 403);
             }
 
-            // Hacer la petición a Chatwoot con autenticación
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->timeout(30)->get($url);
+            // Active Storage de Rails usa redirecciones, necesitamos seguirlas
+            // Usar withOptions para configurar Guzzle y seguir redirects
+            $response = Http::withOptions([
+                'allow_redirects' => [
+                    'max' => 5,
+                    'strict' => false,
+                    'referer' => true,
+                    'protocols' => ['http', 'https'],
+                    'track_redirects' => true
+                ],
+                'verify' => false, // Desactivar verificación SSL si hay problemas
+            ])
+            ->timeout(30)
+            ->get($url);
 
             if (!$response->successful()) {
                 Log::error('Error al obtener archivo de Chatwoot', [
                     'url' => $url,
-                    'status' => $response->status()
+                    'status' => $response->status(),
+                    'body' => substr($response->body(), 0, 500)
                 ]);
                 return response()->json(['error' => 'No se pudo obtener el archivo'], $response->status());
             }
@@ -1117,15 +1128,26 @@ class ChatwootController extends Controller
             // Detectar el tipo de contenido
             $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
             
+            // Si es HTML, probablemente es un error o página de login
+            if (str_contains($contentType, 'text/html')) {
+                Log::warning('Respuesta HTML en lugar de archivo', [
+                    'url' => $url,
+                    'content_type' => $contentType
+                ]);
+                return response()->json(['error' => 'Archivo no disponible'], 404);
+            }
+            
             // Retornar el archivo con el tipo de contenido correcto
             return response($response->body())
                 ->header('Content-Type', $contentType)
-                ->header('Cache-Control', 'public, max-age=86400'); // Cache por 24 horas
+                ->header('Cache-Control', 'public, max-age=86400') // Cache por 24 horas
+                ->header('Access-Control-Allow-Origin', '*');
 
         } catch (\Exception $e) {
             Log::error('Error en proxy de attachment', [
                 'url' => $request->input('url'),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json(['error' => 'Error al procesar la solicitud'], 500);
