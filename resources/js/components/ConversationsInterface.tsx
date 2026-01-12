@@ -931,12 +931,14 @@ const ConversationsInterface: React.FC = () => {
       
       //  UI OPTIMISTA: Agregar mensaje temporal inmediatamente
       const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const nowTimestamp = Math.floor(Date.now() / 1000); // Unix timestamp en segundos
       const optimisticMessage = {
         id: tempId,
         content: messageContent,
         created_at: new Date().toISOString(),
+        timestamp: nowTimestamp, // ⚡ IMPORTANTE: Agregar timestamp para formatTimestamp()
         message_type: 'outgoing',
-        sender: 'agent', // ?? String directo, no objeto
+        sender: 'agent', // ✅ String directo, no objeto
         conversation_id: activeConversation.id,
         status: 'sending', // Marcador especial
         _isOptimistic: true // Flag para identificar mensajes temporales
@@ -2645,7 +2647,7 @@ const ConversationsInterface: React.FC = () => {
                               ? 'text-blue-100' 
                               : 'text-gray-500'
                           }`}>
-                            {formatTimestamp(message.timestamp)}
+                            {formatTimestamp(message.timestamp || message.created_at)}
                           </p>
                           {/* Doble check azul para mensajes enviados */}
                           {message.sender === 'agent' && (

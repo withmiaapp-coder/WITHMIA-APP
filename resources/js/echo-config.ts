@@ -1,14 +1,14 @@
 /**
  * Laravel Echo Configuration for Real-time Broadcasting
  *
- * Este archivo configura Laravel Echo con Laravel Reverb para recibir
+ * Este archivo configura Laravel Echo con Pusher para recibir
  * eventos en tiempo real del servidor.
  */
 
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-// Asignar Pusher globalmente para que Echo lo encuentre (Reverb usa protocolo Pusher)
+// Asignar Pusher globalmente para que Echo lo encuentre
 declare global {
   interface Window {
     Pusher: typeof Pusher;
@@ -21,18 +21,18 @@ window.Pusher = Pusher;
 // Obtener CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-// Configurar Laravel Echo con Pusher (compatible con Redis broadcasting)
-const echo = new Echo({
+// Detectar si estamos usando Pusher real (sin wsHost) o Reverb (con wsHost)
+const pusherHost = import.meta.env.VITE_PUSHER_HOST;
+const isUsingPusherReal = !pusherHost || pusherHost === '';
+
+// Configurar Laravel Echo con Pusher
+const echoConfig: any = {
   broadcaster: 'pusher',
   key: import.meta.env.VITE_PUSHER_APP_KEY || 'local-app-key',
   cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
-  wsHost: window.location.hostname,
-  wsPort: 443,
-  wssPort: 443,
   forceTLS: true,
   encrypted: true,
   disableStats: true,
-  enabledTransports: ['ws', 'wss'],
 
   // Autenticación para canales privados
   authEndpoint: '/broadcasting/auth',
@@ -78,16 +78,28 @@ const echo = new Echo({
       },
     };
   },
-});
+};
+
+// Solo agregar wsHost si estamos usando Reverb (self-hosted)
+if (!isUsingPusherReal && pusherHost) {
+  echoConfig.wsHost = pusherHost;
+  echoConfig.wsPort = 443;
+  echoConfig.wssPort = 443;
+  echoConfig.enabledTransports = ['ws', 'wss'];
+  console.log('🔧 Usando Reverb (self-hosted) en:', pusherHost);
+} else {
+  console.log('🔧 Usando Pusher real, cluster:', import.meta.env.VITE_PUSHER_APP_CLUSTER);
+}
+
+const echo = new Echo(echoConfig);
 
 // Eventos de conexión para debugging
 echo.connector.pusher.connection.bind('connected', () => {
-  // console.log('✅ WebSocket conectado exitosamente');
-  // console.log('🔑 Canal activo:', echo.connector.pusher.connection.socket_id);
+  console.log('✅ WebSocket conectado exitosamente');
 });
 
 echo.connector.pusher.connection.bind('disconnected', () => {
-  // console.log('❌ WebSocket desconectado');
+  console.log('❌ WebSocket desconectado');
 });
 
 echo.connector.pusher.connection.bind('error', (err: any) => {
