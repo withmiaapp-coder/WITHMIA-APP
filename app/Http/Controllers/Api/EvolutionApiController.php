@@ -87,11 +87,19 @@ class EvolutionApiController extends Controller
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
 
+        Log::info('🔗 Connect request received', ['instance' => $instanceName]);
+
         // 🧹 LIMPIEZA PREVIA: Verificar si la instancia existe y no está conectada
         // Si existe pero no está conectada, eliminarla primero para generar QR limpio
         $this->cleanupIfNotConnected($instanceName);
 
         $createResult = $this->evolutionApi->createInstance($instanceName);
+
+        Log::info('📦 Create instance result', [
+            'instance' => $instanceName,
+            'success' => $createResult['success'] ?? false,
+            'error' => $createResult['error'] ?? null
+        ]);
 
         if (!$createResult['success'] && !str_contains($createResult['error'] ?? '', 'already in use')) {
             Log::warning('Failed to create instance', ['instance' => $instanceName, 'error' => $createResult]);
@@ -99,7 +107,18 @@ class EvolutionApiController extends Controller
 
         $result = $this->evolutionApi->connect($instanceName);
 
-        return response()->json($result, $result['success'] ? 200 : 400);
+        Log::info('🔌 Connect result', [
+            'instance' => $instanceName,
+            'success' => $result['success'] ?? false,
+            'has_qr' => isset($result['qr']),
+            'error' => $result['error'] ?? null
+        ]);
+
+        // Devolver 200 si tenemos QR, aunque success sea false
+        $hasQr = isset($result['qr']) && !empty($result['qr']);
+        $statusCode = ($result['success'] || $hasQr) ? 200 : 400;
+
+        return response()->json($result, $statusCode);
     }
 
     /**
@@ -149,8 +168,8 @@ class EvolutionApiController extends Controller
 
             Log::info('✅ Instancia eliminada, se generará QR nuevo', ['instance' => $instanceName]);
 
-            // Pequeña pausa para asegurar que Evolution API procesó la eliminación
-            usleep(500000); // 0.5 segundos
+            // Pausa más larga para asegurar que Evolution API procesó la eliminación
+            sleep(2); // 2 segundos
 
         } catch (\Exception $e) {
             Log::warning('🧹 Error en cleanup (no crítico)', [
