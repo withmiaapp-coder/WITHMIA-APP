@@ -7,6 +7,7 @@ import WhatsAppQRModal from '../components/WhatsAppQRModal';
 import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
 import AdminPanel from '../components/dashboard/AdminPanel';
+import IntegrationSection from '../components/IntegrationSection';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
@@ -463,6 +464,18 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
     return 'disconnected';
   });
+  
+  // Estado para configuraciones de WhatsApp (Evolution API)
+  const [whatsAppSettings, setWhatsAppSettings] = useState({
+    rejectCall: false,
+    groupsIgnore: false,
+    alwaysOnline: false,
+    readMessages: true,
+    syncFullHistory: true,
+    readStatus: true
+  });
+  const [isUpdatingWhatsAppSettings, setIsUpdatingWhatsAppSettings] = useState(false);
+
   const [notification, setNotification] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
   
   // Estado para controlar el colapso del sidebar
@@ -565,6 +578,56 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   };
 
+  // Función para obtener configuraciones de WhatsApp (Evolution API)
+  const fetchWhatsAppSettings = async () => {
+    try {
+      const response = await secureFetch(
+        `/api/evolution-whatsapp/settings/${companySlug}`,
+        { method: 'GET', requireCsrf: false }
+      );
+      const data = await response.json();
+      if (data.success && data.settings) {
+        setWhatsAppSettings({
+          rejectCall: data.settings.rejectCall || false,
+          groupsIgnore: data.settings.groupsIgnore || false,
+          alwaysOnline: data.settings.alwaysOnline || false,
+          readMessages: data.settings.readMessages ?? true,
+          syncFullHistory: data.settings.syncFullHistory ?? true,
+          readStatus: data.settings.readStatus ?? true
+        });
+      }
+    } catch (error) {
+      console.error("Error al obtener configuraciones de WhatsApp:", error);
+    }
+  };
+
+  // Función para actualizar configuraciones de WhatsApp (Evolution API)
+  const updateWhatsAppSettings = async (settings: typeof whatsAppSettings) => {
+    setIsUpdatingWhatsAppSettings(true);
+    try {
+      const response = await secureFetch(
+        `/api/evolution-whatsapp/settings/${companySlug}`,
+        {
+          method: 'POST',
+          requireCsrf: true,
+          body: JSON.stringify(settings)
+        }
+      );
+      const data = await response.json();
+      if (data.success) {
+        setWhatsAppSettings(settings);
+        showNotification("✅ Configuraciones guardadas exitosamente", 'success');
+      } else {
+        showNotification("❌ Error al guardar configuraciones", 'error');
+      }
+    } catch (error) {
+      console.error("Error al actualizar configuraciones de WhatsApp:", error);
+      showNotification("❌ Error al guardar configuraciones", 'error');
+    } finally {
+      setIsUpdatingWhatsAppSettings(false);
+    }
+  };
+
   // Integración real con Chatwoot
   const { conversations } = useConversations();
   const { agents } = useAgents();
@@ -610,6 +673,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   useEffect(() => {
     // Carga inicial
     checkWhatsAppStatus();
+    fetchWhatsAppSettings(); // Cargar configuraciones de WhatsApp
     
     // Subscribirse a eventos de WhatsApp en tiempo real
     const channelName = `company.${companySlug}.whatsapp`;
@@ -969,255 +1033,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 </div>
               </div>
             ) : activeSection === 'insights' ? (
-              <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
-                {/* Sección Integración e Integraciones */}
-                <div className="max-w-7xl mx-auto pb-8">
-                  {/* Header de Integración */}
-                  <div className="mb-8">
-                    <div className="flex items-center space-x-4 mb-2">
-                      <div className="p-4 bg-gradient-to-r from-purple-500 to-violet-500  shadow-lg">
-                        <Lightbulb className="w-10 h-10 text-white" />
-                      </div>
-                      <div>
-                        <h1 className="text-4xl font-bold text-neutral-800">Integración</h1>
-                        <p className="text-lg text-neutral-500">Integraciónes y conexiones externas</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sección Canales de comunicación */}
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-neutral-800 mb-2">Canales de comunicación</h2>
-                    <p className="text-neutral-500">Conecta tus canales de mensajería y comunicación</p>
-                  </div>
-
-                  {/* Grid de Integraciones */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 gap-4">
-                    
-                    {/* WhatsApp Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl card-hover-scale">
-                      <div className="text-center mb-2">
-                        <div className="mx-auto w-fit mb-2">
-                          <img 
-                            src="/icons/whatsapp.webp" 
-                            alt="WhatsApp" 
-                            className="w-12 h-12 transition-transform duration-150 group-hover:scale-110"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                          <MessageCircle className="w-12 h-12 text-green-500 hidden" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">WhatsApp</h3>
-                        <p className="text-neutral-500 mb-2">Conecta tu WhatsApp Business</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {whatsAppStatus === 'open' || whatsAppStatus === 'connected' ? (
-                          <button
-                            onClick={disconnectWhatsApp}
-                            className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg button-hover hover-glow-warning"
-                          >
-                            Desconectar WhatsApp
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setShowWhatsAppModal(true)}
-                            className="w-full py-2 px-4 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg button-hover hover-glow-success"
-                          >
-                            Conectar por QR
-                          </button>
-                        )}
-                        
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: {whatsAppStatus === 'open' || whatsAppStatus === 'connected' ? (
-                            <span className="text-green-500 font-semibold">ԣ� Conectado</span>
-                          ) : (
-                            <span className="text-red-500 font-semibold">��� Desconectado</span>
-                          )}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Instagram Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl card-hover-scale">
-                      <div className="text-center mb-2">
-                        <div className="p-3 bg-gradient-to-r from-pink-500 to-rose-500 rounded-xl shadow-lg mx-auto w-fit mb-2 transition-all duration-150 group-hover:scale-110">
-                          <img 
-                            src="/icons/instagram-new.webp" 
-                            alt="Instagram" 
-                            className="w-6 h-6"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                          <MessageSquare className="w-6 h-6 text-white hidden" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">Instagram</h3>
-                        <p className="text-neutral-500 mb-2">Mensajes de Instagram</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <button className="w-full py-2 px-4 bg-slate-300 text-neutral-400 font-semibold rounded-md cursor-not-allowed">
-                          🔜 Próximamente
-                        </button>
-                        
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: <span className="text-slate-400 font-semibold">No disponible</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Messenger Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl  transition-all duration-50 hover:opacity-100">
-                      <div className="text-center mb-2">
-                        <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500  shadow-lg mx-auto w-fit mb-2 group-hover:opacity-95 transition-transform duration-50">
-                          <img 
-                            src="/icons/facebook-new.webp" 
-                            alt="Messenger" 
-                            className="w-6 h-6"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                          <Mail className="w-6 h-6 text-white hidden" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">Messenger</h3>
-                        <p className="text-neutral-500 mb-2">Conecta Facebook Messenger</p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <button className="w-full py-2 px-4 bg-slate-300 text-neutral-400 font-semibold rounded-md cursor-not-allowed">
-                          🔜 Próximamente
-                        </button>
-                        
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: <span className="text-slate-400 font-semibold">No disponible</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* WhatsApp API Oficial Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl  transition-all duration-50 hover:opacity-100">
-                      <div className="text-center mb-2">
-                        <div className="p-3 bg-gradient-to-r from-emerald-600 to-teal-600  shadow-lg mx-auto w-fit mb-2 group-hover:opacity-95 transition-transform duration-50">
-                          <MessageCircle className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">WhatsApp API Oficial</h3>
-                        <p className="text-neutral-500 mb-2">API oficial de WhatsApp Business</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <button className="w-full py-2 px-4 bg-slate-300 text-neutral-400 font-semibold rounded-md cursor-not-allowed">
-                          🔜 Próximamente
-                        </button>
-
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: <span className="text-slate-400 font-semibold">No disponible</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chat WEB Plugins Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl  transition-all duration-50 hover:opacity-100">
-                      <div className="text-center mb-2">
-                        <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600  shadow-lg mx-auto w-fit mb-2 group-hover:opacity-95 transition-transform duration-50">
-                          <Globe className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">Chat WEB Plugins</h3>
-                        <p className="text-neutral-500 mb-2">Integración con WordPress</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <button className="w-full py-2 px-4 bg-slate-300 text-neutral-400 font-semibold rounded-md cursor-not-allowed">
-                          🔜 Próximamente
-                        </button>
-
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: <span className="text-slate-400 font-semibold">No disponible</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Gmail Integration */}
-                    <div className="group bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-slate-200 shadow-xl  transition-all duration-50 hover:opacity-100">
-                      <div className="text-center mb-2">
-                        <div className="p-3 bg-gradient-to-r from-red-500 to-orange-500  shadow-lg mx-auto w-fit mb-2 group-hover:opacity-95 transition-transform duration-50">
-                          <Mail className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-sm font-bold text-neutral-800 mb-2">Gmail</h3>
-                        <p className="text-neutral-500 mb-2">Conecta con tu cuenta Gmail</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <button className="w-full py-2 px-4 bg-slate-300 text-neutral-400 font-semibold rounded-md cursor-not-allowed">
-                          🔜 Próximamente
-                        </button>
-
-                        <div className="text-center text-xs text-neutral-400">
-                          <p>Estado: <span className="text-slate-400 font-semibold">No disponible</span></p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Sección de Herramientas */}
-                  <div className="mt-12">
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold text-neutral-800 mb-2">Herramientas</h2>
-                      <p className="text-neutral-500">Conecta las herramientas que usas en tu negocio</p>
-                    </div>
-
-                    {/* Grid de Herramientas - 5 por fila, 2 filas */}
-                    <div className="grid grid-cols-5 gap-4 max-w-6xl mx-auto">
-                      {[
-                        { value: "crm", label: "CRM", icon: Database, color: "#059669", description: "Gestiona relaciones con clientes" },
-                        { value: "api", label: "API", icon: Code, color: "#6B7280", description: "Integración personalizada" },
-                        { value: "woocommerce", label: "WooCommerce", icon: ShoppingCart, color: "#96588A", description: "Conecta tu tienda WooCommerce" },
-                        { value: "shopify", label: "Shopify", icon: ShoppingBag, color: "#96BF48", description: "Sincroniza con tu tienda Shopify" },
-                        { value: "reservo", label: "Reservo", icon: Calendar, color: "#F59E0B", description: "Sistema de reservas y citas" },
-                        { value: "calendar", label: "Calendar", icon: CalendarDays, color: "#DC2626", description: "Integra con Google Calendar" },
-                        { value: "drive", label: "Drive", icon: HardDrive, color: "#34A853", description: "Almacenamiento en Google Drive" },
-                        { value: "dropbox", label: "Dropbox", icon: Cloud, color: "#0061FF", description: "Archivos y documentos en la nube" },
-                        { value: "excel", label: "Excel", icon: FileSpreadsheet, color: "#217346", description: "Conecta con google sheet" },
-                        { value: "mercadolibre", label: "Mercado Libre", icon: Store, color: "#FFE600", description: "Conecta con Mercado Libre" }
-                      ].map((tool) => (
-                        <div
-                          key={tool.value}
-                          className="group bg-white/95 backdrop-blur-sm rounded-xl p-6 border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-50 hover:opacity-95"
-                        >
-                          <div className="text-center mb-3">
-                            <div className="p-3 rounded-xl shadow-lg mx-auto w-fit mb-3 group-hover:opacity-100 transition-transform duration-50"
-                                 style={{ background: `linear-gradient(135deg, ${tool.color}, ${tool.color}DD)` }}>
-                              <tool.icon className="w-6 h-6 text-white" />
-                            </div>
-                            <h3 className="text-sm font-bold text-slate-900 mb-2">{tool.label}</h3>
-                            <p className="text-base text-slate-600 mb-3">{tool.description}</p>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <button className="w-full py-2 px-3 bg-slate-300 text-slate-500 font-medium rounded-lg text-xs cursor-not-allowed">
-                              🔜 Próximamente
-                            </button>
-                            
-                            <div className="text-center text-xs text-slate-500">
-                              <p>Estado: <span className="text-slate-400 font-medium">No disponible</span></p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-              </div>
+              <IntegrationSection
+                whatsAppStatus={whatsAppStatus}
+                whatsAppSettings={whatsAppSettings}
+                onConnectWhatsApp={() => setShowWhatsAppModal(true)}
+                onDisconnectWhatsApp={disconnectWhatsApp}
+                onUpdateSettings={updateWhatsAppSettings}
+                isUpdatingSettings={isUpdatingWhatsAppSettings}
+              />
             ) : activeSection === 'knowledge' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
                 <Conocimientos 

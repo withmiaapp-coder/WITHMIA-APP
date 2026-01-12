@@ -47,9 +47,11 @@ class ChatwootProvisioningService
             $this->createAccountUser($accountId, $chatwootUserId, 1); // role=1 (administrator)
             Log::info("✅ Account-User relation created");
 
-            // 4. Crear Channel API
-            $channelId = $this->createChannelApi($accountId);
-            Log::info("✅ Channel API created: ID={$channelId}");
+            // 4. Crear Channel API (con identifier/token para Evolution API)
+            $channelData = $this->createChannelApi($accountId);
+            $channelId = $channelData['id'];
+            $channelToken = $channelData['identifier'];
+            Log::info("✅ Channel API created: ID={$channelId}, Token={$channelToken}");
 
             // 5. Crear Inbox
             $inboxId = $this->createInbox($accountId, $channelId, $company->name);
@@ -59,13 +61,15 @@ class ChatwootProvisioningService
             $this->createInboxMember($chatwootUserId, $inboxId);
             Log::info("✅ Inbox member created");
 
-            // 7. Generar token de acceso único para el usuario
+            // 7. Generar token de acceso único para el usuario (para API de Chatwoot)
             $accessToken = $this->generateAccessToken();
 
             // 8. Actualizar Company en Laravel
+            // chatwoot_api_key = token del channel (para Evolution API)
             $company->update([
                 'chatwoot_account_id' => $accountId,
-                'chatwoot_api_key' => $accessToken,
+                'chatwoot_api_key' => $channelToken, // Token del channel para Evolution API
+                'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_provisioned' => true,
                 'chatwoot_provisioned_at' => now()
             ]);
@@ -180,17 +184,25 @@ class ChatwootProvisioningService
 
     /**
      * Crea un Channel API en Chatwoot (PostgreSQL)
+     * Genera un identifier (token) único para la integración con Evolution API
      */
-    private function createChannelApi(int $accountId): int
+    private function createChannelApi(int $accountId): array
     {
+        // Generar identifier único (usado como token por Evolution API)
+        $identifier = Str::random(24);
+        
         $channelId = $this->chatwootDb->table('channel_api')->insertGetId([
             'account_id' => $accountId,
-            'webhook_url' => '',
+            'webhook_url' => config('evolution.api_url') . '/chatwoot/webhook',
+            'identifier' => $identifier,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
-        return $channelId;
+        return [
+            'id' => $channelId,
+            'identifier' => $identifier
+        ];
     }
 
     /**
@@ -200,7 +212,7 @@ class ChatwootProvisioningService
     {
         $inboxId = $this->chatwootDb->table('inboxes')->insertGetId([
             'account_id' => $accountId,
-            'name' => 'API Inbox',
+            'name' => "WhatsApp {$companyName}",
             'channel_id' => $channelId,
             'channel_type' => 'Channel::Api',
             'created_at' => now(),

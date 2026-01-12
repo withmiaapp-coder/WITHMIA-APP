@@ -57,9 +57,12 @@ class EvolutionApiController extends Controller
             $webhookUrl = $request->input('webhook_url');
         }
 
-        $result = $this->evolutionApi->createInstance($instanceName, $webhookUrl);
+        // Obtener configuración de Chatwoot de la empresa del usuario
+        $chatwootConfig = $this->getChatwootConfigForUser($request->user());
 
-        // Si la instancia se cre?? exitosamente, registrarla en whatsapp_instances
+        $result = $this->evolutionApi->createInstance($instanceName, $webhookUrl, $chatwootConfig);
+
+        // Si la instancia se creó exitosamente, registrarla en whatsapp_instances
         if ($result['success']) {
             $user = $request->user();
             if ($user && $user->company_id) {
@@ -83,6 +86,32 @@ class EvolutionApiController extends Controller
     }
 
     /**
+     * Obtener configuración de Chatwoot específica para el usuario/empresa
+     * Multi-tenant: cada empresa tiene su propio account_id y token
+     */
+    private function getChatwootConfigForUser($user): array|bool
+    {
+        if (!$user) {
+            return true; // Usar config global
+        }
+
+        // Cargar la empresa del usuario
+        $company = $user->company;
+        
+        if ($company && $company->chatwoot_account_id && $company->chatwoot_api_key) {
+            return [
+                'account_id' => $company->chatwoot_account_id,
+                'token' => $company->chatwoot_api_key,
+                'url' => config('chatwoot.url'),
+                'inbox_name' => "WhatsApp {$company->name}"
+            ];
+        }
+
+        // Fallback: usar config global
+        return true;
+    }
+
+    /**
      * Conectar instancia y obtener QR code
      */
     public function connect(Request $request, ?string $instanceName = null): JsonResponse
@@ -95,8 +124,11 @@ class EvolutionApiController extends Controller
         // Si existe pero no está conectada, eliminarla primero para generar QR limpio
         $this->cleanupIfNotConnected($instanceName);
 
-        // Paso 1: Crear la instancia (con Chatwoot si está configurado)
-        $createResult = $this->evolutionApi->createInstance($instanceName);
+        // Obtener configuración de Chatwoot de la empresa del usuario
+        $chatwootConfig = $this->getChatwootConfigForUser($request->user());
+
+        // Paso 1: Crear la instancia (con Chatwoot específico de la empresa)
+        $createResult = $this->evolutionApi->createInstance($instanceName, null, $chatwootConfig);
 
         Log::info('📦 Create instance result', [
             'instance' => $instanceName,
@@ -268,6 +300,106 @@ class EvolutionApiController extends Controller
         $result = $this->evolutionApi->deleteInstance($instanceName);
 
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * Obtener configuraciones de la instancia (settings)
+     */
+    public function getSettings(Request $request, ?string $instanceName = null): JsonResponse
+    {
+        $instanceName = $instanceName ?? $this->getInstanceName($request);
+        
+        try {
+            $baseUrl = config('evolution.api_url');
+            $apiKey = config('evolution.api_key');
+
+            $response = Http::withHeaders([
+                'apikey' => $apiKey
+            ])->timeout(10)->get("{$baseUrl}/settings/find/{$instanceName}");
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to get settings'
+                ], 400);
+            }
+
+            $data = $response->json();
+            
+            return response()->json([
+                'success' => true,
+                'settings' => [
+                    'rejectCall' => $data['rejectCall'] ?? false,
+                    'groupsIgnore' => $data['groupsIgnore'] ?? false,
+                    'alwaysOnline' => $data['alwaysOnline'] ?? false,
+                    'readMessages' => $data['readMessages'] ?? true,
+                    'syncFullHistory' => $data['syncFullHistory'] ?? true,
+                    'readStatus' => $data['readStatus'] ?? true
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting WhatsApp settings', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar configuraciones de la instancia (settings)
+     */
+    public function updateSettings(Request $request, ?string $instanceName = null): JsonResponse
+    {
+        $instanceName = $instanceName ?? $this->getInstanceName($request);
+        
+        try {
+            $baseUrl = config('evolution.api_url');
+            $apiKey = config('evolution.api_key');
+
+            $settings = [
+                'rejectCall' => $request->input('rejectCall', false),
+                'msgCall' => $request->input('msgCall', ''),
+                'groupsIgnore' => $request->input('groupsIgnore', false),
+                'alwaysOnline' => $request->input('alwaysOnline', false),
+                'readMessages' => $request->input('readMessages', true),
+                'syncFullHistory' => $request->input('syncFullHistory', true),
+                'readStatus' => $request->input('readStatus', true)
+            ];
+
+            $response = Http::withHeaders([
+                'apikey' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(10)->post("{$baseUrl}/settings/set/{$instanceName}", $settings);
+
+            if (!$response->successful()) {
+                Log::error('Failed to update WhatsApp settings', [
+                    'instance' => $instanceName,
+                    'response' => $response->body()
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to update settings'
+                ], 400);
+            }
+
+            Log::info('WhatsApp settings updated', [
+                'instance' => $instanceName,
+                'settings' => $settings
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Settings updated successfully',
+                'settings' => $settings
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
