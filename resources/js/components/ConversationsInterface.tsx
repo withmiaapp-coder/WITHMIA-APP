@@ -614,13 +614,17 @@ const ConversationsInterface: React.FC = () => {
           const rawMsgType = event.message?.message_type;
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
           
+          // Normalizar sender a string 'agent' o 'contact' para el renderizado
+          // El renderizador usa message.sender === 'agent' para posicionar el mensaje
+          const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
+          
           // Construir el nuevo mensaje desde el evento
           const newMessage = {
             id: event.message?.id || event.id || Date.now(),
             content: event.message?.content || event.content || '',
             message_type: normalizedMsgType,
             created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
-            sender: event.message?.sender || event.sender || null,
+            sender: normalizedSender, // Usar string normalizado, no el objeto del webhook
             attachments: event.message?.attachments || [],
             source_id: event.message?.source_id || event.source_id || null,
             content_type: event.message?.content_type || 'text',
