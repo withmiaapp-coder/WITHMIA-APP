@@ -477,18 +477,52 @@ class ChatwootController extends Controller
             }
 
             // PASO 3: Si pasa la validación, obtener los mensajes
-            $queryParams = [];
-            if ($before) {
-                $queryParams['before'] = $before;
+            // 🔧 IMPORTANTE: Chatwoot limita a 20 mensajes por llamada, hacemos múltiples para obtener más
+            $allMessages = [];
+            $beforeId = $before;
+            $maxIterations = ceil($limit / 20); // Cuántas llamadas necesitamos
+            $iteration = 0;
+            
+            while ($iteration < $maxIterations) {
+                $queryParams = [];
+                if ($beforeId) {
+                    $queryParams['before'] = $beforeId;
+                }
+                
+                $response = Http::timeout(8)->withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                    'Content-Type' => 'application/json'
+                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages', $queryParams);
+                
+                if (!$response->successful()) {
+                    break;
+                }
+                
+                $messagesData = $response->json();
+                $batchMessages = $messagesData['payload'] ?? [];
+                
+                if (empty($batchMessages)) {
+                    break; // No hay más mensajes
+                }
+                
+                $allMessages = array_merge($allMessages, $batchMessages);
+                
+                // Obtener el ID más antiguo para la siguiente iteración
+                $oldestInBatch = min(array_column($batchMessages, 'id'));
+                
+                // Si el batch es menor a 20, no hay más mensajes
+                if (count($batchMessages) < 20) {
+                    break;
+                }
+                
+                // Preparar para siguiente iteración
+                $beforeId = $oldestInBatch;
+                $iteration++;
             }
             
-            $response = Http::timeout(8)->withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages', $queryParams);
-
-            if ($response->successful()) {
-                $messagesData = $response->json();
+            // Procesar mensajes obtenidos
+            if (!empty($allMessages)) {
+                $messagesData = ['payload' => $allMessages];
                 
                 // 🔒 FILTRAR mensajes de EvolutionAPI (no mostrarlos al usuario)
                 if (isset($messagesData['payload']) && is_array($messagesData['payload'])) {
@@ -554,7 +588,7 @@ class ChatwootController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudieron obtener los mensajes'
-            ], $response->status());
+            ], 500);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Get Messages Error: ' . $e->getMessage(), [

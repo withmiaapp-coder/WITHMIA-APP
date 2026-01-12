@@ -106,25 +106,45 @@ interface _Message {
 }
 
 // 🎯 Componente para mostrar estado del mensaje (checks de WhatsApp)
-const MessageStatus = ({ status, isHighlighted }: { status?: string | number; isHighlighted?: boolean }) => {
+const MessageStatus = ({ status, isHighlighted }: { status?: string | number | null | undefined; isHighlighted?: boolean }) => {
   const baseColor = isHighlighted ? 'text-gray-600' : 'text-blue-200';
   const readColor = 'text-blue-400'; // Azul más brillante para leído
   
-  // 📌 Normalizar status (Chatwoot puede enviar números o strings diferentes)
-  let normalizedStatus = status;
+  // 📌 Normalizar status - si es null/undefined, mostrar delivered (doble check)
+  if (status === null || status === undefined) {
+    // Default: 2 checks grises - entregado al dispositivo
+    return (
+      <svg className={`w-4 h-3 ${baseColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 7l4 4L14 3" />
+        <path d="M8 7l4 4L20 3" />
+      </svg>
+    );
+  }
+  
+  // Normalizar status (Chatwoot puede enviar números o strings diferentes)
+  let normalizedStatus: string = 'delivered';
+  
   if (typeof status === 'number') {
     // Chatwoot status: 0=sent, 1=delivered, 2=read, 3=failed
     const statusMap: Record<number, string> = { 0: 'sent', 1: 'delivered', 2: 'read', 3: 'failed' };
-    normalizedStatus = statusMap[status] || 'delivered';
+    normalizedStatus = statusMap[status] ?? 'delivered';
   } else if (typeof status === 'string') {
     // Normalizar variaciones de strings
     const statusLower = status.toLowerCase();
-    if (statusLower === 'pending' || statusLower === 'progress') normalizedStatus = 'sending';
-    else if (statusLower === 'sent' || statusLower === 'created') normalizedStatus = 'sent';
-    else if (statusLower === 'delivered') normalizedStatus = 'delivered';
-    else if (statusLower === 'read' || statusLower === 'seen') normalizedStatus = 'read';
-    else if (statusLower === 'failed' || statusLower === 'error') normalizedStatus = 'failed';
-    else normalizedStatus = 'delivered'; // Default para valores desconocidos
+    if (statusLower === 'sending' || statusLower === 'pending' || statusLower === 'progress') {
+      normalizedStatus = 'sending';
+    } else if (statusLower === 'sent' || statusLower === 'created') {
+      normalizedStatus = 'sent';
+    } else if (statusLower === 'delivered') {
+      normalizedStatus = 'delivered';
+    } else if (statusLower === 'read' || statusLower === 'seen') {
+      normalizedStatus = 'read';
+    } else if (statusLower === 'failed' || statusLower === 'error') {
+      normalizedStatus = 'failed';
+    } else {
+      // Para cualquier otro valor desconocido, mostrar delivered
+      normalizedStatus = 'delivered';
+    }
   }
   
   switch (normalizedStatus) {
