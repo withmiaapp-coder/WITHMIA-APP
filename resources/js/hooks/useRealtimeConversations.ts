@@ -8,6 +8,7 @@ export interface RealtimeConfig {
   inboxId: number | null;
   enabled: boolean;
   onNewMessage?: (message: any) => void;
+  onMessageUpdated?: (message: any) => void;
   onConversationUpdated?: (conversation: any) => void;
   onConnectionChange?: (connected: boolean) => void;
 }
@@ -88,6 +89,16 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
           }
         });
 
+        // Listener: Mensaje actualizado (para estados read/delivered)
+        channel.listen('.message.updated', (event: any) => {
+          console.log('📝 Mensaje actualizado:', event);
+          setLastEventTime(new Date());
+
+          if (config.onMessageUpdated) {
+            config.onMessageUpdated(event);
+          }
+        });
+
         // Monitorear estado de conexión
         if (echo.connector?.pusher?.connection) {
           const pusherConnection = echo.connector.pusher.connection;
@@ -141,6 +152,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
         
         try {
           channelRef.current.stopListening('.message.received');
+          channelRef.current.stopListening('.message.updated');
           channelRef.current.stopListening('.conversation.updated');
 
           if (echoRef.current) {
@@ -274,6 +286,7 @@ export interface CombinedRealtimeConfig {
   onUpdate: () => Promise<number>; // Función que devuelve cantidad de actualizaciones
   onNewMessage?: (message: any) => void;
   onConversationUpdated?: (conversation: any) => void;
+  onMessageUpdated?: (message: any) => void;
   minPollingInterval?: number;
   maxPollingInterval?: number;
 }
@@ -312,6 +325,12 @@ export const useCombinedRealtime = (config: CombinedRealtimeConfig) => {
       }
       // Ejecutar update
       // config.onUpdate(); // DESHABILITADO - Actualización optimista ya maneja esto
+    },
+    onMessageUpdated: (event) => {
+      console.log('🔔 [WS] Mensaje actualizado (status):', event);
+      if (config.onMessageUpdated) {
+        config.onMessageUpdated(event);
+      }
     },
     onConnectionChange: setWsConnected
   });

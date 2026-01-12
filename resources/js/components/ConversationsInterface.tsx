@@ -102,8 +102,63 @@ interface _Message {
   content: string;
   timestamp: string;
   sender: 'agent' | 'contact';
-  status?: 'sent' | 'delivered' | 'read';
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 }
+
+// 🎯 Componente para mostrar estado del mensaje (checks de WhatsApp)
+const MessageStatus = ({ status, isHighlighted }: { status?: string; isHighlighted?: boolean }) => {
+  const baseColor = isHighlighted ? 'text-gray-600' : 'text-blue-200';
+  const readColor = 'text-blue-400'; // Azul más brillante para leído
+  
+  switch (status) {
+    case 'sending':
+      // Reloj girando - mensaje enviándose
+      return (
+        <svg className={`w-3 h-3 ${baseColor} animate-spin`} fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      );
+    case 'failed':
+      // Error - mensaje no enviado
+      return (
+        <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    case 'sent':
+      // 1 check - enviado al servidor
+      return (
+        <svg className={`w-3 h-3 ${baseColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+        </svg>
+      );
+    case 'delivered':
+      // 2 checks grises - entregado al dispositivo
+      return (
+        <svg className={`w-4 h-3 ${baseColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 7l4 4L14 3" />
+          <path d="M8 7l4 4L20 3" />
+        </svg>
+      );
+    case 'read':
+      // 2 checks azules - leído
+      return (
+        <svg className={`w-4 h-3 ${readColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 7l4 4L14 3" />
+          <path d="M8 7l4 4L20 3" />
+        </svg>
+      );
+    default:
+      // Default: 2 checks (asumimos entregado)
+      return (
+        <svg className={`w-4 h-3 ${baseColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 7l4 4L14 3" />
+          <path d="M8 7l4 4L20 3" />
+        </svg>
+      );
+  }
+};
 
 
   // Helper: Formatea preview del ultimo mensaje (con limpieza de formato)
@@ -433,6 +488,28 @@ const ConversationsInterface: React.FC = () => {
     onConversationUpdated: (event) => {
       // 🔄 Usar debounced fetch en lugar de directo
       debouncedFetchConversations();
+    },
+    onMessageUpdated: (event) => {
+      // 📝 Actualizar estado del mensaje (sent, delivered, read)
+      const messageId = event?.message?.id;
+      const newStatus = event?.message?.status;
+      
+      if (messageId && newStatus) {
+        console.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
+        
+        _setActiveConversation((prev: any) => {
+          if (!prev || !prev.messages) return prev;
+          
+          const updatedMessages = prev.messages.map((msg: any) => {
+            if (msg.id === messageId || (msg._isOptimistic && msg.source_id === event?.message?.source_id)) {
+              return { ...msg, status: newStatus, _isOptimistic: false };
+            }
+            return msg;
+          });
+          
+          return { ...prev, messages: updatedMessages };
+        });
+      }
     },
     onNewMessage: async (event) => {
       // ?? DEDUPLICACI?N: Crear ID ??nico del evento
@@ -1085,11 +1162,46 @@ const ConversationsInterface: React.FC = () => {
       setNewMessage('');
       setReplyingTo(null);
       
-      //  Enviar al servidor SIN ESPERAR (fire-and-forget)
-      sendMessage(activeConversation.id, messageContent).catch((error) => {
-        console.error('Error sending message:', error);
-        // TODO: Marcar mensaje optimista como error con un icono de "!"
-      });
+      // 📤 Enviar al servidor y actualizar status
+      const conversationId = activeConversation.id;
+      sendMessage(conversationId, messageContent)
+        .then((result) => {
+          console.log('✅ Mensaje enviado, actualizando status a sent:', result);
+          // Actualizar mensaje optimista con ID real y status 'sent'
+          _setActiveConversation((prev: any) => {
+            if (!prev || !prev.messages) return prev;
+            return {
+              ...prev,
+              messages: prev.messages.map((msg: any) => {
+                if (msg.id === tempId) {
+                  return {
+                    ...msg,
+                    id: result?.id || msg.id, // Actualizar con ID real si está disponible
+                    status: 'sent',
+                    _isOptimistic: false
+                  };
+                }
+                return msg;
+              })
+            };
+          });
+        })
+        .catch((error) => {
+          console.error('❌ Error sending message:', error);
+          // Marcar mensaje como fallido
+          _setActiveConversation((prev: any) => {
+            if (!prev || !prev.messages) return prev;
+            return {
+              ...prev,
+              messages: prev.messages.map((msg: any) => {
+                if (msg.id === tempId) {
+                  return { ...msg, status: 'failed', _isOptimistic: false };
+                }
+                return msg;
+              })
+            };
+          });
+        });
       
       // ?? El polling detectar? el mensaje real y reemplazar? el optimista
       
@@ -2823,11 +2935,12 @@ const ConversationsInterface: React.FC = () => {
                           }`}>
                             {formatTimestamp(message.timestamp || message.created_at)}
                           </p>
-                          {/* Doble check azul para mensajes enviados */}
+                          {/* Estado del mensaje tipo WhatsApp */}
                           {message.sender === 'agent' && (
-                            <CheckCheck className={`w-3 h-3 ${
-                              searchResults && Array.isArray(searchResults) && searchResults.includes(message.id) ? 'text-gray-600' : 'text-blue-200'
-                            }`} />
+                            <MessageStatus 
+                              status={message.status || (message._isOptimistic ? 'sending' : 'delivered')} 
+                              isHighlighted={searchResults && Array.isArray(searchResults) && searchResults.includes(message.id)}
+                            />
                           )}
                         </div>
                       </div>

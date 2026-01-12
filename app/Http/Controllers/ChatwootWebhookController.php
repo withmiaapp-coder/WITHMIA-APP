@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\NewChatwootMessage;
+use App\Events\MessageUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -18,8 +19,10 @@ class ChatwootWebhookController extends Controller
             
             Log::info('Chatwoot Webhook recibido:', $payload);
 
+            $eventType = $payload['event'] ?? '';
+
             // Verificar que es un evento de mensaje nuevo
-            if (isset($payload['event']) && $payload['event'] === 'message_created') {
+            if ($eventType === 'message_created') {
                 $messageType = $payload['message_type'] ?? '';
                 
                 // Solo procesar mensajes entrantes (no los enviados por nosotros)
@@ -42,6 +45,34 @@ class ChatwootWebhookController extends Controller
                         'contact_name' => $contactName
                     ]);
                 }
+            }
+            
+            // 📝 Manejar actualizaciones de mensaje (status: sent, delivered, read)
+            if ($eventType === 'message_updated') {
+                $message = $payload['message'] ?? $payload;
+                $conversationId = $payload['conversation']['id'] ?? $message['conversation_id'] ?? 0;
+                $inboxId = $payload['inbox']['id'] ?? $payload['inbox_id'] ?? $message['inbox_id'] ?? 1;
+                
+                // Extraer status del mensaje
+                $messageData = [
+                    'id' => $message['id'] ?? 0,
+                    'status' => $message['status'] ?? 'sent',
+                    'source_id' => $message['source_id'] ?? null,
+                    'conversation_id' => $conversationId,
+                ];
+                
+                // Disparar evento para actualizar UI
+                broadcast(new MessageUpdated(
+                    $messageData,
+                    $conversationId,
+                    $inboxId
+                ))->toOthers();
+                
+                Log::info('Estado de mensaje actualizado vía WebSocket', [
+                    'message_id' => $messageData['id'],
+                    'status' => $messageData['status'],
+                    'conversation_id' => $conversationId
+                ]);
             }
 
             return response()->json(['status' => 'success'], 200);
