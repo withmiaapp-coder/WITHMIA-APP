@@ -379,80 +379,58 @@ class EvolutionApiController extends Controller
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
         
+        Log::info('updateSettings called', ['instanceName' => $instanceName, 'input' => $request->all()]);
+        
         try {
             $baseUrl = config('evolution.api_url');
             $apiKey = config('evolution.api_key');
 
             $settings = [
-                'rejectCall' => $request->input('rejectCall', false),
+                'rejectCall' => (bool) $request->input('rejectCall', false),
                 'msgCall' => $request->input('msgCall', ''),
-                'groupsIgnore' => $request->input('groupsIgnore', false),
-                'alwaysOnline' => $request->input('alwaysOnline', false),
-                'readMessages' => $request->input('readMessages', true),
-                'syncFullHistory' => $request->input('syncFullHistory', false),  // Default false for faster connection
-                'readStatus' => $request->input('readStatus', true),
-                'daysLimitImportMessages' => $request->input('daysLimitImportMessages', 7)  // Default 7 days
+                'groupsIgnore' => (bool) $request->input('groupsIgnore', false),
+                'alwaysOnline' => (bool) $request->input('alwaysOnline', false),
+                'readMessages' => (bool) $request->input('readMessages', true),
+                'syncFullHistory' => (bool) $request->input('syncFullHistory', false),
+                'readStatus' => (bool) $request->input('readStatus', true),
+                'daysLimitImportMessages' => (int) $request->input('daysLimitImportMessages', 7)
             ];
 
-            // First check if instance exists
-            $instanceExists = false;
+            // Always save to cache first (for when instance doesn't exist or is created later)
+            \Cache::put("whatsapp_pending_settings_{$instanceName}", $settings, now()->addHours(24));
+            
+            Log::info('Settings saved to cache', ['instance' => $instanceName, 'settings' => $settings]);
+
+            // Try to update on Evolution API if instance exists
             try {
-                $checkResponse = Http::withHeaders([
-                    'apikey' => $apiKey
-                ])->timeout(5)->get("{$baseUrl}/instance/fetchInstances?instanceName={$instanceName}");
+                $response = Http::withHeaders([
+                    'apikey' => $apiKey,
+                    'Content-Type' => 'application/json'
+                ])->timeout(10)->post("{$baseUrl}/settings/set/{$instanceName}", $settings);
 
-                $instances = $checkResponse->json() ?? [];
-                $instanceExists = is_array($instances) && !empty($instances);
-            } catch (\Exception $checkEx) {
-                Log::warning('Could not check if instance exists', ['error' => $checkEx->getMessage()]);
-                $instanceExists = false;
+                if ($response->successful()) {
+                    Log::info('WhatsApp settings updated on Evolution API', ['instance' => $instanceName]);
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Settings updated successfully',
+                        'settings' => $settings,
+                        'instanceExists' => true
+                    ]);
+                }
+            } catch (\Exception $apiEx) {
+                Log::info('Could not update Evolution API (instance may not exist)', ['error' => $apiEx->getMessage()]);
             }
 
-            if (!$instanceExists) {
-                // Instance doesn't exist - save settings to cache for when instance is created
-                \Cache::put("whatsapp_pending_settings_{$instanceName}", $settings, now()->addHours(24));
-                
-                Log::info('Instance not found, settings saved to cache for later', [
-                    'instance' => $instanceName,
-                    'settings' => $settings
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Settings saved for when WhatsApp is connected',
-                    'settings' => $settings,
-                    'instanceExists' => false
-                ]);
-            }
-
-            $response = Http::withHeaders([
-                'apikey' => $apiKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(10)->post("{$baseUrl}/settings/set/{$instanceName}", $settings);
-
-            if (!$response->successful()) {
-                Log::error('Failed to update WhatsApp settings', [
-                    'instance' => $instanceName,
-                    'response' => $response->body()
-                ]);
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to update settings'
-                ], 400);
-            }
-
-            Log::info('WhatsApp settings updated', [
-                'instance' => $instanceName,
-                'settings' => $settings
-            ]);
-
+            // If we get here, instance doesn't exist but settings are cached
             return response()->json([
                 'success' => true,
-                'message' => 'Settings updated successfully',
-                'settings' => $settings
+                'message' => 'Settings saved for when WhatsApp is connected',
+                'settings' => $settings,
+                'instanceExists' => false
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage()]);
+            Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()
