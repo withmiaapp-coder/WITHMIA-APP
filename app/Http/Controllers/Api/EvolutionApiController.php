@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
-use App\Jobs\CleanupUnconnectedInstance;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -96,25 +95,19 @@ class EvolutionApiController extends Controller
 
         $result = $this->evolutionApi->connect($instanceName);
 
-        // 🧹 AUTO-LIMPIEZA: Programar verificación de conexión en 5 minutos
-        // Si no se conecta en 5 minutos, la instancia se eliminará automáticamente
+        // 🧹 AUTO-LIMPIEZA: Registrar instancia para verificación automática
+        // El Scheduler verificará cada minuto y eliminará si no se conecta en 5 min
         if ($result['success']) {
             $connectionRequestedAt = time();
             
-            // Guardar timestamp del intento de conexión para evitar limpiezas duplicadas
-            Cache::put(
-                "whatsapp:connection_attempt:{$instanceName}",
-                $connectionRequestedAt,
-                now()->addMinutes(10) // Mantener por 10 minutos
-            );
+            // Agregar a la lista de instancias pendientes de verificación
+            $pendingInstances = Cache::get('whatsapp:pending_cleanup', []);
+            $pendingInstances[$instanceName] = $connectionRequestedAt;
+            Cache::put('whatsapp:pending_cleanup', $pendingInstances, now()->addHours(1));
 
-            // Programar Job de limpieza para ejecutarse en 5 minutos
-            CleanupUnconnectedInstance::dispatch($instanceName, $connectionRequestedAt)
-                ->delay(now()->addMinutes(5));
-
-            Log::info('🧹 Cleanup job programado para 5 minutos', [
+            Log::info('🧹 Instancia registrada para auto-limpieza', [
                 'instance' => $instanceName,
-                'scheduled_at' => now()->addMinutes(5)->toDateTimeString()
+                'will_check_after' => now()->addMinutes(5)->toDateTimeString()
             ]);
         }
 
@@ -554,20 +547,23 @@ class EvolutionApiController extends Controller
             'data' => $data
         ]);
 
-        // 🧹 AUTO-LIMPIEZA: Si la conexión fue exitosa, cancelar el Job de limpieza
-        // Actualizamos el timestamp para que el Job programado detecte que hay un intento más reciente
+        // 🧹 AUTO-LIMPIEZA: Si la conexión fue exitosa, remover de pendientes
         if ($state === 'open') {
-            // Marcar la conexión como exitosa para evitar que el cleanup elimine la instancia
-            Cache::put(
-                "whatsapp:connection_attempt:{$instanceName}",
-                time() + 86400, // Timestamp futuro para invalidar cualquier job pendiente
-                now()->addHours(24)
-            );
-            
-            Log::info('✅ Conexión exitosa, cleanup job será cancelado', [
-                'instance' => $instanceName,
-                'state' => $state
-            ]);
+            // Remover de la lista de pendientes de limpieza
+            $pendingInstances = Cache::get('whatsapp:pending_cleanup', []);
+            if (isset($pendingInstances[$instanceName])) {
+                unset($pendingInstances[$instanceName]);
+                if (empty($pendingInstances)) {
+                    Cache::forget('whatsapp:pending_cleanup');
+                } else {
+                    Cache::put('whatsapp:pending_cleanup', $pendingInstances, now()->addHours(1));
+                }
+                
+                Log::info('✅ Conexión exitosa, removido de lista de limpieza', [
+                    'instance' => $instanceName,
+                    'state' => $state
+                ]);
+            }
         }
 
         try {
