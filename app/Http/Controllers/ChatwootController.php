@@ -1088,14 +1088,19 @@ class ChatwootController extends Controller
                 return response()->json(['error' => 'URL requerida'], 400);
             }
 
-            // Validar que la URL sea de Chatwoot
-            $chatwootHost = parse_url($this->chatwootBaseUrl, PHP_URL_HOST);
+            // Validar que la URL sea de Chatwoot (puede tener diferentes subdominios en Railway)
             $urlHost = parse_url($url, PHP_URL_HOST);
             
-            if ($urlHost !== $chatwootHost) {
+            // Permitir cualquier URL de Chatwoot en Railway o el dominio configurado
+            $isValidChatwootUrl = (
+                str_contains($urlHost, 'chatwoot') && str_contains($urlHost, 'railway.app')
+            ) || (
+                $urlHost === parse_url($this->chatwootBaseUrl, PHP_URL_HOST)
+            );
+            
+            if (!$isValidChatwootUrl) {
                 Log::warning('Intento de proxy a URL no autorizada', [
                     'url' => $url,
-                    'expected_host' => $chatwootHost,
                     'actual_host' => $urlHost
                 ]);
                 return response()->json(['error' => 'URL no autorizada'], 403);
