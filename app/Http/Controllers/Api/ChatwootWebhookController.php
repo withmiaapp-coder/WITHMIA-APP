@@ -54,27 +54,30 @@ class ChatwootWebhookController extends Controller
         // ✅ Disparar eventos de Broadcasting en tiempo real
         try {
             if ($event === 'message_created' && $inboxId && $accountId) {
-                // Broadcast mensaje nuevo
-                broadcast(new NewMessageReceived(
+                // Broadcast mensaje nuevo (sin toOthers porque viene de webhook externo)
+                $messageEvent = new NewMessageReceived(
                     $data,
                     $data['conversation']['id'] ?? null,
                     $inboxId,
                     $accountId
-                ))->toOthers();
+                );
+                broadcast($messageEvent);
 
                 Log::info('📤 NewMessageReceived event broadcasted', [
                     'inbox_id' => $inboxId,
-                    'conversation_id' => $data['conversation']['id'] ?? null
+                    'conversation_id' => $data['conversation']['id'] ?? null,
+                    'message_content' => substr($data['content'] ?? '', 0, 50)
                 ]);
             }
 
             if (in_array($event, ['conversation_updated', 'conversation_status_changed', 'conversation_created']) && $inboxId && $accountId) {
                 // Broadcast actualización de conversación
-                broadcast(new ConversationUpdated(
+                $convEvent = new ConversationUpdated(
                     $data['conversation'] ?? $data,
                     $inboxId,
                     $accountId
-                ))->toOthers();
+                );
+                broadcast($convEvent);
 
                 Log::info('📤 ConversationUpdated event broadcasted', [
                     'event' => $event,
@@ -85,7 +88,8 @@ class ChatwootWebhookController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error broadcasting event', [
                 'event' => $event,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
 
