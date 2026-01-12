@@ -42,27 +42,44 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
             'created_at' => now()->timestamp,
         ];
         
+        $key = config('broadcasting.connections.pusher.key');
+        $secret = config('broadcasting.connections.pusher.secret');
+        $appId = config('broadcasting.connections.pusher.app_id');
+        $cluster = config('broadcasting.connections.pusher.options.cluster');
+        
         // Intentar broadcast directo con Pusher para ver errores
         $pusher = new \Pusher\Pusher(
-            config('broadcasting.connections.pusher.key'),
-            config('broadcasting.connections.pusher.secret'),
-            config('broadcasting.connections.pusher.app_id'),
+            $key,
+            $secret,
+            $appId,
             [
-                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+                'cluster' => $cluster,
                 'useTLS' => true,
+                'debug' => true,
             ]
         );
         
         $channelName = 'private-inbox.' . $inboxId;
         $eventName = 'message.received';
         
-        $result = $pusher->trigger($channelName, $eventName, [
+        $payload = [
             'message' => $testMessage,
             'conversation_id' => 1,
             'inbox_id' => (int) $inboxId,
             'account_id' => 1,
             'timestamp' => now()->toIso8601String(),
-        ]);
+        ];
+        
+        $result = $pusher->trigger($channelName, $eventName, $payload);
+        
+        // Verificar si hay errores
+        $pusherErrors = [];
+        try {
+            // Intentar obtener info del canal para ver si las credenciales son válidas
+            $channelInfo = $pusher->getChannelInfo($channelName);
+        } catch (\Exception $e) {
+            $pusherErrors[] = 'Channel info error: ' . $e->getMessage();
+        }
         
         return response()->json([
             'status' => 'success',
@@ -70,15 +87,21 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
             'channel' => $channelName,
             'event' => $eventName,
             'pusher_result' => $result,
-            'broadcast_driver' => config('broadcasting.default'),
-            'pusher_key' => config('broadcasting.connections.pusher.key'),
-            'pusher_cluster' => config('broadcasting.connections.pusher.options.cluster'),
-            'pusher_app_id' => config('broadcasting.connections.pusher.app_id'),
+            'pusher_result_type' => gettype($result),
+            'pusher_errors' => $pusherErrors,
+            'config' => [
+                'key' => $key,
+                'secret_length' => strlen($secret ?? ''),
+                'app_id' => $appId,
+                'cluster' => $cluster,
+            ],
+            'payload_size' => strlen(json_encode($payload)),
         ]);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
             'message' => $e->getMessage(),
+            'exception_class' => get_class($e),
             'trace' => $e->getTraceAsString()
         ], 500);
     }
