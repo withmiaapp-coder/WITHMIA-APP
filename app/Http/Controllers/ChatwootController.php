@@ -1074,4 +1074,61 @@ class ChatwootController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Proxy para archivos/imágenes de Chatwoot
+     * Evita problemas de CORS al cargar imágenes desde Active Storage de Rails
+     */
+    public function proxyAttachment(Request $request)
+    {
+        try {
+            $url = $request->input('url');
+            
+            if (!$url) {
+                return response()->json(['error' => 'URL requerida'], 400);
+            }
+
+            // Validar que la URL sea de Chatwoot
+            $chatwootHost = parse_url($this->chatwootBaseUrl, PHP_URL_HOST);
+            $urlHost = parse_url($url, PHP_URL_HOST);
+            
+            if ($urlHost !== $chatwootHost) {
+                Log::warning('Intento de proxy a URL no autorizada', [
+                    'url' => $url,
+                    'expected_host' => $chatwootHost,
+                    'actual_host' => $urlHost
+                ]);
+                return response()->json(['error' => 'URL no autorizada'], 403);
+            }
+
+            // Hacer la petición a Chatwoot con autenticación
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->timeout(30)->get($url);
+
+            if (!$response->successful()) {
+                Log::error('Error al obtener archivo de Chatwoot', [
+                    'url' => $url,
+                    'status' => $response->status()
+                ]);
+                return response()->json(['error' => 'No se pudo obtener el archivo'], $response->status());
+            }
+
+            // Detectar el tipo de contenido
+            $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
+            
+            // Retornar el archivo con el tipo de contenido correcto
+            return response($response->body())
+                ->header('Content-Type', $contentType)
+                ->header('Cache-Control', 'public, max-age=86400'); // Cache por 24 horas
+
+        } catch (\Exception $e) {
+            Log::error('Error en proxy de attachment', [
+                'url' => $request->input('url'),
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json(['error' => 'Error al procesar la solicitud'], 500);
+        }
+    }
 }

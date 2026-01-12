@@ -3010,8 +3010,13 @@ const ConversationsInterface: React.FC = () => {
                           <div className="mt-2 space-y-2">
                             {message.attachments.map((att: any, idx: number) => {
                               // ✅ Chatwoot usa file_url, también soportar data_url como fallback
-                              const attachmentUrl = att.file_url || att.data_url || att.url || '';
+                              const rawUrl = att.file_url || att.data_url || att.url || '';
                               const fileType = att.file_type || att.content_type || '';
+                              
+                              // ✅ Usar proxy para URLs de Chatwoot (evitar CORS)
+                              const attachmentUrl = rawUrl && rawUrl.includes('chatwoot') 
+                                ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               
                               return (
                               <div key={idx}>
@@ -3021,7 +3026,7 @@ const ConversationsInterface: React.FC = () => {
                                     alt="Imagen adjunta" 
                                     className="max-w-full max-h-64 rounded-lg cursor-pointer shadow-md hover:shadow-lg transition-shadow"
                                     onError={(e) => {
-                                      console.warn('Error cargando imagen:', attachmentUrl);
+                                      console.warn('Error cargando imagen:', rawUrl);
                                       (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                     title="Imagen adjunta"
@@ -3356,16 +3361,22 @@ const ConversationsInterface: React.FC = () => {
                     <div>
                       <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3 mb-6">
-                        {images.map((img, idx) => (
+                        {images.map((img, idx) => {
+                          const rawUrl = img.file_url || img.data_url || img.url || '';
+                          const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                            ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                            : rawUrl;
+                          return (
                           <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all cursor-pointer">
                             <img 
-                              src={img.file_url || img.data_url || img.url} 
+                              src={proxyUrl} 
                               alt="Media"
                               className="w-full h-full object-cover"
                               onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                             />
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -3376,7 +3387,12 @@ const ConversationsInterface: React.FC = () => {
                     <div>
                       <h4 className="font-semibold text-gray-700 mb-3">Archivos ({(files || []).length})</h4>
                       <div className="space-y-2 mb-6">
-                        {files.map((file, idx) => (
+                        {files.map((file, idx) => {
+                          const rawUrl = file.file_url || file.data_url || file.url || '';
+                          const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                            ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                            : rawUrl;
+                          return (
                           <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <File className="w-8 h-8 text-gray-500" />
                             <div className="flex-1">
@@ -3384,14 +3400,15 @@ const ConversationsInterface: React.FC = () => {
                               <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
                             </div>
                             <a 
-                              href={file.file_url || file.data_url || file.url} 
+                              href={proxyUrl} 
                               download
                               className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
                             >
                               <Upload className="w-4 h-4" />
                             </a>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
