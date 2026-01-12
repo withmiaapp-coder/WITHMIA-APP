@@ -295,7 +295,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     markAllAsRead,
     clearAll,
     removeNotification,
-    removeNotificationsByConversation,    updateSettings,
+    removeNotificationsByConversation,
+    updateSettings,
     playNotificationSound,
     showDesktopNotification,
   };
