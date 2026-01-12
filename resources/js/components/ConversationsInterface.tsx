@@ -2334,9 +2334,8 @@ const ConversationsInterface: React.FC = () => {
     const { scrollTop, scrollHeight, clientHeight } = conversationsListRef.current;
     const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
     
-    // Cargar m?s cuando llega al 80% del scroll
+    // Cargar más cuando llega al 80% del scroll
     if (scrollPercentage > 0.8) {
-      console.log(' Cargando m?s conversaciones...');
       loadMoreConversations();
     }
   };
@@ -2654,11 +2653,11 @@ const ConversationsInterface: React.FC = () => {
             </div>
           )}
           
-          {/* ?? Indicador de carga al hacer scroll */}
-          {conversationsLoading && (conversations || []).length > 0 && (
+          {/* Indicador de carga al hacer scroll - Solo mostrar cuando realmente está cargando más páginas */}
+          {conversationsLoading && hasMorePages && (conversations || []).length > 0 && (
             <div className="p-4 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-blue-500 mr-2" />
-              <span className="text-sm text-gray-600">Cargando m?s...</span>
+              <span className="text-sm text-gray-600">Cargando más...</span>
             </div>
           )}
         </div>
