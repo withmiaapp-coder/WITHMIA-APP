@@ -610,11 +610,15 @@ const ConversationsInterface: React.FC = () => {
       if (currentActiveConv && currentActiveConv.id === conversationId) {
         console.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
         try {
+          // Normalizar message_type a número (0 = incoming, 1 = outgoing)
+          const rawMsgType = event.message?.message_type;
+          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
+          
           // Construir el nuevo mensaje desde el evento
           const newMessage = {
             id: event.message?.id || event.id || Date.now(),
             content: event.message?.content || event.content || '',
-            message_type: event.message?.message_type ?? 0,
+            message_type: normalizedMsgType,
             created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
             sender: event.message?.sender || event.sender || null,
             attachments: event.message?.attachments || [],
