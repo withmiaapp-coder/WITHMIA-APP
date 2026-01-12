@@ -128,6 +128,75 @@ Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId
 
 // Habilitar autenticación de canales de broadcasting
 
+// 🔧 SETUP: Configurar webhook de Chatwoot automáticamente (temporal - eliminar después de usar)
+Route::get('/setup-chatwoot-webhook', function () {
+    try {
+        $user = \App\Models\User::first();
+        $company = $user->company;
+        
+        if (!$company || !$company->chatwoot_account_id) {
+            return response()->json(['error' => 'No company/account found'], 400);
+        }
+        
+        $chatwootUrl = config('services.chatwoot.base_url', 'https://chatwoot.withmia.com');
+        $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+        $accountId = $company->chatwoot_account_id;
+        $appUrl = config('app.url', 'https://app.withmia.com');
+        $webhookUrl = "{$appUrl}/api/chatwoot/webhook";
+        
+        // 1. Primero ver webhooks existentes
+        $existingResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $apiKey
+        ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
+        
+        $existingWebhooks = $existingResponse->json()['payload'] ?? $existingResponse->json() ?? [];
+        
+        // Verificar si ya existe
+        $alreadyExists = false;
+        foreach ($existingWebhooks as $wh) {
+            if (isset($wh['url']) && strpos($wh['url'], 'chatwoot/webhook') !== false) {
+                $alreadyExists = true;
+                break;
+            }
+        }
+        
+        if ($alreadyExists) {
+            return response()->json([
+                'status' => 'already_exists',
+                'message' => 'Webhook ya existe',
+                'existing_webhooks' => $existingWebhooks
+            ]);
+        }
+        
+        // 2. Crear webhook
+        $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $apiKey,
+            'Content-Type' => 'application/json'
+        ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks", [
+            'webhook' => [
+                'url' => $webhookUrl,
+                'subscriptions' => ['message_created', 'message_updated', 'conversation_created', 'conversation_updated', 'conversation_status_changed']
+            ]
+        ]);
+        
+        return response()->json([
+            'status' => $createResponse->successful() ? 'created' : 'error',
+            'webhook_url' => $webhookUrl,
+            'chatwoot_url' => $chatwootUrl,
+            'account_id' => $accountId,
+            'api_key_used' => substr($apiKey, 0, 10) . '...',
+            'response' => $createResponse->json(),
+            'http_status' => $createResponse->status()
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // API routes go here - using dedicated API controller without auth
 
 // Onboarding API route - no authentication required
