@@ -41,6 +41,7 @@ interface IntegrationSectionProps {
     readMessages: boolean;
     syncFullHistory: boolean;
     readStatus: boolean;
+    daysLimitImportMessages?: number;
   };
   onConnectWhatsApp: () => void;
   onDisconnectWhatsApp: () => void;
@@ -57,7 +58,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   isUpdatingSettings = false
 }) => {
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
-  const [localSettings, setLocalSettings] = useState(whatsAppSettings);
+  const [localSettings, setLocalSettings] = useState({
+    ...whatsAppSettings,
+    daysLimitImportMessages: whatsAppSettings.daysLimitImportMessages || 7
+  });
   const [hasChanges, setHasChanges] = useState(false);
 
   const isConnected = whatsAppStatus === 'open' || whatsAppStatus === 'connected';
@@ -66,7 +70,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     setExpandedChannel(expandedChannel === channelId ? null : channelId);
   };
 
-  const handleSettingChange = (key: string, value: boolean) => {
+  const handleSettingChange = (key: string, value: boolean | number) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
@@ -384,23 +388,58 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Sincronizar Historial */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
-                          <div className="flex items-center gap-3">
-                            <RefreshCw className="w-5 h-5 text-neutral-500" />
-                            <div>
-                              <p className="font-medium text-neutral-700">Sincronizar Historial Completo</p>
-                              <p className="text-sm text-neutral-500">Sincronizar todo el historial al leer el código QR</p>
+                        <div className="p-4 bg-white rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <RefreshCw className="w-5 h-5 text-neutral-500" />
+                              <div>
+                                <p className="font-medium text-neutral-700">Sincronizar Historial</p>
+                                <p className="text-sm text-neutral-500">Importar mensajes al conectar WhatsApp</p>
+                              </div>
                             </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={localSettings.syncFullHistory}
+                                onChange={(e) => handleSettingChange('syncFullHistory', e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
                           </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={localSettings.syncFullHistory}
-                              onChange={(e) => handleSettingChange('syncFullHistory', e.target.checked)}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                          </label>
+                          
+                          {/* Days limit selector - only show when sync is enabled */}
+                          {localSettings.syncFullHistory && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <Clock className="w-5 h-5 text-neutral-400" />
+                                  <div>
+                                    <p className="font-medium text-neutral-600">Límite de días a importar</p>
+                                    <p className="text-xs text-neutral-400">Menos días = conexión más rápida</p>
+                                  </div>
+                                </div>
+                                <select
+                                  value={localSettings.daysLimitImportMessages}
+                                  onChange={(e) => handleSettingChange('daysLimitImportMessages', parseInt(e.target.value))}
+                                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                  <option value={3}>3 días (rápido)</option>
+                                  <option value={7}>7 días</option>
+                                  <option value={14}>14 días</option>
+                                  <option value={30}>30 días</option>
+                                  <option value={60}>60 días (lento)</option>
+                                  <option value={90}>90 días (muy lento)</option>
+                                </select>
+                              </div>
+                              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-xs text-amber-700 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Mayor cantidad de días = más tiempo al escanear el QR
+                                </p>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Ver Estado */}

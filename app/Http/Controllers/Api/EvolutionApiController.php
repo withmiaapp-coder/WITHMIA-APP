@@ -333,8 +333,9 @@ class EvolutionApiController extends Controller
                     'groupsIgnore' => $data['groupsIgnore'] ?? false,
                     'alwaysOnline' => $data['alwaysOnline'] ?? false,
                     'readMessages' => $data['readMessages'] ?? true,
-                    'syncFullHistory' => $data['syncFullHistory'] ?? true,
-                    'readStatus' => $data['readStatus'] ?? true
+                    'syncFullHistory' => $data['syncFullHistory'] ?? false,  // Default false
+                    'readStatus' => $data['readStatus'] ?? true,
+                    'daysLimitImportMessages' => $data['daysLimitImportMessages'] ?? 7  // Default 7 days
                 ]
             ]);
         } catch (\Exception $e) {
@@ -363,8 +364,9 @@ class EvolutionApiController extends Controller
                 'groupsIgnore' => $request->input('groupsIgnore', false),
                 'alwaysOnline' => $request->input('alwaysOnline', false),
                 'readMessages' => $request->input('readMessages', true),
-                'syncFullHistory' => $request->input('syncFullHistory', true),
-                'readStatus' => $request->input('readStatus', true)
+                'syncFullHistory' => $request->input('syncFullHistory', false),  // Default false for faster connection
+                'readStatus' => $request->input('readStatus', true),
+                'daysLimitImportMessages' => $request->input('daysLimitImportMessages', 7)  // Default 7 days
             ];
 
             $response = Http::withHeaders([

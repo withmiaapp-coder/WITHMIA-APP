@@ -154,7 +154,7 @@ class EvolutionApiService
                     'alwaysOnline' => false,
                     'readMessages' => true,     // CRITICAL: Enable message reading
                     'readStatus' => true,       // Enable status reading
-                    'syncFullHistory' => true   // CRITICAL: Sync WhatsApp contacts/messages
+                    'syncFullHistory' => false  // CHANGED: Faster connection - only new messages
                 ]);
 
                 if (!$settingsResponse->successful()) {
