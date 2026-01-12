@@ -318,7 +318,9 @@ const ConversationsInterface: React.FC = () => {
     hasMorePages,
     totalConversations,
     setConversations,
-    currentPage
+    currentPage,
+    updateMessagesCache, // ✅ NUEVO: Para actualizar caché de mensajes
+    addMessageToCache // ✅ NUEVO: Para agregar mensaje a caché
   } = useConversations();
   
   // Estados locales
@@ -775,27 +777,41 @@ const ConversationsInterface: React.FC = () => {
             if (messageExists) {
               console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
               // En lugar de ignorar, reemplazar el mensaje optimista con el real
+              const updatedMessages = existingMessages.map((m: any) => {
+                // Reemplazar mensaje optimista/pending con el mensaje real
+                if (
+                  (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) &&
+                  m.content === newMessage.content &&
+                  (newMessage.message_type === 1 || newMessage.sender === 'agent')
+                ) {
+                  console.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
+                  return { ...newMessage, _isOptimistic: false };
+                }
+                return m;
+              });
+              
+              // ✅ NUEVO: Actualizar caché con mensajes actualizados
+              if (updateMessagesCache) {
+                updateMessagesCache(prev.id, updatedMessages);
+              }
+              
               return {
                 ...prev,
-                messages: existingMessages.map((m: any) => {
-                  // Reemplazar mensaje optimista/pending con el mensaje real
-                  if (
-                    (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) &&
-                    m.content === newMessage.content &&
-                    (newMessage.message_type === 1 || newMessage.sender === 'agent')
-                  ) {
-                    console.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
-                    return { ...newMessage, _isOptimistic: false };
-                  }
-                  return m;
-                })
+                messages: updatedMessages
               };
             }
             
             console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
+            const newMessages = [...existingMessages, newMessage];
+            
+            // ✅ NUEVO: Actualizar caché con nuevo mensaje
+            if (updateMessagesCache) {
+              updateMessagesCache(prev.id, newMessages);
+            }
+            
             return {
               ...prev,
-              messages: [...existingMessages, newMessage]
+              messages: newMessages
             };
           });
           
@@ -1159,6 +1175,12 @@ const ConversationsInterface: React.FC = () => {
   });
 
   const handleSelectConversation = async (conversation: Conversation) => {
+    // ✅ NUEVO: Guardar mensajes de la conversación actual en caché ANTES de cambiar
+    if (activeConversation?.id && activeConversation?.messages?.length > 0 && updateMessagesCache) {
+      console.log(`💾 Guardando ${activeConversation.messages.length} mensajes de conversación ${activeConversation.id} en caché antes de cambiar`);
+      updateMessagesCache(activeConversation.id, activeConversation.messages);
+    }
+    
     // 🚀 OPTIMIZACIÓN: Mostrar conversación INMEDIATAMENTE con loading state
     // Esto elimina el delay de 3 segundos percibido por el usuario
     _setActiveConversation({
@@ -1240,6 +1262,11 @@ const ConversationsInterface: React.FC = () => {
             return timeB - timeA;
           });
         });
+        
+        // ✅ NUEVO: Actualizar caché de mensajes con el mensaje optimista
+        if (addMessageToCache) {
+          addMessageToCache(activeConversation.id, optimisticMessage);
+        }
       }
       
       // Limpiar UI inmediatamente (sin delay)
@@ -1254,19 +1281,26 @@ const ConversationsInterface: React.FC = () => {
           // Actualizar mensaje optimista con ID real y status 'sent'
           _setActiveConversation((prev: any) => {
             if (!prev || !prev.messages) return prev;
+            const updatedMessages = prev.messages.map((msg: any) => {
+              if (msg.id === tempId) {
+                return {
+                  ...msg,
+                  id: result?.id || msg.id, // Actualizar con ID real si está disponible
+                  status: 'sent',
+                  _isOptimistic: false
+                };
+              }
+              return msg;
+            });
+            
+            // ✅ NUEVO: Actualizar caché con los mensajes actualizados
+            if (updateMessagesCache) {
+              updateMessagesCache(prev.id, updatedMessages);
+            }
+            
             return {
               ...prev,
-              messages: prev.messages.map((msg: any) => {
-                if (msg.id === tempId) {
-                  return {
-                    ...msg,
-                    id: result?.id || msg.id, // Actualizar con ID real si está disponible
-                    status: 'sent',
-                    _isOptimistic: false
-                  };
-                }
-                return msg;
-              })
+              messages: updatedMessages
             };
           });
         })

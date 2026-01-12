@@ -774,6 +774,47 @@ export const useConversations = () => {
   }, [apiCall]);
 
   // ========================================
+  // ✅ NUEVO: Función para actualizar caché de mensajes (para sincronización RT)
+  // ========================================
+  const updateMessagesCache = useCallback((conversationId: number, messages: any[]) => {
+    if (!conversationId || !messages) return;
+    
+    const existingCache = messagesLocalCache.current.get(conversationId);
+    messagesLocalCache.current.set(conversationId, {
+      messages: messages,
+      timestamp: Date.now(),
+      hasMore: existingCache?.hasMore ?? false
+    });
+    console.log(`💾 Caché de mensajes actualizada para conversación ${conversationId} (${messages.length} mensajes)`);
+  }, []);
+
+  // ========================================
+  // ✅ NUEVO: Función para agregar mensaje a caché existente
+  // ========================================
+  const addMessageToCache = useCallback((conversationId: number, newMessage: any) => {
+    if (!conversationId || !newMessage) return;
+    
+    const existingCache = messagesLocalCache.current.get(conversationId);
+    if (existingCache) {
+      // Verificar que el mensaje no exista ya
+      const messageExists = existingCache.messages.some((m: any) => 
+        m.id === newMessage.id || 
+        (m._isOptimistic && m.content === newMessage.content)
+      );
+      
+      if (!messageExists) {
+        const updatedMessages = [...existingCache.messages, newMessage];
+        messagesLocalCache.current.set(conversationId, {
+          messages: updatedMessages,
+          timestamp: Date.now(),
+          hasMore: existingCache.hasMore
+        });
+        console.log(`💾 Mensaje agregado a caché para conversación ${conversationId}`);
+      }
+    }
+  }, []);
+
+  // ========================================
   // ✅ NUEVO: Cargar TODAS las conversaciones inicialmente
   // ========================================
   useEffect(() => {
@@ -794,6 +835,8 @@ export const useConversations = () => {
     loadConversationMessages,
     markConversationAsRead, // ✅ Función para marcar como leída
     setActiveConversation: setActiveConversationState,
+    updateMessagesCache, // ✅ NUEVO: Función para actualizar caché de mensajes
+    addMessageToCache, // ✅ NUEVO: Función para agregar mensaje a caché
     // ✅ NUEVO: Metadatos de paginación
     currentPage,
     hasMorePages,
