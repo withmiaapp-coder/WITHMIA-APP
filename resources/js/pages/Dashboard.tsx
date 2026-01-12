@@ -6,6 +6,7 @@ import TeamsManagement from '../components/TeamsManagement';
 import WhatsAppQRModal from '../components/WhatsAppQRModal';
 import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
+import AdminPanel from '../components/dashboard/AdminPanel';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
@@ -636,12 +637,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Función para manejar navegación (mantener embed dentro del dashboard)
   // OPTIMIZADO: flushSync para forzar actualización COMPLETAMENTE síncrona
   const handleNavigation = useCallback((itemId: string) => {
-    // Si es admin, navegar a la página externa
-    if (itemId === 'admin') {
-      window.location.href = '/admin/dashboard';
-      return;
-    }
-    
     // Prevenir clicks duplicados si ya estamos en esa sección
     if (itemId === activeSection) return;
     
@@ -1309,6 +1304,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                   </div>
                 </div>
               </div>
+            ) : activeSection === 'admin' ? (
+              <AdminPanel />
             ) : (
               <div className="h-full overflow-y-auto">
                 {/* Dashboard Principal con Metricas Completas - FASE 3 */}
