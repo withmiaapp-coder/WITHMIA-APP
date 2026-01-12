@@ -448,8 +448,36 @@ export const useConversations = () => {
       );
 
       if (result?.payload) {
-        // ✅ NO agregar optimísticamente - dejar que llegue vía webhook/polling
-        // Esto evita mensajes duplicados
+        // ✅ AGREGAR MENSAJE OPTIMÍSTICAMENTE al chat activo
+        const newMessage = {
+          id: result.payload.id,
+          content: result.payload.content,
+          message_type: 1, // outgoing
+          created_at: result.payload.created_at || new Date().toISOString(),
+          sender: result.payload.sender || { name: 'Agente', type: 'user' },
+          attachments: result.payload.attachments || [],
+          source_id: result.payload.source_id || null,
+          content_type: result.payload.content_type || 'text',
+          private: false,
+          status: 'sent'
+        };
+        
+        // Agregar mensaje al activeConversation
+        setActiveConversation((prev: any) => {
+          if (!prev || prev.id !== conversationId) return prev;
+          
+          const existingMessages = prev.messages || [];
+          // Verificar si ya existe (evitar duplicados)
+          const messageExists = existingMessages.some((m: any) => m.id === newMessage.id);
+          if (messageExists) return prev;
+          
+          console.log('✅ Mensaje OUTGOING agregado optimísticamente al chat:', newMessage.id);
+          return {
+            ...prev,
+            messages: [...existingMessages, newMessage]
+          };
+        });
+
         console.log('✅ Mensaje enviado exitosamente', { 
           id: result.payload.id, 
           content: result.payload.content 
@@ -469,7 +497,7 @@ export const useConversations = () => {
       console.error('Error enviando mensaje:', err);
       throw err;
     }
-  }, [apiCall]);
+  }, [apiCall, setActiveConversation]);
 
   // ========================================
   // Cargar mensajes de conversación
