@@ -482,10 +482,16 @@ export const useConversations = () => {
   // ========================================
   const loadConversationMessages = useCallback(async (conversationId: number, loadMore: boolean = false) => {
     // ✅ Evitar cargas concurrentes de la misma conversación
-    if (isLoadingMessagesRef.current.has(conversationId)) {
-      console.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId}, omitiendo...`);
+    // Para loadMore, usamos una key diferente para permitir cargar más mientras hay mensajes en cache
+    const loadingKey = loadMore ? `${conversationId}-loadMore` : `${conversationId}`;
+    
+    if (isLoadingMessagesRef.current.has(loadingKey)) {
+      console.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore}), omitiendo...`);
       return;
     }
+    
+    console.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
+    isLoadingMessagesRef.current.add(loadingKey);
     
     // 🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
     const cached = messagesLocalCache.current.get(conversationId);
@@ -511,11 +517,11 @@ export const useConversations = () => {
         
         // 🚀 PREFETCH: Precargar siguientes conversaciones en background
         prefetchNextConversations(conversationId);
+        // Limpiar loading key ya que usamos cache
+        isLoadingMessagesRef.current.delete(loadingKey);
         return;
       }
     }
-    
-    isLoadingMessagesRef.current.add(conversationId);
     
     try {
       // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo
@@ -524,10 +530,17 @@ export const useConversations = () => {
         const oldestId = cached.messages[0]?.id;
         if (oldestId) {
           url += `&before=${oldestId}`;
+          console.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
         }
       }
       
+      console.log(`🌐 Llamando API: ${url}`);
       const result = await apiCall(url);
+      console.log(`📦 Respuesta API:`, {
+        success: result?.success,
+        messagesCount: result?.payload?.payload?.length || result?.payload?.length || 0,
+        hasMore: result?.meta?.has_more
+      });
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
 
@@ -634,14 +647,13 @@ export const useConversations = () => {
       if (conversation) {
         setActiveConversationState({
           ...conversation,
-          messages: [],
+          messages: cached?.messages || [],
           _isLoading: false
         });
       }
     } finally {
-      setTimeout(() => {
-        isLoadingMessagesRef.current.delete(conversationId);
-      }, 500);
+      console.log(`✅ Liberando loading key: ${loadingKey}`);
+      isLoadingMessagesRef.current.delete(loadingKey);
     }
   }, [apiCall]);
 
