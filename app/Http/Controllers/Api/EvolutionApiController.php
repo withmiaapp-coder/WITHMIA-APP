@@ -87,6 +87,10 @@ class EvolutionApiController extends Controller
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
 
+        // 🧹 LIMPIEZA PREVIA: Verificar si la instancia existe y no está conectada
+        // Si existe pero no está conectada, eliminarla primero para generar QR limpio
+        $this->cleanupIfNotConnected($instanceName);
+
         $createResult = $this->evolutionApi->createInstance($instanceName);
 
         if (!$createResult['success'] && !str_contains($createResult['error'] ?? '', 'already in use')) {
@@ -95,23 +99,66 @@ class EvolutionApiController extends Controller
 
         $result = $this->evolutionApi->connect($instanceName);
 
-        // 🧹 AUTO-LIMPIEZA: Registrar instancia para verificación automática
-        // El Scheduler verificará cada minuto y eliminará si no se conecta en 5 min
-        if ($result['success']) {
-            $connectionRequestedAt = time();
-            
-            // Agregar a la lista de instancias pendientes de verificación
-            $pendingInstances = Cache::get('whatsapp:pending_cleanup', []);
-            $pendingInstances[$instanceName] = $connectionRequestedAt;
-            Cache::put('whatsapp:pending_cleanup', $pendingInstances, now()->addHours(1));
-
-            Log::info('🧹 Instancia registrada para auto-limpieza', [
-                'instance' => $instanceName,
-                'will_check_after' => now()->addMinutes(5)->toDateTimeString()
-            ]);
-        }
-
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * 🧹 Limpiar instancia si existe pero no está conectada
+     * Esto soluciona el problema de QR que no se genera después de tiempo
+     */
+    private function cleanupIfNotConnected(string $instanceName): void
+    {
+        try {
+            $baseUrl = config('evolution.api_url', 'http://localhost:8080');
+            $apiKey = config('evolution.api_key', 'withmia_evolution_api_key_2025_secure_token');
+
+            // Verificar estado actual de la instancia
+            $response = Http::withHeaders([
+                'apikey' => $apiKey
+            ])->timeout(10)->get("{$baseUrl}/instance/connectionState/{$instanceName}");
+
+            if (!$response->successful()) {
+                // La instancia no existe, perfecto - se creará nueva
+                Log::info('🧹 Instancia no existe, se creará nueva', ['instance' => $instanceName]);
+                return;
+            }
+
+            $data = $response->json();
+            $state = $data['instance']['state'] ?? $data['state'] ?? 'close';
+
+            Log::info('🔍 Estado actual de instancia', [
+                'instance' => $instanceName,
+                'state' => $state
+            ]);
+
+            // Si está conectada (open), no hacer nada
+            if ($state === 'open') {
+                Log::info('✅ Instancia ya conectada, no se elimina', ['instance' => $instanceName]);
+                return;
+            }
+
+            // Si NO está conectada (close, connecting, etc), eliminarla para QR limpio
+            Log::warning('🗑️ Eliminando instancia no conectada para generar QR nuevo', [
+                'instance' => $instanceName,
+                'state' => $state
+            ]);
+
+            Http::withHeaders([
+                'apikey' => $apiKey
+            ])->timeout(15)->delete("{$baseUrl}/instance/delete/{$instanceName}");
+
+            Log::info('✅ Instancia eliminada, se generará QR nuevo', ['instance' => $instanceName]);
+
+            // Pequeña pausa para asegurar que Evolution API procesó la eliminación
+            usleep(500000); // 0.5 segundos
+
+        } catch (\Exception $e) {
+            Log::warning('🧹 Error en cleanup (no crítico)', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            // No lanzar excepción, continuar con el flujo normal
+        }
     }
 
     /**
@@ -546,25 +593,6 @@ class EvolutionApiController extends Controller
             'state' => $state,
             'data' => $data
         ]);
-
-        // 🧹 AUTO-LIMPIEZA: Si la conexión fue exitosa, remover de pendientes
-        if ($state === 'open') {
-            // Remover de la lista de pendientes de limpieza
-            $pendingInstances = Cache::get('whatsapp:pending_cleanup', []);
-            if (isset($pendingInstances[$instanceName])) {
-                unset($pendingInstances[$instanceName]);
-                if (empty($pendingInstances)) {
-                    Cache::forget('whatsapp:pending_cleanup');
-                } else {
-                    Cache::put('whatsapp:pending_cleanup', $pendingInstances, now()->addHours(1));
-                }
-                
-                Log::info('✅ Conexión exitosa, removido de lista de limpieza', [
-                    'instance' => $instanceName,
-                    'state' => $state
-                ]);
-            }
-        }
 
         try {
             // Obtener company_slug desde la instancia
