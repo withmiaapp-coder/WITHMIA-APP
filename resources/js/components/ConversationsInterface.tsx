@@ -603,14 +603,48 @@ const ConversationsInterface: React.FC = () => {
         processedEventsRef.current.delete(firstItem);
       }
 
-      // Si el mensaje es para la conversación activa, recargar sus mensajes
+      // Si el mensaje es para la conversación activa, agregar mensaje en tiempo real
       const currentActiveConv = activeConversationRef.current;
       if (currentActiveConv && currentActiveConv.id === conversationId) {
-        console.log(" Mensaje para conversación activa - Recargando mensajes...");
+        console.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
         try {
-          console.log('💬 Mensajes recargados exitosamente');
+          // Construir el nuevo mensaje desde el evento
+          const newMessage = {
+            id: event.message?.id || event.id || Date.now(),
+            content: event.message?.content || event.content || '',
+            message_type: event.message?.message_type ?? 0,
+            created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
+            sender: event.message?.sender || event.sender || null,
+            attachments: event.message?.attachments || [],
+            source_id: event.message?.source_id || event.source_id || null,
+            content_type: event.message?.content_type || 'text',
+            private: event.message?.private || false,
+            status: event.message?.status || 'sent'
+          };
+          
+          // Actualizar activeConversation con el nuevo mensaje
+          _setActiveConversation((prev: any) => {
+            if (!prev || prev.id !== conversationId) return prev;
+            
+            // Verificar si el mensaje ya existe (evitar duplicados)
+            const existingMessages = prev.messages || [];
+            const messageExists = existingMessages.some((m: any) => m.id === newMessage.id);
+            
+            if (messageExists) {
+              console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado');
+              return prev;
+            }
+            
+            console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id);
+            return {
+              ...prev,
+              messages: [...existingMessages, newMessage]
+            };
+          });
+          
+          console.log('💬 Mensaje agregado exitosamente al chat');
         } catch (error) {
-          console.error('❌ Error recargando mensajes:', error);
+          console.error('❌ Error agregando mensaje al chat:', error);
         }
       }
     }
