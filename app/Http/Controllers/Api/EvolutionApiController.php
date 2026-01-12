@@ -99,11 +99,18 @@ class EvolutionApiController extends Controller
         $company = $user->company;
         
         if ($company && $company->chatwoot_account_id && $company->chatwoot_api_key) {
+            // IMPORTANTE: Usar company_slug para el nombre del inbox
+            // Esto asegura consistencia con el sync automático que busca "WhatsApp {instanceName}"
+            // donde instanceName = company_slug
+            $inboxName = $user->company_slug 
+                ? "WhatsApp {$user->company_slug}" 
+                : "WhatsApp {$company->name}";
+            
             return [
                 'account_id' => $company->chatwoot_account_id,
                 'token' => $company->chatwoot_api_key,
                 'url' => config('chatwoot.url'),
-                'inbox_name' => "WhatsApp {$company->name}"
+                'inbox_name' => $inboxName
             ];
         }
 
