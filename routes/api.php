@@ -302,8 +302,11 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     
     // Configuración
     Route::get('/config', [ChatwootController::class, 'getConfig']);
-    
-    // Proxy para archivos/imágenes de Chatwoot (evitar CORS)
+});
+
+// Proxy para archivos/imágenes de Chatwoot - SIN autenticación (las imágenes se cargan vía <img src>)
+// La validación de URL está en el controlador
+Route::prefix('chatwoot-proxy')->group(function () {
     Route::get('/attachment-proxy', [ChatwootController::class, 'proxyAttachment']);
 });
 
