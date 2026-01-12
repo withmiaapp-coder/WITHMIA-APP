@@ -395,12 +395,18 @@ class EvolutionApiController extends Controller
             ];
 
             // First check if instance exists
-            $checkResponse = Http::withHeaders([
-                'apikey' => $apiKey
-            ])->timeout(5)->get("{$baseUrl}/instance/fetchInstances?instanceName={$instanceName}");
+            $instanceExists = false;
+            try {
+                $checkResponse = Http::withHeaders([
+                    'apikey' => $apiKey
+                ])->timeout(5)->get("{$baseUrl}/instance/fetchInstances?instanceName={$instanceName}");
 
-            $instances = $checkResponse->json() ?? [];
-            $instanceExists = !empty($instances);
+                $instances = $checkResponse->json() ?? [];
+                $instanceExists = is_array($instances) && !empty($instances);
+            } catch (\Exception $checkEx) {
+                Log::warning('Could not check if instance exists', ['error' => $checkEx->getMessage()]);
+                $instanceExists = false;
+            }
 
             if (!$instanceExists) {
                 // Instance doesn't exist - save settings to cache for when instance is created
