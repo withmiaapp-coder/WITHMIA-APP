@@ -113,7 +113,7 @@ class OnboardingApiController extends Controller
             $client = OpenAI::client($apiKey);
 
             $result = $client->chat()->create([
-                'model' => 'gpt-3.5-turbo',
+                'model' => 'gpt-4o-mini',
                 'messages' => [
                     [
                         'role' => 'system',
@@ -124,7 +124,7 @@ class OnboardingApiController extends Controller
                         'content' => "Mejora esta descripción de empresa: \"$description\". Hazla más profesional y atractiva, pero mantén la esencia. Responde solo con la descripción mejorada, sin explicaciones adicionales."
                     ]
                 ],
-                'max_tokens' => 250,
+                'max_tokens' => 200,
                 'temperature' => 0.7,
             ]);
 
