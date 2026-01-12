@@ -317,11 +317,35 @@ class EvolutionApiController extends Controller
                 'apikey' => $apiKey
             ])->timeout(10)->get("{$baseUrl}/settings/find/{$instanceName}");
 
+            // If instance doesn't exist, return cached or default settings
             if (!$response->successful()) {
+                Log::info('Instance not found, returning cached or default settings', ['instance' => $instanceName]);
+                
+                // Check if we have cached pending settings
+                $cachedSettings = \Cache::get("whatsapp_pending_settings_{$instanceName}");
+                
+                if ($cachedSettings) {
+                    return response()->json([
+                        'success' => true,
+                        'settings' => $cachedSettings,
+                        'instanceExists' => false,
+                        'fromCache' => true
+                    ]);
+                }
+                
                 return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to get settings'
-                ], 400);
+                    'success' => true,
+                    'settings' => [
+                        'rejectCall' => false,
+                        'groupsIgnore' => false,
+                        'alwaysOnline' => false,
+                        'readMessages' => true,
+                        'syncFullHistory' => false,
+                        'readStatus' => true,
+                        'daysLimitImportMessages' => 7
+                    ],
+                    'instanceExists' => false
+                ]);
             }
 
             $data = $response->json();
@@ -336,7 +360,8 @@ class EvolutionApiController extends Controller
                     'syncFullHistory' => $data['syncFullHistory'] ?? false,  // Default false
                     'readStatus' => $data['readStatus'] ?? true,
                     'daysLimitImportMessages' => $data['daysLimitImportMessages'] ?? 7  // Default 7 days
-                ]
+                ],
+                'instanceExists' => true
             ]);
         } catch (\Exception $e) {
             Log::error('Error getting WhatsApp settings', ['error' => $e->getMessage()]);
@@ -368,6 +393,31 @@ class EvolutionApiController extends Controller
                 'readStatus' => $request->input('readStatus', true),
                 'daysLimitImportMessages' => $request->input('daysLimitImportMessages', 7)  // Default 7 days
             ];
+
+            // First check if instance exists
+            $checkResponse = Http::withHeaders([
+                'apikey' => $apiKey
+            ])->timeout(5)->get("{$baseUrl}/instance/fetchInstances?instanceName={$instanceName}");
+
+            $instances = $checkResponse->json() ?? [];
+            $instanceExists = !empty($instances);
+
+            if (!$instanceExists) {
+                // Instance doesn't exist - save settings to cache for when instance is created
+                \Cache::put("whatsapp_pending_settings_{$instanceName}", $settings, now()->addHours(24));
+                
+                Log::info('Instance not found, settings saved to cache for later', [
+                    'instance' => $instanceName,
+                    'settings' => $settings
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Settings saved for when WhatsApp is connected',
+                    'settings' => $settings,
+                    'instanceExists' => false
+                ]);
+            }
 
             $response = Http::withHeaders([
                 'apikey' => $apiKey,

@@ -144,18 +144,24 @@ class EvolutionApiService
             try {
                 Log::info('Enabling readMessages for instance', ['instance' => $instanceName]);
                 
+                // Check for cached pending settings from user configuration
+                $cachedSettings = \Cache::get("whatsapp_pending_settings_{$instanceName}");
+                
+                $settings = [
+                    'rejectCall' => $cachedSettings['rejectCall'] ?? false,
+                    'msgCall' => $cachedSettings['msgCall'] ?? '',
+                    'groupsIgnore' => $cachedSettings['groupsIgnore'] ?? false,
+                    'alwaysOnline' => $cachedSettings['alwaysOnline'] ?? false,
+                    'readMessages' => true,     // CRITICAL: Always enable message reading
+                    'readStatus' => $cachedSettings['readStatus'] ?? true,
+                    'syncFullHistory' => $cachedSettings['syncFullHistory'] ?? false,  // Default: faster connection
+                    'daysLimitImportMessages' => $cachedSettings['daysLimitImportMessages'] ?? 7
+                ];
+                
                 $settingsResponse = Http::withHeaders([
                     'apikey' => $this->apiKey,
                     'Content-Type' => 'application/json'
-                ])->post("{$this->baseUrl}/settings/set/{$instanceName}", [
-                    'rejectCall' => false,
-                    'msgCall' => '',
-                    'groupsIgnore' => false,
-                    'alwaysOnline' => false,
-                    'readMessages' => true,     // CRITICAL: Enable message reading
-                    'readStatus' => true,       // Enable status reading
-                    'syncFullHistory' => false  // CHANGED: Faster connection - only new messages
-                ]);
+                ])->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
 
                 if (!$settingsResponse->successful()) {
                     Log::warning('Failed to enable readMessages, but instance created', [
@@ -164,7 +170,16 @@ class EvolutionApiService
                         'body' => $settingsResponse->body()
                     ]);
                 } else {
-                    Log::info('Successfully enabled readMessages', ['instance' => $instanceName]);
+                    Log::info('Successfully applied settings to instance', [
+                        'instance' => $instanceName,
+                        'settings' => $settings,
+                        'fromCache' => $cachedSettings !== null
+                    ]);
+                    
+                    // Clear the cached settings after applying
+                    if ($cachedSettings) {
+                        \Cache::forget("whatsapp_pending_settings_{$instanceName}");
+                    }
                 }
             } catch (\Exception $settingsException) {
                 // Log warning but don't fail instance creation
