@@ -45,6 +45,35 @@ interface AdminStats {
 
 type AdminView = 'dashboard' | 'users' | 'companies';
 
+// Skeleton components para loading elegante
+const SkeletonCard = () => (
+    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm animate-pulse">
+        <div className="flex items-center gap-4">
+            <div className="p-3 bg-slate-200 rounded-xl w-12 h-12"></div>
+            <div>
+                <div className="h-8 bg-slate-200 rounded w-16 mb-2"></div>
+                <div className="h-4 bg-slate-100 rounded w-24"></div>
+            </div>
+        </div>
+    </div>
+);
+
+const SkeletonTable = () => (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+        <div className="p-4 border-b border-slate-200">
+            <div className="h-6 bg-slate-200 rounded w-32"></div>
+        </div>
+        {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="p-4 border-b border-slate-100 flex gap-4">
+                <div className="h-4 bg-slate-100 rounded w-1/4"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/6"></div>
+                <div className="h-4 bg-slate-100 rounded w-1/6"></div>
+            </div>
+        ))}
+    </div>
+);
+
 export default function AdminPanel() {
     const [view, setView] = useState<AdminView>('dashboard');
     const [stats, setStats] = useState<AdminStats | null>(null);
@@ -533,8 +562,33 @@ export default function AdminPanel() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-96">
-                <RefreshCw className="h-8 w-8 text-purple-500 animate-spin" />
+            <div className="h-full overflow-y-auto p-8">
+                <div className="max-w-7xl mx-auto">
+                    {/* Header Skeleton */}
+                    <div className="mb-8 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="p-4 bg-slate-200 rounded-xl w-18 h-18 animate-pulse"></div>
+                            <div>
+                                <div className="h-10 bg-slate-200 rounded w-72 mb-2 animate-pulse"></div>
+                                <div className="h-5 bg-slate-100 rounded w-56 animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <SkeletonCard />
+                        <SkeletonCard />
+                        <SkeletonCard />
+                        <SkeletonCard />
+                    </div>
+
+                    {/* Content Skeleton */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <SkeletonTable />
+                        <SkeletonTable />
+                    </div>
+                </div>
             </div>
         );
     }
