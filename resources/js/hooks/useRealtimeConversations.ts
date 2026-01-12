@@ -44,6 +44,16 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
         const channel = echo.private(channelName);
         channelRef.current = channel;
 
+        // Debug: Log cuando el canal se suscribe exitosamente
+        channel.subscribed(() => {
+          console.log(`✅ Canal ${channelName} SUSCRITO exitosamente`);
+        });
+
+        // Debug: Log errores de suscripción
+        channel.error((error: any) => {
+          console.error(`❌ Error en canal ${channelName}:`, error);
+        });
+
         // Listener: Nuevo mensaje recibido
         channel.listen('.message.received', (event: any) => {
           console.log('📩 Nuevo mensaje recibido:', event);
