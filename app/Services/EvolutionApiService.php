@@ -10,7 +10,7 @@ class EvolutionApiService
 {
     private string $baseUrl;
     private string $apiKey;
-    private int $cacheTtl = 60; // Tiempo de vida del caché en segundos (aumentado)
+    private int $cacheTtl = 5; // Tiempo de vida del caché en segundos (reducido para polling rápido)
     private int $timeout = 5; // Timeout en segundos para evitar bloqueos
     private int $connectTimeout = 3; // Timeout de conexión
 
