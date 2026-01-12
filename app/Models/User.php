@@ -50,4 +50,13 @@ class User extends Authenticatable
         // FIX: Usar company_slug en lugar de company_id
         return $this->belongsTo(Company::class, 'company_slug', 'slug');
     }
+
+    /**
+     * Alias para compatibilidad con código que usa companies()
+     */
+    public function companies()
+    {
+        // Retorna una colección con la empresa del usuario (si tiene)
+        return $this->company() ? collect([$this->company]) : collect([]);
+    }
 }

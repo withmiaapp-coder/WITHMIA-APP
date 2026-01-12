@@ -33,7 +33,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company) {
                 return response()->json([
@@ -68,7 +68,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company) {
                 return response()->json([
@@ -111,7 +111,7 @@ class ChatwootEnterpriseController extends Controller
 
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -200,7 +200,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company) {
                 return response()->json([
@@ -249,7 +249,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company) {
                 return response()->json([
@@ -298,7 +298,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -363,7 +363,7 @@ class ChatwootEnterpriseController extends Controller
     public function showTestInterface()
     {
         $user = auth()->user();
-        $company = $user->companies()->first();
+        $company = $user->company;
 
         return view('enterprise', compact('user', 'company'));
     }
@@ -438,7 +438,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -493,7 +493,7 @@ class ChatwootEnterpriseController extends Controller
 
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -547,7 +547,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -597,7 +597,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -647,7 +647,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -688,7 +688,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
@@ -759,7 +759,7 @@ class ChatwootEnterpriseController extends Controller
     {
         try {
             $user = auth()->user();
-            $company = $user->companies()->first();
+            $company = $user->company;
 
             if (!$company || !$company->chatwoot_account_id) {
                 return response()->json([
