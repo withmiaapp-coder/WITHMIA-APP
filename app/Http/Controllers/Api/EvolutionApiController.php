@@ -250,7 +250,7 @@ class EvolutionApiController extends Controller
     }
 
     /**
-     * Obtener estado de conexi??n
+     * Obtener estado de conexión
      */
     public function getStatus(Request $request, ?string $instanceName = null): JsonResponse
     {
@@ -272,6 +272,13 @@ class EvolutionApiController extends Controller
                         $result['profileInfo'] ?? null
                     ));
                 }
+                
+                // 🔄 AUTO-SYNC: Cuando la conexión está activa, sincronizar el inbox_id de Chatwoot
+                // Esto es CRÍTICO para que la app lea del inbox correcto después de reconectar
+                $state = $result['state'] ?? 'unknown';
+                if ($user && $state === 'open') {
+                    $this->syncChatwootInboxIfNeeded($instanceName, $user);
+                }
             } catch (\Exception $e) {
                 Log::error('Error broadcasting status check', ['error' => $e->getMessage()]);
             }
@@ -281,11 +288,55 @@ class EvolutionApiController extends Controller
     }
 
     /**
+     * 🔄 Sincronizar inbox_id de Chatwoot si es necesario
+     * Se ejecuta cuando WhatsApp está conectado para asegurar que
+     * la app siempre lee del inbox correcto (incluso después de reconectar)
+     */
+    private function syncChatwootInboxIfNeeded(string $instanceName, $user): void
+    {
+        try {
+            // Verificar si ya sincronizamos recientemente (evitar llamadas excesivas)
+            $cacheKey = "inbox_sync_{$instanceName}";
+            if (\Cache::has($cacheKey)) {
+                return; // Ya sincronizado recientemente
+            }
+
+            // Sincronizar inbox_id
+            $syncResult = $this->evolutionApi->syncChatwootInboxId($instanceName, $user);
+            
+            if ($syncResult['success']) {
+                // Marcar como sincronizado por 1 hora
+                \Cache::put($cacheKey, true, 3600);
+                
+                Log::info('✅ Chatwoot inbox_id synchronized automatically', [
+                    'instance' => $instanceName,
+                    'user_id' => $user->id,
+                    'inbox_id' => $syncResult['inbox_id']
+                ]);
+            } else {
+                Log::warning('⚠️ Could not sync Chatwoot inbox_id', [
+                    'instance' => $instanceName,
+                    'error' => $syncResult['error']
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Exception syncing Chatwoot inbox_id', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Desconectar instancia (logout)
      */
     public function disconnect(Request $request, ?string $instanceName = null): JsonResponse
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
+        
+        // 🔄 Invalidar cache de sincronización de inbox para forzar re-sync al reconectar
+        \Cache::forget("inbox_sync_{$instanceName}");
+        
         $result = $this->evolutionApi->disconnect($instanceName);
 
         return response()->json($result, $result['success'] ? 200 : 400);
@@ -297,9 +348,51 @@ class EvolutionApiController extends Controller
     public function deleteInstance(Request $request, ?string $instanceName = null): JsonResponse
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
+        
+        // 🔄 Invalidar cache de sincronización de inbox
+        \Cache::forget("inbox_sync_{$instanceName}");
+        
         $result = $this->evolutionApi->deleteInstance($instanceName);
 
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * 🔄 Sincronizar inbox_id de Chatwoot manualmente
+     * Busca el inbox en Chatwoot y actualiza el usuario/empresa
+     */
+    public function syncChatwootInbox(Request $request, ?string $instanceName = null): JsonResponse
+    {
+        $instanceName = $instanceName ?? $this->getInstanceName($request);
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'error' => 'User not authenticated'
+            ], 401);
+        }
+
+        // Invalidar cache para forzar re-sync
+        \Cache::forget("inbox_sync_{$instanceName}");
+        
+        // Ejecutar sincronización
+        $result = $this->evolutionApi->syncChatwootInboxId($instanceName, $user);
+        
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Inbox synchronized successfully',
+                'inbox_id' => $result['inbox_id'],
+                'user_id' => $user->id,
+                'company_id' => $user->company_id
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => $result['error'] ?? 'Failed to sync inbox'
+        ], 400);
     }
 
     /**

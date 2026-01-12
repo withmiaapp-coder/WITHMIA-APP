@@ -636,4 +636,186 @@ class EvolutionApiService
             Log::warning("Failed to clear WhatsApp cache", ['error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * 🔍 Buscar el inbox_id de Chatwoot basado en el nombre de la instancia
+     * 
+     * Evolution API crea automáticamente un inbox en Chatwoot con el nombre "WhatsApp {instanceName}"
+     * Esta función busca ese inbox y retorna su ID para sincronizarlo con la DB local.
+     * 
+     * @param string $instanceName Nombre de la instancia de WhatsApp
+     * @param string|null $chatwootUrl URL de Chatwoot (usa config si no se proporciona)
+     * @param string|null $chatwootToken Token de admin de Chatwoot
+     * @param string|null $accountId ID de la cuenta en Chatwoot
+     * @return array ['success' => bool, 'inbox_id' => int|null, 'inbox_name' => string|null, 'error' => string|null]
+     */
+    public function findChatwootInboxByInstance(
+        string $instanceName,
+        ?string $chatwootUrl = null,
+        ?string $chatwootToken = null,
+        ?string $accountId = null
+    ): array {
+        try {
+            $url = $chatwootUrl ?? config('chatwoot.url');
+            $token = $chatwootToken ?? config('chatwoot.token');
+            $account = $accountId ?? config('chatwoot.account_id', '1');
+
+            if (!$url || !$token) {
+                return [
+                    'success' => false,
+                    'inbox_id' => null,
+                    'error' => 'Chatwoot URL or token not configured'
+                ];
+            }
+
+            // Consultar todos los inboxes de la cuenta
+            $response = Http::withHeaders([
+                'api_access_token' => $token,
+                'Content-Type' => 'application/json'
+            ])->timeout(10)->get("{$url}/api/v1/accounts/{$account}/inboxes");
+
+            if (!$response->successful()) {
+                Log::error('Failed to fetch Chatwoot inboxes', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'inbox_id' => null,
+                    'error' => 'Failed to fetch inboxes from Chatwoot'
+                ];
+            }
+
+            $inboxes = $response->json()['payload'] ?? [];
+            
+            // Buscar inbox que coincida con el nombre de la instancia
+            // El nombre generado por Evolution API es: "WhatsApp {instanceName}"
+            $expectedInboxName = "WhatsApp {$instanceName}";
+            
+            foreach ($inboxes as $inbox) {
+                if ($inbox['name'] === $expectedInboxName) {
+                    Log::info('✅ Found matching Chatwoot inbox', [
+                        'instance' => $instanceName,
+                        'inbox_id' => $inbox['id'],
+                        'inbox_name' => $inbox['name']
+                    ]);
+                    
+                    return [
+                        'success' => true,
+                        'inbox_id' => $inbox['id'],
+                        'inbox_name' => $inbox['name'],
+                        'error' => null
+                    ];
+                }
+            }
+
+            // No se encontró el inbox
+            Log::warning('Chatwoot inbox not found for instance', [
+                'instance' => $instanceName,
+                'expected_name' => $expectedInboxName,
+                'available_inboxes' => array_map(fn($i) => $i['name'], $inboxes)
+            ]);
+
+            return [
+                'success' => false,
+                'inbox_id' => null,
+                'error' => "Inbox '{$expectedInboxName}' not found in Chatwoot"
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception finding Chatwoot inbox', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'inbox_id' => null,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 🔄 Sincronizar el inbox_id de Chatwoot con el usuario/empresa
+     * 
+     * Busca el inbox creado por Evolution API y actualiza el chatwoot_inbox_id
+     * tanto del usuario como de la empresa.
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @param \App\Models\User $user Usuario actual
+     * @return array ['success' => bool, 'inbox_id' => int|null, 'error' => string|null]
+     */
+    public function syncChatwootInboxId(string $instanceName, $user): array
+    {
+        if (!$user) {
+            return [
+                'success' => false,
+                'inbox_id' => null,
+                'error' => 'No user provided'
+            ];
+        }
+
+        $company = $user->company;
+        
+        // Usar credenciales de la empresa si están disponibles
+        $chatwootUrl = config('chatwoot.url');
+        $chatwootToken = $company?->chatwoot_api_key ?? config('chatwoot.token');
+        $accountId = $company?->chatwoot_account_id ?? config('chatwoot.account_id', '1');
+
+        // Buscar el inbox
+        $result = $this->findChatwootInboxByInstance(
+            $instanceName,
+            $chatwootUrl,
+            $chatwootToken,
+            $accountId
+        );
+
+        if (!$result['success'] || !$result['inbox_id']) {
+            return $result;
+        }
+
+        $inboxId = $result['inbox_id'];
+
+        try {
+            // Actualizar el usuario
+            $user->chatwoot_inbox_id = $inboxId;
+            $user->save();
+            
+            Log::info('✅ Updated user chatwoot_inbox_id', [
+                'user_id' => $user->id,
+                'inbox_id' => $inboxId
+            ]);
+
+            // Actualizar la empresa también (si existe)
+            if ($company) {
+                $company->chatwoot_inbox_id = $inboxId;
+                $company->save();
+                
+                Log::info('✅ Updated company chatwoot_inbox_id', [
+                    'company_id' => $company->id,
+                    'inbox_id' => $inboxId
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'inbox_id' => $inboxId,
+                'error' => null
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update inbox_id in database', [
+                'user_id' => $user->id,
+                'inbox_id' => $inboxId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'inbox_id' => $inboxId,
+                'error' => 'Failed to update database: ' . $e->getMessage()
+            ];
+        }
+    }
 }

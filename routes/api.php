@@ -114,6 +114,8 @@ Route::prefix('evolution-whatsapp')->group(function () {
         // Settings endpoints
         Route::get('/settings/{instanceName?}', [\App\Http\Controllers\Api\EvolutionApiController::class, 'getSettings']);
         Route::post('/settings/{instanceName?}', [\App\Http\Controllers\Api\EvolutionApiController::class, 'updateSettings']);
+        // Sync inbox_id from Chatwoot (force re-sync)
+        Route::post('/sync-inbox/{instanceName?}', [\App\Http\Controllers\Api\EvolutionApiController::class, 'syncChatwootInbox']);
     });
 });
 
