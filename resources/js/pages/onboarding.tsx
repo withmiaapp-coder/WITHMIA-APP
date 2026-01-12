@@ -141,6 +141,21 @@ export default function Onboarding({
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Notification state for elegant toast messages
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({ show: false, message: '', type: 'info' });
+
+  // Show notification function
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 4000);
+  };
 
   const updateFormData = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -307,13 +322,14 @@ export default function Onboarding({
           window.location.href = "/dashboard";
         }
       } else {
-        alert(
-          "Error al guardar: " + (data.message || "Por favor intenta de nuevo.")
+        showNotification(
+          data.message || "Error al guardar. Intenta de nuevo.",
+          "error"
         );
       }
     } catch (error) {
       console.error("Error saving step:", error);
-      alert("Error al guardar. Por favor intenta de nuevo.");
+      showNotification("Error al guardar. Intenta de nuevo.", "error");
     }
     setLoading(false);
   };
@@ -579,7 +595,7 @@ export default function Onboarding({
                     !formData.company_description ||
                     !formData.company_description.trim()
                   ) {
-                    alert("Escribe una descripción primero");
+                    showNotification("Escribe una descripción primero", "info");
                     return;
                   }
                   try {
@@ -602,12 +618,12 @@ export default function Onboarding({
                         "company_description",
                         data.improved_description
                       );
-                      alert("¡Descripción mejorada exitosamente!");
+                      showNotification("¡Descripción mejorada exitosamente!", "success");
                     } else {
-                      alert("Error: " + (data.error || "No se pudo mejorar"));
+                      showNotification(data.error || "No se pudo mejorar la descripción", "error");
                     }
                   } catch (error) {
-                    alert("Error de conexión: " + error);
+                    showNotification("Error de conexión. Intenta de nuevo.", "error");
                     console.error(error);
                   }
                 }}
@@ -1572,6 +1588,100 @@ export default function Onboarding({
   return (
     <>
       <Head title="Registro" />
+      
+      {/* Elegant Toast Notification */}
+      {notification.show && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10000,
+            animation: 'slideDown 0.3s ease-out',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px 24px',
+              borderRadius: '16px',
+              background: notification.type === 'success' 
+                ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                : notification.type === 'error'
+                ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            {notification.type === 'success' && (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            )}
+            {notification.type === 'error' && (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            )}
+            {notification.type === 'info' && (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            )}
+            <span style={{ 
+              color: 'white', 
+              fontSize: '15px', 
+              fontWeight: '500',
+              letterSpacing: '-0.01em',
+            }}>
+              {notification.message}
+            </span>
+            <button
+              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: '8px',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* CSS Animation for toast */}
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
 
       <button
         onClick={() => {
