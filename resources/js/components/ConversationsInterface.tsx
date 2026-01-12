@@ -2508,7 +2508,7 @@ const ConversationsInterface: React.FC = () => {
           <div className="flex space-x-2">
             {[
               { id: 'all', label: 'Todo', count: (conversations || []).length },
-              { id: 'mine', label: 'M??o', count: (conversations || []).filter(c => c.assignee_id === 1).length },
+              { id: 'mine', label: 'Mio', count: (conversations || []).filter(c => c.assignee_id === 1).length },
               { id: 'assigned', label: 'Asignadas', count: (conversations || []).filter(c => c.assignee_id && c.assignee_id !== 1).length }
             ].map((filter) => (
               <button
