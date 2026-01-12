@@ -21,7 +21,14 @@ class AttachmentProxyController extends Controller
         try {
             $url = $request->input('url');
             
+            Log::info('AttachmentProxy: Request recibido', [
+                'url' => $url,
+                'all_params' => $request->all(),
+                'query_string' => $request->getQueryString()
+            ]);
+            
             if (!$url) {
+                Log::warning('AttachmentProxy: URL vacía');
                 return response()->json(['error' => 'URL requerida'], 400);
             }
 

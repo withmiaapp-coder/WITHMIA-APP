@@ -8,11 +8,16 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ContactsController;
+use App\Http\Controllers\AttachmentProxyController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
 // Autenticación de canales de broadcasting
 Broadcast::routes(['middleware' => ['web', 'auth']]);
+
+// Proxy para archivos/imágenes de Chatwoot - SIN autenticación
+// Ruta en web.php para evitar problemas de caché de rutas API
+Route::get('/chatwoot-image-proxy', [AttachmentProxyController::class, 'proxy']);
 
 // Ruta temporal para agregar columnas faltantes
 Route::get('/fix-user-columns', function () {

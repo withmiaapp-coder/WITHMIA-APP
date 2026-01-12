@@ -249,7 +249,7 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
     if (!avatarUrl) return null;
     // Si es una URL de Chatwoot Railway, usar el proxy
     if (avatarUrl.includes('chatwoot') && avatarUrl.includes('railway.app')) {
-      return `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(avatarUrl)}`;
+      return `/chatwoot-image-proxy?url=${encodeURIComponent(avatarUrl)}`;
     }
     // Para otras URLs, retornar directamente
     return avatarUrl;
@@ -3026,7 +3026,7 @@ const ConversationsInterface: React.FC = () => {
                               
                               // ✅ Usar proxy para URLs de Chatwoot (evitar CORS)
                               const attachmentUrl = rawUrl && rawUrl.includes('chatwoot') 
-                                ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                                ? `/chatwoot-image-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
                               
                               return (
@@ -3392,7 +3392,7 @@ const ConversationsInterface: React.FC = () => {
                         {images.map((img, idx) => {
                           const rawUrl = img.file_url || img.data_url || img.url || '';
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
-                            ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                            ? `/chatwoot-image-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
                           return (
                           <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all cursor-pointer">
@@ -3418,7 +3418,7 @@ const ConversationsInterface: React.FC = () => {
                         {files.map((file, idx) => {
                           const rawUrl = file.file_url || file.data_url || file.url || '';
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
-                            ? `/api/chatwoot-proxy/attachment-proxy?url=${encodeURIComponent(rawUrl)}`
+                            ? `/chatwoot-image-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
                           return (
                           <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
