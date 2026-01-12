@@ -61,6 +61,37 @@ Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
     }
 });
 
+// Test endpoint using Laravel broadcast() function
+Route::get('/test-laravel-broadcast/{inboxId}', function ($inboxId) {
+    try {
+        // Test NewMessageReceived event
+        broadcast(new \App\Events\NewMessageReceived(
+            [
+                'content' => 'Test Laravel broadcast ' . now()->format('H:i:s'),
+                'phone' => '5491234567890',
+                'from_me' => false,
+                'test' => true,
+            ],
+            999, // fake conversation ID
+            (int)$inboxId,
+            1
+        ));
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Laravel broadcast sent to inbox.' . $inboxId,
+            'queue_connection' => config('queue.default'),
+            'broadcast_driver' => config('broadcasting.default'),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
 // Habilitar autenticación de canales de broadcasting
 
 // API routes go here - using dedicated API controller without auth
