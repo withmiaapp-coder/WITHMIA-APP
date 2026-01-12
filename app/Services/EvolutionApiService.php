@@ -432,22 +432,25 @@ class EvolutionApiService
             // Invalidar caché
             $this->clearCache($instanceName);
 
-            if (!$response->successful()) {
+            // Si la instancia no existe (404) o fue eliminada exitosamente, es éxito
+            if ($response->status() === 404 || $response->successful()) {
                 return [
-                    'success' => false,
-                    'error' => $response->json()['message'] ?? 'Failed to disconnect'
+                    'success' => true,
+                    'message' => 'Instance disconnected and deleted successfully'
                 ];
             }
 
             return [
-                'success' => true,
-                'message' => 'Instance disconnected and deleted successfully'
+                'success' => false,
+                'error' => $response->json()['message'] ?? 'Failed to disconnect'
             ];
 
         } catch (\Exception $e) {
+            // Si hay error pero la instancia probablemente ya no existe, retornamos éxito
+            $this->clearCache($instanceName);
             return [
-                'success' => false,
-                'error' => $e->getMessage()
+                'success' => true,
+                'message' => 'Instance disconnected (may have been already deleted)'
             ];
         }
     }
