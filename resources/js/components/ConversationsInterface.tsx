@@ -610,11 +610,41 @@ const ConversationsInterface: React.FC = () => {
   const conversationsListRef = useRef<HTMLDivElement>(null);
   
   //  Mensajes filtrados (sin privados, ordenados por fecha)
+  // ⚡ MEJORADO: Filtrar mensajes optimistas cuando ya existe mensaje real con mismo contenido
   const filteredMessages = useMemo(() => {
     if (!activeConversation) return [];
-    return (activeConversation.messages || [])
-      .filter((m: Message) => !m.private)
-      .sort((a: Message, b: Message) => a.created_at - b.created_at);
+    
+    const allMessages = activeConversation.messages || [];
+    
+    // Obtener contenidos de mensajes reales (no optimistas)
+    const realMessageContents = new Set(
+      allMessages
+        .filter((m: any) => !m._isOptimistic && typeof m.id === 'number')
+        .map((m: any) => m.content?.trim())
+    );
+    
+    // Filtrar: excluir mensajes optimistas cuyo contenido ya existe en mensajes reales
+    const deduplicatedMessages = allMessages.filter((m: any) => {
+      // Si es mensaje real, siempre incluir
+      if (!m._isOptimistic && typeof m.id === 'number') {
+        return !m.private;
+      }
+      // Si es optimista, solo incluir si su contenido NO existe ya en mensajes reales
+      if (m._isOptimistic) {
+        const contentExists = realMessageContents.has(m.content?.trim());
+        if (contentExists) {
+          console.log('🔄 Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
+        }
+        return !contentExists;
+      }
+      return !m.private;
+    });
+    
+    return deduplicatedMessages.sort((a: Message, b: Message) => {
+      const timeA = a.timestamp || new Date(a.created_at).getTime() / 1000;
+      const timeB = b.timestamp || new Date(b.created_at).getTime() / 1000;
+      return timeA - timeB;
+    });
   }, [activeConversation]);
   
   // Manejadores para redimensionamiento
@@ -946,13 +976,38 @@ const ConversationsInterface: React.FC = () => {
       
       // Agregar al estado local temporalmente
       if (activeConversation.messages) {
-        // ?? IMPORTANTE: Crear nuevo array para que useMemo detecte el cambio
+        // ⚡ IMPORTANTE: Crear nuevo array para que useMemo detecte el cambio
         const newMessages = [...activeConversation.messages, optimisticMessage];
         console.log(' Agregando mensaje optimista:', tempId, 'Total mensajes:', (newMessages || []).length);
         // Forzar re-render con nuevo objeto Y nuevo array
         _setActiveConversation({ 
           ...activeConversation, 
           messages: newMessages 
+        });
+        
+        // ⚡ NUEVO: Actualizar sidebar (lista de conversaciones) con el mensaje enviado
+        setConversations((prevConversations: any[]) => {
+          return prevConversations.map((conv: any) => {
+            if (conv.id === activeConversation.id) {
+              return {
+                ...conv,
+                last_message: {
+                  content: messageContent,
+                  created_at: new Date().toISOString(),
+                  timestamp: nowTimestamp,
+                  message_type: 1, // outgoing
+                  sender: { name: 'Yo' }
+                },
+                updated_at: new Date().toISOString(),
+                last_activity_at: nowTimestamp
+              };
+            }
+            return conv;
+          }).sort((a: any, b: any) => {
+            const timeA = a.last_activity_at || a.timestamp || 0;
+            const timeB = b.last_activity_at || b.timestamp || 0;
+            return timeB - timeA;
+          });
         });
       }
       

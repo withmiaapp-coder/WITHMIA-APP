@@ -493,14 +493,18 @@ export const useConversations = () => {
           id: msg.id,
           content: msg.content,
           timestamp: msg.created_at,
+          created_at: msg.created_at, // ⚡ Agregar created_at para compatibilidad
           sender: msg.message_type === 0 ? 'contact' : 'agent',
+          message_type: msg.message_type === 0 ? 'incoming' : 'outgoing', // ⚡ Normalizar message_type
           status: msg.status || 'sent',
           attachments: msg.attachments || [],
           sender_name: msg.sender?.name || 'Usuario',
-          isOptimistic: false // Mensajes del servidor NO son optimistas
+          isOptimistic: false, // Mensajes del servidor NO son optimistas
+          _isOptimistic: false // Flag adicional para compatibilidad
         }));
 
         // ✅ Eliminar duplicados por ID (usar Map para mantener solo el último)
+        // ⚡ IMPORTANTE: Los mensajes del servidor REEMPLAZAN cualquier mensaje optimista
         const uniqueMessages = Array.from(
           new Map(chatwootMessages.map((msg: any) => [msg.id, msg])).values()
         );
