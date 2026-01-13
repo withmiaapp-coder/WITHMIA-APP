@@ -23,10 +23,15 @@ Route::get('/test-route', function () {
 // ============================================================================
 Route::get('/img-proxy', function () {
     $url = request()->input('url');
+    $contactName = request()->input('name', '?');
     
     // Función helper para generar un SVG placeholder con iniciales
     $generatePlaceholder = function($name = '?') {
-        $initial = strtoupper(substr($name, 0, 1));
+        $initial = mb_strtoupper(mb_substr($name, 0, 1, 'UTF-8'), 'UTF-8');
+        // Si el carácter no es imprimible o es especial, usar '?'
+        if (empty($initial) || preg_match('/^[\x00-\x1F\x7F]/', $initial)) {
+            $initial = '?';
+        }
         $colors = ['4F46E5', '7C3AED', '2563EB', '059669', 'DC2626', 'EA580C'];
         $color = $colors[ord($initial) % count($colors)];
         
@@ -43,13 +48,13 @@ SVG;
     };
     
     if (!$url) {
-        return $generatePlaceholder();
+        return $generatePlaceholder($contactName);
     }
     
     // Validar que sea de Chatwoot Railway
     $host = parse_url($url, PHP_URL_HOST);
     if (!$host || !str_contains($host, 'chatwoot') || !str_contains($host, 'railway.app')) {
-        return $generatePlaceholder();
+        return $generatePlaceholder($contactName);
     }
     
     try {
@@ -78,7 +83,7 @@ SVG;
         // Si hay cualquier error, devolver placeholder
         if ($error || $httpCode >= 400 || empty($body) || str_contains($contentType ?? '', 'text/html')) {
             error_log("IMG-PROXY: Fallback a placeholder - HTTP: $httpCode, Error: $error");
-            return $generatePlaceholder();
+            return $generatePlaceholder($contactName);
         }
         
         return response($body)
@@ -88,7 +93,7 @@ SVG;
             
     } catch (\Exception $e) {
         error_log("IMG-PROXY: Exception: " . $e->getMessage());
-        return $generatePlaceholder();
+        return $generatePlaceholder($contactName);
     }
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 

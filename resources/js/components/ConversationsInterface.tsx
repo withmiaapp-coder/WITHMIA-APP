@@ -245,11 +245,12 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
   };
 
   // Helper: Obtiene la URL del avatar a través del proxy si es de Chatwoot
-  const getAvatarProxyUrl = (avatarUrl: string | null | undefined): string | null => {
+  const getAvatarProxyUrl = (avatarUrl: string | null | undefined, contactName?: string): string | null => {
     if (!avatarUrl) return null;
     // Si es una URL de Chatwoot Railway, usar el proxy
     if (avatarUrl.includes('chatwoot') && avatarUrl.includes('railway.app')) {
-      return `/img-proxy?url=${encodeURIComponent(avatarUrl)}`;
+      const nameParam = contactName ? `&name=${encodeURIComponent(contactName)}` : '';
+      return `/img-proxy?url=${encodeURIComponent(avatarUrl)}${nameParam}`;
     }
     // Para otras URLs, retornar directamente
     return avatarUrl;
@@ -2593,7 +2594,7 @@ const ConversationsInterface: React.FC = () => {
                         {/* Avatar: imagen real o iniciales */}
                         {conversation.contact.avatarUrl ? (
                           <img 
-                            src={getAvatarProxyUrl(conversation.contact.avatarUrl) || ''} 
+                            src={getAvatarProxyUrl(conversation.contact.avatarUrl, conversation.contact.name) || ''} 
                             alt={conversation.contact.name}
                             className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
                             onError={(e) => { 
@@ -2703,7 +2704,7 @@ const ConversationsInterface: React.FC = () => {
                   <div className="relative">
                     {activeConversation.contact.avatarUrl ? (
                       <img 
-                        src={getAvatarProxyUrl(activeConversation.contact.avatarUrl) || ''} 
+                        src={getAvatarProxyUrl(activeConversation.contact.avatarUrl, activeConversation.contact.name) || ''} 
                         alt={activeConversation.contact.name}
                         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md"
                         onError={(e) => { 
@@ -3498,7 +3499,7 @@ const ConversationsInterface: React.FC = () => {
               <div className="text-center">
                 {activeConversation.contact.avatarUrl ? (
                   <img 
-                    src={getAvatarProxyUrl(activeConversation.contact.avatarUrl) || ''} 
+                    src={getAvatarProxyUrl(activeConversation.contact.avatarUrl, activeConversation.contact.name) || ''} 
                     alt={activeConversation.contact.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-lg mx-auto mb-3"
                     onError={(e) => { 
