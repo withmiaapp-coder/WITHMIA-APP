@@ -13,78 +13,89 @@ use App\Http\Controllers\AttachmentProxyController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
+// TEST ROUTE - muy simple para verificar que las rutas funcionan
+Route::get('/test-route', function () {
+    return response()->json(['status' => 'ok', 'time' => now()->toISOString()]);
+});
+
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
 // ============================================================================
 Route::get('/img-proxy', function () {
     $url = request()->input('url');
     
-    \Log::info('IMG-PROXY: Request recibido', ['url' => $url]);
+    error_log("IMG-PROXY: Request recibido - URL: " . ($url ?? 'null'));
     
     if (!$url) {
-        \Log::warning('IMG-PROXY: URL vacía');
-        return response()->json(['error' => 'URL requerida'], 400);
+        error_log("IMG-PROXY: URL vacía");
+        return response('URL requerida', 400)->header('Content-Type', 'text/plain');
     }
     
     // Validar que sea de Chatwoot Railway
     $host = parse_url($url, PHP_URL_HOST);
     if (!$host || !str_contains($host, 'chatwoot') || !str_contains($host, 'railway.app')) {
-        \Log::warning('IMG-PROXY: URL no autorizada', ['host' => $host]);
-        return response()->json(['error' => 'URL no autorizada'], 403);
+        error_log("IMG-PROXY: URL no autorizada - host: " . ($host ?? 'null'));
+        return response('URL no autorizada', 403)->header('Content-Type', 'text/plain');
     }
     
     try {
-        \Log::info('IMG-PROXY: Haciendo request a Chatwoot', ['url' => $url]);
+        error_log("IMG-PROXY: Haciendo request a Chatwoot...");
         
-        $response = Http::withOptions([
-            'allow_redirects' => [
-                'max' => 5,
-                'strict' => false,
-                'referer' => true,
-                'protocols' => ['http', 'https'],
-            ],
-            'verify' => false,
-        ])->timeout(30)->get($url);
-        
-        $statusCode = $response->status();
-        $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
-        
-        \Log::info('IMG-PROXY: Respuesta de Chatwoot', [
-            'status' => $statusCode,
-            'content_type' => $contentType,
-            'body_length' => strlen($response->body())
+        // Usar cURL directamente para mejor control
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_HTTPHEADER => [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept: image/*,*/*'
+            ]
         ]);
         
-        // Si es redirect, seguirlo
-        if ($statusCode >= 300 && $statusCode < 400) {
-            $redirectUrl = $response->header('Location');
-            \Log::info('IMG-PROXY: Siguiendo redirect', ['redirect_to' => $redirectUrl]);
-            $response = Http::withOptions(['verify' => false])->timeout(30)->get($redirectUrl);
-            $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
+        $body = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        error_log("IMG-PROXY: Respuesta - HTTP: $httpCode, ContentType: $contentType, BodyLen: " . strlen($body) . ", Error: $error");
+        
+        if ($error) {
+            error_log("IMG-PROXY: cURL error: $error");
+            return response("Error de conexión: $error", 502)->header('Content-Type', 'text/plain');
         }
         
-        // Si hay error HTTP, devolver el error
-        if ($response->status() >= 400) {
-            \Log::error('IMG-PROXY: Error HTTP', ['status' => $response->status()]);
-            return response()->json(['error' => 'Error ' . $response->status()], $response->status());
+        if ($httpCode >= 400) {
+            error_log("IMG-PROXY: HTTP error: $httpCode");
+            return response("Error HTTP: $httpCode", $httpCode)->header('Content-Type', 'text/plain');
         }
         
-        // Si es HTML, probablemente es una página de error
-        if (str_contains($contentType, 'text/html')) {
-            \Log::warning('IMG-PROXY: Respuesta es HTML, no imagen');
-            return response()->json(['error' => 'Respuesta HTML, no imagen'], 404);
+        if (empty($body)) {
+            error_log("IMG-PROXY: Body vacío");
+            return response('Respuesta vacía', 404)->header('Content-Type', 'text/plain');
         }
         
-        \Log::info('IMG-PROXY: Devolviendo imagen exitosamente');
+        // Si es HTML, es error
+        if (str_contains($contentType ?? '', 'text/html')) {
+            error_log("IMG-PROXY: Respuesta es HTML");
+            return response('Respuesta HTML no válida', 404)->header('Content-Type', 'text/plain');
+        }
         
-        return response($response->body())
-            ->header('Content-Type', $contentType)
+        error_log("IMG-PROXY: Éxito! Devolviendo imagen");
+        
+        return response($body)
+            ->header('Content-Type', $contentType ?: 'image/jpeg')
             ->header('Cache-Control', 'public, max-age=86400')
             ->header('Access-Control-Allow-Origin', '*');
             
     } catch (\Exception $e) {
-        \Log::error('IMG-PROXY: Exception', ['error' => $e->getMessage()]);
-        return response()->json(['error' => $e->getMessage()], 500);
+        error_log("IMG-PROXY: Exception: " . $e->getMessage());
+        return response('Error: ' . $e->getMessage(), 500)->header('Content-Type', 'text/plain');
     }
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
