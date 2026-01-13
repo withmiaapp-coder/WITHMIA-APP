@@ -19,12 +19,12 @@ class SyncContactAvatars extends Command
 
     private function initConfig(): void
     {
-        $this->evolutionApiUrl = rtrim(config('evolution.api_url', env('EVOLUTION_API_URL', '')), '/');
-        $this->evolutionApiKey = config('evolution.api_key', env('EVOLUTION_API_KEY', ''));
-        $this->chatwootUrl = rtrim(config('chatwoot.url', env('CHATWOOT_BASE_URL', env('CHATWOOT_URL', ''))), '/');
-        // Usar CHATWOOT_PLATFORM_API_TOKEN si CHATWOOT_API_KEY no está disponible
-        $this->chatwootApiKey = config('chatwoot.api_key', env('CHATWOOT_API_KEY', env('CHATWOOT_PLATFORM_API_TOKEN', '')));
-        $this->chatwootAccountId = (int) config('chatwoot.account_id', env('CHATWOOT_ACCOUNT_ID', 1));
+        // Usar env() directamente ya que config() puede no tener las claves correctas
+        $this->evolutionApiUrl = rtrim(env('EVOLUTION_API_URL', ''), '/');
+        $this->evolutionApiKey = env('EVOLUTION_API_KEY', '');
+        $this->chatwootUrl = rtrim(env('CHATWOOT_BASE_URL', env('CHATWOOT_URL', '')), '/');
+        $this->chatwootApiKey = env('CHATWOOT_API_KEY', env('CHATWOOT_PLATFORM_API_TOKEN', ''));
+        $this->chatwootAccountId = (int) env('CHATWOOT_ACCOUNT_ID', 1);
     }
 
     public function handle()
