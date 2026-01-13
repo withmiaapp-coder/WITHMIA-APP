@@ -31,18 +31,22 @@ class ChatwootWebhookController extends Controller
                     $contactName = $payload['conversation']['meta']['sender']['name'] ?? 'Contacto desconocido';
                     $messageContent = $payload['content'] ?? '';
                     $unreadCount = $payload['conversation']['unread_count'] ?? 0;
+                    $inboxId = $payload['inbox']['id'] ?? $payload['conversation']['inbox_id'] ?? 1;
 
-                    // Disparar evento de Reverb
+                    // Disparar evento de Reverb al canal correcto
                     broadcast(new NewChatwootMessage(
                         $conversationId,
                         $contactName,
                         $messageContent,
-                        $unreadCount
+                        $unreadCount,
+                        $inboxId
                     ))->toOthers();
 
                     Log::info('Notificación enviada vía Reverb', [
                         'conversation_id' => $conversationId,
-                        'contact_name' => $contactName
+                        'contact_name' => $contactName,
+                        'inbox_id' => $inboxId,
+                        'channel' => 'inbox.' . $inboxId
                     ]);
                 }
             }
