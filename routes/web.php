@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingApiController;
@@ -11,6 +12,49 @@ use App\Http\Controllers\ContactsController;
 use App\Http\Controllers\AttachmentProxyController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+
+// ============================================================================
+// PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
+// ============================================================================
+Route::get('/img-proxy', function () {
+    $url = request()->input('url');
+    
+    if (!$url) {
+        return response()->json(['error' => 'URL requerida'], 400);
+    }
+    
+    // Validar que sea de Chatwoot Railway
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!$host || !str_contains($host, 'chatwoot') || !str_contains($host, 'railway.app')) {
+        return response()->json(['error' => 'URL no autorizada'], 403);
+    }
+    
+    try {
+        $response = Http::withOptions([
+            'allow_redirects' => true,
+            'verify' => false,
+        ])->timeout(15)->get($url);
+        
+        if (!$response->successful()) {
+            return response()->json(['error' => 'No disponible'], 404);
+        }
+        
+        $contentType = $response->header('Content-Type') ?? 'image/jpeg';
+        
+        // Si es HTML, es un error
+        if (str_contains($contentType, 'text/html')) {
+            return response()->json(['error' => 'No encontrado'], 404);
+        }
+        
+        return response($response->body())
+            ->header('Content-Type', $contentType)
+            ->header('Cache-Control', 'public, max-age=86400')
+            ->header('Access-Control-Allow-Origin', '*');
+            
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Autenticación de canales de broadcasting
 Broadcast::routes(['middleware' => ['web', 'auth']]);
