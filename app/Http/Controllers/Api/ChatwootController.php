@@ -1106,12 +1106,32 @@ class ChatwootController extends Controller
                 'phone_number' => 'nullable|string|max:50'
             ]);
 
+            // Limpiar email si es el placeholder genérico (evita error de duplicado)
+            $email = $validated['email'] ?? '';
+            if (in_array(strtolower($email), ['sin-email@example.com', 'no-email@example.com', ''])) {
+                $email = null;
+            }
+
             Log::info('Actualizando contacto en Chatwoot', [
                 'contact_id' => $contactId,
                 'data' => $validated,
+                'email_final' => $email,
                 'user_id' => $this->userId,
                 'account_id' => $this->accountId
             ]);
+
+            // Preparar datos para Chatwoot (solo enviar campos con valor)
+            $updateData = ['name' => $validated['name'] ?? ''];
+            
+            // Solo enviar email si tiene valor real
+            if ($email !== null) {
+                $updateData['email'] = $email;
+            }
+            
+            // Solo enviar phone_number si tiene valor
+            if (!empty($validated['phone_number'])) {
+                $updateData['phone_number'] = $validated['phone_number'];
+            }
 
             // Llamar a la API de Chatwoot para actualizar el contacto
             $response = Http::withHeaders([
@@ -1119,11 +1139,7 @@ class ChatwootController extends Controller
                 'Content-Type' => 'application/json'
             ])->put(
                 $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/contacts/' . $contactId,
-                [
-                    'name' => $validated['name'] ?? '',
-                    'email' => $validated['email'] ?? '',
-                    'phone_number' => $validated['phone_number'] ?? ''
-                ]
+                $updateData
             );
 
             if ($response->successful()) {
