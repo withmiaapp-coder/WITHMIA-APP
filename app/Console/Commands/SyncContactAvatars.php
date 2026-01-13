@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class SyncContactAvatars extends Command
 {
-    protected $signature = 'contacts:sync-avatars {--instance=} {--limit=50}';
+    protected $signature = 'contacts:sync-avatars {--instance=} {--limit=50} {--force : Forzar actualización de todos los avatares, incluso los existentes}';
     protected $description = 'Sincroniza los avatares de contactos desde Evolution API a Chatwoot';
 
     private ?string $evolutionApiUrl = null;
@@ -68,6 +68,21 @@ class SyncContactAvatars extends Command
         }
 
         $this->info("Encontrados " . count($contacts) . " contactos");
+
+        // Filtrar contactos que ya tienen avatar (a menos que sea --force)
+        $forceUpdate = $this->option('force');
+        if (!$forceUpdate) {
+            $originalCount = count($contacts);
+            $contacts = array_filter($contacts, function($contact) {
+                return empty($contact['thumbnail']);
+            });
+            $filtered = $originalCount - count($contacts);
+            if ($filtered > 0) {
+                $this->info("Omitidos {$filtered} contactos con avatar existente (usa --force para actualizar)");
+            }
+        } else {
+            $this->warn("Modo FORCE activado - se actualizarán TODOS los avatares");
+        }
 
         // 3. Para cada contacto, obtener foto de perfil de Evolution API
         $limit = (int) $this->option('limit');
