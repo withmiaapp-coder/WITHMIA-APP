@@ -3667,20 +3667,20 @@ const ConversationsInterface: React.FC = () => {
       {/* Modal de editar contacto */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full border border-white/20 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 animate-in fade-in zoom-in duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
                   <UserPlus className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">Editar Contacto</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Editar Contacto</h3>
               </div>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
 
@@ -3688,52 +3688,52 @@ const ConversationsInterface: React.FC = () => {
             <div className="p-6 space-y-4">
               {/* Campo Nombre */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Nombre completo
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Ej: Juan P??rez"
-                  className="w-full px-4 py-2.5 bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Ej: Juan Pérez"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
                 />
               </div>
 
-              {/* Campo Tel??fono */}
+              {/* Campo Teléfono */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tel??fono
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Teléfono
                 </label>
                 <input
                   type="tel"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="Ej: +52 55 1234 5678"
-                  className="w-full px-4 py-2.5 bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Ej: +56 9 1234 5678"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
                 />
               </div>
 
               {/* Campo Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Correo electr??nico
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Correo electrónico
                 </label>
                 <input
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                   placeholder="Ej: correo@ejemplo.com"
-                  className="w-full px-4 py-2.5 bg-white/50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end space-x-3 p-6 bg-gray-50/50 border-t border-gray-200/50 rounded-b-2xl">
+            <div className="flex items-center justify-end space-x-3 p-6 bg-gray-50 border-t border-gray-200 rounded-b-2xl">
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                className="px-4 py-2.5 text-gray-800 hover:bg-gray-200 rounded-lg transition-colors font-medium"
               >
                 Cancelar
               </button>
