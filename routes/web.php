@@ -24,23 +24,35 @@ Route::get('/test-route', function () {
 Route::get('/img-proxy', function () {
     $url = request()->input('url');
     
-    error_log("IMG-PROXY: Request recibido - URL: " . ($url ?? 'null'));
+    // Función helper para generar un SVG placeholder con iniciales
+    $generatePlaceholder = function($name = '?') {
+        $initial = strtoupper(substr($name, 0, 1));
+        $colors = ['4F46E5', '7C3AED', '2563EB', '059669', 'DC2626', 'EA580C'];
+        $color = $colors[ord($initial) % count($colors)];
+        
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#{$color}"/>
+  <text x="50" y="50" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">{$initial}</text>
+</svg>
+SVG;
+        return response($svg)
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Cache-Control', 'public, max-age=3600')
+            ->header('Access-Control-Allow-Origin', '*');
+    };
     
     if (!$url) {
-        error_log("IMG-PROXY: URL vacía");
-        return response('URL requerida', 400)->header('Content-Type', 'text/plain');
+        return $generatePlaceholder();
     }
     
     // Validar que sea de Chatwoot Railway
     $host = parse_url($url, PHP_URL_HOST);
     if (!$host || !str_contains($host, 'chatwoot') || !str_contains($host, 'railway.app')) {
-        error_log("IMG-PROXY: URL no autorizada - host: " . ($host ?? 'null'));
-        return response('URL no autorizada', 403)->header('Content-Type', 'text/plain');
+        return $generatePlaceholder();
     }
     
     try {
-        error_log("IMG-PROXY: Haciendo request a Chatwoot...");
-        
         // Usar cURL directamente para mejor control
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -48,7 +60,7 @@ Route::get('/img-proxy', function () {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_TIMEOUT => 10, // Timeout más corto
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false,
             CURLOPT_HTTPHEADER => [
@@ -63,30 +75,11 @@ Route::get('/img-proxy', function () {
         $error = curl_error($ch);
         curl_close($ch);
         
-        error_log("IMG-PROXY: Respuesta - HTTP: $httpCode, ContentType: $contentType, BodyLen: " . strlen($body) . ", Error: $error");
-        
-        if ($error) {
-            error_log("IMG-PROXY: cURL error: $error");
-            return response("Error de conexión: $error", 502)->header('Content-Type', 'text/plain');
+        // Si hay cualquier error, devolver placeholder
+        if ($error || $httpCode >= 400 || empty($body) || str_contains($contentType ?? '', 'text/html')) {
+            error_log("IMG-PROXY: Fallback a placeholder - HTTP: $httpCode, Error: $error");
+            return $generatePlaceholder();
         }
-        
-        if ($httpCode >= 400) {
-            error_log("IMG-PROXY: HTTP error: $httpCode");
-            return response("Error HTTP: $httpCode", $httpCode)->header('Content-Type', 'text/plain');
-        }
-        
-        if (empty($body)) {
-            error_log("IMG-PROXY: Body vacío");
-            return response('Respuesta vacía', 404)->header('Content-Type', 'text/plain');
-        }
-        
-        // Si es HTML, es error
-        if (str_contains($contentType ?? '', 'text/html')) {
-            error_log("IMG-PROXY: Respuesta es HTML");
-            return response('Respuesta HTML no válida', 404)->header('Content-Type', 'text/plain');
-        }
-        
-        error_log("IMG-PROXY: Éxito! Devolviendo imagen");
         
         return response($body)
             ->header('Content-Type', $contentType ?: 'image/jpeg')
@@ -95,7 +88,7 @@ Route::get('/img-proxy', function () {
             
     } catch (\Exception $e) {
         error_log("IMG-PROXY: Exception: " . $e->getMessage());
-        return response('Error: ' . $e->getMessage(), 500)->header('Content-Type', 'text/plain');
+        return $generatePlaceholder();
     }
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
