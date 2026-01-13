@@ -11,26 +11,38 @@ class SyncContactAvatars extends Command
     protected $signature = 'contacts:sync-avatars {--instance=} {--limit=50}';
     protected $description = 'Sincroniza los avatares de contactos desde Evolution API a Chatwoot';
 
-    private string $evolutionApiUrl;
-    private string $evolutionApiKey;
-    private string $chatwootUrl;
-    private string $chatwootApiKey;
-    private int $chatwootAccountId;
+    private ?string $evolutionApiUrl = null;
+    private ?string $evolutionApiKey = null;
+    private ?string $chatwootUrl = null;
+    private ?string $chatwootApiKey = null;
+    private int $chatwootAccountId = 1;
 
-    public function __construct()
+    private function initConfig(): void
     {
-        parent::__construct();
-        $this->evolutionApiUrl = rtrim(config('evolution.api_url', env('EVOLUTION_API_URL')), '/');
-        $this->evolutionApiKey = config('evolution.api_key', env('EVOLUTION_API_KEY'));
-        $this->chatwootUrl = rtrim(config('chatwoot.url', env('CHATWOOT_BASE_URL')), '/');
-        $this->chatwootApiKey = config('chatwoot.api_key', env('CHATWOOT_API_KEY'));
+        $this->evolutionApiUrl = rtrim(config('evolution.api_url', env('EVOLUTION_API_URL', '')), '/');
+        $this->evolutionApiKey = config('evolution.api_key', env('EVOLUTION_API_KEY', ''));
+        $this->chatwootUrl = rtrim(config('chatwoot.url', env('CHATWOOT_BASE_URL', '')), '/');
+        $this->chatwootApiKey = config('chatwoot.api_key', env('CHATWOOT_API_KEY', ''));
         $this->chatwootAccountId = (int) config('chatwoot.account_id', env('CHATWOOT_ACCOUNT_ID', 1));
     }
 
     public function handle()
     {
+        // Inicializar configuración al ejecutar (no en constructor para evitar errores en build)
+        $this->initConfig();
+        
         $this->info('=== Sincronización de Avatares ===');
         $this->newLine();
+
+        // Verificar configuración
+        if (empty($this->evolutionApiUrl) || empty($this->evolutionApiKey)) {
+            $this->error('Configuración de Evolution API no encontrada');
+            return 1;
+        }
+        if (empty($this->chatwootUrl) || empty($this->chatwootApiKey)) {
+            $this->error('Configuración de Chatwoot no encontrada');
+            return 1;
+        }
 
         // 1. Obtener instancia
         $instanceName = $this->option('instance');
