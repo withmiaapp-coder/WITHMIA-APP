@@ -1911,18 +1911,18 @@ const ConversationsInterface: React.FC = () => {
       || activeConversation?.contact_inbox?.contact_id;
 
     if (!contactId) {
-      console.error('?? No se pudo obtener el ID del contacto', {
+      console.error('No se pudo obtener el ID del contacto', {
         'contact': activeConversation?.contact,
         'meta': activeConversation?.meta,
         'contact_inbox': activeConversation?.contact_inbox
       });
-      setToastMessage('?? Error: No hay contacto activo');
+      setToastMessage('Error: No hay contacto activo');
       setShowToast(true);
       return;
     }
 
     try {
-      console.log(' Guardando contacto:', {
+      console.log('Guardando contacto:', {
         id: contactId,
         name: editName,
         phone: editPhone,
@@ -1939,7 +1939,7 @@ const ConversationsInterface: React.FC = () => {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
         },
         body: JSON.stringify({
-          name: editName || editPhone, // Si no hay nombre, usar el tel??fono
+          name: editName || editPhone, // Si no hay nombre, usar el telefono
           email: editEmail,
           phone_number: editPhone
         })
@@ -1951,27 +1951,36 @@ const ConversationsInterface: React.FC = () => {
       }
 
       const result = await updateResponse.json();
-      console.log('?? Contacto actualizado exitosamente:', result);
+      console.log('Contacto actualizado exitosamente:', result);
 
-      // Actualizar el estado local de la conversación activa
+      // Actualizar el estado local de la conversación activa Y la lista de conversaciones inmediatamente
+      const newName = editName || editPhone;
+      
       if (activeConversation) {
         const updatedConversation = {
           ...activeConversation,
           contact: {
             ...activeConversation.contact,
-            name: editName || editPhone,
+            name: newName,
             email: editEmail,
             phone_number: editPhone
           }
         };
         _setActiveConversation(updatedConversation);
+        
+        // Actualizar también en la lista de conversaciones inmediatamente
+        setConversations(prev => prev.map(conv => 
+          conv.id === activeConversation.id 
+            ? { ...conv, contact: { ...conv.contact, name: newName, email: editEmail, phone_number: editPhone } }
+            : conv
+        ));
       }
 
-      // Recargar conversaciones para reflejar los cambios
-      await fetchUpdatedConversations();
+      // Recargar conversaciones en background para sincronizar con servidor
+      fetchUpdatedConversations();
       
-      // Mostrar toast de ??xito
-      setToastMessage('?Contacto actualizado exitosamente!');
+      // Mostrar toast de exito
+      setToastMessage('Contacto actualizado exitosamente');
       setShowToast(true);
       
       // Cerrar modal
