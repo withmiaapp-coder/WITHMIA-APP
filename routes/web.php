@@ -19,32 +19,63 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/img-proxy', function () {
     $url = request()->input('url');
     
+    \Log::info('IMG-PROXY: Request recibido', ['url' => $url]);
+    
     if (!$url) {
+        \Log::warning('IMG-PROXY: URL vacía');
         return response()->json(['error' => 'URL requerida'], 400);
     }
     
     // Validar que sea de Chatwoot Railway
     $host = parse_url($url, PHP_URL_HOST);
     if (!$host || !str_contains($host, 'chatwoot') || !str_contains($host, 'railway.app')) {
+        \Log::warning('IMG-PROXY: URL no autorizada', ['host' => $host]);
         return response()->json(['error' => 'URL no autorizada'], 403);
     }
     
     try {
+        \Log::info('IMG-PROXY: Haciendo request a Chatwoot', ['url' => $url]);
+        
         $response = Http::withOptions([
-            'allow_redirects' => true,
+            'allow_redirects' => [
+                'max' => 5,
+                'strict' => false,
+                'referer' => true,
+                'protocols' => ['http', 'https'],
+            ],
             'verify' => false,
-        ])->timeout(15)->get($url);
+        ])->timeout(30)->get($url);
         
-        if (!$response->successful()) {
-            return response()->json(['error' => 'No disponible'], 404);
+        $statusCode = $response->status();
+        $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
+        
+        \Log::info('IMG-PROXY: Respuesta de Chatwoot', [
+            'status' => $statusCode,
+            'content_type' => $contentType,
+            'body_length' => strlen($response->body())
+        ]);
+        
+        // Si es redirect, seguirlo
+        if ($statusCode >= 300 && $statusCode < 400) {
+            $redirectUrl = $response->header('Location');
+            \Log::info('IMG-PROXY: Siguiendo redirect', ['redirect_to' => $redirectUrl]);
+            $response = Http::withOptions(['verify' => false])->timeout(30)->get($redirectUrl);
+            $contentType = $response->header('Content-Type') ?? 'application/octet-stream';
         }
         
-        $contentType = $response->header('Content-Type') ?? 'image/jpeg';
+        // Si hay error HTTP, devolver el error
+        if ($response->status() >= 400) {
+            \Log::error('IMG-PROXY: Error HTTP', ['status' => $response->status()]);
+            return response()->json(['error' => 'Error ' . $response->status()], $response->status());
+        }
         
-        // Si es HTML, es un error
+        // Si es HTML, probablemente es una página de error
         if (str_contains($contentType, 'text/html')) {
-            return response()->json(['error' => 'No encontrado'], 404);
+            \Log::warning('IMG-PROXY: Respuesta es HTML, no imagen');
+            return response()->json(['error' => 'Respuesta HTML, no imagen'], 404);
         }
+        
+        \Log::info('IMG-PROXY: Devolviendo imagen exitosamente');
         
         return response($response->body())
             ->header('Content-Type', $contentType)
@@ -52,6 +83,7 @@ Route::get('/img-proxy', function () {
             ->header('Access-Control-Allow-Origin', '*');
             
     } catch (\Exception $e) {
+        \Log::error('IMG-PROXY: Exception', ['error' => $e->getMessage()]);
         return response()->json(['error' => $e->getMessage()], 500);
     }
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
