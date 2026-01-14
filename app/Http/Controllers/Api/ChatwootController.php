@@ -489,15 +489,17 @@ class ChatwootController extends Controller
                 \Illuminate\Support\Facades\Cache::put($validationCacheKey, true, 300);
             }
 
-            // 🚀 Intentar obtener mensajes desde cache
-            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            if ($cached) {
-                return response()->json([
-                    'success' => true,
-                    'payload' => $cached['payload'],
-                    'meta' => $cached['meta'] ?? [],
-                    'from_cache' => true
-                ]);
+            // 🚀 Intentar obtener mensajes desde cache (SOLO para carga inicial, NO para loadMore)
+            if (!$before) {
+                $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+                if ($cached) {
+                    return response()->json([
+                        'success' => true,
+                        'payload' => $cached['payload'],
+                        'meta' => $cached['meta'] ?? [],
+                        'from_cache' => true
+                    ]);
+                }
             }
 
             // PASO 3: Si pasa la validación, obtener los mensajes
