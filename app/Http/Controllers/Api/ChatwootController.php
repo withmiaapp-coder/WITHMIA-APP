@@ -796,8 +796,36 @@ class ChatwootController extends Controller
                 'hasAttachments' => $request->hasFile('attachments'),
                 'allFiles' => array_keys($request->allFiles()),
                 'contentType' => $request->header('Content-Type'),
-                'allInputs' => array_keys($request->all())
+                'allInputs' => array_keys($request->all()),
+                '_FILES' => !empty($_FILES) ? array_keys($_FILES) : 'empty',
+                'php_upload_error' => $_FILES['file']['error'] ?? 'no file field'
             ]);
+            
+            // Verificar si hubo error en el upload de PHP
+            if (isset($_FILES['file']) && $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'El archivo excede upload_max_filesize de PHP',
+                    UPLOAD_ERR_FORM_SIZE => 'El archivo excede MAX_FILE_SIZE del formulario',
+                    UPLOAD_ERR_PARTIAL => 'El archivo se subió parcialmente',
+                    UPLOAD_ERR_NO_FILE => 'No se subió ningún archivo',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Falta directorio temporal',
+                    UPLOAD_ERR_CANT_WRITE => 'Error al escribir archivo en disco',
+                    UPLOAD_ERR_EXTENSION => 'Extensión de PHP detuvo la subida',
+                ];
+                $errorCode = $_FILES['file']['error'];
+                $errorMsg = $uploadErrors[$errorCode] ?? "Error de upload desconocido: {$errorCode}";
+                
+                Log::error('❌ Error de upload PHP: ' . $errorMsg, [
+                    'error_code' => $errorCode,
+                    'php_upload_max_filesize' => ini_get('upload_max_filesize'),
+                    'php_post_max_size' => ini_get('post_max_size')
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg
+                ], 400);
+            }
             
             // Verificar múltiples formas de envío de archivo
             $uploadedFile = $request->file('file') ?? $request->file('attachments') ?? $request->file('attachment');
