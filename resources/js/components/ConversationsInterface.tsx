@@ -1744,9 +1744,16 @@ const ConversationsInterface: React.FC = () => {
     try {
       console.log('📤 Enviando archivo:', file.name, 'tipo:', file.type, 'tamaño:', file.size);
       
+      // Obtener CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
         body: formData
       });
       
@@ -1832,9 +1839,16 @@ const ConversationsInterface: React.FC = () => {
     try {
       console.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
       
+      // Obtener CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
         body: formData
       });
       
