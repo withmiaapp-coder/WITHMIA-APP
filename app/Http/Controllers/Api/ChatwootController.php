@@ -561,14 +561,20 @@ class ChatwootController extends Controller
             } else {
                 // CARGA INICIAL: Múltiples llamadas para obtener el límite deseado
                 $beforeId = null;
-                $maxIterations = ceil($limit / 20);
+                $maxIterations = 10; // Máximo 10 iteraciones = 200 mensajes
                 $iteration = 0;
+                $seenIds = []; // Para detectar si Chatwoot repite mensajes
                 
                 while ($iteration < $maxIterations) {
                     $queryParams = [];
                     if ($beforeId) {
-                        $queryParams['before'] = $beforeId;
+                        $queryParams['before'] = (int)$beforeId;
                     }
+                    
+                    Log::info('🔄 Iteración carga inicial', [
+                        'iteration' => $iteration,
+                        'before_id' => $beforeId
+                    ]);
                     
                     $response = Http::timeout(8)->withHeaders([
                         'api_access_token' => $this->chatwootToken,
@@ -584,10 +590,30 @@ class ChatwootController extends Controller
                     $batchMessages = $messagesData['payload'] ?? [];
                     
                     if (empty($batchMessages)) {
+                        Log::info('📭 No más mensajes en iteración ' . $iteration);
                         $lastBatchWasFull = false;
                         break;
                     }
                     
+                    // Verificar si Chatwoot está repitiendo mensajes (bug de paginación)
+                    $batchIds = array_column($batchMessages, 'id');
+                    $newIds = array_diff($batchIds, $seenIds);
+                    
+                    Log::info('📦 Batch recibido', [
+                        'iteration' => $iteration,
+                        'batch_size' => count($batchMessages),
+                        'new_ids_count' => count($newIds),
+                        'batch_min_id' => min($batchIds),
+                        'batch_max_id' => max($batchIds)
+                    ]);
+                    
+                    if (empty($newIds)) {
+                        Log::warning('⚠️ Chatwoot repitió los mismos mensajes - deteniendo paginación');
+                        $lastBatchWasFull = false;
+                        break;
+                    }
+                    
+                    $seenIds = array_merge($seenIds, $batchIds);
                     $allMessages = array_merge($allMessages, $batchMessages);
                     
                     if (count($batchMessages) < 20) {
@@ -595,13 +621,25 @@ class ChatwootController extends Controller
                         break;
                     }
                     
-                    $beforeId = min(array_column($batchMessages, 'id'));
+                    $beforeId = min($batchIds);
                     $iteration++;
                 }
                 
+                // Eliminar duplicados por ID
+                $uniqueMessages = [];
+                $seenMsgIds = [];
+                foreach ($allMessages as $msg) {
+                    if (!in_array($msg['id'], $seenMsgIds)) {
+                        $uniqueMessages[] = $msg;
+                        $seenMsgIds[] = $msg['id'];
+                    }
+                }
+                $allMessages = $uniqueMessages;
+                
                 Log::info('📦 Carga inicial completada', [
                     'total_messages' => count($allMessages),
-                    'iterations' => $iteration + 1
+                    'iterations' => $iteration + 1,
+                    'unique_ids' => count($seenMsgIds)
                 ]);
             }
             
