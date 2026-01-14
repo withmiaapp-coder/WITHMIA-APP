@@ -246,10 +246,29 @@ class ConversationDeduplicationService
     private function getChatwootConnection(): ?\PDO
     {
         try {
+            // Usar CHATWOOT_DATABASE_URL si está disponible
+            $databaseUrl = env('CHATWOOT_DATABASE_URL');
+            
+            if ($databaseUrl) {
+                $parsed = parse_url($databaseUrl);
+                $host = $parsed['host'] ?? 'localhost';
+                $port = $parsed['port'] ?? 5432;
+                $database = ltrim($parsed['path'] ?? '/chatwoot', '/');
+                $username = $parsed['user'] ?? 'postgres';
+                $password = $parsed['pass'] ?? '';
+            } else {
+                // Fallback a variables individuales
+                $host = env('CHATWOOT_DB_HOST', 'localhost');
+                $port = env('CHATWOOT_DB_PORT', '5432');
+                $database = env('CHATWOOT_DB_DATABASE', 'chatwoot');
+                $username = env('CHATWOOT_DB_USERNAME', 'postgres');
+                $password = env('CHATWOOT_DB_PASSWORD', '');
+            }
+            
             $pdo = new \PDO(
-                "pgsql:host=127.0.0.1;port=5432;dbname=chatwoot_production",
-                "postgres",
-                "733b40439de8301feb9cfa517c00cdb7"
+                "pgsql:host={$host};port={$port};dbname={$database}",
+                $username,
+                $password
             );
             $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             return $pdo;
