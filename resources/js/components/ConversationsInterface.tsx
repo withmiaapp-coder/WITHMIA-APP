@@ -4119,64 +4119,165 @@ const ConversationsInterface: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* Sección Archivos */}
-                      <div className="mb-6">
-                        <h4 className="font-semibold text-gray-700 mb-3">Archivos ({files.length})</h4>
-                        {files.length > 0 ? (
-                          <div className="space-y-2">
-                            {files.map((file, idx) => {
-                              const rawUrl = file.file_url || file.data_url || file.url || '';
-                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
-                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
-                                : rawUrl;
-                              
-                              // Renderizar icono según tipo de archivo
-                              const renderFileIcon = () => {
-                                switch (file.file_category) {
-                                  case 'video':
-                                    return <Video className="w-8 h-8 text-purple-500" />;
-                                  case 'audio':
-                                    return <Music className="w-8 h-8 text-green-500" />;
-                                  case 'pdf':
-                                    return <FileType className="w-8 h-8 text-red-500" />;
-                                  case 'word':
-                                    return <FileText className="w-8 h-8 text-blue-500" />;
-                                  case 'spreadsheet':
-                                    return <FileText className="w-8 h-8 text-green-600" />;
-                                  default:
-                                    return <File className="w-8 h-8 text-gray-500" />;
-                                }
-                              };
-                              
-                              return (
-                                <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                  {renderFileIcon()}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
-                                    <p className="text-sm text-gray-500">
-                                      {file.file_category === 'video' && '🎥 Video • '}
-                                      {file.file_category === 'audio' && '🎵 Audio • '}
-                                      {file.file_category === 'pdf' && '📄 PDF • '}
-                                      {file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}
-                                    </p>
+                      {/* Sección Videos */}
+                      {(() => {
+                        const videos = files.filter(f => f.file_category === 'video');
+                        return videos.length > 0 ? (
+                          <div className="mb-6">
+                            <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              {videos.map((file, idx) => {
+                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
+                                return (
+                                  <div key={idx} className="bg-gray-100 rounded-lg overflow-hidden">
+                                    <video 
+                                      src={proxyUrl}
+                                      controls
+                                      className="w-full h-40 object-cover"
+                                      preload="metadata"
+                                    />
+                                    <div className="p-2">
+                                      <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
+                                      <p className="text-xs text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                    </div>
                                   </div>
-                                  <a 
-                                    href={proxyUrl} 
-                                    download={file.file_name}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
-                                  >
-                                    <Upload className="w-4 h-4" />
-                                  </a>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
-                        ) : (
+                        ) : null;
+                      })()}
+                      
+                      {/* Sección Audios */}
+                      {(() => {
+                        const audios = files.filter(f => f.file_category === 'audio');
+                        return audios.length > 0 ? (
+                          <div className="mb-6">
+                            <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
+                            <div className="space-y-3">
+                              {audios.map((file, idx) => {
+                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
+                                return (
+                                  <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                      <Music className="w-6 h-6 text-green-500" />
+                                      <p className="font-medium text-gray-700 truncate flex-1">{file.file_name}</p>
+                                      <span className="text-xs text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</span>
+                                    </div>
+                                    <audio 
+                                      src={proxyUrl}
+                                      controls
+                                      className="w-full h-10"
+                                      preload="metadata"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* Sección PDFs */}
+                      {(() => {
+                        const pdfs = files.filter(f => f.file_category === 'pdf');
+                        return pdfs.length > 0 ? (
+                          <div className="mb-6">
+                            <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              {pdfs.map((file, idx) => {
+                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
+                                return (
+                                  <div key={idx} className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                                    <div className="h-32 bg-red-50 flex items-center justify-center">
+                                      <FileType className="w-16 h-16 text-red-400" />
+                                    </div>
+                                    <div className="p-3 flex items-center justify-between">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-gray-700 truncate text-sm">{file.file_name}</p>
+                                        <p className="text-xs text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                      </div>
+                                      <a 
+                                        href={proxyUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* Sección Otros Archivos */}
+                      {(() => {
+                        const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category));
+                        return otherFiles.length > 0 ? (
+                          <div className="mb-6">
+                            <h4 className="font-semibold text-gray-700 mb-3">Otros archivos ({otherFiles.length})</h4>
+                            <div className="space-y-2">
+                              {otherFiles.map((file, idx) => {
+                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
+                                
+                                const renderFileIcon = () => {
+                                  switch (file.file_category) {
+                                    case 'word':
+                                      return <FileText className="w-8 h-8 text-blue-500" />;
+                                    case 'spreadsheet':
+                                      return <FileText className="w-8 h-8 text-green-600" />;
+                                    default:
+                                      return <File className="w-8 h-8 text-gray-500" />;
+                                  }
+                                };
+                                
+                                return (
+                                  <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    {renderFileIcon()}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
+                                      <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                    </div>
+                                    <a 
+                                      href={proxyUrl} 
+                                      download={file.file_name}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </a>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                      
+                      {/* Mensaje si no hay archivos */}
+                      {files.length === 0 && (
+                        <div className="mb-6">
+                          <h4 className="font-semibold text-gray-700 mb-3">Archivos (0)</h4>
                           <p className="text-gray-400 text-sm">No hay archivos</p>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       
                       {/* Sección Enlaces */}
                       <div>
@@ -4232,59 +4333,112 @@ const ConversationsInterface: React.FC = () => {
                 }
                 
                 if (mediaFilter === 'files') {
+                  const videos = files.filter(f => f.file_category === 'video');
+                  const audios = files.filter(f => f.file_category === 'audio');
+                  const pdfs = files.filter(f => f.file_category === 'pdf');
+                  const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category));
+                  
                   return (
-                    <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Archivos ({files.length})</h4>
-                      <div className="space-y-2">
-                        {files.map((file, idx) => {
-                          const rawUrl = file.file_url || file.data_url || file.url || '';
-                          const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
-                            ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
-                            : rawUrl;
-                          
-                          // Renderizar icono según tipo de archivo
-                          const renderFileIcon = () => {
-                            switch (file.file_category) {
-                              case 'video':
-                                return <Video className="w-8 h-8 text-purple-500" />;
-                              case 'audio':
-                                return <Music className="w-8 h-8 text-green-500" />;
-                              case 'pdf':
-                                return <FileType className="w-8 h-8 text-red-500" />;
-                              case 'word':
-                                return <FileText className="w-8 h-8 text-blue-500" />;
-                              case 'spreadsheet':
-                                return <FileText className="w-8 h-8 text-green-600" />;
-                              default:
-                                return <File className="w-8 h-8 text-gray-500" />;
-                            }
-                          };
-                          
-                          return (
-                            <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                              {renderFileIcon()}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
-                                <p className="text-sm text-gray-500">
-                                  {file.file_category === 'video' && '🎥 Video • '}
-                                  {file.file_category === 'audio' && '🎵 Audio • '}
-                                  {file.file_category === 'pdf' && '📄 PDF • '}
-                                  {file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}
-                                </p>
-                              </div>
-                              <a 
-                                href={proxyUrl} 
-                                download={file.file_name}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
-                              >
-                                <Upload className="w-4 h-4" />
-                              </a>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <div className="space-y-6">
+                      {/* Videos */}
+                      {videos.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {videos.map((file, idx) => {
+                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="bg-gray-100 rounded-lg overflow-hidden">
+                                  <video src={proxyUrl} controls className="w-full h-40 object-cover" preload="metadata" />
+                                  <div className="p-2">
+                                    <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Audios */}
+                      {audios.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
+                          <div className="space-y-3">
+                            {audios.map((file, idx) => {
+                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                                  <p className="font-medium text-gray-700 truncate mb-2">{file.file_name}</p>
+                                  <audio src={proxyUrl} controls className="w-full h-10" preload="metadata" />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* PDFs */}
+                      {pdfs.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {pdfs.map((file, idx) => {
+                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                                  <div className="h-24 bg-red-50 flex items-center justify-center">
+                                    <FileType className="w-12 h-12 text-red-400" />
+                                  </div>
+                                  <div className="p-3 flex items-center justify-between">
+                                    <p className="font-medium text-gray-700 truncate text-sm flex-1">{file.file_name}</p>
+                                    <a href={proxyUrl} target="_blank" rel="noopener noreferrer" className="ml-2 p-1.5 bg-red-500 text-white rounded hover:bg-red-600">
+                                      <Download className="w-4 h-4" />
+                                    </a>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Otros archivos */}
+                      {otherFiles.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-3">Otros ({otherFiles.length})</h4>
+                          <div className="space-y-2">
+                            {otherFiles.map((file, idx) => {
+                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                                  <File className="w-8 h-8 text-gray-500" />
+                                  <p className="font-medium text-gray-800 truncate flex-1">{file.file_name}</p>
+                                  <a href={proxyUrl} download={file.file_name} target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
+                                    <Download className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {files.length === 0 && (
+                        <p className="text-gray-400 text-sm">No hay archivos</p>
+                      )}
                     </div>
                   );
                 }
