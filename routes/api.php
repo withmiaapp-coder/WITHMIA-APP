@@ -23,37 +23,47 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Error parseando JSON del template'], 400);
         }
         
-        // 🧹 SOLO mantener propiedades aceptadas por n8n API
-        $cleanWorkflow = [
-            'name' => "WhatsApp Bot - {$instanceName}",
-            'nodes' => $templateWorkflow['nodes'] ?? [],
-            'connections' => $templateWorkflow['connections'] ?? [],
-            'settings' => $templateWorkflow['settings'] ?? [],
-            'active' => false, // Crear inactivo, activar después
-        ];
-        
-        // Limpiar nodos
+        // Limpiar nodos primero
         $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
-        foreach ($cleanWorkflow['nodes'] as &$node) {
-            // Remover propiedades no necesarias de nodos
-            unset($node['notesInFlow']);
-            unset($node['alwaysOutputData']);
-            unset($node['color']);
-            unset($node['notes']);
-            unset($node['continueOnFail']);
-            unset($node['onError']);
-            unset($node['retryOnFail']);
-            unset($node['maxTries']);
-            unset($node['waitBetweenTries']);
-            unset($node['executeOnce']);
+        $cleanNodes = [];
+        foreach ($templateWorkflow['nodes'] ?? [] as $node) {
+            // Solo mantener propiedades esenciales de nodos
+            $cleanNode = [
+                'parameters' => $node['parameters'] ?? [],
+                'type' => $node['type'],
+                'typeVersion' => $node['typeVersion'] ?? 1,
+                'position' => $node['position'],
+                'id' => $node['id'],
+                'name' => $node['name'],
+            ];
+            
+            // Incluir credentials si existen
+            if (isset($node['credentials'])) {
+                $cleanNode['credentials'] = $node['credentials'];
+            }
+            
+            // Incluir webhookId si existe
+            if (isset($node['webhookId'])) {
+                $cleanNode['webhookId'] = $node['webhookId'];
+            }
             
             if ($node['type'] === 'n8n-nodes-base.webhook') {
-                $node['webhookId'] = $newWebhookId;
-                if (isset($node['parameters']['path'])) {
-                    $node['parameters']['path'] = "whatsapp-{$instanceName}";
+                $cleanNode['webhookId'] = $newWebhookId;
+                if (isset($cleanNode['parameters']['path'])) {
+                    $cleanNode['parameters']['path'] = "whatsapp-{$instanceName}";
                 }
             }
+            
+            $cleanNodes[] = $cleanNode;
         }
+        
+        // 🧹 SOLO propiedades exactas que n8n API acepta
+        $cleanWorkflow = [
+            'name' => "WhatsApp Bot - {$instanceName}",
+            'nodes' => $cleanNodes,
+            'connections' => $templateWorkflow['connections'] ?? (object)[],
+            'settings' => $templateWorkflow['settings'] ?? (object)[],
+        ];
         
         // Crear en n8n
         $result = $n8nService->createWorkflow($cleanWorkflow);
