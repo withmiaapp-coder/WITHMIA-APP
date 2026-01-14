@@ -7,6 +7,75 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
+// 🚀 CREAR WORKFLOW N8N MANUALMENTE
+Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        // Cargar template
+        $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+        if (!file_exists($templatePath)) {
+            return response()->json(['error' => 'Template no encontrado: ' . $templatePath], 404);
+        }
+        
+        $templateWorkflow = json_decode(file_get_contents($templatePath), true);
+        if (!$templateWorkflow) {
+            return response()->json(['error' => 'Error parseando JSON del template'], 400);
+        }
+        
+        // Personalizar
+        unset($templateWorkflow['id']);
+        $templateWorkflow['name'] = "WhatsApp Bot - {$instanceName}";
+        
+        $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+        
+        foreach ($templateWorkflow['nodes'] as &$node) {
+            if ($node['type'] === 'n8n-nodes-base.webhook') {
+                $node['webhookId'] = $newWebhookId;
+                if (isset($node['parameters']['path'])) {
+                    $node['parameters']['path'] = "whatsapp-{$instanceName}";
+                }
+            }
+        }
+        
+        // Crear en n8n
+        $result = $n8nService->createWorkflow($templateWorkflow);
+        
+        if ($result['success']) {
+            $workflowId = $result['data']['id'] ?? null;
+            
+            // Activar
+            if ($workflowId) {
+                $activateResult = $n8nService->activateWorkflow($workflowId);
+            }
+            
+            // Guardar en BD
+            \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->update([
+                    'n8n_workflow_id' => $workflowId,
+                    'n8n_webhook_url' => "https://n8n-production-b776.up.railway.app/webhook/whatsapp-{$instanceName}",
+                    'updated_at' => now()
+                ]);
+            
+            return response()->json([
+                'success' => true,
+                'workflow_id' => $workflowId,
+                'webhook_url' => "https://n8n-production-b776.up.railway.app/webhook/whatsapp-{$instanceName}",
+                'message' => 'Workflow creado y activado!'
+            ]);
+        }
+        
+        return response()->json(['error' => 'Error creando workflow', 'details' => $result], 500);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // Health check endpoint for Railway
 Route::get('/health', function () {
     try {
