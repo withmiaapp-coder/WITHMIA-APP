@@ -3064,9 +3064,9 @@ const ConversationsInterface: React.FC = () => {
           {searchResults !== null && !isSearching && (
             <div className="mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-xl text-xs font-semibold text-blue-800 shadow-md backdrop-blur-sm">
               {searchResults.length === 0 ? (
-                <span>??? No se encontraron resultados para "{searchTerm}"</span>
+                <span>🔍 No se encontraron resultados para "{searchTerm}"</span>
               ) : (
-                <span>??? {searchResults.length} conversación{searchResults.length !== 1 ? 'es' : ''} encontrada{searchResults.length !== 1 ? 's' : ''}</span>
+                <span>🔍 {searchResults.length} conversación{searchResults.length !== 1 ? 'es' : ''} encontrada{searchResults.length !== 1 ? 's' : ''}</span>
               )}
             </div>
           )}

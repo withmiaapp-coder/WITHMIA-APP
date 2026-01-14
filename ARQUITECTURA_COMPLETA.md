@@ -17,7 +17,7 @@
 | **Evolution API** | Latest | evolution-api.railway.internal | ✅ Active | WhatsApp Business API |
 | **n8n** | 2.2.6 | https://n8n-production-5f6d.up.railway.app | ✅ Active | Workflow automation |
 | **Qdrant** | 1.16.3 | https://qdrant-production-549b.up.railway.app | ✅ Active | Vector database (RAG) |
-| **Chatwoot** | Latest | https://chatwoot-production-e86a.up.railway.app | ✅ Active | Customer support |
+| **Chatwoot** | Latest | chatwoot.railway.internal:3000 (interno) | ✅ Active | Customer support |
 
 ---
 
@@ -118,9 +118,9 @@ CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 SESSION_DRIVER=redis
 
-# Chatwoot
+# Chatwoot (usar URL interna para mejor rendimiento)
 CHATWOOT_PLATFORM_API_TOKEN=MsvdE51W3VubDAMUbNB2x7FC
-CHATWOOT_API_BASE_URL=https://chatwoot-production-e86a.up.railway.app
+CHATWOOT_API_BASE_URL=http://chatwoot.railway.internal:3000
 CHATWOOT_URL=https://chatwoot-production-e86a.up.railway.app
 CHATWOOT_ACCOUNT_ID=1
 CHATWOOT_INBOX_ID=1
