@@ -683,11 +683,15 @@ export const useConversations = () => {
             return timeA - timeB;
           });
 
-        // 🚀 Si es loadMore, combinar con mensajes existentes
-        if (loadMore && cached?.messages) {
-          const existingIds = new Set(cached.messages.map((m: any) => m.id));
-          const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
-          uniqueMessages = [...newOlderMessages, ...cached.messages];
+        // 🚀 Si es loadMore, combinar con mensajes existentes (usar cache O conversación activa)
+        if (loadMore) {
+          const existingMessages = cached?.messages || activeConversationRef.current?.messages || [];
+          if (existingMessages.length > 0) {
+            const existingIds = new Set(existingMessages.map((m: any) => m.id));
+            const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
+            debugLog.log(`📜 LoadMore: ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes`);
+            uniqueMessages = [...newOlderMessages, ...existingMessages];
+          }
         } else if (cached?.messages) {
           // ✅ FIX: Preservar mensajes optimistas/pendientes que aún no están en API
           const optimisticMessages = cached.messages.filter((m: any) => 
