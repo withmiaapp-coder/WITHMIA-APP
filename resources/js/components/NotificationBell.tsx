@@ -81,22 +81,22 @@ export const NotificationBell: React.FC = () => {
           />
 
           {/* Panel */}
-          <div className="fixed top-14 right-4 w-96 max-h-[80vh] bg-white rounded-lg shadow-2xl border border-gray-200 z-50 flex flex-col animate-slide-down">
+          <div className="fixed top-14 right-4 w-96 max-h-[80vh] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col animate-slide-down">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600">
+            <div className="p-4 border-b border-gray-100 bg-gray-50/80">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white">
-                  <Bell className="w-5 h-5" />
-                  <h3 className="font-bold text-lg">Notificaciones</h3>
+                <div className="flex items-center gap-2 text-gray-800">
+                  <Bell className="w-5 h-5 text-gray-600" />
+                  <h3 className="font-semibold text-base">Notificaciones</h3>
                   {unreadCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
                       {unreadCount}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-white hover:bg-white/20 p-1 rounded-lg transition-colors"
+                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-200/60 p-1.5 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
