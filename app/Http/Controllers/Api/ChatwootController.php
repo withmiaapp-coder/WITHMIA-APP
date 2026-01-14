@@ -872,8 +872,19 @@ class ChatwootController extends Controller
                 'size' => $file->getSize()
             ]);
 
-            // Determinar el tipo de media según el MIME type
-            $mediaType = $this->getMediaType($mimeType);
+            // DETECTAR SI ES UN AUDIO GRABADO (algunos browsers envían video/webm para audio)
+            $isVoiceMessage = str_contains($originalName, 'audio-message');
+            
+            // Si es un mensaje de voz, forzar el tipo a audio
+            if ($isVoiceMessage) {
+                $mediaType = 'audio';
+                // WhatsApp prefiere audio/ogg para notas de voz
+                $mimeType = 'audio/ogg';
+                Log::info('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
+            } else {
+                // Determinar el tipo de media según el MIME type
+                $mediaType = $this->getMediaType($mimeType);
+            }
             
             // Convertir archivo a base64 (funciona mejor en Railway que URLs)
             $fileContent = file_get_contents($file->getPathname());
@@ -881,6 +892,7 @@ class ChatwootController extends Controller
             
             Log::info('📁 Archivo convertido a base64', [
                 'mediaType' => $mediaType,
+                'isVoiceMessage' => $isVoiceMessage,
                 'base64_length' => strlen($base64Media)
             ]);
 
@@ -896,8 +908,9 @@ class ChatwootController extends Controller
             // Enviar según el tipo de media
             $evolutionResult = null;
             
-            if ($mediaType === 'audio' && str_contains($originalName, 'audio-message')) {
+            if ($isVoiceMessage) {
                 // Para audios de voz, usar endpoint especial de WhatsApp
+                Log::info('🎤 Enviando como nota de voz WhatsApp');
                 $evolutionResult = $this->evolutionApi->sendWhatsAppAudio(
                     $instanceName,
                     $cleanPhone,
