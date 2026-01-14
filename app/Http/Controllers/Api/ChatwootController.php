@@ -790,15 +790,28 @@ class ChatwootController extends Controller
                 ], 400);
             }
 
-            // PASO 4: Detectar si es archivo o texto
-            Log::info('📦 Detectando tipo de contenido', [
+            // PASO 4: Detectar si es archivo (base64 o upload tradicional)
+            $fileBase64 = $request->input('file_base64');
+            $fileName = $request->input('file_name');
+            $fileType = $request->input('file_type');
+            
+            // 🚀 MÉTODO 1: Archivo enviado como base64 (evita límites de PHP)
+            if ($fileBase64 && $fileName && $fileType) {
+                Log::info('📦 Archivo recibido como base64', [
+                    'fileName' => $fileName,
+                    'fileType' => $fileType,
+                    'base64_length' => strlen($fileBase64)
+                ]);
+                
+                return $this->sendBase64File($fileBase64, $fileName, $fileType, $id, $contactPhone);
+            }
+            
+            // 🔄 MÉTODO 2: Upload tradicional (FormData)
+            Log::info('📦 Detectando upload tradicional', [
                 'hasFile' => $request->hasFile('file'),
                 'hasAttachments' => $request->hasFile('attachments'),
                 'allFiles' => array_keys($request->allFiles()),
-                'contentType' => $request->header('Content-Type'),
-                'allInputs' => array_keys($request->all()),
-                '_FILES' => !empty($_FILES) ? array_keys($_FILES) : 'empty',
-                'php_upload_error' => $_FILES['file']['error'] ?? 'no file field'
+                'contentType' => $request->header('Content-Type')
             ]);
             
             // Verificar si hubo error en el upload de PHP
@@ -895,6 +908,115 @@ class ChatwootController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al enviar mensaje: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar archivo como base64 (evita límites de upload PHP)
+     */
+    private function sendBase64File($base64Data, $fileName, $mimeType, $conversationId, $contactPhone)
+    {
+        try {
+            Log::info('📎 Procesando archivo base64 para envío', [
+                'user_id' => $this->userId,
+                'conversation_id' => $conversationId,
+                'mimeType' => $mimeType,
+                'fileName' => $fileName,
+                'base64_length' => strlen($base64Data)
+            ]);
+
+            // DETECTAR SI ES UN AUDIO GRABADO
+            $isVoiceMessage = str_contains($fileName, 'audio-message');
+            
+            if ($isVoiceMessage) {
+                $mediaType = 'audio';
+                $mimeType = 'audio/ogg';
+                Log::info('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
+            } else {
+                $mediaType = $this->getMediaType($mimeType);
+            }
+            
+            Log::info('📁 Archivo base64 listo para enviar', [
+                'mediaType' => $mediaType,
+                'isVoiceMessage' => $isVoiceMessage
+            ]);
+
+            // Obtener instanceName
+            $user = auth()->user();
+            $instanceName = $user && $user->company_slug 
+                ? $user->company_slug 
+                : 'with-mia-cqwp4d';
+            
+            // Limpiar número de teléfono
+            $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
+
+            // Enviar según el tipo de media
+            if ($isVoiceMessage) {
+                $evolutionResult = $this->evolutionApi->sendWhatsAppAudio(
+                    $instanceName,
+                    $cleanPhone,
+                    $base64Data
+                );
+            } else {
+                $evolutionResult = $this->evolutionApi->sendMediaMessage(
+                    $instanceName,
+                    $cleanPhone,
+                    $base64Data,
+                    $mediaType,
+                    $mimeType,
+                    null,
+                    $mediaType === 'document' ? $fileName : null
+                );
+            }
+
+            if ($evolutionResult && $evolutionResult['success']) {
+                Log::info('✅ Archivo base64 enviado via Evolution API', [
+                    'user_id' => $this->userId,
+                    'conversation_id' => $conversationId,
+                    'phone' => $cleanPhone,
+                    'mediaType' => $mediaType
+                ]);
+
+                // Invalidar caché
+                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
+                Cache::forget($cacheKey);
+
+                return response()->json([
+                    'success' => true,
+                    'payload' => [
+                        'id' => 'pending-' . time(),
+                        'content' => "📎 {$fileName}",
+                        'created_at' => now()->toISOString(),
+                        'message_type' => 1,
+                        'status' => 'sent',
+                        'attachments' => [[
+                            'file_type' => $mimeType,
+                            'file_name' => $fileName
+                        ]],
+                        'sender' => [
+                            'name' => auth()->user()->name ?? 'Agent'
+                        ]
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el archivo a WhatsApp',
+                'error' => $evolutionResult['error'] ?? 'Error desconocido'
+            ], 500);
+
+        } catch (\Exception $e) {
+            Log::error('💥 Error enviando archivo base64: ' . $e->getMessage(), [
+                'user_id' => $this->userId,
+                'conversation_id' => $conversationId,
+                'trace' => substr($e->getTraceAsString(), 0, 500)
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar archivo: ' . $e->getMessage()
             ], 500);
         }
     }

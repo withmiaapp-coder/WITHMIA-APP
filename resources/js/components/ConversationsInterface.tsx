@@ -1766,24 +1766,40 @@ const ConversationsInterface: React.FC = () => {
     setIsUploadingFile(true);
     setUploadProgress(file.name);
     
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('conversation_id', activeConversation.id.toString());
-    
     try {
-      console.log('📤 Enviando archivo:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+      console.log('📤 Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+      
+      // Convertir archivo a base64 para evitar límites de upload PHP
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remover el prefijo "data:mime/type;base64,"
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       // Obtener CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
+      // Enviar como JSON con base64 (evita límites de upload PHP)
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'X-CSRF-TOKEN': csrfToken,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: formData
+        body: JSON.stringify({
+          file_base64: base64,
+          file_name: file.name,
+          file_type: file.type,
+          conversation_id: activeConversation.id
+        })
       });
       
       const data = await response.json();
