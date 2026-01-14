@@ -406,6 +406,7 @@ const ConversationsInterface: React.FC = () => {
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
   const [mediaGallery, setMediaGallery] = useState<Array<{url: string, type: 'image' | 'video'}>>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [mediaZoom, setMediaZoom] = useState(1); // 🔍 Zoom level (1 = 100%)
   
   // 🎬 Helper: Abrir visor de media con galería completa de la conversación
   const openMediaViewer = useCallback((clickedUrl: string, clickedType: 'image' | 'video') => {
@@ -445,17 +446,28 @@ const ConversationsInterface: React.FC = () => {
     
     setMediaGallery(allMedia);
     setCurrentMediaIndex(clickedIndex >= 0 ? clickedIndex : 0);
+    setMediaZoom(1); // Reset zoom al abrir
     setMediaViewerOpen(true);
   }, [activeConversation?.messages]);
   
   // 🎬 Navegación de la galería
   const goToPreviousMedia = useCallback(() => {
     setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : mediaGallery.length - 1));
+    setMediaZoom(1); // Reset zoom al cambiar
   }, [mediaGallery.length]);
   
   const goToNextMedia = useCallback(() => {
     setCurrentMediaIndex(prev => (prev < mediaGallery.length - 1 ? prev + 1 : 0));
+    setMediaZoom(1); // Reset zoom al cambiar
   }, [mediaGallery.length]);
+  
+  // 🔍 Handler para zoom con scroll
+  const handleMediaWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setMediaZoom(prev => Math.min(Math.max(0.5, prev + delta), 3)); // Min 50%, Max 300%
+  }, []);
   
   // Estados para modal de descarga con progreso
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -486,6 +498,137 @@ const ConversationsInterface: React.FC = () => {
   
   // ?? DEDUPLICACI?N: Ref para evitar procesar eventos WebSocket duplicados
   const processedEventsRef = useRef<Set<string>>(new Set());
+  
+  // 🔗 Cache de link previews (para evitar fetch repetidos)
+  const [linkPreviews, setLinkPreviews] = useState<Record<string, {
+    title?: string;
+    description?: string;
+    image?: string;
+    siteName?: string;
+    loading?: boolean;
+    error?: boolean;
+  }>>({});
+  
+  // 🔗 Función para extraer URLs de un texto
+  const extractUrls = useCallback((text: string): string[] => {
+    if (!text) return [];
+    const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
+    const matches = text.match(urlRegex) || [];
+    // Filtrar URLs de attachments que ya se muestran como media
+    return matches.filter(url => 
+      !url.match(/\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|webm|mp3|wav|pdf|doc)$/i) &&
+      !url.includes('chatwoot') &&
+      !url.includes('active_storage')
+    );
+  }, []);
+  
+  // 🔗 Función para obtener preview de un enlace (usando API de metadata)
+  const fetchLinkPreview = useCallback(async (url: string) => {
+    // Si ya tenemos el preview cacheado o está cargando, no volver a fetch
+    if (linkPreviews[url] && !linkPreviews[url].error) return;
+    
+    // Marcar como cargando
+    setLinkPreviews(prev => ({ ...prev, [url]: { loading: true } }));
+    
+    try {
+      // Usar un servicio de metadata (openlinkpreview, microlink, etc.) o nuestro propio proxy
+      // Aquí usamos una API pública gratuita
+      const response = await axios.get(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+      
+      if (response.data?.status === 'success' && response.data?.data) {
+        const data = response.data.data;
+        setLinkPreviews(prev => ({
+          ...prev,
+          [url]: {
+            title: data.title || new URL(url).hostname,
+            description: data.description,
+            image: data.image?.url,
+            siteName: data.publisher || new URL(url).hostname,
+            loading: false
+          }
+        }));
+      } else {
+        // Fallback: al menos mostrar el dominio
+        setLinkPreviews(prev => ({
+          ...prev,
+          [url]: {
+            title: new URL(url).hostname,
+            siteName: new URL(url).hostname,
+            loading: false
+          }
+        }));
+      }
+    } catch (error) {
+      // En caso de error, mostrar preview básico
+      try {
+        setLinkPreviews(prev => ({
+          ...prev,
+          [url]: {
+            title: new URL(url).hostname,
+            siteName: new URL(url).hostname,
+            loading: false,
+            error: true
+          }
+        }));
+      } catch {
+        setLinkPreviews(prev => ({
+          ...prev,
+          [url]: { loading: false, error: true }
+        }));
+      }
+    }
+  }, [linkPreviews]);
+  
+  // 🔗 Componente para renderizar preview de enlace estilo WhatsApp
+  const LinkPreviewCard: React.FC<{ url: string; preview: any }> = ({ url, preview }) => {
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+    const youtubeId = isYouTube ? url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1] : null;
+    
+    return (
+      <a 
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block mt-2 rounded-lg overflow-hidden border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm max-w-[300px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Imagen de preview o thumbnail de YouTube */}
+        {(preview.image || youtubeId) && (
+          <div className="relative w-full h-36 bg-gray-100">
+            <img 
+              src={youtubeId ? `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg` : preview.image}
+              alt={preview.title || 'Preview'}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            {isYouTube && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
+                  <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Información del enlace */}
+        <div className="p-3">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+            {preview.siteName || new URL(url).hostname}
+          </p>
+          {preview.title && (
+            <p className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+              {preview.title}
+            </p>
+          )}
+          {preview.description && (
+            <p className="text-xs text-gray-600 line-clamp-2">
+              {preview.description}
+            </p>
+          )}
+        </div>
+      </a>
+    );
+  };
   
   //  OPTIMIZACIÓN: Función con debounce para recargar conversaciones
   const debouncedFetchConversations = useCallback(() => {
@@ -3079,7 +3222,37 @@ const ConversationsInterface: React.FC = () => {
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 absolute top-1 right-1" />
                         )}
                         
-                        <p className="text-sm">{searchTerm && searchResults ? highlightSearchTerm(message.content, searchTerm, index) : message.content}</p>
+                        {/* Contenido del mensaje */}
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {searchTerm && searchResults ? highlightSearchTerm(message.content, searchTerm, index) : message.content}
+                        </p>
+                        
+                        {/* 🔗 Link Previews estilo WhatsApp */}
+                        {(() => {
+                          const urls = extractUrls(message.content);
+                          if (urls.length === 0) return null;
+                          
+                          // Fetch preview para URLs que no tenemos
+                          urls.forEach(url => {
+                            if (!linkPreviews[url]) {
+                              fetchLinkPreview(url);
+                            }
+                          });
+                          
+                          return urls.map((url, urlIdx) => {
+                            const preview = linkPreviews[url];
+                            if (!preview || preview.loading) {
+                              return (
+                                <div key={urlIdx} className="mt-2 p-3 rounded-lg bg-gray-100 animate-pulse max-w-[300px]">
+                                  <div className="h-24 bg-gray-200 rounded mb-2"></div>
+                                  <div className="h-3 bg-gray-200 rounded w-20 mb-1"></div>
+                                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                                </div>
+                              );
+                            }
+                            return <LinkPreviewCard key={urlIdx} url={url} preview={preview} />;
+                          });
+                        })()}
 
                         {/* Renderizar archivos adjuntos (imágenes, audios, documentos) */}
                         {message.attachments && message.attachments.length > 0 && (
@@ -3128,10 +3301,13 @@ const ConversationsInterface: React.FC = () => {
                                     </div>
                                   </div>
                                 ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
-                                  /* 🎬 VIDEO: Miniatura con botón play - Click abre fullscreen estilo WhatsApp */
+                                  /* 🎬 VIDEO: Miniatura estilo WhatsApp con gradient */
                                   <div 
-                                    className="relative rounded-lg overflow-hidden shadow-md bg-gray-200 max-w-[280px] cursor-pointer group"
+                                    className="relative rounded-lg overflow-hidden shadow-md max-w-[280px] cursor-pointer group"
                                     onClick={() => openMediaViewer(attachmentUrl, 'video')}
+                                    style={{
+                                      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+                                    }}
                                   >
                                     {/* Video como thumbnail - #t=0.5 fuerza cargar frame del segundo 0.5 */}
                                     <video 
@@ -3143,35 +3319,32 @@ const ConversationsInterface: React.FC = () => {
                                         // Intentar mostrar el primer frame
                                         const video = e.target as HTMLVideoElement;
                                         video.currentTime = 0.5;
+                                        // Si carga, ocultar el fondo gradient
+                                        const container = video.parentElement;
+                                        if (container) container.style.background = 'transparent';
                                       }}
                                       onError={(e) => {
+                                        // Si falla el video, mostrar placeholder visual
                                         const target = e.target as HTMLVideoElement;
                                         target.style.display = 'none';
-                                        const placeholder = target.nextElementSibling as HTMLElement;
-                                        if (placeholder) placeholder.style.display = 'flex';
                                       }}
                                     >
                                       <source src={`${attachmentUrl}#t=0.5`} type={fileType || 'video/mp4'} />
                                     </video>
-                                    {/* Overlay con botón de play */}
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                    {/* Overlay con botón de play siempre visible */}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
                                       <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                                         <Play className="w-7 h-7 text-gray-800 ml-1" fill="currentColor" />
                                       </div>
                                     </div>
-                                    {/* Indicador de duración (esquina inferior derecha) */}
-                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-gray-800/80 rounded text-white text-xs font-medium">
+                                    {/* Indicador de video (esquina inferior derecha) */}
+                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white text-xs font-medium flex items-center gap-1">
+                                      <Film className="w-3 h-3" />
                                       Video
                                     </div>
-                                    {/* Placeholder para video no disponible */}
-                                    <div 
-                                      className="hidden items-center justify-center bg-gray-100 rounded-lg p-6 min-w-[200px] min-h-[120px]"
-                                      style={{ display: 'none' }}
-                                    >
-                                      <div className="text-center text-gray-500">
-                                        <Film className="w-10 h-10 mx-auto mb-2" />
-                                        <span className="text-xs">Video no disponible</span>
-                                      </div>
+                                    {/* Decoración visual cuando no carga el video */}
+                                    <div className="absolute inset-0 flex items-end justify-start p-3 pointer-events-none opacity-50">
+                                      <div className="text-white/30 text-xs">▶ Click para reproducir</div>
                                     </div>
                                   </div>
                                 ) : fileType.includes('audio') ? (
@@ -3985,7 +4158,7 @@ const ConversationsInterface: React.FC = () => {
       {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo Claro */}
       {mediaViewerOpen && mediaGallery.length > 0 && (
         <div 
-          className="fixed inset-0 z-[9999] bg-gray-100/95 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-[9999] bg-gray-100/95 backdrop-blur-sm flex flex-col"
           onClick={() => setMediaViewerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowLeft') goToPreviousMedia();
@@ -3994,8 +4167,8 @@ const ConversationsInterface: React.FC = () => {
           }}
           tabIndex={0}
         >
-          {/* Header con contador y botón de cerrar */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-gray-200 z-10">
+          {/* Header con contador, descargar y botón de cerrar */}
+          <div className="flex-shrink-0 p-4 flex justify-between items-center bg-white/90 backdrop-blur-sm border-b border-gray-200 z-10">
             <div className="text-gray-700 flex items-center space-x-3">
               <span className="text-sm font-medium">
                 {mediaGallery[currentMediaIndex]?.type === 'video' ? '🎬 Video' : '🖼️ Imagen'}
@@ -4005,71 +4178,97 @@ const ConversationsInterface: React.FC = () => {
                   {currentMediaIndex + 1} / {mediaGallery.length}
                 </span>
               )}
+              {mediaZoom !== 1 && (
+                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                  {Math.round(mediaZoom * 100)}%
+                </span>
+              )}
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
-              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
-            >
-              <X className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
-
-          {/* Flecha Izquierda */}
-          {mediaGallery.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); goToPreviousMedia(); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
-            >
-              <ChevronUp className="w-8 h-8 rotate-[-90deg]" />
-            </button>
-          )}
-
-          {/* Flecha Derecha */}
-          {mediaGallery.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); goToNextMedia(); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
-            >
-              <ChevronDown className="w-8 h-8 rotate-[-90deg]" />
-            </button>
-          )}
-
-          {/* Contenido del media */}
-          <div 
-            className="max-w-[90vw] max-h-[80vh] flex items-center justify-center bg-white rounded-xl shadow-2xl p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {mediaGallery[currentMediaIndex]?.type === 'video' ? (
-              <video 
-                key={currentMediaIndex}
-                controls
-                autoPlay
-                className="max-w-full max-h-[75vh] rounded-lg"
-                style={{ outline: 'none' }}
+            <div className="flex items-center space-x-2">
+              {/* Botón Descargar */}
+              <a
+                href={mediaGallery[currentMediaIndex]?.url}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm transition-colors"
+                onClick={(e) => e.stopPropagation()}
               >
-                <source src={mediaGallery[currentMediaIndex]?.url} type="video/mp4" />
-                Tu navegador no soporta el elemento de video.
-              </video>
-            ) : (
-              <img 
-                key={currentMediaIndex}
-                src={mediaGallery[currentMediaIndex]?.url} 
-                alt={`Media ${currentMediaIndex + 1}`}
-                className="max-w-full max-h-[75vh] object-contain rounded-lg select-none"
-                draggable={false}
-              />
-            )}
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Descargar</span>
+              </a>
+              {/* Botón Cerrar */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
+                className="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-700" />
+              </button>
+            </div>
           </div>
 
-          {/* Footer con descargar y miniaturas */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200">
-            {/* Miniaturas de navegación (si hay más de 1) */}
+          {/* Área principal del media con zoom */}
+          <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+            {/* Flecha Izquierda */}
             {mediaGallery.length > 1 && (
-              <div className="flex justify-center space-x-2 mb-3 overflow-x-auto py-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); goToPreviousMedia(); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
+              >
+                <ChevronUp className="w-8 h-8 rotate-[-90deg]" />
+              </button>
+            )}
+
+            {/* Flecha Derecha */}
+            {mediaGallery.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); goToNextMedia(); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
+              >
+                <ChevronDown className="w-8 h-8 rotate-[-90deg]" />
+              </button>
+            )}
+
+            {/* Contenido del media con zoom */}
+            <div 
+              className="flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+              onWheel={handleMediaWheel}
+              style={{ cursor: mediaZoom > 1 ? 'move' : 'zoom-in' }}
+            >
+              {mediaGallery[currentMediaIndex]?.type === 'video' ? (
+                <video 
+                  key={currentMediaIndex}
+                  controls
+                  autoPlay
+                  className="max-w-[85vw] max-h-[70vh] rounded-lg shadow-xl"
+                  style={{ outline: 'none' }}
+                >
+                  <source src={mediaGallery[currentMediaIndex]?.url} type="video/mp4" />
+                  Tu navegador no soporta el elemento de video.
+                </video>
+              ) : (
+                <img 
+                  key={currentMediaIndex}
+                  src={mediaGallery[currentMediaIndex]?.url} 
+                  alt={`Media ${currentMediaIndex + 1}`}
+                  className="max-w-[85vw] max-h-[70vh] object-contain rounded-lg shadow-xl select-none transition-transform duration-150"
+                  style={{ transform: `scale(${mediaZoom})` }}
+                  draggable={false}
+                  onDoubleClick={() => setMediaZoom(prev => prev === 1 ? 2 : 1)}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Footer solo con miniaturas (más compacto) */}
+          {mediaGallery.length > 1 && (
+            <div className="flex-shrink-0 py-3 px-4 bg-white/90 backdrop-blur-sm border-t border-gray-200">
+              <div className="flex justify-center space-x-2 overflow-x-auto">
                 {mediaGallery.map((media, idx) => (
                   <button
                     key={idx}
-                    onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); }}
+                    onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); setMediaZoom(1); }}
                     className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shadow-sm ${
                       idx === currentMediaIndex 
                         ? 'border-blue-500 scale-110 shadow-md' 
@@ -4090,23 +4289,8 @@ const ConversationsInterface: React.FC = () => {
                   </button>
                 ))}
               </div>
-            )}
-            
-            {/* Botón de descargar */}
-            <div className="flex justify-center">
-              <a
-                href={mediaGallery[currentMediaIndex]?.url}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white text-sm transition-colors shadow-md"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Download className="w-4 h-4" />
-                <span>Descargar</span>
-              </a>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
