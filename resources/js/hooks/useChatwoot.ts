@@ -606,23 +606,27 @@ export const useConversations = () => {
       if (loadMore) {
         // Buscar mensajes en cache o en la conversación activa
         const currentMessages = cached?.messages || activeConversationRef.current?.messages || [];
+        console.log('🔍 LoadMore - mensajes actuales:', currentMessages.length);
         if (currentMessages.length > 0) {
           // Ordenar por ID ascendente y obtener el más antiguo (menor ID)
           const sortedMessages = [...currentMessages].sort((a, b) => a.id - b.id);
           const oldestId = sortedMessages[0]?.id;
+          console.log('🔍 Mensaje más antiguo ID:', oldestId);
           if (oldestId) {
             url += `&before=${oldestId}`;
-            debugLog.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
+            console.log(`📜 URL con before: ${url}`);
           }
         }
       }
       
-      debugLog.log(`🌐 Llamando API: ${url}`);
+      console.log(`🌐 Llamando API: ${url}`);
       const result = await apiCall(url);
-      debugLog.log(`📦 Respuesta API:`, {
+      console.log(`📦 Respuesta API:`, {
         success: result?.success,
         messagesCount: result?.payload?.payload?.length || result?.payload?.length || 0,
-        hasMore: result?.meta?.has_more
+        hasMore: result?.meta?.has_more,
+        firstMsgId: (result?.payload?.payload || result?.payload)?.[0]?.id,
+        lastMsgId: (result?.payload?.payload || result?.payload)?.[(result?.payload?.payload || result?.payload)?.length - 1]?.id
       });
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
