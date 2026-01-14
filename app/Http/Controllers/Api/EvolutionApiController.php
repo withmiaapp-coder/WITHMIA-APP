@@ -626,6 +626,17 @@ class EvolutionApiController extends Controller
             $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             if (!$instance) return response()->json(['status' => 'ok']);
             
+            // 🚀 AUTO-CREAR WORKFLOW si la instancia no tiene uno (verificación lazy)
+            if (empty($instance->n8n_workflow_id)) {
+                Log::info('🤖 Instancia sin workflow, creando automáticamente...', [
+                    'instance' => $instanceName,
+                    'event' => $event
+                ]);
+                $this->createN8nWorkflowForInstance($instance);
+                // Recargar instancia para obtener el nuevo workflow_id
+                $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+            }
+            
             // Usar el webhook específico de la instancia o el webhook por defecto
             $webhookPath = $instance->n8n_webhook_url 
                 ? basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH))
