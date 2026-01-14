@@ -407,6 +407,9 @@ const ConversationsInterface: React.FC = () => {
   const [mediaGallery, setMediaGallery] = useState<Array<{url: string, type: 'image' | 'video'}>>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [mediaZoom, setMediaZoom] = useState(1); // 🔍 Zoom level (1 = 100%)
+  const [mediaPan, setMediaPan] = useState({ x: 0, y: 0 }); // 🖱️ Pan position
+  const [isDragging, setIsDragging] = useState(false); // 🖱️ Dragging state
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 🖱️ Drag start position
   
   // 🎬 Helper: Abrir visor de media con galería completa de la conversación
   const openMediaViewer = useCallback((clickedUrl: string, clickedType: 'image' | 'video') => {
@@ -447,6 +450,7 @@ const ConversationsInterface: React.FC = () => {
     setMediaGallery(allMedia);
     setCurrentMediaIndex(clickedIndex >= 0 ? clickedIndex : 0);
     setMediaZoom(1); // Reset zoom al abrir
+    setMediaPan({ x: 0, y: 0 }); // Reset pan al abrir
     setMediaViewerOpen(true);
   }, [activeConversation?.messages]);
   
@@ -454,11 +458,13 @@ const ConversationsInterface: React.FC = () => {
   const goToPreviousMedia = useCallback(() => {
     setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : mediaGallery.length - 1));
     setMediaZoom(1); // Reset zoom al cambiar
+    setMediaPan({ x: 0, y: 0 }); // Reset pan al cambiar
   }, [mediaGallery.length]);
   
   const goToNextMedia = useCallback(() => {
     setCurrentMediaIndex(prev => (prev < mediaGallery.length - 1 ? prev + 1 : 0));
     setMediaZoom(1); // Reset zoom al cambiar
+    setMediaPan({ x: 0, y: 0 }); // Reset pan al cambiar
   }, [mediaGallery.length]);
   
   // 🔍 Handler para zoom con scroll
@@ -466,7 +472,35 @@ const ConversationsInterface: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setMediaZoom(prev => Math.min(Math.max(0.5, prev + delta), 3)); // Min 50%, Max 300%
+    const newZoom = Math.min(Math.max(0.5, mediaZoom + delta), 3);
+    setMediaZoom(newZoom);
+    // Si vuelve a zoom 1, resetear pan
+    if (newZoom <= 1) {
+      setMediaPan({ x: 0, y: 0 });
+    }
+  }, [mediaZoom]);
+  
+  // 🖱️ Handlers para arrastrar imagen con zoom
+  const handleMediaMouseDown = useCallback((e: React.MouseEvent) => {
+    if (mediaZoom > 1) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - mediaPan.x, y: e.clientY - mediaPan.y });
+    }
+  }, [mediaZoom, mediaPan]);
+  
+  const handleMediaMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDragging && mediaZoom > 1) {
+      e.preventDefault();
+      setMediaPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  }, [isDragging, mediaZoom, dragStart]);
+  
+  const handleMediaMouseUp = useCallback(() => {
+    setIsDragging(false);
   }, []);
   
   // Estados para modal de descarga con progreso
@@ -4211,12 +4245,19 @@ const ConversationsInterface: React.FC = () => {
               </button>
             )}
 
-            {/* Contenido del media con zoom */}
+            {/* Contenido del media con zoom y pan */}
             <div 
-              className="flex items-center justify-center p-4"
+              className="flex items-center justify-center p-4 select-none"
               onClick={(e) => e.stopPropagation()}
               onWheel={handleMediaWheel}
-              style={{ cursor: mediaZoom > 1 ? 'move' : 'zoom-in' }}
+              onMouseDown={handleMediaMouseDown}
+              onMouseMove={handleMediaMouseMove}
+              onMouseUp={handleMediaMouseUp}
+              onMouseLeave={handleMediaMouseUp}
+              style={{ 
+                cursor: isDragging ? 'grabbing' : (mediaZoom > 1 ? 'grab' : 'zoom-in'),
+                userSelect: 'none'
+              }}
             >
               {mediaGallery[currentMediaIndex]?.type === 'video' ? (
                 <video 
@@ -4234,10 +4275,17 @@ const ConversationsInterface: React.FC = () => {
                   key={currentMediaIndex}
                   src={mediaGallery[currentMediaIndex]?.url} 
                   alt={`Media ${currentMediaIndex + 1}`}
-                  className="max-w-[85vw] max-h-[70vh] object-contain rounded-lg shadow-xl select-none transition-transform duration-150"
-                  style={{ transform: `scale(${mediaZoom})` }}
+                  className="max-w-[85vw] max-h-[70vh] object-contain rounded-lg shadow-xl select-none"
+                  style={{ 
+                    transform: `scale(${mediaZoom}) translate(${mediaPan.x / mediaZoom}px, ${mediaPan.y / mediaZoom}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                    pointerEvents: 'none' // Evitar que la imagen interfiera con el drag
+                  }}
                   draggable={false}
-                  onDoubleClick={() => setMediaZoom(prev => prev === 1 ? 2 : 1)}
+                  onDoubleClick={() => { 
+                    setMediaZoom(prev => prev === 1 ? 2 : 1); 
+                    setMediaPan({ x: 0, y: 0 }); 
+                  }}
                 />
               )}
             </div>
@@ -4250,7 +4298,7 @@ const ConversationsInterface: React.FC = () => {
                 {mediaGallery.map((media, idx) => (
                   <button
                     key={idx}
-                    onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); setMediaZoom(1); }}
+                    onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); setMediaZoom(1); setMediaPan({ x: 0, y: 0 }); }}
                     className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shadow-sm ${
                       idx === currentMediaIndex 
                         ? 'border-blue-500 scale-110 shadow-md' 
