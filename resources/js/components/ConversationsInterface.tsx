@@ -392,9 +392,12 @@ const ConversationsInterface: React.FC = () => {
   // 3. Drag & Drop (Arrastrar y soltar archivos)
   const [isDragging, setIsDragging] = useState(false);
   const [draggedFiles, setDraggedFiles] = useState<File[]>([]);
+  const [isUploadingFile, setIsUploadingFile] = useState(false); // 📤 Estado de carga de archivo
+  const [uploadProgress, setUploadProgress] = useState<string>(''); // Nombre del archivo subiendo
   
   // 4. Audio Messages (Mensajes de voz)
   const [isRecording, setIsRecording] = useState(false);
+  const [isSendingAudio, setIsSendingAudio] = useState(false); // 🎤 Estado de envío de audio
   const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1731,22 +1734,40 @@ const ConversationsInterface: React.FC = () => {
   const handleSendAttachment = async (file: File) => {
     if (!activeConversation) return;
     
+    setIsUploadingFile(true);
+    setUploadProgress(file.name);
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('conversation_id', activeConversation.id.toString());
     
     try {
+      console.log('📤 Enviando archivo:', file.name, 'tipo:', file.type, 'tamaño:', file.size);
+      
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
         body: formData
       });
       
-      if (response.ok) {
-        console.log(' Archivo enviado:', file.name);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('✅ Archivo enviado:', file.name);
+        // Refrescar la conversación para ver el mensaje
+        if (typeof fetchConversations === 'function') {
+          await fetchConversations();
+        }
+      } else {
+        console.error('❌ Error del servidor:', data);
+        alert(`Error al enviar archivo: ${data.message || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('?? Error enviando archivo:', error);
+      console.error('💥 Error enviando archivo:', error);
+      alert('Error de conexión al enviar archivo');
+    } finally {
+      setIsUploadingFile(false);
+      setUploadProgress('');
     }
   };
 
@@ -1775,14 +1796,14 @@ const ConversationsInterface: React.FC = () => {
       setAudioRecorder(recorder);
       setIsRecording(true);
       
-      // Contador de duraci??n
+      // Contador de duración
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
       
     } catch (error) {
-      console.error('?? Error al iniciar grabaci??n:', error);
-      alert('No se pudo acceder al micr??fono');
+      console.error('🎤 Error al iniciar grabación:', error);
+      alert('No se pudo acceder al micrófono');
     }
   };
 
@@ -1800,24 +1821,40 @@ const ConversationsInterface: React.FC = () => {
   const handleSendAudioMessage = async (audioBlob: Blob) => {
     if (!activeConversation) return;
     
+    setIsSendingAudio(true);
+    
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio-message.webm');
     formData.append('conversation_id', activeConversation.id.toString());
     formData.append('message_type', 'outgoing');
-    formData.append('content', ' Mensaje de voz');
+    formData.append('content', '🎤 Mensaje de voz');
     
     try {
+      console.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
+      
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
         body: formData
       });
       
-      if (response.ok) {
-        console.log(' Audio enviado');
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('✅ Audio enviado');
+        // Refrescar la conversación para ver el mensaje
+        if (typeof fetchConversations === 'function') {
+          await fetchConversations();
+        }
+      } else {
+        console.error('❌ Error del servidor:', data);
+        alert(`Error al enviar audio: ${data.message || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('?? Error enviando audio:', error);
+      console.error('💥 Error enviando audio:', error);
+      alert('Error de conexión al enviar audio');
+    } finally {
+      setIsSendingAudio(false);
     }
   };
 
@@ -3549,16 +3586,61 @@ const ConversationsInterface: React.FC = () => {
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
-                    <span className="text-xs text-gray-500">{activeConversation.contact.name} est? escribiendo...</span>
+                    <span className="text-xs text-gray-500">{activeConversation.contact.name} está escribiendo...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 📤 INDICADOR DE SUBIDA DE ARCHIVO */}
+              {isUploadingFile && (
+                <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <Paperclip className="w-4 h-4 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-blue-700">Enviando archivo...</span>
+                      <p className="text-xs text-blue-500 truncate">{uploadProgress}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 🎤 INDICADOR DE ENVÍO DE AUDIO */}
+              {isSendingAudio && (
+                <div className="px-4 py-3 bg-green-50 border-b border-green-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                      <Mic className="w-4 h-4 text-green-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <span className="text-sm font-medium text-green-700">Enviando mensaje de voz...</span>
                   </div>
                 </div>
               )}
 
               <div className="p-4">
                 <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-                  <button type="button" className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300">
+                  {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS */}
+                  <label className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300 cursor-pointer">
                     <Paperclip className="w-4 h-4 text-gray-600" />
-                  </button>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          for (const file of Array.from(files)) {
+                            await handleSendAttachment(file);
+                          }
+                          e.target.value = ''; // Reset input
+                        }
+                      }}
+                      disabled={isUploadingFile}
+                    />
+                  </label>
                   
                   <div className="flex-1 relative">
                     <input
@@ -3569,7 +3651,7 @@ const ConversationsInterface: React.FC = () => {
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje..."}
                       className="w-full px-4 py-3 bg-white/40 rounded-xl text-gray-800 placeholder-gray-400 outline-none focus:bg-white/50 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
-                      disabled={isTyping}
+                      disabled={isTyping || isUploadingFile}
                     />
                   </div>
                   

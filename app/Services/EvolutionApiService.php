@@ -531,6 +531,161 @@ class EvolutionApiService
     }
 
     /**
+     * Enviar mensaje con media (imagen, video, audio, documento)
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @param string $number Número de teléfono (con código de país, ej: 5491234567890)
+     * @param string $media URL pública o base64 del archivo de media
+     * @param string $mediaType Tipo de media: image, video, audio, document
+     * @param string $mimeType MIME type del archivo (ej: image/jpeg, video/mp4)
+     * @param string|null $caption Texto opcional para la media
+     * @param string|null $fileName Nombre del archivo (obligatorio para documentos en base64)
+     * @return array
+     */
+    public function sendMediaMessage(
+        string $instanceName, 
+        string $number, 
+        string $media, 
+        string $mediaType, 
+        string $mimeType, 
+        ?string $caption = null,
+        ?string $fileName = null
+    ): array {
+        try {
+            $isBase64 = !filter_var($media, FILTER_VALIDATE_URL) && strlen($media) > 200;
+            
+            Log::info('📤 Enviando media vía Evolution API', [
+                'instance' => $instanceName,
+                'number' => $number,
+                'mediaType' => $mediaType,
+                'mimeType' => $mimeType,
+                'isBase64' => $isBase64,
+                'media_length' => strlen($media),
+                'caption' => $caption
+            ]);
+
+            $payload = [
+                'number' => $number,
+                'mediatype' => $mediaType,
+                'mimetype' => $mimeType,
+                'media' => $media
+            ];
+
+            // Agregar caption si se proporciona
+            if ($caption) {
+                $payload['caption'] = $caption;
+            }
+
+            // Agregar nombre de archivo para documentos
+            if ($fileName && $mediaType === 'document') {
+                $payload['fileName'] = $fileName;
+            }
+
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(60)->post("{$this->baseUrl}/message/sendMedia/{$instanceName}", $payload);
+
+            if (!$response->successful()) {
+                Log::error('❌ Error enviando media vía Evolution API', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $response->json()['message'] ?? 'Failed to send media'
+                ];
+            }
+
+            Log::info('✅ Media enviada exitosamente', [
+                'instance' => $instanceName,
+                'number' => $number,
+                'mediaType' => $mediaType
+            ]);
+
+            return [
+                'success' => true,
+                'data' => $response->json()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('💥 Exception en sendMediaMessage', [
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Enviar audio de WhatsApp (PTT - Push To Talk)
+     * Usa endpoint especial para audio nativo de WhatsApp
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @param string $number Número de teléfono
+     * @param string $audio URL o base64 del archivo de audio
+     * @return array
+     */
+    public function sendWhatsAppAudio(string $instanceName, string $number, string $audio): array
+    {
+        try {
+            $isBase64 = !filter_var($audio, FILTER_VALIDATE_URL) && strlen($audio) > 200;
+            
+            Log::info('🎤 Enviando audio WhatsApp vía Evolution API', [
+                'instance' => $instanceName,
+                'number' => $number,
+                'isBase64' => $isBase64,
+                'audio_length' => strlen($audio)
+            ]);
+
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(60)->post("{$this->baseUrl}/message/sendWhatsAppAudio/{$instanceName}", [
+                'number' => $number,
+                'audio' => $audio
+            ]);
+
+            if (!$response->successful()) {
+                // Fallback: si sendWhatsAppAudio falla, intentar con sendMedia
+                Log::warning('⚠️ sendWhatsAppAudio falló, intentando con sendMedia', [
+                    'status' => $response->status()
+                ]);
+                
+                return $this->sendMediaMessage(
+                    $instanceName,
+                    $number,
+                    $audio,
+                    'audio',
+                    'audio/ogg',
+                    null
+                );
+            }
+
+            Log::info('✅ Audio WhatsApp enviado exitosamente', [
+                'instance' => $instanceName,
+                'number' => $number
+            ]);
+
+            return [
+                'success' => true,
+                'data' => $response->json()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('💥 Exception en sendWhatsAppAudio', [
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Listar todas las instancias
      * 
      * @return array

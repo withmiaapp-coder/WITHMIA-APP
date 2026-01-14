@@ -714,10 +714,9 @@ class ChatwootController extends Controller
      * 1. App → Evolution API → WhatsApp
      * 2. Evolution → Chatwoot (un solo mensaje con source_id)
      * 
-     * ANTES (con duplicados):
-     * 1. App → Chatwoot API (mensaje sin source_id)
-     * 2. App → Evolution → WhatsApp
-     * 3. Evolution → Chatwoot (mensaje CON source_id) = DUPLICADO
+     * SOPORTA:
+     * - Mensajes de texto
+     * - Archivos (imágenes, videos, audio, documentos)
      */
     public function sendMessage(Request $request, $id)
     {
@@ -791,9 +790,22 @@ class ChatwootController extends Controller
                 ], 400);
             }
 
-            // PASO 4: Enviar DIRECTAMENTE a Evolution API (Evolution guardará en Chatwoot)
-            // ⚡ NO guardar en Chatwoot aquí - Evolution lo hará automáticamente
+            // PASO 4: Detectar si es archivo o texto
+            if ($request->hasFile('file')) {
+                // 📎 ENVÍO DE ARCHIVO (imagen, video, audio, documento)
+                return $this->sendFileMessage($request, $id, $contactPhone);
+            }
+
+            // PASO 5: Enviar mensaje de texto
             $messageContent = $request->input('content');
+            
+            if (empty($messageContent)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El mensaje no puede estar vacío'
+                ], 400);
+            }
+            
             $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
 
             if ($evolutionResult) {
@@ -838,6 +850,139 @@ class ChatwootController extends Controller
                 'message' => 'Error al enviar mensaje'
             ], 500);
         }
+    }
+
+    /**
+     * Enviar archivo (imagen, video, audio, documento) vía Evolution API
+     * Usa base64 para evitar problemas de storage en Railway
+     */
+    private function sendFileMessage(Request $request, $conversationId, $contactPhone)
+    {
+        try {
+            $file = $request->file('file');
+            $mimeType = $file->getMimeType();
+            $originalName = $file->getClientOriginalName();
+            $caption = $request->input('content', '');
+            
+            Log::info('📎 Procesando archivo para envío', [
+                'user_id' => $this->userId,
+                'conversation_id' => $conversationId,
+                'mimeType' => $mimeType,
+                'originalName' => $originalName,
+                'size' => $file->getSize()
+            ]);
+
+            // Determinar el tipo de media según el MIME type
+            $mediaType = $this->getMediaType($mimeType);
+            
+            // Convertir archivo a base64 (funciona mejor en Railway que URLs)
+            $fileContent = file_get_contents($file->getPathname());
+            $base64Media = base64_encode($fileContent);
+            
+            Log::info('📁 Archivo convertido a base64', [
+                'mediaType' => $mediaType,
+                'base64_length' => strlen($base64Media)
+            ]);
+
+            // Obtener instanceName desde el usuario autenticado
+            $user = auth()->user();
+            $instanceName = $user && $user->company_slug 
+                ? $user->company_slug 
+                : 'with-mia-cqwp4d'; // Fallback
+            
+            // Limpiar número de teléfono
+            $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
+
+            // Enviar según el tipo de media
+            $evolutionResult = null;
+            
+            if ($mediaType === 'audio' && str_contains($originalName, 'audio-message')) {
+                // Para audios de voz, usar endpoint especial de WhatsApp
+                $evolutionResult = $this->evolutionApi->sendWhatsAppAudio(
+                    $instanceName,
+                    $cleanPhone,
+                    $base64Media
+                );
+            } else {
+                // Para otros archivos, usar sendMedia con base64
+                $evolutionResult = $this->evolutionApi->sendMediaMessage(
+                    $instanceName,
+                    $cleanPhone,
+                    $base64Media,
+                    $mediaType,
+                    $mimeType,
+                    !empty($caption) ? $caption : null,
+                    $mediaType === 'document' ? $originalName : null
+                );
+            }
+
+            if ($evolutionResult && $evolutionResult['success']) {
+                Log::info('✅ Archivo enviado via Evolution API', [
+                    'user_id' => $this->userId,
+                    'conversation_id' => $conversationId,
+                    'phone' => $cleanPhone,
+                    'mediaType' => $mediaType
+                ]);
+
+                // 🗑️ INVALIDAR CACHÉ
+                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
+                Cache::forget($cacheKey);
+
+                return response()->json([
+                    'success' => true,
+                    'payload' => [
+                        'id' => 'pending-' . time(),
+                        'content' => $caption ?: "📎 {$originalName}",
+                        'created_at' => now()->toISOString(),
+                        'message_type' => 1, // outgoing
+                        'status' => 'sent',
+                        'attachments' => [[
+                            'file_type' => $mimeType,
+                            'file_name' => $originalName
+                        ]],
+                        'sender' => [
+                            'name' => auth()->user()->name ?? 'Agent'
+                        ]
+                    ]
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el archivo a WhatsApp',
+                'error' => $evolutionResult['error'] ?? 'Error desconocido'
+            ], 500);
+
+        } catch (\Exception $e) {
+            Log::error('💥 Error enviando archivo: ' . $e->getMessage(), [
+                'user_id' => $this->userId,
+                'conversation_id' => $conversationId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al enviar archivo'
+            ], 500);
+        }
+    }
+
+    /**
+     * Determinar el tipo de media según el MIME type
+     */
+    private function getMediaType(string $mimeType): string
+    {
+        if (str_starts_with($mimeType, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mimeType, 'video/')) {
+            return 'video';
+        }
+        if (str_starts_with($mimeType, 'audio/')) {
+            return 'audio';
+        }
+        // Cualquier otro tipo es documento
+        return 'document';
     }
 
     /**
