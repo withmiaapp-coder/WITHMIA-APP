@@ -2985,7 +2985,23 @@ const ConversationsInterface: React.FC = () => {
       </div>
 
       {/* Chat Principal - Panel Central */}
-      <div className="flex-1 flex flex-col bg-white/10 backdrop-blur-xl">
+      <div 
+        className="flex-1 flex flex-col bg-white/10 backdrop-blur-xl relative"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* DRAG & DROP OVERLAY - Nivel superior */}
+        {isDragging && activeConversation && (
+          <div className="absolute inset-0 z-50 bg-blue-600/40 backdrop-blur-sm border-4 border-dashed border-blue-400 flex items-center justify-center pointer-events-none">
+            <div className="text-center bg-white/95 p-8 rounded-2xl shadow-2xl transform scale-110">
+              <Upload className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-bounce" />
+              <p className="text-2xl font-bold text-blue-800">Suelta los archivos aquí</p>
+              <p className="text-sm text-blue-600 mt-2">Imágenes, videos, documentos (máx 16MB)</p>
+            </div>
+          </div>
+        )}
         {activeConversation ? (
           <>
             {/* Header del Chat */}
@@ -3174,21 +3190,7 @@ const ConversationsInterface: React.FC = () => {
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 relative"
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
             >
-              {/*  DRAG & DROP OVERLAY */}
-              {isDragging && (
-                <div className="absolute inset-0 z-50 bg-blue-600/30 backdrop-blur-md border-4 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
-                  <div className="text-center bg-white/90 p-8 rounded-2xl shadow-2xl">
-                    <Upload className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-bounce" />
-                    <p className="text-2xl font-bold text-blue-800">Suelta los archivos aquí</p>
-                    <p className="text-sm text-blue-600 mt-2">Imágenes, videos, documentos (máx 16MB)</p>
-                  </div>
-                </div>
-              )}
               {/*  MENSAJE FIJADO */}
               {pinnedMessage && (
                 <div className="sticky top-0 z-10 bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4 rounded-r-lg shadow-sm">
