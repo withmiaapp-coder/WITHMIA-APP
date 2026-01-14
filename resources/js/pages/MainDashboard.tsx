@@ -8,13 +8,13 @@ import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
 import AdminPanel from '../components/dashboard/AdminPanel';
 import IntegrationSection from '../components/IntegrationSection';
+import { NotificationBell } from '../components/NotificationBell';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
   MessageCircle,
   Users,
   TrendingUp,
-  Bell,
   Search,
   BarChart3,
   BookOpen,
@@ -1007,10 +1007,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               
               {/* Action Bar */}
               <div className="flex items-center space-x-4">
-                <button className="relative p-2.5 rounded-lg transition-all duration-50 hover:opacity-95">
-                  <Bell className="w-5 h-5 text-neutral-500" />
-                  <div className="absolute top-2.5 right-2.5 w-4 h-4 bg-gradient-to-r from-rose-400 to-red-500 rounded-full animate-pulse border-2 border-white"></div>
-                </button>
+                <NotificationBell />
               </div>
             </div>
           </header>

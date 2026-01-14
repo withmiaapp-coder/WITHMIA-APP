@@ -16,8 +16,8 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
     const user = pageProps?.auth?.user;
     const inboxId = user?.chatwoot_inbox_id || null;
 
-    // Si es Dashboard, renderizar sin layout de sidebar pero CON notificaciones
-    if (component === 'Dashboard') {
+    // Si es MainDashboard (antes llamado Dashboard), renderizar sin layout de sidebar pero CON notificaciones
+    if (component === 'MainDashboard') {
         return (
             <GlobalNotificationProvider inboxId={inboxId}>
                 {children}

@@ -4,15 +4,29 @@ import { useGlobalNotifications } from '@/contexts/GlobalNotificationContext';
 import { router } from '@inertiajs/react';
 
 export const NotificationBell: React.FC = () => {
+  const globalNotifications = useGlobalNotifications();
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Si no hay contexto de notificaciones, no renderizar nada o mostrar solo el ícono
+  if (!globalNotifications) {
+    return (
+      <button
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors opacity-50 cursor-not-allowed"
+        aria-label="Notificaciones no disponibles"
+        title="Sistema de notificaciones no disponible"
+      >
+        <Bell className="w-5 h-5" />
+      </button>
+    );
+  }
+
   const {
     notifications,
     unreadCount,
     markAsRead,
     markAllAsRead,
     clearAll,
-  } = useGlobalNotifications();
-
-  const [isOpen, setIsOpen] = useState(false);
+  } = globalNotifications;
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
