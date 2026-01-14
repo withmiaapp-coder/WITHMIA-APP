@@ -542,9 +542,10 @@ const ConversationsInterface: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
-  // ?? NUEVO: Ref para auto-scroll de mensajes
+  // 📜 NUEVO: Ref para auto-scroll de mensajes
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
   
   // ?? NUEVO: Ref para auto-scroll de mensajes
@@ -769,6 +770,41 @@ const ConversationsInterface: React.FC = () => {
       }, 100);
     }
   }, [activeConversation?.id]); // Solo cuando cambie la conversación activa
+
+  // 🔄 Infinite scroll para cargar más mensajes al llegar al tope
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current;
+    const container = messagesContainerRef.current;
+    
+    if (!trigger || !container) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && activeConversation?._hasMoreMessages && !activeConversation?._isLoading) {
+          // Guardar posición actual del scroll
+          const scrollHeight = container.scrollHeight;
+          
+          loadConversationMessages(activeConversation.id, true).then(() => {
+            // Mantener la posición relativa después de cargar
+            requestAnimationFrame(() => {
+              const newScrollHeight = container.scrollHeight;
+              container.scrollTop = newScrollHeight - scrollHeight;
+            });
+          });
+        }
+      },
+      {
+        root: container,
+        rootMargin: '100px 0px 0px 0px', // Disparar 100px antes de llegar al tope
+        threshold: 0.1
+      }
+    );
+    
+    observer.observe(trigger);
+    
+    return () => observer.disconnect();
+  }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, loadConversationMessages]);
   
   // 🎯 NUEVO: Usar hook combinado de tiempo real con WebSocket (sin polling)
   const {
@@ -3507,18 +3543,20 @@ const ConversationsInterface: React.FC = () => {
                 </div>
               )}
 
-              {/* 🚀 BOTÓN CARGAR MÁS MENSAJES */}
-              {activeConversation?._hasMoreMessages && !activeConversation?._isLoading && (
-                <div className="flex justify-center py-3">
-                  <button
-                    onClick={() => loadConversationMessages(activeConversation.id, true)}
-                    className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                    Cargar mensajes anteriores
-                  </button>
+              {/* � Trigger invisible para infinite scroll (carga más mensajes al llegar al tope) */}
+              <div 
+                ref={loadMoreTriggerRef} 
+                className="h-1 w-full"
+                aria-hidden="true"
+              />
+              
+              {/* Indicador de carga de mensajes anteriores */}
+              {activeConversation?._isLoading && filteredMessages.length > 0 && (
+                <div className="flex justify-center py-2">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    <span>Cargando mensajes...</span>
+                  </div>
                 </div>
               )}
 
