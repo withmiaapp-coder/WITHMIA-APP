@@ -570,9 +570,13 @@ export const useConversations = () => {
       setActiveConversationState(prev => prev ? { ...prev, _isLoading: true } : prev);
     }
     
-    // �🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
+    // 🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
     const cached = messagesLocalCache.current.get(conversationId);
     const now = Date.now();
+    
+    // 🔧 FIX: Si el caché tiene hasMore=false pero pocos mensajes (< 25), 
+    // asumir que puede haber más (el backend anterior tenía un bug)
+    const cachedHasMore = cached?.hasMore ?? (cached?.messages?.length >= 20);
     
     if (cached && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
       debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
@@ -582,7 +586,7 @@ export const useConversations = () => {
           ...conversation,
           messages: cached.messages,
           _isLoading: false,
-          _hasMoreMessages: cached.hasMore
+          _hasMoreMessages: cachedHasMore  // Usar el valor corregido
         });
         
         // Actualizar unread_count local

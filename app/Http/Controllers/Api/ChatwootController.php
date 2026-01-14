@@ -502,108 +502,101 @@ class ChatwootController extends Controller
                 }
             }
 
-            // PASO 3: Obtener TODOS los mensajes con paginación manual
+            // PASO 3: Obtener mensajes con paginación REAL
             $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages';
             
-            // 🚀 LOOP: Obtener todos los mensajes iterando con before
-            $allMessages = [];
-            $beforeId = null;
-            $iteration = 0;
-            $maxIterations = 100; // Máximo 2000 mensajes
-            
-            fwrite(STDERR, "🔄 Iniciando fetch de mensajes para conversación {$id}\n");
-            
-            while ($iteration < $maxIterations) {
-                $queryParams = $beforeId ? ['before' => $beforeId] : [];
-                
-                fwrite(STDERR, "📡 Iteración {$iteration}: before=" . ($beforeId ?? 'null') . "\n");
-                
-                $response = Http::timeout(10)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($chatwootUrl, $queryParams);
-                
-                if (!$response->successful()) {
-                    fwrite(STDERR, "❌ Error en iteración {$iteration}: " . $response->status() . "\n");
-                    break;
-                }
-                
-                $batch = $response->json()['payload'] ?? [];
-                $batchCount = count($batch);
-                
-                fwrite(STDERR, "📦 Recibidos: {$batchCount} mensajes\n");
-                
-                if (empty($batch)) {
-                    fwrite(STDERR, "📭 No hay más mensajes\n");
-                    break;
-                }
-                
-                // IDs del batch
-                $batchIds = array_column($batch, 'id');
-                $minId = min($batchIds);
-                $maxId = max($batchIds);
-                
-                fwrite(STDERR, "📊 IDs: min={$minId}, max={$maxId}\n");
-                
-                // Verificar si Chatwoot ignoró el before (devolvió los mismos mensajes)
-                if ($beforeId !== null && $maxId >= $beforeId) {
-                    fwrite(STDERR, "⚠️ Chatwoot ignoró before={$beforeId}, recibió max={$maxId}. FIN.\n");
-                    break;
-                }
-                
-                // Agregar mensajes (evitando duplicados)
-                $existingIds = array_column($allMessages, 'id');
-                $newCount = 0;
-                foreach ($batch as $msg) {
-                    if (!in_array($msg['id'], $existingIds)) {
-                        $allMessages[] = $msg;
-                        $newCount++;
-                    }
-                }
-                
-                fwrite(STDERR, "✅ Agregados: {$newCount} mensajes nuevos. Total: " . count($allMessages) . "\n");
-                
-                // Preparar siguiente iteración
-                $beforeId = $minId;
-                $iteration++;
-                
-                // Si recibimos menos de 20, no hay más
-                if ($batchCount < 20) {
-                    fwrite(STDERR, "📭 Batch incompleto ({$batchCount} < 20), fin de paginación\n");
-                    break;
-                }
+            // 🚀 PAGINACIÓN REAL: Usar el parámetro before del frontend
+            $queryParams = [];
+            if ($before) {
+                $queryParams['before'] = $before;
             }
             
-            fwrite(STDERR, "🏁 Total mensajes obtenidos: " . count($allMessages) . " en {$iteration} iteraciones\n");
+            Log::info("📡 Fetch mensajes conversación {$id}", [
+                'before' => $before,
+                'limit' => $limit,
+                'url' => $chatwootUrl
+            ]);
+            
+            $response = Http::timeout(15)->withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->get($chatwootUrl, $queryParams);
+            
+            if (!$response->successful()) {
+                Log::error("❌ Error fetch mensajes: " . $response->status());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al obtener mensajes de Chatwoot'
+                ], $response->status());
+            }
+            
+            $responseData = $response->json();
+            $allMessages = $responseData['payload'] ?? [];
+            $chatwootMeta = $responseData['meta'] ?? [];
+            
+            Log::info("📦 Mensajes recibidos de Chatwoot", [
+                'count' => count($allMessages),
+                'meta' => $chatwootMeta,
+                'first_id' => $allMessages[0]['id'] ?? null,
+                'last_id' => end($allMessages)['id'] ?? null
+            ]);
             
             // Ordenar por ID ascendente (más antiguos primero)
             usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
             
-            // 🔒 FILTRAR mensajes de EvolutionAPI
+            // 🔒 FILTRAR mensajes de EvolutionAPI (solo entrantes)
             $filteredMessages = array_values(array_filter($allMessages, function($message) {
                 $senderName = $message['sender']['name'] ?? '';
                 $messageType = $message['message_type'] ?? null;
+                // Siempre mostrar mensajes salientes
                 if ($messageType === 1 || $messageType === 'outgoing') return true;
+                // Para entrantes, filtrar EvolutionAPI
                 return stripos($senderName, 'EvolutionAPI') === false;
             }));
             
             $oldestMessageId = !empty($filteredMessages) ? $filteredMessages[0]['id'] : null;
             $newestMessageId = !empty($filteredMessages) ? $filteredMessages[count($filteredMessages) - 1]['id'] : null;
             
+            // 🔍 CALCULAR has_more CORRECTAMENTE
+            // Chatwoot devuelve mensajes ordenados por ID DESC (más recientes primero)
+            // Si recibimos >= 20 mensajes (batch completo de Chatwoot), probablemente hay más
+            $hasMore = count($allMessages) >= 20;
+            
+            // También verificar si Chatwoot envía metadata de paginación
+            if (isset($chatwootMeta['has_more'])) {
+                $hasMore = $chatwootMeta['has_more'];
+            }
+            
+            Log::info("📊 Paginación calculada", [
+                'messages_count' => count($filteredMessages),
+                'has_more' => $hasMore,
+                'oldest_id' => $oldestMessageId,
+                'newest_id' => $newestMessageId,
+                'before_param' => $before
+            ]);
+            
             $messagesData = ['payload' => $filteredMessages];
             
             $meta = [
                 'total' => count($filteredMessages),
                 'returned' => count($filteredMessages),
-                'has_more' => false,
-                'oldest_id' => $oldestMessageId
+                'has_more' => $hasMore,
+                'oldest_id' => $oldestMessageId,
+                'newest_id' => $newestMessageId,
+                '_debug' => [
+                    'chatwoot_count' => count($allMessages),
+                    'filtered_count' => count($filteredMessages),
+                    'before_param' => $before
+                ]
             ];
             
-            // Cache
-            \Illuminate\Support\Facades\Cache::put($cacheKey, [
-                'payload' => $messagesData,
-                'meta' => $meta
-            ], $cacheTTL);
+            // Cache solo para carga inicial (sin before)
+            if (!$before) {
+                \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                    'payload' => $messagesData,
+                    'meta' => $meta
+                ], $cacheTTL);
+            }
                 
             return response()->json([
                 'success' => true,
