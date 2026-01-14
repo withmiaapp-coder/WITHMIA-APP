@@ -81,7 +81,7 @@ class DashboardController extends Controller
             'chatwoot_status' => $chatwootStatus
         ]);
 
-        return Inertia::render('Dashboard', [
+        return Inertia::render('MainDashboard', [
             'user' => $user->toArray(),
             'company' => is_object($company) ? (array)$company : $company,
             'companySlug' => $companySlug,

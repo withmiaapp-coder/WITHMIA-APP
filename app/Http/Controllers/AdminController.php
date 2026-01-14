@@ -27,7 +27,7 @@ class AdminController extends Controller
             return redirect('/dashboard')->with('error', 'No tienes permisos de administrador');
         }
 
-        return inertia('admin/Dashboard');
+        return inertia('admin/AdminDashboard');
     }
 
     /**
