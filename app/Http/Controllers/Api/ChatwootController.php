@@ -502,10 +502,10 @@ class ChatwootController extends Controller
                 }
             }
 
-            // PASO 3: Si pasa la validación, obtener los mensajes
+            // PASO 3: Obtener los mensajes
             $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages';
             
-            // 🚀 SIMPLE: Obtener TODOS los mensajes de Chatwoot y devolverlos TODOS
+            // 🚀 SIMPLE: Devolver TODOS los mensajes de Chatwoot sin paginación
             // Sin paginación del backend - el frontend maneja todo
             
             $response = Http::timeout(15)->withHeaders([
