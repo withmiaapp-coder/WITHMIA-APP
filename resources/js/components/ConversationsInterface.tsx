@@ -2069,14 +2069,62 @@ const ConversationsInterface: React.FC = () => {
     const files: any[] = [];
     const links: any[] = [];
     
+    // Helper para detectar si es imagen
+    const isImage = (att: any): boolean => {
+      // Verificar por file_type o content_type
+      const mimeType = att.file_type || att.content_type || '';
+      if (mimeType.startsWith('image/')) return true;
+      
+      // Verificar por extensión en la URL
+      const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i;
+      if (imageExtensions.test(url)) return true;
+      
+      // Verificar por nombre de archivo
+      const fileName = att.file_name || att.name || '';
+      if (imageExtensions.test(fileName)) return true;
+      
+      return false;
+    };
+    
+    // Helper para obtener nombre de archivo
+    const getFileName = (att: any): string => {
+      // Prioridad: file_name > name > extraer de URL
+      if (att.file_name) return att.file_name;
+      if (att.name) return att.name;
+      
+      // Intentar extraer de la URL
+      const url = att.data_url || att.file_url || att.url || '';
+      if (url) {
+        try {
+          const urlPath = new URL(url).pathname;
+          const fileName = urlPath.split('/').pop();
+          if (fileName && fileName.includes('.')) return decodeURIComponent(fileName);
+        } catch {
+          // Si falla el parsing de URL, intentar extraer directamente
+          const match = url.match(/\/([^\/\?]+\.[^\/\?]+)(\?|$)/);
+          if (match) return decodeURIComponent(match[1]);
+        }
+      }
+      
+      return 'Archivo';
+    };
+    
     activeConversation.messages.forEach((msg: any) => {
-      // Buscar im?genes en attachments
-      if (msg.attachments) {
+      // Buscar archivos en attachments
+      if (msg.attachments && Array.isArray(msg.attachments)) {
         msg.attachments.forEach((att: any) => {
-          if (att.file_type?.startsWith('image/')) {
-            images.push({ ...att, message_id: msg.id });
-          } else if (att.file_type) {
-            files.push({ ...att, message_id: msg.id });
+          const fileName = getFileName(att);
+          const enrichedAtt = { 
+            ...att, 
+            message_id: msg.id,
+            file_name: fileName // Asegurar que siempre tenga nombre
+          };
+          
+          if (isImage(att)) {
+            images.push(enrichedAtt);
+          } else {
+            files.push(enrichedAtt);
           }
         });
       }
@@ -2090,6 +2138,8 @@ const ConversationsInterface: React.FC = () => {
         });
       }
     });
+    
+    console.log('📎 Media encontrada:', { images: images.length, files: files.length, links: links.length });
     
     return { images, files, links };
   };
@@ -3999,25 +4049,118 @@ const ConversationsInterface: React.FC = () => {
               {(() => {
                 const { images, files, links } = getMediaFromConversation();
                 
-                if (mediaFilter === 'images' || mediaFilter === 'all') {
+                // Si el filtro es "all", mostrar todas las secciones
+                if (mediaFilter === 'all') {
+                  return (
+                    <>
+                      {/* Sección Imágenes */}
+                      <div className="mb-6">
+                        <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
+                        {images.length > 0 ? (
+                          <div className="grid grid-cols-4 gap-3">
+                            {images.map((img, idx) => {
+                              const rawUrl = img.file_url || img.data_url || img.url || img.thumb_url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
+                                  <img 
+                                    src={proxyUrl} 
+                                    alt={img.file_name || 'Imagen'}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-gray-400 text-sm">No hay imágenes</p>
+                        )}
+                      </div>
+                      
+                      {/* Sección Archivos */}
+                      <div className="mb-6">
+                        <h4 className="font-semibold text-gray-700 mb-3">Archivos ({files.length})</h4>
+                        {files.length > 0 ? (
+                          <div className="space-y-2">
+                            {files.map((file, idx) => {
+                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
+                              return (
+                                <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                  <File className="w-8 h-8 text-gray-500" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
+                                    <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                  </div>
+                                  <a 
+                                    href={proxyUrl} 
+                                    download={file.file_name}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
+                                  >
+                                    <Upload className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-gray-400 text-sm">No hay archivos</p>
+                        )}
+                      </div>
+                      
+                      {/* Sección Enlaces */}
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-3">Enlaces ({links.length})</h4>
+                        {links.length > 0 ? (
+                          <div className="space-y-2">
+                            {links.map((link, idx) => (
+                              <a 
+                                key={idx} 
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                              >
+                                <FileText className="w-8 h-8 text-blue-500" />
+                                <p className="flex-1 text-blue-600 hover:underline truncate">{link.url}</p>
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-400 text-sm">No hay enlaces</p>
+                        )}
+                      </div>
+                    </>
+                  );
+                }
+                
+                // Filtros individuales
+                if (mediaFilter === 'images') {
                   return (
                     <div>
                       <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
-                      <div className="grid grid-cols-4 gap-3 mb-6">
+                      <div className="grid grid-cols-4 gap-3">
                         {images.map((img, idx) => {
-                          const rawUrl = img.file_url || img.data_url || img.url || '';
+                          const rawUrl = img.file_url || img.data_url || img.url || img.thumb_url || '';
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                             ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
                           return (
-                          <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
-                            <img 
-                              src={proxyUrl} 
-                              alt="Media"
-                              className="w-full h-full object-cover"
-                              onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-                            />
-                          </div>
+                            <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
+                              <img 
+                                src={proxyUrl} 
+                                alt={img.file_name || 'Imagen'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                              />
+                            </div>
                           );
                         })}
                       </div>
@@ -4025,31 +4168,33 @@ const ConversationsInterface: React.FC = () => {
                   );
                 }
                 
-                if (mediaFilter === 'files' || mediaFilter === 'all') {
+                if (mediaFilter === 'files') {
                   return (
                     <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Archivos ({(files || []).length})</h4>
-                      <div className="space-y-2 mb-6">
+                      <h4 className="font-semibold text-gray-700 mb-3">Archivos ({files.length})</h4>
+                      <div className="space-y-2">
                         {files.map((file, idx) => {
                           const rawUrl = file.file_url || file.data_url || file.url || '';
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                             ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
                           return (
-                          <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <File className="w-8 h-8 text-gray-500" />
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-800">{file.file_name || file.name || 'Archivo'}</p>
-                              <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                            <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                              <File className="w-8 h-8 text-gray-500" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
+                                <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                              </div>
+                              <a 
+                                href={proxyUrl} 
+                                download={file.file_name}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
+                              >
+                                <Upload className="w-4 h-4" />
+                              </a>
                             </div>
-                            <a 
-                              href={proxyUrl} 
-                              download
-                              className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
-                            >
-                              <Upload className="w-4 h-4" />
-                            </a>
-                          </div>
                           );
                         })}
                       </div>
@@ -4057,7 +4202,7 @@ const ConversationsInterface: React.FC = () => {
                   );
                 }
                 
-                if (mediaFilter === 'links' || mediaFilter === 'all') {
+                if (mediaFilter === 'links') {
                   return (
                     <div>
                       <h4 className="font-semibold text-gray-700 mb-3">Enlaces ({links.length})</h4>
@@ -4078,6 +4223,8 @@ const ConversationsInterface: React.FC = () => {
                     </div>
                   );
                 }
+                
+                return null;
               })()}
             </div>
           </div>
