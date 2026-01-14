@@ -40,7 +40,7 @@
                       "name":  "OpenAI Chat Model",
                       "credentials":  {
                                           "openAiApi":  {
-                                                            "id":  "REPLACE_WITH_OPENAI_CREDENTIAL_ID",
+                                                            "id":  "BllBLDmfNrTO004D",
                                                             "name":  "OpenAI Account"
                                                         }
                                       }
@@ -389,7 +389,7 @@
                       "name":  "Transcribe a recording",
                       "credentials":  {
                                           "openAiApi":  {
-                                                            "id":  "REPLACE_WITH_OPENAI_CREDENTIAL_ID",
+                                                            "id":  "BllBLDmfNrTO004D",
                                                             "name":  "OpenAI Account"
                                                         }
                                       }
@@ -518,7 +518,7 @@
                       "name":  "Analyze image",
                       "credentials":  {
                                           "openAiApi":  {
-                                                            "id":  "REPLACE_WITH_OPENAI_CREDENTIAL_ID",
+                                                            "id":  "BllBLDmfNrTO004D",
                                                             "name":  "OpenAI Account"
                                                         }
                                       }
@@ -663,7 +663,7 @@
                       "name":  "Redis",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -746,7 +746,7 @@
                       "name":  "Redis1",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -872,7 +872,7 @@
                       "name":  "Redis2",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -950,7 +950,7 @@
                       "name":  "Herramienta ** Buscar **",
                       "credentials":  {
                                           "qdrantApi":  {
-                                                            "id":  "REPLACE_WITH_QDRANT_CREDENTIAL_ID",
+                                                            "id":  "eYH0VSgjW8WrINgu",
                                                             "name":  "Qdrant Railway"
                                                         }
                                       }
@@ -1001,7 +1001,7 @@
                       "name":  "Message a model",
                       "credentials":  {
                                           "openAiApi":  {
-                                                            "id":  "REPLACE_WITH_OPENAI_CREDENTIAL_ID",
+                                                            "id":  "BllBLDmfNrTO004D",
                                                             "name":  "OpenAI Account"
                                                         }
                                       }
@@ -1550,7 +1550,7 @@
                       "name":  "Activar BOT",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -1589,7 +1589,7 @@
                       "name":  "Bloquea al Agente",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -1658,7 +1658,7 @@
                       "name":  "Verifica Bloqueo",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -1735,7 +1735,7 @@
                       "name":  "Bloqueo a Humano",
                       "credentials":  {
                                           "redis":  {
-                                                        "id":  "REPLACE_WITH_REDIS_CREDENTIAL_ID",
+                                                        "id":  "gCcUJtTuMMkiR3y6",
                                                         "name":  "Redis Railway"
                                                     }
                                       }
@@ -2319,3 +2319,4 @@
 
              ]
 }
+
