@@ -1029,12 +1029,17 @@ const ConversationsInterface: React.FC = () => {
       debugLog.log('🔔 Filtro de notificación:', { messageType, isIncoming, isOutgoing, pasaFiltro: isIncoming && !isOutgoing });
       
       if (event?.message && event?.conversation && isIncoming && !isOutgoing) {
+        const contactName = event.conversation.contact_name || event.sender?.name || event.contact?.name || 'Nuevo contacto';
+        const messageContent = event.message.content || event.content || 'Nuevo mensaje';
+        const priority = (event.conversation.unread_count || 0) > 3 ? 'high' : 'medium';
+        
+        // Notificación local (hook useNotifications)
         notifications.notify({
           conversationId: event.conversation.id || event.conversation_id || 0,
-          conversationName: event.conversation.contact_name || event.sender?.name || event.contact?.name || 'Nuevo contacto',
-          message: event.message.content || event.content || 'Nuevo mensaje',
-          priority: (event.conversation.unread_count || 0) > 3 ? 'high' : 'medium',
-          avatar: (event.conversation.contact_name || event.sender?.name || 'M').charAt(0),
+          conversationName: contactName,
+          message: messageContent,
+          priority,
+          avatar: contactName.charAt(0),
           assignedToMe: true,
           onClickNotification: () => {
             if (event.conversation_id) {
@@ -1045,7 +1050,19 @@ const ConversationsInterface: React.FC = () => {
             }
           }
         });
-        debugLog.log('??? Notificaci??n enviada para nuevo mensaje');
+        
+        // 📢 Emitir evento global para GlobalNotificationContext (sin duplicar WebSocket)
+        window.dispatchEvent(new CustomEvent('newChatwootMessage', {
+          detail: {
+            conversationId: event.conversation.id || event.conversation_id,
+            contactName,
+            message: messageContent,
+            priority,
+            avatar: contactName.charAt(0).toUpperCase(),
+          }
+        }));
+        
+        debugLog.log('✅ Notificación enviada para nuevo mensaje');
       }
 
       // Limpiar eventos antiguos
