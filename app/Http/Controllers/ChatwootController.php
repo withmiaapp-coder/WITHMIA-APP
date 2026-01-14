@@ -60,6 +60,17 @@ class ChatwootController extends Controller
     }
 
     /**
+     * Helper: HTTP client con timeout configurado para Chatwoot
+     */
+    private function chatwootHttp()
+    {
+        return Http::timeout(10)->withHeaders([
+            'api_access_token' => $this->chatwootToken,
+            'Content-Type' => 'application/json'
+        ]);
+    }
+
+    /**
      * Obtener estadísticas del dashboard (REAL API)
      */
     /**
@@ -81,7 +92,7 @@ class ChatwootController extends Controller
 
             // Cache key único por usuario/inbox
             $cacheKey = "conversations:inbox:{$this->inboxId}:user:{$this->userId}";
-            $cacheTTL = 120; // 2 minutos
+            $cacheTTL = 300; // 5 minutos
 
             // Intentar obtener desde Redis
             $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
@@ -117,7 +128,7 @@ class ChatwootController extends Controller
             $maxPages = 20;
 
             while ($currentPage <= $maxPages) {
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                $response = \Illuminate\Support\Facades\Http::timeout(10)->withHeaders([
                     'api_access_token' => $this->chatwootToken,
                     'Content-Type' => 'application/json'
                 ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations', [

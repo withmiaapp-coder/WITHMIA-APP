@@ -251,19 +251,25 @@ Route::post('/improve-description', [OnboardingApiController::class, 'improveDes
 
 // WhatsApp API route - no authentication required for testing
 
-// User profile API
+// User profile API (con cache)
 Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
     Route::get('/profile', function() {
-        $user = auth()->user()->load('company');
+        $userId = auth()->id();
+        $cacheKey = "user:profile:{$userId}";
         
-        // Obtener inbox_id del usuario o de la company
-        $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
+        // Cache por 5 minutos
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function() {
+            $user = auth()->user()->load('company');
+            $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
+            
+            return [
+                'success' => true,
+                'user' => $user,
+                'chatwoot_inbox_id' => $inboxId
+            ];
+        });
         
-        return response()->json([
-            'success' => true,
-            'user' => $user,
-            'chatwoot_inbox_id' => $inboxId
-        ]);
+        return response()->json($data);
     });
 });
 

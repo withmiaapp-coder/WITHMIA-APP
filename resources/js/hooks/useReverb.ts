@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import debugLog from '@/utils/debugLogger';
 
 declare global {
     interface Window {
@@ -17,13 +18,13 @@ export function useReverb() {
             const cluster = import.meta.env.VITE_PUSHER_APP_CLUSTER;
             
             if (!appKey) {
-                console.warn('⚠️ VITE_PUSHER_APP_KEY no está configurado. WebSocket deshabilitado.');
-                console.warn('📋 Configura Pusher en Railway - Ver PUSHER_SETUP.md');
+                debugLog.warn('⚠️ VITE_PUSHER_APP_KEY no está configurado. WebSocket deshabilitado.');
+                debugLog.warn('📋 Configura Pusher en Railway - Ver PUSHER_SETUP.md');
                 return;
             }
 
             if (!cluster) {
-                console.warn('⚠️ VITE_PUSHER_APP_CLUSTER no está configurado. WebSocket deshabilitado.');
+                debugLog.warn('⚠️ VITE_PUSHER_APP_CLUSTER no está configurado. WebSocket deshabilitado.');
                 return;
             }
 
@@ -38,8 +39,8 @@ export function useReverb() {
                 disableStats: true,
             });
 
-            console.log('✅ Echo conectado a Pusher exitosamente');
-            console.log('📍 Cluster:', cluster);
+            debugLog.log('✅ Echo conectado a Pusher exitosamente');
+            debugLog.log('📍 Cluster:', cluster);
         }
 
         return () => {

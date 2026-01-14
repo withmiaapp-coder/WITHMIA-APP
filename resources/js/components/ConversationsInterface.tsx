@@ -245,9 +245,9 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
       return "🔗 Enlace";
     }
     
-    // Multimedia
-    if (/\.(mp3|wav|ogg|m4a)$/i.test(cleanMessage)) return "🎵 Audio";
-    if (/\.(mp4|mov|avi|webm)$/i.test(cleanMessage)) return "🎥 Video";
+    // Multimedia (incluir .oga, .opus, .aac para audios de WhatsApp)
+    if (/\.(mp3|wav|ogg|oga|opus|m4a|aac|amr|3gp)$/i.test(cleanMessage)) return "🎵 Audio";
+    if (/\.(mp4|mov|avi|webm|mkv)$/i.test(cleanMessage)) return "🎥 Video";
     if (/\.(pdf|doc|docx|xls|xlsx)$/i.test(cleanMessage)) return "📄 Documento";
     
     return cleanMessage;
@@ -696,7 +696,7 @@ const ConversationsInterface: React.FC = () => {
     
     // Si ya hay un reload en progreso, marcar que hay uno pendiente
     if (isPendingReloadRef.current) {
-      console.log('?? Reload ya en progreso, agendando siguiente...');
+      debugLog.log('?? Reload ya en progreso, agendando siguiente...');
       return;
     }
     
@@ -707,7 +707,7 @@ const ConversationsInterface: React.FC = () => {
     if (timeSinceLastReload < 2000) {
       // Agendar reload despu??s del tiempo m??nimo
       const delay = 2000 - timeSinceLastReload;
-      console.log(`?? Agendando reload en ${delay}ms...`);
+      debugLog.log(`?? Agendando reload en ${delay}ms...`);
       
       reloadDebounceRef.current = setTimeout(() => {
         executeFetchConversations();
@@ -725,9 +725,9 @@ const ConversationsInterface: React.FC = () => {
     
     try {
       await fetchUpdatedConversations();
-      console.log('??? Conversaciones actualizadas');
+      debugLog.log('??? Conversaciones actualizadas');
     } catch (error) {
-      console.error('??? Error actualizando conversaciones:', error);
+      debugLog.error('??? Error actualizando conversaciones:', error);
     } finally {
       isPendingReloadRef.current = false;
     }
@@ -794,7 +794,7 @@ const ConversationsInterface: React.FC = () => {
       const newStatus = event?.message?.status;
       
       if (messageId && newStatus) {
-        console.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
+        debugLog.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
         
         _setActiveConversation((prev: any) => {
           if (!prev || !prev.messages) return prev;
@@ -814,16 +814,16 @@ const ConversationsInterface: React.FC = () => {
       // ?? DEDUPLICACI?N: Crear ID ??nico del evento
       const eventId = `${event?.message?.id || 'unknown'}-${event?.timestamp || Date.now()}`;
 
-      console.log(' ========== NUEVO MENSAJE RECIBIDO ==========');
-      console.log(' EventID:', eventId);
-      console.log(' Evento completo:', JSON.stringify(event, null, 2));
-      console.log(' Conversaci??n activa ID:', activeConversationRef.current?.id);
-      console.log(' Conversation ID del evento:', event?.conversation_id);
-      console.log(' ??Coinciden?:', event?.conversation_id === activeConversationRef.current?.id);
+      debugLog.log(' ========== NUEVO MENSAJE RECIBIDO ==========');
+      debugLog.log(' EventID:', eventId);
+      debugLog.log(' Evento completo:', JSON.stringify(event, null, 2));
+      debugLog.log(' Conversaci??n activa ID:', activeConversationRef.current?.id);
+      debugLog.log(' Conversation ID del evento:', event?.conversation_id);
+      debugLog.log(' ??Coinciden?:', event?.conversation_id === activeConversationRef.current?.id);
 
       // Verificar duplicados
       if (processedEventsRef.current.has(eventId)) {
-        console.log('?? Evento duplicado, omitiendo');
+        debugLog.log('?? Evento duplicado, omitiendo');
         return;
       }
 
@@ -831,20 +831,20 @@ const ConversationsInterface: React.FC = () => {
       
       // 🧪 FILTRAR MENSAJES DE PRUEBA - No crear conversaciones falsas
       if (event?.message?.test === true || event?.test === true) {
-        console.log('🧪 Mensaje de PRUEBA detectado - ignorando para evitar conversaciones falsas');
+        debugLog.log('🧪 Mensaje de PRUEBA detectado - ignorando para evitar conversaciones falsas');
         return;
       }
       
       // 🔢 Verificar que conversation_id sea válido (no IDs de prueba como 999)
       const convId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;
       if (!convId || convId <= 0) {
-        console.log('⚠️ conversation_id inválido:', convId, '- ignorando');
+        debugLog.log('⚠️ conversation_id inválido:', convId, '- ignorando');
         return;
       }
       
       // ⚠️ NO FILTRAR NADA MÁS - Dejar que Laravel maneje los filtros
       // El backend ya filtra mensajes fromMe, aquí solo procesamos
-      console.log('✅ Procesando evento normalmente (filtros en backend)');
+      debugLog.log('✅ Procesando evento normalmente (filtros en backend)');
 
       // Obtener el conversation_id del evento
       const conversationId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;
@@ -854,8 +854,8 @@ const ConversationsInterface: React.FC = () => {
         const conversationId = event.conversation_id;
         const newTimestamp = event.timestamp || event.message?.created_at || new Date().toISOString();
 
-        console.log(' Iniciando actualización optimista para conversación:', conversationId);
-        console.log(' Nuevo timestamp:', newTimestamp);
+        debugLog.log(' Iniciando actualización optimista para conversación:', conversationId);
+        debugLog.log(' Nuevo timestamp:', newTimestamp);
 
         // Buscar si la conversación ya existe
         const existingIndex = prevConversations.findIndex((conv: any) => conv.id === conversationId);
@@ -888,14 +888,14 @@ const ConversationsInterface: React.FC = () => {
                 timestamp: new Date(newTimestamp).getTime() / 1000,
                 last_activity_at: new Date(newTimestamp).getTime() / 1000
               };
-              console.log('📝 Conversación actualizada:', updatedConv.id, 'isActive:', isActiveConversation, 'unread:', updatedConv.unread_count);
+              debugLog.log('📝 Conversación actualizada:', updatedConv.id, 'isActive:', isActiveConversation, 'unread:', updatedConv.unread_count);
               return updatedConv;
             }
             return conv;
           });
         } else {
           // Conversación NO existe - agregarla desde el evento
-          console.log(' Conversación nueva detectada - agregando:', conversationId);
+          debugLog.log(' Conversación nueva detectada - agregando:', conversationId);
           // Construir conversación con estructura completa
           const sender = event.sender || event.message?.sender || { name: 'Nuevo contacto' };
           const newConv = {
@@ -932,7 +932,7 @@ const ConversationsInterface: React.FC = () => {
           // Agregar solo si no existe ya (prevenir duplicados)
           const alreadyExists = prevConversations.some(c => c.id === conversationId);
           updated = alreadyExists ? prevConversations : [newConv, ...prevConversations];
-          console.log(' Nueva conversación agregada al inicio');
+          debugLog.log(' Nueva conversación agregada al inicio');
         }
 
         // Ordenar por timestamp (más reciente primero)
@@ -942,11 +942,11 @@ const ConversationsInterface: React.FC = () => {
           return timeB - timeA;
         });
 
-        console.log(' Primera conversación después de ordenar:', sorted[0]?.id, sorted[0]?.meta?.sender?.name);
+        debugLog.log(' Primera conversación después de ordenar:', sorted[0]?.id, sorted[0]?.meta?.sender?.name);
         return sorted;
       });
 
-      console.log(' Conversation ID encontrado:', conversationId);
+      debugLog.log(' Conversation ID encontrado:', conversationId);
 
 
       //  NOTIFICACIÓN DE NUEVO MENSAJE
@@ -955,7 +955,7 @@ const ConversationsInterface: React.FC = () => {
       const isIncoming = messageType === 0 || messageType === 'incoming';
       const isOutgoing = messageType === 1 || messageType === 'outgoing';
       
-      console.log('🔔 Filtro de notificación:', { messageType, isIncoming, isOutgoing, pasaFiltro: isIncoming && !isOutgoing });
+      debugLog.log('🔔 Filtro de notificación:', { messageType, isIncoming, isOutgoing, pasaFiltro: isIncoming && !isOutgoing });
       
       if (event?.message && event?.conversation && isIncoming && !isOutgoing) {
         notifications.notify({
@@ -974,7 +974,7 @@ const ConversationsInterface: React.FC = () => {
             }
           }
         });
-        console.log('??? Notificaci??n enviada para nuevo mensaje');
+        debugLog.log('??? Notificaci??n enviada para nuevo mensaje');
       }
 
       // Limpiar eventos antiguos
@@ -988,7 +988,7 @@ const ConversationsInterface: React.FC = () => {
       const currentActiveConv = activeConversationRef.current;
       
       if (currentActiveConv && currentActiveConv.id === conversationId) {
-        console.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
+        debugLog.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
         try {
           // Normalizar message_type a número (0 = incoming, 1 = outgoing)
           const rawMsgType = event.message?.message_type;
@@ -1037,7 +1037,7 @@ const ConversationsInterface: React.FC = () => {
                 );
                 
                 if (isOptimisticOrPending && m.content === newMessage.content) {
-                  console.log('🔄 Detectado mensaje duplicado (optimista→real):', m.id, '→', newMessage.id);
+                  debugLog.log('🔄 Detectado mensaje duplicado (optimista→real):', m.id, '→', newMessage.id);
                   return true;
                 }
               }
@@ -1046,7 +1046,7 @@ const ConversationsInterface: React.FC = () => {
             });
             
             if (messageExists) {
-              console.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
+              debugLog.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
               // En lugar de ignorar, reemplazar el mensaje optimista con el real
               const updatedMessages = existingMessages.map((m: any) => {
                 // Reemplazar mensaje optimista/pending con el mensaje real
@@ -1055,7 +1055,7 @@ const ConversationsInterface: React.FC = () => {
                   m.content === newMessage.content &&
                   (newMessage.message_type === 1 || newMessage.sender === 'agent')
                 ) {
-                  console.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
+                  debugLog.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
                   return { ...newMessage, _isOptimistic: false };
                 }
                 return m;
@@ -1072,7 +1072,7 @@ const ConversationsInterface: React.FC = () => {
               };
             }
             
-            console.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
+            debugLog.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
             const newMessages = [...existingMessages, newMessage];
             
             // ✅ NUEVO: Actualizar caché con nuevo mensaje
@@ -1086,14 +1086,14 @@ const ConversationsInterface: React.FC = () => {
             };
           });
           
-          console.log('💬 Mensaje agregado exitosamente al chat');
+          debugLog.log('💬 Mensaje agregado exitosamente al chat');
         } catch (error) {
-          console.error('❌ Error agregando mensaje al chat:', error);
+          debugLog.error('❌ Error agregando mensaje al chat:', error);
         }
       } else {
         // 🆕 NUEVO: Si la conversación NO está activa, agregar mensaje al caché
         // para que cuando el usuario abra esa conversación, el mensaje ya esté ahí
-        console.log('💾 Mensaje para conversación INACTIVA - agregando al caché:', conversationId);
+        debugLog.log('💾 Mensaje para conversación INACTIVA - agregando al caché:', conversationId);
         
         // Normalizar el mensaje
         const rawMsgType = event.message?.message_type;
@@ -1116,7 +1116,7 @@ const ConversationsInterface: React.FC = () => {
         // Agregar al caché aunque la conversación no esté activa
         if (addMessageToCache && conversationId) {
           addMessageToCache(conversationId, newMessage);
-          console.log('✅ Mensaje agregado al caché para conversación inactiva:', conversationId);
+          debugLog.log('✅ Mensaje agregado al caché para conversación inactiva:', conversationId);
         }
       }
     }
@@ -1169,7 +1169,7 @@ const ConversationsInterface: React.FC = () => {
       if (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) {
         const contentExists = realMessageContents.has(m.content?.trim());
         if (contentExists) {
-          console.log('🔄 Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
+          debugLog.log('🔄 Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
         }
         return !contentExists;
       }
@@ -1236,13 +1236,13 @@ const ConversationsInterface: React.FC = () => {
     setIsSearching(true);
     const timeoutId = setTimeout(async () => {
       try {
-        console.log(' Buscando en backend:', searchTerm);
+        debugLog.log(' Buscando en backend:', searchTerm);
         
         const response = await axios.get('/api/chatwoot/conversations/search', {
           params: { q: searchTerm }
         });
 
-        console.log('??? Resultados de búsqueda:', response.data);
+        debugLog.log('??? Resultados de búsqueda:', response.data);
         
         if (response.data.success) {
           // Mapear resultados para incluir avatarUrl en el objeto contact
@@ -1255,7 +1255,7 @@ const ConversationsInterface: React.FC = () => {
                              null;
             
             // Debug temporal
-            console.log(' Avatar para', conv.contact?.name, ':', avatarUrl);
+            debugLog.log(' Avatar para', conv.contact?.name, ':', avatarUrl);
             
             return {
               ...conv,
@@ -1268,13 +1268,13 @@ const ConversationsInterface: React.FC = () => {
             };
           });
           setSearchResults(mappedResults);
-          console.log(` Encontradas ${mappedResults.length} conversaciones con avatarUrl mapeado`);
+          debugLog.log(` Encontradas ${mappedResults.length} conversaciones con avatarUrl mapeado`);
         } else {
           setSearchResults([]);
-          console.warn('?? B??squeda sin resultados');
+          debugLog.warn('?? B??squeda sin resultados');
         }
       } catch (error: any) {
-        console.error('??? Error en búsqueda:', error.response?.data || error.message);
+        debugLog.error('??? Error en búsqueda:', error.response?.data || error.message);
         setSearchResults([]);
       } finally {
         setIsSearching(false);
@@ -1349,7 +1349,7 @@ const ConversationsInterface: React.FC = () => {
       const matchesSearch = nameMatch || lastMessageMatch || allMessagesMatch || labelMatch || contactMatch;
       
       if (matchesSearch) {
-        console.log('??? Match encontrado:', {
+        debugLog.log('??? Match encontrado:', {
           name: conversation.contact?.name,
           nameMatch,
           lastMessageMatch,
@@ -1367,7 +1367,7 @@ const ConversationsInterface: React.FC = () => {
       return matchesSearch;
     });
     
-    console.log(' Con búsqueda, resultados:', result.length);
+    debugLog.log(' Con búsqueda, resultados:', result.length);
 
     window.DEBUG_CONVS = result.slice(0, 5).map(c => ({ id: c.id, name: c.contact?.name, updated_at: c.updated_at, lastMsg: c.last_message?.timestamp }));
     if (appliedFilters) {
@@ -1476,7 +1476,7 @@ const ConversationsInterface: React.FC = () => {
   const handleSelectConversation = async (conversation: Conversation) => {
     // ✅ NUEVO: Guardar mensajes de la conversación actual en caché ANTES de cambiar
     if (activeConversation?.id && activeConversation?.messages?.length > 0 && updateMessagesCache) {
-      console.log(`💾 Guardando ${activeConversation.messages.length} mensajes de conversación ${activeConversation.id} en caché antes de cambiar`);
+      debugLog.log(`💾 Guardando ${activeConversation.messages.length} mensajes de conversación ${activeConversation.id} en caché antes de cambiar`);
       updateMessagesCache(activeConversation.id, activeConversation.messages);
     }
     
@@ -1502,7 +1502,7 @@ const ConversationsInterface: React.FC = () => {
     // Marcar como leída en backend (no bloqueante)
     if (markConversationAsRead) {
       markConversationAsRead(conversation.id).then(() => {
-        console.log('✅ Conversación marcada como leída en servidor');
+        debugLog.log('✅ Conversación marcada como leída en servidor');
       });
     }
   };
@@ -1538,7 +1538,7 @@ const ConversationsInterface: React.FC = () => {
       if (activeConversation.messages) {
         // ⚡ IMPORTANTE: Crear nuevo array para que useMemo detecte el cambio
         const newMessages = [...activeConversation.messages, optimisticMessage];
-        console.log(' Agregando mensaje optimista:', tempId, 'Total mensajes:', (newMessages || []).length);
+        debugLog.log(' Agregando mensaje optimista:', tempId, 'Total mensajes:', (newMessages || []).length);
         // Forzar re-render con nuevo objeto Y nuevo array
         _setActiveConversation({ 
           ...activeConversation, 
@@ -1584,7 +1584,7 @@ const ConversationsInterface: React.FC = () => {
       const conversationId = activeConversation.id;
       sendMessage(conversationId, messageContent)
         .then((result) => {
-          console.log('✅ Mensaje enviado, actualizando status a sent:', result);
+          debugLog.log('✅ Mensaje enviado, actualizando status a sent:', result);
           // Actualizar mensaje optimista con ID real y status 'sent'
           _setActiveConversation((prev: any) => {
             if (!prev || !prev.messages) return prev;
@@ -1612,7 +1612,7 @@ const ConversationsInterface: React.FC = () => {
           });
         })
         .catch((error) => {
-          console.error('❌ Error sending message:', error);
+          debugLog.error('❌ Error sending message:', error);
           // Marcar mensaje como fallido
           _setActiveConversation((prev: any) => {
             if (!prev || !prev.messages) return prev;
@@ -1631,7 +1631,7 @@ const ConversationsInterface: React.FC = () => {
       // ?? El polling detectar? el mensaje real y reemplazar? el optimista
       
     } catch (error) {
-      console.error('Error preparing message:', error);
+      debugLog.error('Error preparing message:', error);
     }
   };
 
@@ -1719,7 +1719,7 @@ const ConversationsInterface: React.FC = () => {
       }, 100);
     }
     
-    console.log(` B??squeda: "${query}" - ${(results || []).length} resultados encontrados`, results);
+    debugLog.log(` B??squeda: "${query}" - ${(results || []).length} resultados encontrados`, results);
   };
 
   // 8 MUTE - Silenciar conversación
@@ -1869,7 +1869,7 @@ const ConversationsInterface: React.FC = () => {
     }
     
     try {
-      console.log('📤 Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+      debugLog.log('📤 Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
       
       // Convertir archivo a base64 para evitar límites de upload PHP
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -1907,7 +1907,7 @@ const ConversationsInterface: React.FC = () => {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        console.log('✅ Archivo enviado:', file.name);
+        debugLog.log('✅ Archivo enviado:', file.name);
         
         // Actualizar mensaje optimista a "sent"
         _setActiveConversation(prev => {
@@ -1943,7 +1943,7 @@ const ConversationsInterface: React.FC = () => {
           });
         });
       } else {
-        console.error('❌ Error del servidor:', data);
+        debugLog.error('❌ Error del servidor:', data);
         // Remover mensaje optimista si falló
         _setActiveConversation(prev => {
           if (!prev) return prev;
@@ -1955,7 +1955,7 @@ const ConversationsInterface: React.FC = () => {
         alert(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('💥 Error enviando archivo:', error);
+      debugLog.error('💥 Error enviando archivo:', error);
       // Remover mensaje optimista si hubo error
       _setActiveConversation(prev => {
         if (!prev) return prev;
@@ -2002,7 +2002,7 @@ const ConversationsInterface: React.FC = () => {
       }, 1000);
       
     } catch (error) {
-      console.error('🎤 Error al iniciar grabación:', error);
+      debugLog.error('🎤 Error al iniciar grabación:', error);
       alert('No se pudo acceder al micrófono');
     }
   };
@@ -2030,7 +2030,7 @@ const ConversationsInterface: React.FC = () => {
     formData.append('content', '🎤 Mensaje de voz');
     
     try {
-      console.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
+      debugLog.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
       
       // Obtener CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -2048,17 +2048,17 @@ const ConversationsInterface: React.FC = () => {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        console.log('✅ Audio enviado');
+        debugLog.log('✅ Audio enviado');
         // Refrescar la conversación para ver el mensaje
         if (typeof fetchConversations === 'function') {
           await fetchConversations();
         }
       } else {
-        console.error('❌ Error del servidor:', data);
+        debugLog.error('❌ Error del servidor:', data);
         alert(`Error al enviar audio: ${data.message || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('💥 Error enviando audio:', error);
+      debugLog.error('💥 Error enviando audio:', error);
       alert('Error de conexión al enviar audio');
     } finally {
       setIsSendingAudio(false);
@@ -2178,7 +2178,7 @@ const ConversationsInterface: React.FC = () => {
       }
     });
     
-    console.log('📎 Media encontrada:', { images: images.length, files: files.length, links: links.length });
+    debugLog.log('📎 Media encontrada:', { images: images.length, files: files.length, links: links.length });
     
     return { images, files, links };
   };
@@ -2218,7 +2218,7 @@ const ConversationsInterface: React.FC = () => {
         const esIncoming = lastMessage?.message_type === 0 || lastMessage?.message_type === 'incoming';
         const esOutgoing = lastMessage?.message_type === 1 || lastMessage?.message_type === 'outgoing';
         
-        console.log('📨 Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
+        debugLog.log('📨 Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
         
         // Solo mostrar separador si es mensaje INCOMING (de otro usuario)
         if (esIncoming) {
@@ -2241,7 +2241,7 @@ const ConversationsInterface: React.FC = () => {
               }
             });
           } else {
-            console.log('🛑 Usuario leyendo mensajes anteriores - NO hacer scroll automático');
+            debugLog.log('🛑 Usuario leyendo mensajes anteriores - NO hacer scroll automático');
           }
         }
       } else if (previousMessageCount === 0) {
@@ -2300,7 +2300,7 @@ const ConversationsInterface: React.FC = () => {
               behavior: 'smooth', 
               block: 'center' 
             });
-            console.log(' Scroll al mensaje que coincide:', firstMatchIndex);
+            debugLog.log(' Scroll al mensaje que coincide:', firstMatchIndex);
           }
         }
       }, 500);
@@ -2322,7 +2322,7 @@ const ConversationsInterface: React.FC = () => {
       });
       setTotalMatches(count);
       setCurrentMatchIndex(0); // Resetear a la primera coincidencia
-      console.log(` Total de coincidencias de "${searchTerm}":`, count);
+      debugLog.log(` Total de coincidencias de "${searchTerm}":`, count);
     } else {
       setTotalMatches(0);
       setCurrentMatchIndex(0);
@@ -2334,7 +2334,7 @@ const ConversationsInterface: React.FC = () => {
   // ?? Ejecutar scroll cuando se active el trigger
   useEffect(() => {
     if (shouldScrollToBottom) {
-      console.log(' Haciendo scroll autom?tico...');
+      debugLog.log(' Haciendo scroll autom?tico...');
       setTimeout(() => scrollToBottom('smooth'), 150);
       setShouldScrollToBottom(false);
     }
@@ -2398,7 +2398,7 @@ const ConversationsInterface: React.FC = () => {
     if (activeConversation) {
       const contact = activeConversation.contact;
       
-      console.log(' DEBUG - Abriendo modal de edici??n:', {
+      debugLog.log(' DEBUG - Abriendo modal de edici??n:', {
         'activeConversation completo': activeConversation,
         'contact': contact,
         'contact.name': contact?.name,
@@ -2419,7 +2419,7 @@ const ConversationsInterface: React.FC = () => {
       // o si es un nombre real (con letras/caracteres especiales)
       const isPhoneNumber = /^[+\d]+$/.test(nameValue);
       
-      console.log(' Valores a setear:', {
+      debugLog.log(' Valores a setear:', {
         phoneNumber,
         nameValue,
         isPhoneNumber,
@@ -2437,12 +2437,12 @@ const ConversationsInterface: React.FC = () => {
       setEditEmail(contact?.email || '');
       setIsEditModalOpen(true);
     } else {
-      console.error('?? No hay conversación activa');
+      debugLog.error('?? No hay conversación activa');
     }
   };
 
   const handleSaveContact = async () => {
-    console.log(' handleSaveContact llamado', {
+    debugLog.log(' handleSaveContact llamado', {
       'activeConversation existe': !!activeConversation,
       'activeConversation.contact existe': !!activeConversation?.contact,
       'activeConversation.contact.id': activeConversation?.contact?.id,
@@ -2457,7 +2457,7 @@ const ConversationsInterface: React.FC = () => {
       || activeConversation?.contact_inbox?.contact_id;
 
     if (!contactId) {
-      console.error('No se pudo obtener el ID del contacto', {
+      debugLog.error('No se pudo obtener el ID del contacto', {
         'contact': activeConversation?.contact,
         'meta': activeConversation?.meta,
         'contact_inbox': activeConversation?.contact_inbox
@@ -2468,7 +2468,7 @@ const ConversationsInterface: React.FC = () => {
     }
 
     try {
-      console.log('Guardando contacto:', {
+      debugLog.log('Guardando contacto:', {
         id: contactId,
         name: editName,
         phone: editPhone,
@@ -2497,7 +2497,7 @@ const ConversationsInterface: React.FC = () => {
       }
 
       const result = await updateResponse.json();
-      console.log('Contacto actualizado exitosamente:', result);
+      debugLog.log('Contacto actualizado exitosamente:', result);
 
       // Actualizar el estado local de la conversación activa Y la lista de conversaciones inmediatamente
       const newName = editName || editPhone;
@@ -2532,7 +2532,7 @@ const ConversationsInterface: React.FC = () => {
       // Cerrar modal
       setIsEditModalOpen(false);
     } catch (error) {
-      console.error('Error guardando contacto:', error);
+      debugLog.error('Error guardando contacto:', error);
       setToastMessage('Error al actualizar el contacto');
       setShowToast(true);
       
@@ -2561,7 +2561,7 @@ const ConversationsInterface: React.FC = () => {
     }
     
     try {
-      console.log('📊 Iniciando descarga de conversación:', activeConversation.id);
+      debugLog.log('📊 Iniciando descarga de conversación:', activeConversation.id);
       
       // Crear workbook
       const wb = XLSX.utils.book_new();
@@ -2679,11 +2679,11 @@ const ConversationsInterface: React.FC = () => {
       // Descargar archivo
       XLSX.writeFile(wb, filename);
       
-      console.log('✅ Excel descargado exitosamente:', filename);
+      debugLog.log('✅ Excel descargado exitosamente:', filename);
       setIsSettingsOpen(false);
       
     } catch (error) {
-      console.error('❌ Error al descargar chat:', error);
+      debugLog.error('❌ Error al descargar chat:', error);
       alert('Error al generar el archivo Excel. Por favor intenta de nuevo.');
     }
   };
@@ -2698,7 +2698,7 @@ const ConversationsInterface: React.FC = () => {
       setDownloadStatus('Conectando con el servidor...');
       setIsSettingsOpen(false);
       
-      console.log('📤 Solicitando exportación de conversaciones con mensajes...');
+      debugLog.log('📤 Solicitando exportación de conversaciones con mensajes...');
 
       // Fase 1: Fetching (0-30%)
       setDownloadProgress(5);
@@ -2728,7 +2728,7 @@ const ConversationsInterface: React.FC = () => {
       
       setDownloadProgress(30);
       setDownloadStatus(`${(conversationsWithMessages || []).length} conversaciones recibidas`);
-      console.log(`✅ Recibidas ${(conversationsWithMessages || []).length} conversaciones con mensajes`);
+      debugLog.log(`✅ Recibidas ${(conversationsWithMessages || []).length} conversaciones con mensajes`);
 
       // Fase 2: Processing (30-60%)
       setDownloadPhase('processing');
@@ -2876,7 +2876,7 @@ const ConversationsInterface: React.FC = () => {
       setDownloadPhase('complete');
       setDownloadStatus(`✅ ¡Completado! ${(conversationsWithMessages || []).length} conversaciones con ${totalMensajes} mensajes`);
       
-      console.log('✅ Excel generado exitosamente:', filename);
+      debugLog.log('✅ Excel generado exitosamente:', filename);
       
       // Cerrar modal después de 3 segundos
       setTimeout(() => {
@@ -2884,7 +2884,7 @@ const ConversationsInterface: React.FC = () => {
       }, 3000);
 
     } catch (error) {
-      console.error('?? Error descargando conversaciones:', error);
+      debugLog.error('?? Error descargando conversaciones:', error);
       setDownloadPhase('error');
       setDownloadStatus(`?? Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       setDownloadProgress(0);
@@ -3954,10 +3954,10 @@ const ConversationsInterface: React.FC = () => {
                     <button 
                       type="button"
                       onMouseDown={handleStartRecording}
-                      className="p-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl transition-all duration-300"
+                      className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300"
                       title="Mant??n presionado para grabar"
                     >
-                      <Mic className="w-4 h-4 text-gray-900" />
+                      <Mic className="w-5 h-5 text-gray-600" />
                     </button>
                   ) : (
                     <button 

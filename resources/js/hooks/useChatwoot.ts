@@ -1,22 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import debugLog from '@/utils/debugLogger';
+import { isReactionMessage } from '@/utils/messageUtils';
 
 // ============================================================================
 // HOOK PRINCIPAL: Gestión de Conversaciones con Chatwoot - OPTIMIZADO v2
 // ============================================================================
-
-// Helper: Detectar si un mensaje es solo una reacción (emoji único)
-// Las reacciones de WhatsApp llegan como mensajes con solo un emoji
-const isReactionMessage = (content: string | null | undefined): boolean => {
-  if (!content) return false;
-  const trimmed = content.trim();
-  // Regex para detectar si es solo uno o dos emojis (reacciones típicas)
-  // Cubre emojis Unicode incluyendo modificadores de skin tone
-  const emojiOnlyRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)(?:\p{Emoji_Modifier})?(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)(?:\p{Emoji_Modifier})?)*$/u;
-  // Solo filtrar si es un emoji único o dos (reacciones típicas como 🙏, 👍, ❤️, 😂)
-  const isOnlyEmoji = emojiOnlyRegex.test(trimmed);
-  const isShort = trimmed.length <= 8; // Los emojis pueden ocupar varios caracteres Unicode
-  return isOnlyEmoji && isShort;
-};
 
 interface ChatwootAPIConfig {
   baseUrl?: string;
@@ -64,10 +52,10 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
         setError('La solicitud tardó demasiado. Intenta de nuevo.');
-        console.warn('⏱️ Timeout en llamada API:', endpoint);
+        debugLog.warn('⏱️ Timeout en llamada API:', endpoint);
       } else {
         setError(err.message);
-        console.error('Chatwoot API Error:', err);
+        debugLog.error('Chatwoot API Error:', err);
       }
       throw err;
     } finally {
@@ -213,12 +201,12 @@ export const useConversations = () => {
         Object.entries(parsed).forEach(([convId, data]: [string, any]) => {
           if (now - data.timestamp < LOCAL_CACHE_TTL) {
             messagesLocalCache.current.set(parseInt(convId), data);
-            console.log(`📥 Restaurada caché de conversación ${convId} desde sessionStorage`);
+            debugLog.log(`📥 Restaurada caché de conversación ${convId} desde sessionStorage`);
           }
         });
       }
     } catch (e) {
-      console.warn('Error restaurando caché de mensajes:', e);
+      debugLog.warn('Error restaurando caché de mensajes:', e);
     }
   }, []);
   
@@ -231,7 +219,7 @@ export const useConversations = () => {
       });
       sessionStorage.setItem('chatwoot_messages_cache', JSON.stringify(cacheObj));
     } catch (e) {
-      console.warn('Error guardando caché de mensajes:', e);
+      debugLog.warn('Error guardando caché de mensajes:', e);
     }
   }, []);
   
@@ -267,7 +255,7 @@ export const useConversations = () => {
           
           // Solo loguear si realmente obtuvimos un inbox_id
           if (inboxId) {
-            console.log('✅ User inbox_id obtenido:', inboxId);
+            debugLog.log('✅ User inbox_id obtenido:', inboxId);
           }
           setUserInboxId(inboxId);
         }
@@ -340,7 +328,7 @@ export const useConversations = () => {
   // ========================================
   const fetchConversations = useCallback(async (page: number = 1, append: boolean = false) => {
     try {
-      console.log(`📄 Fetching conversations - Page ${page}, Per page: ${perPage}`);
+      debugLog.log(`📄 Fetching conversations - Page ${page}, Per page: ${perPage}`);
       
       const result = await apiCall(
         `/api/chatwoot-proxy/conversations?page=${page}&per_page=${perPage}`,
@@ -401,12 +389,12 @@ export const useConversations = () => {
         
         lastFetchTimestamp.current = Date.now();
         
-        console.log(`✅ Loaded ${chatwootConversations.length} conversations (Page ${page})`);
+        debugLog.log(`✅ Loaded ${chatwootConversations.length} conversations (Page ${page})`);
       } else {
         setConversations([]);
       }
     } catch (err) {
-      console.error('Error fetching conversations:', err);
+      debugLog.error('Error fetching conversations:', err);
       if (!append) {
         setConversations([]);
       }
@@ -420,7 +408,7 @@ export const useConversations = () => {
     try {
       const updatedSince = Math.floor(lastUpdateTimestamp.current / 1000);
       
-      console.log(`🔄 Fetching updated conversations since ${new Date(lastUpdateTimestamp.current).toISOString()}`);
+      debugLog.log(`🔄 Fetching updated conversations since ${new Date(lastUpdateTimestamp.current).toISOString()}`);
       
       const result = await apiCall(
         `/api/chatwoot-proxy/conversations?updated_since=${updatedSince}`,
@@ -430,7 +418,7 @@ export const useConversations = () => {
       const payload = result?.data?.payload || result?.payload || [];
       
       if (Array.isArray(payload) && payload.length > 0) {
-        console.log(`✅ Found ${payload.length} updated conversations`);
+        debugLog.log(`✅ Found ${payload.length} updated conversations`);
         
         const updatedConversations = payload.map((conv: any) => ({
           id: conv.id,
@@ -462,7 +450,14 @@ export const useConversations = () => {
 
           updatedConversations.forEach(updated => {
             const existing = conversationMap.get(updated.id);
-            const merged = existing ? { ...updated, unread_count: Math.max(updated.unread_count || 0, existing.unread_count || 0) } : updated;
+            // ✅ FIX: Si el servidor dice unread_count 0, respetarlo (fue marcada como leída)
+            // Solo usar Math.max si el servidor reporta mensajes no leídos
+            let finalUnreadCount = updated.unread_count || 0;
+            if (existing && updated.unread_count > 0) {
+              // Solo mantener el máximo cuando HAY mensajes no leídos según el servidor
+              finalUnreadCount = Math.max(updated.unread_count, existing.unread_count || 0);
+            }
+            const merged = existing ? { ...updated, unread_count: finalUnreadCount } : updated;
             conversationMap.set(updated.id, merged);
             conversationsCache.current.set(updated.id, merged);
           });
@@ -487,7 +482,7 @@ export const useConversations = () => {
             return timeB - timeA;
           });
 
-          console.log(`🔄 Conversaciones reordenadas. Primera: ${sorted[0]?.contact.name} (ID: ${sorted[0]?.id}) - Timestamp: ${new Date(getTimestamp(sorted[0])).toISOString()}`);
+          debugLog.log(`🔄 Conversaciones reordenadas. Primera: ${sorted[0]?.contact.name} (ID: ${sorted[0]?.id}) - Timestamp: ${new Date(getTimestamp(sorted[0])).toISOString()}`);
           
           return sorted;
         });
@@ -495,11 +490,11 @@ export const useConversations = () => {
         
         return updatedConversations.length;
       } else {
-        console.log('✅ No updates found');
+        debugLog.log('✅ No updates found');
         return 0;
       }
     } catch (err) {
-      console.error('Error fetching updated conversations:', err);
+      debugLog.error('Error fetching updated conversations:', err);
       return 0;
     }
   }, [apiCall]);
@@ -533,7 +528,7 @@ export const useConversations = () => {
 
       if (result?.payload) {
         // ✅ NO agregar aquí - ConversationsInterface ya lo hace optimísticamente
-        console.log('✅ Mensaje enviado exitosamente', { 
+        debugLog.log('✅ Mensaje enviado exitosamente', { 
           id: result.payload.id, 
           content: result.payload.content 
         });
@@ -549,7 +544,7 @@ export const useConversations = () => {
 
       throw new Error('No se pudo enviar el mensaje');
     } catch (err) {
-      console.error('Error enviando mensaje:', err);
+      debugLog.error('Error enviando mensaje:', err);
       throw err;
     }
   }, [apiCall]);
@@ -563,11 +558,11 @@ export const useConversations = () => {
     const loadingKey = loadMore ? `${conversationId}-loadMore` : `${conversationId}`;
     
     if (isLoadingMessagesRef.current.has(loadingKey)) {
-      console.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore}), omitiendo...`);
+      debugLog.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore}), omitiendo...`);
       return;
     }
     
-    console.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
+    debugLog.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
     isLoadingMessagesRef.current.add(loadingKey);
     
     // 🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
@@ -575,7 +570,7 @@ export const useConversations = () => {
     const now = Date.now();
     
     if (cached && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
-      console.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
+      debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
       if (conversation) {
         setActiveConversationState({
@@ -607,13 +602,13 @@ export const useConversations = () => {
         const oldestId = cached.messages[0]?.id;
         if (oldestId) {
           url += `&before=${oldestId}`;
-          console.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
+          debugLog.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
         }
       }
       
-      console.log(`🌐 Llamando API: ${url}`);
+      debugLog.log(`🌐 Llamando API: ${url}`);
       const result = await apiCall(url);
-      console.log(`📦 Respuesta API:`, {
+      debugLog.log(`📦 Respuesta API:`, {
         success: result?.success,
         messagesCount: result?.payload?.payload?.length || result?.payload?.length || 0,
         hasMore: result?.meta?.has_more
@@ -622,8 +617,8 @@ export const useConversations = () => {
       const meta = result?.meta || {};
 
       if (Array.isArray(messagesArray)) {
+        // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
         const chatwootMessages = messagesArray
-          .filter((msg: any) => !isReactionMessage(msg.content)) // Filtrar reacciones
           .map((msg: any) => ({
           id: msg.id,
           content: msg.content,
@@ -671,7 +666,6 @@ export const useConversations = () => {
         
         let uniqueMessages = chatwootMessages
           .filter((m: any) => !duplicateIds.has(m.id))
-          .filter((m: any) => !isReactionMessage(m.content)) // Filtrar reacciones (emojis solos)
           .sort((a: any, b: any) => {
             const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
             const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
@@ -693,7 +687,7 @@ export const useConversations = () => {
           );
           
           if (optimisticMessages.length > 0) {
-            console.log(`💾 Preservando ${optimisticMessages.length} mensajes optimistas pendientes`);
+            debugLog.log(`💾 Preservando ${optimisticMessages.length} mensajes optimistas pendientes`);
             // Agregar mensajes optimistas que no están en la respuesta de API
             const apiMessageContents = new Set(uniqueMessages.map((m: any) => m.content?.trim()));
             const pendingToKeep = optimisticMessages.filter((m: any) => 
@@ -702,7 +696,7 @@ export const useConversations = () => {
             
             if (pendingToKeep.length > 0) {
               uniqueMessages = [...uniqueMessages, ...pendingToKeep];
-              console.log(`📝 Agregados ${pendingToKeep.length} mensajes pendientes a la lista`);
+              debugLog.log(`📝 Agregados ${pendingToKeep.length} mensajes pendientes a la lista`);
             }
           }
         }
@@ -745,7 +739,7 @@ export const useConversations = () => {
         }
       }
     } catch (err) {
-      console.error('Error cargando mensajes:', err);
+      debugLog.error('Error cargando mensajes:', err);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
       if (conversation) {
         setActiveConversationState({
@@ -755,7 +749,7 @@ export const useConversations = () => {
         });
       }
     } finally {
-      console.log(`✅ Liberando loading key: ${loadingKey}`);
+      debugLog.log(`✅ Liberando loading key: ${loadingKey}`);
       isLoadingMessagesRef.current.delete(loadingKey);
     }
   }, [apiCall]);
@@ -775,13 +769,13 @@ export const useConversations = () => {
         
         // Cargar en background con delay para no saturar
         setTimeout(() => {
-          console.log(`🔮 Prefetching mensajes para conversación ${conv.id}`);
+          debugLog.log(`🔮 Prefetching mensajes para conversación ${conv.id}`);
           apiCall(`/api/chatwoot-proxy/conversations/${conv.id}/messages?limit=50`)
             .then(result => {
               const messagesArray = result?.payload?.payload || result?.payload || [];
               if (Array.isArray(messagesArray)) {
+                // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend
                 const chatwootMessages = messagesArray
-                  .filter((msg: any) => !isReactionMessage(msg.content)) // Filtrar reacciones
                   .map((msg: any) => ({
                   id: msg.id,
                   content: msg.content,
@@ -803,7 +797,7 @@ export const useConversations = () => {
                   hasMore: result?.meta?.has_more ?? false
                 });
                 persistMessagesCache(); // ✅ Persistir en sessionStorage
-                console.log(`✅ Prefetch completado para conversación ${conv.id}`);
+                debugLog.log(`✅ Prefetch completado para conversación ${conv.id}`);
               }
             })
             .catch(() => {
@@ -855,15 +849,15 @@ export const useConversations = () => {
               );
             }
             
-            console.log('✅ Conversación refetcheada después de marcar como leída - unread_count:', response.payload.unread_count);
+            debugLog.log('✅ Conversación refetcheada después de marcar como leída - unread_count:', response.payload.unread_count);
           }
         } catch (err) {
-          console.warn('No se pudo refetch la conversación:', err);
+          debugLog.warn('No se pudo refetch la conversación:', err);
         }
       }, 800); // 800ms de delay para que Chatwoot procese
 
     } catch (err) {
-      console.error('Error marcando como leída:', err);
+      debugLog.error('Error marcando como leída:', err);
     }
   }, [apiCall]);
 
@@ -880,7 +874,7 @@ export const useConversations = () => {
       hasMore: existingCache?.hasMore ?? false
     });
     persistMessagesCache(); // ✅ Persistir en sessionStorage
-    console.log(`💾 Caché de mensajes actualizada para conversación ${conversationId} (${messages.length} mensajes)`);
+    debugLog.log(`💾 Caché de mensajes actualizada para conversación ${conversationId} (${messages.length} mensajes)`);
   }, [persistMessagesCache]);
 
   // ========================================
@@ -905,7 +899,7 @@ export const useConversations = () => {
           hasMore: existingCache.hasMore
         });
         persistMessagesCache(); // ✅ Persistir en sessionStorage
-        console.log(`💾 Mensaje agregado a caché para conversación ${conversationId}`);
+        debugLog.log(`💾 Mensaje agregado a caché para conversación ${conversationId}`);
       }
     }
   }, [persistMessagesCache]);

@@ -7,6 +7,7 @@
 
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import debugLog from '@/utils/debugLogger';
 
 // Asignar Pusher globalmente para que Echo lo encuentre
 declare global {
@@ -62,7 +63,7 @@ const echoConfig: any = {
         })
           .then(response => {
             if (!response.ok) {
-              console.error('❌ Broadcasting auth failed:', response.status, response.statusText);
+              debugLog.error('❌ Broadcasting auth failed:', response.status, response.statusText);
               throw new Error(`HTTP ${response.status}`);
             }
             return response.json();
@@ -72,7 +73,7 @@ const echoConfig: any = {
             callback(null, data);
           })
           .catch(error => {
-            console.error('❌ Broadcasting auth error:', error);
+            debugLog.error('❌ Broadcasting auth error:', error);
             callback(error, null);
           });
       },
@@ -86,28 +87,28 @@ if (!isUsingPusherReal && pusherHost) {
   echoConfig.wsPort = 443;
   echoConfig.wssPort = 443;
   echoConfig.enabledTransports = ['ws', 'wss'];
-  console.log('🔧 Usando Reverb (self-hosted) en:', pusherHost);
+  debugLog.log('🔧 Usando Reverb (self-hosted) en:', pusherHost);
 } else {
-  console.log('🔧 Usando Pusher real, cluster:', import.meta.env.VITE_PUSHER_APP_CLUSTER);
+  debugLog.log('🔧 Usando Pusher real, cluster:', import.meta.env.VITE_PUSHER_APP_CLUSTER);
 }
 
 const echo = new Echo(echoConfig);
 
 // Eventos de conexión para debugging
 echo.connector.pusher.connection.bind('connected', () => {
-  console.log('✅ WebSocket conectado exitosamente');
+  debugLog.log('✅ WebSocket conectado exitosamente');
 });
 
 echo.connector.pusher.connection.bind('disconnected', () => {
-  console.log('❌ WebSocket desconectado');
+  debugLog.log('❌ WebSocket desconectado');
 });
 
 echo.connector.pusher.connection.bind('error', (err: any) => {
-  console.error('❌ Error en WebSocket:', err);
-  console.error('Error type:', err?.type);
-  console.error('Error code:', err?.code);
-  console.error('Error data:', err?.data);
-  console.error('Full error:', JSON.stringify(err, null, 2));
+  debugLog.error('❌ Error en WebSocket:', err);
+  debugLog.error('Error type:', err?.type);
+  debugLog.error('Error code:', err?.code);
+  debugLog.error('Error data:', err?.data);
+  debugLog.error('Full error:', JSON.stringify(err, null, 2));
 });
 
 echo.connector.pusher.connection.bind('state_change', (states: any) => {

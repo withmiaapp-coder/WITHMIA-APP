@@ -18,8 +18,21 @@ export default defineConfig({
         jsx: 'automatic',
     },
     build: {
-        minify: false,
-        sourcemap: true,
+        // Minificar en producción para reducir tamaño
+        minify: 'esbuild',
+        // Sourcemaps solo en desarrollo
+        sourcemap: false,
+        // Optimizar chunks
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Separar vendor de la app
+                    'vendor-react': ['react', 'react-dom'],
+                    'vendor-ui': ['lucide-react', '@headlessui/react'],
+                    'vendor-pusher': ['pusher-js', 'laravel-echo'],
+                },
+            },
+        },
     },
     resolve: {
         alias: {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import debugLog from '@/utils/debugLogger';
 
 // ============================================================================
 // HOOK: Tiempo Real con Laravel Echo + Reverb - OPTIMIZADO v2
@@ -40,35 +41,35 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
 
         // Suscribirse al canal privado del inbox
         const channelName = `inbox.${config.inboxId}`;
-        console.log(`🔌 Conectando a canal: ${channelName}`);
+        debugLog.log(`🔌 Conectando a canal: ${channelName}`);
 
         const channel = echo.private(channelName);
         channelRef.current = channel;
 
         // Debug: Log cuando el canal se suscribe exitosamente
         channel.subscribed(() => {
-          console.log(`✅ Canal ${channelName} SUSCRITO exitosamente`);
+          debugLog.log(`✅ Canal ${channelName} SUSCRITO exitosamente`);
         });
 
         // Debug: Log errores de suscripción
         channel.error((error: any) => {
-          console.error(`❌ Error en canal ${channelName}:`, error);
+          debugLog.error(`❌ Error en canal ${channelName}:`, error);
         });
 
         // Listener: Nuevo mensaje recibido
         channel.listen('.message.received', (event: any) => {
-          console.log('📩 Nuevo mensaje recibido:', event);
+          debugLog.log('📩 Nuevo mensaje recibido:', event);
           
           // 🧪 FILTRAR MENSAJES DE PRUEBA
           if (event?.message?.test === true || event?.test === true) {
-            console.log('🧪 [WS] Mensaje de PRUEBA detectado - ignorando');
+            debugLog.log('🧪 [WS] Mensaje de PRUEBA detectado - ignorando');
             return;
           }
           
           // 🔢 Verificar conversation_id válido
           const convId = event?.conversation_id || event?.conversation?.id;
           if (!convId || convId <= 0) {
-            console.log('⚠️ [WS] conversation_id inválido:', convId, '- ignorando');
+            debugLog.log('⚠️ [WS] conversation_id inválido:', convId, '- ignorando');
             return;
           }
           
@@ -81,7 +82,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
 
         // Listener: Conversación actualizada
         channel.listen('.conversation.updated', (event: any) => {
-          console.log('🔄 Conversación actualizada:', event);
+          debugLog.log('🔄 Conversación actualizada:', event);
           setLastEventTime(new Date());
 
           if (config.onConversationUpdated) {
@@ -91,7 +92,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
 
         // Listener: Mensaje actualizado (para estados read/delivered)
         channel.listen('.message.updated', (event: any) => {
-          console.log('📝 Mensaje actualizado:', event);
+          debugLog.log('📝 Mensaje actualizado:', event);
           setLastEventTime(new Date());
 
           if (config.onMessageUpdated) {
@@ -104,7 +105,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
           const pusherConnection = echo.connector.pusher.connection;
 
           pusherConnection.bind('connected', () => {
-            console.log('✅ WebSocket CONECTADO');
+            debugLog.log('✅ WebSocket CONECTADO');
             setIsConnected(true);
             if (config.onConnectionChange) {
               config.onConnectionChange(true);
@@ -112,7 +113,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
           });
 
           pusherConnection.bind('disconnected', () => {
-            console.log('⚠️ WebSocket DESCONECTADO');
+            debugLog.log('⚠️ WebSocket DESCONECTADO');
             setIsConnected(false);
             if (config.onConnectionChange) {
               config.onConnectionChange(false);
@@ -120,7 +121,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
           });
 
           pusherConnection.bind('error', (err: any) => {
-            console.error('❌ Error en WebSocket:', err);
+            debugLog.error('❌ Error en WebSocket:', err);
           });
 
           // Estado inicial
@@ -135,7 +136,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
         // console.log('✅ Echo inicializado correctamente');
 
       } catch (error) {
-        console.error('❌ Error inicializando Echo:', error);
+        debugLog.error('❌ Error inicializando Echo:', error);
         setIsConnected(false);
         if (config.onConnectionChange) {
           config.onConnectionChange(false);
@@ -148,7 +149,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
     // Cleanup: desuscribirse al desmontar
     return () => {
       if (channelRef.current && config.inboxId) {
-        console.log(`🔌 Desconectando de canal: inbox.${config.inboxId}`);
+        debugLog.log(`🔌 Desconectando de canal: inbox.${config.inboxId}`);
         
         try {
           channelRef.current.stopListening('.message.received');
@@ -159,7 +160,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
             echoRef.current.leave(`inbox.${config.inboxId}`);
           }
         } catch (error) {
-          console.error('Error al limpiar suscripciones:', error);
+          debugLog.error('Error al limpiar suscripciones:', error);
         }
       }
     };
@@ -200,7 +201,7 @@ export const useSmartPollingFallback = (config: PollingFallbackConfig) => {
     if (!enabled) {
       // Limpiar interval si existe
       if (intervalRef.current) {
-        console.log('🛑 Smart Polling detenido (WebSocket conectado)');
+        debugLog.log('🛑 Smart Polling detenido (WebSocket conectado)');
         clearTimeout(intervalRef.current);
         intervalRef.current = null;
         currentIntervalRef.current = minInterval;
@@ -209,26 +210,26 @@ export const useSmartPollingFallback = (config: PollingFallbackConfig) => {
       return;
     }
 
-    console.log(`🔄 Iniciando Smart Polling con intervalo inicial de ${minInterval}s`);
+    debugLog.log(`🔄 Iniciando Smart Polling con intervalo inicial de ${minInterval}s`);
 
     // Función recursiva para polling con backoff
     const scheduleNextPoll = async () => {
       try {
         const startTime = Date.now();
-        console.log(`🔄 Polling ejecutado (intervalo: ${currentIntervalRef.current}s)`);
+        debugLog.log(`🔄 Polling ejecutado (intervalo: ${currentIntervalRef.current}s)`);
 
         // Ejecutar polling y obtener cantidad de cambios
         const changesCount = await onPoll();
         
         const executionTime = Date.now() - startTime;
-        console.log(`✅ Polling completado en ${executionTime}ms - ${changesCount} cambios detectados`);
+        debugLog.log(`✅ Polling completado en ${executionTime}ms - ${changesCount} cambios detectados`);
 
         // Ajustar intervalo basado en actividad
         if (changesCount > 0) {
           // Hay actividad: resetear a intervalo mínimo
           consecutiveEmptyPolls.current = 0;
           currentIntervalRef.current = minInterval;
-          console.log(`⚡ Actividad detectada - Intervalo reseteado a ${minInterval}s`);
+          debugLog.log(`⚡ Actividad detectada - Intervalo reseteado a ${minInterval}s`);
         } else {
           // Sin actividad: aumentar intervalo con backoff
           consecutiveEmptyPolls.current++;
@@ -240,14 +241,14 @@ export const useSmartPollingFallback = (config: PollingFallbackConfig) => {
             );
             
             if (newInterval !== currentIntervalRef.current) {
-              console.log(`📈 Sin actividad (${consecutiveEmptyPolls.current} veces) - Aumentando intervalo a ${newInterval.toFixed(0)}s`);
+              debugLog.log(`📈 Sin actividad (${consecutiveEmptyPolls.current} veces) - Aumentando intervalo a ${newInterval.toFixed(0)}s`);
               currentIntervalRef.current = newInterval;
             }
           }
         }
 
       } catch (error) {
-        console.error('❌ Error en polling:', error);
+        debugLog.error('❌ Error en polling:', error);
         // En caso de error, usar intervalo mínimo
         currentIntervalRef.current = minInterval;
       }
@@ -263,7 +264,7 @@ export const useSmartPollingFallback = (config: PollingFallbackConfig) => {
 
     return () => {
       if (intervalRef.current) {
-        console.log('🛑 Smart Polling limpiado');
+        debugLog.log('🛑 Smart Polling limpiado');
         clearTimeout(intervalRef.current);
         intervalRef.current = null;
       }
@@ -310,7 +311,7 @@ export const useCombinedRealtime = (config: CombinedRealtimeConfig) => {
     inboxId: config.inboxId,
     enabled: config.enabled,
     onNewMessage: (event) => {
-      console.log('🔔 [WS] Nuevo mensaje recibido:', event);
+      debugLog.log('🔔 [WS] Nuevo mensaje recibido:', event);
       
       // ✅ NO FILTRAR - Dejar que el componente maneje la lógica
       // Los mensajes de Chatwoot WebSocket son legítimos
@@ -319,7 +320,7 @@ export const useCombinedRealtime = (config: CombinedRealtimeConfig) => {
       }
     },
     onConversationUpdated: (event) => {
-      console.log('🔔 [WS] Conversación actualizada:', event);
+      debugLog.log('🔔 [WS] Conversación actualizada:', event);
       if (config.onConversationUpdated) {
         config.onConversationUpdated(event);
       }
@@ -327,7 +328,7 @@ export const useCombinedRealtime = (config: CombinedRealtimeConfig) => {
       // config.onUpdate(); // DESHABILITADO - Actualización optimista ya maneja esto
     },
     onMessageUpdated: (event) => {
-      console.log('🔔 [WS] Mensaje actualizado (status):', event);
+      debugLog.log('🔔 [WS] Mensaje actualizado (status):', event);
       if (config.onMessageUpdated) {
         config.onMessageUpdated(event);
       }
