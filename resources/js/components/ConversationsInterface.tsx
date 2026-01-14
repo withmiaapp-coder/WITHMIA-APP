@@ -781,7 +781,15 @@ const ConversationsInterface: React.FC = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
+        console.log('🔄 IntersectionObserver:', {
+          isIntersecting: entry.isIntersecting,
+          hasMoreMessages: activeConversation?._hasMoreMessages,
+          isLoading: activeConversation?._isLoading,
+          conversationId: activeConversation?.id
+        });
+        
         if (entry.isIntersecting && activeConversation?._hasMoreMessages && !activeConversation?._isLoading) {
+          console.log('📜 Cargando más mensajes...');
           // Guardar posición actual del scroll
           const scrollHeight = container.scrollHeight;
           
