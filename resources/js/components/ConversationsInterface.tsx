@@ -3130,14 +3130,20 @@ const ConversationsInterface: React.FC = () => {
                                 ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
                                   /* 🎬 VIDEO: Miniatura con botón play - Click abre fullscreen estilo WhatsApp */
                                   <div 
-                                    className="relative rounded-lg overflow-hidden shadow-md bg-black max-w-[280px] cursor-pointer group"
+                                    className="relative rounded-lg overflow-hidden shadow-md bg-gray-200 max-w-[280px] cursor-pointer group"
                                     onClick={() => openMediaViewer(attachmentUrl, 'video')}
                                   >
-                                    {/* Video como thumbnail (sin controles, muted) */}
+                                    {/* Video como thumbnail - #t=0.5 fuerza cargar frame del segundo 0.5 */}
                                     <video 
                                       preload="metadata"
                                       muted
+                                      playsInline
                                       className="w-full h-40 object-cover rounded-lg"
+                                      onLoadedData={(e) => {
+                                        // Intentar mostrar el primer frame
+                                        const video = e.target as HTMLVideoElement;
+                                        video.currentTime = 0.5;
+                                      }}
                                       onError={(e) => {
                                         const target = e.target as HTMLVideoElement;
                                         target.style.display = 'none';
@@ -3145,7 +3151,7 @@ const ConversationsInterface: React.FC = () => {
                                         if (placeholder) placeholder.style.display = 'flex';
                                       }}
                                     >
-                                      <source src={attachmentUrl} type={fileType || 'video/mp4'} />
+                                      <source src={`${attachmentUrl}#t=0.5`} type={fileType || 'video/mp4'} />
                                     </video>
                                     {/* Overlay con botón de play */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
@@ -3154,15 +3160,15 @@ const ConversationsInterface: React.FC = () => {
                                       </div>
                                     </div>
                                     {/* Indicador de duración (esquina inferior derecha) */}
-                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-gray-800/80 rounded text-white text-xs font-medium">
                                       Video
                                     </div>
                                     {/* Placeholder para video no disponible */}
                                     <div 
-                                      className="hidden items-center justify-center bg-gray-800 rounded-lg p-6 min-w-[200px] min-h-[120px]"
+                                      className="hidden items-center justify-center bg-gray-100 rounded-lg p-6 min-w-[200px] min-h-[120px]"
                                       style={{ display: 'none' }}
                                     >
-                                      <div className="text-center text-gray-400">
+                                      <div className="text-center text-gray-500">
                                         <Film className="w-10 h-10 mx-auto mb-2" />
                                         <span className="text-xs">Video no disponible</span>
                                       </div>
@@ -3976,10 +3982,10 @@ const ConversationsInterface: React.FC = () => {
         onClose={() => setShowAdvancedFilters(false)}
       />
 
-      {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo WhatsApp */}
+      {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo Claro */}
       {mediaViewerOpen && mediaGallery.length > 0 && (
         <div 
-          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+          className="fixed inset-0 z-[9999] bg-gray-100/95 backdrop-blur-sm flex items-center justify-center"
           onClick={() => setMediaViewerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowLeft') goToPreviousMedia();
@@ -3989,22 +3995,22 @@ const ConversationsInterface: React.FC = () => {
           tabIndex={0}
         >
           {/* Header con contador y botón de cerrar */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10">
-            <div className="text-white flex items-center space-x-3">
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-gray-200 z-10">
+            <div className="text-gray-700 flex items-center space-x-3">
               <span className="text-sm font-medium">
                 {mediaGallery[currentMediaIndex]?.type === 'video' ? '🎬 Video' : '🖼️ Imagen'}
               </span>
               {mediaGallery.length > 1 && (
-                <span className="text-xs text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
                   {currentMediaIndex + 1} / {mediaGallery.length}
                 </span>
               )}
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition-colors"
             >
-              <X className="w-6 h-6 text-white" />
+              <X className="w-6 h-6 text-gray-700" />
             </button>
           </div>
 
@@ -4012,7 +4018,7 @@ const ConversationsInterface: React.FC = () => {
           {mediaGallery.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goToPreviousMedia(); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
             >
               <ChevronUp className="w-8 h-8 rotate-[-90deg]" />
             </button>
@@ -4022,7 +4028,7 @@ const ConversationsInterface: React.FC = () => {
           {mediaGallery.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goToNextMedia(); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/90 hover:bg-white shadow-lg text-gray-700 transition-all hover:scale-110"
             >
               <ChevronDown className="w-8 h-8 rotate-[-90deg]" />
             </button>
@@ -4030,7 +4036,7 @@ const ConversationsInterface: React.FC = () => {
 
           {/* Contenido del media */}
           <div 
-            className="max-w-[90vw] max-h-[80vh] flex items-center justify-center"
+            className="max-w-[90vw] max-h-[80vh] flex items-center justify-center bg-white rounded-xl shadow-2xl p-2"
             onClick={(e) => e.stopPropagation()}
           >
             {mediaGallery[currentMediaIndex]?.type === 'video' ? (
@@ -4038,7 +4044,7 @@ const ConversationsInterface: React.FC = () => {
                 key={currentMediaIndex}
                 controls
                 autoPlay
-                className="max-w-full max-h-[80vh] rounded-lg"
+                className="max-w-full max-h-[75vh] rounded-lg"
                 style={{ outline: 'none' }}
               >
                 <source src={mediaGallery[currentMediaIndex]?.url} type="video/mp4" />
@@ -4049,14 +4055,14 @@ const ConversationsInterface: React.FC = () => {
                 key={currentMediaIndex}
                 src={mediaGallery[currentMediaIndex]?.url} 
                 alt={`Media ${currentMediaIndex + 1}`}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg select-none"
                 draggable={false}
               />
             )}
           </div>
 
           {/* Footer con descargar y miniaturas */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200">
             {/* Miniaturas de navegación (si hay más de 1) */}
             {mediaGallery.length > 1 && (
               <div className="flex justify-center space-x-2 mb-3 overflow-x-auto py-2">
@@ -4064,15 +4070,15 @@ const ConversationsInterface: React.FC = () => {
                   <button
                     key={idx}
                     onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); }}
-                    className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                    className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shadow-sm ${
                       idx === currentMediaIndex 
-                        ? 'border-white scale-110' 
-                        : 'border-transparent opacity-60 hover:opacity-100'
+                        ? 'border-blue-500 scale-110 shadow-md' 
+                        : 'border-gray-300 opacity-70 hover:opacity-100 hover:border-gray-400'
                     }`}
                   >
                     {media.type === 'video' ? (
-                      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                        <Play className="w-4 h-4 text-white" />
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <Play className="w-4 h-4 text-gray-600" />
                       </div>
                     ) : (
                       <img 
@@ -4093,7 +4099,7 @@ const ConversationsInterface: React.FC = () => {
                 download
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white text-sm transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white text-sm transition-colors shadow-md"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Download className="w-4 h-4" />
