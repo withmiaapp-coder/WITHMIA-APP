@@ -289,7 +289,77 @@ class EvolutionApiService
     }
 
     /**
-     * Asegurar que los webhooks estén configurados
+     * 🎯 Configurar webhook de Evolution API para una instancia
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @param string $webhookUrl URL del webhook (puede ser n8n, mia-app, etc.)
+     * @param array $events Eventos a recibir
+     * @return array
+     */
+    public function setWebhook(string $instanceName, string $webhookUrl, array $events = null): array
+    {
+        try {
+            $defaultEvents = [
+                'MESSAGES_UPSERT',
+                'MESSAGES_UPDATE',
+                'CONNECTION_UPDATE',
+                'SEND_MESSAGE'
+            ];
+
+            $webhookConfig = [
+                'webhook' => [
+                    'enabled' => true,
+                    'url' => $webhookUrl,
+                    'webhook_by_events' => false,
+                    'webhook_base64' => false,
+                    'events' => $events ?? $defaultEvents
+                ]
+            ];
+
+            Log::info('🔗 Configurando webhook en Evolution API', [
+                'instance' => $instanceName,
+                'url' => $webhookUrl
+            ]);
+
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/webhook/set/{$instanceName}", $webhookConfig);
+
+            if ($response->successful()) {
+                Log::info('✅ Webhook configurado exitosamente', [
+                    'instance' => $instanceName,
+                    'url' => $webhookUrl
+                ]);
+                return [
+                    'success' => true,
+                    'data' => $response->json()
+                ];
+            } else {
+                Log::warning('⚠️ Error configurando webhook', [
+                    'instance' => $instanceName,
+                    'error' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $response->body()
+                ];
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ Excepción configurando webhook', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Asegurar que los webhooks estén configurados (método legacy)
      */
     private function ensureWebhooksConfigured(string $instanceName): void
     {
@@ -305,39 +375,9 @@ class EvolutionApiService
                 return;
             }
 
-            // Configurar webhooks
+            // Configurar webhooks usando el nuevo método
             $webhookUrl = config('app.url') . '/api/evolution-whatsapp/webhook';
-            $webhookConfig = [
-                'webhook' => [
-                    'enabled' => true,
-                    'url' => $webhookUrl,
-                    'webhook_by_events' => false,
-                    'webhook_base64' => false,
-                    'events' => [
-                        'MESSAGES_UPSERT',
-                        'MESSAGES_UPDATE',
-                        'CONNECTION_UPDATE',
-                        'SEND_MESSAGE'
-                    ]
-                ]
-            ];
-
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/webhook/set/{$instanceName}", $webhookConfig);
-
-            if ($response->successful()) {
-                Log::info("Webhooks configured successfully", [
-                    'instance' => $instanceName,
-                    'url' => $webhookUrl
-                ]);
-            } else {
-                Log::warning("Failed to configure webhooks", [
-                    'instance' => $instanceName,
-                    'error' => $response->body()
-                ]);
-            }
+            $this->setWebhook($instanceName, $webhookUrl);
 
         } catch (\Exception $e) {
             Log::error("Error configuring webhooks", [

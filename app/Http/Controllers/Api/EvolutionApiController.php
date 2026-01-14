@@ -1080,29 +1080,62 @@ class EvolutionApiController extends Controller
                 return;
             }
 
-            // Personalizar workflow
-            unset($templateWorkflow['id']);
-            $templateWorkflow['name'] = "WhatsApp Bot - {$companyName}";
-            
+            // Limpiar y personalizar nodos
+            $cleanNodes = [];
             $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
             
-            foreach ($templateWorkflow['nodes'] as &$node) {
+            foreach ($templateWorkflow['nodes'] as $node) {
+                // Limpiar nodo - solo propiedades esenciales
+                $cleanNode = [
+                    'parameters' => $node['parameters'] ?? [],
+                    'type' => $node['type'],
+                    'typeVersion' => $node['typeVersion'] ?? 1,
+                    'position' => $node['position'],
+                    'id' => $node['id'],
+                    'name' => $node['name'],
+                ];
+                
+                // Incluir credentials si existen
+                if (isset($node['credentials'])) {
+                    $cleanNode['credentials'] = $node['credentials'];
+                }
+                
+                // Configurar webhook
                 if ($node['type'] === 'n8n-nodes-base.webhook') {
-                    $node['webhookId'] = $newWebhookId;
-                    if (isset($node['parameters']['path'])) {
-                        $node['parameters']['path'] = "whatsapp-{$instance->instance_name}";
+                    $cleanNode['webhookId'] = $newWebhookId;
+                    if (isset($cleanNode['parameters']['path'])) {
+                        $cleanNode['parameters']['path'] = "whatsapp-{$instance->instance_name}";
                     }
                 }
                 
+                // Simplificar prompt del AI Agent para evitar error 500
+                if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
+                    $cleanNode['parameters']['text'] = "Responde como asistente de {$companyName}";
+                    $cleanNode['parameters']['options'] = [
+                        'systemMessage' => "Eres MIA, asistente digital de {$companyName}. Responde de forma profesional y amigable."
+                    ];
+                }
+                
+                // Configurar memoria por empresa
                 if ($node['type'] === '@n8n/n8n-nodes-langchain.memoryBufferWindow') {
-                    if (isset($node['parameters']['sessionKey'])) {
-                        $node['parameters']['sessionKey'] = "company_{$instance->company_id}_" . '={{ $json.message.chat_id }}';
+                    if (isset($cleanNode['parameters']['sessionKey'])) {
+                        $cleanNode['parameters']['sessionKey'] = "company_{$instance->company_id}_" . '={{ $json.message.chat_id }}';
                     }
                 }
+                
+                $cleanNodes[] = $cleanNode;
             }
 
+            // Crear workflow limpio
+            $cleanWorkflow = [
+                'name' => "WhatsApp Bot - {$companyName}",
+                'nodes' => $cleanNodes,
+                'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
+                'settings' => ['executionOrder' => 'v1'],
+            ];
+
             // Crear en n8n via API
-            $result = $this->n8nService->createWorkflow($templateWorkflow);
+            $result = $this->n8nService->createWorkflow($cleanWorkflow);
 
             if ($result['success']) {
                 $workflowId = $result['data']['id'] ?? null;
@@ -1111,6 +1144,25 @@ class EvolutionApiController extends Controller
                 // Activar workflow
                 if ($workflowId) {
                     $this->n8nService->activateWorkflow($workflowId);
+                }
+                
+                // 🎯 OPCIÓN B: Configurar webhook de Evolution API para que apunte DIRECTO a n8n
+                $evolutionWebhookResult = $this->evolutionApi->setWebhook(
+                    $instance->instance_name,
+                    $webhookUrl,
+                    ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
+                );
+                
+                if ($evolutionWebhookResult['success']) {
+                    Log::info('🔗 Webhook de Evolution configurado hacia n8n', [
+                        'instance' => $instance->instance_name,
+                        'n8n_webhook_url' => $webhookUrl
+                    ]);
+                } else {
+                    Log::warning('⚠️ No se pudo configurar webhook de Evolution hacia n8n', [
+                        'instance' => $instance->instance_name,
+                        'error' => $evolutionWebhookResult['error'] ?? 'Unknown'
+                    ]);
                 }
                 
                 // Guardar referencia en la base de datos
@@ -1122,7 +1174,7 @@ class EvolutionApiController extends Controller
                         'updated_at' => now()
                     ]);
 
-                Log::info('✅ Workflow de n8n creado exitosamente', [
+                Log::info('✅ Workflow de n8n creado y webhook configurado', [
                     'workflow_id' => $workflowId,
                     'webhook_url' => $webhookUrl,
                     'instance' => $instance->instance_name

@@ -23,11 +23,10 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Error parseando JSON del template'], 400);
         }
         
-        // Limpiar nodos primero
+        // Limpiar nodos
         $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
         $cleanNodes = [];
         foreach ($templateWorkflow['nodes'] ?? [] as $node) {
-            // Solo mantener propiedades esenciales de nodos
             $cleanNode = [
                 'parameters' => $node['parameters'] ?? [],
                 'type' => $node['type'],
@@ -37,14 +36,8 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 'name' => $node['name'],
             ];
             
-            // Incluir credentials si existen
             if (isset($node['credentials'])) {
                 $cleanNode['credentials'] = $node['credentials'];
-            }
-            
-            // Incluir webhookId si existe
-            if (isset($node['webhookId'])) {
-                $cleanNode['webhookId'] = $node['webhookId'];
             }
             
             if ($node['type'] === 'n8n-nodes-base.webhook') {
@@ -54,23 +47,23 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 }
             }
             
+            // 🔧 Simplificar prompt del AI Agent para evitar error 500 de n8n
+            if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
+                $cleanNode['parameters']['text'] = "Responde como asistente de {$instanceName}";
+                $cleanNode['parameters']['options'] = [
+                    'systemMessage' => "Eres MIA, asistente digital. Responde de forma profesional y amigable."
+                ];
+            }
+            
             $cleanNodes[] = $cleanNode;
         }
         
-        // 🧹 SOLO propiedades exactas que n8n API acepta
         $cleanWorkflow = [
             'name' => "WhatsApp Bot - {$instanceName}",
             'nodes' => $cleanNodes,
             'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
-            'settings' => $templateWorkflow['settings'] ?? new \stdClass(),
+            'settings' => ['executionOrder' => 'v1'],
         ];
-        
-        // Debug: log what we're sending
-        Log::info('🔍 Workflow to create', [
-            'keys' => array_keys($cleanWorkflow),
-            'nodes_count' => count($cleanNodes),
-            'first_node_keys' => !empty($cleanNodes) ? array_keys($cleanNodes[0]) : [],
-        ]);
         
         // Crear en n8n
         $result = $n8nService->createWorkflow($cleanWorkflow);
