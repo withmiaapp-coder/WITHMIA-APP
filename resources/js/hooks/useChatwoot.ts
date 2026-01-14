@@ -690,11 +690,25 @@ export const useConversations = () => {
         // 🚀 Si es loadMore, combinar con mensajes existentes (usar cache O conversación activa)
         if (loadMore) {
           const existingMessages = cached?.messages || activeConversationRef.current?.messages || [];
+          console.log('🔄 LoadMore combinar:', {
+            nuevos: uniqueMessages.length,
+            existentes: existingMessages.length,
+            nuevosIds: uniqueMessages.map((m: any) => m.id).slice(0, 5),
+            existentesIds: existingMessages.map((m: any) => m.id).slice(0, 5)
+          });
           if (existingMessages.length > 0) {
             const existingIds = new Set(existingMessages.map((m: any) => m.id));
             const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
+            console.log(`📜 Mensajes nuevos (no duplicados): ${newOlderMessages.length}`, newOlderMessages.map((m: any) => m.id));
             debugLog.log(`📜 LoadMore: ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes`);
             uniqueMessages = [...newOlderMessages, ...existingMessages];
+            // Re-ordenar por timestamp
+            uniqueMessages.sort((a: any, b: any) => {
+              const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
+              const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
+              return timeA - timeB;
+            });
+            console.log(`✅ Total mensajes después de combinar: ${uniqueMessages.length}`);
           }
         } else if (cached?.messages) {
           // ✅ FIX: Preservar mensajes optimistas/pendientes que aún no están en API
