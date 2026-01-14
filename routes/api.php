@@ -23,28 +23,29 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Error parseando JSON del template'], 400);
         }
         
-        // 🧹 LIMPIAR propiedades que n8n API no acepta
-        unset($templateWorkflow['id']);
-        unset($templateWorkflow['meta']);
-        unset($templateWorkflow['createdAt']);
-        unset($templateWorkflow['updatedAt']);
-        unset($templateWorkflow['versionId']);
-        unset($templateWorkflow['homeProject']);
-        unset($templateWorkflow['triggerCount']);
-        unset($templateWorkflow['scopes']);
-        unset($templateWorkflow['tags']);
-        unset($templateWorkflow['shared']);
-        unset($templateWorkflow['sharedWithProjects']);
+        // 🧹 SOLO mantener propiedades aceptadas por n8n API
+        $cleanWorkflow = [
+            'name' => "WhatsApp Bot - {$instanceName}",
+            'nodes' => $templateWorkflow['nodes'] ?? [],
+            'connections' => $templateWorkflow['connections'] ?? [],
+            'settings' => $templateWorkflow['settings'] ?? [],
+            'active' => false, // Crear inactivo, activar después
+        ];
         
-        $templateWorkflow['name'] = "WhatsApp Bot - {$instanceName}";
-        
+        // Limpiar nodos
         $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
-        
-        foreach ($templateWorkflow['nodes'] as &$node) {
-            // Limpiar propiedades de nodos
+        foreach ($cleanWorkflow['nodes'] as &$node) {
+            // Remover propiedades no necesarias de nodos
             unset($node['notesInFlow']);
             unset($node['alwaysOutputData']);
             unset($node['color']);
+            unset($node['notes']);
+            unset($node['continueOnFail']);
+            unset($node['onError']);
+            unset($node['retryOnFail']);
+            unset($node['maxTries']);
+            unset($node['waitBetweenTries']);
+            unset($node['executeOnce']);
             
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $node['webhookId'] = $newWebhookId;
@@ -55,7 +56,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         }
         
         // Crear en n8n
-        $result = $n8nService->createWorkflow($templateWorkflow);
+        $result = $n8nService->createWorkflow($cleanWorkflow);
         
         if ($result['success']) {
             $workflowId = $result['data']['id'] ?? null;
