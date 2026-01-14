@@ -144,6 +144,36 @@ export const useConversations = () => {
     return deduplicated;
   };
   
+  // 🆕 Helper: Construir last_message con soporte para attachments
+  const buildLastMessage = (conv: any) => {
+    const lastMsg = conv.last_non_activity_message;
+    const attachments = lastMsg?.attachments || [];
+    const content = lastMsg?.content || '';
+    
+    // Si no hay contenido pero hay attachments, generar preview del archivo
+    let displayContent = content;
+    if ((!content || content.trim() === '') && attachments.length > 0) {
+      const attachment = attachments[0];
+      const fileType = attachment.file_type || attachment.content_type || '';
+      const fileName = attachment.data_url?.split('/').pop() || attachment.file_name || 'archivo';
+      
+      if (fileType.startsWith('image/')) displayContent = '📷 Imagen';
+      else if (fileType.startsWith('video/')) displayContent = '🎥 Video';
+      else if (fileType.startsWith('audio/')) displayContent = '🎵 Audio';
+      else if (fileType.includes('pdf')) displayContent = '📄 PDF';
+      else displayContent = `📎 ${fileName}`;
+    } else if (!content || content.trim() === '') {
+      displayContent = 'Sin mensajes';
+    }
+    
+    return {
+      content: displayContent,
+      timestamp: conv.last_activity_at || conv.created_at,
+      sender: lastMsg?.message_type === 0 ? 'contact' : 'agent',
+      attachments: attachments
+    };
+  };
+  
   // ✅ NUEVO: Cache de conversaciones para merge inteligente
   const conversationsCache = useRef<Map<number, any>>(new Map());
   
@@ -260,11 +290,7 @@ export const useConversations = () => {
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
             status: conv.meta?.sender?.availability_status || 'offline'
           },
-          last_message: {
-            content: conv.last_non_activity_message?.content || 'Sin mensajes',
-            timestamp: conv.last_activity_at || conv.created_at,
-            sender: conv.last_non_activity_message?.message_type === 0 ? 'contact' : 'agent'
-          },
+          last_message: buildLastMessage(conv),
           status: conv.status,
           priority: conv.priority || 'medium',
           labels: conv.labels || [],
@@ -328,11 +354,7 @@ export const useConversations = () => {
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
               status: conv.meta?.sender?.availability_status || 'offline'
             },
-            last_message: {
-              content: conv.last_non_activity_message?.content || 'Sin mensajes',
-              timestamp: conv.last_activity_at || conv.created_at,
-              sender: conv.last_non_activity_message?.message_type === 0 ? 'contact' : 'agent'
-            },
+            last_message: buildLastMessage(conv),
             status: conv.status,
             priority: conv.priority || 'medium',
             labels: conv.labels || [],
@@ -407,11 +429,7 @@ export const useConversations = () => {
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
             status: conv.meta?.sender?.availability_status || 'offline'
           },
-          last_message: {
-            content: conv.last_non_activity_message?.content || 'Sin mensajes',
-            timestamp: conv.last_activity_at || conv.created_at,
-            sender: conv.last_non_activity_message?.message_type === 0 ? 'contact' : 'agent'
-          },
+          last_message: buildLastMessage(conv),
           status: conv.status,
           priority: conv.priority || 'medium',
           labels: conv.labels || [],
