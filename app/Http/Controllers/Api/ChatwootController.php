@@ -336,9 +336,8 @@ class ChatwootController extends Controller
             $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
             
             if ($cached) {
-                Log::debug('✅ Conversación servida desde Redis cache', [
+                Log::info('⚡ Conversación desde CACHÉ Redis', [
                     'conversation_id' => $id,
-                    'user_id' => $this->userId,
                     'cache_key' => $cacheKey
                 ]);
                 
