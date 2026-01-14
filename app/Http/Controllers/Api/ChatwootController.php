@@ -311,7 +311,7 @@ class ChatwootController extends Controller
     }
 
     /**
-     * Obtener una conversación específica por ID - CON VALIDACIÓN DE SEGURIDAD
+     * Obtener una conversación específica por ID - CON VALIDACIÓN DE SEGURIDAD Y CACHÉ REDIS
      */
     public function getConversation($id)
     {
@@ -329,7 +329,27 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // Obtener la conversación
+            // 🚀 CACHÉ: Intentar obtener desde Redis (TTL 30 segundos)
+            $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
+            $cacheTTL = 30; // 30 segundos - balance entre velocidad y frescura
+            
+            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            
+            if ($cached) {
+                Log::debug('✅ Conversación servida desde Redis cache', [
+                    'conversation_id' => $id,
+                    'user_id' => $this->userId,
+                    'cache_key' => $cacheKey
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'payload' => $cached,
+                    'cached' => true
+                ]);
+            }
+
+            // Obtener la conversación desde Chatwoot
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json'
@@ -365,15 +385,20 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            Log::info('Conversación obtenida exitosamente', [
+            // 🚀 CACHÉ: Guardar en Redis
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $conversation, $cacheTTL);
+
+            Log::info('Conversación obtenida desde Chatwoot y cacheada', [
                 'user_id' => $this->userId,
                 'conversation_id' => $id,
-                'unread_count' => $conversation['unread_count'] ?? 0
+                'unread_count' => $conversation['unread_count'] ?? 0,
+                'cache_ttl' => $cacheTTL
             ]);
 
             return response()->json([
                 'success' => true,
-                'payload' => $conversation
+                'payload' => $conversation,
+                'cached' => false
             ]);
 
         } catch (\Exception $e) {
@@ -651,7 +676,11 @@ class ChatwootController extends Controller
             ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/update_last_seen');
 
             if ($response->successful()) {
-                Log::info('Conversación marcada como leída', [
+                // 🚀 INVALIDAR CACHÉ: La conversación cambió (unread_count = 0)
+                $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
+                \Illuminate\Support\Facades\Cache::forget($cacheKey);
+                
+                Log::info('Conversación marcada como leída (caché invalidado)', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id
                 ]);
