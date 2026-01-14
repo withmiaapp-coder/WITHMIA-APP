@@ -771,42 +771,51 @@ const ConversationsInterface: React.FC = () => {
     }
   }, [activeConversation?.id]); // Solo cuando cambie la conversación activa
 
+  // 🔄 Ref para evitar cargas múltiples en infinite scroll
+  const isLoadingMoreRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
+
   // 🔄 Infinite scroll para cargar más mensajes al llegar al tope (usando scroll event)
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
     
-    let isLoadingMore = false;
-    
     const handleScroll = () => {
-      // Si el usuario está cerca del tope (menos de 100px del inicio)
-      const isNearTop = container.scrollTop < 100;
+      // Debounce: no cargar si ya cargamos hace menos de 2 segundos
+      const now = Date.now();
+      if (now - lastLoadTimeRef.current < 2000) return;
       
-      console.log('🔄 Scroll check:', {
-        scrollTop: container.scrollTop,
-        isNearTop,
-        hasMoreMessages: activeConversation?._hasMoreMessages,
-        isLoading: activeConversation?._isLoading,
-        isLoadingMore
-      });
+      // Si el usuario está cerca del tope (menos de 50px del inicio)
+      const isNearTop = container.scrollTop < 50;
       
-      if (isNearTop && activeConversation?._hasMoreMessages && !activeConversation?._isLoading && !isLoadingMore) {
+      if (isNearTop && 
+          activeConversation?._hasMoreMessages && 
+          !activeConversation?._isLoading && 
+          !isLoadingMoreRef.current) {
+        
         console.log('📜 Cargando más mensajes...');
-        isLoadingMore = true;
+        isLoadingMoreRef.current = true;
+        lastLoadTimeRef.current = now;
         
-        // Guardar posición actual del scroll
-        const scrollHeight = container.scrollHeight;
+        // Guardar altura actual antes de cargar
+        const prevScrollHeight = container.scrollHeight;
         
-        loadConversationMessages(activeConversation.id, true).then(() => {
-          // Mantener la posición relativa después de cargar
-          requestAnimationFrame(() => {
-            const newScrollHeight = container.scrollHeight;
-            container.scrollTop = newScrollHeight - scrollHeight;
-            isLoadingMore = false;
+        loadConversationMessages(activeConversation.id, true)
+          .then(() => {
+            // Esperar a que React renderice los nuevos mensajes
+            setTimeout(() => {
+              const newScrollHeight = container.scrollHeight;
+              const addedHeight = newScrollHeight - prevScrollHeight;
+              // Mover el scroll hacia abajo por la cantidad de contenido nuevo
+              if (addedHeight > 0) {
+                container.scrollTop = addedHeight + 50; // +50 para no re-disparar inmediatamente
+              }
+              isLoadingMoreRef.current = false;
+            }, 100);
+          })
+          .catch(() => {
+            isLoadingMoreRef.current = false;
           });
-        }).catch(() => {
-          isLoadingMore = false;
-        });
       }
     };
     
