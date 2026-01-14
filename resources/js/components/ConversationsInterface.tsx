@@ -4132,14 +4132,15 @@ const ConversationsInterface: React.FC = () => {
                                   ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                   : rawUrl;
                                 return (
-                                  <div key={idx} className="bg-gray-100 rounded-lg overflow-hidden">
+                                  <div key={idx} className="bg-black rounded-lg overflow-hidden">
                                     <video 
                                       src={proxyUrl}
                                       controls
-                                      className="w-full h-40 object-cover"
+                                      className="w-full aspect-video object-contain bg-black"
                                       preload="metadata"
+                                      poster=""
                                     />
-                                    <div className="p-2">
+                                    <div className="p-2 bg-gray-100">
                                       <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
                                       <p className="text-xs text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
                                     </div>
@@ -4351,9 +4352,9 @@ const ConversationsInterface: React.FC = () => {
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
                               return (
-                                <div key={idx} className="bg-gray-100 rounded-lg overflow-hidden">
-                                  <video src={proxyUrl} controls className="w-full h-40 object-cover" preload="metadata" />
-                                  <div className="p-2">
+                                <div key={idx} className="bg-black rounded-lg overflow-hidden">
+                                  <video src={proxyUrl} controls className="w-full aspect-video object-contain bg-black" preload="metadata" poster="" />
+                                  <div className="p-2 bg-gray-100">
                                     <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
                                   </div>
                                 </div>
