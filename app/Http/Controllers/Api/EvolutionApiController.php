@@ -628,10 +628,35 @@ class EvolutionApiController extends Controller
         // REENVIO A N8N (usando red interna de Railway)
         try {
             $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
-            if (!$instance) return response()->json(['status' => 'ok']);
+            
+            // 🚀 Si la instancia no existe en BD, crearla automáticamente
+            if (!$instance) {
+                Log::info('📝 Instancia no encontrada en BD, creándola automáticamente...', [
+                    'instance' => $instanceName,
+                    'event' => $event
+                ]);
+                
+                // Intentar obtener company_id del nombre de instancia (formato: with-mia-XXXX)
+                // Por defecto usamos company_id = 1 si no podemos determinarlo
+                $companyId = 1;
+                
+                DB::table('whatsapp_instances')->insert([
+                    'instance_name' => $instanceName,
+                    'company_id' => $companyId,
+                    'instance_url' => config('evolution.base_url', 'https://evolution-api-production-2adf.up.railway.app'),
+                    'is_active' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                Log::info('✅ Instancia creada en BD', ['instance' => $instanceName, 'company_id' => $companyId]);
+                
+                // Recargar instancia
+                $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+            }
             
             // 🚀 AUTO-CREAR WORKFLOW si la instancia no tiene uno (verificación lazy)
-            if (empty($instance->n8n_workflow_id)) {
+            if ($instance && empty($instance->n8n_workflow_id)) {
                 Log::info('🤖 Instancia sin workflow, creando automáticamente...', [
                     'instance' => $instanceName,
                     'event' => $event
