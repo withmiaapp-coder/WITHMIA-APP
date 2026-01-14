@@ -192,7 +192,23 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
 
 
   // Helper: Formatea preview del ultimo mensaje (con limpieza de formato)
-  const formatLastMessagePreview = (message) => {
+  const formatLastMessagePreview = (message, attachments?: any[]) => {
+    // 🆕 NUEVO: Si no hay contenido pero hay attachments, mostrar tipo de archivo
+    if ((!message || message.trim() === '') && attachments && attachments.length > 0) {
+      const attachment = attachments[0];
+      const fileType = attachment.file_type || attachment.content_type || '';
+      const fileName = attachment.data_url?.split('/').pop() || attachment.file_name || 'archivo';
+      
+      if (fileType.startsWith('image/')) return '📷 Imagen';
+      if (fileType.startsWith('video/')) return '🎥 Video';
+      if (fileType.startsWith('audio/')) return '🎵 Audio';
+      if (fileType.includes('pdf')) return '📄 PDF';
+      if (fileType.includes('document') || fileType.includes('word')) return '📄 Documento';
+      if (fileType.includes('sheet') || fileType.includes('excel')) return '📊 Hoja de cálculo';
+      
+      return `📎 ${fileName}`;
+    }
+    
     if (!message) return "";
     
     // Limpiar mensaje de formato markdown/HTML
@@ -217,18 +233,18 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
     if (imageExtensions.test(cleanMessage) || 
         cleanMessage.includes("active_storage") || 
         cleanMessage.includes("chatwoot-admin")) {
-      return " Imagen";
+      return "📷 Imagen";
     }
     
     // URL larga generica
     if (cleanMessage.startsWith("http") && cleanMessage.length > 50) {
-      return " Enlace";
+      return "🔗 Enlace";
     }
     
     // Multimedia
-    if (/\.(mp3|wav|ogg|m4a)$/i.test(cleanMessage)) return " Audio";
-    if (/\.(mp4|mov|avi|webm)$/i.test(cleanMessage)) return " Video";
-    if (/\.(pdf|doc|docx|xls|xlsx)$/i.test(cleanMessage)) return " Documento";
+    if (/\.(mp3|wav|ogg|m4a)$/i.test(cleanMessage)) return "🎵 Audio";
+    if (/\.(mp4|mov|avi|webm)$/i.test(cleanMessage)) return "🎥 Video";
+    if (/\.(pdf|doc|docx|xls|xlsx)$/i.test(cleanMessage)) return "📄 Documento";
     
     return cleanMessage;
   };
@@ -1070,6 +1086,34 @@ const ConversationsInterface: React.FC = () => {
         } catch (error) {
           console.error('❌ Error agregando mensaje al chat:', error);
         }
+      } else {
+        // 🆕 NUEVO: Si la conversación NO está activa, agregar mensaje al caché
+        // para que cuando el usuario abra esa conversación, el mensaje ya esté ahí
+        console.log('💾 Mensaje para conversación INACTIVA - agregando al caché:', conversationId);
+        
+        // Normalizar el mensaje
+        const rawMsgType = event.message?.message_type;
+        const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
+        const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
+        
+        const newMessage = {
+          id: event.message?.id || event.id || Date.now(),
+          content: event.message?.content || event.content || '',
+          message_type: normalizedMsgType,
+          created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
+          sender: normalizedSender,
+          attachments: event.message?.attachments || [],
+          source_id: event.message?.source_id || event.source_id || null,
+          content_type: event.message?.content_type || 'text',
+          private: event.message?.private || false,
+          status: event.message?.status || 'sent'
+        };
+        
+        // Agregar al caché aunque la conversación no esté activa
+        if (addMessageToCache && conversationId) {
+          addMessageToCache(conversationId, newMessage);
+          console.log('✅ Mensaje agregado al caché para conversación inactiva:', conversationId);
+        }
       }
     }
   });
@@ -1792,6 +1836,31 @@ const ConversationsInterface: React.FC = () => {
       _setActiveConversation({
         ...activeConversation,
         messages: newMessages
+      });
+      
+      // 🆕 NUEVO: También actualizar sidebar inmediatamente (UI optimista)
+      setConversations((prevConversations: any[]) => {
+        return prevConversations.map((conv: any) => {
+          if (conv.id === activeConversation.id) {
+            return {
+              ...conv,
+              last_message: {
+                content: `📎 ${file.name}`,
+                created_at: new Date().toISOString(),
+                timestamp: nowTimestamp,
+                message_type: 1,
+                sender: { name: 'Yo' }
+              },
+              updated_at: new Date().toISOString(),
+              last_activity_at: nowTimestamp
+            };
+          }
+          return conv;
+        }).sort((a: any, b: any) => {
+          const timeA = a.last_activity_at || a.timestamp || 0;
+          const timeB = b.last_activity_at || b.timestamp || 0;
+          return timeB - timeA;
+        });
       });
     }
     
@@ -3023,7 +3092,7 @@ const ConversationsInterface: React.FC = () => {
                           <span className="text-xs text-gray-500">{formatTimestamp(conversation.last_message.timestamp)}</span>
                         </div>
                         
-                        <p className="text-sm text-gray-600 truncate mb-2">{formatLastMessagePreview(conversation.last_message.content)}</p>
+                        <p className="text-sm text-gray-600 truncate mb-2">{formatLastMessagePreview(conversation.last_message.content, conversation.last_message.attachments)}</p>
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
