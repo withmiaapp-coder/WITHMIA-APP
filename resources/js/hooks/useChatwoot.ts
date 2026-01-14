@@ -701,6 +701,13 @@ export const useConversations = () => {
             const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
             console.log(`📜 Mensajes nuevos (no duplicados): ${newOlderMessages.length}`, newOlderMessages.map((m: any) => m.id));
             debugLog.log(`📜 LoadMore: ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes`);
+            
+            // ⚠️ Si no hay mensajes nuevos, significa que no hay más mensajes anteriores
+            if (newOlderMessages.length === 0) {
+              console.log('⚠️ No hay más mensajes anteriores - marcando hasMore=false');
+              meta.has_more = false;
+            }
+            
             uniqueMessages = [...newOlderMessages, ...existingMessages];
             // Re-ordenar por timestamp
             uniqueMessages.sort((a: any, b: any) => {

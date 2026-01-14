@@ -516,29 +516,47 @@ class ChatwootController extends Controller
             // 🔧 SIMPLIFICADO: Para loadMore, solo una llamada. Para inicial, múltiples si es necesario.
             if ($before) {
                 // LOAD MORE: Una sola llamada con before
-                $queryParams = ['before' => $before];
+                $queryParams = ['before' => (int)$before];
+                
+                $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages';
+                
+                Log::info('🚀 Llamando Chatwoot LoadMore', [
+                    'url' => $chatwootUrl,
+                    'params' => $queryParams
+                ]);
                 
                 $response = Http::timeout(8)->withHeaders([
                     'api_access_token' => $this->chatwootToken,
                     'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages', $queryParams);
+                ])->get($chatwootUrl, $queryParams);
                 
                 if ($response->successful()) {
                     $messagesData = $response->json();
                     $allMessages = $messagesData['payload'] ?? [];
                     
-                    // 🔍 DEBUG
+                    // 🔍 DEBUG DETALLADO
                     $msgIds = array_column($allMessages, 'id');
                     Log::info('📥 LoadMore - Respuesta de Chatwoot', [
                         'before_requested' => $before,
                         'messages_received' => count($allMessages),
                         'msg_ids_range' => $msgIds ? ['min' => min($msgIds), 'max' => max($msgIds)] : 'empty',
-                        'first_3_ids' => array_slice($msgIds, 0, 3)
+                        'all_ids' => $msgIds,
+                        'chatwoot_returned_before_correctly' => $msgIds ? (max($msgIds) < $before) : 'no_messages'
                     ]);
+                    
+                    // ⚠️ VERIFICAR: Si Chatwoot devuelve mensajes >= before, significa que no hay más antiguos
+                    if (!empty($msgIds) && min($msgIds) >= $before) {
+                        Log::warning('⚠️ Chatwoot no devolvió mensajes anteriores - posiblemente no hay más', [
+                            'requested_before' => $before,
+                            'received_min_id' => min($msgIds)
+                        ]);
+                        // Devolver vacío para indicar que no hay más mensajes
+                        $allMessages = [];
+                    }
                     
                     $lastBatchWasFull = count($allMessages) >= 20;
                 } else {
-                    Log::warning('❌ Error en LoadMore API Chatwoot', ['status' => $response->status()]);
+                    Log::warning('❌ Error en LoadMore API Chatwoot', ['status' => $response->status(), 'body' => $response->body()]);
                 }
             } else {
                 // CARGA INICIAL: Múltiples llamadas para obtener el límite deseado
