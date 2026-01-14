@@ -673,7 +673,14 @@ class ChatwootController extends Controller
                     'total' => $totalMessages,
                     'returned' => count($limitedMessages),
                     'has_more' => $hasMore,
-                    'oldest_id' => $oldestMessageId
+                    'oldest_id' => $oldestMessageId,
+                    // 🔍 DEBUG: Info sobre lo que Chatwoot devolvió
+                    '_debug' => [
+                        'before_requested' => $before,
+                        'chatwoot_returned_count' => $totalMessages,
+                        'chatwoot_min_id' => $totalMessages > 0 ? min(array_column($allMessages, 'id')) : null,
+                        'chatwoot_max_id' => $totalMessages > 0 ? max(array_column($allMessages, 'id')) : null,
+                    ]
                 ];
                 
                 // 🚀 Guardar mensajes en cache (solo si NO es loadMore para evitar cache de resultados parciales)

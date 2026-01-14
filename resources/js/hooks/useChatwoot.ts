@@ -626,7 +626,8 @@ export const useConversations = () => {
         messagesCount: result?.payload?.payload?.length || result?.payload?.length || 0,
         hasMore: result?.meta?.has_more,
         firstMsgId: (result?.payload?.payload || result?.payload)?.[0]?.id,
-        lastMsgId: (result?.payload?.payload || result?.payload)?.[(result?.payload?.payload || result?.payload)?.length - 1]?.id
+        lastMsgId: (result?.payload?.payload || result?.payload)?.[(result?.payload?.payload || result?.payload)?.length - 1]?.id,
+        _debug: result?.meta?._debug // Mostrar debug del backend
       });
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
