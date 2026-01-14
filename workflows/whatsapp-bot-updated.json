@@ -973,25 +973,6 @@
                   },
                   {
                       "parameters":  {
-                                         "modelName":  "embed-multilingual-v3.0"
-                                     },
-                      "type":  "@n8n/n8n-nodes-langchain.embeddingsCohere",
-                      "typeVersion":  1,
-                      "position":  [
-                                       2760,
-                                       900
-                                   ],
-                      "id":  "14b3f407-8671-4837-8290-c9fde4a52f90",
-                      "name":  "Embeddings Cohere",
-                      "credentials":  {
-                                          "cohereApi":  {
-                                                            "id":  "REPLACE_WITH_COHERE_CREDENTIAL_ID",
-                                                            "name":  "Cohere Account"
-                                                        }
-                                      }
-                  },
-                  {
-                      "parameters":  {
                                          "modelId":  {
                                                          "__rl":  true,
                                                          "value":  "gpt-4o-mini",
@@ -2126,17 +2107,6 @@
                                                                          ]
                                                                      ]
                                                      },
-                        "Embeddings Cohere":  {
-                                                  "ai_embedding":  [
-                                                                       [
-                                                                           {
-                                                                               "node":  "Herramienta ** Buscar **",
-                                                                               "type":  "ai_embedding",
-                                                                               "index":  0
-                                                                           }
-                                                                       ]
-                                                                   ]
-                                              },
                         "Humanizador":  {
                                             "ai_tool":  [
                                                             [
