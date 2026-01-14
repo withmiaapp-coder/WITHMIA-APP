@@ -1766,6 +1766,35 @@ const ConversationsInterface: React.FC = () => {
     setIsUploadingFile(true);
     setUploadProgress(file.name);
     
+    // 🚀 Crear mensaje optimista para mostrar inmediatamente en el chat
+    const tempId = `temp-file-${Date.now()}-${Math.random()}`;
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    const optimisticMessage = {
+      id: tempId,
+      content: `📎 ${file.name}`,
+      created_at: new Date().toISOString(),
+      timestamp: nowTimestamp,
+      message_type: 'outgoing',
+      sender: 'agent',
+      conversation_id: activeConversation.id,
+      status: 'sending',
+      _isOptimistic: true,
+      attachments: [{
+        file_type: file.type,
+        file_name: file.name,
+        data_url: URL.createObjectURL(file) // Para preview local
+      }]
+    };
+    
+    // Agregar mensaje optimista al chat inmediatamente
+    if (activeConversation.messages) {
+      const newMessages = [...activeConversation.messages, optimisticMessage];
+      _setActiveConversation({
+        ...activeConversation,
+        messages: newMessages
+      });
+    }
+    
     try {
       console.log('📤 Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
       
@@ -1806,16 +1835,62 @@ const ConversationsInterface: React.FC = () => {
       
       if (response.ok && data.success) {
         console.log('✅ Archivo enviado:', file.name);
-        // Refrescar la conversación para ver el mensaje
-        if (typeof fetchConversations === 'function') {
-          await fetchConversations();
-        }
+        
+        // Actualizar mensaje optimista a "sent"
+        _setActiveConversation(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages?.map(msg => 
+              msg.id === tempId 
+                ? { ...msg, status: 'sent', id: data.payload?.id || tempId }
+                : msg
+            ) || []
+          };
+        });
+        
+        // También actualizar sidebar
+        setConversations((prevConversations: any[]) => {
+          return prevConversations.map((conv: any) => {
+            if (conv.id === activeConversation.id) {
+              return {
+                ...conv,
+                last_message: {
+                  content: `📎 ${file.name}`,
+                  created_at: new Date().toISOString(),
+                  timestamp: nowTimestamp,
+                  message_type: 1,
+                  sender: { name: 'Yo' }
+                },
+                updated_at: new Date().toISOString(),
+                last_activity_at: nowTimestamp
+              };
+            }
+            return conv;
+          });
+        });
       } else {
         console.error('❌ Error del servidor:', data);
+        // Remover mensaje optimista si falló
+        _setActiveConversation(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages?.filter(msg => msg.id !== tempId) || []
+          };
+        });
         alert(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error('💥 Error enviando archivo:', error);
+      // Remover mensaje optimista si hubo error
+      _setActiveConversation(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          messages: prev.messages?.filter(msg => msg.id !== tempId) || []
+        };
+      });
       alert('Error de conexión al enviar archivo');
     } finally {
       setIsUploadingFile(false);
