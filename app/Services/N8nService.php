@@ -78,6 +78,13 @@ class N8nService
     public function createWorkflow(array $workflowData): array
     {
         try {
+            // Log what we're sending
+            Log::info('n8n createWorkflow request', [
+                'url' => "{$this->baseUrl}/api/v1/workflows",
+                'workflow_keys' => array_keys($workflowData),
+                'nodes_count' => count($workflowData['nodes'] ?? []),
+            ]);
+            
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
@@ -93,7 +100,8 @@ class N8nService
 
             Log::error('n8n createWorkflow error', [
                 'status' => $response->status(),
-                'body' => $response->body()
+                'body' => $response->body(),
+                'sent_json' => json_encode($workflowData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             ]);
 
             return ['success' => false, 'error' => 'Error al crear workflow'];

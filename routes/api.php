@@ -61,9 +61,16 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         $cleanWorkflow = [
             'name' => "WhatsApp Bot - {$instanceName}",
             'nodes' => $cleanNodes,
-            'connections' => $templateWorkflow['connections'] ?? (object)[],
-            'settings' => $templateWorkflow['settings'] ?? (object)[],
+            'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
+            'settings' => $templateWorkflow['settings'] ?? new \stdClass(),
         ];
+        
+        // Debug: log what we're sending
+        Log::info('🔍 Workflow to create', [
+            'keys' => array_keys($cleanWorkflow),
+            'nodes_count' => count($cleanNodes),
+            'first_node_keys' => !empty($cleanNodes) ? array_keys($cleanNodes[0]) : [],
+        ]);
         
         // Crear en n8n
         $result = $n8nService->createWorkflow($cleanWorkflow);
