@@ -1,8 +1,20 @@
 <?php
 /**
- * Proxy directo para imágenes de Chatwoot
- * Este archivo NO pasa por el routing de Laravel, evitando problemas de caché
+ * Proxy para archivos multimedia de Chatwoot (imágenes, videos, audio)
+ * Soporta Range requests para streaming de video
  */
+
+// Headers CORS permisivos
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Range, Accept-Ranges, Content-Range');
+header('Access-Control-Expose-Headers: Content-Range, Accept-Ranges, Content-Length');
+
+// Manejar preflight OPTIONS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
 
 // Obtener la URL del parámetro
 $url = $_GET['url'] ?? '';
@@ -26,23 +38,32 @@ if (!$host || strpos($host, 'chatwoot') === false || strpos($host, 'railway.app'
     exit;
 }
 
-// Configurar cURL para seguir redirecciones (Active Storage de Rails las usa)
+// Headers adicionales para la petición
+$headers = [
+    'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+];
+
+// Si hay Range header, pasarlo al servidor origen (importante para videos)
+if (isset($_SERVER['HTTP_RANGE'])) {
+    $headers[] = 'Range: ' . $_SERVER['HTTP_RANGE'];
+}
+
+// Configurar cURL para seguir redirecciones
 $ch = curl_init();
 curl_setopt_array($ch, [
     CURLOPT_URL => $url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_MAXREDIRS => 5,
-    CURLOPT_TIMEOUT => 15,
+    CURLOPT_TIMEOUT => 30, // Más tiempo para videos
     CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_HTTPHEADER => [
-        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    ]
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_HEADER => true // Incluir headers en respuesta
 ]);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+$headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 $error = curl_error($ch);
 curl_close($ch);
 
@@ -54,12 +75,34 @@ if ($error) {
     exit;
 }
 
-// Si el servidor devuelve error
+// Separar headers del body
+$responseHeaders = substr($response, 0, $headerSize);
+$body = substr($response, $headerSize);
+
+// Si el servidor devuelve error (excepto 206 Partial Content)
 if ($httpCode >= 400) {
     http_response_code($httpCode);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Archivo no disponible', 'status' => $httpCode]);
     exit;
+}
+
+// Parsear headers de respuesta importantes
+$contentType = 'application/octet-stream';
+$contentLength = null;
+$contentRange = null;
+$acceptRanges = null;
+
+foreach (explode("\r\n", $responseHeaders) as $line) {
+    if (stripos($line, 'Content-Type:') === 0) {
+        $contentType = trim(substr($line, 13));
+    } elseif (stripos($line, 'Content-Length:') === 0) {
+        $contentLength = trim(substr($line, 15));
+    } elseif (stripos($line, 'Content-Range:') === 0) {
+        $contentRange = trim(substr($line, 14));
+    } elseif (stripos($line, 'Accept-Ranges:') === 0) {
+        $acceptRanges = trim(substr($line, 14));
+    }
 }
 
 // Si es HTML, probablemente es un error
@@ -70,8 +113,19 @@ if (strpos($contentType, 'text/html') !== false) {
     exit;
 }
 
-// Éxito - devolver la imagen
-header('Content-Type: ' . ($contentType ?: 'application/octet-stream'));
-header('Cache-Control: public, max-age=86400'); // Cache por 24 horas
-header('Access-Control-Allow-Origin: *');
-echo $response;
+// Establecer código de respuesta (206 para partial content)
+http_response_code($httpCode);
+
+// Headers de respuesta
+header('Content-Type: ' . $contentType);
+header('Accept-Ranges: bytes');
+header('Cache-Control: public, max-age=86400');
+
+if ($contentLength) {
+    header('Content-Length: ' . $contentLength);
+}
+if ($contentRange) {
+    header('Content-Range: ' . $contentRange);
+}
+
+echo $body;

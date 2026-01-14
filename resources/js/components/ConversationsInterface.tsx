@@ -3301,35 +3301,36 @@ const ConversationsInterface: React.FC = () => {
                                     </div>
                                   </div>
                                 ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
-                                  /* 🎬 VIDEO: Miniatura estilo WhatsApp con gradient */
+                                  /* 🎬 VIDEO: Miniatura con primer frame real del video */
                                   <div 
-                                    className="relative rounded-lg overflow-hidden shadow-md max-w-[280px] cursor-pointer group"
+                                    className="relative rounded-lg overflow-hidden shadow-md max-w-[280px] cursor-pointer group bg-gray-900"
                                     onClick={() => openMediaViewer(attachmentUrl, 'video')}
-                                    style={{
-                                      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
-                                    }}
                                   >
-                                    {/* Video como thumbnail - #t=0.5 fuerza cargar frame del segundo 0.5 */}
+                                    {/* Video que captura el primer frame */}
                                     <video 
-                                      preload="metadata"
+                                      preload="auto"
                                       muted
                                       playsInline
-                                      className="w-full h-40 object-cover rounded-lg"
-                                      onLoadedData={(e) => {
-                                        // Intentar mostrar el primer frame
+                                      crossOrigin="anonymous"
+                                      className="w-full h-40 object-cover"
+                                      onLoadedMetadata={(e) => {
                                         const video = e.target as HTMLVideoElement;
+                                        // Ir al segundo 0.5 para obtener un frame visible
                                         video.currentTime = 0.5;
-                                        // Si carga, ocultar el fondo gradient
-                                        const container = video.parentElement;
-                                        if (container) container.style.background = 'transparent';
+                                      }}
+                                      onSeeked={(e) => {
+                                        // Cuando llegó al frame, asegurarse que se vea
+                                        const video = e.target as HTMLVideoElement;
+                                        video.style.opacity = '1';
                                       }}
                                       onError={(e) => {
-                                        // Si falla el video, mostrar placeholder visual
+                                        // Si falla, ocultar el video y mostrar el fallback
                                         const target = e.target as HTMLVideoElement;
                                         target.style.display = 'none';
                                       }}
+                                      style={{ opacity: 0.01 }} // Casi invisible hasta que cargue
                                     >
-                                      <source src={`${attachmentUrl}#t=0.5`} type={fileType || 'video/mp4'} />
+                                      <source src={attachmentUrl} type={fileType || 'video/mp4'} />
                                     </video>
                                     {/* Overlay con botón de play siempre visible */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
@@ -3341,10 +3342,6 @@ const ConversationsInterface: React.FC = () => {
                                     <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded text-white text-xs font-medium flex items-center gap-1">
                                       <Film className="w-3 h-3" />
                                       Video
-                                    </div>
-                                    {/* Decoración visual cuando no carga el video */}
-                                    <div className="absolute inset-0 flex items-end justify-start p-3 pointer-events-none opacity-50">
-                                      <div className="text-white/30 text-xs">▶ Click para reproducir</div>
                                     </div>
                                   </div>
                                 ) : fileType.includes('audio') ? (
