@@ -1698,16 +1698,25 @@ const ConversationsInterface: React.FC = () => {
   //  FASE 3 - HANDLERS PARA FUNCIONES AVANZADAS
 
   // 1 DRAG & DROP - Manejar archivos arrastrados
+  const dragCounter = useRef<number>(0); // Contador para manejar elementos hijos
+  
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    dragCounter.current--;
+    // Solo ocultar cuando salimos completamente del contenedor
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -1718,6 +1727,7 @@ const ConversationsInterface: React.FC = () => {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounter.current = 0; // Resetear contador
     setIsDragging(false);
     
     const files = Array.from(e.dataTransfer.files);
@@ -1734,6 +1744,13 @@ const ConversationsInterface: React.FC = () => {
   const handleSendAttachment = async (file: File) => {
     if (!activeConversation) return;
     
+    // Validar tamaño máximo (16MB para WhatsApp)
+    const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`El archivo es demasiado grande. Máximo 16MB.\nTamaño actual: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      return;
+    }
+    
     setIsUploadingFile(true);
     setUploadProgress(file.name);
     
@@ -1742,7 +1759,7 @@ const ConversationsInterface: React.FC = () => {
     formData.append('conversation_id', activeConversation.id.toString());
     
     try {
-      console.log('📤 Enviando archivo:', file.name, 'tipo:', file.type, 'tamaño:', file.size);
+      console.log('📤 Enviando archivo:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
       
       // Obtener CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -1767,7 +1784,7 @@ const ConversationsInterface: React.FC = () => {
         }
       } else {
         console.error('❌ Error del servidor:', data);
-        alert(`Error al enviar archivo: ${data.message || 'Error desconocido'}`);
+        alert(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error('💥 Error enviando archivo:', error);
@@ -3164,11 +3181,11 @@ const ConversationsInterface: React.FC = () => {
             >
               {/*  DRAG & DROP OVERLAY */}
               {isDragging && (
-                <div className="absolute inset-0 z-50 bg-blue-500/20 backdrop-blur-sm border-4 border-dashed border-blue-500 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <Upload className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-                    <p className="text-xl font-semibold text-blue-800">Suelta los archivos aqu??</p>
-                    <p className="text-sm text-blue-600 mt-2">Im?genes, documentos y m?s</p>
+                <div className="absolute inset-0 z-50 bg-blue-600/30 backdrop-blur-md border-4 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
+                  <div className="text-center bg-white/90 p-8 rounded-2xl shadow-2xl">
+                    <Upload className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-bounce" />
+                    <p className="text-2xl font-bold text-blue-800">Suelta los archivos aquí</p>
+                    <p className="text-sm text-blue-600 mt-2">Imágenes, videos, documentos (máx 16MB)</p>
                   </div>
                 </div>
               )}
