@@ -3320,20 +3320,31 @@ const ConversationsInterface: React.FC = () => {
                                     </div>
                                   </div>
                                 ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
-                                  /* 🎬 VIDEO: Thumbnail estilo WhatsApp con diseño visual atractivo */
+                                  /* 🎬 VIDEO: Thumbnail real generado por el servidor */
                                   <div 
                                     className="relative rounded-xl overflow-hidden shadow-lg max-w-[280px] h-40 cursor-pointer group"
                                     onClick={() => openMediaViewer(attachmentUrl, 'video')}
-                                    style={{
-                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
-                                    }}
                                   >
-                                    {/* Patrón decorativo de fondo */}
-                                    <div className="absolute inset-0 opacity-20">
-                                      <div className="absolute top-4 left-4 w-16 h-16 border-2 border-white/30 rounded-full"></div>
-                                      <div className="absolute bottom-4 right-4 w-24 h-24 border-2 border-white/20 rounded-full"></div>
-                                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-white/10 rounded-full"></div>
-                                    </div>
+                                    {/* Imagen del thumbnail generada por ffmpeg en el servidor */}
+                                    <img 
+                                      src={`/video-thumbnail.php?url=${encodeURIComponent(rawUrl)}`}
+                                      alt="Video thumbnail"
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        // Si falla, mostrar gradient de fallback
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const fallback = target.nextElementSibling as HTMLElement;
+                                        if (fallback) fallback.style.display = 'block';
+                                      }}
+                                    />
+                                    {/* Fallback gradient si no carga el thumbnail */}
+                                    <div 
+                                      className="absolute inset-0 hidden"
+                                      style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                      }}
+                                    ></div>
                                     
                                     {/* Overlay oscuro para contraste */}
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors"></div>
@@ -3341,7 +3352,7 @@ const ConversationsInterface: React.FC = () => {
                                     {/* Botón de play central */}
                                     <div className="absolute inset-0 flex items-center justify-center">
                                       <div className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform backdrop-blur-sm">
-                                        <Play className="w-8 h-8 text-purple-600 ml-1" fill="currentColor" />
+                                        <Play className="w-8 h-8 text-gray-800 ml-1" fill="currentColor" />
                                       </div>
                                     </div>
                                     
@@ -3349,11 +3360,6 @@ const ConversationsInterface: React.FC = () => {
                                     <div className="absolute bottom-3 right-3 px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full text-white text-xs font-medium flex items-center gap-1.5">
                                       <Film className="w-3.5 h-3.5" />
                                       <span>Video</span>
-                                    </div>
-                                    
-                                    {/* Texto de acción (esquina inferior izquierda) */}
-                                    <div className="absolute bottom-3 left-3 text-white/80 text-xs font-medium">
-                                      Toca para reproducir
                                     </div>
                                   </div>
                                 ) : fileType.includes('audio') ? (
