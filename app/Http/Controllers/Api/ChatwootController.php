@@ -594,12 +594,20 @@ class ChatwootController extends Controller
                 $allMessages = $messagesData['payload'] ?? [];
                 $totalMessages = count($allMessages);
                 
-                // Ordenar por ID descendente (más recientes primero) y tomar los últimos N
-                usort($allMessages, fn($a, $b) => $b['id'] - $a['id']);
-                $limitedMessages = array_slice($allMessages, 0, $limit);
-                
-                // Revertir para mostrar en orden cronológico (más antiguos primero)
-                $limitedMessages = array_reverse($limitedMessages);
+                // Si es loadMore (before está definido), queremos los mensajes más antiguos
+                // Si es carga inicial, queremos los más recientes
+                if ($before) {
+                    // LoadMore: ordenar por ID ascendente y tomar los más antiguos
+                    usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
+                    $limitedMessages = array_slice($allMessages, 0, $limit);
+                    // NO revertir - ya están en orden cronológico (antiguos primero)
+                } else {
+                    // Carga inicial: ordenar por ID descendente (más recientes primero) y tomar los últimos N
+                    usort($allMessages, fn($a, $b) => $b['id'] - $a['id']);
+                    $limitedMessages = array_slice($allMessages, 0, $limit);
+                    // Revertir para mostrar en orden cronológico (más antiguos primero)
+                    $limitedMessages = array_reverse($limitedMessages);
+                }
                 
                 $messagesData['payload'] = $limitedMessages;
                 // has_more es true si: obtuvimos más de lo que pedimos O el último batch estaba lleno
