@@ -23,13 +23,29 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Error parseando JSON del template'], 400);
         }
         
-        // Personalizar
+        // 🧹 LIMPIAR propiedades que n8n API no acepta
         unset($templateWorkflow['id']);
+        unset($templateWorkflow['meta']);
+        unset($templateWorkflow['createdAt']);
+        unset($templateWorkflow['updatedAt']);
+        unset($templateWorkflow['versionId']);
+        unset($templateWorkflow['homeProject']);
+        unset($templateWorkflow['triggerCount']);
+        unset($templateWorkflow['scopes']);
+        unset($templateWorkflow['tags']);
+        unset($templateWorkflow['shared']);
+        unset($templateWorkflow['sharedWithProjects']);
+        
         $templateWorkflow['name'] = "WhatsApp Bot - {$instanceName}";
         
         $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
         
         foreach ($templateWorkflow['nodes'] as &$node) {
+            // Limpiar propiedades de nodos
+            unset($node['notesInFlow']);
+            unset($node['alwaysOutputData']);
+            unset($node['color']);
+            
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $node['webhookId'] = $newWebhookId;
                 if (isset($node['parameters']['path'])) {
