@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { useRealtimeConversations } from '@/hooks/useRealtimeConversations';
 
 // ============================================================================
 // CONTEXTO GLOBAL DE NOTIFICACIONES (OPTIMIZADO)
-// Este contexto maneja notificaciones globales sin duplicar suscripciones WebSocket.
-// Las notificaciones se reciben via eventos de ventana desde ConversationsInterface.
+// Este contexto maneja notificaciones globales con suscripción WebSocket propia.
+// Funciona en TODAS las secciones del dashboard, no solo en Chats.
 // ============================================================================
 
 interface Notification {
@@ -368,6 +369,49 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       window.removeEventListener('newChatwootMessage', handleNewMessage as EventListener);
     };
   }, [addNotification]);
+
+  // 🌐 SUSCRIPCIÓN WEBSOCKET DIRECTA
+  // Esto asegura que recibas notificaciones en TODAS las secciones del dashboard,
+  // no solo cuando estás en la sección de Chats.
+  // La deduplicación se maneja en addNotification() (groupNotifications)
+  useRealtimeConversations({
+    inboxId,
+    enabled: settings.enabled && inboxId !== null,
+    onNewMessage: (event) => {
+      // Solo notificar mensajes INCOMING (no los que tú envías)
+      const messageType = event?.message?.message_type;
+      const isIncoming = messageType === 0 || messageType === 'incoming';
+      
+      if (!isIncoming) return;
+
+      console.log('🔔 [GLOBAL-WS] Nuevo mensaje recibido vía WebSocket:', event?.conversation_id);
+
+      // Extraer información del evento
+      const contactName = event?.conversation?.meta?.sender?.name || 
+                         event?.conversation?.contact?.name ||
+                         event?.sender?.name ||
+                         'Contacto';
+      const messageContent = event?.message?.content || event?.content || 'Nuevo mensaje';
+      const conversationId = event?.conversation?.id || event?.conversation_id;
+
+      if (conversationId) {
+        addNotification({
+          conversationId,
+          contactName,
+          message: messageContent.substring(0, 100),
+          priority: (event?.conversation?.unread_count || 0) > 3 ? 'high' : 'medium',
+          avatar: contactName.charAt(0).toUpperCase(),
+        });
+      }
+    },
+    onConversationUpdated: (event) => {
+      // Podemos usar esto para actualizar el estado si necesario
+      console.log('🔄 [GLOBAL-WS] Conversación actualizada:', event?.id);
+    },
+    onConnectionChange: (connected) => {
+      console.log(`🔌 [GLOBAL-WS] WebSocket ${connected ? 'conectado' : 'desconectado'}`);
+    },
+  });
 
   const value: GlobalNotificationContextType = {
     notifications,
