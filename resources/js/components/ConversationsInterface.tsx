@@ -402,6 +402,61 @@ const ConversationsInterface: React.FC = () => {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   
+  // 🎬 Estados para visor de media fullscreen con navegación (estilo WhatsApp)
+  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [mediaGallery, setMediaGallery] = useState<Array<{url: string, type: 'image' | 'video'}>>([]);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  
+  // 🎬 Helper: Abrir visor de media con galería completa de la conversación
+  const openMediaViewer = useCallback((clickedUrl: string, clickedType: 'image' | 'video') => {
+    // Recolectar todos los medias de los mensajes de la conversación activa
+    const allMedia: Array<{url: string, type: 'image' | 'video'}> = [];
+    
+    if (activeConversation?.messages) {
+      activeConversation.messages.forEach((msg: any) => {
+        if (msg.attachments) {
+          msg.attachments.forEach((att: any) => {
+            const rawUrl = att.file_url || att.data_url || att.url || '';
+            const fileType = att.file_type || att.content_type || '';
+            
+            if (!rawUrl) return;
+            
+            const attachmentUrl = rawUrl.includes('chatwoot') 
+              ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+              : rawUrl;
+            
+            if (fileType.includes('image')) {
+              allMedia.push({ url: attachmentUrl, type: 'image' });
+            } else if (fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl)) {
+              allMedia.push({ url: attachmentUrl, type: 'video' });
+            }
+          });
+        }
+      });
+    }
+    
+    // Si no encontramos medias, al menos agregar el clickeado
+    if (allMedia.length === 0) {
+      allMedia.push({ url: clickedUrl, type: clickedType });
+    }
+    
+    // Encontrar el índice del media clickeado
+    const clickedIndex = allMedia.findIndex(m => m.url === clickedUrl);
+    
+    setMediaGallery(allMedia);
+    setCurrentMediaIndex(clickedIndex >= 0 ? clickedIndex : 0);
+    setMediaViewerOpen(true);
+  }, [activeConversation?.messages]);
+  
+  // 🎬 Navegación de la galería
+  const goToPreviousMedia = useCallback(() => {
+    setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : mediaGallery.length - 1));
+  }, [mediaGallery.length]);
+  
+  const goToNextMedia = useCallback(() => {
+    setCurrentMediaIndex(prev => (prev < mediaGallery.length - 1 ? prev + 1 : 0));
+  }, [mediaGallery.length]);
+  
   // Estados para modal de descarga con progreso
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -3042,11 +3097,14 @@ const ConversationsInterface: React.FC = () => {
                               return (
                               <div key={idx}>
                                 {fileType.includes('image') ? (
-                                  <div className="relative">
+                                  <div 
+                                    className="relative cursor-pointer"
+                                    onClick={() => openMediaViewer(attachmentUrl, 'image')}
+                                  >
                                     <img 
                                       src={attachmentUrl} 
                                       alt="Imagen adjunta" 
-                                      className="max-w-full max-h-64 rounded-lg cursor-pointer shadow-md hover:shadow-lg transition-shadow"
+                                      className="max-w-full max-h-64 rounded-lg shadow-md hover:shadow-lg hover:brightness-95 transition-all"
                                       onError={(e) => {
                                         // Mostrar placeholder en lugar de ocultar
                                         const target = e.target as HTMLImageElement;
@@ -3054,7 +3112,7 @@ const ConversationsInterface: React.FC = () => {
                                         const placeholder = target.nextElementSibling as HTMLElement;
                                         if (placeholder) placeholder.style.display = 'flex';
                                       }}
-                                      title="Imagen adjunta"
+                                      title="Click para ver en grande"
                                     />
                                     {/* Placeholder para imagen no disponible */}
                                     <div 
@@ -3070,14 +3128,17 @@ const ConversationsInterface: React.FC = () => {
                                     </div>
                                   </div>
                                 ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
-                                  /* 🎬 VIDEO: Reproductor estilo WhatsApp */
-                                  <div className="relative rounded-lg overflow-hidden shadow-md bg-black max-w-sm">
+                                  /* 🎬 VIDEO: Miniatura con botón play - Click abre fullscreen estilo WhatsApp */
+                                  <div 
+                                    className="relative rounded-lg overflow-hidden shadow-md bg-black max-w-[280px] cursor-pointer group"
+                                    onClick={() => openMediaViewer(attachmentUrl, 'video')}
+                                  >
+                                    {/* Video como thumbnail (sin controles, muted) */}
                                     <video 
-                                      controls
                                       preload="metadata"
-                                      className="max-w-full max-h-72 rounded-lg"
+                                      muted
+                                      className="w-full h-40 object-cover rounded-lg"
                                       onError={(e) => {
-                                        // Mostrar placeholder si el video no carga
                                         const target = e.target as HTMLVideoElement;
                                         target.style.display = 'none';
                                         const placeholder = target.nextElementSibling as HTMLElement;
@@ -3085,26 +3146,25 @@ const ConversationsInterface: React.FC = () => {
                                       }}
                                     >
                                       <source src={attachmentUrl} type={fileType || 'video/mp4'} />
-                                      Tu navegador no soporta el elemento de video.
                                     </video>
+                                    {/* Overlay con botón de play */}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                                      <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                        <Play className="w-7 h-7 text-gray-800 ml-1" fill="currentColor" />
+                                      </div>
+                                    </div>
+                                    {/* Indicador de duración (esquina inferior derecha) */}
+                                    <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 rounded text-white text-xs font-medium">
+                                      Video
+                                    </div>
                                     {/* Placeholder para video no disponible */}
                                     <div 
                                       className="hidden items-center justify-center bg-gray-800 rounded-lg p-6 min-w-[200px] min-h-[120px]"
                                       style={{ display: 'none' }}
                                     >
                                       <div className="text-center text-gray-400">
-                                        <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
+                                        <Film className="w-10 h-10 mx-auto mb-2" />
                                         <span className="text-xs">Video no disponible</span>
-                                        <a 
-                                          href={attachmentUrl} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="block mt-2 text-blue-400 hover:text-blue-300 text-xs underline"
-                                        >
-                                          Descargar video
-                                        </a>
                                       </div>
                                     </div>
                                   </div>
@@ -3915,6 +3975,134 @@ const ConversationsInterface: React.FC = () => {
         }}
         onClose={() => setShowAdvancedFilters(false)}
       />
+
+      {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo WhatsApp */}
+      {mediaViewerOpen && mediaGallery.length > 0 && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+          onClick={() => setMediaViewerOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') goToPreviousMedia();
+            if (e.key === 'ArrowRight') goToNextMedia();
+            if (e.key === 'Escape') setMediaViewerOpen(false);
+          }}
+          tabIndex={0}
+        >
+          {/* Header con contador y botón de cerrar */}
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10">
+            <div className="text-white flex items-center space-x-3">
+              <span className="text-sm font-medium">
+                {mediaGallery[currentMediaIndex]?.type === 'video' ? '🎬 Video' : '🖼️ Imagen'}
+              </span>
+              {mediaGallery.length > 1 && (
+                <span className="text-xs text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                  {currentMediaIndex + 1} / {mediaGallery.length}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
+
+          {/* Flecha Izquierda */}
+          {mediaGallery.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToPreviousMedia(); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+            >
+              <ChevronUp className="w-8 h-8 rotate-[-90deg]" />
+            </button>
+          )}
+
+          {/* Flecha Derecha */}
+          {mediaGallery.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToNextMedia(); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all hover:scale-110"
+            >
+              <ChevronDown className="w-8 h-8 rotate-[-90deg]" />
+            </button>
+          )}
+
+          {/* Contenido del media */}
+          <div 
+            className="max-w-[90vw] max-h-[80vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {mediaGallery[currentMediaIndex]?.type === 'video' ? (
+              <video 
+                key={currentMediaIndex}
+                controls
+                autoPlay
+                className="max-w-full max-h-[80vh] rounded-lg"
+                style={{ outline: 'none' }}
+              >
+                <source src={mediaGallery[currentMediaIndex]?.url} type="video/mp4" />
+                Tu navegador no soporta el elemento de video.
+              </video>
+            ) : (
+              <img 
+                key={currentMediaIndex}
+                src={mediaGallery[currentMediaIndex]?.url} 
+                alt={`Media ${currentMediaIndex + 1}`}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg select-none"
+                draggable={false}
+              />
+            )}
+          </div>
+
+          {/* Footer con descargar y miniaturas */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+            {/* Miniaturas de navegación (si hay más de 1) */}
+            {mediaGallery.length > 1 && (
+              <div className="flex justify-center space-x-2 mb-3 overflow-x-auto py-2">
+                {mediaGallery.map((media, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); }}
+                    className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                      idx === currentMediaIndex 
+                        ? 'border-white scale-110' 
+                        : 'border-transparent opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    {media.type === 'video' ? (
+                      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                        <Play className="w-4 h-4 text-white" />
+                      </div>
+                    ) : (
+                      <img 
+                        src={media.url} 
+                        alt={`Thumbnail ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Botón de descargar */}
+            <div className="flex justify-center">
+              <a
+                href={mediaGallery[currentMediaIndex]?.url}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white text-sm transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-4 h-4" />
+                <span>Descargar</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
