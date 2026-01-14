@@ -3069,6 +3069,45 @@ const ConversationsInterface: React.FC = () => {
                                       </div>
                                     </div>
                                   </div>
+                                ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
+                                  /* 🎬 VIDEO: Reproductor estilo WhatsApp */
+                                  <div className="relative rounded-lg overflow-hidden shadow-md bg-black max-w-sm">
+                                    <video 
+                                      controls
+                                      preload="metadata"
+                                      className="max-w-full max-h-72 rounded-lg"
+                                      onError={(e) => {
+                                        // Mostrar placeholder si el video no carga
+                                        const target = e.target as HTMLVideoElement;
+                                        target.style.display = 'none';
+                                        const placeholder = target.nextElementSibling as HTMLElement;
+                                        if (placeholder) placeholder.style.display = 'flex';
+                                      }}
+                                    >
+                                      <source src={attachmentUrl} type={fileType || 'video/mp4'} />
+                                      Tu navegador no soporta el elemento de video.
+                                    </video>
+                                    {/* Placeholder para video no disponible */}
+                                    <div 
+                                      className="hidden items-center justify-center bg-gray-800 rounded-lg p-6 min-w-[200px] min-h-[120px]"
+                                      style={{ display: 'none' }}
+                                    >
+                                      <div className="text-center text-gray-400">
+                                        <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-xs">Video no disponible</span>
+                                        <a 
+                                          href={attachmentUrl} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="block mt-2 text-blue-400 hover:text-blue-300 text-xs underline"
+                                        >
+                                          Descargar video
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
                                 ) : fileType.includes('audio') ? (
                                   <div className="bg-white/40 p-2 rounded-lg">
                                     <audio controls className="w-full max-w-xs">
