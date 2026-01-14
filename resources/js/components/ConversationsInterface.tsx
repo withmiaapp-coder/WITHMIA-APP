@@ -408,7 +408,7 @@ const ConversationsInterface: React.FC = () => {
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [mediaZoom, setMediaZoom] = useState(1); // 🔍 Zoom level (1 = 100%)
   const [mediaPan, setMediaPan] = useState({ x: 0, y: 0 }); // 🖱️ Pan position
-  const [isDragging, setIsDragging] = useState(false); // 🖱️ Dragging state
+  const [isMediaDragging, setIsMediaDragging] = useState(false); // 🖱️ Dragging state for media viewer
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 🖱️ Drag start position
   
   // 🎬 Helper: Abrir visor de media con galería completa de la conversación
@@ -484,23 +484,23 @@ const ConversationsInterface: React.FC = () => {
   const handleMediaMouseDown = useCallback((e: React.MouseEvent) => {
     if (mediaZoom > 1) {
       e.preventDefault();
-      setIsDragging(true);
+      setIsMediaDragging(true);
       setDragStart({ x: e.clientX - mediaPan.x, y: e.clientY - mediaPan.y });
     }
   }, [mediaZoom, mediaPan]);
   
   const handleMediaMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging && mediaZoom > 1) {
+    if (isMediaDragging && mediaZoom > 1) {
       e.preventDefault();
       setMediaPan({
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
       });
     }
-  }, [isDragging, mediaZoom, dragStart]);
+  }, [isMediaDragging, mediaZoom, dragStart]);
   
   const handleMediaMouseUp = useCallback(() => {
-    setIsDragging(false);
+    setIsMediaDragging(false);
   }, []);
   
   // Estados para modal de descarga con progreso
@@ -4255,7 +4255,7 @@ const ConversationsInterface: React.FC = () => {
               onMouseUp={handleMediaMouseUp}
               onMouseLeave={handleMediaMouseUp}
               style={{ 
-                cursor: isDragging ? 'grabbing' : (mediaZoom > 1 ? 'grab' : 'zoom-in'),
+                cursor: isMediaDragging ? 'grabbing' : (mediaZoom > 1 ? 'grab' : 'zoom-in'),
                 userSelect: 'none'
               }}
             >
@@ -4278,7 +4278,7 @@ const ConversationsInterface: React.FC = () => {
                   className="max-w-[85vw] max-h-[70vh] object-contain rounded-lg shadow-xl select-none"
                   style={{ 
                     transform: `scale(${mediaZoom}) translate(${mediaPan.x / mediaZoom}px, ${mediaPan.y / mediaZoom}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                    transition: isMediaDragging ? 'none' : 'transform 0.15s ease-out',
                     pointerEvents: 'none' // Evitar que la imagen interfiera con el drag
                   }}
                   draggable={false}
