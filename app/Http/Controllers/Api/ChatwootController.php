@@ -421,8 +421,8 @@ class ChatwootController extends Controller
     public function getConversationMessages($id, Request $request = null)
     {
         try {
-            // 🚀 PAGINACIÓN: Límite de mensajes (default 50, max 200)
-            $limit = min((int)($request?->query('limit', 50) ?? 50), 200);
+            // 🚀 PAGINACIÓN: Límite de mensajes (default 20, max 100 para no saturar)
+            $limit = min((int)($request?->query('limit', 20) ?? 20), 100);
             $before = $request?->query('before'); // ID del mensaje más antiguo para cargar más
             
             // SEGURIDAD: Validar que el usuario tenga inbox asignado

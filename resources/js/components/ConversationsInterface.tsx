@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import * as XLSX from 'xlsx';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from 'axios';
@@ -3554,16 +3554,25 @@ const ConversationsInterface: React.FC = () => {
               {/* � Trigger invisible para infinite scroll (carga más mensajes al llegar al tope) */}
               <div 
                 ref={loadMoreTriggerRef} 
-                className="h-1 w-full"
+                className="h-4 w-full"
                 aria-hidden="true"
               />
               
               {/* Indicador de carga de mensajes anteriores */}
-              {activeConversation?._isLoading && filteredMessages.length > 0 && (
-                <div className="flex justify-center py-2">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+              {activeConversation?._isLoading && (
+                <div className="flex justify-center py-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-full">
                     <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    <span>Cargando mensajes...</span>
+                    <span>Cargando mensajes anteriores...</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Indicador de que hay más mensajes por cargar */}
+              {activeConversation?._hasMoreMessages && !activeConversation?._isLoading && filteredMessages.length > 0 && (
+                <div className="flex justify-center py-2">
+                  <div className="text-xs text-gray-400 italic">
+                    ↑ Scroll arriba para cargar más
                   </div>
                 </div>
               )}
@@ -5043,3 +5052,7 @@ const ConversationsInterface: React.FC = () => {
 };
 
 export default ConversationsInterface;
+
+
+
+

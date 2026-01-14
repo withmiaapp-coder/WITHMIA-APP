@@ -596,8 +596,8 @@ export const useConversations = () => {
     }
     
     try {
-      // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo
-      let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=50`;
+      // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo (20 mensajes para no saturar)
+      let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=20`;
       if (loadMore && cached?.messages?.length > 0) {
         const oldestId = cached.messages[0]?.id;
         if (oldestId) {
@@ -770,7 +770,7 @@ export const useConversations = () => {
         // Cargar en background con delay para no saturar
         setTimeout(() => {
           debugLog.log(`🔮 Prefetching mensajes para conversación ${conv.id}`);
-          apiCall(`/api/chatwoot-proxy/conversations/${conv.id}/messages?limit=50`)
+          apiCall(`/api/chatwoot-proxy/conversations/${conv.id}/messages?limit=20`)
             .then(result => {
               const messagesArray = result?.payload?.payload || result?.payload || [];
               if (Array.isArray(messagesArray)) {
