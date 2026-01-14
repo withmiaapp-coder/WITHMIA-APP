@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
+use App\Services\N8nService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -17,10 +18,12 @@ use App\Events\WhatsAppStatusChanged;
 class EvolutionApiController extends Controller
 {
     private EvolutionApiService $evolutionApi;
+    private N8nService $n8nService;
 
-    public function __construct(EvolutionApiService $evolutionApi)
+    public function __construct(EvolutionApiService $evolutionApi, N8nService $n8nService)
     {
         $this->evolutionApi = $evolutionApi;
+        $this->n8nService = $n8nService;
     }
 
     /**
@@ -618,14 +621,21 @@ class EvolutionApiController extends Controller
             'data' => $data
         ]);
 
-        // REENVIO A N8N
+        // REENVIO A N8N (usando red interna de Railway)
         try {
             $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             if (!$instance) return response()->json(['status' => 'ok']);
-            $n8nUrl="http://172.17.0.3:5678/webhook/whatsapp-user-{$instance->company_id}";
-            Log::info('Reenviando a n8n',['url'=>$n8nUrl]);
-            Http::timeout(5)->post($n8nUrl,$request->all());
-        } catch (\Exception $e) { Log::error('Error n8n',['e'=>$e->getMessage()]); }
+            
+            // Usar el webhook específico de la instancia o el webhook por defecto
+            $webhookPath = $instance->n8n_webhook_url 
+                ? basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH))
+                : "whatsapp-{$instanceName}";
+            
+            $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
+            Log::info('Reenviando a n8n', ['webhook' => $webhookPath, 'success' => $result['success']]);
+        } catch (\Exception $e) { 
+            Log::warning('Error n8n (non-blocking)', ['e' => $e->getMessage()]); 
+        }
 
 
         try {
@@ -962,6 +972,11 @@ class EvolutionApiController extends Controller
             if ($instance) {
                 $companySlug = $instance->company_slug ?? $instance->company_id;
                 
+                // 🚀 CREAR WORKFLOW EN N8N cuando se conecta WhatsApp por primera vez
+                if (($state === 'open' || $state === 'connected') && empty($instance->n8n_workflow_id)) {
+                    $this->createN8nWorkflowForInstance($instance);
+                }
+                
                 // Disparar evento de WhatsApp con el company_slug correcto
                 broadcast(new WhatsAppStatusChanged(
                     $companySlug,
@@ -990,6 +1005,98 @@ class EvolutionApiController extends Controller
             Log::error('Error broadcasting connection event', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
+            ]);
+        }
+    }
+
+    /**
+     * Crear workflow de n8n para una instancia de WhatsApp
+     */
+    private function createN8nWorkflowForInstance($instance): void
+    {
+        try {
+            // Obtener información de la empresa
+            $company = DB::table('companies')->where('id', $instance->company_id)->first();
+            $companyName = $company->name ?? $instance->company_slug ?? "Company {$instance->company_id}";
+
+            Log::info('🤖 Creando workflow de n8n para instancia', [
+                'instance' => $instance->instance_name,
+                'company_id' => $instance->company_id,
+                'company_name' => $companyName
+            ]);
+
+            // Cargar template del workflow
+            $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+            
+            if (!file_exists($templatePath)) {
+                Log::warning('Template de workflow no encontrado, saltando creación automática');
+                return;
+            }
+
+            $templateWorkflow = json_decode(file_get_contents($templatePath), true);
+            
+            if (!$templateWorkflow) {
+                Log::warning('Error parseando template de workflow');
+                return;
+            }
+
+            // Personalizar workflow
+            unset($templateWorkflow['id']);
+            $templateWorkflow['name'] = "WhatsApp Bot - {$companyName}";
+            
+            $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+            
+            foreach ($templateWorkflow['nodes'] as &$node) {
+                if ($node['type'] === 'n8n-nodes-base.webhook') {
+                    $node['webhookId'] = $newWebhookId;
+                    if (isset($node['parameters']['path'])) {
+                        $node['parameters']['path'] = "whatsapp-{$instance->instance_name}";
+                    }
+                }
+                
+                if ($node['type'] === '@n8n/n8n-nodes-langchain.memoryBufferWindow') {
+                    if (isset($node['parameters']['sessionKey'])) {
+                        $node['parameters']['sessionKey'] = "company_{$instance->company_id}_" . '={{ $json.message.chat_id }}';
+                    }
+                }
+            }
+
+            // Crear en n8n via API
+            $result = $this->n8nService->createWorkflow($templateWorkflow);
+
+            if ($result['success']) {
+                $workflowId = $result['data']['id'] ?? null;
+                $webhookUrl = $this->n8nService->getWebhookUrl($instance->instance_name);
+                
+                // Activar workflow
+                if ($workflowId) {
+                    $this->n8nService->activateWorkflow($workflowId);
+                }
+                
+                // Guardar referencia en la base de datos
+                DB::table('whatsapp_instances')
+                    ->where('id', $instance->id)
+                    ->update([
+                        'n8n_workflow_id' => $workflowId,
+                        'n8n_webhook_url' => $webhookUrl,
+                        'updated_at' => now()
+                    ]);
+
+                Log::info('✅ Workflow de n8n creado exitosamente', [
+                    'workflow_id' => $workflowId,
+                    'webhook_url' => $webhookUrl,
+                    'instance' => $instance->instance_name
+                ]);
+            } else {
+                Log::warning('No se pudo crear workflow en n8n', [
+                    'error' => $result['error'] ?? 'Unknown',
+                    'instance' => $instance->instance_name
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error creando workflow de n8n', [
+                'error' => $e->getMessage(),
+                'instance' => $instance->instance_name
             ]);
         }
     }

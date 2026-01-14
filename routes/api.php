@@ -375,5 +375,10 @@ Route::middleware(['web', 'auth'])->group(function () {
 });
 
 // N8n Workflow Management
-Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany'])->middleware('auth:sanctum');
-Route::get('/workflows/company-list', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'listCompanyWorkflows'])->middleware('auth:sanctum');
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
+    Route::get('/workflows/company-list', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'listCompanyWorkflows']);
+    Route::get('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'getCompanyWorkflow']);
+    Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
+    Route::post('/workflows/company/{companyId}/toggle', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'toggleWorkflow']);
+});
