@@ -1065,19 +1065,32 @@ class EvolutionApiController extends Controller
                 'company_name' => $companyName
             ]);
 
-            // Cargar template del workflow
+            // Intentar cargar template del archivo
             $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+            $templateWorkflow = null;
             
-            if (!file_exists($templatePath)) {
-                Log::warning('Template de workflow no encontrado, saltando creación automática');
-                return;
+            if (file_exists($templatePath)) {
+                $content = file_get_contents($templatePath);
+                // Limpiar BOM y caracteres invisibles
+                $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+                $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+                
+                $templateWorkflow = json_decode($content, true);
+                
+                if (!$templateWorkflow) {
+                    Log::warning('Error parseando template de workflow desde archivo', [
+                        'json_error' => json_last_error_msg(),
+                        'file_size' => strlen($content)
+                    ]);
+                }
+            } else {
+                Log::warning('Template de workflow no encontrado en disco');
             }
-
-            $templateWorkflow = json_decode(file_get_contents($templatePath), true);
             
+            // Si falla el template del archivo, usar workflow minimalista embebido
             if (!$templateWorkflow) {
-                Log::warning('Error parseando template de workflow');
-                return;
+                Log::info('🔧 Usando workflow minimalista embebido');
+                $templateWorkflow = $this->getMinimalWorkflowTemplate($companyName, $instance->instance_name);
             }
 
             // Limpiar y personalizar nodos
@@ -1232,5 +1245,92 @@ class EvolutionApiController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Genera un workflow minimalista embebido cuando el template JSON falla
+     */
+    private function getMinimalWorkflowTemplate(string $companyName, string $instanceName): array
+    {
+        $webhookPath = "whatsapp-{$instanceName}";
+        
+        return [
+            'name' => "WhatsApp Bot - {$companyName}",
+            'nodes' => [
+                [
+                    'parameters' => [
+                        'path' => $webhookPath,
+                        'httpMethod' => 'POST',
+                        'responseMode' => 'onReceived',
+                        'responseData' => 'allEntries'
+                    ],
+                    'type' => 'n8n-nodes-base.webhook',
+                    'typeVersion' => 2,
+                    'position' => [0, 0],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'Webhook WhatsApp',
+                    'webhookId' => \Illuminate\Support\Str::uuid()->toString()
+                ],
+                [
+                    'parameters' => [
+                        'promptType' => 'define',
+                        'text' => "Responde como asistente de {$companyName}",
+                        'options' => [
+                            'systemMessage' => "Eres MIA, asistente digital de {$companyName}. Responde de forma profesional y amigable."
+                        ]
+                    ],
+                    'type' => '@n8n/n8n-nodes-langchain.agent',
+                    'typeVersion' => 2,
+                    'position' => [300, 0],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'AI Agent'
+                ],
+                [
+                    'parameters' => [
+                        'model' => [
+                            '__rl' => true,
+                            'value' => 'gpt-4.1-mini',
+                            'mode' => 'list'
+                        ],
+                        'options' => []
+                    ],
+                    'type' => '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+                    'typeVersion' => 1.2,
+                    'position' => [300, -200],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'OpenAI Chat Model',
+                    'credentials' => [
+                        'openAiApi' => [
+                            'id' => 'BllBLDmfNrTO004D',
+                            'name' => 'OpenAI Account'
+                        ]
+                    ]
+                ],
+                [
+                    'parameters' => [
+                        'sessionIdType' => 'customKey',
+                        'sessionKey' => "company_{$instanceName}_" . '={{ $json.message.chat_id }}',
+                        'contextWindowLength' => 10
+                    ],
+                    'type' => '@n8n/n8n-nodes-langchain.memoryBufferWindow',
+                    'typeVersion' => 1.3,
+                    'position' => [500, -200],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'Window Buffer Memory'
+                ]
+            ],
+            'connections' => [
+                'Webhook WhatsApp' => [
+                    'main' => [[['node' => 'AI Agent', 'type' => 'main', 'index' => 0]]]
+                ],
+                'OpenAI Chat Model' => [
+                    'ai_languageModel' => [[['node' => 'AI Agent', 'type' => 'ai_languageModel', 'index' => 0]]]
+                ],
+                'Window Buffer Memory' => [
+                    'ai_memory' => [[['node' => 'AI Agent', 'type' => 'ai_memory', 'index' => 0]]]
+                ]
+            ],
+            'settings' => ['executionOrder' => 'v1']
+        ];
     }
 }
