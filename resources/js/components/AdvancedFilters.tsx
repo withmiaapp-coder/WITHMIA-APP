@@ -183,10 +183,10 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-white border-b-2 border-pink-400">
+        <div className="p-4 border-b border-gray-300 bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg">
+              <div className="p-2 bg-gray-900 rounded-lg">
                 <Filter className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -200,7 +200,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/80 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -218,7 +218,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 className="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
               >
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-pink-500" />
+                  <Calendar className="w-5 h-5 text-gray-600" />
                   <span className="font-semibold text-gray-900">Rango de Fechas</span>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedSections.date ? 'rotate-180' : ''}`} />
@@ -232,7 +232,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                         type="radio"
                         checked={filters.dateRange === range}
                         onChange={() => handleDateRangeChange(range)}
-                        className="w-4 h-4 text-pink-600"
+                        className="w-4 h-4 text-gray-900"
                       />
                       <span className="text-gray-700">
                         {range === 'all' && 'Todas las fechas'}
@@ -252,7 +252,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                           type="date"
                           value={filters.customDateFrom || ''}
                           onChange={(e) => setFilters(prev => ({ ...prev, customDateFrom: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                         />
                       </div>
                       <div>
@@ -261,7 +261,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                           type="date"
                           value={filters.customDateTo || ''}
                           onChange={(e) => setFilters(prev => ({ ...prev, customDateTo: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                         />
                       </div>
                     </div>
@@ -278,10 +278,10 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   className="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
-                    <Tag className="w-5 h-5 text-pink-500" />
+                    <Tag className="w-5 h-5 text-gray-600" />
                     <span className="font-semibold text-gray-900">Etiquetas</span>
                     {filters.labels.length > 0 && (
-                      <span className="px-2 py-0.5 bg-pink-50 text-pink-700 text-xs font-medium rounded-full">
+                      <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-full">
                         {filters.labels.length}
                       </span>
                     )}
@@ -297,7 +297,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                           type="checkbox"
                           checked={filters.labels.includes(label)}
                           onChange={() => toggleLabel(label)}
-                          className="w-4 h-4 text-pink-600 rounded"
+                          className="w-4 h-4 text-gray-900 rounded"
                         />
                         <span className="text-gray-700">#{label}</span>
                       </label>
@@ -313,7 +313,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-900 flex items-center">
-                  <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                  <Star className="w-4 h-4 mr-2 text-gray-500" />
                   Filtros Guardados
                 </h3>
               </div>
@@ -327,21 +327,21 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   {savedFilters.map((filter) => (
                     <div
                       key={filter.id}
-                      className="p-3 bg-white border border-gray-200 rounded-lg hover:border-pink-300 transition-colors"
+                      className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-400 transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <button
                           onClick={() => handleLoadFilter(filter)}
-                          className="flex-1 text-left font-medium text-gray-900 hover:text-pink-600 transition-colors"
+                          className="flex-1 text-left font-medium text-gray-900 hover:text-gray-600 transition-colors"
                         >
                           {filter.name}
                         </button>
                         <button
                           onClick={() => handleDeleteFilter(filter.id)}
-                          className="p-1 hover:bg-red-50 rounded transition-colors"
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
                           title="Eliminar"
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Trash2 className="w-4 h-4 text-gray-500" />
                         </button>
                       </div>
                       <div className="text-xs text-gray-500 space-y-1">
@@ -363,26 +363,26 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
             <button
               onClick={() => setShowSaveDialog(!showSaveDialog)}
-              className="w-full px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors flex items-center justify-center space-x-2"
+              className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2"
             >
               <Save className="w-4 h-4" />
               <span>Guardar Filtro Actual</span>
             </button>
 
             {showSaveDialog && (
-              <div className="p-3 bg-white border border-pink-200 rounded-lg">
+              <div className="p-3 bg-white border border-gray-300 rounded-lg">
                 <input
                   type="text"
                   value={filterName}
                   onChange={(e) => setFilterName(e.target.value)}
                   placeholder="Nombre del filtro..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 mb-2"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 mb-2"
                   onKeyPress={(e) => e.key === 'Enter' && handleSaveFilter()}
                 />
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSaveFilter}
-                    className="flex-1 px-3 py-1.5 bg-pink-500 text-white text-sm rounded-lg hover:bg-pink-600 transition-colors"
+                    className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors"
                   >
                     Guardar
                   </button>
@@ -418,7 +418,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             </button>
             <button
               onClick={handleApply}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-lg hover:from-pink-600 hover:to-rose-600 transition-all shadow-lg"
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all shadow-lg"
             >
               Aplicar Filtros
             </button>
