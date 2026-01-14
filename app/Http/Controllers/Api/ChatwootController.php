@@ -534,10 +534,14 @@ class ChatwootController extends Controller
                 $messagesData = $response->json();
                 $batchMessages = $messagesData['payload'] ?? [];
                 
-                Log::info('Batch recibido', [
+                // 🔍 DEBUG: Ver qué devuelve Chatwoot
+                $msgIds = array_column($batchMessages, 'id');
+                Log::info('Batch recibido de Chatwoot', [
                     'iteration' => $iteration,
                     'batch_size' => count($batchMessages),
-                    'before_id' => $beforeId
+                    'before_id' => $beforeId,
+                    'msg_ids' => $msgIds ? [min($msgIds), max($msgIds)] : [],
+                    'first_5_ids' => array_slice($msgIds, 0, 5)
                 ]);
                 
                 if (empty($batchMessages)) {
@@ -613,13 +617,15 @@ class ChatwootController extends Controller
                 // has_more es true si: obtuvimos más de lo que pedimos O el último batch estaba lleno
                 $hasMore = $totalMessages > $limit || $lastBatchWasFull;
                 $oldestMessageId = !empty($limitedMessages) ? $limitedMessages[0]['id'] : null;
+                $newestMessageId = !empty($limitedMessages) ? $limitedMessages[count($limitedMessages) - 1]['id'] : null;
                 
-                Log::info('Mensajes procesados', [
-                    'total' => $totalMessages,
+                Log::info('Mensajes procesados FINAL', [
+                    'before_param' => $before,
+                    'total_from_chatwoot' => $totalMessages,
                     'returned' => count($limitedMessages),
-                    'has_more' => $hasMore,
                     'oldest_id' => $oldestMessageId,
-                    'last_batch_was_full' => $lastBatchWasFull
+                    'newest_id' => $newestMessageId,
+                    'has_more' => $hasMore
                 ]);
                 
                 $meta = [
