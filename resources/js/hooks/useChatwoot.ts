@@ -4,6 +4,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // HOOK PRINCIPAL: Gestión de Conversaciones con Chatwoot - OPTIMIZADO v2
 // ============================================================================
 
+// Helper: Detectar si un mensaje es solo una reacción (emoji único)
+// Las reacciones de WhatsApp llegan como mensajes con solo un emoji
+const isReactionMessage = (content: string | null | undefined): boolean => {
+  if (!content) return false;
+  const trimmed = content.trim();
+  // Regex para detectar si es solo uno o dos emojis (reacciones típicas)
+  // Cubre emojis Unicode incluyendo modificadores de skin tone
+  const emojiOnlyRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)(?:\p{Emoji_Modifier})?(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)(?:\p{Emoji_Modifier})?)*$/u;
+  // Solo filtrar si es un emoji único o dos (reacciones típicas como 🙏, 👍, ❤️, 😂)
+  const isOnlyEmoji = emojiOnlyRegex.test(trimmed);
+  const isShort = trimmed.length <= 8; // Los emojis pueden ocupar varios caracteres Unicode
+  return isOnlyEmoji && isShort;
+};
+
 interface ChatwootAPIConfig {
   baseUrl?: string;
 }
@@ -608,7 +622,9 @@ export const useConversations = () => {
       const meta = result?.meta || {};
 
       if (Array.isArray(messagesArray)) {
-        const chatwootMessages = messagesArray.map((msg: any) => ({
+        const chatwootMessages = messagesArray
+          .filter((msg: any) => !isReactionMessage(msg.content)) // Filtrar reacciones
+          .map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           timestamp: msg.created_at,
@@ -655,6 +671,7 @@ export const useConversations = () => {
         
         let uniqueMessages = chatwootMessages
           .filter((m: any) => !duplicateIds.has(m.id))
+          .filter((m: any) => !isReactionMessage(m.content)) // Filtrar reacciones (emojis solos)
           .sort((a: any, b: any) => {
             const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
             const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
@@ -763,7 +780,9 @@ export const useConversations = () => {
             .then(result => {
               const messagesArray = result?.payload?.payload || result?.payload || [];
               if (Array.isArray(messagesArray)) {
-                const chatwootMessages = messagesArray.map((msg: any) => ({
+                const chatwootMessages = messagesArray
+                  .filter((msg: any) => !isReactionMessage(msg.content)) // Filtrar reacciones
+                  .map((msg: any) => ({
                   id: msg.id,
                   content: msg.content,
                   timestamp: msg.created_at,
