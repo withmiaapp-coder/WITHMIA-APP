@@ -3362,10 +3362,35 @@ const ConversationsInterface: React.FC = () => {
                                       <span>Video</span>
                                     </div>
                                   </div>
-                                ) : fileType.includes('audio') ? (
-                                  <div className="bg-white/40 p-2 rounded-lg">
-                                    <audio controls className="w-full max-w-xs">
-                                      <source src={attachmentUrl} type={fileType} />
+                                ) : fileType.includes('audio') || /\.(mp3|wav|ogg|oga|m4a|aac|webm)$/i.test(rawUrl) ? (
+                                  /* 🎵 AUDIO: Reproductor estilo WhatsApp */
+                                  <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-3 rounded-xl max-w-[280px] border border-emerald-200/50">
+                                    {/* Icono de audio/micrófono */}
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
+                                      <Mic className="w-5 h-5 text-white" />
+                                    </div>
+                                    {/* Reproductor de audio nativo mejorado */}
+                                    <audio 
+                                      controls 
+                                      className="flex-1 h-8"
+                                      style={{ 
+                                        minWidth: '150px',
+                                        maxWidth: '200px'
+                                      }}
+                                    >
+                                      <source 
+                                        src={attachmentUrl} 
+                                        type={
+                                          rawUrl.endsWith('.oga') ? 'audio/ogg' :
+                                          rawUrl.endsWith('.ogg') ? 'audio/ogg' :
+                                          rawUrl.endsWith('.mp3') ? 'audio/mpeg' :
+                                          rawUrl.endsWith('.wav') ? 'audio/wav' :
+                                          rawUrl.endsWith('.m4a') ? 'audio/mp4' :
+                                          rawUrl.endsWith('.aac') ? 'audio/aac' :
+                                          rawUrl.endsWith('.webm') ? 'audio/webm' :
+                                          fileType.includes('/') ? fileType : 'audio/mpeg'
+                                        } 
+                                      />
                                       Tu navegador no soporta el elemento de audio.
                                     </audio>
                                   </div>
