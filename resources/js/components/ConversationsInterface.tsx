@@ -788,10 +788,25 @@ const ConversationsInterface: React.FC = () => {
       // Si el usuario está cerca del tope (menos de 50px del inicio)
       const isNearTop = container.scrollTop < 50;
       
+      // Debug: mostrar estado actual
+      if (isNearTop) {
+        console.log('🔍 Estado scroll:', {
+          scrollTop: container.scrollTop,
+          hasMoreMessages: activeConversation?._hasMoreMessages,
+          isLoading: activeConversation?._isLoading,
+          isLoadingMore: isLoadingMoreRef.current,
+          messagesCount: activeConversation?.messages?.length
+        });
+      }
+      
+      // Cargar si: está cerca del tope, no está cargando, y tiene mensajes (asumimos que siempre hay más si no sabemos)
+      const hasMore = activeConversation?._hasMoreMessages !== false; // true o undefined = intentar cargar
+      
       if (isNearTop && 
-          activeConversation?._hasMoreMessages && 
+          hasMore && 
           !activeConversation?._isLoading && 
-          !isLoadingMoreRef.current) {
+          !isLoadingMoreRef.current &&
+          activeConversation?.messages?.length > 0) {
         
         console.log('📜 Cargando más mensajes...');
         isLoadingMoreRef.current = true;
@@ -806,14 +821,16 @@ const ConversationsInterface: React.FC = () => {
             setTimeout(() => {
               const newScrollHeight = container.scrollHeight;
               const addedHeight = newScrollHeight - prevScrollHeight;
+              console.log('✅ Mensajes cargados:', { prevHeight: prevScrollHeight, newHeight: newScrollHeight, added: addedHeight });
               // Mover el scroll hacia abajo por la cantidad de contenido nuevo
               if (addedHeight > 0) {
                 container.scrollTop = addedHeight + 50; // +50 para no re-disparar inmediatamente
               }
               isLoadingMoreRef.current = false;
-            }, 100);
+            }, 150);
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error('❌ Error cargando mensajes:', err);
             isLoadingMoreRef.current = false;
           });
       }
@@ -822,7 +839,7 @@ const ConversationsInterface: React.FC = () => {
     container.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, loadConversationMessages]);
+  }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
   
   // 🎯 NUEVO: Usar hook combinado de tiempo real con WebSocket (sin polling)
   const {
