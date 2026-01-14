@@ -1842,43 +1842,47 @@ const ConversationsInterface: React.FC = () => {
     }
   }, []);
 
-  // ?? NUEVO: Auto-scroll cuando se carga una conversación o llegan mensajes nuevos
+  // ✅ ARREGLADO: Auto-scroll inteligente - solo si el usuario está cerca del fondo
   useEffect(() => {
     if (activeConversation?.messages && (activeConversation?.messages || []).length > 0) {
       const currentMessageCount = (activeConversation?.messages || []).length;
+      const container = messagesContainerRef.current;
       
       // Detectar si hay nuevos mensajes (no es el primer load)
       if (previousMessageCount > 0 && currentMessageCount > previousMessageCount) {
         // ✅ VERIFICAR: Solo mostrar separador si el último mensaje NO es tuyo
         const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
         const esIncoming = lastMessage?.message_type === 0 || lastMessage?.message_type === 'incoming';
+        const esOutgoing = lastMessage?.message_type === 1 || lastMessage?.message_type === 'outgoing';
         
-        console.log(' Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
-        console.log(' Último mensaje tipo:', lastMessage?.message_type, 'Es incoming?', esIncoming);
+        console.log('📨 Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
         
         // Solo mostrar separador si es mensaje INCOMING (de otro usuario)
         if (esIncoming) {
-          // Hay mensajes nuevos de OTROS - mostrar separador
           setNewMessageSeparatorIndex(previousMessageCount);
-          
-          // Ocultar separador después de 3 segundos
           setTimeout(() => {
             setNewMessageSeparatorIndex(null);
           }, 3000);
         }
         
-        // ?? SCROLL INMEDIATO Y GARANTIZADO (siempre scroll, con o sin separador)
-        requestAnimationFrame(() => {
-          const container = messagesContainerRef.current;
-          if (container) {
-            console.log(' Forzando scroll inmediato - scrollHeight:', container.scrollHeight);
-            container.scrollTop = container.scrollHeight;
-            console.log('?? Scroll ejecutado - scrollTop:', container.scrollTop);
+        // ✅ NUEVO: Solo hacer scroll si el usuario está cerca del fondo O si es su propio mensaje
+        if (container) {
+          const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+          const isNearBottom = distanceFromBottom < 150; // Menos de 150px del fondo
+          
+          // Hacer scroll si: está cerca del fondo O si es su propio mensaje
+          if (isNearBottom || esOutgoing) {
+            requestAnimationFrame(() => {
+              if (messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+              }
+            });
+          } else {
+            console.log('🛑 Usuario leyendo mensajes anteriores - NO hacer scroll automático');
           }
-        });
+        }
       } else if (previousMessageCount === 0) {
-        // Primer load - scroll instant??neo
-        debugLog.log(' Primera carga de mensajes');
+        // Primer load - scroll instantáneo
         setTimeout(() => scrollToBottom('auto'), 100);
       }
       
@@ -1887,19 +1891,19 @@ const ConversationsInterface: React.FC = () => {
     }
   }, [activeConversation?.id, activeConversation?.messages?.length ?? 0, scrollToBottom]);
   
-  //  NUEVO: Mantener scroll SIEMPRE en el fondo (MutationObserver)
+  // ✅ ARREGLADO: Solo hacer scroll al fondo en primera carga de conversación
+  // (Eliminado MutationObserver agresivo que causaba scroll no deseado)
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container || !activeConversation) return;
 
-    debugLog.log('??? Iniciando observer para mantener scroll al fondo');
-
-    // Función para forzar scroll al fondo
-    const scrollToBottomImmediate = () => {
-      //  NO hacer scroll autom?tico si hay búsqueda activa
+    // Solo scroll al fondo cuando se cambia de conversación (primera carga)
+    // NO usar MutationObserver que causa scroll agresivo al cargar imágenes/videos
+    
+    // Scroll inicial solo una vez
+    const scrollToBottomOnce = () => {
       if ((searchResults || []).length > 0) {
-        debugLog.log(' B??squeda activa - cancelando auto-scroll');
-        return;
+        return; // No hacer scroll si hay búsqueda activa
       }
       
       requestAnimationFrame(() => {
@@ -1909,29 +1913,10 @@ const ConversationsInterface: React.FC = () => {
       });
     };
 
-    // Observer que detecta cambios en el DOM (nuevos mensajes, im?genes cargadas, etc)
-    const observer = new MutationObserver(() => {
-      debugLog.log(' DOM mutado - haciendo scroll al fondo');
-      scrollToBottomImmediate();
-    });
-
-    // Observar cambios en el contenedor
-    observer.observe(container, {
-      childList: true,        // Detectar cuando se agregan/eliminan hijos
-      subtree: true,          // Observar todos los descendientes
-      attributes: true,       // Detectar cambios de atributos (ej: im?genes cargadas)
-      characterData: true     // Detectar cambios de texto
-    });
-
-    // Scroll inicial
-    scrollToBottomImmediate();
-
-    // Cleanup
-    return () => {
-      debugLog.log(' Deteniendo observer de scroll');
-      observer.disconnect();
-    };
-  }, [activeConversation?.id, activeConversation?.messages?.length ?? 0, searchResults?.length ?? 0]);
+    // Solo hacer scroll inicial al cambiar de conversación
+    scrollToBottomOnce();
+    
+  }, [activeConversation?.id]); // Solo cuando cambia la conversación, NO en cada mensaje
 
   //  Scroll autom??tico al primer mensaje que coincide con la búsqueda
   useEffect(() => {
