@@ -3935,17 +3935,17 @@ const ConversationsInterface: React.FC = () => {
         )}
       </div>
 
-      {/*  GALER?A MULTIMEDIA MODAL */}
+      {/*  GALERÍA MULTIMEDIA MODAL */}
       {showMediaGallery && activeConversation && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-500 to-purple-600">
-              <h3 className="text-lg font-semibold text-white">Multimedia compartida</h3>
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-800">Multimedia compartida</h3>
               <button
                 onClick={() => setShowMediaGallery(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-white" />
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
             
@@ -3954,7 +3954,7 @@ const ConversationsInterface: React.FC = () => {
                 onClick={() => setMediaFilter('all')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   mediaFilter === 'all' 
-                    ? 'bg-purple-500 text-white' 
+                    ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -3964,18 +3964,18 @@ const ConversationsInterface: React.FC = () => {
                 onClick={() => setMediaFilter('images')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'images' 
-                    ? 'bg-purple-500 text-white' 
+                    ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <ImageIcon className="w-4 h-4" />
-                <span>Im?genes</span>
+                <span>Imágenes</span>
               </button>
               <button
                 onClick={() => setMediaFilter('files')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'files' 
-                    ? 'bg-purple-500 text-white' 
+                    ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -3986,7 +3986,7 @@ const ConversationsInterface: React.FC = () => {
                 onClick={() => setMediaFilter('links')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'links' 
-                    ? 'bg-purple-500 text-white' 
+                    ? 'bg-gray-800 text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -4010,7 +4010,7 @@ const ConversationsInterface: React.FC = () => {
                             ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
                           return (
-                          <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-purple-500 transition-all cursor-pointer">
+                          <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
                             <img 
                               src={proxyUrl} 
                               alt="Media"
@@ -4045,7 +4045,7 @@ const ConversationsInterface: React.FC = () => {
                             <a 
                               href={proxyUrl} 
                               download
-                              className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                              className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
                             >
                               <Upload className="w-4 h-4" />
                             </a>
