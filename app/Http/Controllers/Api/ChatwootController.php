@@ -857,13 +857,16 @@ class ChatwootController extends Controller
             ], 500);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Send Message Error: ' . $e->getMessage(), [
+            Log::error('💥 Chatwoot Send Message Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId,
-                'conversation_id' => $id
+                'conversation_id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 1000)
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al enviar mensaje'
+                'message' => 'Error al enviar mensaje: ' . $e->getMessage()
             ], 500);
         }
     }
