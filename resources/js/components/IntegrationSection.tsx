@@ -191,8 +191,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-2">
-            <div className="p-4 bg-gradient-to-r from-purple-500 to-violet-500 rounded-xl shadow-lg">
-              <Plug className="w-10 h-10 text-white" />
+            <div className="p-2 rounded-lg bg-gradient-to-r from-gray-500 to-slate-600 shadow-lg">
+              <Plug className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-neutral-800">Integraciones</h1>
