@@ -4027,7 +4027,7 @@ const ConversationsInterface: React.FC = () => {
       {/*  GALERÍA MULTIMEDIA MODAL */}
       {showMediaGallery && activeConversation && (
         <div 
-          className="fixed inset-0 bg-black/20 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowMediaGallery(false); }}
         >
           <div 
