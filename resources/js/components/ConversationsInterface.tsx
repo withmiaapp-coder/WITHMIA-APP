@@ -771,47 +771,48 @@ const ConversationsInterface: React.FC = () => {
     }
   }, [activeConversation?.id]); // Solo cuando cambie la conversación activa
 
-  // 🔄 Infinite scroll para cargar más mensajes al llegar al tope
+  // 🔄 Infinite scroll para cargar más mensajes al llegar al tope (usando scroll event)
   useEffect(() => {
-    const trigger = loadMoreTriggerRef.current;
     const container = messagesContainerRef.current;
+    if (!container) return;
     
-    if (!trigger || !container) return;
+    let isLoadingMore = false;
     
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        console.log('🔄 IntersectionObserver:', {
-          isIntersecting: entry.isIntersecting,
-          hasMoreMessages: activeConversation?._hasMoreMessages,
-          isLoading: activeConversation?._isLoading,
-          conversationId: activeConversation?.id
-        });
+    const handleScroll = () => {
+      // Si el usuario está cerca del tope (menos de 100px del inicio)
+      const isNearTop = container.scrollTop < 100;
+      
+      console.log('🔄 Scroll check:', {
+        scrollTop: container.scrollTop,
+        isNearTop,
+        hasMoreMessages: activeConversation?._hasMoreMessages,
+        isLoading: activeConversation?._isLoading,
+        isLoadingMore
+      });
+      
+      if (isNearTop && activeConversation?._hasMoreMessages && !activeConversation?._isLoading && !isLoadingMore) {
+        console.log('📜 Cargando más mensajes...');
+        isLoadingMore = true;
         
-        if (entry.isIntersecting && activeConversation?._hasMoreMessages && !activeConversation?._isLoading) {
-          console.log('📜 Cargando más mensajes...');
-          // Guardar posición actual del scroll
-          const scrollHeight = container.scrollHeight;
-          
-          loadConversationMessages(activeConversation.id, true).then(() => {
-            // Mantener la posición relativa después de cargar
-            requestAnimationFrame(() => {
-              const newScrollHeight = container.scrollHeight;
-              container.scrollTop = newScrollHeight - scrollHeight;
-            });
+        // Guardar posición actual del scroll
+        const scrollHeight = container.scrollHeight;
+        
+        loadConversationMessages(activeConversation.id, true).then(() => {
+          // Mantener la posición relativa después de cargar
+          requestAnimationFrame(() => {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - scrollHeight;
+            isLoadingMore = false;
           });
-        }
-      },
-      {
-        root: container,
-        rootMargin: '100px 0px 0px 0px', // Disparar 100px antes de llegar al tope
-        threshold: 0.1
+        }).catch(() => {
+          isLoadingMore = false;
+        });
       }
-    );
+    };
     
-    observer.observe(trigger);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     
-    return () => observer.disconnect();
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, loadConversationMessages]);
   
   // 🎯 NUEVO: Usar hook combinado de tiempo real con WebSocket (sin polling)

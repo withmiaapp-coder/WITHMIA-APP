@@ -565,7 +565,12 @@ export const useConversations = () => {
     debugLog.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
     isLoadingMessagesRef.current.add(loadingKey);
     
-    // 🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
+    // � Marcar como loading INMEDIATAMENTE para mostrar el spinner
+    if (loadMore) {
+      setActiveConversationState(prev => prev ? { ...prev, _isLoading: true } : prev);
+    }
+    
+    // �🚀 CACHE LOCAL: Verificar si tenemos mensajes en cache (no expirados)
     const cached = messagesLocalCache.current.get(conversationId);
     const now = Date.now();
     
@@ -598,11 +603,17 @@ export const useConversations = () => {
     try {
       // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo (20 mensajes para no saturar)
       let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=20`;
-      if (loadMore && cached?.messages?.length > 0) {
-        const oldestId = cached.messages[0]?.id;
-        if (oldestId) {
-          url += `&before=${oldestId}`;
-          debugLog.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
+      if (loadMore) {
+        // Buscar mensajes en cache o en la conversación activa
+        const currentMessages = cached?.messages || activeConversationRef.current?.messages || [];
+        if (currentMessages.length > 0) {
+          // Ordenar por ID ascendente y obtener el más antiguo (menor ID)
+          const sortedMessages = [...currentMessages].sort((a, b) => a.id - b.id);
+          const oldestId = sortedMessages[0]?.id;
+          if (oldestId) {
+            url += `&before=${oldestId}`;
+            debugLog.log(`📜 Cargando mensajes anteriores a ID: ${oldestId}`);
+          }
         }
       }
       
