@@ -234,9 +234,13 @@ class EvolutionApiController extends Controller
                 'state' => $state
             ]);
 
-            // Si está conectada (open), no hacer nada
+            // Si está conectada (open), verificar si necesita workflow de n8n
             if ($state === 'open') {
                 Log::info('✅ Instancia ya conectada, no se elimina', ['instance' => $instanceName]);
+                
+                // 🚀 CREAR WORKFLOW si no existe
+                $this->ensureN8nWorkflowExists($instanceName);
+                
                 return;
             }
 
@@ -1108,6 +1112,47 @@ class EvolutionApiController extends Controller
             Log::error('Error creando workflow de n8n', [
                 'error' => $e->getMessage(),
                 'instance' => $instance->instance_name
+            ]);
+        }
+    }
+
+    /**
+     * Asegurar que existe un workflow de n8n para la instancia
+     */
+    private function ensureN8nWorkflowExists(string $instanceName): void
+    {
+        try {
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->where('is_active', 1)
+                ->first();
+
+            if (!$instance) {
+                Log::info('No se encontró instancia en DB para crear workflow', ['instance' => $instanceName]);
+                return;
+            }
+
+            // Si ya tiene workflow, no hacer nada
+            if (!empty($instance->n8n_workflow_id)) {
+                Log::info('Instancia ya tiene workflow de n8n', [
+                    'instance' => $instanceName,
+                    'workflow_id' => $instance->n8n_workflow_id
+                ]);
+                return;
+            }
+
+            Log::info('🤖 Creando workflow de n8n para instancia conectada', [
+                'instance' => $instanceName,
+                'company_id' => $instance->company_id
+            ]);
+
+            // Crear workflow
+            $this->createN8nWorkflowForInstance($instance);
+
+        } catch (\Exception $e) {
+            Log::error('Error en ensureN8nWorkflowExists', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
             ]);
         }
     }
