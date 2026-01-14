@@ -54,6 +54,10 @@ import {
   Bell,
   BellOff,
   Grid,
+  // Iconos para tipos de archivo
+  Video,
+  Music,
+  FileType,
   // Nuevos iconos para Fase 3
   Filter
 } from 'lucide-react';
@@ -2087,6 +2091,39 @@ const ConversationsInterface: React.FC = () => {
       return false;
     };
     
+    // Helper para detectar tipo de archivo (video, audio, pdf, etc.)
+    const getFileCategory = (att: any, fileName: string): string => {
+      const mimeType = (att.file_type || att.content_type || '').toLowerCase();
+      const nameLower = fileName.toLowerCase();
+      
+      // Video
+      if (mimeType.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(nameLower)) {
+        return 'video';
+      }
+      
+      // Audio
+      if (mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|oga|m4a|aac|flac|wma)$/i.test(nameLower)) {
+        return 'audio';
+      }
+      
+      // PDF
+      if (mimeType === 'application/pdf' || /\.pdf$/i.test(nameLower)) {
+        return 'pdf';
+      }
+      
+      // Documentos de Word
+      if (mimeType.includes('word') || /\.(doc|docx)$/i.test(nameLower)) {
+        return 'word';
+      }
+      
+      // Hojas de cálculo
+      if (mimeType.includes('sheet') || mimeType.includes('excel') || /\.(xls|xlsx|csv)$/i.test(nameLower)) {
+        return 'spreadsheet';
+      }
+      
+      return 'file';
+    };
+    
     // Helper para obtener nombre de archivo
     const getFileName = (att: any): string => {
       // Prioridad: file_name > name > extraer de URL
@@ -2115,10 +2152,12 @@ const ConversationsInterface: React.FC = () => {
       if (msg.attachments && Array.isArray(msg.attachments)) {
         msg.attachments.forEach((att: any) => {
           const fileName = getFileName(att);
+          const fileCategory = getFileCategory(att, fileName);
           const enrichedAtt = { 
             ...att, 
             message_id: msg.id,
-            file_name: fileName // Asegurar que siempre tenga nombre
+            file_name: fileName, // Asegurar que siempre tenga nombre
+            file_category: fileCategory // Tipo de archivo para el icono
           };
           
           if (isImage(att)) {
@@ -4090,12 +4129,36 @@ const ConversationsInterface: React.FC = () => {
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
+                              
+                              // Renderizar icono según tipo de archivo
+                              const renderFileIcon = () => {
+                                switch (file.file_category) {
+                                  case 'video':
+                                    return <Video className="w-8 h-8 text-purple-500" />;
+                                  case 'audio':
+                                    return <Music className="w-8 h-8 text-green-500" />;
+                                  case 'pdf':
+                                    return <FileType className="w-8 h-8 text-red-500" />;
+                                  case 'word':
+                                    return <FileText className="w-8 h-8 text-blue-500" />;
+                                  case 'spreadsheet':
+                                    return <FileText className="w-8 h-8 text-green-600" />;
+                                  default:
+                                    return <File className="w-8 h-8 text-gray-500" />;
+                                }
+                              };
+                              
                               return (
                                 <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                  <File className="w-8 h-8 text-gray-500" />
+                                  {renderFileIcon()}
                                   <div className="flex-1 min-w-0">
                                     <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
-                                    <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                    <p className="text-sm text-gray-500">
+                                      {file.file_category === 'video' && '🎥 Video • '}
+                                      {file.file_category === 'audio' && '🎵 Audio • '}
+                                      {file.file_category === 'pdf' && '📄 PDF • '}
+                                      {file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}
+                                    </p>
                                   </div>
                                   <a 
                                     href={proxyUrl} 
@@ -4178,12 +4241,36 @@ const ConversationsInterface: React.FC = () => {
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                             ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
+                          
+                          // Renderizar icono según tipo de archivo
+                          const renderFileIcon = () => {
+                            switch (file.file_category) {
+                              case 'video':
+                                return <Video className="w-8 h-8 text-purple-500" />;
+                              case 'audio':
+                                return <Music className="w-8 h-8 text-green-500" />;
+                              case 'pdf':
+                                return <FileType className="w-8 h-8 text-red-500" />;
+                              case 'word':
+                                return <FileText className="w-8 h-8 text-blue-500" />;
+                              case 'spreadsheet':
+                                return <FileText className="w-8 h-8 text-green-600" />;
+                              default:
+                                return <File className="w-8 h-8 text-gray-500" />;
+                            }
+                          };
+                          
                           return (
                             <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                              <File className="w-8 h-8 text-gray-500" />
+                              {renderFileIcon()}
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
-                                <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
+                                <p className="text-sm text-gray-500">
+                                  {file.file_category === 'video' && '🎥 Video • '}
+                                  {file.file_category === 'audio' && '🎵 Audio • '}
+                                  {file.file_category === 'pdf' && '📄 PDF • '}
+                                  {file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}
+                                </p>
                               </div>
                               <a 
                                 href={proxyUrl} 
