@@ -845,10 +845,13 @@ const ConversationsInterface: React.FC = () => {
           // Conversación existe - actualizar
           updated = prevConversations.map((conv: any) => {
             if (conv.id === conversationId) {
-              // ✅ Solo incrementar unread_count si es mensaje INCOMING
+              // ✅ Solo incrementar unread_count si:
+              // 1. Es mensaje INCOMING (no outgoing)
+              // 2. La conversación NO está activa actualmente
               const messageType = event.message?.message_type;
               const isOutgoing = messageType === 1 || messageType === 'outgoing';
-              const shouldIncrementUnread = !isOutgoing;
+              const isActiveConversation = activeConversation?.id === conversationId;
+              const shouldIncrementUnread = !isOutgoing && !isActiveConversation;
               
               const updatedConv = {
                 ...conv,
@@ -859,12 +862,13 @@ const ConversationsInterface: React.FC = () => {
                   message_type: event.message?.message_type || 0,
                   sender: event.sender || event.message?.sender
                 },
-                unread_count: shouldIncrementUnread ? (conv.unread_count || 0) + 1 : (conv.unread_count || 0),
+                // Si la conversación está activa, mantener unread_count en 0
+                unread_count: isActiveConversation ? 0 : (shouldIncrementUnread ? (conv.unread_count || 0) + 1 : (conv.unread_count || 0)),
                 updated_at: newTimestamp,
                 timestamp: new Date(newTimestamp).getTime() / 1000,
                 last_activity_at: new Date(newTimestamp).getTime() / 1000
               };
-              console.log(' Conversación actualizada:', updatedConv.id, updatedConv.meta?.sender?.name);
+              console.log('📝 Conversación actualizada:', updatedConv.id, 'isActive:', isActiveConversation, 'unread:', updatedConv.unread_count);
               return updatedConv;
             }
             return conv;
@@ -1433,13 +1437,21 @@ const ConversationsInterface: React.FC = () => {
     _setActiveConversation({
       ...conversation,
       messages: [], // Array vacío mientras carga
+      unread_count: 0, // ✅ Resetear contador inmediatamente al abrir
       _isLoading: true // Flag para mostrar skeleton
     });
+    
+    // ✅ NUEVO: Actualizar lista de conversaciones para quitar el badge inmediatamente
+    setConversations((prev: Conversation[]) => 
+      prev.map((conv: Conversation) => 
+        conv.id === conversation.id ? { ...conv, unread_count: 0 } : conv
+      )
+    );
     
     // Cargar mensajes en background (no bloqueante)
     loadConversationMessages(conversation.id);
     
-    // Marcar como leída en background (no bloqueante)
+    // Marcar como leída en backend (no bloqueante)
     if (markConversationAsRead) {
       markConversationAsRead(conversation.id).then(() => {
         console.log('✅ Conversación marcada como leída en servidor');
