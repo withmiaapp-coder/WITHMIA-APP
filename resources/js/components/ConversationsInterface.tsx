@@ -4027,7 +4027,7 @@ const ConversationsInterface: React.FC = () => {
       {/*  GALERÍA MULTIMEDIA MODAL */}
       {showMediaGallery && activeConversation && (
         <div 
-          className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-gray-100 z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowMediaGallery(false); }}
         >
           <div 
@@ -4563,44 +4563,7 @@ const ConversationsInterface: React.FC = () => {
                 </button>
               </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  Informacion
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estado:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(activeConversation.status)}`}>
-                      {activeConversation.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Prioridad:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(activeConversation.priority)}`}>
-                      {activeConversation.priority}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3">Acciones Rapidas</h4>
-                <div className="space-y-2">
-                  <button className="w-full p-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm text-gray-700 transition-colors flex items-center">
-                    <Archive className="w-4 h-4 mr-2" />
-                    Archivar Conversación
-                  </button>
-                  <button className="w-full p-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm text-gray-700 transition-colors flex items-center">
-                    <Star className="w-4 h-4 mr-2" />
-                    Marcar como Favorito
-                  </button>
-                  <button className="w-full p-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm text-gray-700 transition-colors flex items-center">
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Resolver Conversacion
-                  </button>
-                </div>
-              </div>
             </>
           ) : (
             <div className="text-center text-gray-500">
