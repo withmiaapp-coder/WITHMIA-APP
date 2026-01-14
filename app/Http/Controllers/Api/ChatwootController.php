@@ -791,8 +791,24 @@ class ChatwootController extends Controller
             }
 
             // PASO 4: Detectar si es archivo o texto
-            if ($request->hasFile('file')) {
+            Log::info('📦 Detectando tipo de contenido', [
+                'hasFile' => $request->hasFile('file'),
+                'hasAttachments' => $request->hasFile('attachments'),
+                'allFiles' => array_keys($request->allFiles()),
+                'contentType' => $request->header('Content-Type'),
+                'allInputs' => array_keys($request->all())
+            ]);
+            
+            // Verificar múltiples formas de envío de archivo
+            $uploadedFile = $request->file('file') ?? $request->file('attachments') ?? $request->file('attachment');
+            
+            if ($uploadedFile) {
                 // 📎 ENVÍO DE ARCHIVO (imagen, video, audio, documento)
+                Log::info('📎 Archivo detectado, procesando...', [
+                    'fileName' => $uploadedFile->getClientOriginalName(),
+                    'mimeType' => $uploadedFile->getMimeType(),
+                    'size' => $uploadedFile->getSize()
+                ]);
                 return $this->sendFileMessage($request, $id, $contactPhone);
             }
 
@@ -859,7 +875,17 @@ class ChatwootController extends Controller
     private function sendFileMessage(Request $request, $conversationId, $contactPhone)
     {
         try {
-            $file = $request->file('file');
+            // Buscar archivo en múltiples nombres de campo
+            $file = $request->file('file') ?? $request->file('attachments') ?? $request->file('attachment');
+            
+            if (!$file) {
+                Log::error('❌ No se encontró archivo en el request');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró archivo para enviar'
+                ], 400);
+            }
+            
             $mimeType = $file->getMimeType();
             $originalName = $file->getClientOriginalName();
             $caption = $request->input('content', '');
