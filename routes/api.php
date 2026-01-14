@@ -7,7 +7,24 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// 🚀 CREAR WORKFLOW N8N MANUALMENTE
+// � RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
+Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
+    $updated = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+        ->where('instance_name', $instanceName)
+        ->update([
+            'n8n_workflow_id' => null,
+            'n8n_webhook_url' => null,
+            'updated_at' => now()
+        ]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => "Workflow reseteado para {$instanceName}",
+        'rows_affected' => $updated
+    ]);
+});
+
+// �🚀 CREAR WORKFLOW N8N MANUALMENTE
 Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
