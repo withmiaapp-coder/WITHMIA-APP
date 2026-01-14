@@ -996,12 +996,14 @@ class ChatwootController extends Controller
             Log::error('💥 Error enviando archivo: ' . $e->getMessage(), [
                 'user_id' => $this->userId,
                 'conversation_id' => $conversationId,
-                'trace' => $e->getTraceAsString()
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 1000)
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al enviar archivo'
+                'message' => 'Error al enviar archivo: ' . $e->getMessage()
             ], 500);
         }
     }
