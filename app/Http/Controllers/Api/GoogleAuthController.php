@@ -79,27 +79,21 @@ class GoogleAuthController extends Controller
                 $request->session()->flush();
             }
             
-            // Login del usuario
+            // Login del usuario con remember
             Auth::login($user, true);
             
-            // Regenerar la sesión
+            // Regenerar la sesión para seguridad
             $request->session()->regenerate();
             
+            // Guardar el user_id en la sesión explícitamente
+            $request->session()->put('user_id', $user->id);
+            $request->session()->save();
+            
             error_log('Session created - ID: ' . session()->getId() . ', User: ' . $user->id);
+            error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Siempre mostrar pantalla de transición con cookie de sesión
-            return response()->view('transition', ['redirect' => '/onboarding'])
-                ->withCookie(cookie(
-                    config('session.cookie'),
-                    session()->getId(),
-                    config('session.lifetime'),
-                    config('session.path'),
-                    config('session.domain'),
-                    config('session.secure'),
-                    config('session.http_only'),
-                    false,
-                    config('session.same_site')
-                ));
+            // Mostrar pantalla de transición - dejar que Laravel maneje la cookie
+            return response()->view('transition', ['redirect' => '/onboarding']);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());

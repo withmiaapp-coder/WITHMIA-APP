@@ -60,6 +60,21 @@ Route::get('/debug-users', function () {
     ]);
 });
 
+// 🔍 DEBUG: Session info
+Route::get('/debug-session', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+        'user_id' => \Illuminate\Support\Facades\Auth::id(),
+        'session_id' => session()->getId(),
+        'session_driver' => config('session.driver'),
+        'session_domain' => config('session.domain'),
+        'session_secure' => config('session.secure'),
+        'session_same_site' => config('session.same_site'),
+        'cookies' => array_keys($request->cookies->all()),
+        'session_data' => session()->all(),
+    ]);
+});
+
 // 🔍 DEBUG: Limpiar caché de Redis
 Route::get('/clear-all-cache', function () {
     try {
