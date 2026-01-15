@@ -18,6 +18,27 @@ Route::get('/test-route', function () {
     return response()->json(['status' => 'ok', 'time' => now()->toISOString()]);
 });
 
+// TEMP: Reset user for testing onboarding (ELIMINAR EN PRODUCCIÓN)
+Route::get('/reset-onboarding-test', function () {
+    $email = request()->input('email', 'withmia.app@gmail.com');
+    $secret = request()->input('secret');
+    
+    if ($secret !== 'withmia2026reset') {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $user = \App\Models\User::where('email', $email)->first();
+    if ($user) {
+        $user->update([
+            'company_slug' => null,
+            'onboarding_step' => 1,
+            'onboarding_completed' => false
+        ]);
+        return response()->json(['success' => true, 'message' => "Usuario {$email} reseteado"]);
+    }
+    return response()->json(['error' => 'Usuario no encontrado'], 404);
+});
+
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
 // ============================================================================
