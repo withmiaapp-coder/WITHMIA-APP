@@ -1098,9 +1098,15 @@ class EvolutionApiController extends Controller
             $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
             
             foreach ($templateWorkflow['nodes'] as $node) {
+                // Asegurar que parameters sea un objeto (stdClass) no un array vacío
+                $params = $node['parameters'] ?? [];
+                if (empty($params) || (is_array($params) && count($params) === 0)) {
+                    $params = new \stdClass(); // n8n requiere objeto vacío {}, no array []
+                }
+                
                 // Limpiar nodo - solo propiedades esenciales
                 $cleanNode = [
-                    'parameters' => $node['parameters'] ?? [],
+                    'parameters' => $params,
                     'type' => $node['type'],
                     'typeVersion' => $node['typeVersion'] ?? 1,
                     'position' => $node['position'],
