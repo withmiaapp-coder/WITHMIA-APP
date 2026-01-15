@@ -1161,7 +1161,15 @@ class EvolutionApiController extends Controller
                 
                 // Activar workflow
                 if ($workflowId) {
-                    $this->n8nService->activateWorkflow($workflowId);
+                    $activateResult = $this->n8nService->activateWorkflow($workflowId);
+                    if (!$activateResult['success']) {
+                        Log::warning('⚠️ No se pudo activar el workflow', [
+                            'workflow_id' => $workflowId,
+                            'error' => $activateResult['error'] ?? 'Unknown'
+                        ]);
+                    } else {
+                        Log::info('✅ Workflow activado correctamente', ['workflow_id' => $workflowId]);
+                    }
                 }
                 
                 // 🎯 OPCIÓN B: Configurar webhook de Evolution API para que apunte DIRECTO a n8n

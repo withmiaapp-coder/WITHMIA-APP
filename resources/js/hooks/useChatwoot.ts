@@ -317,7 +317,9 @@ export const useConversations = () => {
         setTotalConversations(0);
       }
       
-    } catch (err) {
+    } catch (err: any) {
+      // Ignorar errores de abort (componente desmontado)
+      if (err?.name === 'AbortError') return;
       console.error('❌ Error cargando todas las conversaciones:', err);
       setConversations([]);
     }
@@ -993,7 +995,9 @@ export const useTeams = () => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/teams');
       setTeams(result);
-    } catch (err) {
+    } catch (err: any) {
+      // Ignorar errores de abort (componente desmontado)
+      if (err?.name === 'AbortError') return;
       console.error('Error fetching teams:', err);
     }
   }, [apiCall]);

@@ -118,16 +118,24 @@ class N8nService
     public function activateWorkflow(string $workflowId): array
     {
         try {
+            Log::info('🔄 Intentando activar workflow en n8n', ['workflow_id' => $workflowId]);
+            
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
             ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate");
 
             if ($response->successful()) {
+                Log::info('✅ Workflow activado exitosamente', ['workflow_id' => $workflowId]);
                 return ['success' => true];
             }
 
-            return ['success' => false, 'error' => 'Error al activar workflow'];
+            Log::error('❌ Error al activar workflow', [
+                'workflow_id' => $workflowId,
+                'status' => $response->status(),
+                'body' => substr($response->body(), 0, 500)
+            ]);
+            return ['success' => false, 'error' => 'Error al activar workflow: ' . $response->status()];
         } catch (\Exception $e) {
             Log::error('n8n activateWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => $e->getMessage()];
