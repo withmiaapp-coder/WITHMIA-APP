@@ -297,6 +297,9 @@ class EvolutionApiController extends Controller
                 $state = $result['state'] ?? 'unknown';
                 if ($user && $state === 'open') {
                     $this->syncChatwootInboxIfNeeded($instanceName, $user);
+                    
+                    // 🚀 AUTO-CREAR WORKFLOW: Cuando la instancia está conectada, asegurar que existe workflow
+                    $this->ensureN8nWorkflowExists($instanceName);
                 }
             } catch (\Exception $e) {
                 Log::error('Error broadcasting status check', ['error' => $e->getMessage()]);
