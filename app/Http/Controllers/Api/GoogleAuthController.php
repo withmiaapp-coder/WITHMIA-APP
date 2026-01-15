@@ -90,24 +90,8 @@ class GoogleAuthController extends Controller
             error_log('Cookie config - Name: ' . $cookieName . ', Domain: ' . $cookieDomain . ', Secure: ' . ($cookieSecure ? 'true' : 'false') . ', SameSite: ' . $cookieSameSite);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Retornar JSON para que el JavaScript haga el redirect
-            // Esto asegura que la cookie se establece correctamente antes del redirect
-            return response()->json([
-                'success' => true,
-                'redirect' => '/onboarding',
-                'user' => [
-                    'id' => $user->id,
-                    'email' => $user->email,
-                    'name' => $user->name
-                ],
-                'debug' => [
-                    'session_id' => substr($sessionId, 0, 10) . '...',
-                    'cookie_name' => $cookieName,
-                    'cookie_domain' => $cookieDomain,
-                    'cookie_secure' => $cookieSecure,
-                    'cookie_same_site' => $cookieSameSite
-                ]
-            ]);
+            // Redirect directo - el navegador procesará las cookies automáticamente
+            return redirect('/onboarding');
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());

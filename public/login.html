@@ -315,39 +315,39 @@
 
         <div class="google-signin-container">
             <script>
-function handleCredentialResponse(response) {
+async function handleCredentialResponse(response) {
     try {
         const responsePayload = parseJwt(response.credential);
         console.log("Procesando login de Google...");
         
-        // Usar fetch con credentials: 'include' para asegurar cookies
-        const formData = new URLSearchParams();
-        formData.append('credential', response.credential);
-        formData.append('google_id', responsePayload.sub);
-        formData.append('email', responsePayload.email);
-        formData.append('name', responsePayload.name);
-        formData.append('picture', responsePayload.picture);
+        // Usar formulario POST tradicional en lugar de fetch
+        // Esto garantiza que las cookies se establezcan antes del redirect
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/auth/google';
+        form.style.display = 'none';
         
-        fetch('/auth/google', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData.toString(),
-            credentials: 'include',
-            redirect: 'follow'
-        })
-        .then(response => {
-            console.log('Login response:', response.status, response.url);
-            // Después de que el login sea exitoso, redirigir manualmente
-            window.location.href = '/onboarding';
-        })
-        .catch(error => {
-            console.error('Login error:', error);
-            alert('Error en el login. Por favor intenta de nuevo.');
-        });
+        const fields = {
+            'credential': response.credential,
+            'google_id': responsePayload.sub,
+            'email': responsePayload.email,
+            'name': responsePayload.name,
+            'picture': responsePayload.picture
+        };
+        
+        for (const [key, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     } catch (error) {
         console.error('Error:', error);
+        alert('Error en el login. Por favor intenta de nuevo.');
     }
 }
 
