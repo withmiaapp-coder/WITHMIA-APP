@@ -293,7 +293,7 @@ Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
     return app(OnboardingController::class)->show();
 })->name('onboarding');
 
-Route::middleware('auth.clean')->group(function () {
+Route::middleware(['railway.auth', 'auth.clean'])->group(function () {
 
     // Dashboard routes - Sistema híbrido /dashboard/{company-slug}
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');

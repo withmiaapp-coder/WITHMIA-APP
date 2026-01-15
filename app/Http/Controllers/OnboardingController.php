@@ -129,9 +129,19 @@ class OnboardingController extends Controller
             
             if ($isCompleted) {
                 $user->refresh();
+                
+                // Obtener el auth_token de la sesión para incluirlo en el redirect
+                $authToken = session('railway_auth_token');
+                $dashboardUrl = route('dashboard.company', ['companySlug' => $user->company_slug]);
+                
+                // Agregar token a la URL si existe (Railway Edge workaround)
+                if ($authToken) {
+                    $dashboardUrl .= '?auth_token=' . $authToken;
+                }
+                
                 $completionData = [
                     'company_slug' => $user->company_slug,
-                    'dashboard_url' => route('dashboard.company', ['companySlug' => $user->company_slug])
+                    'dashboard_url' => $dashboardUrl
                 ];
             }
 
@@ -155,7 +165,8 @@ class OnboardingController extends Controller
             }
 
             if ($isCompleted) {
-                return redirect()->route('dashboard.company', ['companySlug' => $user->company_slug]);
+                // Usar la URL con token ya generada
+                return redirect($completionData['dashboard_url']);
             }
 
             return back()->with([
