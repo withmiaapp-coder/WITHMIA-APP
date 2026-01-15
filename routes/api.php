@@ -51,6 +51,69 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
+// 🔍 DIAGNOSTICAR WORKFLOW - Ver nodos y detectar problemas
+Route::get('/diagnose-workflow/{workflowId}', function ($workflowId) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $result = $n8nService->getWorkflow($workflowId);
+        
+        if (!$result['success']) {
+            return response()->json(['error' => 'No se pudo obtener workflow', 'details' => $result], 400);
+        }
+        
+        $workflow = $result['data'];
+        $nodes = $workflow['nodes'] ?? [];
+        $problems = [];
+        $nodesInfo = [];
+        
+        foreach ($nodes as $node) {
+            $nodeInfo = [
+                'name' => $node['name'] ?? 'Unknown',
+                'type' => $node['type'] ?? 'Unknown',
+                'has_credentials' => isset($node['credentials']),
+                'credentials' => []
+            ];
+            
+            // Detectar problemas de credenciales
+            if (isset($node['credentials'])) {
+                foreach ($node['credentials'] as $credType => $cred) {
+                    $nodeInfo['credentials'][$credType] = [
+                        'id' => $cred['id'] ?? 'missing',
+                        'name' => $cred['name'] ?? 'missing'
+                    ];
+                    // Los IDs hardcodeados que pueden no existir
+                    $problems[] = "Nodo '{$node['name']}' requiere credencial '$credType' (ID: {$cred['id']})";
+                }
+            }
+            
+            // Detectar modelo incorrecto
+            if (strpos($node['type'] ?? '', 'lmChatOpenAi') !== false) {
+                $model = $node['parameters']['model'] ?? null;
+                if (is_array($model) && isset($model['value'])) {
+                    $modelValue = $model['value'];
+                    if ($modelValue === 'gpt-4.1-mini') {
+                        $problems[] = "Nodo '{$node['name']}' tiene modelo incorrecto: '$modelValue' (debería ser gpt-4o-mini)";
+                    }
+                }
+            }
+            
+            $nodesInfo[] = $nodeInfo;
+        }
+        
+        return response()->json([
+            'workflow_id' => $workflowId,
+            'workflow_name' => $workflow['name'] ?? 'Unknown',
+            'active' => $workflow['active'] ?? false,
+            'total_nodes' => count($nodes),
+            'nodes' => $nodesInfo,
+            'problems_detected' => $problems
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // ⚡ ACTIVAR WORKFLOW n8n
 Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
     try {
