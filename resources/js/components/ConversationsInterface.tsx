@@ -761,6 +761,54 @@ const ConversationsInterface: React.FC = () => {
     };
   }, []);
   
+  // 🔔 Escuchar evento selectConversation desde NotificationBell y query params
+  useEffect(() => {
+    // Función para seleccionar conversación por ID
+    const selectConversationById = (conversationId: number) => {
+      if (!conversations || conversations.length === 0) return;
+      
+      const conversation = conversations.find((c: any) => c.id === conversationId);
+      if (conversation) {
+        console.log('🔔 Seleccionando conversación desde notificación:', conversationId);
+        _setActiveConversation({
+          ...conversation,
+          messages: [],
+          unread_count: 0,
+          _isLoading: true
+        });
+        loadConversationMessages(conversationId);
+        if (markConversationAsRead) {
+          markConversationAsRead(conversationId);
+        }
+      }
+    };
+
+    // Revisar query param al cargar
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationParam = urlParams.get('conversation');
+    if (conversationParam) {
+      const conversationId = parseInt(conversationParam, 10);
+      if (!isNaN(conversationId)) {
+        selectConversationById(conversationId);
+        // Limpiar query param del URL sin recargar
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+
+    // Escuchar evento personalizado
+    const handleSelectEvent = (event: CustomEvent) => {
+      const { conversationId } = event.detail;
+      if (conversationId) {
+        selectConversationById(conversationId);
+      }
+    };
+
+    window.addEventListener('selectConversation', handleSelectEvent as EventListener);
+    return () => {
+      window.removeEventListener('selectConversation', handleSelectEvent as EventListener);
+    };
+  }, [conversations, _setActiveConversation, loadConversationMessages, markConversationAsRead]);
+  
   //  Auto-focus del input cuando se abre una conversación (como WhatsApp)
   useEffect(() => {
     if (activeConversation && messageInputRef.current) {

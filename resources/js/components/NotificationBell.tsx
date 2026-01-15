@@ -47,11 +47,16 @@ export const NotificationBell: React.FC = () => {
       markAsRead(notificationId);
     }
     setIsOpen(false);
-    // Navegar a la página de conversaciones (puedes ajustar la ruta)
-    router.visit('/dashboard', {
-      preserveState: true,
-      preserveScroll: true,
-      only: ['conversations'],
+    
+    // Emitir evento para que ConversationsInterface seleccione la conversación
+    window.dispatchEvent(new CustomEvent('selectConversation', {
+      detail: { conversationId }
+    }));
+    
+    // Navegar a dashboard con el conversationId
+    router.visit(`/dashboard?conversation=${conversationId}`, {
+      preserveState: false,
+      preserveScroll: false,
     });
   };
 

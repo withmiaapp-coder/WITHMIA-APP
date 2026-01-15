@@ -223,36 +223,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       read: false,
     };
 
-    // Agrupar notificaciones si está habilitado
-    if (settings.groupNotifications) {
-      setNotifications(prev => {
-        // Buscar notificación existente de la misma conversación
-        const existingIndex = prev.findIndex(n => n.conversationId === notification.conversationId && !n.read);
-        if (existingIndex !== -1) {
-          // Actualizar la existente en lugar de crear una nueva
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            message: notification.message,
-            timestamp: new Date(),
-          };
-          return updated;
-        }
-        return [newNotification, ...prev].slice(0, 50);
-      });
-      
-      // Solo incrementar contador si es una nueva conversación
-      setNotifications(prev => {
-        const hasExisting = prev.some(n => n.conversationId === notification.conversationId && n.id !== newNotification.id && !n.read);
-        if (!hasExisting) {
-          setUnreadCount(count => count + 1);
-        }
-        return prev;
-      });
-    } else {
-      setNotifications(prev => [newNotification, ...prev].slice(0, 50));
-      setUnreadCount(prev => prev + 1);
-    }
+    // Siempre agregar nueva notificación (sin agrupar)
+    // Mantener máximo 50 notificaciones
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
+    setUnreadCount(prev => prev + 1);
 
     // Efectos con prioridad
     playNotificationSound(notification.priority || 'medium');
@@ -263,7 +237,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     );
 
     console.log('🔔 Notificación agregada:', newNotification);
-  }, [settings.enabled, settings.groupNotifications, playNotificationSound, showDesktopNotification]);
+  }, [settings.enabled, playNotificationSound, showDesktopNotification]);
 
   // Marcar como leída
   const markAsRead = useCallback((notificationId: string) => {
