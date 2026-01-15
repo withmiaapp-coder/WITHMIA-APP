@@ -39,6 +39,44 @@ Route::get('/reset-onboarding-test', function () {
     return response()->json(['error' => 'Usuario no encontrado'], 404);
 });
 
+// TEMP: Borrar TODOS los datos de prueba de la DB (ELIMINAR EN PRODUCCIÓN)
+Route::get('/clean-test-data', function () {
+    $secret = request()->input('secret');
+    
+    if ($secret !== 'withmia2026clean') {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $deleted = [];
+    
+    // Borrar todas las companies
+    $companiesCount = \App\Models\Company::count();
+    \App\Models\Company::truncate();
+    $deleted['companies'] = $companiesCount;
+    
+    // Resetear todos los usuarios (no borrar, solo limpiar onboarding)
+    $usersCount = \App\Models\User::count();
+    \App\Models\User::query()->update([
+        'company_slug' => null,
+        'onboarding_step' => 1,
+        'onboarding_completed' => false,
+        'company_name' => null,
+        'company_description' => null,
+        'company_website' => null,
+        'use_case' => null,
+        'monthly_volume' => null,
+        'discovery_source' => null,
+        'current_tools' => null,
+    ]);
+    $deleted['users_reset'] = $usersCount;
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Base de datos limpiada',
+        'deleted' => $deleted
+    ]);
+});
+
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
 // ============================================================================
