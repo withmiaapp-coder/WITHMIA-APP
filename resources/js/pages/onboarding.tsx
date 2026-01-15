@@ -320,8 +320,18 @@ export default function Onboarding({
           // Clear localStorage when onboarding is completed
           localStorage.removeItem("withmia_onboarding_data");
           localStorage.removeItem("withmia_onboarding_step");
+          
+          // Get dashboard URL from backend (includes auth_token)
+          let dashboardUrl = data.dashboard_url || `/dashboard/${data.company_slug}`;
+          
+          // Ensure auth_token is in URL (Railway Edge workaround)
+          const storedToken = localStorage.getItem('railway_auth_token');
+          if (storedToken && !dashboardUrl.includes('auth_token=')) {
+            dashboardUrl += (dashboardUrl.includes('?') ? '&' : '?') + 'auth_token=' + storedToken;
+          }
+          
           // Show elegant transition before redirecting
-          showTransitionAndRedirect("/dashboard", 3000);
+          showTransitionAndRedirect(dashboardUrl, 3000);
         }
       } else {
         showNotification(
