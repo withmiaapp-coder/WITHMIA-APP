@@ -68,6 +68,84 @@ Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
     }
 });
 
+// 🔧 ARREGLAR WORKFLOW EXISTENTE - Obtener, corregir nodos con error y actualizar
+Route::get('/fix-workflow/{workflowId}', function ($workflowId) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        // 1. Obtener workflow actual
+        $getResult = $n8nService->getWorkflow($workflowId);
+        if (!$getResult['success']) {
+            return response()->json(['error' => 'No se pudo obtener workflow', 'details' => $getResult], 400);
+        }
+        
+        $workflow = $getResult['data'];
+        $nodes = $workflow['nodes'] ?? [];
+        $fixedNodes = [];
+        $fixes = [];
+        
+        foreach ($nodes as $node) {
+            $nodeType = $node['type'] ?? '';
+            $nodeName = $node['name'] ?? '';
+            
+            // Arreglar nodo OpenAI Chat Model
+            if (strpos($nodeType, 'lmChatOpenAi') !== false) {
+                // Corregir modelo
+                if (isset($node['parameters']['model'])) {
+                    $model = $node['parameters']['model'];
+                    if (is_array($model) && isset($model['value'])) {
+                        $modelValue = $model['value'];
+                        // Corregir modelos incorrectos
+                        if ($modelValue === 'gpt-4.1-mini' || $modelValue === 'gpt-4-mini') {
+                            $node['parameters']['model'] = 'gpt-4o-mini';
+                            $fixes[] = "Corregido modelo de '$modelValue' a 'gpt-4o-mini'";
+                        }
+                    }
+                }
+                // Asegurar options es objeto
+                if (!isset($node['parameters']['options']) || empty($node['parameters']['options'])) {
+                    $node['parameters']['options'] = new \stdClass();
+                }
+            }
+            
+            // Asegurar que parameters nunca es array vacío
+            if (isset($node['parameters']) && is_array($node['parameters']) && empty($node['parameters'])) {
+                $node['parameters'] = new \stdClass();
+                $fixes[] = "Corregido parameters vacío en nodo '$nodeName'";
+            }
+            
+            $fixedNodes[] = $node;
+        }
+        
+        // 2. Actualizar workflow con nodos corregidos
+        $updateData = [
+            'name' => $workflow['name'],
+            'nodes' => $fixedNodes,
+            'connections' => $workflow['connections'] ?? new \stdClass(),
+            'settings' => $workflow['settings'] ?? ['executionOrder' => 'v1']
+        ];
+        
+        $updateResult = $n8nService->updateWorkflow($workflowId, $updateData);
+        
+        // 3. Activar workflow
+        $activateResult = $n8nService->activateWorkflow($workflowId);
+        
+        return response()->json([
+            'success' => true,
+            'workflow_id' => $workflowId,
+            'fixes_applied' => $fixes,
+            'update_result' => $updateResult,
+            'activate_result' => $activateResult
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // 🚀 CREAR WORKFLOW MINIMALISTA (sin template JSON)
 Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
     try {
