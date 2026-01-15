@@ -51,6 +51,23 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
+// ⚡ ACTIVAR WORKFLOW n8n
+Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $result = $n8nService->activateWorkflow($workflowId);
+        
+        return response()->json([
+            'workflow_id' => $workflowId,
+            'result' => $result
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // 🚀 CREAR WORKFLOW MINIMALISTA (sin template JSON)
 Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
     try {
