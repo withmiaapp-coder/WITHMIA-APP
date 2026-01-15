@@ -3032,7 +3032,7 @@ const ConversationsInterface: React.FC = () => {
       <div className="h-full flex items-center justify-center bg-white/20 backdrop-blur-2xl">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error de Conexi??n</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error de Conexión</h3>
           <p className="text-gray-600 mb-4">No se pudieron cargar las conversaciones</p>
           <button 
             onClick={() => fetchUpdatedConversations()}
