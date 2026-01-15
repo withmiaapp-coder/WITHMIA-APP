@@ -715,9 +715,18 @@ class EvolutionApiController extends Controller
                 $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             }
             
-            // 🚀 AUTO-CREAR WORKFLOW si la instancia no tiene uno (verificación lazy)
-            if ($instance && empty($instance->n8n_workflow_id)) {
-                Log::info('🤖 Instancia sin workflow, creando automáticamente...', [
+            // 🚀 AUTO-CREAR WORKFLOW solo cuando WhatsApp se conecta (connection.update con estado open)
+            // NO crear en cualquier evento para evitar recrear el workflow después de desconectar
+            $shouldCreateWorkflow = false;
+            if ($event === 'connection.update' || $event === 'CONNECTION_UPDATE') {
+                $state = $data['state'] ?? ($data['status'] ?? null);
+                if ($state === 'open' || $state === 'connected') {
+                    $shouldCreateWorkflow = true;
+                }
+            }
+            
+            if ($shouldCreateWorkflow && $instance && empty($instance->n8n_workflow_id)) {
+                Log::info('🤖 WhatsApp conectado, creando workflow automáticamente...', [
                     'instance' => $instanceName,
                     'event' => $event
                 ]);
