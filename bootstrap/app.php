@@ -30,5 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Interceptar AuthenticationException para NO mostrar "Redirecting to"
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+            // Retornar login.html directamente sin redirect
+            return response()->file(public_path('login.html'));
+        });
     })->create();

@@ -9,14 +9,14 @@ use Illuminate\Support\Facades\Auth;
 
 class TokenAuth
 {
-    public function handle(Request \, Closure \)
+    public function handle(Request $request, Closure $next)
     {
         // Por ahora, simplemente verificar si hay una sesión activa
         if (Auth::check()) {
-            return \(\);
+            return $next($request);
         }
 
-        // Si no hay sesión, redirigir al login
-        return redirect('/login');
+        // Si no hay sesión, mostrar login directamente (sin redirect feo)
+        return response()->file(public_path('login.html'));
     }
 }
