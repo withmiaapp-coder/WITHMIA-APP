@@ -113,6 +113,39 @@ class N8nService
     }
 
     /**
+     * Actualizar un workflow existente
+     */
+    public function updateWorkflow(string $workflowId, array $workflowData): array
+    {
+        try {
+            Log::info('n8n updateWorkflow request', [
+                'workflow_id' => $workflowId,
+                'nodes_count' => count($workflowData['nodes'] ?? [])
+            ]);
+            
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $workflowData);
+
+            if ($response->successful()) {
+                Log::info('✅ Workflow actualizado', ['workflow_id' => $workflowId]);
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('n8n updateWorkflow error', [
+                'status' => $response->status(),
+                'body' => substr($response->body(), 0, 500)
+            ]);
+            return ['success' => false, 'error' => 'Error al actualizar workflow: ' . $response->status()];
+        } catch (\Exception $e) {
+            Log::error('n8n updateWorkflow exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Activar un workflow
      */
     public function activateWorkflow(string $workflowId): array
