@@ -19,7 +19,7 @@ class RolePermissionMiddleware
     public function handle(Request $request, Closure $next, ...$rolesOrPermissions): Response
     {
         if (!auth()->check()) {
-            return response()->view('transition', ['redirect' => '/login']);
+            return redirect('/login');
         }
 
         $user = auth()->user();

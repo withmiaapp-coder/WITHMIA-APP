@@ -44,10 +44,10 @@
     </div>
 
     <script>
-        // Redirigir después de 1.5 segundos
+        // Redirigir después de 3 segundos para que el logo se dibuje completo
         setTimeout(function() {
             window.location.href = "{{ $redirect ?? '/login' }}";
-        }, 1500);
+        }, 3000);
     </script>
 </body>
 </html>

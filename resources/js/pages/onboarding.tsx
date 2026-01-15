@@ -321,7 +321,7 @@ export default function Onboarding({
           localStorage.removeItem("withmia_onboarding_data");
           localStorage.removeItem("withmia_onboarding_step");
           // Show elegant transition before redirecting
-          showTransitionAndRedirect("/dashboard", 1500);
+          showTransitionAndRedirect("/dashboard", 3000);
         }
       } else {
         showNotification(

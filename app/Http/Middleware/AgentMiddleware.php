@@ -14,7 +14,7 @@ class AgentMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if (!auth()->check()) {
-            return response()->view('transition', ['redirect' => '/login']);
+            return redirect('/login');
         }
 
         $user = auth()->user();

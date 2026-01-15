@@ -24,10 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway proxies for proper HTTPS detection
         $middleware->trustProxies(at: '*');
         
-        // Customize the redirect for unauthenticated users to show transition
-        $middleware->redirectGuestsTo(fn (Request $request) => 
-            $request->expectsJson() ? null : route('transition.login')
-        );
+        // Redirect directo a login (sin transición para evitar loops)
+        $middleware->redirectGuestsTo('/login');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

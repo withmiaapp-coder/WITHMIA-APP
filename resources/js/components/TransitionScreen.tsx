@@ -39,7 +39,7 @@ export default function TransitionScreen({ targetUrl, delay = 1500 }: Transition
 }
 
 // Función helper para mostrar la transición y redirigir
-export function showTransitionAndRedirect(targetUrl: string, delay: number = 1500) {
+export function showTransitionAndRedirect(targetUrl: string, delay: number = 3000) {
   // Crear el contenedor si no existe
   let container = document.getElementById('transition-screen-container');
   if (!container) {
