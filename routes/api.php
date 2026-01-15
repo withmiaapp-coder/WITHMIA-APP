@@ -8,29 +8,31 @@ use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
 // Helper para workflow minimalista
-function getMinimalWorkflow(string $instanceName): array {
-    $webhookPath = "whatsapp-{$instanceName}";
-    return [
-        'name' => "WhatsApp Bot - {$instanceName}",
-        'nodes' => [
-            [
-                'parameters' => [
-                    'path' => $webhookPath,
-                    'httpMethod' => 'POST',
-                    'responseMode' => 'onReceived',
-                    'responseData' => 'allEntries'
-                ],
-                'type' => 'n8n-nodes-base.webhook',
-                'typeVersion' => 2,
-                'position' => [0, 0],
-                'id' => \Illuminate\Support\Str::uuid()->toString(),
-                'name' => 'Webhook WhatsApp',
-                'webhookId' => \Illuminate\Support\Str::uuid()->toString()
-            ]
-        ],
-        'connections' => new \stdClass(),
-        'settings' => ['executionOrder' => 'v1']
-    ];
+if (!function_exists('getMinimalWorkflow')) {
+    function getMinimalWorkflow(string $instanceName): array {
+        $webhookPath = "whatsapp-{$instanceName}";
+        return [
+            'name' => "WhatsApp Bot - {$instanceName}",
+            'nodes' => [
+                [
+                    'parameters' => [
+                        'path' => $webhookPath,
+                        'httpMethod' => 'POST',
+                        'responseMode' => 'onReceived',
+                        'responseData' => 'allEntries'
+                    ],
+                    'type' => 'n8n-nodes-base.webhook',
+                    'typeVersion' => 2,
+                    'position' => [0, 0],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'Webhook WhatsApp',
+                    'webhookId' => \Illuminate\Support\Str::uuid()->toString()
+                ]
+            ],
+            'connections' => new \stdClass(),
+            'settings' => ['executionOrder' => 'v1']
+        ];
+    }
 }
 
 // 🔄 RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
