@@ -116,18 +116,9 @@
     </div>
 
     <script>
-        // Guardar el token en localStorage para Railway Edge workaround
-        const urlParams = new URLSearchParams(window.location.search);
-        const authToken = urlParams.get('auth_token');
-        
-        if (authToken) {
-            localStorage.setItem('railway_auth_token', authToken);
-            console.log('[Railway Auth] Token saved from transition page');
-        }
-        
-        // Redirect después de 2.5 segundos
+        // Redirect después de 2.5 segundos al onboarding
         setTimeout(() => {
-            window.location.href = '/onboarding' + (authToken ? '?auth_token=' + authToken : '');
+            window.location.href = '/onboarding';
         }, 2500);
     </script>
 </body>

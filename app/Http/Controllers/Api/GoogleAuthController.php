@@ -93,31 +93,19 @@ class GoogleAuthController extends Controller
             // Guardar sesión explícitamente
             $request->session()->save();
             
-            // Crear un token persistente para Railway Edge (que stripea cookies)
-            $authToken = Str::random(64);
+            // Determinar a dónde redirigir según el estado del usuario
+            if ($user->company_slug && $user->onboarding_completed) {
+                // Usuario ya completó onboarding - ir al dashboard
+                $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]);
+            } else {
+                // Usuario nuevo o sin completar onboarding
+                $redirectUrl = route('onboarding');
+            }
             
-            // Guardar el token en cache con el user_id (expira en 24 horas)
-            // Este token será usado para todas las peticiones mientras Railway Edge no soporte cookies
-            \Illuminate\Support\Facades\Cache::put('auth_token:' . $authToken, [
-                'user_id' => $user->id,
-                'session_id' => $sessionId,
-                'created_at' => now()->toIso8601String()
-            ], 60 * 60 * 24);
+            error_log('Redirecting user to: ' . $redirectUrl);
             
-            error_log('Created auth token for URL: ' . substr($authToken, 0, 10) . '...');
-            
-            // Mostrar página de transición elegante con el logo animado
-            // Inyectar el token directamente en el HTML
-            $transitionHtml = file_get_contents(public_path('auth-transition.html'));
-            $transitionHtml = str_replace(
-                "const authToken = urlParams.get('auth_token');",
-                "const authToken = '{$authToken}';",
-                $transitionHtml
-            );
-            
-            return response($transitionHtml, 200, [
-                'Content-Type' => 'text/html; charset=UTF-8',
-            ]);
+            // Redirigir directamente sin auth_token
+            return redirect($redirectUrl);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
@@ -165,22 +153,7 @@ class GoogleAuthController extends Controller
         $receivedCookies = array_keys($request->cookies->all());
         $hasCookie = in_array($cookieName, $receivedCookies);
         
-        // También verificar autenticación via Railway Auth Token
-        $railwayToken = $request->header('X-Railway-Auth-Token');
-        $authenticatedViaToken = false;
-        
-        if (!Auth::check() && $railwayToken) {
-            $tokenData = \Illuminate\Support\Facades\Cache::get('auth_token:' . $railwayToken);
-            if ($tokenData && isset($tokenData['user_id'])) {
-                $user = \App\Models\User::find($tokenData['user_id']);
-                if ($user) {
-                    Auth::login($user, true);
-                    $authenticatedViaToken = true;
-                }
-            }
-        }
-        
-        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO') . ', RailwayToken: ' . ($railwayToken ? 'YES' : 'NO'));
+        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO'));
         
         return response()->json([
             'authenticated' => Auth::check(),
@@ -188,8 +161,7 @@ class GoogleAuthController extends Controller
             'session_id' => substr($sessionId, 0, 10) . '...',
             'has_valid_session' => $hasSession,
             'received_cookies' => $receivedCookies,
-            'expected_cookie' => $cookieName,
-            'authenticated_via_token' => $authenticatedViaToken
+            'expected_cookie' => $cookieName
         ]);
     }
 }

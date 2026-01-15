@@ -346,43 +346,24 @@ Route::post('/api/improve-description', [OnboardingApiController::class, 'improv
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('onboarding.improve');
 
-// Onboarding route - FUERA del middleware auth para evitar "Redirecting to"
+// Onboarding route - Autenticación basada en sesión
 Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
-    $cookieName = config('session.cookie');
-    $receivedCookies = array_keys($request->cookies->all());
     $sessionId = session()->getId();
     
-    error_log('Onboarding - Session ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies received: ' . implode(',', $receivedCookies) . ', Expected cookie: ' . $cookieName);
-    
-    // Workaround: Si hay un auth_token en la URL, restaurar la sesión
-    if ($authToken = $request->query('auth_token')) {
-        error_log('Auth token received: ' . substr($authToken, 0, 10) . '...');
-        
-        // Usar get() en lugar de pull() para NO consumir el token
-        // El token se reutilizará para todas las peticiones
-        $tokenData = \Illuminate\Support\Facades\Cache::get('auth_token:' . $authToken);
-        
-        if ($tokenData && isset($tokenData['user_id'])) {
-            $user = \App\Models\User::find($tokenData['user_id']);
-            if ($user) {
-                Auth::login($user, true);
-                $request->session()->regenerate();
-                error_log('User restored from auth_token: ' . $user->id);
-                
-                // Guardar el token en la sesión para que Inertia lo pase al frontend
-                session(['railway_auth_token' => $authToken]);
-                
-                // NO hacer redirect - mostrar directamente el onboarding
-                return app(OnboardingController::class)->show();
-            }
-        }
-        error_log('Auth token invalid or expired');
-    }
+    error_log('Onboarding - Session ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO'));
     
     if (!Auth::check()) {
         // No autenticado - mostrar login directamente
         return response()->file(public_path('login.html'));
     }
+    
+    $user = Auth::user();
+    
+    // Si ya completó onboarding, redirigir al dashboard
+    if ($user->company_slug && $user->onboarding_completed) {
+        return redirect()->route('dashboard.company', ['companySlug' => $user->company_slug]);
+    }
+    
     return app(OnboardingController::class)->show();
 })->name('onboarding');
 

@@ -321,14 +321,8 @@ export default function Onboarding({
           localStorage.removeItem("withmia_onboarding_data");
           localStorage.removeItem("withmia_onboarding_step");
           
-          // Get dashboard URL from backend (includes auth_token)
+          // Get dashboard URL from backend
           let dashboardUrl = data.dashboard_url || `/dashboard/${data.company_slug}`;
-          
-          // Ensure auth_token is in URL (Railway Edge workaround)
-          const storedToken = localStorage.getItem('railway_auth_token');
-          if (storedToken && !dashboardUrl.includes('auth_token=')) {
-            dashboardUrl += (dashboardUrl.includes('?') ? '&' : '?') + 'auth_token=' + storedToken;
-          }
           
           // Show elegant transition before redirecting
           showTransitionAndRedirect(dashboardUrl, 3000);

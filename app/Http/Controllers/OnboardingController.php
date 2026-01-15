@@ -130,14 +130,8 @@ class OnboardingController extends Controller
             if ($isCompleted) {
                 $user->refresh();
                 
-                // Obtener el auth_token de la sesión para incluirlo en el redirect
-                $authToken = session('railway_auth_token');
+                // URL del dashboard usando el company_slug
                 $dashboardUrl = route('dashboard.company', ['companySlug' => $user->company_slug]);
-                
-                // Agregar token a la URL si existe (Railway Edge workaround)
-                if ($authToken) {
-                    $dashboardUrl .= '?auth_token=' . $authToken;
-                }
                 
                 $completionData = [
                     'company_slug' => $user->company_slug,
