@@ -89,9 +89,30 @@ class GoogleAuthController extends Controller
             error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
             error_log('Cookie config - Name: ' . $cookieName . ', Domain: ' . $cookieDomain . ', Secure: ' . ($cookieSecure ? 'true' : 'false') . ', SameSite: ' . $cookieSameSite);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
-
-            // Redirect directo - el navegador procesará las cookies automáticamente
-            return redirect('/onboarding');
+            
+            // Guardar sesión explícitamente
+            $request->session()->save();
+            
+            // Crear respuesta con redirect y cookie explícita
+            $response = redirect('/onboarding');
+            
+            // Agregar la cookie de sesión manualmente para estar seguros
+            $encryptedValue = encrypt($sessionId, false);
+            $cookie = cookie(
+                $cookieName,
+                $encryptedValue,
+                config('session.lifetime'),
+                '/',
+                $cookieDomain ?: null,
+                true, // secure
+                true, // httpOnly
+                false, // raw
+                $cookieSameSite ?: 'lax'
+            );
+            
+            error_log('Setting cookie manually: ' . $cookieName . ' = ' . substr($encryptedValue, 0, 20) . '...');
+            
+            return $response->withCookie($cookie);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
