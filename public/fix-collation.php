@@ -1,7 +1,7 @@
 <?php
 /**
  * Script para corregir el warning de collation de PostgreSQL
- * Ejecuta: ALTER DATABASE railway REFRESH COLLATION VERSION
+ * y verificar estado de n8n en instancias
  * ELIMINAR DESPUÉS DE USAR
  */
 
@@ -9,6 +9,10 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $app = require_once __DIR__ . '/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+
+// Bootstrapear la app completamente
+$request = Illuminate\Http\Request::capture();
+$kernel->handle($request);
 
 header('Content-Type: application/json');
 
