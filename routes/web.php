@@ -243,11 +243,16 @@ Route::post('/api/improve-description', [OnboardingApiController::class, 'improv
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('onboarding.improve');
 
-Route::middleware('auth')->group(function () {
+// Onboarding route - FUERA del middleware auth para evitar "Redirecting to"
+Route::get('/onboarding', function () {
+    if (!Auth::check()) {
+        // No autenticado - mostrar login directamente
+        return response()->file(public_path('login.html'));
+    }
+    return app(OnboardingController::class)->show();
+})->name('onboarding');
 
-    // Onboarding routes
-    Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding');
-
+Route::middleware('auth.clean')->group(function () {
 
     // Dashboard routes - Sistema híbrido /dashboard/{company-slug}
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');

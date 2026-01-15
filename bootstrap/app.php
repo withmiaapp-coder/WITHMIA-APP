@@ -23,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Trust Railway proxies for proper HTTPS detection
         $middleware->trustProxies(at: '*');
+        
+        // Registrar middleware personalizado
+        $middleware->alias([
+            'auth.clean' => \App\Http\Middleware\AuthWithoutRedirectText::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
