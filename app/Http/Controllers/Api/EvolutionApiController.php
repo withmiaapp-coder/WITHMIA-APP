@@ -682,10 +682,38 @@ class EvolutionApiController extends Controller
         $instanceName = $request->input('instance');
         $data = $request->input('data');
 
+        // 🚀 FAST REJECT: Ignorar eventos no críticos inmediatamente
+        // Esto evita procesamiento innecesario de eventos spam
+        $ignoredEvents = [
+            'presence.update',
+            'PRESENCE_UPDATE',
+            'chats.set',
+            'CHATS_SET',
+            'contacts.set',
+            'CONTACTS_SET',
+            'labels.edit',
+            'LABELS_EDIT',
+            'messages.edited',
+            'MESSAGES_EDITED',
+            'groups.update',
+            'GROUPS_UPDATE',
+        ];
+        
+        if (in_array($event, $ignoredEvents)) {
+            return response()->json(['status' => 'ignored']);
+        }
+
+        // 🔒 RATE LIMIT GLOBAL: Máximo 1 webhook por instancia cada 2 segundos
+        // Esto previene que el servidor se sature con webhooks repetidos
+        $rateLimitKey = "webhook_rate_{$instanceName}_{$event}";
+        if (Cache::has($rateLimitKey)) {
+            return response()->json(['status' => 'rate_limited']);
+        }
+        Cache::put($rateLimitKey, true, 2); // 2 segundos
+
         Log::info('Evolution API Webhook received', [
             'event' => $event,
-            'instance' => $instanceName,
-            'data' => $data
+            'instance' => $instanceName
         ]);
 
         // REENVIO A N8N (usando red interna de Railway)
@@ -803,37 +831,123 @@ class EvolutionApiController extends Controller
     }
 
     /**
+     * Mensajes de sistema de WhatsApp que NO deben generar notificaciones
+     * Estos son mensajes internos de la conexión, no mensajes reales de usuarios
+     */
+    private const SYSTEM_MESSAGE_PATTERNS = [
+        '🚀 Connection successfully established!',
+        'Connection successfully established',
+        'QRCode generated',
+        'Waiting for QR Code',
+        'Connecting...',
+        'Connected!',
+        'Disconnected',
+        'protocolomessage',
+        'protocolMessage',
+    ];
+    
+    /**
+     * Verificar si es un mensaje de sistema que debe ser ignorado
+     */
+    private function isSystemMessage(string $messageText, array $data): bool
+    {
+        // Verificar patrones de mensajes de sistema
+        foreach (self::SYSTEM_MESSAGE_PATTERNS as $pattern) {
+            if (stripos($messageText, $pattern) !== false) {
+                return true;
+            }
+        }
+        
+        // Mensajes de protocolo de WhatsApp (no son mensajes reales)
+        if (isset($data['message']['protocolMessage'])) {
+            return true;
+        }
+        
+        // Mensajes de status@broadcast (actualizaciones de estado)
+        if (isset($data['key']['remoteJid']) && str_contains($data['key']['remoteJid'], 'status@broadcast')) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verificar si un mensaje ya fue procesado (deduplicación)
+     */
+    private function isMessageAlreadyProcessed(array $data): bool
+    {
+        // Usar el messageId único de WhatsApp para deduplicación
+        $messageId = $data['key']['id'] ?? null;
+        if (!$messageId) {
+            return false; // Sin ID, no podemos deduplicar
+        }
+        
+        $cacheKey = 'processed_msg_' . $messageId;
+        
+        // Si ya está en caché, fue procesado
+        if (Cache::has($cacheKey)) {
+            Log::debug('🔄 Mensaje ya procesado (deduplicado)', ['message_id' => $messageId]);
+            return true;
+        }
+        
+        // Marcar como procesado por 60 segundos (suficiente para evitar duplicados)
+        Cache::put($cacheKey, true, 60);
+        return false;
+    }
+    
+    /**
      * Manejar evento de nuevo mensaje
      */
     private function handleMessageUpsert(array $data, string $instanceName): void
     {
         $phoneNumber = $data['key']['remoteJid'] ?? null;
         $fromMe = $data['key']['fromMe'] ?? false;
+        $messageId = $data['key']['id'] ?? null;
         $messageText = $data['message']['conversation'] 
             ?? $data['message']['extendedTextMessage']['text'] 
             ?? $data['message']['imageMessage']['caption'] 
             ?? '';
 
         if (!$phoneNumber) {
-            Log::warning('Mensaje sin n??mero de tel??fono', ['data' => $data]);
+            Log::warning('Mensaje sin número de teléfono', ['data' => $data]);
             return;
         }
 
-        // Limpiar el n??mero de tel??fono (quitar @s.whatsapp.net)
+        // Limpiar el número de teléfono (quitar @s.whatsapp.net)
         $cleanPhone = str_replace('@s.whatsapp.net', '', $phoneNumber);
 
-        Log::info('???? Nuevo mensaje recibido', [
+        // 🔄 DEDUPLICACIÓN: Verificar si ya procesamos este mensaje
+        if ($this->isMessageAlreadyProcessed($data)) {
+            Log::info('⏭️ Mensaje duplicado ignorado', [
+                'message_id' => $messageId,
+                'phone' => $cleanPhone
+            ]);
+            return;
+        }
+        
+        // 🚫 FILTRO DE MENSAJES DE SISTEMA
+        // Ignorar mensajes de conexión, protocolo, etc.
+        if ($this->isSystemMessage($messageText, $data)) {
+            Log::info('🔇 Mensaje de sistema ignorado', [
+                'message' => substr($messageText, 0, 50),
+                'phone' => $cleanPhone
+            ]);
+            return;
+        }
+
+        Log::info('📨 Nuevo mensaje recibido', [
             'phone' => $phoneNumber,
             'clean_phone' => $cleanPhone,
             'from_me' => $fromMe,
             'message' => $messageText,
+            'message_id' => $messageId,
             'instance' => $instanceName
         ]);
 
-        // ???? NO notificar si el mensaje es de nosotros (fromMe: true)
-        // Esto evita la notificaci??n falsa de "nuevo mensaje" cuando T?? env??as
+        // 🛑 NO notificar si el mensaje es de nosotros (fromMe: true)
+        // Esto evita la notificación falsa de "nuevo mensaje" cuando TÚ envías
         if ($fromMe) {
-            Log::info('?????? Mensaje enviado por nosotros, no se notifica', [
+            Log::info('⏭️ Mensaje enviado por nosotros, no se notifica', [
                 'phone' => $cleanPhone,
                 'from_me' => true
             ]);
@@ -1082,15 +1196,33 @@ class EvolutionApiController extends Controller
     }
 
     /**
-     * Manejar cambio de estado de conexi??n
+     * Manejar cambio de estado de conexión
+     * Con rate limiting para evitar spam de eventos
      */
     private function handleConnectionUpdate(array $data, string $instanceName): void
     {
         $state = $data['state'] ?? 'unknown';
 
-        Log::info('???? Cambio de conexi??n', [
+        // 🔒 RATE LIMITING: Solo procesar si el estado cambió o han pasado 30 segundos
+        $cacheKey = "connection_state_{$instanceName}";
+        $lastState = Cache::get($cacheKey);
+        
+        // Si el estado no cambió y fue procesado recientemente, ignorar
+        if ($lastState === $state) {
+            Log::debug('⏭️ Connection update ignorado (rate limited)', [
+                'instance' => $instanceName,
+                'state' => $state
+            ]);
+            return;
+        }
+        
+        // Guardar estado por 30 segundos
+        Cache::put($cacheKey, $state, 30);
+
+        Log::info('📡 Cambio de conexión', [
             'instance' => $instanceName,
             'state' => $state,
+            'previous_state' => $lastState,
             'data' => $data
         ]);
 

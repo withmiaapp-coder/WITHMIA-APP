@@ -88,6 +88,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const originalTitle = useRef<string>('');
   const lastNotificationTime = useRef<number>(0);
   const RATE_LIMIT_MS = 1000; // Mínimo 1 segundo entre notificaciones
+  
+  // 🔒 DEDUPLICACIÓN: Set para trackear mensajes ya procesados
+  const processedMessageIds = useRef<Set<string>>(new Set());
+  const lastNotificationPerConversation = useRef<Map<number, number>>(new Map());
+  const CONVERSATION_RATE_LIMIT_MS = 3000; // Mínimo 3 segundos entre notificaciones de la misma conversación
 
   // Cargar configuración desde localStorage
   useEffect(() => {
@@ -365,21 +370,77 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       
       if (!isIncoming) return;
 
-      console.log('🔔 [GLOBAL-WS] Nuevo mensaje recibido vía WebSocket:', event?.conversation_id);
+      // 🔒 DEDUPLICACIÓN POR MESSAGE ID
+      const messageId = event?.message?.id || event?.id;
+      const conversationId = event?.conversation?.id || event?.conversation_id;
+      
+      if (!conversationId || conversationId <= 0) {
+        console.log('⚠️ [GLOBAL-WS] conversation_id inválido, ignorando');
+        return;
+      }
+      
+      // Crear clave única para este mensaje
+      const messageKey = `${conversationId}-${messageId}`;
+      
+      if (processedMessageIds.current.has(messageKey)) {
+        console.log('🔄 [GLOBAL-WS] Mensaje ya procesado, ignorando:', messageKey);
+        return;
+      }
+      
+      // Marcar como procesado
+      processedMessageIds.current.add(messageKey);
+      
+      // Limpiar mensajes antiguos del Set (mantener máximo 100)
+      if (processedMessageIds.current.size > 100) {
+        const firstItem = processedMessageIds.current.values().next().value;
+        processedMessageIds.current.delete(firstItem);
+      }
+      
+      // 🔒 RATE LIMIT POR CONVERSACIÓN
+      const now = Date.now();
+      const lastTime = lastNotificationPerConversation.current.get(conversationId) || 0;
+      
+      if (now - lastTime < CONVERSATION_RATE_LIMIT_MS) {
+        console.log(`⏱️ [GLOBAL-WS] Rate limit para conversación ${conversationId}, ignorando`);
+        return;
+      }
+      
+      lastNotificationPerConversation.current.set(conversationId, now);
+      
+      // 🚫 FILTRAR MENSAJES DE SISTEMA/CONEXIÓN DE WHATSAPP
+      const messageContent = event?.message?.content || event?.content || '';
+      const systemMessages = [
+        'Connection successfully established',
+        'QRCode successfully generated',
+        'Instance created',
+        'Connecting...',
+        'Disconnected',
+        '🚀 Connection',
+        '⚡ QRCode',
+      ];
+      
+      const isSystemMessage = systemMessages.some(sm => 
+        messageContent.toLowerCase().includes(sm.toLowerCase())
+      );
+      
+      if (isSystemMessage) {
+        console.log('🔧 [GLOBAL-WS] Mensaje de sistema detectado, ignorando:', messageContent.substring(0, 50));
+        return;
+      }
+
+      console.log('🔔 [GLOBAL-WS] Nuevo mensaje recibido vía WebSocket:', conversationId);
 
       // Extraer información del evento
       const contactName = event?.conversation?.meta?.sender?.name || 
                          event?.conversation?.contact?.name ||
                          event?.sender?.name ||
                          'Contacto';
-      const messageContent = event?.message?.content || event?.content || 'Nuevo mensaje';
-      const conversationId = event?.conversation?.id || event?.conversation_id;
 
       if (conversationId) {
         addNotification({
           conversationId,
           contactName,
-          message: messageContent.substring(0, 100),
+          message: messageContent.substring(0, 100) || 'Nuevo mensaje',
           priority: (event?.conversation?.unread_count || 0) > 3 ? 'high' : 'medium',
           avatar: contactName.charAt(0).toUpperCase(),
         });

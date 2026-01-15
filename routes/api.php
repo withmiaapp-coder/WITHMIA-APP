@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
@@ -51,64 +51,41 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
-// 🔍 DIAGNOSTICAR WORKFLOW - Ver nodos y detectar problemas
-Route::get('/diagnose-workflow/{workflowId}', function ($workflowId) {
+// 🔍 DEBUG: Ver usuarios en la base de datos
+Route::get('/debug-users', function () {
+    $users = \App\Models\User::all(['id', 'name', 'email', 'created_at']);
+    return response()->json([
+        'total' => $users->count(),
+        'users' => $users
+    ]);
+});
+
+// 🔍 DEBUG: Limpiar caché de Redis
+Route::get('/clear-all-cache', function () {
     try {
-        $n8nService = app(\App\Services\N8nService::class);
-        $result = $n8nService->getWorkflow($workflowId);
-        
-        if (!$result['success']) {
-            return response()->json(['error' => 'No se pudo obtener workflow', 'details' => $result], 400);
-        }
-        
-        $workflow = $result['data'];
-        $nodes = $workflow['nodes'] ?? [];
-        $problems = [];
-        $nodesInfo = [];
-        
-        foreach ($nodes as $node) {
-            $nodeInfo = [
-                'name' => $node['name'] ?? 'Unknown',
-                'type' => $node['type'] ?? 'Unknown',
-                'has_credentials' => isset($node['credentials']),
-                'credentials' => []
-            ];
-            
-            // Detectar problemas de credenciales
-            if (isset($node['credentials'])) {
-                foreach ($node['credentials'] as $credType => $cred) {
-                    $nodeInfo['credentials'][$credType] = [
-                        'id' => $cred['id'] ?? 'missing',
-                        'name' => $cred['name'] ?? 'missing'
-                    ];
-                    // Los IDs hardcodeados que pueden no existir
-                    $problems[] = "Nodo '{$node['name']}' requiere credencial '$credType' (ID: {$cred['id']})";
-                }
-            }
-            
-            // Detectar modelo incorrecto
-            if (strpos($node['type'] ?? '', 'lmChatOpenAi') !== false) {
-                $model = $node['parameters']['model'] ?? null;
-                if (is_array($model) && isset($model['value'])) {
-                    $modelValue = $model['value'];
-                    if ($modelValue === 'gpt-4.1-mini') {
-                        $problems[] = "Nodo '{$node['name']}' tiene modelo incorrecto: '$modelValue' (debería ser gpt-4o-mini)";
-                    }
-                }
-            }
-            
-            $nodesInfo[] = $nodeInfo;
-        }
-        
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
         return response()->json([
-            'workflow_id' => $workflowId,
-            'workflow_name' => $workflow['name'] ?? 'Unknown',
-            'active' => $workflow['active'] ?? false,
-            'total_nodes' => count($nodes),
-            'nodes' => $nodesInfo,
-            'problems_detected' => $problems
+            'success' => true,
+            'message' => 'Cache cleared'
         ]);
-        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// 🗑️ WIPE DATABASE - Solo estructura, sin datos
+Route::get('/wipe-database', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
+            '--force' => true
+        ]);
+        $output = \Illuminate\Support\Facades\Artisan::output();
+        return response()->json([
+            'success' => true,
+            'message' => 'Database wiped - empty tables created',
+            'output' => $output
+        ]);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }

@@ -190,10 +190,10 @@ Route::get('/', function () {
         // Verificar si el usuario ha completado el onboarding
         $user = Auth::user();
         if ($user->company_slug) {
-            // Usar el slug que ya tiene el usuario
-            return redirect("/dashboard/{$user->company_slug}");
+            // Usar el slug que ya tiene el usuario - mostrar transición
+            return view('transition', ['redirect' => "/dashboard/{$user->company_slug}"]);
         }
-        return redirect('/onboarding');
+        return view('transition', ['redirect' => '/onboarding']);
     }
     return redirect('/login');
 });
@@ -201,7 +201,7 @@ Route::get('/', function () {
 // Login route - redirect if already authenticated
 Route::get('/login', function () {
     if (Auth::check()) {
-        return redirect('/onboarding');
+        return view('transition', ['redirect' => '/onboarding']);
     }
     return response()->file(public_path('login.html'));
 })->name('login');

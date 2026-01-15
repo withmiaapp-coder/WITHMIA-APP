@@ -74,7 +74,23 @@ class GoogleAuthController extends Controller
             error_log('Login tracking updated - IP: ' . $loginIp . ', Time: ' . now());
             */
 
+            // Invalidar cualquier sesión anterior
+            $request->session()->invalidate();
+            
             Auth::login($user, true);
+            
+            // Regenerar la sesión para seguridad
+            $request->session()->regenerate();
+            $request->session()->regenerateToken();
+            
+            error_log('Session created - ID: ' . session()->getId() . ', User: ' . $user->id);
+
+            // Si es un form submit (no JSON), mostrar pantalla de transición
+            if (!$request->expectsJson() && !$request->isJson()) {
+                return response()->view('transition', ['redirect' => '/onboarding'])->withCookie(
+                    cookie()->forever(config('session.cookie'), session()->getId())
+                );
+            }
 
             return response()->json([
                 'success' => true,
@@ -122,9 +138,16 @@ class GoogleAuthController extends Controller
 
     public function checkSession()
     {
+        $sessionId = session()->getId();
+        $hasSession = !empty($sessionId) && strlen($sessionId) > 10;
+        
+        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO'));
+        
         return response()->json([
             'authenticated' => Auth::check(),
-            'user' => Auth::user()
+            'user' => Auth::user(),
+            'session_id' => substr($sessionId, 0, 10) . '...',
+            'has_valid_session' => $hasSession
         ]);
     }
 }

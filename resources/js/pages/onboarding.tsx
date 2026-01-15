@@ -24,6 +24,7 @@ import {
   Target,
   HelpCircle,
 } from "lucide-react";
+import { showTransitionAndRedirect } from "@/components/TransitionScreen";
 
 interface OnboardingProps {
   currentStep: number;
@@ -319,7 +320,8 @@ export default function Onboarding({
           // Clear localStorage when onboarding is completed
           localStorage.removeItem("withmia_onboarding_data");
           localStorage.removeItem("withmia_onboarding_step");
-          window.location.href = "/dashboard";
+          // Show elegant transition before redirecting
+          showTransitionAndRedirect("/dashboard", 1500);
         }
       } else {
         showNotification(

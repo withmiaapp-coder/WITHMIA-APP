@@ -521,6 +521,8 @@ class OnboardingController extends Controller
             // Remover campos que n8n no acepta en creación
             unset($templateWorkflow['id']);
             unset($templateWorkflow['versionId']);
+            unset($templateWorkflow['meta']);
+            unset($templateWorkflow['tags']);
 
             // Crear workflow en n8n
             $result = $this->n8nService->createWorkflow($templateWorkflow);

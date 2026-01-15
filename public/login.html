@@ -320,25 +320,30 @@ function handleCredentialResponse(response) {
         const responsePayload = parseJwt(response.credential);
         console.log("Procesando login de Google...");
         
-        fetch('/auth/google', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                credential: response.credential,
-                google_id: responsePayload.sub,
-                email: responsePayload.email,
-                name: responsePayload.name,
-                picture: responsePayload.picture
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = '/onboarding';
-            }
-        });
+        // Usar form submit en lugar de fetch para que las cookies se actualicen correctamente
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/auth/google';
+        form.style.display = 'none';
+        
+        const fields = {
+            credential: response.credential,
+            google_id: responsePayload.sub,
+            email: responsePayload.email,
+            name: responsePayload.name,
+            picture: responsePayload.picture
+        };
+        
+        for (const [key, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     } catch (error) {
         console.error('Error:', error);
     }
@@ -372,13 +377,40 @@ function parseJwt(token) {
     </div>
 
     <script>
+        // Función para mostrar transición elegante con video
+        function showTransitionAndRedirect(targetUrl, delay = 1500) {
+            const overlay = document.createElement('div');
+            overlay.id = 'transition-overlay';
+            overlay.innerHTML = `
+                <div style="
+                    position: fixed;
+                    inset: 0;
+                    z-index: 99999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: black;
+                ">
+                    <video autoplay loop muted playsinline style="width: 128px; height: 128px; object-fit: contain;">
+                        <source src="/logo-animated.webm" type="video/webm" />
+                        <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA" style="width: 128px; height: 128px;" />
+                    </video>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, delay);
+        }
+
         // Verificar si ya está autenticado al cargar la página
         fetch("/check-session")
  .then(response => response.json())
  .then(data => {
  if (data.authenticated) {
  console.log("Usuario ya autenticado redirigiendo...");
- window.location.href = "/onboarding";
+ showTransitionAndRedirect("/onboarding", 1500);
  }
  })
  .catch(error => console.log("No hay sesión activa:", error));
