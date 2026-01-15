@@ -92,8 +92,8 @@ class GoogleAuthController extends Controller
             error_log('Session created - ID: ' . session()->getId() . ', User: ' . $user->id);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Mostrar pantalla de transición - dejar que Laravel maneje la cookie
-            return response()->view('transition', ['redirect' => '/onboarding']);
+            // Usar redirect en lugar de view para que Laravel maneje la cookie de sesión
+            return redirect('/transition-to-onboarding');
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());

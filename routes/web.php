@@ -212,6 +212,16 @@ Route::get('/transition-login', function () {
     return view('transition', ['redirect' => '/login']);
 })->name('transition.login');
 
+// Transition route AFTER login - this is where session cookie gets set properly
+Route::get('/transition-to-onboarding', function () {
+    // Esta ruta se llama después del login, la sesión ya debería estar activa
+    if (!Auth::check()) {
+        \Log::error('transition-to-onboarding: User not authenticated after login!');
+        return response()->file(public_path('login.html'));
+    }
+    return view('transition', ['redirect' => '/onboarding']);
+})->name('transition.onboarding');
+
 // Authentication routes (no middleware needed)
 Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
