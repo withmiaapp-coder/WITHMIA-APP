@@ -42,6 +42,68 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
             'n8n_webhook_url' => null,
             'updated_at' => now()
         ]);
+
+// 🚀 CREAR WORKFLOW MINIMALISTA (sin template JSON)
+Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $evolutionApi = app(\App\Services\EvolutionApiService::class);
+        
+        // Usar workflow minimalista directamente
+        $workflow = getMinimalWorkflow($instanceName);
+        
+        Log::info('🔧 Creando workflow minimalista', ['name' => $workflow['name']]);
+        
+        // Crear en n8n
+        $result = $n8nService->createWorkflow($workflow);
+        
+        if ($result['success']) {
+            $workflowId = $result['data']['id'] ?? null;
+            $webhookUrl = $n8nService->getWebhookUrl($instanceName);
+            
+            // Activar
+            if ($workflowId) {
+                $activateResult = $n8nService->activateWorkflow($workflowId);
+                Log::info('✅ Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
+            }
+            
+            // Configurar webhook de Evolution hacia n8n
+            $evolutionResult = $evolutionApi->setWebhook(
+                $instanceName,
+                $webhookUrl,
+                ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
+            );
+            Log::info('🔗 Webhook Evolution configurado', ['result' => $evolutionResult]);
+            
+            // Guardar en BD
+            \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->update([
+                    'n8n_workflow_id' => $workflowId,
+                    'n8n_webhook_url' => $webhookUrl,
+                    'updated_at' => now()
+                ]);
+            
+            return response()->json([
+                'success' => true,
+                'workflow_id' => $workflowId,
+                'webhook_url' => $webhookUrl,
+                'evolution_webhook' => $evolutionResult['success'] ?? false,
+                'activated' => $activateResult['success'] ?? false,
+                'message' => 'Workflow minimalista creado y activado!'
+            ]);
+        }
+        
+        return response()->json(['error' => 'Error creando workflow', 'details' => $result], 500);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Error creando workflow minimalista', ['error' => $e->getMessage()]);
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
     
     return response()->json([
         'success' => true,

@@ -356,9 +356,69 @@ class EvolutionApiController extends Controller
         // 🔄 Invalidar cache de sincronización de inbox para forzar re-sync al reconectar
         \Cache::forget("inbox_sync_{$instanceName}");
         
+        // 🗑️ ELIMINAR WORKFLOW DE N8N al desconectar WhatsApp
+        $this->deleteN8nWorkflowForInstance($instanceName);
+        
         $result = $this->evolutionApi->disconnect($instanceName);
 
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+    
+    /**
+     * Eliminar workflow de n8n asociado a una instancia de WhatsApp
+     */
+    private function deleteN8nWorkflowForInstance(string $instanceName): void
+    {
+        try {
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->first();
+            
+            if (!$instance || empty($instance->n8n_workflow_id)) {
+                Log::info('🔍 No hay workflow de n8n para eliminar', [
+                    'instance' => $instanceName
+                ]);
+                return;
+            }
+            
+            Log::info('🗑️ Eliminando workflow de n8n al desconectar WhatsApp', [
+                'instance' => $instanceName,
+                'workflow_id' => $instance->n8n_workflow_id
+            ]);
+            
+            // Eliminar workflow de n8n
+            try {
+                $this->n8nService->deleteWorkflow($instance->n8n_workflow_id);
+                Log::info('✅ Workflow eliminado de n8n exitosamente', [
+                    'workflow_id' => $instance->n8n_workflow_id
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('⚠️ Error eliminando workflow de n8n (puede que ya no exista)', [
+                    'workflow_id' => $instance->n8n_workflow_id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // Limpiar referencias en la base de datos
+            DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->update([
+                    'n8n_workflow_id' => null,
+                    'n8n_webhook_url' => null,
+                    'updated_at' => now()
+                ]);
+            
+            Log::info('✅ Referencias de workflow limpiadas en base de datos', [
+                'instance' => $instanceName
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error eliminando workflow de n8n', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            // No lanzar excepción para no interrumpir el proceso de desconexión
+        }
     }
 
     /**
