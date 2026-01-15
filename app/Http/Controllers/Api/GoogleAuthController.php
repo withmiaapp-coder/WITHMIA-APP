@@ -93,14 +93,16 @@ class GoogleAuthController extends Controller
             // Guardar sesión explícitamente
             $request->session()->save();
             
-            // Crear un token temporal para pasar en la URL (workaround para Railway Edge)
+            // Crear un token persistente para Railway Edge (que stripea cookies)
             $authToken = Str::random(64);
             
-            // Guardar el token en cache con el user_id (expira en 60 segundos)
+            // Guardar el token en cache con el user_id (expira en 24 horas)
+            // Este token será usado para todas las peticiones mientras Railway Edge no soporte cookies
             \Illuminate\Support\Facades\Cache::put('auth_token:' . $authToken, [
                 'user_id' => $user->id,
-                'session_id' => $sessionId
-            ], 60);
+                'session_id' => $sessionId,
+                'created_at' => now()->toIso8601String()
+            ], 60 * 60 * 24);
             
             error_log('Created auth token for URL: ' . substr($authToken, 0, 10) . '...');
             
@@ -153,7 +155,22 @@ class GoogleAuthController extends Controller
         $receivedCookies = array_keys($request->cookies->all());
         $hasCookie = in_array($cookieName, $receivedCookies);
         
-        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO'));
+        // También verificar autenticación via Railway Auth Token
+        $railwayToken = $request->header('X-Railway-Auth-Token');
+        $authenticatedViaToken = false;
+        
+        if (!Auth::check() && $railwayToken) {
+            $tokenData = \Illuminate\Support\Facades\Cache::get('auth_token:' . $railwayToken);
+            if ($tokenData && isset($tokenData['user_id'])) {
+                $user = \App\Models\User::find($tokenData['user_id']);
+                if ($user) {
+                    Auth::login($user, true);
+                    $authenticatedViaToken = true;
+                }
+            }
+        }
+        
+        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO') . ', RailwayToken: ' . ($railwayToken ? 'YES' : 'NO'));
         
         return response()->json([
             'authenticated' => Auth::check(),
@@ -161,7 +178,8 @@ class GoogleAuthController extends Controller
             'session_id' => substr($sessionId, 0, 10) . '...',
             'has_valid_session' => $hasSession,
             'received_cookies' => $receivedCookies,
-            'expected_cookie' => $cookieName
+            'expected_cookie' => $cookieName,
+            'authenticated_via_token' => $authenticatedViaToken
         ]);
     }
 }

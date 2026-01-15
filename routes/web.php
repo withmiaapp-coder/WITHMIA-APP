@@ -265,7 +265,9 @@ Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
     if ($authToken = $request->query('auth_token')) {
         error_log('Auth token received: ' . substr($authToken, 0, 10) . '...');
         
-        $tokenData = \Illuminate\Support\Facades\Cache::pull('auth_token:' . $authToken);
+        // Usar get() en lugar de pull() para NO consumir el token
+        // El token se reutilizará para todas las peticiones
+        $tokenData = \Illuminate\Support\Facades\Cache::get('auth_token:' . $authToken);
         
         if ($tokenData && isset($tokenData['user_id'])) {
             $user = \App\Models\User::find($tokenData['user_id']);
@@ -274,8 +276,11 @@ Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
                 $request->session()->regenerate();
                 error_log('User restored from auth_token: ' . $user->id);
                 
-                // Redirect sin el token para limpiar la URL
-                return redirect('/onboarding');
+                // Guardar el token en la sesión para que Inertia lo pase al frontend
+                session(['railway_auth_token' => $authToken]);
+                
+                // NO hacer redirect - mostrar directamente el onboarding
+                return app(OnboardingController::class)->show();
             }
         }
         error_log('Auth token invalid or expired');

@@ -38,6 +38,9 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        
+        // Obtener el auth_token de la URL o de la sesión (Railway Edge workaround)
+        $authToken = $request->query('auth_token') ?? session('railway_auth_token');
 
         return [
             ...parent::share($request),
@@ -51,6 +54,8 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Railway Edge auth token para persistir autenticación sin cookies
+            'railwayAuthToken' => $authToken,
         ];
     }
 }
