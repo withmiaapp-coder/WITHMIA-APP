@@ -110,13 +110,6 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
         ], 500);
     }
 });
-    
-    return response()->json([
-        'success' => true,
-        'message' => "Workflow reseteado para {$instanceName}",
-        'rows_affected' => $updated
-    ]);
-});
 
 // 🚀 CREAR WORKFLOW N8N MANUALMENTE
 Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
