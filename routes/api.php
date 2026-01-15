@@ -7,7 +7,33 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// � RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
+// Helper para workflow minimalista
+function getMinimalWorkflow(string $instanceName): array {
+    $webhookPath = "whatsapp-{$instanceName}";
+    return [
+        'name' => "WhatsApp Bot - {$instanceName}",
+        'nodes' => [
+            [
+                'parameters' => [
+                    'path' => $webhookPath,
+                    'httpMethod' => 'POST',
+                    'responseMode' => 'onReceived',
+                    'responseData' => 'allEntries'
+                ],
+                'type' => 'n8n-nodes-base.webhook',
+                'typeVersion' => 2,
+                'position' => [0, 0],
+                'id' => \Illuminate\Support\Str::uuid()->toString(),
+                'name' => 'Webhook WhatsApp',
+                'webhookId' => \Illuminate\Support\Str::uuid()->toString()
+            ]
+        ],
+        'connections' => new \stdClass(),
+        'settings' => ['executionOrder' => 'v1']
+    ];
+}
+
+// 🔄 RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
 Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     $updated = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
         ->where('instance_name', $instanceName)
@@ -24,10 +50,11 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
-// �🚀 CREAR WORKFLOW N8N MANUALMENTE
+// 🚀 CREAR WORKFLOW N8N MANUALMENTE
 Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
+        $evolutionApi = app(\App\Services\EvolutionApiService::class);
         
         // Cargar template
         $templatePath = base_path('workflows/whatsapp-bot-updated.json');
@@ -35,9 +62,15 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Template no encontrado: ' . $templatePath], 404);
         }
         
-        $templateWorkflow = json_decode(file_get_contents($templatePath), true);
+        // Limpiar BOM y caracteres problemáticos
+        $content = file_get_contents($templatePath);
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+        
+        $templateWorkflow = json_decode($content, true);
         if (!$templateWorkflow) {
-            return response()->json(['error' => 'Error parseando JSON del template'], 400);
+            // Fallback a workflow minimalista
+            $templateWorkflow = getMinimalWorkflow($instanceName);
         }
         
         // Limpiar nodos
@@ -87,26 +120,37 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         
         if ($result['success']) {
             $workflowId = $result['data']['id'] ?? null;
+            $webhookUrl = $n8nService->getWebhookUrl($instanceName);
             
             // Activar
             if ($workflowId) {
                 $activateResult = $n8nService->activateWorkflow($workflowId);
+                Log::info('✅ Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
             }
+            
+            // Configurar webhook de Evolution hacia n8n
+            $evolutionResult = $evolutionApi->setWebhook(
+                $instanceName,
+                $webhookUrl,
+                ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
+            );
+            Log::info('🔗 Webhook Evolution configurado', ['result' => $evolutionResult]);
             
             // Guardar en BD
             \Illuminate\Support\Facades\DB::table('whatsapp_instances')
                 ->where('instance_name', $instanceName)
                 ->update([
                     'n8n_workflow_id' => $workflowId,
-                    'n8n_webhook_url' => "https://n8n-production-b776.up.railway.app/webhook/whatsapp-{$instanceName}",
+                    'n8n_webhook_url' => $webhookUrl,
                     'updated_at' => now()
                 ]);
             
             return response()->json([
                 'success' => true,
                 'workflow_id' => $workflowId,
-                'webhook_url' => "https://n8n-production-b776.up.railway.app/webhook/whatsapp-{$instanceName}",
-                'message' => 'Workflow creado y activado!'
+                'webhook_url' => $webhookUrl,
+                'evolution_webhook' => $evolutionResult,
+                'message' => 'Workflow creado, activado y Evolution configurado!'
             ]);
         }
         
