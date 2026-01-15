@@ -91,23 +91,15 @@ class GoogleAuthController extends Controller
             
             $sessionId = $request->session()->getId();
             $cookieName = config('session.cookie');
+            $cookieDomain = config('session.domain');
+            $cookieSecure = config('session.secure') ? 'Secure; ' : '';
+            $cookieSameSite = config('session.same_site', 'lax');
+            $cookieLifetime = config('session.lifetime') * 60; // minutos a segundos
+            $expires = gmdate('D, d M Y H:i:s T', time() + $cookieLifetime);
             
             error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
-            error_log('Cookie name: ' . $cookieName);
+            error_log('Cookie name: ' . $cookieName . ', Domain: ' . $cookieDomain);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
-
-            // Encolar la cookie de sesión usando Cookie::queue (más confiable)
-            \Illuminate\Support\Facades\Cookie::queue(
-                $cookieName,
-                $sessionId,
-                config('session.lifetime'),
-                config('session.path'),
-                config('session.domain'),
-                config('session.secure'),
-                config('session.http_only'),
-                false,
-                config('session.same_site')
-            );
 
             // Retornar HTML con JavaScript redirect
             $html = '<!DOCTYPE html>
@@ -135,7 +127,14 @@ class GoogleAuthController extends Controller
 </body>
 </html>';
             
-            return response($html);
+            // Crear cookie manualmente con header directo
+            $cookieValue = $sessionId;
+            $cookieHeader = "{$cookieName}={$cookieValue}; Path=/; Domain={$cookieDomain}; Expires={$expires}; {$cookieSecure}HttpOnly; SameSite={$cookieSameSite}";
+            
+            error_log('Set-Cookie header: ' . $cookieHeader);
+            
+            return response($html)
+                ->header('Set-Cookie', $cookieHeader);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
