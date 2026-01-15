@@ -29,11 +29,25 @@ function getRailwayToken(): string | null {
     return localStorage.getItem(RAILWAY_TOKEN_KEY);
 }
 
-// Interceptar fetch para agregar el token a todas las peticiones
+// Verificar si la URL es del mismo origen (para no agregar token a APIs externas)
+function isSameOrigin(input: RequestInfo | URL): boolean {
+    try {
+        const url = typeof input === 'string' ? new URL(input, window.location.origin) : 
+                    input instanceof URL ? input : 
+                    new URL(input.url, window.location.origin);
+        return url.origin === window.location.origin;
+    } catch {
+        // Si es una URL relativa, es del mismo origen
+        return true;
+    }
+}
+
+// Interceptar fetch para agregar el token SOLO a peticiones del mismo dominio
 const originalFetch = window.fetch;
 window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const token = getRailwayToken();
-    if (token) {
+    // Solo agregar token a peticiones del mismo origen (no a Google, etc.)
+    if (token && isSameOrigin(input)) {
         init = init || {};
         init.headers = init.headers || {};
         if (init.headers instanceof Headers) {
