@@ -100,8 +100,9 @@ class N8nService
 
             Log::error('n8n createWorkflow error', [
                 'status' => $response->status(),
-                'body' => $response->body(),
-                'sent_json' => json_encode($workflowData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+                'body' => substr($response->body(), 0, 500), // Solo primeros 500 chars del error
+                'workflow_name' => $workflowData['name'] ?? 'unknown',
+                'nodes_count' => count($workflowData['nodes'] ?? [])
             ]);
 
             return ['success' => false, 'error' => 'Error al crear workflow'];
