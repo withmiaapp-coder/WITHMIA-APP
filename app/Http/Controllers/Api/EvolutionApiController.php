@@ -1410,24 +1410,14 @@ class EvolutionApiController extends Controller
                 ],
                 [
                     'parameters' => [
-                        'model' => [
-                            '__rl' => true,
-                            'value' => 'gpt-4.1-mini',
-                            'mode' => 'list'
-                        ],
-                        'options' => []
+                        'model' => 'gpt-4o-mini',
+                        'options' => new \stdClass()
                     ],
                     'type' => '@n8n/n8n-nodes-langchain.lmChatOpenAi',
                     'typeVersion' => 1.2,
                     'position' => [300, -200],
                     'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'OpenAI Chat Model',
-                    'credentials' => [
-                        'openAiApi' => [
-                            'id' => 'BllBLDmfNrTO004D',
-                            'name' => 'OpenAI Account'
-                        ]
-                    ]
+                    'name' => 'OpenAI Chat Model'
                 ],
                 [
                     'parameters' => [
