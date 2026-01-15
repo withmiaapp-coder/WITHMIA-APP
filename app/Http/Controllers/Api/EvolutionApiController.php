@@ -1055,14 +1055,13 @@ class EvolutionApiController extends Controller
     private function createN8nWorkflowForInstance($instance): void
     {
         try {
-            // Obtener información de la empresa
-            $company = DB::table('companies')->where('id', $instance->company_id)->first();
-            $companyName = $company->name ?? $instance->company_slug ?? "Company {$instance->company_id}";
+            // Usar el instance_name (slug) como identificador único del workflow
+            $workflowName = $instance->instance_name;
 
             Log::info('🤖 Creando workflow de n8n para instancia', [
                 'instance' => $instance->instance_name,
                 'company_id' => $instance->company_id,
-                'company_name' => $companyName
+                'workflow_name' => $workflowName
             ]);
 
             // Intentar cargar template del archivo
@@ -1090,7 +1089,7 @@ class EvolutionApiController extends Controller
             // Si falla el template del archivo, usar workflow minimalista embebido
             if (!$templateWorkflow) {
                 Log::info('🔧 Usando workflow minimalista embebido');
-                $templateWorkflow = $this->getMinimalWorkflowTemplate($companyName, $instance->instance_name);
+                $templateWorkflow = $this->getMinimalWorkflowTemplate($workflowName, $instance->instance_name);
             }
 
             // Limpiar y personalizar nodos
@@ -1129,9 +1128,9 @@ class EvolutionApiController extends Controller
                 
                 // Simplificar prompt del AI Agent para evitar error 500
                 if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
-                    $cleanNode['parameters']['text'] = "Responde como asistente de {$companyName}";
+                    $cleanNode['parameters']['text'] = "Responde como asistente de {$workflowName}";
                     $cleanNode['parameters']['options'] = [
-                        'systemMessage' => "Eres MIA, asistente digital de {$companyName}. Responde de forma profesional y amigable."
+                        'systemMessage' => "Eres MIA, asistente digital de {$workflowName}. Responde de forma profesional y amigable."
                     ];
                 }
                 
@@ -1147,7 +1146,7 @@ class EvolutionApiController extends Controller
 
             // Crear workflow limpio
             $cleanWorkflow = [
-                'name' => "WhatsApp Bot - {$companyName}",
+                'name' => "WhatsApp Bot - {$workflowName}",
                 'nodes' => $cleanNodes,
                 'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
                 'settings' => ['executionOrder' => 'v1'],
@@ -1256,12 +1255,12 @@ class EvolutionApiController extends Controller
     /**
      * Genera un workflow minimalista embebido cuando el template JSON falla
      */
-    private function getMinimalWorkflowTemplate(string $companyName, string $instanceName): array
+    private function getMinimalWorkflowTemplate(string $workflowName, string $instanceName): array
     {
         $webhookPath = "whatsapp-{$instanceName}";
         
         return [
-            'name' => "WhatsApp Bot - {$companyName}",
+            'name' => "WhatsApp Bot - {$workflowName}",
             'nodes' => [
                 [
                     'parameters' => [
@@ -1280,9 +1279,9 @@ class EvolutionApiController extends Controller
                 [
                     'parameters' => [
                         'promptType' => 'define',
-                        'text' => "Responde como asistente de {$companyName}",
+                        'text' => "Responde como asistente de {$workflowName}",
                         'options' => [
-                            'systemMessage' => "Eres MIA, asistente digital de {$companyName}. Responde de forma profesional y amigable."
+                            'systemMessage' => "Eres MIA, asistente digital de {$workflowName}. Responde de forma profesional y amigable."
                         ]
                     ],
                     'type' => '@n8n/n8n-nodes-langchain.agent',
