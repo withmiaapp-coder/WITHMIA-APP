@@ -81,8 +81,13 @@ class GoogleAuthController extends Controller
             $request->session()->regenerate();
             
             $sessionId = $request->session()->getId();
+            $cookieName = config('session.cookie');
+            $cookieDomain = config('session.domain');
+            $cookieSecure = config('session.secure');
+            $cookieSameSite = config('session.same_site');
             
             error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
+            error_log('Cookie config - Name: ' . $cookieName . ', Domain: ' . $cookieDomain . ', Secure: ' . ($cookieSecure ? 'true' : 'false') . ', SameSite: ' . $cookieSameSite);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
             // Retornar JSON para que el JavaScript haga el redirect
@@ -94,6 +99,13 @@ class GoogleAuthController extends Controller
                     'id' => $user->id,
                     'email' => $user->email,
                     'name' => $user->name
+                ],
+                'debug' => [
+                    'session_id' => substr($sessionId, 0, 10) . '...',
+                    'cookie_name' => $cookieName,
+                    'cookie_domain' => $cookieDomain,
+                    'cookie_secure' => $cookieSecure,
+                    'cookie_same_site' => $cookieSameSite
                 ]
             ]);
 
