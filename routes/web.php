@@ -77,6 +77,40 @@ Route::get('/clean-test-data', function () {
     ]);
 });
 
+// TEMP: BORRAR TODO - usuarios, companies, reiniciar IDs (ELIMINAR EN PRODUCCIÓN)
+Route::get('/nuke-database', function () {
+    $secret = request()->input('secret');
+    
+    if ($secret !== 'withmia2026nuke') {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $deleted = [];
+    
+    // Deshabilitar foreign key checks temporalmente
+    \DB::statement('SET session_replication_role = replica;');
+    
+    // Borrar companies
+    $deleted['companies'] = \App\Models\Company::count();
+    \DB::table('companies')->truncate();
+    
+    // Borrar usuarios
+    $deleted['users'] = \App\Models\User::count();
+    \DB::table('users')->truncate();
+    
+    // Borrar sessions
+    \DB::table('sessions')->truncate();
+    
+    // Rehabilitar foreign key checks
+    \DB::statement('SET session_replication_role = DEFAULT;');
+    
+    return response()->json([
+        'success' => true,
+        'message' => '💥 Base de datos NUCLEAR - Todo borrado, IDs reiniciados',
+        'deleted' => $deleted
+    ]);
+});
+
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
 // ============================================================================
