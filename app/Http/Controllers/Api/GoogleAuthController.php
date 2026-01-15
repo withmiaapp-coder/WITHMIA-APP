@@ -85,9 +85,22 @@ class GoogleAuthController extends Controller
             error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Usar redirect normal para que Laravel maneje la cookie de sesión correctamente
-            // El middleware de sesión agregará la cookie automáticamente
-            return redirect('/onboarding');
+            // Usar una respuesta HTML con meta refresh para asegurar que la cookie se establezca
+            // antes de redirigir (el redirect() de Laravel a veces no funciona bien con cookies en producción)
+            $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="0;url=/onboarding">
+    <title>Redirigiendo...</title>
+</head>
+<body>
+    <script>window.location.href="/onboarding";</script>
+</body>
+</html>';
+            
+            return response($html)
+                ->header('Content-Type', 'text/html');
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
