@@ -261,6 +261,26 @@ Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
     
     error_log('Onboarding - Session ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies received: ' . implode(',', $receivedCookies) . ', Expected cookie: ' . $cookieName);
     
+    // Workaround: Si hay un auth_token en la URL, restaurar la sesión
+    if ($authToken = $request->query('auth_token')) {
+        error_log('Auth token received: ' . substr($authToken, 0, 10) . '...');
+        
+        $tokenData = \Illuminate\Support\Facades\Cache::pull('auth_token:' . $authToken);
+        
+        if ($tokenData && isset($tokenData['user_id'])) {
+            $user = \App\Models\User::find($tokenData['user_id']);
+            if ($user) {
+                Auth::login($user, true);
+                $request->session()->regenerate();
+                error_log('User restored from auth_token: ' . $user->id);
+                
+                // Redirect sin el token para limpiar la URL
+                return redirect('/onboarding');
+            }
+        }
+        error_log('Auth token invalid or expired');
+    }
+    
     if (!Auth::check()) {
         // No autenticado - mostrar login directamente
         return response()->file(public_path('login.html'));

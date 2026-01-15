@@ -93,26 +93,19 @@ class GoogleAuthController extends Controller
             // Guardar sesión explícitamente
             $request->session()->save();
             
-            // Crear respuesta con redirect y cookie explícita
-            $response = redirect('/onboarding');
+            // Crear un token temporal para pasar en la URL (workaround para Railway Edge)
+            $authToken = Str::random(64);
             
-            // Agregar la cookie de sesión manualmente para estar seguros
-            $encryptedValue = encrypt($sessionId, false);
-            $cookie = cookie(
-                $cookieName,
-                $encryptedValue,
-                config('session.lifetime'),
-                '/',
-                $cookieDomain ?: null,
-                true, // secure
-                true, // httpOnly
-                false, // raw
-                $cookieSameSite ?: 'lax'
-            );
+            // Guardar el token en cache con el user_id (expira en 60 segundos)
+            \Illuminate\Support\Facades\Cache::put('auth_token:' . $authToken, [
+                'user_id' => $user->id,
+                'session_id' => $sessionId
+            ], 60);
             
-            error_log('Setting cookie manually: ' . $cookieName . ' = ' . substr($encryptedValue, 0, 20) . '...');
+            error_log('Created auth token for URL: ' . substr($authToken, 0, 10) . '...');
             
-            return $response->withCookie($cookie);
+            // Redirect con el token en la URL
+            return redirect('/onboarding?auth_token=' . $authToken);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
