@@ -107,17 +107,17 @@ class GoogleAuthController extends Controller
             error_log('Created auth token for URL: ' . substr($authToken, 0, 10) . '...');
             
             // Mostrar página de transición elegante con el logo animado
-            // En lugar de redirect directo que muestra "Redirecting to..."
-            return response()->file(public_path('auth-transition.html'), [
-                'Content-Type' => 'text/html',
-                'X-Auth-Token' => $authToken
-            ])->setContent(
-                str_replace(
-                    "urlParams.get('auth_token')",
-                    "'" . $authToken . "'",
-                    file_get_contents(public_path('auth-transition.html'))
-                )
+            // Inyectar el token directamente en el HTML
+            $transitionHtml = file_get_contents(public_path('auth-transition.html'));
+            $transitionHtml = str_replace(
+                "const authToken = urlParams.get('auth_token');",
+                "const authToken = '{$authToken}';",
+                $transitionHtml
             );
+            
+            return response($transitionHtml, 200, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+            ]);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
