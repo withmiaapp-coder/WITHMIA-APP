@@ -42,6 +42,12 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
             'n8n_webhook_url' => null,
             'updated_at' => now()
         ]);
+    
+    return response()->json([
+        'success' => $updated > 0,
+        'message' => $updated > 0 ? 'Workflow reset successfully' : 'No instance found'
+    ]);
+});
 
 // 🚀 CREAR WORKFLOW MINIMALISTA (sin template JSON)
 Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
