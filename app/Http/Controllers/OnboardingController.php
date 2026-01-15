@@ -407,9 +407,16 @@ class OnboardingController extends Controller
             Log::error("Excepción creando workflow RAG para {$uniqueSlug}: " . $e->getMessage());
         }
 
-        if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
-            Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
-            Mail::to($user->email)->send(new OnboardingCompletedMail($user));
+        // Enviar correos de forma no bloqueante (try-catch para evitar que falle el onboarding)
+        try {
+            if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
+                Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
+                Mail::to($user->email)->send(new OnboardingCompletedMail($user));
+                Log::info("Correos de onboarding enviados para: {$user->email}");
+            }
+        } catch (\Exception $mailException) {
+            // No bloquear el onboarding si falla el correo
+            Log::error("Error enviando correos de onboarding: " . $mailException->getMessage());
         }
 
         return [
@@ -523,6 +530,7 @@ class OnboardingController extends Controller
             unset($templateWorkflow['versionId']);
             unset($templateWorkflow['meta']);
             unset($templateWorkflow['tags']);
+            unset($templateWorkflow['active']); // read-only field
 
             // Crear workflow en n8n
             $result = $this->n8nService->createWorkflow($templateWorkflow);
