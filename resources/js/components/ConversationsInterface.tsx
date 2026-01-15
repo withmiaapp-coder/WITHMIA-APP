@@ -397,8 +397,18 @@ const ConversationsInterface: React.FC = () => {
   // 7. Contact Info Panel (Panel de informacion)
   const [showContactInfo, setShowContactInfo] = useState(false);
   
-  // 8. Muted Conversations (Silenciadas)
-  const [mutedConversations, setMutedConversations] = useState<Set<number>>(new Set());
+  // 8. Muted Conversations (Silenciadas) - Persistir en localStorage
+  const [mutedConversations, setMutedConversations] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem('mutedConversations');
+      if (saved) {
+        return new Set(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Error loading muted conversations:', e);
+    }
+    return new Set();
+  });
   
   //  FASE 3 - FUNCIONES AVANZADAS
   // 1. Search Bar Visual (Barra de búsqueda expandible)
@@ -1858,18 +1868,32 @@ const ConversationsInterface: React.FC = () => {
     debugLog.log(` B??squeda: "${query}" - ${(results || []).length} resultados encontrados`, results);
   };
 
-  // 8 MUTE - Silenciar conversación
-  const handleMuteConversation = (conversationId: number) => {
+  // 8 MUTE - Silenciar conversación (persiste en localStorage)
+  const handleMuteConversation = (conversationId?: number) => {
+    const id = conversationId || activeConversation?.id;
+    if (!id) return;
+    
     setMutedConversations(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(conversationId)) {
-        newSet.delete(conversationId);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+        console.log(`🔔 Notificaciones activadas para conversación ${id}`);
       } else {
-        newSet.add(conversationId);
+        newSet.add(id);
+        console.log(`🔕 Notificaciones silenciadas para conversación ${id}`);
       }
+      // Persistir en localStorage
+      localStorage.setItem('mutedConversations', JSON.stringify([...newSet]));
+      // Exponer globalmente para el sistema de notificaciones
+      (window as any).__mutedConversations = newSet;
       return newSet;
     });
   };
+  
+  // Exponer mutedConversations globalmente al montar
+  React.useEffect(() => {
+    (window as any).__mutedConversations = mutedConversations;
+  }, [mutedConversations]);
 
   // 9 TYPING INDICATOR - Simular "escribiendo..."
   const handleTypingIndicator = () => {
@@ -3547,7 +3571,7 @@ const ConversationsInterface: React.FC = () => {
                   
                   {/*  SILENCIAR */}
                   <button 
-                    onClick={handleMuteConversation}
+                    onClick={() => handleMuteConversation(activeConversation.id)}
                     className={`p-2 rounded-lg transition-all duration-300 ${
                       mutedConversations.has(activeConversation.id)
                         ? 'bg-red-500 text-white shadow-lg' 

@@ -215,6 +215,13 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // Agregar notificación
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     if (!settings.enabled) return;
+    
+    // 🔇 Verificar si la conversación está silenciada
+    const mutedConversations = (window as any).__mutedConversations as Set<number> | undefined;
+    if (mutedConversations?.has(notification.conversationId)) {
+      console.log(`🔇 Notificación silenciada para conversación ${notification.conversationId}`);
+      return; // No mostrar notificación para conversaciones silenciadas
+    }
 
     const newNotification: Notification = {
       ...notification,
