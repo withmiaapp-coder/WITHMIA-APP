@@ -738,13 +738,33 @@ class EvolutionApiController extends Controller
                 $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             }
             
-            // Usar el webhook específico de la instancia o el webhook por defecto
-            $webhookPath = $instance->n8n_webhook_url 
-                ? basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH))
-                : "whatsapp-{$instanceName}";
+            // 📨 SOLO reenviar a n8n eventos importantes (mensajes)
+            // No reenviar: labels.edit, presence.update, chats.set, messages.edited, etc.
+            $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT', 'messages.update', 'MESSAGES_UPDATE', 'send.message', 'SEND_MESSAGE'];
             
-            $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
-            Log::info('Reenviando a n8n', ['webhook' => $webhookPath, 'success' => $result['success']]);
+            if (in_array($event, $eventsToForward)) {
+                // Verificar si tenemos webhook configurado
+                if ($instance && !empty($instance->n8n_webhook_url)) {
+                    $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
+                    $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
+                    Log::info('📨 Reenviando mensaje a n8n', ['webhook' => $webhookPath, 'success' => $result['success']]);
+                } elseif ($instance && empty($instance->n8n_workflow_id)) {
+                    // Si no hay workflow, intentar crearlo ahora
+                    Log::info('⚠️ No hay workflow n8n, intentando crear...', ['instance' => $instanceName]);
+                    $this->createN8nWorkflowForInstance($instance);
+                    $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+                    
+                    if (!empty($instance->n8n_webhook_url)) {
+                        $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
+                        $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
+                        Log::info('📨 Reenviando mensaje a n8n (workflow recién creado)', ['webhook' => $webhookPath, 'success' => $result['success']]);
+                    }
+                } else {
+                    Log::warning('⚠️ Workflow existe pero sin webhook_url', ['instance' => $instanceName, 'workflow_id' => $instance->n8n_workflow_id ?? null]);
+                }
+            } else {
+                Log::debug('🔇 Evento ignorado para n8n', ['event' => $event]);
+            }
         } catch (\Exception $e) { 
             Log::warning('Error n8n (non-blocking)', ['e' => $e->getMessage()]); 
         }
@@ -1307,11 +1327,29 @@ class EvolutionApiController extends Controller
                 return;
             }
 
-            // Si ya tiene workflow, no hacer nada
-            if (!empty($instance->n8n_workflow_id)) {
-                Log::info('Instancia ya tiene workflow de n8n', [
+            // Si ya tiene workflow Y webhook_url, no hacer nada
+            if (!empty($instance->n8n_workflow_id) && !empty($instance->n8n_webhook_url)) {
+                Log::debug('Instancia ya tiene workflow de n8n completo', [
                     'instance' => $instanceName,
-                    'workflow_id' => $instance->n8n_workflow_id
+                    'workflow_id' => $instance->n8n_workflow_id,
+                    'webhook_url' => $instance->n8n_webhook_url
+                ]);
+                return;
+            }
+
+            // Si tiene workflow_id pero no webhook_url, regenerar el webhook_url
+            if (!empty($instance->n8n_workflow_id) && empty($instance->n8n_webhook_url)) {
+                $webhookUrl = $this->n8nService->getWebhookUrl($instanceName);
+                DB::table('whatsapp_instances')
+                    ->where('id', $instance->id)
+                    ->update([
+                        'n8n_webhook_url' => $webhookUrl,
+                        'updated_at' => now()
+                    ]);
+                Log::info('🔧 Webhook URL regenerado para instancia existente', [
+                    'instance' => $instanceName,
+                    'workflow_id' => $instance->n8n_workflow_id,
+                    'webhook_url' => $webhookUrl
                 ]);
                 return;
             }
