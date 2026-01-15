@@ -360,6 +360,7 @@ class EvolutionApiService
 
     /**
      * Asegurar que los webhooks estén configurados (método legacy)
+     * NOTA: Si ya hay un webhook configurado (hacia n8n o app), NO lo sobrescribe
      */
     private function ensureWebhooksConfigured(string $instanceName): void
     {
@@ -369,13 +370,23 @@ class EvolutionApiService
                 'apikey' => $this->apiKey
             ])->get("{$this->baseUrl}/webhook/find/{$instanceName}");
 
-            // Si ya tiene webhooks configurados, no hacer nada
-            if ($checkResponse->successful() && $checkResponse->json()) {
-                Log::info("Webhooks already configured", ['instance' => $instanceName]);
-                return;
+            // Si ya tiene webhooks configurados, no hacer nada (respetar config de n8n)
+            if ($checkResponse->successful()) {
+                $webhookData = $checkResponse->json();
+                if ($webhookData && !empty($webhookData['url'])) {
+                    Log::info("Webhook ya configurado, respetando configuración existente", [
+                        'instance' => $instanceName,
+                        'current_url' => $webhookData['url']
+                    ]);
+                    return;
+                }
             }
 
-            // Configurar webhooks usando el nuevo método
+            // Solo configurar webhook hacia app si NO hay ninguno configurado
+            // (El workflow de n8n se configura en createN8nWorkflowForInstance)
+            Log::info("No hay webhook configurado, configurando hacia app Laravel", [
+                'instance' => $instanceName
+            ]);
             $webhookUrl = config('app.url') . '/api/evolution-whatsapp/webhook';
             $this->setWebhook($instanceName, $webhookUrl);
 
