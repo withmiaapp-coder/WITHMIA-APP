@@ -89,10 +89,27 @@ class GoogleAuthController extends Controller
             $request->session()->put('user_id', $user->id);
             $request->session()->save();
             
-            error_log('Session created - ID: ' . session()->getId() . ', User: ' . $user->id);
+            $sessionId = $request->session()->getId();
+            $cookieName = config('session.cookie');
+            
+            error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
+            error_log('Cookie name: ' . $cookieName);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Retornar HTML con JavaScript redirect (evita el feo "Redirecting to")
+            // Encolar la cookie de sesión usando Cookie::queue (más confiable)
+            \Illuminate\Support\Facades\Cookie::queue(
+                $cookieName,
+                $sessionId,
+                config('session.lifetime'),
+                config('session.path'),
+                config('session.domain'),
+                config('session.secure'),
+                config('session.http_only'),
+                false,
+                config('session.same_site')
+            );
+
+            // Retornar HTML con JavaScript redirect
             $html = '<!DOCTYPE html>
 <html>
 <head>
@@ -118,19 +135,7 @@ class GoogleAuthController extends Controller
 </body>
 </html>';
             
-            return response($html)->withCookie(
-                cookie(
-                    config('session.cookie'),
-                    $request->session()->getId(),
-                    config('session.lifetime'),
-                    config('session.path'),
-                    config('session.domain'),
-                    config('session.secure'),
-                    config('session.http_only'),
-                    false,
-                    config('session.same_site')
-                )
-            );
+            return response($html);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
