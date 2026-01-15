@@ -145,7 +145,7 @@ export default function Conocimientos({
     }
   };
 
-  const startPollingForVectorIds = (filename: string, companyId: number) => {
+  const startPollingForVectorIds = (filename: string, companySlug: string) => {
     let attempts = 0;
     const maxAttempts = 60; // Poll for up to 5 minutes (60 * 5 seconds)
     
@@ -153,8 +153,8 @@ export default function Conocimientos({
       attempts++;
       
       try {
-        // Fetch documents to check if vector_ids are populated
-        const response = await fetch(`/api/documents?company_id=${companyId}&category=${selectedCategory}`);
+        // Fetch documents to check if vector_ids are populated (using company_slug)
+        const response = await fetch(`/api/documents?company_slug=${companySlug}&category=${selectedCategory}`);
         const data = await response.json();
         
         if (data.success) {
@@ -238,12 +238,14 @@ export default function Conocimientos({
 
       setUploadProgress((prev) => ({ ...prev, [fileId]: 50 }));
 
-      const companyId = company?.id || user?.company_id || 1;
-      console.log('Company ID:', companyId, 'Company:', company, 'User:', user);
+      // Usar company_slug para la colección de Qdrant
+      const companySlug = company?.slug || user?.company_slug || 'default';
+      const collectionName = `company_${companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}_knowledge`;
+      console.log('Company Slug:', companySlug, 'Collection:', collectionName, 'Company:', company, 'User:', user);
       
       setUploadProgress((prev) => ({ ...prev, [fileId]: 60 }));
 
-      // Save metadata to MySQL FIRST (fast, 1-2 seconds) - temporary entry
+      // Save metadata to PostgreSQL FIRST (fast, 1-2 seconds) - temporary entry
       const metadataResponse = await fetch("/api/documents/metadata", {
         method: "POST",
         headers: { 
@@ -254,7 +256,7 @@ export default function Conocimientos({
           filename: file.name,
           category: category,
           chunks_created: 0, // Will be updated later by n8n response
-          qdrant_collection: `company_${companyId}_knowledge`,
+          qdrant_collection: collectionName,
           qdrant_vector_ids: null // Will be updated when n8n finishes
         }),
       });
@@ -265,30 +267,34 @@ export default function Conocimientos({
 
       setUploadProgress((prev) => ({ ...prev, [fileId]: 100 }));
 
+      // Obtener URL del webhook RAG desde la empresa o usar el default
+      const ragWebhookUrl = company?.settings?.rag_webhook_url || 
+        `https://n8n-production-dace.up.railway.app/webhook/rag-${companySlug}`;
+
       // Process with n8n in background (fire and forget)
       const requestBody = {
-        company_id: companyId,
+        company_slug: companySlug,
         category: category,
         filename: file.name,
         file: base64Content,
       };
-      console.log('📤 Enviando a n8n en segundo plano:', requestBody);
+      console.log('📤 Enviando a n8n RAG:', ragWebhookUrl, requestBody);
       
       // Fire n8n processing - it will respond immediately
-      fetch("https://n8n-admin.withmia.com/webhook/upload-document", {
+      fetch(ragWebhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       })
       .then(res => res.json())
       .then(data => {
-        console.log('✅ n8n webhook respondió:', data);
+        console.log('✅ n8n RAG webhook respondió:', data);
         // n8n responded immediately, now it's processing in background
         // Start polling to check when vector_ids are ready
-        startPollingForVectorIds(file.name, companyId);
+        startPollingForVectorIds(file.name, companySlug);
       })
       .catch(err => {
-        console.error('Error iniciando procesamiento:', err);
+        console.error('Error iniciando procesamiento RAG:', err);
       });
 
       // Refresh documents list

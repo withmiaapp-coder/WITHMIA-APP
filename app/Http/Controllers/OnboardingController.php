@@ -15,14 +15,24 @@ use App\Models\Company;
 use App\Mail\OnboardingCompletedNotificationMail;
 use App\Mail\OnboardingCompletedMail;
 use App\Services\ChatwootProvisioningService;
+use App\Services\QdrantService;
+use App\Services\N8nService;
 
 class OnboardingController extends Controller
 {
     protected $chatwootProvisioningService;
+    protected $qdrantService;
+    protected $n8nService;
 
-    public function __construct(ChatwootProvisioningService $chatwootProvisioningService)
+    public function __construct(
+        ChatwootProvisioningService $chatwootProvisioningService,
+        QdrantService $qdrantService,
+        N8nService $n8nService
+    )
     {
         $this->chatwootProvisioningService = $chatwootProvisioningService;
+        $this->qdrantService = $qdrantService;
+        $this->n8nService = $n8nService;
         $this->middleware('auth')->only(['show', 'index']);
     }
 
@@ -351,6 +361,52 @@ class OnboardingController extends Controller
             Log::error("Error creando cuenta Chatwoot para {$user->email}: " . $e->getMessage());
         }
 
+        // Crear colección de Qdrant para la base de conocimiento de la empresa
+        try {
+            Log::info("Creando colección Qdrant para: {$uniqueSlug}");
+            $qdrantResult = $this->qdrantService->createCompanyCollection($uniqueSlug);
+            
+            if ($qdrantResult['success']) {
+                $collectionName = $qdrantResult['collection'];
+                Log::info("Colección Qdrant creada: {$collectionName}", $qdrantResult);
+                
+                // Guardar nombre de colección en la empresa
+                $company->update([
+                    'settings' => array_merge($company->settings ?? [], [
+                        'qdrant_collection' => $collectionName
+                    ])
+                ]);
+            } else {
+                Log::error("Error creando colección Qdrant para {$uniqueSlug}: " . ($qdrantResult['error'] ?? 'Unknown'));
+            }
+        } catch (\Exception $e) {
+            Log::error("Excepción creando colección Qdrant para {$uniqueSlug}: " . $e->getMessage());
+        }
+
+        // Crear workflow RAG para procesar documentos de la empresa
+        try {
+            Log::info("Creando workflow RAG para: {$uniqueSlug}");
+            $ragResult = $this->createRagWorkflow($company, $uniqueSlug);
+            
+            if ($ragResult['success']) {
+                Log::info("Workflow RAG creado para {$uniqueSlug}", [
+                    'workflow_id' => $ragResult['workflow_id'] ?? null
+                ]);
+                
+                // Guardar ID del workflow RAG
+                $company->update([
+                    'settings' => array_merge($company->settings ?? [], [
+                        'rag_workflow_id' => $ragResult['workflow_id'] ?? null,
+                        'rag_webhook_url' => $ragResult['webhook_url'] ?? null
+                    ])
+                ]);
+            } else {
+                Log::error("Error creando workflow RAG para {$uniqueSlug}: " . ($ragResult['error'] ?? 'Unknown'));
+            }
+        } catch (\Exception $e) {
+            Log::error("Excepción creando workflow RAG para {$uniqueSlug}: " . $e->getMessage());
+        }
+
         if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
             Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
             Mail::to($user->email)->send(new OnboardingCompletedMail($user));
@@ -420,5 +476,81 @@ class OnboardingController extends Controller
                 'settings' => []
             ]
         );
+    }
+
+    /**
+     * Crear workflow RAG para procesar documentos de una empresa
+     */
+    private function createRagWorkflow(Company $company, string $companySlug): array
+    {
+        try {
+            $templatePath = base_path('workflows/rag-documents-updated.json');
+            
+            if (!file_exists($templatePath)) {
+                Log::error("Template RAG no encontrado: {$templatePath}");
+                return ['success' => false, 'error' => 'Template not found'];
+            }
+
+            // Cargar y parsear template
+            $content = file_get_contents($templatePath);
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content); // Limpiar BOM
+            $templateWorkflow = json_decode($content, true);
+
+            if (!$templateWorkflow) {
+                Log::error("Error parseando template RAG: " . json_last_error_msg());
+                return ['success' => false, 'error' => 'Invalid template JSON'];
+            }
+
+            // Personalizar workflow para esta empresa
+            $collectionName = $this->qdrantService->getCollectionName($companySlug);
+            $webhookPath = "rag-{$companySlug}";
+            $newWebhookId = Str::uuid()->toString();
+
+            // Actualizar nodos
+            foreach ($templateWorkflow['nodes'] as &$node) {
+                // Actualizar webhook path
+                if ($node['type'] === 'n8n-nodes-base.webhook') {
+                    $node['parameters']['path'] = $webhookPath;
+                    $node['webhookId'] = $newWebhookId;
+                }
+            }
+
+            // Cambiar nombre del workflow
+            $templateWorkflow['name'] = "RAG Documents - {$companySlug}";
+            
+            // Remover campos que n8n no acepta en creación
+            unset($templateWorkflow['id']);
+            unset($templateWorkflow['versionId']);
+
+            // Crear workflow en n8n
+            $result = $this->n8nService->createWorkflow($templateWorkflow);
+
+            if ($result['success']) {
+                $workflowId = $result['data']['id'] ?? null;
+                $webhookUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-dace.up.railway.app') . "/webhook/{$webhookPath}";
+
+                // Activar workflow
+                if ($workflowId) {
+                    $this->n8nService->activateWorkflow($workflowId);
+                    Log::info("Workflow RAG activado: {$workflowId}");
+                }
+
+                return [
+                    'success' => true,
+                    'workflow_id' => $workflowId,
+                    'webhook_url' => $webhookUrl,
+                    'collection_name' => $collectionName
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $result['error'] ?? 'Unknown error creating workflow'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("Excepción en createRagWorkflow: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 }

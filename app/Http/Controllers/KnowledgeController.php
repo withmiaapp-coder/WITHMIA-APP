@@ -20,9 +20,9 @@ class KnowledgeController extends Controller
     /**
      * Ensure Qdrant collection exists for company, create if not
      */
-    private function ensureQdrantCollection($companyId)
+    private function ensureQdrantCollection($companySlug)
     {
-        $collectionName = "company_{$companyId}_knowledge";
+        $collectionName = "company_{$companySlug}_knowledge";
         
         try {
             // Check if collection exists
@@ -38,7 +38,7 @@ class KnowledgeController extends Controller
             
             $createResponse = Http::put("{$this->qdrantHost}/collections/{$collectionName}", [
                 'vectors' => [
-                    'size' => 768,  // nomic-embed-text dimension
+                    'size' => 1536,  // OpenAI text-embedding-3-small dimension
                     'distance' => 'Cosine'
                 ]
             ]);
@@ -223,8 +223,9 @@ class KnowledgeController extends Controller
 
             // Delete vectors from Qdrant using stored vector IDs
             try {
-                $collectionName = $document->qdrant_collection ?? "company_{$company->id}_knowledge";
-                $qdrantUrl = "http://172.17.0.1:6333";
+                $companySlug = $company->slug ?? 'company_' . $company->id;
+                $collectionName = $document->qdrant_collection ?? "company_{$companySlug}_knowledge";
+                $qdrantUrl = rtrim(env('QDRANT_HOST', 'http://localhost:6333'), '/');
 
                 // Get vector IDs from qdrant_vector_ids column (JSON array)
                 if (!empty($document->qdrant_vector_ids)) {
@@ -286,8 +287,11 @@ class KnowledgeController extends Controller
                 return response()->json(['success' => false, 'error' => 'No company found'], 404);
             }
 
+            // Use company slug for Qdrant collection naming
+            $companySlug = $company->slug ?? 'company_' . $company->id;
+
             // Ensure Qdrant collection exists for this company
-            $this->ensureQdrantCollection($company->id);
+            $this->ensureQdrantCollection($companySlug);
 
             $validated = $request->validate([
                 'filename' => 'required|string|max:255',
@@ -301,8 +305,8 @@ class KnowledgeController extends Controller
                 'filename' => $validated['filename'],
                 'category' => $validated['category'],
                 'chunks_created' => $validated['chunks_created'] ?? 0,
-                'qdrant_collection' => $validated['qdrant_collection'] ?? "company_{$company->id}_knowledge",
-                'file_path' => "/home/ubuntu/documents/{$company->id}/{$validated['category']}/{$validated['filename']}",
+                'qdrant_collection' => $validated['qdrant_collection'] ?? "company_{$companySlug}_knowledge",
+                'file_path' => "/documents/{$companySlug}/{$validated['category']}/{$validated['filename']}",
                 'created_at' => now(),
                 'updated_at' => now()
             ]);

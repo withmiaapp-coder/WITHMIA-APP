@@ -276,6 +276,20 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
         $evolutionApi = app(\App\Services\EvolutionApiService::class);
+        $qdrantService = app(\App\Services\QdrantService::class);
+        
+        // Buscar la instancia para obtener el company_slug
+        $instance = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+            ->where('instance_name', $instanceName)
+            ->first();
+        
+        $companySlug = $instance->company_slug ?? null;
+        $collectionName = $companySlug ? $qdrantService->getCollectionName($companySlug) : 'coleccion';
+        
+        Log::info("Creando workflow para {$instanceName}", [
+            'company_slug' => $companySlug,
+            'collection_name' => $collectionName
+        ]);
         
         // Cargar template
         $templatePath = base_path('workflows/whatsapp-bot-updated.json');
@@ -316,6 +330,16 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 if (isset($cleanNode['parameters']['path'])) {
                     $cleanNode['parameters']['path'] = "whatsapp-{$instanceName}";
                 }
+            }
+            
+            // 🔧 Configurar Qdrant con la colección correcta de la empresa
+            if ($node['type'] === '@n8n/n8n-nodes-langchain.vectorStoreQdrant') {
+                $cleanNode['parameters']['qdrantCollection'] = [
+                    '__rl' => true,
+                    'value' => $collectionName,
+                    'mode' => 'id'
+                ];
+                Log::info("Configurando Qdrant con colección: {$collectionName}");
             }
             
             // 🔧 Simplificar prompt del AI Agent para evitar error 500 de n8n

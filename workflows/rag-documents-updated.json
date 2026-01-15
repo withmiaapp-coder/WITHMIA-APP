@@ -18,10 +18,11 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            {"id": "1", "name": "company_id", "value": "={{ $json.body.company_id }}", "type": "number"},
+            {"id": "1", "name": "company_slug", "value": "={{ $json.body.company_slug }}", "type": "string"},
             {"id": "2", "name": "filename", "value": "={{ $json.body.filename }}", "type": "string"},
             {"id": "3", "name": "category", "value": "={{ $json.body.category }}", "type": "string"},
-            {"id": "4", "name": "file_url", "value": "={{ $json.body.file_url }}", "type": "string"}
+            {"id": "4", "name": "file_url", "value": "={{ $json.body.file_url }}", "type": "string"},
+            {"id": "5", "name": "collection_name", "value": "={{ 'company_' + $json.body.company_slug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge' }}", "type": "string"}
           ]
         }
       },
@@ -57,8 +58,9 @@
     {
       "parameters": {
         "chunkSize": 500,
+        "chunkOverlap": 50,
         "options": {"metadata": {"metadataValues": [
-          {"name": "company_id", "value": "={{ $('Normalize Input').item.json.company_id }}"},
+          {"name": "company_slug", "value": "={{ $('Normalize Input').item.json.company_slug }}"},
           {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
           {"name": "category", "value": "={{ $('Normalize Input').item.json.category }}"}
         ]}}
@@ -71,19 +73,23 @@
     },
     {
       "parameters": {
-        "modelName": "embed-multilingual-v3.0"
+        "model": "text-embedding-3-small"
       },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1,
       "position": [720, 400],
       "id": "embeddings",
-      "name": "Cohere Embeddings",
-      "credentials": {"cohereApi": {"id": "cohere-cred", "name": "Cohere API"}}
+      "name": "OpenAI Embeddings",
+      "credentials": {"openAiApi": {"id": "BllBLDmfNrTO004D", "name": "OpenAI Account"}}
     },
     {
       "parameters": {
-        "qdrantCollection": "company_{{ $('Normalize Input').item.json.company_id }}_knowledge",
-        "qdrantUrl": "http://qdrant.railway.internal:6333",
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "={{ $('Normalize Input').item.json.collection_name }}",
+          "mode": "id"
+        },
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
@@ -91,7 +97,7 @@
       "position": [720, 260],
       "id": "store-qdrant",
       "name": "Store in Qdrant",
-      "credentials": {"qdrantApi": {"id": "qdrant-cred", "name": "Qdrant"}}
+      "credentials": {"qdrantApi": {"id": "eYH0VSgjW8WrINgu", "name": "Qdrant Railway"}}
     },
     {
       "parameters": {
@@ -104,10 +110,10 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            {"name": "company_id", "value": "={{ $('Normalize Input').item.json.company_id }}"},
+            {"name": "company_slug", "value": "={{ $('Normalize Input').item.json.company_slug }}"},
             {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
-            {"name": "vector_ids", "value": "={{ $json.vector_ids }}"},
-            {"name": "chunks_created", "value": "={{ $json.chunks_count }}"},
+            {"name": "vector_ids", "value": "={{ $json.ids }}"},
+            {"name": "chunks_created", "value": "={{ $json.ids.length }}"},
             {"name": "secret_token", "value": "withmia_n8n_secret_2024"}
           ]
         }
@@ -125,13 +131,13 @@
     "Download File": {"main": [[{"node": "Extract Text", "type": "main", "index": 0}]]},
     "Extract Text": {"main": [[{"node": "Chunk Document", "type": "main", "index": 0}]]},
     "Chunk Document": {"main": [[{"node": "Store in Qdrant", "type": "main", "index": 0}]]},
-    "Cohere Embeddings": {"ai_embedding": [[{"node": "Store in Qdrant", "type": "ai_embedding", "index": 0}]]},
+    "OpenAI Embeddings": {"ai_embedding": [[{"node": "Store in Qdrant", "type": "ai_embedding", "index": 0}]]},
     "Store in Qdrant": {"main": [[{"node": "Notify Laravel", "type": "main", "index": 0}]]}
   },
   "active": false,
   "settings": {"executionOrder": "v1"},
-  "versionId": "updated-2026-01-11",
-  "meta": {"templateCredsSetupCompleted": false},
+  "versionId": "updated-2026-01-15-openai",
+  "meta": {"templateCredsSetupCompleted": true},
   "id": "rag-documents-withmia",
-  "tags": ["RAG", "Qdrant", "Documents"]
+  "tags": ["RAG", "Qdrant", "Documents", "OpenAI"]
 }

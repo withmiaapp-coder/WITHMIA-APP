@@ -1047,7 +1047,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                   company={{
                     id: user.company_id,
                     name: user.company_name,
-                    description: user.company_description
+                    slug: companySlug,
+                    description: user.company_description,
+                    settings: company?.settings
                   }}
                   onboardingData={{
                     company_name: user.company_name || '',
