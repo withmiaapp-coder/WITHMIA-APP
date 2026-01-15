@@ -1,14 +1,11 @@
 <?php
 
 return [
-    'paths' => ['api/*', 'auth/*', 'login', 'logout', 'check-session'],
+    'paths' => ['api/*', 'auth/*', 'login', 'logout', 'check-session', 'onboarding', 'onboarding/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        'https://app.withmia.com',
-        'https://accounts.google.com'
-    ],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

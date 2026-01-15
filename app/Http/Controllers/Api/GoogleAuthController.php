@@ -74,67 +74,20 @@ class GoogleAuthController extends Controller
             error_log('Login tracking updated - IP: ' . $loginIp . ', Time: ' . now());
             */
 
-            // Invalidar cualquier sesión anterior
-            if ($request->hasSession()) {
-                $request->session()->flush();
-            }
-            
-            // Login del usuario con remember
+            // Login del usuario con remember=true para persistencia
             Auth::login($user, true);
             
-            // Regenerar la sesión para seguridad
+            // Regenerar la sesión DESPUÉS del login para prevenir session fixation
             $request->session()->regenerate();
             
-            // Guardar el user_id en la sesión explícitamente
-            $request->session()->put('user_id', $user->id);
-            $request->session()->save();
-            
             $sessionId = $request->session()->getId();
-            $cookieName = config('session.cookie');
-            $cookieDomain = config('session.domain');
-            $cookieSecure = config('session.secure') ? 'Secure; ' : '';
-            $cookieSameSite = config('session.same_site', 'lax');
-            $cookieLifetime = config('session.lifetime') * 60; // minutos a segundos
-            $expires = gmdate('D, d M Y H:i:s T', time() + $cookieLifetime);
             
             error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
-            error_log('Cookie name: ' . $cookieName . ', Domain: ' . $cookieDomain);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
 
-            // Retornar HTML con JavaScript redirect
-            $html = '<!DOCTYPE html>
-<html>
-<head>
-    <title>WITHMIA</title>
-    <link rel="icon" href="/logo-withmia.webp?v=2025-withmia" type="image/webp">
-    <style>
-        body {
-            margin: 0;
-            background: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        video { width: 160px; height: 160px; object-fit: contain; }
-    </style>
-</head>
-<body>
-    <video autoplay loop muted playsinline>
-        <source src="/logo-animated.webm" type="video/webm" />
-    </video>
-    <script>setTimeout(function() { window.location.href = "/onboarding"; }, 3000);</script>
-</body>
-</html>';
-            
-            // Crear cookie manualmente con header directo
-            $cookieValue = $sessionId;
-            $cookieHeader = "{$cookieName}={$cookieValue}; Path=/; Domain={$cookieDomain}; Expires={$expires}; {$cookieSecure}HttpOnly; SameSite={$cookieSameSite}";
-            
-            error_log('Set-Cookie header: ' . $cookieHeader);
-            
-            return response($html)
-                ->header('Set-Cookie', $cookieHeader);
+            // Usar redirect normal para que Laravel maneje la cookie de sesión correctamente
+            // El middleware de sesión agregará la cookie automáticamente
+            return redirect('/onboarding');
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
@@ -174,18 +127,23 @@ class GoogleAuthController extends Controller
         return response()->json(['message' => 'Google OAuth login endpoint']);
     }
 
-    public function checkSession()
+    public function checkSession(Request $request)
     {
         $sessionId = session()->getId();
         $hasSession = !empty($sessionId) && strlen($sessionId) > 10;
+        $cookieName = config('session.cookie');
+        $receivedCookies = array_keys($request->cookies->all());
+        $hasCookie = in_array($cookieName, $receivedCookies);
         
-        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO'));
+        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO'));
         
         return response()->json([
             'authenticated' => Auth::check(),
             'user' => Auth::user(),
             'session_id' => substr($sessionId, 0, 10) . '...',
-            'has_valid_session' => $hasSession
+            'has_valid_session' => $hasSession,
+            'received_cookies' => $receivedCookies,
+            'expected_cookie' => $cookieName
         ]);
     }
 }

@@ -405,7 +405,7 @@ function parseJwt(token) {
         }
 
         // Verificar si ya está autenticado al cargar la página
-        fetch("/check-session")
+        fetch("/check-session", { credentials: 'include' })
  .then(response => response.json())
  .then(data => {
  if (data.authenticated) {
