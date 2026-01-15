@@ -14,7 +14,7 @@ class TeamManagementMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return response()->view('transition', ['redirect' => '/login']);
         }
 
         $user = auth()->user();

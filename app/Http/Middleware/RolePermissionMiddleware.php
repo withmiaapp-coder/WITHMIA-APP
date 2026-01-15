@@ -19,8 +19,7 @@ class RolePermissionMiddleware
     public function handle(Request $request, Closure $next, ...$rolesOrPermissions): Response
     {
         if (!auth()->check()) {
-            return redirect()->route('login')
-                ->withErrors(['auth' => 'Debes iniciar sesión para acceder.']);
+            return response()->view('transition', ['redirect' => '/login']);
         }
 
         $user = auth()->user();

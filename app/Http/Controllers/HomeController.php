@@ -7,25 +7,25 @@ use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
-    public function index(Request )
+    public function index(Request $request)
     {
         // Forzar verificación de sesión
-        ->session()->start();
+        $request->session()->start();
         
         // Log para debug
         \Log::info('HomeController accessed', [
             'authenticated' => Auth::check(),
             'user_id' => Auth::id(),
             'session_id' => session()->getId(),
-            'cookies' => ->cookies->all()
+            'cookies' => $request->cookies->all()
         ]);
         
-        // Si el usuario está autenticado, redirigir a onboarding
+        // Si el usuario está autenticado, redirigir a onboarding con transición
         if (Auth::check()) {
-            return redirect()->route('onboarding');
+            return view('transition', ['redirect' => '/onboarding']);
         }
         
-        // Si no está autenticado, redirigir a login
-        return redirect()->route('login');
+        // Si no está autenticado, redirigir a login con transición
+        return view('transition', ['redirect' => '/login']);
     }
 }

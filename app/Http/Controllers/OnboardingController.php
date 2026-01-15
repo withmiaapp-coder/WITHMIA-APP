@@ -80,7 +80,7 @@ class OnboardingController extends Controller
                 if ($isJsonRequest) {
                     return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
                 }
-                return redirect()->route('login');
+                return view('transition', ['redirect' => '/login']);
             }
             
             $user = auth()->user();
@@ -89,7 +89,7 @@ class OnboardingController extends Controller
                 if ($isJsonRequest) {
                     return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
                 }
-                return redirect()->route('login');
+                return view('transition', ['redirect' => '/login']);
             }
 
             if ($user->company_slug) {

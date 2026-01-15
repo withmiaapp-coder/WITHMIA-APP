@@ -206,6 +206,11 @@ Route::get('/login', function () {
     return response()->file(public_path('login.html'));
 })->name('login');
 
+// Transition route for unauthenticated redirects
+Route::get('/transition-login', function () {
+    return view('transition', ['redirect' => '/login']);
+})->name('transition.login');
+
 // Authentication routes (no middleware needed)
 Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
