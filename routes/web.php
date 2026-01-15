@@ -254,7 +254,13 @@ Route::post('/api/improve-description', [OnboardingApiController::class, 'improv
     ->name('onboarding.improve');
 
 // Onboarding route - FUERA del middleware auth para evitar "Redirecting to"
-Route::get('/onboarding', function () {
+Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
+    $cookieName = config('session.cookie');
+    $receivedCookies = array_keys($request->cookies->all());
+    $sessionId = session()->getId();
+    
+    error_log('Onboarding - Session ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies received: ' . implode(',', $receivedCookies) . ', Expected cookie: ' . $cookieName);
+    
     if (!Auth::check()) {
         // No autenticado - mostrar login directamente
         return response()->file(public_path('login.html'));
