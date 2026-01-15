@@ -75,28 +75,31 @@ class GoogleAuthController extends Controller
             */
 
             // Invalidar cualquier sesión anterior
-            $request->session()->invalidate();
+            if ($request->hasSession()) {
+                $request->session()->flush();
+            }
             
+            // Login del usuario
             Auth::login($user, true);
             
-            // Regenerar la sesión para seguridad
+            // Regenerar la sesión
             $request->session()->regenerate();
-            $request->session()->regenerateToken();
             
             error_log('Session created - ID: ' . session()->getId() . ', User: ' . $user->id);
 
-            // Si es un form submit (no JSON), mostrar pantalla de transición
-            if (!$request->expectsJson() && !$request->isJson()) {
-                return response()->view('transition', ['redirect' => '/onboarding'])->withCookie(
-                    cookie()->forever(config('session.cookie'), session()->getId())
-                );
-            }
-
-            return response()->json([
-                'success' => true,
-                'redirect' => '/onboarding',
-                'user' => $user->only(['id', 'name', 'email'])
-            ]);
+            // Siempre mostrar pantalla de transición con cookie de sesión
+            return response()->view('transition', ['redirect' => '/onboarding'])
+                ->withCookie(cookie(
+                    config('session.cookie'),
+                    session()->getId(),
+                    config('session.lifetime'),
+                    config('session.path'),
+                    config('session.domain'),
+                    config('session.secure'),
+                    config('session.http_only'),
+                    false,
+                    config('session.same_site')
+                ));
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());

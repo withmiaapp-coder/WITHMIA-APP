@@ -25,7 +25,7 @@ class HomeController extends Controller
             return view('transition', ['redirect' => '/onboarding']);
         }
         
-        // Si no está autenticado, redirigir directo a login (sin transición)
-        return redirect('/login');
+        // Si no está autenticado, mostrar login directamente
+        return response()->file(public_path('login.html'));
     }
 }

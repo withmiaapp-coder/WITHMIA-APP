@@ -23,9 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Trust Railway proxies for proper HTTPS detection
         $middleware->trustProxies(at: '*');
-        
-        // Redirect directo a login (sin transición para evitar loops)
-        $middleware->redirectGuestsTo('/login');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

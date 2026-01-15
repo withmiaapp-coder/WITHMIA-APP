@@ -19,7 +19,7 @@ class RolePermissionMiddleware
     public function handle(Request $request, Closure $next, ...$rolesOrPermissions): Response
     {
         if (!auth()->check()) {
-            return redirect('/login');
+            return response()->file(public_path('login.html'));
         }
 
         $user = auth()->user();

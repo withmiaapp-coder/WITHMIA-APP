@@ -195,7 +195,8 @@ Route::get('/', function () {
         }
         return view('transition', ['redirect' => '/onboarding']);
     }
-    return redirect('/login');
+    // No autenticado - mostrar login directamente (sin redirect feo)
+    return response()->file(public_path('login.html'));
 });
 
 // Login route - redirect if already authenticated
