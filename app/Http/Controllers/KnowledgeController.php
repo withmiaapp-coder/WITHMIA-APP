@@ -785,39 +785,22 @@ class KnowledgeController extends Controller
 
     /**
      * Fix UTF-8 mojibake - when UTF-8 text was incorrectly interpreted as Latin-1
-     * Common patterns: "Ã³" -> "ó", "Ã¡" -> "á", etc.
      */
     private function fixUtf8Mojibake($text)
     {
-        // Check if we have mojibake patterns
-        // These are UTF-8 characters that look like "Ã" followed by another char
-        // This happens when UTF-8 bytes are interpreted as Latin-1
+        // Mojibake pattern: "Ã" (C3 83) appears when UTF-8 is double-encoded
+        // The character Ã is \xC3 in Latin-1, which is the first byte of many UTF-8 Spanish chars
         
-        // Common mojibake indicators for Spanish
-        $hasMojibake = (
-            strpos($text, 'Ã¡') !== false ||  // á
-            strpos($text, 'Ã©') !== false ||  // é
-            strpos($text, 'Ã­') !== false ||  // í
-            strpos($text, 'Ã³') !== false ||  // ó
-            strpos($text, 'Ãº') !== false ||  // ú
-            strpos($text, 'Ã±') !== false ||  // ñ
-            strpos($text, 'Ã') !== false      // General Ã pattern
-        );
-        
-        if ($hasMojibake) {
-            Log::info("Detected mojibake in text, attempting fix...");
+        // Check for the telltale sign: \xC3\x83 (which is "Ã" in UTF-8)
+        // This appears before accented vowels in double-encoded text
+        if (strpos($text, "\xC3\x83") !== false) {
+            Log::info("Detected UTF-8 double encoding (found C3 83 pattern)");
             
-            // The text is double-encoded: UTF-8 -> Latin-1 -> UTF-8
-            // To fix: treat it as Latin-1 bytes and decode to get proper UTF-8
+            // Convert: treat as Latin-1 and output as Latin-1 (which undoes one layer)
             $fixed = mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
             
-            // Verify the result looks correct (has Spanish accented chars)
-            if (preg_match('/[áéíóúñüÁÉÍÓÚÑÜ]/u', $fixed)) {
-                Log::info("Successfully fixed UTF-8 mojibake");
-                return $fixed;
-            } else {
-                Log::warning("Mojibake fix did not produce Spanish characters, keeping original");
-            }
+            Log::info("Applied mojibake fix");
+            return $fixed;
         }
         
         return $text;
