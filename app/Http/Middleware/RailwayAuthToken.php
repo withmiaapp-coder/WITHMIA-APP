@@ -10,7 +10,12 @@ use App\Models\User;
 
 class RailwayAuthToken
 {
-    public function handle(Request $request, Closure $next)
+    /**
+     * Handle an incoming request.
+     * When $requireAuth is true (used as route middleware), it will block unauthenticated requests.
+     * When false (used globally), it just tries to authenticate without blocking.
+     */
+    public function handle(Request $request, Closure $next, $requireAuth = 'false')
     {
         // Ya autenticado, continuar
         if (Auth::check()) {
@@ -40,15 +45,20 @@ class RailwayAuthToken
             }
         }
         
-        // No autenticado - devolver error JSON 401
-        Log::warning('RailwayAuthToken: Unauthenticated request blocked', [
-            'path' => $request->path(),
-            'has_token' => !empty($token)
-        ]);
+        // Si requireAuth es true, bloquear solicitudes no autenticadas
+        if ($requireAuth === 'true' || $requireAuth === true) {
+            Log::warning('RailwayAuthToken: Unauthenticated request blocked', [
+                'path' => $request->path(),
+                'has_token' => !empty($token)
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Unauthenticated - No valid auth token provided'
+            ], 401);
+        }
         
-        return response()->json([
-            'success' => false,
-            'error' => 'Unauthenticated - No valid auth token provided'
-        ], 401);
+        // No bloquear - continuar sin autenticación
+        return $next($request);
     }
 }

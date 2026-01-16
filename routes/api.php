@@ -1077,7 +1077,7 @@ Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handle'])
     ->name('chatwoot.webhook');
 
 // Knowledge Base / Conocimientos API routes - authenticated via RailwayAuthToken
-Route::middleware(['railway.auth'])->group(function () {
+Route::middleware(['railway.auth:true'])->group(function () {
     // Onboarding data
     Route::get('/onboarding-data', [\App\Http\Controllers\KnowledgeController::class, 'getOnboardingData']);
     Route::put('/onboarding-data', [\App\Http\Controllers\KnowledgeController::class, 'updateOnboardingData']);
