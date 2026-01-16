@@ -493,11 +493,11 @@ class KnowledgeController extends Controller
                 DB::table('knowledge_documents')->insert([
                     'company_id' => $company->id,
                     'filename' => $validated['filename'],
-                    'category' => 'general',
+                    'category' => 'informacion', // Valid values: historia, producto, informacion, desarrollo
                     'chunks_created' => 1,
                     'qdrant_collection' => $collectionName,
                     'qdrant_vector_ids' => json_encode([$validated['chunk_id']]),
-                    'file_path' => "/documents/{$validated['company_slug']}/general/{$validated['filename']}",
+                    'file_path' => "/documents/{$validated['company_slug']}/informacion/{$validated['filename']}",
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
