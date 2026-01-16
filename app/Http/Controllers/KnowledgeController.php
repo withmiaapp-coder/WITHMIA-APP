@@ -798,48 +798,57 @@ class KnowledgeController extends Controller
      */
     private function fixUtf8Mojibake($text)
     {
-        // Detect mojibake patterns for Spanish characters using hex representation
-        // When UTF-8 is double-encoded, we get patterns like:
-        // á → Ã¡ (C3 A1), é → Ã© (C3 A9), í → Ã­ (C3 AD), ó → Ã³ (C3 B3)
-        // ú → Ãº (C3 BA), ñ → Ã± (C3 B1), Ñ → Ã' (C3 91)
-        
-        // Check for common mojibake patterns using hex escape sequences (safe for any encoding)
-        $mojibakePatterns = [
-            "\xC3\xA1",   // Ã¡ (á mojibake)
-            "\xC3\xA9",   // Ã© (é mojibake)
-            "\xC3\xAD",   // Ã­ (í mojibake)
-            "\xC3\xB3",   // Ã³ (ó mojibake)
-            "\xC3\xBA",   // Ãº (ú mojibake)
-            "\xC3\xB1",   // Ã± (ñ mojibake)
-            "\xC3\x91",   // Ã' (Ñ mojibake)
-            "\xC3\xBC",   // Ã¼ (ü mojibake)
-            "\xC3\x81",   // Ã (Á mojibake)
-            "\xC3\x89",   // Ã‰ (É mojibake)
-            "\xC3\x8D",   // Ã (Í mojibake)
-            "\xC3\x93",   // Ã" (Ó mojibake)
-            "\xC3\x9A",   // Ãš (Ú mojibake)
+        // Direct replacement of mojibake patterns to correct UTF-8 characters
+        // Mojibake occurs when UTF-8 is incorrectly decoded as Latin-1 and re-encoded as UTF-8
+        // Pattern: correct UTF-8 char -> mojibake sequence
+        $replacements = [
+            // Lowercase vowels with accents
+            "\xC3\x83\xC2\xA1" => "\xC3\xA1",  // á (Ã¡ -> á)
+            "\xC3\x83\xC2\xA9" => "\xC3\xA9",  // é (Ã© -> é)
+            "\xC3\x83\xC2\xAD" => "\xC3\xAD",  // í (Ã­ -> í)
+            "\xC3\x83\xC2\xB3" => "\xC3\xB3",  // ó (Ã³ -> ó)
+            "\xC3\x83\xC2\xBA" => "\xC3\xBA",  // ú (Ãº -> ú)
+            // Uppercase vowels with accents
+            "\xC3\x83\xE2\x80\x81" => "\xC3\x81",  // Á
+            "\xC3\x83\xE2\x80\xB0" => "\xC3\x89",  // É
+            "\xC3\x83\xC2\x8D" => "\xC3\x8D",  // Í
+            "\xC3\x83\xE2\x80\x9C" => "\xC3\x93",  // Ó
+            "\xC3\x83\xC5\xA1" => "\xC3\x9A",  // Ú
+            // ñ and Ñ
+            "\xC3\x83\xC2\xB1" => "\xC3\xB1",  // ñ (Ã± -> ñ)
+            "\xC3\x83\xE2\x80\x98" => "\xC3\x91",  // Ñ
+            // ü
+            "\xC3\x83\xC2\xBC" => "\xC3\xBC",  // ü (Ã¼ -> ü)
+            // Common symbols
+            "\xC2\xBF" => "?",     // ¿ -> ? (simplify)
+            "\xC2\xA1" => "!",     // ¡ -> ! (simplify)
+            "\xC2\xB0" => "\xC2\xB0", // ° keep as is
         ];
         
-        $hasMojibake = false;
-        foreach ($mojibakePatterns as $pattern) {
-            if (strpos($text, $pattern) !== false) {
-                $hasMojibake = true;
-                Log::info("Detected mojibake pattern: " . bin2hex($pattern));
-                break;
-            }
-        }
+        $originalLength = strlen($text);
+        $text = str_replace(array_keys($replacements), array_values($replacements), $text);
         
-        if ($hasMojibake) {
-            // The text is UTF-8 that was incorrectly re-encoded as UTF-8
-            // To fix: interpret the UTF-8 bytes as ISO-8859-1 and you get correct UTF-8
-            $fixed = mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
-            
-            // Verify the fix worked
-            if ($fixed && mb_check_encoding($fixed, 'UTF-8')) {
-                Log::info("Fixed mojibake by decoding to ISO-8859-1, length: " . strlen($fixed));
-                $text = $fixed;
-            } else {
-                Log::warning("Mojibake fix failed, keeping original");
+        // Also try simpler 2-byte mojibake patterns (Ã + byte)
+        $simpleReplacements = [
+            "\xC3\xA1" => "\xC3\xA1",  // Keep if already correct á
+            "\xC3\xA9" => "\xC3\xA9",  // Keep if already correct é
+            "\xC3\xAD" => "\xC3\xAD",  // Keep if already correct í
+            "\xC3\xB3" => "\xC3\xB3",  // Keep if already correct ó
+            "\xC3\xBA" => "\xC3\xBA",  // Keep if already correct ú
+            "\xC3\xB1" => "\xC3\xB1",  // Keep if already correct ñ
+        ];
+        
+        // Check if we still have the Ã character (0xC3 0x83) which indicates mojibake
+        if (strpos($text, "\xC3\x83") !== false) {
+            Log::info("Detected Ã character, attempting mb_convert_encoding fix");
+            // Try the encoding conversion approach
+            $fixed = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');
+            if ($fixed) {
+                $fixed = @mb_convert_encoding($fixed, 'UTF-8', 'Windows-1252');
+                if ($fixed && strlen($fixed) > 0) {
+                    $text = $fixed;
+                    Log::info("Applied Windows-1252 round-trip fix");
+                }
             }
         }
         
@@ -858,7 +867,10 @@ class KnowledgeController extends Controller
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
         }
         
-        Log::info("UTF-8 processing completed, length: " . strlen($text));
+        if (strlen($text) !== $originalLength) {
+            Log::info("UTF-8 mojibake fix applied, length changed: {$originalLength} -> " . strlen($text));
+        }
+        
         return $text;
     }
 
