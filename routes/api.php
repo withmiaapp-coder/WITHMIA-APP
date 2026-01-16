@@ -312,6 +312,22 @@ Route::get('/wipe-database', function () {
     }
 });
 
+// 🧹 CLEANUP TEST DATA - Keep only specified company
+Route::get('/cleanup-test-data/{keepSlug}', function ($keepSlug) {
+    try {
+        $output = \Illuminate\Support\Facades\Artisan::call('cleanup:test-data', [
+            '--keep-slug' => $keepSlug
+        ]);
+        return response()->json([
+            'success' => true,
+            'message' => "Cleanup completed, kept company: {$keepSlug}",
+            'output' => \Illuminate\Support\Facades\Artisan::output()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // ⚡ ACTIVAR WORKFLOW n8n
 Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
     try {
