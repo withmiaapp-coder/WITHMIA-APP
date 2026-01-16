@@ -1076,6 +1076,9 @@ Route::middleware(['web', 'auth'])->group(function () {
 // Public webhook endpoint for n8n (no authentication)
 Route::post('/n8n/update-vector-ids', [\App\Http\Controllers\KnowledgeController::class, 'updateVectorIdsWebhook']);
 
+// n8n chunk notification endpoint (no authentication - called after each chunk is stored in Qdrant)
+Route::post('/knowledge/chunk-stored', [\App\Http\Controllers\KnowledgeController::class, 'chunkStored']);
+
 // WhatsApp Instance lookup endpoint (no authentication - used by n8n)
 Route::get('/whatsapp/instance/{instanceName}/company', [\App\Http\Controllers\Api\WhatsAppInstanceController::class, 'getCompanyByInstance']);
 

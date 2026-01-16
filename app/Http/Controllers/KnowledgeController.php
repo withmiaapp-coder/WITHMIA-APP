@@ -442,4 +442,85 @@ class KnowledgeController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Store chunk notification from n8n (no authentication required)
+     * Called by n8n after each chunk is stored in Qdrant
+     */
+    public function chunkStored(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'company_slug' => 'required|string',
+                'filename' => 'required|string|max:255',
+                'chunk_id' => 'required|string',
+                'chunk_index' => 'required|integer'
+            ]);
+
+            // Find company by slug
+            $company = DB::table('companies')->where('slug', $validated['company_slug'])->first();
+            
+            if (!$company) {
+                Log::warning("Chunk stored - Company not found: {$validated['company_slug']}");
+                return response()->json(['success' => false, 'error' => 'Company not found'], 404);
+            }
+
+            // Find or create document record
+            $document = DB::table('knowledge_documents')
+                ->where('company_id', $company->id)
+                ->where('filename', $validated['filename'])
+                ->first();
+
+            if ($document) {
+                // Update existing document - increment chunks and add vector ID
+                $existingVectorIds = $document->qdrant_vector_ids ? json_decode($document->qdrant_vector_ids, true) : [];
+                $existingVectorIds[] = $validated['chunk_id'];
+                
+                DB::table('knowledge_documents')
+                    ->where('id', $document->id)
+                    ->update([
+                        'qdrant_vector_ids' => json_encode($existingVectorIds),
+                        'chunks_created' => $validated['chunk_index'] + 1,
+                        'updated_at' => now()
+                    ]);
+                    
+                Log::info("Chunk stored for document {$validated['filename']}, chunk {$validated['chunk_index']}");
+            } else {
+                // Document not found - this shouldn't happen normally
+                // Create it anyway to not lose data
+                $collectionName = "company_{$validated['company_slug']}_knowledge";
+                
+                DB::table('knowledge_documents')->insert([
+                    'company_id' => $company->id,
+                    'filename' => $validated['filename'],
+                    'category' => 'general',
+                    'chunks_created' => 1,
+                    'qdrant_collection' => $collectionName,
+                    'qdrant_vector_ids' => json_encode([$validated['chunk_id']]),
+                    'file_path' => "/documents/{$validated['company_slug']}/general/{$validated['filename']}",
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                Log::info("Created new document record for {$validated['filename']}");
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Chunk stored notification received'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Datos inválidos',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error processing chunk stored notification: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error processing notification'
+            ], 500);
+        }
+    }
 }
