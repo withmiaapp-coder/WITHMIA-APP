@@ -968,14 +968,26 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $workflowData = $response->json();
             $workflowId = $workflowData['id'];
 
-            // Activate the workflow
+            // Activate the workflow - n8n requires Content-Type: application/json
             $activateResponse = Http::withHeaders([
                 'X-N8N-API-KEY' => $n8nApiKey,
                 'Content-Type' => 'application/json'
-            ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate");
+            ])->withBody('{}', 'application/json')
+              ->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate");
 
             if (!$activateResponse->successful()) {
-                Log::warning("Failed to activate workflow: " . $activateResponse->body());
+                Log::warning("Failed to activate workflow {$workflowId}: " . $activateResponse->body());
+                
+                // Retry with different approach
+                $retryResponse = Http::withHeaders([
+                    'X-N8N-API-KEY' => $n8nApiKey,
+                ])->asJson()->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", []);
+                
+                if ($retryResponse->successful()) {
+                    Log::info("Workflow {$workflowId} activated on retry");
+                } else {
+                    Log::error("Failed to activate workflow even after retry: " . $retryResponse->body());
+                }
             } else {
                 Log::info("Workflow {$workflowId} activated successfully");
             }
