@@ -425,29 +425,20 @@ class OnboardingController extends Controller
             Log::error("Excepción creando colección Qdrant para {$uniqueSlug}: " . $e->getMessage());
         }
 
-        // 🚀 Dispatch Job en background para: Workflow RAG + Correos
-        // Esto hace que el dashboard cargue INMEDIATAMENTE
+        // 🚀 Dispatch Job DESPUÉS de enviar la respuesta (no bloquea al usuario)
+        // dispatchAfterResponse ejecuta el job después de que el usuario recibe su respuesta
         try {
-            PostOnboardingSetupJob::dispatch(
+            PostOnboardingSetupJob::dispatchAfterResponse(
                 $user->id,
                 $company->id,
                 $uniqueSlug,
                 request()->ip()
             );
-            Log::info("PostOnboardingSetupJob dispatched para: {$uniqueSlug}");
+            Log::info("PostOnboardingSetupJob scheduled after response para: {$uniqueSlug}");
         } catch (\Exception $e) {
-            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
-            
-            // Fallback: hacer síncrono si falla el dispatch
-            try {
-                $this->createRagWorkflow($company, $uniqueSlug);
-                if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
-                    Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
-                    Mail::to($user->email)->send(new OnboardingCompletedMail($user));
-                }
-            } catch (\Exception $fallbackEx) {
-                Log::error("Fallback onboarding también falló: " . $fallbackEx->getMessage());
-            }
+            Log::error("Error scheduling PostOnboardingSetupJob: " . $e->getMessage());
+            // No hacer fallback síncrono - dejar que el usuario vaya al dashboard rápido
+        }
         }
 
         return [
