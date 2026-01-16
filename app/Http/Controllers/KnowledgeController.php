@@ -579,6 +579,31 @@ class KnowledgeController extends Controller
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
             $workflowId = $company->settings['rag_workflow_id'] ?? null;
 
+            // Verify workflow still exists in n8n
+            if ($workflowId && $n8nApiKey) {
+                try {
+                    $checkResponse = Http::withHeaders([
+                        'X-N8N-API-KEY' => $n8nApiKey
+                    ])->get("{$n8nUrl}/api/v1/workflows/{$workflowId}");
+                    
+                    if (!$checkResponse->successful()) {
+                        // Workflow was deleted, clear settings
+                        Log::info("Workflow {$workflowId} not found in n8n, will create new one");
+                        $settings = $company->settings ?? [];
+                        unset($settings['rag_workflow_id']);
+                        unset($settings['rag_webhook_path']);
+                        unset($settings['rag_workflow_name']);
+                        $company->settings = $settings;
+                        $company->save();
+                        
+                        $webhookPath = null;
+                        $workflowId = null;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Could not verify workflow existence: " . $e->getMessage());
+                }
+            }
+
             if (!$webhookPath || !$workflowId) {
                 // Create company-specific workflow
                 $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
