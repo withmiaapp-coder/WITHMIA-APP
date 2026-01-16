@@ -951,10 +951,11 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                     'Generate Embeddings' => ['main' => [[['node' => 'Prepare for Qdrant', 'type' => 'main', 'index' => 0]]]],
                     'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]]
                 ],
-                'settings' => ['executionOrder' => 'v1']
+                'settings' => ['executionOrder' => 'v1'],
+                'active' => true  // Crear workflow ya activado
             ];
 
-            // Create workflow in n8n
+            // Create workflow in n8n (already active)
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $n8nApiKey,
                 'Content-Type' => 'application/json'
@@ -968,29 +969,15 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $workflowData = $response->json();
             $workflowId = $workflowData['id'];
 
-            // Activate the workflow - n8n requires Content-Type: application/json
-            $activateResponse = Http::withHeaders([
-                'X-N8N-API-KEY' => $n8nApiKey,
-                'Content-Type' => 'application/json'
-            ])->withBody('{}', 'application/json')
-              ->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate");
-
-            if (!$activateResponse->successful()) {
-                Log::warning("Failed to activate workflow {$workflowId}: " . $activateResponse->body());
-                
-                // Retry with different approach
-                $retryResponse = Http::withHeaders([
+            // Verify workflow is active
+            if (!($workflowData['active'] ?? false)) {
+                Log::warning("Workflow created but not active, activating...");
+                Http::withHeaders([
                     'X-N8N-API-KEY' => $n8nApiKey,
                 ])->asJson()->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", []);
-                
-                if ($retryResponse->successful()) {
-                    Log::info("Workflow {$workflowId} activated on retry");
-                } else {
-                    Log::error("Failed to activate workflow even after retry: " . $retryResponse->body());
-                }
-            } else {
-                Log::info("Workflow {$workflowId} activated successfully");
             }
+
+            Log::info("Workflow {$workflowId} created and active for {$companySlug}");
 
             // Save workflow info to company settings
             $settings = $company->settings ?? [];
