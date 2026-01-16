@@ -12,7 +12,7 @@ class RailwayAuthToken
 {
     public function handle(Request $request, Closure $next)
     {
-        // Ya autenticado, no hacer nada
+        // Ya autenticado, continuar
         if (Auth::check()) {
             return $next($request);
         }
@@ -32,6 +32,7 @@ class RailwayAuthToken
                     'source' => $request->query('auth_token') ? 'query' : 
                                ($request->header('X-Railway-Auth-Token') ? 'header' : 'input')
                 ]);
+                return $next($request);
             } else {
                 Log::warning('RailwayAuthToken: Invalid token provided', [
                     'token_prefix' => substr($token, 0, 8) . '...'
@@ -39,6 +40,15 @@ class RailwayAuthToken
             }
         }
         
-        return $next($request);
+        // No autenticado - devolver error JSON 401
+        Log::warning('RailwayAuthToken: Unauthenticated request blocked', [
+            'path' => $request->path(),
+            'has_token' => !empty($token)
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => 'Unauthenticated - No valid auth token provided'
+        ], 401);
     }
 }

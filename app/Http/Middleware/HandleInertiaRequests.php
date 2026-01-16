@@ -38,6 +38,12 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        
+        // Get auth token from query or authenticated user
+        $railwayAuthToken = $request->query('auth_token');
+        if (!$railwayAuthToken && $request->user()) {
+            $railwayAuthToken = $request->user()->auth_token;
+        }
 
         return [
             ...parent::share($request),
@@ -51,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'railwayAuthToken' => $railwayAuthToken,
         ];
     }
 }
