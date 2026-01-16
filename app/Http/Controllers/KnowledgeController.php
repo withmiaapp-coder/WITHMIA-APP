@@ -723,8 +723,7 @@ class KnowledgeController extends Controller
                     }
                 }
                 
-                // Fix mojibake (UTF-8 interpreted as Latin-1) - common pattern
-                // This fixes cases like "economÃ­a" -> "economía"
+                // Fix mojibake (UTF-8 double-encoded text)
                 $extractedText = $this->fixUtf8Mojibake($extractedText);
                 
                 // Clean the text
@@ -784,23 +783,20 @@ class KnowledgeController extends Controller
     }
 
     /**
-     * Fix UTF-8 mojibake - when UTF-8 text was incorrectly interpreted as Latin-1
+     * Fix UTF-8 mojibake - fixes double-encoded UTF-8 text
      */
     private function fixUtf8Mojibake($text)
     {
-        // Mojibake pattern: "Ã" (C3 83) appears when UTF-8 is double-encoded
-        // The character Ã is \xC3 in Latin-1, which is the first byte of many UTF-8 Spanish chars
+        // Always try to fix double-encoding for Spanish text from PDFs
+        // PDFParser often produces double-encoded UTF-8
+        $fixed = @mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
         
-        // Check for the telltale sign: \xC3\x83 (which is "Ã" in UTF-8)
-        // This appears before accented vowels in double-encoded text
-        if (strpos($text, "\xC3\x83") !== false) {
-            Log::info("Detected UTF-8 double encoding (found C3 83 pattern)");
-            
-            // Convert: treat as Latin-1 and output as Latin-1 (which undoes one layer)
-            $fixed = mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
-            
-            Log::info("Applied mojibake fix");
-            return $fixed;
+        if ($fixed !== false && strlen($fixed) > 0) {
+            // Check if the fix produced valid Spanish characters
+            if (preg_match('/[a-zA-Z]/', $fixed)) {
+                Log::info("Applied UTF-8 mojibake fix");
+                return $fixed;
+            }
         }
         
         return $text;
