@@ -542,12 +542,22 @@ class KnowledgeController extends Controller
      */
     public function proxyToN8n(Request $request)
     {
+        Log::info("proxyToN8n called", [
+            'has_user' => Auth::check(),
+            'request_method' => $request->method(),
+            'has_file' => $request->has('file'),
+            'filename' => $request->input('filename'),
+        ]);
+        
         try {
             $user = Auth::user();
             
             if (!$user) {
+                Log::error("proxyToN8n: User not authenticated");
                 return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
             }
+            
+            Log::info("proxyToN8n: User authenticated", ['user_id' => $user->id, 'email' => $user->email]);
             
             $company = $user->company;
             
