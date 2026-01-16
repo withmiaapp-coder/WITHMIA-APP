@@ -970,11 +970,14 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
 
             // Activate the workflow
             $activateResponse = Http::withHeaders([
-                'X-N8N-API-KEY' => $n8nApiKey
+                'X-N8N-API-KEY' => $n8nApiKey,
+                'Content-Type' => 'application/json'
             ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate");
 
             if (!$activateResponse->successful()) {
                 Log::warning("Failed to activate workflow: " . $activateResponse->body());
+            } else {
+                Log::info("Workflow {$workflowId} activated successfully");
             }
 
             // Save workflow info to company settings
