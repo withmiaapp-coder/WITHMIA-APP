@@ -202,6 +202,18 @@ class KnowledgeController extends Controller
     {
         try {
             $user = Auth::user();
+            
+            Log::info('deleteDocument called', [
+                'documentId' => $documentId,
+                'user' => $user ? $user->id : null,
+                'auth_check' => Auth::check(),
+                'has_token' => $request->header('X-Railway-Auth-Token') ? 'yes' : 'no'
+            ]);
+            
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
+            }
+            
             $company = $user->company;
             
             if (!$company) {
@@ -520,6 +532,81 @@ class KnowledgeController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'Error processing notification'
+            ], 500);
+        }
+    }
+
+    /**
+     * Proxy request to n8n RAG webhook to avoid CORS issues
+     * Sends file to n8n where AI will extract the text
+     */
+    public function proxyToN8n(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
+            }
+            
+            $company = $user->company;
+            
+            if (!$company) {
+                return response()->json(['success' => false, 'error' => 'No company found'], 404);
+            }
+
+            $companySlug = $company->slug ?? 'company_' . $company->id;
+            
+            // Get webhook URL from company settings or use env variable
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-docker-production-4255.up.railway.app');
+            $webhookUrl = $company->settings['rag_webhook_url'] ?? 
+                "{$n8nUrl}/webhook/documents-upload";
+
+            $validated = $request->validate([
+                'category' => 'required|string',
+                'filename' => 'required|string',
+                'file' => 'required|string', // base64 content
+            ]);
+
+            Log::info("Proxying RAG request to n8n for {$validated['filename']}", [
+                'company_slug' => $companySlug,
+                'webhook_url' => $webhookUrl
+            ]);
+
+            // Send to n8n webhook - AI will extract the text there
+            $response = Http::timeout(120)->post($webhookUrl, [
+                'company_slug' => $companySlug,
+                'category' => $validated['category'],
+                'filename' => $validated['filename'],
+                'file' => $validated['file'],
+            ]);
+
+            if ($response->successful()) {
+                Log::info("n8n RAG webhook responded successfully for {$validated['filename']}");
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Document sent to n8n for AI processing',
+                    'n8n_response' => $response->json()
+                ]);
+            } else {
+                Log::error("n8n RAG webhook failed: " . $response->body());
+                return response()->json([
+                    'success' => false,
+                    'error' => 'n8n webhook failed',
+                    'details' => $response->body()
+                ], 500);
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Datos inválidos',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error proxying to n8n: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error sending to n8n: ' . $e->getMessage()
             ], 500);
         }
     }

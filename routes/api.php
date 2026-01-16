@@ -321,6 +321,23 @@ Route::get('/debug-users', function () {
     ]);
 });
 
+// 🔍 DEBUG: Ver tokens de usuarios
+Route::get('/debug-tokens', function () {
+    $users = \App\Models\User::all(['id', 'name', 'email', 'auth_token']);
+    return response()->json([
+        'total' => $users->count(),
+        'users' => $users->map(function($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'auth_token' => $u->auth_token,
+                'token_length' => strlen($u->auth_token ?? '')
+            ];
+        })
+    ]);
+});
+
 // 🔍 DEBUG: Session info
 Route::get('/debug-session', function (\Illuminate\Http\Request $request) {
     return response()->json([
@@ -1059,8 +1076,8 @@ use App\Http\Controllers\ChatwootWebhookController;
 Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handle'])
     ->name('chatwoot.webhook');
 
-// Knowledge Base / Conocimientos API routes - authenticated
-Route::middleware(['web', 'auth'])->group(function () {
+// Knowledge Base / Conocimientos API routes - authenticated via RailwayAuthToken
+Route::middleware(['railway.auth'])->group(function () {
     // Onboarding data
     Route::get('/onboarding-data', [\App\Http\Controllers\KnowledgeController::class, 'getOnboardingData']);
     Route::put('/onboarding-data', [\App\Http\Controllers\KnowledgeController::class, 'updateOnboardingData']);
@@ -1071,6 +1088,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/documents/metadata', [\App\Http\Controllers\KnowledgeController::class, 'storeDocumentMetadata']);
     Route::delete('/documents/{id}', [\App\Http\Controllers\KnowledgeController::class, 'deleteDocument']);
     Route::post('/documents/update-vector-ids', [\App\Http\Controllers\KnowledgeController::class, 'updateVectorIds']);
+    
+    // Proxy to n8n RAG webhook (avoids CORS issues)
+    Route::post('/documents/process-rag', [\App\Http\Controllers\KnowledgeController::class, 'proxyToN8n']);
 });
 
 // Public webhook endpoint for n8n (no authentication)

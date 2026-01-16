@@ -17,7 +17,17 @@ import {
   Globe,
   Users,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface OnboardingData {
   company_name: string;
@@ -104,6 +114,9 @@ export default function Conocimientos({
   const [pollingIntervals, setPollingIntervals] = useState<{
     [key: string]: NodeJS.Timeout;
   }>({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch onboarding data on mount
   useEffect(() => {
@@ -267,29 +280,33 @@ export default function Conocimientos({
 
       setUploadProgress((prev) => ({ ...prev, [fileId]: 100 }));
 
-      // Obtener URL del webhook RAG desde la empresa o usar el default
-      const ragWebhookUrl = company?.settings?.rag_webhook_url || 
-        `https://n8n-production-dace.up.railway.app/webhook/rag-${companySlug}`;
+      // Get auth token from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const authToken = urlParams.get('auth_token') || '';
 
-      // Process with n8n in background (fire and forget)
+      // Process with n8n through Laravel proxy (avoids CORS issues)
       const requestBody = {
-        company_slug: companySlug,
         category: category,
         filename: file.name,
         file: base64Content,
       };
-      console.log('📤 Enviando a n8n RAG:', ragWebhookUrl, requestBody);
+      console.log('📤 Enviando a n8n RAG via proxy:', requestBody.filename);
       
-      // Fire n8n processing - it will respond immediately
-      fetch(ragWebhookUrl, {
+      // Send to Laravel proxy which forwards to n8n
+      fetch(`/api/documents/process-rag${authToken ? `?auth_token=${authToken}` : ''}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Railway-Auth-Token": authToken,
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
         body: JSON.stringify(requestBody),
       })
       .then(res => res.json())
       .then(data => {
-        console.log('✅ n8n RAG webhook respondió:', data);
-        // n8n responded immediately, now it's processing in background
+        console.log('✅ n8n RAG proxy respondió:', data);
+        // n8n responded, now it's processing in background
         // Start polling to check when vector_ids are ready
         startPollingForVectorIds(file.name, companySlug);
       })
@@ -355,26 +372,47 @@ export default function Conocimientos({
     e.target.value = "";
   };
 
-  const deleteDocument = async (docId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este documento?")) return;
+  const openDeleteModal = (doc: Document) => {
+    setDocumentToDelete(doc);
+    setDeleteModalOpen(true);
+  };
 
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setDocumentToDelete(null);
+  };
+
+  const deleteDocument = async () => {
+    if (!documentToDelete) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/documents/${docId}`, {
+      const response = await fetch(`/api/documents/${documentToDelete.id}`, {
         method: "DELETE",
+        credentials: "same-origin",
         headers: {
           "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         }
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       if (data.success) {
         await fetchDocuments();
+        closeDeleteModal();
       } else {
         alert("Error al eliminar: " + (data.error || "Intente nuevamente"));
       }
     } catch (error) {
       console.error("Error deleting document:", error);
-      alert("Error al eliminar el documento");
+      alert("Error al eliminar el documento. Por favor intente nuevamente.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -782,13 +820,13 @@ export default function Conocimientos({
                       Subido:{" "}
                       {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
                       {doc.chunks_created &&
-                        ` ÔÇó ${doc.chunks_created} fragmentos`}
+                        ` • ${doc.chunks_created} fragmentos`}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => deleteDocument(doc.id)}
+                    onClick={() => openDeleteModal(doc)}
                     className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
                     title="Eliminar"
                   >
@@ -800,6 +838,51 @@ export default function Conocimientos({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <DialogTitle>Eliminar documento</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              ¿Estás seguro de que deseas eliminar <strong>"{documentToDelete?.filename}"</strong>? 
+              Esta acción no se puede deshacer y también eliminará los embeddings asociados.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={closeDeleteModal}
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteDocument}
+              disabled={isDeleting}
+              className="gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

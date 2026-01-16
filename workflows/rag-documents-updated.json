@@ -17,13 +17,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extraer datos del body\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst fileBase64 = body.file || '';\n\n// Limpiar el base64 (quitar data:... prefix si existe)\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(',')) {\n  cleanBase64 = cleanBase64.split(',')[1];\n}\n\n// Crear nombre de colección\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Decodificar base64 a texto\nconst fileContent = Buffer.from(cleanBase64, 'base64').toString('utf-8');\n\n// Retornar texto extraído\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: fileContent\n  }\n};"
+        "jsCode": "// Extraer datos del body\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst fileBase64 = body.file || '';\nconst mimeType = body.mime_type || 'application/pdf';\n\n// Limpiar el base64 (quitar data:... prefix si existe)\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(',')) {\n  cleanBase64 = cleanBase64.split(',')[1];\n}\n\n// Crear nombre de colección\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Preparar como binary data para el nodo Extract From File\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    mime_type: mimeType\n  },\n  binary: {\n    data: {\n      data: cleanBase64,\n      mimeType: mimeType,\n      fileName: filename\n    }\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [220, 300],
       "id": "process-base64",
-      "name": "Decode Base64"
+      "name": "Prepare Binary Data"
     },
     {
       "parameters": {
@@ -38,11 +38,32 @@
     },
     {
       "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [440, 300],
+      "id": "extract-text",
+      "name": "Extract Text from PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combinar el texto extraído con los metadatos originales\nconst extractedData = $input.first().json;\nconst prevData = $('Prepare Binary Data').first().json;\n\n// El texto extraído viene en el campo 'text' del nodo Extract From File\nconst extractedText = extractedData.text || extractedData.data || '';\n\n// Limpiar el texto: remover caracteres no imprimibles y normalizar espacios\nlet cleanText = extractedText\n  .replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F-\\x9F]/g, '') // Remover caracteres de control\n  .replace(/\\s+/g, ' ') // Normalizar espacios múltiples\n  .replace(/\\n\\s*\\n/g, '\\n\\n') // Mantener párrafos\n  .trim();\n\n// Verificar que tenemos texto válido\nif (!cleanText || cleanText.length < 10) {\n  throw new Error('No se pudo extraer texto del documento. El archivo puede estar vacío, ser una imagen escaneada, o estar protegido.');\n}\n\nreturn {\n  json: {\n    company_slug: prevData.company_slug,\n    filename: prevData.filename,\n    category: prevData.category,\n    collection_name: prevData.collection_name,\n    text: cleanText,\n    text_length: cleanText.length\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300],
+      "id": "combine-data",
+      "name": "Combine Extracted Text"
+    },
+    {
+      "parameters": {
         "jsCode": "// Dividir texto en chunks - LIMITADO A ~6000 TOKENS (aprox 24000 caracteres)\nconst text = $input.first().json.text || '';\nconst companySlug = $input.first().json.company_slug;\nconst filename = $input.first().json.filename;\nconst category = $input.first().json.category;\nconst collectionName = $input.first().json.collection_name;\n\n// ~4 caracteres = 1 token aprox. Limite 6000 tokens = 24000 chars\n// Usamos 20000 para tener margen de seguridad\nconst maxCharsPerChunk = 20000;\nconst chunkOverlap = 500;\nconst chunks = [];\n\n// Si el texto es corto, no dividir\nif (text.length <= maxCharsPerChunk) {\n  chunks.push(text);\n} else {\n  // Dividir por párrafos primero\n  const paragraphs = text.split(/\\n\\n+/);\n  let currentChunk = '';\n  \n  for (const para of paragraphs) {\n    // Si agregar este párrafo excede el límite\n    if (currentChunk.length + para.length > maxCharsPerChunk) {\n      // Guardar chunk actual si tiene contenido\n      if (currentChunk.trim()) {\n        chunks.push(currentChunk.trim());\n      }\n      \n      // Si el párrafo solo es muy largo, dividirlo por oraciones\n      if (para.length > maxCharsPerChunk) {\n        const sentences = para.split(/(?<=[.!?])\\s+/);\n        currentChunk = '';\n        for (const sentence of sentences) {\n          if (currentChunk.length + sentence.length > maxCharsPerChunk) {\n            if (currentChunk.trim()) chunks.push(currentChunk.trim());\n            // Si una sola oración es muy larga, dividir por caracteres\n            if (sentence.length > maxCharsPerChunk) {\n              for (let i = 0; i < sentence.length; i += maxCharsPerChunk - chunkOverlap) {\n                chunks.push(sentence.substring(i, i + maxCharsPerChunk));\n              }\n              currentChunk = '';\n            } else {\n              currentChunk = sentence;\n            }\n          } else {\n            currentChunk += (currentChunk ? ' ' : '') + sentence;\n          }\n        }\n      } else {\n        currentChunk = para;\n      }\n    } else {\n      currentChunk += (currentChunk ? '\\n\\n' : '') + para;\n    }\n  }\n  \n  // No olvidar el último chunk\n  if (currentChunk.trim()) {\n    chunks.push(currentChunk.trim());\n  }\n}\n\n// Retornar chunks como items separados\nreturn chunks.map((chunk, index) => ({\n  json: {\n    text: chunk,\n    chunk_index: index,\n    total_chunks: chunks.length,\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 300],
+      "position": [880, 300],
       "id": "chunk-text",
       "name": "Split into Chunks"
     },
@@ -67,7 +88,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 300],
+      "position": [1100, 300],
       "id": "generate-embeddings",
       "name": "Generate Embeddings"
     },
@@ -77,7 +98,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 300],
+      "position": [1320, 300],
       "id": "prepare-qdrant",
       "name": "Prepare for Qdrant"
     },
@@ -92,7 +113,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 300],
+      "position": [1540, 300],
       "id": "store-qdrant",
       "name": "Store in Qdrant"
     },
@@ -107,7 +128,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 300],
+      "position": [1760, 300],
       "id": "notify-laravel",
       "name": "Notify Laravel"
     }
@@ -116,14 +137,28 @@
     "Webhook Upload": {
       "main": [
         [
-          {"node": "Decode Base64", "type": "main", "index": 0}
+          {"node": "Prepare Binary Data", "type": "main", "index": 0}
         ]
       ]
     },
-    "Decode Base64": {
+    "Prepare Binary Data": {
       "main": [
         [
           {"node": "Respond Immediately", "type": "main", "index": 0},
+          {"node": "Extract Text from PDF", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Extract Text from PDF": {
+      "main": [
+        [
+          {"node": "Combine Extracted Text", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Combine Extracted Text": {
+      "main": [
+        [
           {"node": "Split into Chunks", "type": "main", "index": 0}
         ]
       ]
