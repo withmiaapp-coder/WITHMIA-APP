@@ -5,117 +5,167 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "documents-upload",
-        "options": {
-          "rawBody": true
-        }
+        "responseMode": "responseNode",
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-280, 260],
-      "id": "webhook-documents",
+      "position": [0, 300],
+      "id": "webhook-upload",
       "name": "Webhook Upload",
       "webhookId": "rag-documents-withmia"
     },
     {
       "parameters": {
-        "jsCode": "// Extraer datos del body del webhook\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst fileBase64 = body.file || '';\n\n// Limpiar el base64 (quitar data:... prefix si existe)\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(',')) {\n  cleanBase64 = cleanBase64.split(',')[1];\n}\n\n// Crear nombre de colección\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Determinar mime type basado en extensión\nlet mimeType = 'application/pdf';\nconst ext = filename.toLowerCase().split('.').pop();\nif (ext === 'txt') mimeType = 'text/plain';\nelse if (ext === 'doc' || ext === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';\nelse if (ext === 'csv') mimeType = 'text/csv';\nelse if (ext === 'json') mimeType = 'application/json';\nelse if (ext === 'md') mimeType = 'text/markdown';\n\n// Convertir base64 a Buffer\nconst fileBuffer = Buffer.from(cleanBase64, 'base64');\n\n// Retornar JSON con el archivo como binario\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    mime_type: mimeType\n  },\n  binary: {\n    data: {\n      data: fileBuffer.toString('base64'),\n      mimeType: mimeType,\n      fileName: filename\n    }\n  }\n};"
+        "jsCode": "// Extraer datos del body\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst fileBase64 = body.file || '';\n\n// Limpiar el base64 (quitar data:... prefix si existe)\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(',')) {\n  cleanBase64 = cleanBase64.split(',')[1];\n}\n\n// Crear nombre de colección\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Decodificar base64 a texto\nconst fileContent = Buffer.from(cleanBase64, 'base64').toString('utf-8');\n\n// Retornar texto extraído\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: fileContent\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-80, 260],
+      "position": [220, 300],
       "id": "process-base64",
-      "name": "Process Base64 to Binary"
+      "name": "Decode Base64"
     },
     {
       "parameters": {
-        "operation": "text",
-        "options": {}
+        "respondWith": "json",
+        "responseBody": "={\"success\": true, \"message\": \"Processing started\", \"filename\": \"{{ $json.filename }}\"}"
       },
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1,
-      "position": [120, 260],
-      "id": "extract-text",
-      "name": "Extract Text"
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 160],
+      "id": "respond-webhook",
+      "name": "Respond Immediately"
     },
     {
       "parameters": {
-        "chunkSize": 500,
-        "chunkOverlap": 50,
-        "options": {
-          "metadata": {
-            "metadataValues": [
-              {"name": "company_slug", "value": "={{ $('Process Base64 to Binary').item.json.company_slug }}"},
-              {"name": "filename", "value": "={{ $('Process Base64 to Binary').item.json.filename }}"},
-              {"name": "category", "value": "={{ $('Process Base64 to Binary').item.json.category }}"}
-            ]
-          }
-        }
+        "jsCode": "// Dividir texto en chunks\nconst text = $input.first().json.text || '';\nconst companySlug = $input.first().json.company_slug;\nconst filename = $input.first().json.filename;\nconst category = $input.first().json.category;\nconst collectionName = $input.first().json.collection_name;\n\nconst chunkSize = 500;\nconst chunkOverlap = 50;\nconst chunks = [];\n\n// Dividir por párrafos primero, luego por tamaño\nconst paragraphs = text.split(/\\n\\n+/);\nlet currentChunk = '';\n\nfor (const para of paragraphs) {\n  if (currentChunk.length + para.length < chunkSize) {\n    currentChunk += (currentChunk ? '\\n\\n' : '') + para;\n  } else {\n    if (currentChunk) {\n      chunks.push(currentChunk);\n    }\n    // Si el párrafo es muy largo, dividir por oraciones\n    if (para.length > chunkSize) {\n      const sentences = para.split(/(?<=[.!?])\\s+/);\n      currentChunk = '';\n      for (const sentence of sentences) {\n        if (currentChunk.length + sentence.length < chunkSize) {\n          currentChunk += (currentChunk ? ' ' : '') + sentence;\n        } else {\n          if (currentChunk) chunks.push(currentChunk);\n          currentChunk = sentence;\n        }\n      }\n    } else {\n      currentChunk = para;\n    }\n  }\n}\nif (currentChunk) chunks.push(currentChunk);\n\n// Retornar chunks como items separados\nreturn chunks.map((chunk, index) => ({\n  json: {\n    text: chunk,\n    chunk_index: index,\n    total_chunks: chunks.length,\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName\n  }\n}));"
       },
-      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
-      "typeVersion": 1,
-      "position": [320, 260],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300],
       "id": "chunk-text",
-      "name": "Chunk Document"
-    },
-    {
-      "parameters": {
-        "model": "text-embedding-3-small"
-      },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
-      "typeVersion": 1,
-      "position": [520, 400],
-      "id": "embeddings",
-      "name": "OpenAI Embeddings",
-      "credentials": {"openAiApi": {"id": "BllBLDmfNrTO004D", "name": "OpenAI Account"}}
-    },
-    {
-      "parameters": {
-        "mode": "insert",
-        "qdrantCollection": {
-          "__rl": true,
-          "value": "={{ $('Process Base64 to Binary').item.json.collection_name }}",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
-      "typeVersion": 1.3,
-      "position": [520, 260],
-      "id": "store-qdrant",
-      "name": "Store in Qdrant",
-      "credentials": {"qdrantApi": {"id": "eYH0VSgjW8WrINgu", "name": "Qdrant Railway"}}
+      "name": "Split into Chunks"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.withmia.com/api/knowledge/update-vector-ids",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{"name": "X-N8N-Secret", "value": "withmia_n8n_secret_2024"}]
+          "parameters": []
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"company_slug\": \"{{ $('Process Base64 to Binary').item.json.company_slug }}\",\n  \"filename\": \"{{ $('Process Base64 to Binary').item.json.filename }}\",\n  \"vector_ids\": {{ JSON.stringify($json.ids || []) }},\n  \"chunks_created\": {{ ($json.ids || []).length }},\n  \"secret_token\": \"withmia_n8n_secret_2024\"\n}"
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.text) }}\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 260],
+      "position": [660, 300],
+      "id": "generate-embeddings",
+      "name": "Generate Embeddings",
+      "credentials": {
+        "openAiApi": {
+          "id": "BllBLDmfNrTO004D",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\nreturn {\n  json: {\n    id: `${prevData.filename}-${prevData.chunk_index}-${Date.now()}`,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index\n    },\n    collection_name: prevData.collection_name\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300],
+      "id": "prepare-qdrant",
+      "name": "Prepare for Qdrant"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.QDRANT_HOST || 'https://qdrant-production-b4f0.up.railway.app' }}/collections/{{ $json.collection_name }}/points",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify($json.id) }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 300],
+      "id": "store-qdrant",
+      "name": "Store in Qdrant",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "qdrant-api-key",
+          "name": "Qdrant API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.withmia.com/api/knowledge/chunk-stored",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"company_slug\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.company_slug) }},\n  \"filename\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.filename) }},\n  \"chunk_id\": {{ JSON.stringify($('Prepare for Qdrant').item.json.id) }},\n  \"chunk_index\": {{ $('Prepare for Qdrant').item.json.payload.chunk_index }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 300],
       "id": "notify-laravel",
       "name": "Notify Laravel"
     }
   ],
   "connections": {
-    "Webhook Upload": {"main": [[{"node": "Process Base64 to Binary", "type": "main", "index": 0}]]},
-    "Process Base64 to Binary": {"main": [[{"node": "Extract Text", "type": "main", "index": 0}]]},
-    "Extract Text": {"main": [[{"node": "Chunk Document", "type": "main", "index": 0}]]},
-    "Chunk Document": {"main": [[{"node": "Store in Qdrant", "type": "main", "index": 0}]]},
-    "OpenAI Embeddings": {"ai_embedding": [[{"node": "Store in Qdrant", "type": "ai_embedding", "index": 0}]]},
-    "Store in Qdrant": {"main": [[{"node": "Notify Laravel", "type": "main", "index": 0}]]}
+    "Webhook Upload": {
+      "main": [
+        [
+          {"node": "Decode Base64", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Decode Base64": {
+      "main": [
+        [
+          {"node": "Respond Immediately", "type": "main", "index": 0},
+          {"node": "Split into Chunks", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Split into Chunks": {
+      "main": [
+        [
+          {"node": "Generate Embeddings", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Generate Embeddings": {
+      "main": [
+        [
+          {"node": "Prepare for Qdrant", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Prepare for Qdrant": {
+      "main": [
+        [
+          {"node": "Store in Qdrant", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Store in Qdrant": {
+      "main": [
+        [
+          {"node": "Notify Laravel", "type": "main", "index": 0}
+        ]
+      ]
+    }
   },
-  "active": false,
-  "settings": {"executionOrder": "v1"},
-  "versionId": "updated-2025-01-16-code-node",
-  "meta": {"templateCredsSetupCompleted": true},
-  "id": "rag-documents-withmia",
-  "tags": ["RAG", "Qdrant", "Documents", "OpenAI"]
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
