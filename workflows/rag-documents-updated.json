@@ -50,11 +50,16 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/embeddings",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": []
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            }
+          ]
         },
         "sendBody": true,
         "specifyBody": "json",
@@ -64,13 +69,7 @@
       "typeVersion": 4.2,
       "position": [660, 300],
       "id": "generate-embeddings",
-      "name": "Generate Embeddings",
-      "credentials": {
-        "openAiApi": {
-          "id": "BllBLDmfNrTO004D",
-          "name": "OpenAI Account"
-        }
-      }
+      "name": "Generate Embeddings"
     },
     {
       "parameters": {
