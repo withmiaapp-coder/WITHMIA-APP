@@ -789,20 +789,34 @@ class KnowledgeController extends Controller
      */
     private function fixUtf8Mojibake($text)
     {
-        // The pattern "Ã" followed by another character is a sign of double-encoding
-        // For example: "ó" in UTF-8 is bytes C3 B3
-        // When double-encoded, it becomes: C3 83 C2 B3 which displays as "Ã³"
+        // Check if we have mojibake patterns
+        // These are UTF-8 characters that look like "Ã" followed by another char
+        // This happens when UTF-8 bytes are interpreted as Latin-1
         
-        // Check if we have mojibake patterns (Ã followed by specific characters)
-        if (preg_match('/\xC3[\x80-\xBF]/', $text)) {
-            // Try to fix by treating the string as Latin-1 and converting to UTF-8
-            // This essentially "undoes" the double encoding
+        // Common mojibake indicators for Spanish
+        $hasMojibake = (
+            strpos($text, 'Ã¡') !== false ||  // á
+            strpos($text, 'Ã©') !== false ||  // é
+            strpos($text, 'Ã­') !== false ||  // í
+            strpos($text, 'Ã³') !== false ||  // ó
+            strpos($text, 'Ãº') !== false ||  // ú
+            strpos($text, 'Ã±') !== false ||  // ñ
+            strpos($text, 'Ã') !== false      // General Ã pattern
+        );
+        
+        if ($hasMojibake) {
+            Log::info("Detected mojibake in text, attempting fix...");
+            
+            // The text is double-encoded: UTF-8 -> Latin-1 -> UTF-8
+            // To fix: treat it as Latin-1 bytes and decode to get proper UTF-8
             $fixed = mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
             
-            // Verify the result contains Spanish characters
-            if (preg_match('/[áéíóúñüÁÉÍÓÚÑÜ¿¡]/u', $fixed)) {
-                Log::info("Fixed UTF-8 mojibake via mb_convert_encoding");
+            // Verify the result looks correct (has Spanish accented chars)
+            if (preg_match('/[áéíóúñüÁÉÍÓÚÑÜ]/u', $fixed)) {
+                Log::info("Successfully fixed UTF-8 mojibake");
                 return $fixed;
+            } else {
+                Log::warning("Mojibake fix did not produce Spanish characters, keeping original");
             }
         }
         
