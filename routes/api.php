@@ -1091,6 +1091,9 @@ Route::middleware(['railway.auth'])->group(function () {
     
     // Proxy to n8n RAG webhook (avoids CORS issues)
     Route::post('/documents/process-rag', [\App\Http\Controllers\KnowledgeController::class, 'proxyToN8n']);
+    
+    // Reset workflow (creates new simplified workflow for company)
+    Route::post('/documents/reset-workflow', [\App\Http\Controllers\KnowledgeController::class, 'resetWorkflow']);
 });
 
 // Public webhook endpoint for n8n (no authentication)

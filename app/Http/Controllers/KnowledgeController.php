@@ -1103,4 +1103,74 @@ return {
 };
 JS;
     }
+
+    /**
+     * Reset the RAG workflow for the company (deletes and recreates)
+     */
+    public function resetWorkflow(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
+            }
+            
+            $company = $user->company;
+            
+            if (!$company) {
+                return response()->json(['success' => false, 'error' => 'No company found'], 404);
+            }
+
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-docker-production-4255.up.railway.app');
+            $n8nApiKey = env('N8N_API_KEY');
+
+            // Try to delete the old workflow if it exists
+            $oldWorkflowId = $company->settings['rag_workflow_id'] ?? null;
+            if ($oldWorkflowId && $n8nApiKey) {
+                try {
+                    Http::withHeaders([
+                        'X-N8N-API-KEY' => $n8nApiKey
+                    ])->delete("{$n8nUrl}/api/v1/workflows/{$oldWorkflowId}");
+                } catch (\Exception $e) {
+                    Log::warning("Could not delete old workflow: " . $e->getMessage());
+                }
+            }
+
+            // Clear workflow settings
+            $settings = $company->settings ?? [];
+            unset($settings['rag_workflow_id']);
+            unset($settings['rag_webhook_path']);
+            unset($settings['rag_workflow_name']);
+            $company->settings = $settings;
+            $company->save();
+
+            // Create new workflow
+            $companySlug = $company->slug ?? 'company_' . $company->id;
+            $companyName = $company->name ?? $companySlug;
+            
+            $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error creating new workflow: ' . $result['error']
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Workflow reset successfully',
+                'workflow_id' => $result['workflow_id'],
+                'webhook_path' => $result['webhook_path']
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error resetting workflow: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error resetting workflow: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
