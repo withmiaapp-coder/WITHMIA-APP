@@ -439,7 +439,6 @@ class OnboardingController extends Controller
             Log::error("Error scheduling PostOnboardingSetupJob: " . $e->getMessage());
             // No hacer fallback síncrono - dejar que el usuario vaya al dashboard rápido
         }
-        }
 
         return [
             'completed' => true,
