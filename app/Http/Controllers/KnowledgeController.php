@@ -602,18 +602,33 @@ class KnowledgeController extends Controller
                 'file' => 'required|string', // base64 content
             ]);
 
-            Log::info("Proxying RAG request to n8n for {$validated['filename']}", [
+            Log::info("Processing RAG request for {$validated['filename']}", [
                 'company_slug' => $companySlug,
-                'webhook_url' => $webhookUrl,
                 'workflow_id' => $workflowId
             ]);
 
-            // Send to n8n webhook with company-specific credentials
+            // EXTRACT TEXT IN LARAVEL - supports visual PDFs with GPT-4 Vision
+            $extractedText = $this->extractTextFromDocument(
+                $validated['file'], 
+                $validated['filename'],
+                $openaiApiKey
+            );
+
+            if (!$extractedText || strlen($extractedText) < 50) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se pudo extraer texto del documento. Puede estar vacío o ser solo imágenes sin texto legible.'
+                ], 400);
+            }
+
+            Log::info("Text extracted: " . strlen($extractedText) . " characters");
+
+            // Send EXTRACTED TEXT to n8n (not the binary file)
             $response = Http::timeout(120)->post($webhookUrl, [
                 'company_slug' => $companySlug,
                 'category' => $validated['category'],
                 'filename' => $validated['filename'],
-                'file' => $validated['file'],
+                'text' => $extractedText, // Send text, not file
                 'openai_api_key' => $openaiApiKey,
                 'qdrant_host' => $qdrantHost,
             ]);
@@ -649,6 +664,154 @@ class KnowledgeController extends Controller
     }
 
     /**
+     * Extract text from document - supports PDFs (including visual/catalog PDFs), TXT, DOCX
+     * Uses GPT-4 Vision for visual PDFs when text extraction yields poor results
+     */
+    private function extractTextFromDocument($base64Content, $filename, $openaiApiKey)
+    {
+        // Clean base64
+        $cleanBase64 = $base64Content;
+        if (strpos($cleanBase64, ',') !== false) {
+            $cleanBase64 = explode(',', $cleanBase64)[1];
+        }
+        
+        $fileContent = base64_decode($cleanBase64);
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        $extractedText = '';
+        
+        try {
+            if ($extension === 'pdf') {
+                // First try pdfparser for text-based PDFs
+                $parser = new \Smalot\PdfParser\Parser();
+                $pdf = $parser->parseContent($fileContent);
+                $extractedText = $pdf->getText();
+                
+                // Clean the text
+                $extractedText = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $extractedText);
+                $extractedText = preg_replace('/\s+/', ' ', $extractedText);
+                $extractedText = trim($extractedText);
+                
+                Log::info("PDF text extraction: " . strlen($extractedText) . " characters");
+                
+                // If text is too short, it's likely a visual/scanned PDF - use GPT-4 Vision
+                if (strlen($extractedText) < 200) {
+                    Log::info("PDF has little text, using GPT-4 Vision for visual content");
+                    $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
+                }
+                
+            } elseif (in_array($extension, ['txt', 'md'])) {
+                $extractedText = $fileContent;
+                
+            } elseif ($extension === 'docx') {
+                // Extract text from DOCX
+                $tempFile = tempnam(sys_get_temp_dir(), 'docx_');
+                file_put_contents($tempFile, $fileContent);
+                
+                $zip = new \ZipArchive();
+                if ($zip->open($tempFile) === true) {
+                    $xml = $zip->getFromName('word/document.xml');
+                    $zip->close();
+                    
+                    // Strip XML tags
+                    $extractedText = strip_tags($xml);
+                    $extractedText = preg_replace('/\s+/', ' ', $extractedText);
+                    $extractedText = trim($extractedText);
+                }
+                
+                unlink($tempFile);
+                
+            } elseif (in_array($extension, ['png', 'jpg', 'jpeg', 'webp', 'gif'])) {
+                // Images - use Vision directly
+                $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'image');
+            }
+            
+        } catch (\Exception $e) {
+            Log::error("Text extraction error for {$filename}: " . $e->getMessage());
+            
+            // Fallback to Vision for PDFs
+            if ($extension === 'pdf') {
+                Log::info("Falling back to GPT-4 Vision after extraction error");
+                try {
+                    $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
+                } catch (\Exception $e2) {
+                    Log::error("Vision fallback also failed: " . $e2->getMessage());
+                }
+            }
+        }
+        
+        return $extractedText;
+    }
+
+    /**
+     * Extract text from visual content using GPT-4 Vision
+     */
+    private function extractWithVision($base64Content, $filename, $openaiApiKey, $type = 'pdf')
+    {
+        // For PDFs, we need to tell the user we're processing visual content
+        // GPT-4 Vision can read images, so we'll describe what to extract
+        
+        $mimeType = 'application/pdf';
+        if ($type === 'image') {
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $mimeType = "image/{$ext}";
+            if ($ext === 'jpg') $mimeType = 'image/jpeg';
+        }
+        
+        // Use GPT-4o (supports vision) to analyze the document
+        $response = Http::timeout(180)
+            ->withHeaders([
+                'Authorization' => "Bearer {$openaiApiKey}",
+                'Content-Type' => 'application/json'
+            ])
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'Eres un experto en extraer texto de documentos visuales como catálogos, presentaciones, y PDFs con imágenes. Tu tarea es extraer TODO el texto visible en el documento, incluyendo:
+- Títulos y subtítulos
+- Descripciones de productos
+- Precios y códigos
+- Texto en tablas
+- Texto en imágenes
+- Cualquier información relevante
+
+Responde SOLO con el texto extraído, organizado de forma clara. No agregues comentarios ni explicaciones.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => "Extrae todo el texto de este documento: {$filename}"
+                            ],
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => "data:{$mimeType};base64,{$base64Content}",
+                                    'detail' => 'high'
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'max_tokens' => 4096,
+                'temperature' => 0
+            ]);
+        
+        if ($response->successful()) {
+            $data = $response->json();
+            $text = $data['choices'][0]['message']['content'] ?? '';
+            Log::info("GPT-4 Vision extracted: " . strlen($text) . " characters");
+            return trim($text);
+        } else {
+            Log::error("GPT-4 Vision API error: " . $response->body());
+            throw new \Exception("Error calling GPT-4 Vision: " . $response->status());
+        }
+    }
+
+    /**
      * Create a company-specific RAG workflow in n8n
      */
     private function createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey)
@@ -658,7 +821,7 @@ class KnowledgeController extends Controller
             $webhookPath = "rag-{$companySlug}-" . substr(md5($companySlug . time()), 0, 8);
             $workflowName = "RAG Documents - {$companyName}";
 
-            // Workflow template with company-specific name and webhook path
+            // Workflow template - SIMPLIFICADO: texto ya extraído en Laravel
             $workflow = [
                 'name' => $workflowName,
                 'nodes' => [
@@ -689,7 +852,7 @@ class KnowledgeController extends Controller
                     [
                         'parameters' => [
                             'respondWith' => 'json',
-                            'responseBody' => '={"success": true, "message": "Processing started with AI", "filename": "{{ $json.filename }}", "company": "' . $companyName . '"}'
+                            'responseBody' => '={"success": true, "message": "Procesando documento", "filename": "{{ $json.filename }}", "text_length": {{ $json.text_length }}, "company": "' . $companyName . '"}'
                         ],
                         'type' => 'n8n-nodes-base.respondToWebhook',
                         'typeVersion' => 1.1,
@@ -699,42 +862,11 @@ class KnowledgeController extends Controller
                     ],
                     [
                         'parameters' => [
-                            'method' => 'POST',
-                            'url' => 'https://api.openai.com/v1/chat/completions',
-                            'sendHeaders' => true,
-                            'headerParameters' => [
-                                'parameters' => [
-                                    ['name' => 'Authorization', 'value' => '=Bearer {{ $json.openai_api_key }}']
-                                ]
-                            ],
-                            'sendBody' => true,
-                            'specifyBody' => 'json',
-                            'jsonBody' => $this->getAIExtractJsonBody(),
-                            'options' => ['timeout' => 120000]
-                        ],
-                        'type' => 'n8n-nodes-base.httpRequest',
-                        'typeVersion' => 4.2,
-                        'position' => [440, 300],
-                        'id' => 'ai-extract-text',
-                        'name' => 'AI Extract Text (GPT-4)'
-                    ],
-                    [
-                        'parameters' => [
-                            'jsCode' => $this->getProcessAIResponseCode()
-                        ],
-                        'type' => 'n8n-nodes-base.code',
-                        'typeVersion' => 2,
-                        'position' => [660, 300],
-                        'id' => 'process-ai-response',
-                        'name' => 'Process AI Response'
-                    ],
-                    [
-                        'parameters' => [
                             'jsCode' => $this->getChunkTextCode()
                         ],
                         'type' => 'n8n-nodes-base.code',
                         'typeVersion' => 2,
-                        'position' => [880, 300],
+                        'position' => [440, 300],
                         'id' => 'chunk-text',
                         'name' => 'Split into Chunks'
                     ],
@@ -754,7 +886,7 @@ class KnowledgeController extends Controller
                         ],
                         'type' => 'n8n-nodes-base.httpRequest',
                         'typeVersion' => 4.2,
-                        'position' => [1100, 300],
+                        'position' => [660, 300],
                         'id' => 'generate-embeddings',
                         'name' => 'Generate Embeddings'
                     ],
@@ -764,7 +896,7 @@ class KnowledgeController extends Controller
                         ],
                         'type' => 'n8n-nodes-base.code',
                         'typeVersion' => 2,
-                        'position' => [1320, 300],
+                        'position' => [880, 300],
                         'id' => 'prepare-qdrant',
                         'name' => 'Prepare for Qdrant'
                     ],
@@ -779,7 +911,7 @@ class KnowledgeController extends Controller
                         ],
                         'type' => 'n8n-nodes-base.httpRequest',
                         'typeVersion' => 4.2,
-                        'position' => [1540, 300],
+                        'position' => [1100, 300],
                         'id' => 'store-qdrant',
                         'name' => 'Store in Qdrant'
                     ]
@@ -788,10 +920,8 @@ class KnowledgeController extends Controller
                     'Webhook Upload' => ['main' => [[['node' => 'Process Input', 'type' => 'main', 'index' => 0]]]],
                     'Process Input' => ['main' => [[
                         ['node' => 'Respond Immediately', 'type' => 'main', 'index' => 0],
-                        ['node' => 'AI Extract Text (GPT-4)', 'type' => 'main', 'index' => 0]
+                        ['node' => 'Split into Chunks', 'type' => 'main', 'index' => 0]
                     ]]],
-                    'AI Extract Text (GPT-4)' => ['main' => [[['node' => 'Process AI Response', 'type' => 'main', 'index' => 0]]]],
-                    'Process AI Response' => ['main' => [[['node' => 'Split into Chunks', 'type' => 'main', 'index' => 0]]]],
                     'Split into Chunks' => ['main' => [[['node' => 'Generate Embeddings', 'type' => 'main', 'index' => 0]]]],
                     'Generate Embeddings' => ['main' => [[['node' => 'Prepare for Qdrant', 'type' => 'main', 'index' => 0]]]],
                     'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]]
@@ -851,32 +981,18 @@ class KnowledgeController extends Controller
     private function getProcessInputCode()
     {
         return <<<'JS'
-// Extraer datos del body
+// Extraer datos del body - TEXTO YA VIENE EXTRAÍDO DE LARAVEL
 const body = $input.first().json.body || $input.first().json;
 
 const companySlug = body.company_slug || 'default';
 const filename = body.filename || 'document.pdf';
 const category = body.category || 'general';
-const fileBase64 = body.file || '';
+const text = body.text || ''; // Texto ya extraído por Laravel
 const openaiApiKey = body.openai_api_key || '';
 const qdrantHost = body.qdrant_host || 'https://qdrant-production-549b.up.railway.app';
 
-// Limpiar el base64 (quitar data:... prefix si existe)
-let cleanBase64 = fileBase64;
-if (cleanBase64.includes(',')) {
-  cleanBase64 = cleanBase64.split(',')[1];
-}
-
 // Crear nombre de colección
 const collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';
-
-// Detectar tipo de archivo
-const ext = filename.split('.').pop().toLowerCase();
-let mimeType = 'application/octet-stream';
-if (ext === 'pdf') mimeType = 'application/pdf';
-else if (ext === 'txt') mimeType = 'text/plain';
-else if (ext === 'md') mimeType = 'text/markdown';
-else if (ext === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 return {
   json: {
@@ -884,73 +1000,10 @@ return {
     filename: filename,
     category: category,
     collection_name: collectionName,
-    file_base64: cleanBase64,
-    mime_type: mimeType,
-    file_extension: ext,
+    text: text,
+    text_length: text.length,
     openai_api_key: openaiApiKey,
     qdrant_host: qdrantHost
-  }
-};
-JS;
-    }
-
-    private function getAIExtractJsonBody()
-    {
-        return <<<'JSON'
-={
-  "model": "gpt-4o-mini",
-  "messages": [
-    {
-      "role": "system",
-      "content": "Eres un asistente experto en extracción de texto de documentos. Tu tarea es extraer TODO el texto del documento proporcionado de forma limpia y estructurada. Mantén la estructura del documento (títulos, párrafos, listas). NO resumas, extrae el texto COMPLETO. Si el documento está en base64, decodifícalo mentalmente. Responde SOLO con el texto extraído, sin comentarios adicionales."
-    },
-    {
-      "role": "user",
-      "content": "Extrae todo el texto de este documento {{ $json.filename }} (tipo: {{ $json.mime_type }}).\n\nContenido en base64:\n{{ $json.file_base64.substring(0, 100000) }}"
-    }
-  ],
-  "max_tokens": 16000,
-  "temperature": 0
-}
-JSON;
-    }
-
-    private function getProcessAIResponseCode()
-    {
-        return <<<'JS'
-// Obtener el texto extraído por la IA
-const aiResponse = $input.first().json;
-const prevData = $('Process Input').first().json;
-
-let extractedText = '';
-
-try {
-  extractedText = aiResponse.choices[0].message.content || '';
-} catch (e) {
-  throw new Error('No se pudo obtener respuesta de la IA: ' + JSON.stringify(aiResponse));
-}
-
-// Limpiar el texto
-let cleanText = extractedText
-  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-  .replace(/\s+/g, ' ')
-  .trim();
-
-// Verificar que tenemos texto válido
-if (!cleanText || cleanText.length < 20) {
-  throw new Error('La IA no pudo extraer texto suficiente del documento.');
-}
-
-console.log(`Texto extraído por IA: ${cleanText.length} caracteres`);
-
-return {
-  json: {
-    company_slug: prevData.company_slug,
-    filename: prevData.filename,
-    category: prevData.category,
-    collection_name: prevData.collection_name,
-    text: cleanText,
-    text_length: cleanText.length
   }
 };
 JS;
@@ -960,11 +1013,15 @@ JS;
     {
         return <<<'JS'
 // Dividir texto en chunks optimizados para embeddings
-const text = $input.first().json.text || '';
-const companySlug = $input.first().json.company_slug;
-const filename = $input.first().json.filename;
-const category = $input.first().json.category;
-const collectionName = $input.first().json.collection_name;
+// Tomar datos de Process Input
+const processInput = $("Process Input").first().json;
+const text = processInput.text || '';
+const companySlug = processInput.company_slug;
+const filename = processInput.filename;
+const category = processInput.category;
+const collectionName = processInput.collection_name;
+const openaiApiKey = processInput.openai_api_key;
+const qdrantHost = processInput.qdrant_host;
 
 // Tamaño óptimo para embeddings: ~1500 tokens = ~6000 caracteres
 const maxCharsPerChunk = 6000;
@@ -1003,7 +1060,9 @@ return chunks.map((chunk, index) => ({
     company_slug: companySlug,
     filename: filename,
     category: category,
-    collection_name: collectionName
+    collection_name: collectionName,
+    openai_api_key: openaiApiKey,
+    qdrant_host: qdrantHost
   }
 }));
 JS;
