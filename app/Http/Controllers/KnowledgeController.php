@@ -712,6 +712,21 @@ class KnowledgeController extends Controller
                 $pdf = $parser->parseContent($fileContent);
                 $extractedText = $pdf->getText();
                 
+                // Fix UTF-8 encoding issues
+                // PDFs often have text in Latin-1 or Windows-1252 that needs conversion
+                if (!mb_check_encoding($extractedText, 'UTF-8')) {
+                    // Try to detect and convert encoding
+                    $detectedEncoding = mb_detect_encoding($extractedText, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ASCII'], true);
+                    if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
+                        $extractedText = mb_convert_encoding($extractedText, 'UTF-8', $detectedEncoding);
+                        Log::info("Converted PDF text from {$detectedEncoding} to UTF-8");
+                    }
+                }
+                
+                // Fix mojibake (UTF-8 interpreted as Latin-1) - common pattern
+                // This fixes cases like "economÃ­a" -> "economía"
+                $extractedText = $this->fixUtf8Mojibake($extractedText);
+                
                 // Clean the text
                 $extractedText = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $extractedText);
                 $extractedText = preg_replace('/\s+/', ' ', $extractedText);
@@ -766,6 +781,39 @@ class KnowledgeController extends Controller
         }
         
         return $extractedText;
+    }
+
+    /**
+     * Fix UTF-8 mojibake - when UTF-8 text was incorrectly interpreted as Latin-1
+     * Common patterns: "Ã¡" -> "á", "Ã©" -> "é", "Ã­" -> "í", etc.
+     */
+    private function fixUtf8Mojibake($text)
+    {
+        // Common mojibake patterns (UTF-8 bytes interpreted as Latin-1)
+        $replacements = [
+            'Ã¡' => 'á', 'Ã©' => 'é', 'Ã­' => 'í', 'Ã³' => 'ó', 'Ãº' => 'ú',
+            'Ã±' => 'ñ', 'Ã' => 'Á', 'Ã‰' => 'É', 'Ã' => 'Í', 'Ã"' => 'Ó',
+            'Ãš' => 'Ú', 'Ã'' => 'Ñ', 'Ã¼' => 'ü', 'Ãœ' => 'Ü',
+            'Â¿' => '¿', 'Â¡' => '¡', 'Âº' => 'º', 'Âª' => 'ª',
+            'â€œ' => '"', 'â€' => '"', 'â€™' => "'", 'â€"' => '—', 'â€"' => '–',
+            'â€¢' => '•', 'â€¦' => '…', 'Ââ€' => '',
+            // Additional common patterns
+            'Ã‚' => 'Â', 'Ãƒ' => 'Ã', 'Ã¤' => 'ä', 'Ã¶' => 'ö',
+        ];
+        
+        $text = str_replace(array_keys($replacements), array_values($replacements), $text);
+        
+        // Try to fix with iconv if still detecting issues
+        if (preg_match('/Ã[€-¿]/', $text)) {
+            // There are still mojibake patterns, try double UTF-8 decode
+            $decoded = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
+            if ($decoded !== false && mb_check_encoding($decoded, 'UTF-8')) {
+                $text = $decoded;
+                Log::info("Fixed UTF-8 double encoding via iconv");
+            }
+        }
+        
+        return $text;
     }
 
     /**
