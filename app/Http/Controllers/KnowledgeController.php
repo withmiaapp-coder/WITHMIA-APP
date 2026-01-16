@@ -969,15 +969,20 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $workflowData = $response->json();
             $workflowId = $workflowData['id'];
 
-            // Verify workflow is active
-            if (!($workflowData['active'] ?? false)) {
-                Log::warning("Workflow created but not active, activating...");
-                Http::withHeaders([
-                    'X-N8N-API-KEY' => $n8nApiKey,
-                ])->asJson()->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", []);
-            }
+            // SIEMPRE activar el workflow después de crearlo
+            // n8n requiere (object)[] para enviar {} como body JSON
+            Log::info("Activating workflow {$workflowId}...");
+            $activateResponse = Http::withHeaders([
+                'X-N8N-API-KEY' => $n8nApiKey,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
-            Log::info("Workflow {$workflowId} created and active for {$companySlug}");
+            if ($activateResponse->successful()) {
+                Log::info("✅ Workflow {$workflowId} activated successfully");
+            } else {
+                Log::error("❌ Failed to activate workflow: " . $activateResponse->body());
+            }
 
             // Save workflow info to company settings
             $settings = $company->settings ?? [];
