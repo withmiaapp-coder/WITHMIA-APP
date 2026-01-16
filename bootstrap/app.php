@@ -24,11 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway proxies for proper HTTPS detection
         $middleware->trustProxies(at: '*');
         
-        // Agregar RailwayAuthToken al stack web para autenticar via token
-        // (Railway Edge stripea Set-Cookie headers)
-        $middleware->web(append: [
-            \App\Http\Middleware\RailwayAuthToken::class,
-        ]);
+        // Railway auth token middleware (before auth)
+        $middleware->append(\App\Http\Middleware\RailwayAuthToken::class);
         
         // Registrar middleware personalizado
         $middleware->alias([

@@ -3,9 +3,177 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
+
+// 🔧 FIX TEMPORAL: Arreglar usuarios sin inbox_id
+Route::get('/fix-user-inbox/{email}', function ($email) {
+    $updated = DB::table('users')
+        ->where('email', $email)
+        ->update([
+            'chatwoot_inbox_id' => 1,
+            'onboarding_completed' => true,
+            'updated_at' => now()
+        ]);
+    
+    return response()->json([
+        'success' => $updated > 0,
+        'message' => $updated > 0 ? "Usuario {$email} actualizado con inbox_id=1" : "Usuario no encontrado",
+        'rows_affected' => $updated
+    ]);
+});
+
+// 🔥 RESET TOTAL: Borra TODO (Laravel + Chatwoot) - SOLO PARA DESARROLLO
+Route::get('/reset-all-databases/{confirm}', function ($confirm) {
+    if ($confirm !== 'SI-BORRAR-TODO') {
+        return response()->json([
+            'error' => 'Para confirmar usa: /api/reset-all-databases/SI-BORRAR-TODO'
+        ], 400);
+    }
+    
+    $results = [];
+    
+    try {
+        // 1. Borrar tablas de Laravel (usuarios, empresas, etc)
+        DB::statement('SET session_replication_role = replica;'); // Deshabilitar FK temporalmente
+        
+        $laravelTables = ['users', 'companies', 'whatsapp_instances', 'sessions', 'cache', 'jobs', 'failed_jobs'];
+        foreach ($laravelTables as $table) {
+            try {
+                DB::table($table)->truncate();
+                $results[] = "✅ Truncated: {$table}";
+            } catch (\Exception $e) {
+                $results[] = "⚠️ Skip {$table}: " . $e->getMessage();
+            }
+        }
+        
+        // 2. Borrar tablas de Chatwoot
+        $chatwootDb = DB::connection('chatwoot');
+        $chatwootDb->statement('SET session_replication_role = replica;');
+        
+        $chatwootTables = [
+            'inbox_members', 'inboxes', 'channel_api', 'access_tokens',
+            'account_users', 'users', 'accounts', 'conversations', 'messages', 'contacts'
+        ];
+        
+        foreach ($chatwootTables as $table) {
+            try {
+                $chatwootDb->table($table)->truncate();
+                $results[] = "✅ Chatwoot truncated: {$table}";
+            } catch (\Exception $e) {
+                $results[] = "⚠️ Chatwoot skip {$table}: " . $e->getMessage();
+            }
+        }
+        
+        // Re-habilitar FK
+        DB::statement('SET session_replication_role = DEFAULT;');
+        $chatwootDb->statement('SET session_replication_role = DEFAULT;');
+        
+        // 3. Ejecutar migraciones de Laravel
+        Artisan::call('migrate', ['--force' => true]);
+        $results[] = "✅ Laravel migrations executed";
+        
+        return response()->json([
+            'success' => true,
+            'message' => '🔥 RESET COMPLETO',
+            'results' => $results
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'results' => $results
+        ], 500);
+    }
+});
+
+// 🔄 Actualizar workflow RAG existente con el nuevo template
+Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $qdrantService = app(\App\Services\QdrantService::class);
+        
+        // Cargar template actualizado
+        $templatePath = base_path('workflows/rag-documents-updated.json');
+        if (!file_exists($templatePath)) {
+            return response()->json(['error' => 'Template not found'], 404);
+        }
+        
+        $content = file_get_contents($templatePath);
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        $templateWorkflow = json_decode($content, true);
+        
+        if (!$templateWorkflow) {
+            return response()->json(['error' => 'Invalid template JSON: ' . json_last_error_msg()], 500);
+        }
+        
+        // Personalizar para la empresa
+        $collectionName = $qdrantService->getCollectionName($companySlug);
+        $webhookPath = "rag-{$companySlug}";
+        $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+        
+        foreach ($templateWorkflow['nodes'] as &$node) {
+            if ($node['type'] === 'n8n-nodes-base.webhook') {
+                $node['parameters']['path'] = $webhookPath;
+                $node['webhookId'] = $newWebhookId;
+            }
+        }
+        
+        $templateWorkflow['name'] = "RAG Documents - {$companySlug}";
+        unset($templateWorkflow['id']);
+        unset($templateWorkflow['versionId']);
+        unset($templateWorkflow['meta']);
+        unset($templateWorkflow['tags']);
+        unset($templateWorkflow['active']);
+        
+        // Buscar workflow existente
+        $workflows = $n8nService->getWorkflows();
+        $existingWorkflowId = null;
+        
+        if ($workflows['success']) {
+            foreach ($workflows['data'] as $wf) {
+                if (str_contains($wf['name'] ?? '', "RAG Documents - {$companySlug}")) {
+                    $existingWorkflowId = $wf['id'];
+                    break;
+                }
+            }
+        }
+        
+        if ($existingWorkflowId) {
+            // Actualizar workflow existente
+            $result = $n8nService->updateWorkflow($existingWorkflowId, $templateWorkflow);
+            $action = 'updated';
+        } else {
+            // Crear nuevo workflow
+            $result = $n8nService->createWorkflow($templateWorkflow);
+            $action = 'created';
+        }
+        
+        if ($result['success']) {
+            $workflowId = $result['data']['id'] ?? $existingWorkflowId;
+            
+            // Activar workflow
+            $activateResult = $n8nService->activateWorkflow($workflowId);
+            
+            return response()->json([
+                'success' => true,
+                'action' => $action,
+                'workflow_id' => $workflowId,
+                'activated' => $activateResult['success'],
+                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-dace.up.railway.app') . "/webhook/{$webhookPath}"
+            ]);
+        }
+        
+        return response()->json(['error' => $result['error'] ?? 'Unknown error'], 500);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
 
 // Helper para workflow minimalista
 if (!function_exists('getMinimalWorkflow')) {
@@ -89,7 +257,45 @@ Route::get('/clear-all-cache', function () {
     }
 });
 
-// 🗑️ WIPE DATABASE - Solo estructura, sin datos
+// 🗑️ TRUNCATE ALL TABLES - Eliminar todos los datos manteniendo estructura
+Route::get('/truncate-all-tables', function () {
+    try {
+        Artisan::call('db:truncate-all', ['--force' => true]);
+        $output = Artisan::output();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'All tables truncated successfully',
+            'output' => $output
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// � RUN MIGRATIONS
+Route::get('/run-migrations', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        $output = Artisan::output();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Migrations executed successfully',
+            'output' => $output
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// �🗑️ WIPE DATABASE - Solo estructura, sin datos
 Route::get('/wipe-database', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [

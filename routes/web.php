@@ -332,9 +332,15 @@ Route::get('/logout', function () {
         \Log::error('Logout error: ' . $e->getMessage());
     }
     
-    // Redirigir inmediatamente sin esperar nada más
-    return redirect('/login')->with('logout', true)->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Mostrar pantalla de carga con video antes de ir al login
+    return view('auth-loading', ['redirect' => '/login']);
 })->name('logout.get');
+
+// Ruta para mostrar pantalla de carga con video
+Route::get('/auth-loading', function (\Illuminate\Http\Request $request) {
+    $redirect = $request->query('redirect', '/login');
+    return view('auth-loading', ['redirect' => $redirect]);
+})->name('auth.loading');
 
 // Onboarding POST route - outside auth middleware to avoid CSRF issues
 Route::post('/onboarding', [OnboardingController::class, 'store'])
@@ -361,15 +367,20 @@ Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
     
     // Si ya completó onboarding, redirigir al dashboard
     if ($user->company_slug && $user->onboarding_completed) {
-        return redirect()->route('dashboard.company', ['companySlug' => $user->company_slug]);
+        $authToken = $request->query('auth_token');
+        $url = route('dashboard.company', ['companySlug' => $user->company_slug]);
+        if ($authToken) {
+            $url .= '?auth_token=' . $authToken;
+        }
+        return redirect($url);
     }
     
-    return app(OnboardingController::class)->show();
+    return app(OnboardingController::class)->show($request);
 })->name('onboarding');
 
-Route::middleware(['railway.auth', 'auth.clean'])->group(function () {
+Route::middleware(['railway.auth', 'auth', 'auth.clean'])->group(function () {
 
-    // Dashboard routes - Sistema híbrido /dashboard/{company-slug}
+    // Dashboard routes - Sistema slug /dashboard/{company-slug}
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
     Route::get('/dashboard/{companySlug}', [DashboardController::class, 'show'])
         ->where('companySlug', '(?!dashboard)[a-z0-9\-]+')

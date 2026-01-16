@@ -61,9 +61,10 @@ return [
 
         'chatwoot' => [
             'driver' => 'pgsql',
-            'host' => env('CHATWOOT_DB_HOST', 'localhost'),
+            'url' => env('CHATWOOT_DATABASE_URL'),
+            'host' => env('CHATWOOT_DB_HOST', 'postgres.railway.internal'),
             'port' => env('CHATWOOT_DB_PORT', '5432'),
-            'database' => env('CHATWOOT_DB_DATABASE', 'chatwoot_production'),
+            'database' => env('CHATWOOT_DB_DATABASE', 'railway'),
             'username' => env('CHATWOOT_DB_USERNAME', 'postgres'),
             'password' => env('CHATWOOT_DB_PASSWORD', ''),
             'charset' => 'utf8',

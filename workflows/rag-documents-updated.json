@@ -5,7 +5,9 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "documents-upload",
-        "options": {}
+        "options": {
+          "rawBody": true
+        }
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -16,42 +18,22 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {"id": "1", "name": "company_slug", "value": "={{ $json.body.company_slug }}", "type": "string"},
-            {"id": "2", "name": "filename", "value": "={{ $json.body.filename }}", "type": "string"},
-            {"id": "3", "name": "category", "value": "={{ $json.body.category }}", "type": "string"},
-            {"id": "4", "name": "file_url", "value": "={{ $json.body.file_url }}", "type": "string"},
-            {"id": "5", "name": "collection_name", "value": "={{ 'company_' + $json.body.company_slug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge' }}", "type": "string"}
-          ]
-        }
+        "jsCode": "// Extraer datos del body del webhook\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst fileBase64 = body.file || '';\n\n// Limpiar el base64 (quitar data:... prefix si existe)\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(',')) {\n  cleanBase64 = cleanBase64.split(',')[1];\n}\n\n// Crear nombre de colección\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Determinar mime type basado en extensión\nlet mimeType = 'application/pdf';\nconst ext = filename.toLowerCase().split('.').pop();\nif (ext === 'txt') mimeType = 'text/plain';\nelse if (ext === 'doc' || ext === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';\nelse if (ext === 'csv') mimeType = 'text/csv';\nelse if (ext === 'json') mimeType = 'application/json';\nelse if (ext === 'md') mimeType = 'text/markdown';\n\n// Convertir base64 a Buffer\nconst fileBuffer = Buffer.from(cleanBase64, 'base64');\n\n// Retornar JSON con el archivo como binario\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    mime_type: mimeType\n  },\n  binary: {\n    data: {\n      data: fileBuffer.toString('base64'),\n      mimeType: mimeType,\n      fileName: filename\n    }\n  }\n};"
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [-80, 260],
-      "id": "normalize-input",
-      "name": "Normalize Input"
+      "id": "process-base64",
+      "name": "Process Base64 to Binary"
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "={{ $json.file_url }}",
-        "options": {"response": {"response": {"responseFormat": "file"}}}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [120, 260],
-      "id": "download-file",
-      "name": "Download File"
-    },
-    {
-      "parameters": {
-        "operation": "pdf",
+        "operation": "text",
         "options": {}
       },
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
-      "position": [320, 260],
+      "position": [120, 260],
       "id": "extract-text",
       "name": "Extract Text"
     },
@@ -59,15 +41,19 @@
       "parameters": {
         "chunkSize": 500,
         "chunkOverlap": 50,
-        "options": {"metadata": {"metadataValues": [
-          {"name": "company_slug", "value": "={{ $('Normalize Input').item.json.company_slug }}"},
-          {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
-          {"name": "category", "value": "={{ $('Normalize Input').item.json.category }}"}
-        ]}}
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {"name": "company_slug", "value": "={{ $('Process Base64 to Binary').item.json.company_slug }}"},
+              {"name": "filename", "value": "={{ $('Process Base64 to Binary').item.json.filename }}"},
+              {"name": "category", "value": "={{ $('Process Base64 to Binary').item.json.category }}"}
+            ]
+          }
+        }
       },
-      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
       "typeVersion": 1,
-      "position": [520, 260],
+      "position": [320, 260],
       "id": "chunk-text",
       "name": "Chunk Document"
     },
@@ -77,7 +63,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1,
-      "position": [720, 400],
+      "position": [520, 400],
       "id": "embeddings",
       "name": "OpenAI Embeddings",
       "credentials": {"openAiApi": {"id": "BllBLDmfNrTO004D", "name": "OpenAI Account"}}
@@ -87,14 +73,14 @@
         "mode": "insert",
         "qdrantCollection": {
           "__rl": true,
-          "value": "={{ $('Normalize Input').item.json.collection_name }}",
+          "value": "={{ $('Process Base64 to Binary').item.json.collection_name }}",
           "mode": "id"
         },
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
       "typeVersion": 1.3,
-      "position": [720, 260],
+      "position": [520, 260],
       "id": "store-qdrant",
       "name": "Store in Qdrant",
       "credentials": {"qdrantApi": {"id": "eYH0VSgjW8WrINgu", "name": "Qdrant Railway"}}
@@ -102,33 +88,25 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://mia-app-production.up.railway.app/api/knowledge/update-vector-ids",
+        "url": "https://app.withmia.com/api/knowledge/update-vector-ids",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [{"name": "X-N8N-Secret", "value": "withmia_n8n_secret_2024"}]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {"name": "company_slug", "value": "={{ $('Normalize Input').item.json.company_slug }}"},
-            {"name": "filename", "value": "={{ $('Normalize Input').item.json.filename }}"},
-            {"name": "vector_ids", "value": "={{ $json.ids }}"},
-            {"name": "chunks_created", "value": "={{ $json.ids.length }}"},
-            {"name": "secret_token", "value": "withmia_n8n_secret_2024"}
-          ]
-        }
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"company_slug\": \"{{ $('Process Base64 to Binary').item.json.company_slug }}\",\n  \"filename\": \"{{ $('Process Base64 to Binary').item.json.filename }}\",\n  \"vector_ids\": {{ JSON.stringify($json.ids || []) }},\n  \"chunks_created\": {{ ($json.ids || []).length }},\n  \"secret_token\": \"withmia_n8n_secret_2024\"\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [920, 260],
+      "position": [720, 260],
       "id": "notify-laravel",
       "name": "Notify Laravel"
     }
   ],
   "connections": {
-    "Webhook Upload": {"main": [[{"node": "Normalize Input", "type": "main", "index": 0}]]},
-    "Normalize Input": {"main": [[{"node": "Download File", "type": "main", "index": 0}]]},
-    "Download File": {"main": [[{"node": "Extract Text", "type": "main", "index": 0}]]},
+    "Webhook Upload": {"main": [[{"node": "Process Base64 to Binary", "type": "main", "index": 0}]]},
+    "Process Base64 to Binary": {"main": [[{"node": "Extract Text", "type": "main", "index": 0}]]},
     "Extract Text": {"main": [[{"node": "Chunk Document", "type": "main", "index": 0}]]},
     "Chunk Document": {"main": [[{"node": "Store in Qdrant", "type": "main", "index": 0}]]},
     "OpenAI Embeddings": {"ai_embedding": [[{"node": "Store in Qdrant", "type": "ai_embedding", "index": 0}]]},
@@ -136,7 +114,7 @@
   },
   "active": false,
   "settings": {"executionOrder": "v1"},
-  "versionId": "updated-2026-01-15-openai",
+  "versionId": "updated-2025-01-16-code-node",
   "meta": {"templateCredsSetupCompleted": true},
   "id": "rag-documents-withmia",
   "tags": ["RAG", "Qdrant", "Documents", "OpenAI"]

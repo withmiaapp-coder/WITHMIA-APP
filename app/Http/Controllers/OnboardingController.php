@@ -36,11 +36,16 @@ class OnboardingController extends Controller
         $this->middleware('auth')->only(['show', 'index']);
     }
 
-    public function show()
+    public function show(Request $request)
     {
         $user = auth()->user();
         if ($user->company_slug) {
-            return redirect()->route('dashboard.company', ['companySlug' => $user->company_slug]);
+            $authToken = $request->query('auth_token');
+            $url = route('dashboard.company', ['companySlug' => $user->company_slug]);
+            if ($authToken) {
+                $url .= '?auth_token=' . $authToken;
+            }
+            return redirect($url);
         }
         $company = $this->getOrCreateCompany($user);
         return Inertia::render('onboarding', [
@@ -50,11 +55,16 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
         if ($user->company_slug) {
-            return redirect()->route('dashboard.company', ['companySlug' => $user->company_slug]);
+            $authToken = $request->query('auth_token');
+            $url = route('dashboard.company', ['companySlug' => $user->company_slug]);
+            if ($authToken) {
+                $url .= '?auth_token=' . $authToken;
+            }
+            return redirect($url);
         }
         return Inertia::render('onboarding');
     }
@@ -69,10 +79,11 @@ class OnboardingController extends Controller
 
             \Log::info('OnboardingController@store START', [
                 'step' => $request->input('step'),
-                'all_input' => $request->all(),
                 'is_json' => $isJsonRequest,
                 'auth_check' => auth()->check(),
-                'user_id' => auth()->id()
+                'user_id' => auth()->id(),
+                'has_auth_token_query' => $request->query('auth_token') ? 'yes' : 'no',
+                'has_auth_token_header' => $request->header('X-Railway-Auth-Token') ? 'yes' : 'no',
             ]);
 
             if (!auth()->check()) {
@@ -111,10 +122,10 @@ class OnboardingController extends Controller
                 case 3: $this->saveWebsiteData($request, $user); break;
                 case 4: $this->saveUsageData($request, $user); break;
                 case 5: $this->saveVolumeData($request, $user); break;
-                case 6: $this->saveDiscoveryData($request, $user); break;
+                case 6: $this->saveDiscoveryDataInternal($request, $user); break;
                 case 7:
                     $this->saveToolsData($request, $user);
-                    $this->processOnboardingCompletion($request, $user);
+                    $completionResult = $this->processOnboardingCompletion($request, $user);
                     $user->refresh();
                     break;
             }
@@ -128,14 +139,10 @@ class OnboardingController extends Controller
             $completionData = [];
             
             if ($isCompleted) {
-                $user->refresh();
-                
-                // URL del dashboard usando el company_slug
-                $dashboardUrl = route('dashboard.company', ['companySlug' => $user->company_slug]);
-                
-                $completionData = [
+                // Usar los datos del completion que ya incluyen el auth_token
+                $completionData = $completionResult ?? [
                     'company_slug' => $user->company_slug,
-                    'dashboard_url' => $dashboardUrl
+                    'dashboard_url' => route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token
                 ];
             }
 
@@ -152,15 +159,18 @@ class OnboardingController extends Controller
                 ];
                 
                 if ($isCompleted) {
-                    $responseData = array_merge($responseData, $completionData);
+                    // Devolver JSON con la URL del dashboard para que el frontend redirija
+                    $dashboardUrl = $completionData['dashboard_url'] ?? route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
+                    $responseData['dashboard_url'] = $dashboardUrl;
+                    $responseData['company_slug'] = $user->company_slug;
                 }
                 
                 return response()->json($responseData);
             }
 
             if ($isCompleted) {
-                // Usar la URL con token ya generada
-                return redirect($completionData['dashboard_url']);
+                // Usar la URL con token ya generada y mostrar pantalla de carga
+                return view('auth-loading', ['redirect' => $completionData['dashboard_url']]);
             }
 
             return back()->with([
@@ -311,26 +321,44 @@ class OnboardingController extends Controller
     private function saveDiscoveryDataInternal(Request $request, User $user)
     {
         $company = $this->getOrCreateCompany($user);
-        $company->update([
-            'settings' => array_merge($company->settings ?? [], [
-                'onboarding' => array_merge($company->settings['onboarding'] ?? [], [
-                    'discovered_via' => $request->discovered_via,
-                    'discovered_other' => $request->discovered_other
-                ])
-            ])
+        
+        // Guardar discovered_via, discovered_other y también tools (que vienen en el mismo paso)
+        $settings = $company->settings ?? [];
+        $onboarding = $settings['onboarding'] ?? [];
+        
+        $onboarding['discovered_via'] = $request->discovered_via ?? [];
+        $onboarding['discovered_other'] = $request->discovered_other ?? '';
+        $onboarding['tools'] = $request->tools ?? [];
+        $onboarding['other_tools'] = $request->other_tools ?? '';
+        
+        $settings['onboarding'] = $onboarding;
+        
+        $company->update(['settings' => $settings]);
+        
+        \Log::info('saveDiscoveryDataInternal completed', [
+            'company_id' => $company->id,
+            'discovered_via' => $onboarding['discovered_via'],
+            'tools' => $onboarding['tools']
         ]);
     }
 
     private function saveToolsData(Request $request, User $user)
     {
         $company = $this->getOrCreateCompany($user);
-        $company->update([
-            'settings' => array_merge($company->settings ?? [], [
-                'onboarding' => array_merge($company->settings['onboarding'] ?? [], [
-                    'current_tools' => $request->current_tools,
-                    'other_tools' => $request->other_tools
-                ])
-            ])
+        
+        $settings = $company->settings ?? [];
+        $onboarding = $settings['onboarding'] ?? [];
+        
+        $onboarding['tools'] = $request->tools ?? [];
+        $onboarding['other_tools'] = $request->other_tools ?? '';
+        
+        $settings['onboarding'] = $onboarding;
+        
+        $company->update(['settings' => $settings]);
+        
+        \Log::info('saveToolsData completed', [
+            'company_id' => $company->id,
+            'tools' => $onboarding['tools']
         ]);
     }
 
@@ -355,15 +383,23 @@ class OnboardingController extends Controller
 
         Log::info("Empresa obtenida/creada: ID {$company->id}");
 
+        // Provisioning automático de Chatwoot - crea cuenta, usuario e inbox únicos
         try {
             Log::info("Iniciando creacion automatica de cuenta Chatwoot para: {$user->email}");
             $chatwootResult = $this->chatwootProvisioningService->provisionCompanyAccount($company, $user);
-            Log::info("Cuenta Chatwoot creada exitosamente para: {$user->email}", [
-                'account_id' => $chatwootResult['account']['id'] ?? null,
-                'inbox_id' => $chatwootResult['inbox']['id'] ?? null
-            ]);
+            
+            if ($chatwootResult['success'] ?? false) {
+                Log::info("Cuenta Chatwoot creada exitosamente para: {$user->email}", [
+                    'account_id' => $chatwootResult['account']['id'] ?? null,
+                    'inbox_id' => $chatwootResult['inbox']['id'] ?? null
+                ]);
+            } else {
+                Log::error("Chatwoot provisioning falló para: {$user->email}", [
+                    'error' => $chatwootResult['error'] ?? 'Unknown'
+                ]);
+            }
         } catch (\Exception $e) {
-            Log::error("Error creando cuenta Chatwoot para {$user->email}: " . $e->getMessage());
+            Log::error("Excepción creando cuenta Chatwoot para {$user->email}: " . $e->getMessage());
         }
 
         // Crear colección de Qdrant para la base de conocimiento de la empresa
@@ -412,22 +448,26 @@ class OnboardingController extends Controller
             Log::error("Excepción creando workflow RAG para {$uniqueSlug}: " . $e->getMessage());
         }
 
-        // Enviar correos de forma no bloqueante (try-catch para evitar que falle el onboarding)
+        // Enviar correos de forma asíncrona usando queue (si está disponible)
+        // Si no hay queue, simplemente skip para no bloquear el onboarding
         try {
-            if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
-                Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
-                Mail::to($user->email)->send(new OnboardingCompletedMail($user));
-                Log::info("Correos de onboarding enviados para: {$user->email}");
+            if (class_exists('App\Mail\OnboardingCompletedNotificationMail') && config('queue.default') !== 'sync') {
+                Mail::to("a.diaz@withmia.com")->queue(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
+                Mail::to($user->email)->queue(new OnboardingCompletedMail($user));
+                Log::info("Correos de onboarding encolados para: {$user->email}");
+            } else {
+                // Queue no disponible, skip emails para no bloquear
+                Log::info("Correos de onboarding omitidos (queue no disponible) para: {$user->email}");
             }
         } catch (\Exception $mailException) {
             // No bloquear el onboarding si falla el correo
-            Log::error("Error enviando correos de onboarding: " . $mailException->getMessage());
+            Log::error("Error con correos de onboarding: " . $mailException->getMessage());
         }
 
         return [
             'completed' => true,
             'company_slug' => $uniqueSlug,
-            'dashboard_url' => route('dashboard.company', ['companySlug' => $uniqueSlug])
+            'dashboard_url' => route('dashboard.company', ['companySlug' => $uniqueSlug]) . '?auth_token=' . $user->auth_token
         ];
     }
 
@@ -546,8 +586,14 @@ class OnboardingController extends Controller
 
                 // Activar workflow
                 if ($workflowId) {
-                    $this->n8nService->activateWorkflow($workflowId);
-                    Log::info("Workflow RAG activado: {$workflowId}");
+                    $activateResult = $this->n8nService->activateWorkflow($workflowId);
+                    if ($activateResult['success']) {
+                        Log::info("Workflow RAG activado exitosamente: {$workflowId}");
+                    } else {
+                        Log::error("Error activando workflow RAG: {$workflowId}", [
+                            'error' => $activateResult['error'] ?? 'Unknown'
+                        ]);
+                    }
                 }
 
                 return [

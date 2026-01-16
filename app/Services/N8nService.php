@@ -153,12 +153,13 @@ class N8nService
         try {
             Log::info('🔄 Intentando activar workflow en n8n', ['workflow_id' => $workflowId]);
             
-            // n8n API requiere un body vacío {} en el POST
+            // n8n API requiere un body JSON object vacío {} en el POST
+            // Usar (object)[] para forzar {} en lugar de []
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", []);
+            ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
             if ($response->successful()) {
                 Log::info('✅ Workflow activado exitosamente', ['workflow_id' => $workflowId]);

@@ -47,6 +47,16 @@ export default function Onboarding({
     localStorage.setItem("withmia_onboarding_step", step.toString());
   }, [step]);
 
+  // 🔑 Guardar auth_token del URL en localStorage para Railway Edge
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token');
+    if (authToken) {
+      localStorage.setItem('railway_auth_token', authToken);
+      console.log('[Onboarding] Auth token saved from URL');
+    }
+  }, []);
+
   // Función para background progresivo con estética Apple 2025 + OpenAI
 
   // Función para obtener el límite de dígitos por país
@@ -299,7 +309,12 @@ export default function Onboarding({
           break;
       }
 
-      const response = await fetch("/onboarding", {
+      // Obtener auth_token de la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const authToken = urlParams.get('auth_token');
+      const url = authToken ? `/onboarding?auth_token=${authToken}` : '/onboarding';
+
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -321,11 +336,18 @@ export default function Onboarding({
           localStorage.removeItem("withmia_onboarding_data");
           localStorage.removeItem("withmia_onboarding_step");
           
-          // Get dashboard URL from backend
+          // Get dashboard URL from backend and ensure it has auth_token
           let dashboardUrl = data.dashboard_url || `/dashboard/${data.company_slug}`;
           
-          // Show elegant transition before redirecting
-          showTransitionAndRedirect(dashboardUrl, 3000);
+          // Si la URL no tiene auth_token, agregarlo
+          const urlParams = new URLSearchParams(window.location.search);
+          const authToken = urlParams.get('auth_token');
+          if (authToken && !dashboardUrl.includes('auth_token')) {
+            dashboardUrl += (dashboardUrl.includes('?') ? '&' : '?') + `auth_token=${authToken}`;
+          }
+          
+          // Redirigir a la página de carga con video
+          window.location.href = `/auth-loading?redirect=${encodeURIComponent(dashboardUrl)}`;
         }
       } else {
         showNotification(

@@ -74,6 +74,13 @@ class GoogleAuthController extends Controller
             error_log('Login tracking updated - IP: ' . $loginIp . ', Time: ' . now());
             */
 
+            // Generar auth_token si no existe
+            if (empty($user->auth_token)) {
+                $user->auth_token = Str::random(60);
+                $user->save();
+                error_log('Generated new auth_token for user: ' . $user->id);
+            }
+            
             // Login del usuario con remember=true para persistencia
             Auth::login($user, true);
             
@@ -95,17 +102,15 @@ class GoogleAuthController extends Controller
             
             // Determinar a dónde redirigir según el estado del usuario
             if ($user->company_slug && $user->onboarding_completed) {
-                // Usuario ya completó onboarding - ir al dashboard
-                $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]);
+                // Usuario ya completó onboarding - ir al dashboard con auth_token
+                $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
             } else {
-                // Usuario nuevo o sin completar onboarding
-                $redirectUrl = route('onboarding');
+                // Usuario nuevo o sin completar onboarding - ir a onboarding con auth_token
+                $redirectUrl = route('onboarding') . '?auth_token=' . $user->auth_token;
             }
             
-            error_log('Redirecting user to: ' . $redirectUrl);
-            
-            // Redirigir directamente sin auth_token
-            return redirect($redirectUrl);
+            // Mostrar pantalla de carga con video
+            return view('auth-loading', ['redirect' => $redirectUrl]);
 
         } catch (\Exception $e) {
             error_log('Google Auth Error: ' . $e->getMessage());
