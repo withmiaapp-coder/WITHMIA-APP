@@ -785,34 +785,26 @@ class KnowledgeController extends Controller
 
     /**
      * Fix UTF-8 mojibake - when UTF-8 text was incorrectly interpreted as Latin-1
-     * Common patterns: "Ã¡" -> "á", "Ã©" -> "é", "Ã­" -> "í", etc.
+     * Common patterns: "Ã³" -> "ó", "Ã¡" -> "á", etc.
      */
     private function fixUtf8Mojibake($text)
     {
-        // Try the iconv approach first - most reliable for double-encoded UTF-8
-        // This handles cases where UTF-8 was encoded twice
-        $decoded = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
-        if ($decoded !== false) {
-            // Check if the decoded version looks like valid UTF-8
-            if (mb_check_encoding($decoded, 'UTF-8') && preg_match('/[áéíóúñüÁÉÍÓÚÑÜ]/u', $decoded)) {
-                Log::info("Fixed UTF-8 double encoding via iconv");
-                return $decoded;
+        // The pattern "Ã" followed by another character is a sign of double-encoding
+        // For example: "ó" in UTF-8 is bytes C3 B3
+        // When double-encoded, it becomes: C3 83 C2 B3 which displays as "Ã³"
+        
+        // Check if we have mojibake patterns (Ã followed by specific characters)
+        if (preg_match('/\xC3[\x80-\xBF]/', $text)) {
+            // Try to fix by treating the string as Latin-1 and converting to UTF-8
+            // This essentially "undoes" the double encoding
+            $fixed = mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
+            
+            // Verify the result contains Spanish characters
+            if (preg_match('/[áéíóúñüÁÉÍÓÚÑÜ¿¡]/u', $fixed)) {
+                Log::info("Fixed UTF-8 mojibake via mb_convert_encoding");
+                return $fixed;
             }
         }
-        
-        // If iconv didn't work, try manual replacements for common mojibake patterns
-        // These are UTF-8 bytes that were incorrectly interpreted as Latin-1
-        $patterns = [
-            "\xC3\x83\xC2\xA1" => "á",  // á double-encoded
-            "\xC3\x83\xC2\xA9" => "é",  // é double-encoded  
-            "\xC3\x83\xC2\xAD" => "í",  // í double-encoded
-            "\xC3\x83\xC2\xB3" => "ó",  // ó double-encoded
-            "\xC3\x83\xC2\xBA" => "ú",  // ú double-encoded
-            "\xC3\x83\xC2\xB1" => "ñ",  // ñ double-encoded
-            "\xC3\x83\xC2\xBC" => "ü",  // ü double-encoded
-        ];
-        
-        $text = str_replace(array_keys($patterns), array_values($patterns), $text);
         
         return $text;
     }
