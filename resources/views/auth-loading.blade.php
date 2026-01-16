@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WITHMIA</title>
     <script>
+        // � Si estamos dentro de un iframe, redirigir inmediatamente sin animación
+        if (window.self !== window.top) {
+            window.location.replace("{{ $redirect }}");
+        }
+        
         // 🔑 PRE-GUARDAR TOKEN INMEDIATAMENTE antes de cualquier cosa
         (function() {
             var targetUrl = "{{ $redirect }}";
@@ -17,6 +22,14 @@
                 }
             } catch(e) {
                 console.error('[Auth-Loading] Error saving token:', e);
+            }
+        })();
+        
+        // 🚀 Para logout, redirigir inmediatamente sin animación
+        (function() {
+            var targetUrl = "{{ $redirect }}";
+            if (targetUrl === '/login' || targetUrl.includes('/login')) {
+                window.location.replace(targetUrl);
             }
         })();
     </script>

@@ -17,6 +17,7 @@ use App\Mail\OnboardingCompletedMail;
 use App\Services\ChatwootProvisioningService;
 use App\Services\QdrantService;
 use App\Services\N8nService;
+use App\Jobs\PostOnboardingSetupJob;
 
 class OnboardingController extends Controller
 {
@@ -424,44 +425,29 @@ class OnboardingController extends Controller
             Log::error("Excepción creando colección Qdrant para {$uniqueSlug}: " . $e->getMessage());
         }
 
-        // Crear workflow RAG para procesar documentos de la empresa
+        // 🚀 Dispatch Job en background para: Workflow RAG + Correos
+        // Esto hace que el dashboard cargue INMEDIATAMENTE
         try {
-            Log::info("Creando workflow RAG para: {$uniqueSlug}");
-            $ragResult = $this->createRagWorkflow($company, $uniqueSlug);
-            
-            if ($ragResult['success']) {
-                Log::info("Workflow RAG creado para {$uniqueSlug}", [
-                    'workflow_id' => $ragResult['workflow_id'] ?? null
-                ]);
-                
-                // Guardar ID del workflow RAG
-                $company->update([
-                    'settings' => array_merge($company->settings ?? [], [
-                        'rag_workflow_id' => $ragResult['workflow_id'] ?? null,
-                        'rag_webhook_url' => $ragResult['webhook_url'] ?? null
-                    ])
-                ]);
-            } else {
-                Log::error("Error creando workflow RAG para {$uniqueSlug}: " . ($ragResult['error'] ?? 'Unknown'));
-            }
+            PostOnboardingSetupJob::dispatch(
+                $user->id,
+                $company->id,
+                $uniqueSlug,
+                request()->ip()
+            );
+            Log::info("PostOnboardingSetupJob dispatched para: {$uniqueSlug}");
         } catch (\Exception $e) {
-            Log::error("Excepción creando workflow RAG para {$uniqueSlug}: " . $e->getMessage());
-        }
-
-        // Enviar correos de forma asíncrona usando queue (si está disponible)
-        try {
-            if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
-                // Enviar a admin
-                Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
-                Log::info("Correo admin enviado para onboarding de: {$user->email}");
-                
-                // Enviar al usuario
-                Mail::to($user->email)->send(new OnboardingCompletedMail($user));
-                Log::info("Correo bienvenida enviado a: {$user->email}");
+            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
+            
+            // Fallback: hacer síncrono si falla el dispatch
+            try {
+                $this->createRagWorkflow($company, $uniqueSlug);
+                if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
+                    Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
+                    Mail::to($user->email)->send(new OnboardingCompletedMail($user));
+                }
+            } catch (\Exception $fallbackEx) {
+                Log::error("Fallback onboarding también falló: " . $fallbackEx->getMessage());
             }
-        } catch (\Exception $mailException) {
-            // No bloquear el onboarding si falla el correo
-            Log::error("Error enviando correos de onboarding: " . $mailException->getMessage());
         }
 
         return [
