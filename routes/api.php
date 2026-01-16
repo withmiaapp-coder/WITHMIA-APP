@@ -175,6 +175,99 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
     }
 });
 
+// 🔄 Actualizar TODOS los workflows RAG de todas las empresas
+Route::get('/update-all-rag-workflows', function () {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $qdrantService = app(\App\Services\QdrantService::class);
+        
+        // Cargar template actualizado
+        $templatePath = base_path('workflows/rag-documents-updated.json');
+        if (!file_exists($templatePath)) {
+            return response()->json(['error' => 'Template not found'], 404);
+        }
+        
+        $content = file_get_contents($templatePath);
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        $templateWorkflow = json_decode($content, true);
+        
+        if (!$templateWorkflow) {
+            return response()->json(['error' => 'Invalid template JSON'], 500);
+        }
+        
+        // Obtener todas las empresas
+        $companies = \App\Models\Company::all();
+        $results = [];
+        
+        foreach ($companies as $company) {
+            $companySlug = $company->slug;
+            
+            try {
+                // Personalizar para la empresa
+                $collectionName = $qdrantService->getCollectionName($companySlug);
+                $webhookPath = "rag-{$companySlug}";
+                $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+                
+                $workflowCopy = $templateWorkflow;
+                
+                foreach ($workflowCopy['nodes'] as &$node) {
+                    if ($node['type'] === 'n8n-nodes-base.webhook') {
+                        $node['parameters']['path'] = $webhookPath;
+                        $node['webhookId'] = $newWebhookId;
+                    }
+                }
+                
+                $workflowCopy['name'] = "RAG Documents - {$companySlug}";
+                unset($workflowCopy['id']);
+                unset($workflowCopy['versionId']);
+                unset($workflowCopy['meta']);
+                unset($workflowCopy['tags']);
+                unset($workflowCopy['active']);
+                
+                // Buscar workflow existente
+                $workflows = $n8nService->getWorkflows();
+                $existingWorkflowId = null;
+                
+                if ($workflows['success']) {
+                    foreach ($workflows['data'] as $wf) {
+                        if (str_contains($wf['name'] ?? '', "RAG Documents - {$companySlug}")) {
+                            $existingWorkflowId = $wf['id'];
+                            break;
+                        }
+                    }
+                }
+                
+                if ($existingWorkflowId) {
+                    $result = $n8nService->updateWorkflow($existingWorkflowId, $workflowCopy);
+                    $action = 'updated';
+                } else {
+                    $result = $n8nService->createWorkflow($workflowCopy);
+                    $action = 'created';
+                }
+                
+                if ($result['success']) {
+                    $workflowId = $result['data']['id'] ?? $existingWorkflowId;
+                    $n8nService->activateWorkflow($workflowId);
+                    $results[$companySlug] = ['success' => true, 'action' => $action, 'workflow_id' => $workflowId];
+                } else {
+                    $results[$companySlug] = ['success' => false, 'error' => $result['error'] ?? 'Unknown'];
+                }
+            } catch (\Exception $e) {
+                $results[$companySlug] = ['success' => false, 'error' => $e->getMessage()];
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'total_companies' => count($companies),
+            'results' => $results
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // Helper para workflow minimalista
 if (!function_exists('getMinimalWorkflow')) {
     function getMinimalWorkflow(string $instanceName): array {
