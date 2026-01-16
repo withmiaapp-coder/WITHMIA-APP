@@ -449,19 +449,19 @@ class OnboardingController extends Controller
         }
 
         // Enviar correos de forma asíncrona usando queue (si está disponible)
-        // Si no hay queue, simplemente skip para no bloquear el onboarding
         try {
-            if (class_exists('App\Mail\OnboardingCompletedNotificationMail') && config('queue.default') !== 'sync') {
-                Mail::to("a.diaz@withmia.com")->queue(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
-                Mail::to($user->email)->queue(new OnboardingCompletedMail($user));
-                Log::info("Correos de onboarding encolados para: {$user->email}");
-            } else {
-                // Queue no disponible, skip emails para no bloquear
-                Log::info("Correos de onboarding omitidos (queue no disponible) para: {$user->email}");
+            if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
+                // Enviar a admin
+                Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, request()->ip(), $company));
+                Log::info("Correo admin enviado para onboarding de: {$user->email}");
+                
+                // Enviar al usuario
+                Mail::to($user->email)->send(new OnboardingCompletedMail($user));
+                Log::info("Correo bienvenida enviado a: {$user->email}");
             }
         } catch (\Exception $mailException) {
             // No bloquear el onboarding si falla el correo
-            Log::error("Error con correos de onboarding: " . $mailException->getMessage());
+            Log::error("Error enviando correos de onboarding: " . $mailException->getMessage());
         }
 
         return [
