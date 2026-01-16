@@ -1016,8 +1016,16 @@ const item = $input.first();
 const embedding = item.json.data[0].embedding;
 const prevData = $('Split into Chunks').item.json;
 
-// Generar ID único
-const uniqueId = `${prevData.filename.replace(/[^a-z0-9]/gi, '_')}_chunk${prevData.chunk_index}_${Date.now()}`;
+// Generar UUID válido para Qdrant
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+const uniqueId = generateUUID();
 
 return {
   json: {
