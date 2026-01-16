@@ -798,15 +798,26 @@ class KnowledgeController extends Controller
      */
     private function fixUtf8Mojibake($text)
     {
-        // Detect mojibake patterns for Spanish characters
+        // Detect mojibake patterns for Spanish characters using hex representation
         // When UTF-8 is double-encoded, we get patterns like:
-        // á → Ã¡, é → Ã©, í → Ã­, ó → Ã³, ú → Ãº, ñ → Ã±, Ñ → Ã'
+        // á → Ã¡ (C3 A1), é → Ã© (C3 A9), í → Ã­ (C3 AD), ó → Ã³ (C3 B3)
+        // ú → Ãº (C3 BA), ñ → Ã± (C3 B1), Ñ → Ã' (C3 91)
         
-        // Check for common mojibake patterns (Ã followed by specific bytes)
+        // Check for common mojibake patterns using hex escape sequences (safe for any encoding)
         $mojibakePatterns = [
-            'Ã¡', 'Ã©', 'Ã­', 'Ã³', 'Ãº', 'Ã±', 'Ã'',  // á é í ó ú ñ Ñ
-            'Ã¼', 'Ã', 'Ã‰', 'Ã', 'Ã"', 'Ãš',          // ü Á É Í Ó Ú
-            'Â°', 'Â¿', 'Â¡',                            // ° ¿ ¡
+            "\xC3\xA1",   // Ã¡ (á mojibake)
+            "\xC3\xA9",   // Ã© (é mojibake)
+            "\xC3\xAD",   // Ã­ (í mojibake)
+            "\xC3\xB3",   // Ã³ (ó mojibake)
+            "\xC3\xBA",   // Ãº (ú mojibake)
+            "\xC3\xB1",   // Ã± (ñ mojibake)
+            "\xC3\x91",   // Ã' (Ñ mojibake)
+            "\xC3\xBC",   // Ã¼ (ü mojibake)
+            "\xC3\x81",   // Ã (Á mojibake)
+            "\xC3\x89",   // Ã‰ (É mojibake)
+            "\xC3\x8D",   // Ã (Í mojibake)
+            "\xC3\x93",   // Ã" (Ó mojibake)
+            "\xC3\x9A",   // Ãš (Ú mojibake)
         ];
         
         $hasMojibake = false;
