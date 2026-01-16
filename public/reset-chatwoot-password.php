@@ -42,11 +42,15 @@ try {
         $action = $_GET['action'] ?? 'list';
         
         if ($action === 'list') {
-            $result = pg_query($conn, "SELECT id, email, name, role, confirmed_at FROM users ORDER BY id LIMIT 10");
+            $result = pg_query($conn, "SELECT id, email, name, confirmed_at FROM users ORDER BY id LIMIT 10");
             
-            echo "<h2>Chatwoot Users</h2><table border='1'><tr><th>ID</th><th>Email</th><th>Name</th><th>Role</th><th>Confirmed</th></tr>";
+            if (!$result) {
+                die('Query failed: ' . pg_last_error($conn));
+            }
+            
+            echo "<h2>Chatwoot Users</h2><table border='1'><tr><th>ID</th><th>Email</th><th>Name</th><th>Confirmed</th></tr>";
             while ($row = pg_fetch_assoc($result)) {
-                echo "<tr><td>{$row['id']}</td><td>{$row['email']}</td><td>{$row['name']}</td><td>{$row['role']}</td><td>{$row['confirmed_at']}</td></tr>";
+                echo "<tr><td>{$row['id']}</td><td>{$row['email']}</td><td>{$row['name']}</td><td>{$row['confirmed_at']}</td></tr>";
             }
             echo "</table>";
             echo "<p>To reset password, use: ?key=mia-reset-2026-secure&action=reset&user_id=X&password=YOUR_NEW_PASSWORD</p>";
