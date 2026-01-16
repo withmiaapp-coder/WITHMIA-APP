@@ -951,11 +951,11 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                     'Generate Embeddings' => ['main' => [[['node' => 'Prepare for Qdrant', 'type' => 'main', 'index' => 0]]]],
                     'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]]
                 ],
-                'settings' => ['executionOrder' => 'v1'],
-                'active' => true  // Crear workflow ya activado
+                'settings' => ['executionOrder' => 'v1']
+                // NOTE: 'active' es read-only, se activa después de crear
             ];
 
-            // Create workflow in n8n (already active)
+            // Create workflow in n8n
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $n8nApiKey,
                 'Content-Type' => 'application/json'
