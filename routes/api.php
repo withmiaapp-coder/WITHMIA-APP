@@ -1048,7 +1048,7 @@ Route::prefix('baileys-whatsapp')->group(function () {
 Route::prefix('evolution-whatsapp')->group(function () {
     Route::post('/webhook', [\App\Http\Controllers\Api\EvolutionApiController::class, 'webhook']);
     
-    Route::middleware(['web', 'auth'])->group(function () {
+    Route::middleware(['railway.auth:true'])->group(function () {
         Route::post('/create', [\App\Http\Controllers\Api\EvolutionApiController::class, 'createInstance']);
         Route::get('/instances', [\App\Http\Controllers\Api\EvolutionApiController::class, 'listInstances']);
         Route::post('/connect/{instanceName?}', [\App\Http\Controllers\Api\EvolutionApiController::class, 'connect']);
