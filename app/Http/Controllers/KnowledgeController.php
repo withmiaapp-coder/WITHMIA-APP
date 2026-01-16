@@ -1098,9 +1098,10 @@ JS;
     private function getPrepareQdrantCode()
     {
         return <<<'JS'
-const item = $input.first();
-const embedding = item.json.data[0].embedding;
-const prevData = $('Split into Chunks').item.json;
+// Procesar TODOS los items de embeddings
+const items = $input.all();
+const chunkItems = $('Split into Chunks').all();
+const results = [];
 
 // Generar UUID válido para Qdrant
 function generateUUID() {
@@ -1111,23 +1112,29 @@ function generateUUID() {
   });
 }
 
-const uniqueId = generateUUID();
+for (let i = 0; i < items.length; i++) {
+  const embedding = items[i].json.data[0].embedding;
+  const chunkData = chunkItems[i].json;
+  
+  results.push({
+    json: {
+      id: generateUUID(),
+      vector: embedding,
+      payload: {
+        text: chunkData.text,
+        filename: chunkData.filename,
+        category: chunkData.category,
+        company_slug: chunkData.company_slug,
+        chunk_index: chunkData.chunk_index,
+        total_chunks: chunkData.total_chunks
+      },
+      collection_name: chunkData.collection_name
+    }
+  });
+}
 
-return {
-  json: {
-    id: uniqueId,
-    vector: embedding,
-    payload: {
-      text: prevData.text,
-      filename: prevData.filename,
-      category: prevData.category,
-      company_slug: prevData.company_slug,
-      chunk_index: prevData.chunk_index,
-      total_chunks: prevData.total_chunks
-    },
-    collection_name: prevData.collection_name
-  }
-};
+console.log(`Preparados ${results.length} puntos para Qdrant`);
+return results;
 JS;
     }
 
