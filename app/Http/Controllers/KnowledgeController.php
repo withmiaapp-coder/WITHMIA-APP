@@ -538,7 +538,7 @@ class KnowledgeController extends Controller
 
     /**
      * Proxy request to n8n RAG webhook to avoid CORS issues
-     * Sends file to n8n where AI will extract the text
+     * Creates a company-specific workflow if it doesn't exist
      */
     public function proxyToN8n(Request $request)
     {
@@ -556,11 +556,45 @@ class KnowledgeController extends Controller
             }
 
             $companySlug = $company->slug ?? 'company_' . $company->id;
+            $companyName = $company->name ?? $companySlug;
             
-            // Get webhook URL from company settings or use env variable
+            // Get n8n configuration
             $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-docker-production-4255.up.railway.app');
-            $webhookUrl = $company->settings['rag_webhook_url'] ?? 
-                "{$n8nUrl}/webhook/documents-upload";
+            $n8nApiKey = env('N8N_API_KEY');
+
+            // Get OpenAI API key - company specific or fallback to global
+            $openaiApiKey = $company->settings['openai_api_key'] ?? env('OPENAI_API_KEY');
+            
+            if (!$openaiApiKey) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No hay API key de OpenAI configurada para esta empresa'
+                ], 400);
+            }
+
+            // Get Qdrant host
+            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-549b.up.railway.app');
+
+            // Check if company has a workflow, if not create one
+            $webhookPath = $company->settings['rag_webhook_path'] ?? null;
+            $workflowId = $company->settings['rag_workflow_id'] ?? null;
+
+            if (!$webhookPath || !$workflowId) {
+                // Create company-specific workflow
+                $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
+                
+                if (!$result['success']) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Error al crear workflow: ' . $result['error']
+                    ], 500);
+                }
+                
+                $webhookPath = $result['webhook_path'];
+                $workflowId = $result['workflow_id'];
+            }
+
+            $webhookUrl = "{$n8nUrl}/webhook/{$webhookPath}";
 
             $validated = $request->validate([
                 'category' => 'required|string',
@@ -570,15 +604,18 @@ class KnowledgeController extends Controller
 
             Log::info("Proxying RAG request to n8n for {$validated['filename']}", [
                 'company_slug' => $companySlug,
-                'webhook_url' => $webhookUrl
+                'webhook_url' => $webhookUrl,
+                'workflow_id' => $workflowId
             ]);
 
-            // Send to n8n webhook - AI will extract the text there
+            // Send to n8n webhook with company-specific credentials
             $response = Http::timeout(120)->post($webhookUrl, [
                 'company_slug' => $companySlug,
                 'category' => $validated['category'],
                 'filename' => $validated['filename'],
                 'file' => $validated['file'],
+                'openai_api_key' => $openaiApiKey,
+                'qdrant_host' => $qdrantHost,
             ]);
 
             if ($response->successful()) {
@@ -609,5 +646,394 @@ class KnowledgeController extends Controller
                 'error' => 'Error sending to n8n: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Create a company-specific RAG workflow in n8n
+     */
+    private function createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey)
+    {
+        try {
+            // Generate unique webhook path for this company
+            $webhookPath = "rag-{$companySlug}-" . substr(md5($companySlug . time()), 0, 8);
+            $workflowName = "RAG Documents - {$companyName}";
+
+            // Workflow template with company-specific name and webhook path
+            $workflow = [
+                'name' => $workflowName,
+                'nodes' => [
+                    [
+                        'parameters' => [
+                            'httpMethod' => 'POST',
+                            'path' => $webhookPath,
+                            'responseMode' => 'responseNode',
+                            'options' => new \stdClass()
+                        ],
+                        'type' => 'n8n-nodes-base.webhook',
+                        'typeVersion' => 2,
+                        'position' => [0, 300],
+                        'id' => 'webhook-upload',
+                        'name' => 'Webhook Upload',
+                        'webhookId' => "rag-{$companySlug}"
+                    ],
+                    [
+                        'parameters' => [
+                            'jsCode' => $this->getProcessInputCode()
+                        ],
+                        'type' => 'n8n-nodes-base.code',
+                        'typeVersion' => 2,
+                        'position' => [220, 300],
+                        'id' => 'process-input',
+                        'name' => 'Process Input'
+                    ],
+                    [
+                        'parameters' => [
+                            'respondWith' => 'json',
+                            'responseBody' => '={"success": true, "message": "Processing started with AI", "filename": "{{ $json.filename }}", "company": "' . $companyName . '"}'
+                        ],
+                        'type' => 'n8n-nodes-base.respondToWebhook',
+                        'typeVersion' => 1.1,
+                        'position' => [440, 160],
+                        'id' => 'respond-webhook',
+                        'name' => 'Respond Immediately'
+                    ],
+                    [
+                        'parameters' => [
+                            'method' => 'POST',
+                            'url' => 'https://api.openai.com/v1/chat/completions',
+                            'sendHeaders' => true,
+                            'headerParameters' => [
+                                'parameters' => [
+                                    ['name' => 'Authorization', 'value' => '=Bearer {{ $json.openai_api_key }}']
+                                ]
+                            ],
+                            'sendBody' => true,
+                            'specifyBody' => 'json',
+                            'jsonBody' => $this->getAIExtractJsonBody(),
+                            'options' => ['timeout' => 120000]
+                        ],
+                        'type' => 'n8n-nodes-base.httpRequest',
+                        'typeVersion' => 4.2,
+                        'position' => [440, 300],
+                        'id' => 'ai-extract-text',
+                        'name' => 'AI Extract Text (GPT-4)'
+                    ],
+                    [
+                        'parameters' => [
+                            'jsCode' => $this->getProcessAIResponseCode()
+                        ],
+                        'type' => 'n8n-nodes-base.code',
+                        'typeVersion' => 2,
+                        'position' => [660, 300],
+                        'id' => 'process-ai-response',
+                        'name' => 'Process AI Response'
+                    ],
+                    [
+                        'parameters' => [
+                            'jsCode' => $this->getChunkTextCode()
+                        ],
+                        'type' => 'n8n-nodes-base.code',
+                        'typeVersion' => 2,
+                        'position' => [880, 300],
+                        'id' => 'chunk-text',
+                        'name' => 'Split into Chunks'
+                    ],
+                    [
+                        'parameters' => [
+                            'method' => 'POST',
+                            'url' => 'https://api.openai.com/v1/embeddings',
+                            'sendHeaders' => true,
+                            'headerParameters' => [
+                                'parameters' => [
+                                    ['name' => 'Authorization', 'value' => '=Bearer {{ $("Process Input").first().json.openai_api_key }}']
+                                ]
+                            ],
+                            'sendBody' => true,
+                            'specifyBody' => 'json',
+                            'jsonBody' => "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify(\$json.text) }}\n}"
+                        ],
+                        'type' => 'n8n-nodes-base.httpRequest',
+                        'typeVersion' => 4.2,
+                        'position' => [1100, 300],
+                        'id' => 'generate-embeddings',
+                        'name' => 'Generate Embeddings'
+                    ],
+                    [
+                        'parameters' => [
+                            'jsCode' => $this->getPrepareQdrantCode()
+                        ],
+                        'type' => 'n8n-nodes-base.code',
+                        'typeVersion' => 2,
+                        'position' => [1320, 300],
+                        'id' => 'prepare-qdrant',
+                        'name' => 'Prepare for Qdrant'
+                    ],
+                    [
+                        'parameters' => [
+                            'method' => 'PUT',
+                            'url' => '={{ $("Process Input").first().json.qdrant_host }}/collections/{{ $json.collection_name }}/points',
+                            'sendBody' => true,
+                            'specifyBody' => 'json',
+                            'jsonBody' => "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify(\$json.id) }},\n    \"vector\": {{ JSON.stringify(\$json.vector) }},\n    \"payload\": {{ JSON.stringify(\$json.payload) }}\n  }]\n}",
+                            'options' => ['timeout' => 30000]
+                        ],
+                        'type' => 'n8n-nodes-base.httpRequest',
+                        'typeVersion' => 4.2,
+                        'position' => [1540, 300],
+                        'id' => 'store-qdrant',
+                        'name' => 'Store in Qdrant'
+                    ]
+                ],
+                'connections' => [
+                    'Webhook Upload' => ['main' => [[['node' => 'Process Input', 'type' => 'main', 'index' => 0]]]],
+                    'Process Input' => ['main' => [[
+                        ['node' => 'Respond Immediately', 'type' => 'main', 'index' => 0],
+                        ['node' => 'AI Extract Text (GPT-4)', 'type' => 'main', 'index' => 0]
+                    ]]],
+                    'AI Extract Text (GPT-4)' => ['main' => [[['node' => 'Process AI Response', 'type' => 'main', 'index' => 0]]]],
+                    'Process AI Response' => ['main' => [[['node' => 'Split into Chunks', 'type' => 'main', 'index' => 0]]]],
+                    'Split into Chunks' => ['main' => [[['node' => 'Generate Embeddings', 'type' => 'main', 'index' => 0]]]],
+                    'Generate Embeddings' => ['main' => [[['node' => 'Prepare for Qdrant', 'type' => 'main', 'index' => 0]]]],
+                    'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]]
+                ],
+                'settings' => ['executionOrder' => 'v1']
+            ];
+
+            // Create workflow in n8n
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $n8nApiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$n8nUrl}/api/v1/workflows", $workflow);
+
+            if (!$response->successful()) {
+                Log::error("Failed to create n8n workflow: " . $response->body());
+                return ['success' => false, 'error' => 'Failed to create workflow in n8n'];
+            }
+
+            $workflowData = $response->json();
+            $workflowId = $workflowData['id'];
+
+            // Activate the workflow
+            $activateResponse = Http::withHeaders([
+                'X-N8N-API-KEY' => $n8nApiKey
+            ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate");
+
+            if (!$activateResponse->successful()) {
+                Log::warning("Failed to activate workflow: " . $activateResponse->body());
+            }
+
+            // Save workflow info to company settings
+            $settings = $company->settings ?? [];
+            $settings['rag_workflow_id'] = $workflowId;
+            $settings['rag_webhook_path'] = $webhookPath;
+            $settings['rag_workflow_name'] = $workflowName;
+            $company->settings = $settings;
+            $company->save();
+
+            Log::info("Created RAG workflow for company {$companySlug}", [
+                'workflow_id' => $workflowId,
+                'webhook_path' => $webhookPath,
+                'workflow_name' => $workflowName
+            ]);
+
+            return [
+                'success' => true,
+                'workflow_id' => $workflowId,
+                'webhook_path' => $webhookPath
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("Error creating company workflow: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    private function getProcessInputCode()
+    {
+        return <<<'JS'
+// Extraer datos del body
+const body = $input.first().json.body || $input.first().json;
+
+const companySlug = body.company_slug || 'default';
+const filename = body.filename || 'document.pdf';
+const category = body.category || 'general';
+const fileBase64 = body.file || '';
+const openaiApiKey = body.openai_api_key || '';
+const qdrantHost = body.qdrant_host || 'https://qdrant-production-549b.up.railway.app';
+
+// Limpiar el base64 (quitar data:... prefix si existe)
+let cleanBase64 = fileBase64;
+if (cleanBase64.includes(',')) {
+  cleanBase64 = cleanBase64.split(',')[1];
+}
+
+// Crear nombre de colección
+const collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';
+
+// Detectar tipo de archivo
+const ext = filename.split('.').pop().toLowerCase();
+let mimeType = 'application/octet-stream';
+if (ext === 'pdf') mimeType = 'application/pdf';
+else if (ext === 'txt') mimeType = 'text/plain';
+else if (ext === 'md') mimeType = 'text/markdown';
+else if (ext === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+return {
+  json: {
+    company_slug: companySlug,
+    filename: filename,
+    category: category,
+    collection_name: collectionName,
+    file_base64: cleanBase64,
+    mime_type: mimeType,
+    file_extension: ext,
+    openai_api_key: openaiApiKey,
+    qdrant_host: qdrantHost
+  }
+};
+JS;
+    }
+
+    private function getAIExtractJsonBody()
+    {
+        return <<<'JSON'
+={
+  "model": "gpt-4o-mini",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Eres un asistente experto en extracción de texto de documentos. Tu tarea es extraer TODO el texto del documento proporcionado de forma limpia y estructurada. Mantén la estructura del documento (títulos, párrafos, listas). NO resumas, extrae el texto COMPLETO. Si el documento está en base64, decodifícalo mentalmente. Responde SOLO con el texto extraído, sin comentarios adicionales."
+    },
+    {
+      "role": "user",
+      "content": "Extrae todo el texto de este documento {{ $json.filename }} (tipo: {{ $json.mime_type }}).\n\nContenido en base64:\n{{ $json.file_base64.substring(0, 100000) }}"
+    }
+  ],
+  "max_tokens": 16000,
+  "temperature": 0
+}
+JSON;
+    }
+
+    private function getProcessAIResponseCode()
+    {
+        return <<<'JS'
+// Obtener el texto extraído por la IA
+const aiResponse = $input.first().json;
+const prevData = $('Process Input').first().json;
+
+let extractedText = '';
+
+try {
+  extractedText = aiResponse.choices[0].message.content || '';
+} catch (e) {
+  throw new Error('No se pudo obtener respuesta de la IA: ' + JSON.stringify(aiResponse));
+}
+
+// Limpiar el texto
+let cleanText = extractedText
+  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+// Verificar que tenemos texto válido
+if (!cleanText || cleanText.length < 20) {
+  throw new Error('La IA no pudo extraer texto suficiente del documento.');
+}
+
+console.log(`Texto extraído por IA: ${cleanText.length} caracteres`);
+
+return {
+  json: {
+    company_slug: prevData.company_slug,
+    filename: prevData.filename,
+    category: prevData.category,
+    collection_name: prevData.collection_name,
+    text: cleanText,
+    text_length: cleanText.length
+  }
+};
+JS;
+    }
+
+    private function getChunkTextCode()
+    {
+        return <<<'JS'
+// Dividir texto en chunks optimizados para embeddings
+const text = $input.first().json.text || '';
+const companySlug = $input.first().json.company_slug;
+const filename = $input.first().json.filename;
+const category = $input.first().json.category;
+const collectionName = $input.first().json.collection_name;
+
+// Tamaño óptimo para embeddings: ~1500 tokens = ~6000 caracteres
+const maxCharsPerChunk = 6000;
+const chunks = [];
+
+if (text.length <= maxCharsPerChunk) {
+  chunks.push(text);
+} else {
+  // Dividir por párrafos
+  const paragraphs = text.split(/\n\n+|(?<=\.)\s+(?=[A-Z])/);
+  let currentChunk = '';
+  
+  for (const para of paragraphs) {
+    if (currentChunk.length + para.length > maxCharsPerChunk) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = para;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + para;
+    }
+  }
+  
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+}
+
+console.log(`Documento dividido en ${chunks.length} chunks`);
+
+return chunks.map((chunk, index) => ({
+  json: {
+    text: chunk,
+    chunk_index: index,
+    total_chunks: chunks.length,
+    company_slug: companySlug,
+    filename: filename,
+    category: category,
+    collection_name: collectionName
+  }
+}));
+JS;
+    }
+
+    private function getPrepareQdrantCode()
+    {
+        return <<<'JS'
+const item = $input.first();
+const embedding = item.json.data[0].embedding;
+const prevData = $('Split into Chunks').item.json;
+
+// Generar ID único
+const uniqueId = `${prevData.filename.replace(/[^a-z0-9]/gi, '_')}_chunk${prevData.chunk_index}_${Date.now()}`;
+
+return {
+  json: {
+    id: uniqueId,
+    vector: embedding,
+    payload: {
+      text: prevData.text,
+      filename: prevData.filename,
+      category: prevData.category,
+      company_slug: prevData.company_slug,
+      chunk_index: prevData.chunk_index,
+      total_chunks: prevData.total_chunks
+    },
+    collection_name: prevData.collection_name
+  }
+};
+JS;
     }
 }
