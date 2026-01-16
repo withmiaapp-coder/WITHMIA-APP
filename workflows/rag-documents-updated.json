@@ -86,23 +86,16 @@
       "parameters": {
         "method": "PUT",
         "url": "={{ $env.QDRANT_HOST || 'https://qdrant-production-b4f0.up.railway.app' }}/collections/{{ $json.collection_name }}/points",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify($json.id) }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}"
+        "jsonBody": "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify($json.id) }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1100, 300],
       "id": "store-qdrant",
-      "name": "Store in Qdrant",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "qdrant-api-key",
-          "name": "Qdrant API Key"
-        }
-      }
+      "name": "Store in Qdrant"
     },
     {
       "parameters": {
