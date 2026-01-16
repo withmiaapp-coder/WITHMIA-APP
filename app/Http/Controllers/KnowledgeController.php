@@ -794,72 +794,61 @@ class KnowledgeController extends Controller
 
     /**
      * Fix UTF-8 mojibake and ensure valid UTF-8 for json_encode
-     * Handles double-encoded UTF-8 text and cleans invalid sequences
+     * Preserves Spanish characters (á, é, í, ó, ú, ñ, etc.)
      */
     private function fixUtf8Mojibake($text)
     {
-        // First, try to fix double-encoding (mojibake)
-        // When UTF-8 is encoded as UTF-8 again, characters like "í" become "Ã­"
-        // The fix is to decode from UTF-8 treating it as ISO-8859-1
-        $original = $text;
-        
-        // Check for mojibake patterns (Ã followed by certain characters is double-encoded UTF-8)
-        if (preg_match('/\xC3[\x80-\xBF]/', $text)) {
-            // Try to fix by re-interpreting the bytes
-            $fixed = @mb_convert_encoding($text, 'UTF-8', 'UTF-8');
-            
-            // Alternative: try treating as double-encoded
-            // Convert from UTF-8 to ISO-8859-1 (undoes one layer of UTF-8 encoding)
-            $decoded = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
-            if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
-                // If decoding to ISO-8859-1 gives valid UTF-8, we had double-encoding
-                Log::info("Fixed double-encoded UTF-8 (mojibake)");
-                $text = $decoded;
-            } elseif ($decoded) {
-                // The decoded text is ISO-8859-1, convert it to UTF-8
-                $reencoded = @iconv('ISO-8859-1', 'UTF-8//IGNORE', $decoded);
-                if ($reencoded) {
-                    Log::info("Fixed mojibake via ISO-8859-1 re-encoding");
-                    $text = $reencoded;
+        // First check if text is already valid UTF-8
+        if (mb_check_encoding($text, 'UTF-8')) {
+            // Check for mojibake patterns: Ã followed by certain bytes indicates double-encoding
+            // Examples: "Ã¡" = á, "Ã©" = é, "Ã­" = í, "Ã³" = ó, "Ãº" = ú, "Ã±" = ñ
+            if (preg_match('/Ã[¡©­³ºñÑ]|Ã\x83/', $text)) {
+                // Text is double-encoded UTF-8, decode one layer
+                $decoded = @mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
+                if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
+                    Log::info("Fixed mojibake: decoded double-encoded UTF-8");
+                    $text = $decoded;
                 }
             }
-        }
-        
-        // CRITICAL: Ensure the final text is valid UTF-8 for json_encode
-        // Remove any remaining invalid UTF-8 sequences
-        if (!mb_check_encoding($text, 'UTF-8')) {
-            // Method 1: Use iconv to strip invalid sequences
-            $cleaned = @iconv('UTF-8', 'UTF-8//IGNORE', $text);
-            if ($cleaned) {
-                Log::info("Cleaned invalid UTF-8 sequences with iconv");
-                $text = $cleaned;
+        } else {
+            // Text is not valid UTF-8, try to fix it
+            // First try: assume it's ISO-8859-1 (Latin-1) and convert to UTF-8
+            $converted = @mb_convert_encoding($text, 'UTF-8', 'ISO-8859-1');
+            if ($converted && mb_check_encoding($converted, 'UTF-8')) {
+                Log::info("Converted from ISO-8859-1 to UTF-8");
+                $text = $converted;
             } else {
-                // Method 2: Use mb_convert_encoding which handles errors more gracefully
-                $cleaned = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+                // Second try: use iconv to strip only truly invalid sequences
+                $cleaned = @iconv('UTF-8', 'UTF-8//IGNORE', $text);
                 if ($cleaned) {
-                    Log::info("Cleaned invalid UTF-8 sequences with mb_convert_encoding");
+                    Log::info("Cleaned invalid UTF-8 with iconv");
                     $text = $cleaned;
                 }
             }
         }
         
-        // Final safety: replace any remaining problematic bytes with replacement character
-        // This regex removes invalid UTF-8 byte sequences
-        $text = preg_replace('/[\x80-\xFF](?![\x80-\xBF])|(?<![\xC0-\xFF])[\x80-\xBF]/', '', $text);
-        
-        // Also remove common problematic control characters
+        // Remove only control characters (not printable characters!)
+        // Keep: tabs (\x09), newlines (\x0A), carriage returns (\x0D), and all printable chars
         $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $text);
         
-        // Verify json_encode will work
+        // Final verification: ensure json_encode works
         $testEncode = @json_encode(['test' => $text]);
         if ($testEncode === false) {
-            Log::warning("Text still not valid for JSON, applying aggressive cleanup");
-            // Aggressive cleanup: convert to ASCII-safe representation and back
-            $text = mb_convert_encoding($text, 'ASCII', 'UTF-8');
-            $text = preg_replace('/[^\x20-\x7E\s]/', '', $text);
+            $jsonError = json_last_error_msg();
+            Log::warning("JSON encode failed: {$jsonError}, using fallback");
+            
+            // Fallback: use mb_convert to clean, preserving as much as possible
+            $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+            
+            // If still fails, replace invalid sequences with empty string
+            if (@json_encode(['test' => $text]) === false) {
+                // Last resort: strip non-UTF8 bytes but keep ASCII
+                $text = preg_replace('/[^\x09\x0A\x0D\x20-\x7E\xC0-\xFF][\x80-\xBF]*/', '', $text);
+                Log::warning("Applied last-resort UTF-8 cleanup");
+            }
         }
         
-        Log::info("UTF-8 cleanup completed, length: " . strlen($text));
+        Log::info("UTF-8 processing completed, length: " . strlen($text));
         return $text;
     }
 
