@@ -53,12 +53,13 @@ class CleanupTestData extends Command
             $this->info("  ✓ Deleted");
         }
         
-        // Delete users without companies (using subquery since relationship may not exist)
-        $userIdsWithCompanies = DB::table('company_user')->pluck('user_id')->unique()->toArray();
-        $usersWithoutCompanies = User::whereNotIn('id', $userIdsWithCompanies)->get();
-        $this->info("Found {$usersWithoutCompanies->count()} users without companies");
+        // Delete users that don't belong to the kept company
+        $usersToDelete = User::where('company_slug', '!=', $keepSlug)
+            ->orWhereNull('company_slug')
+            ->get();
+        $this->info("Found {$usersToDelete->count()} users to delete");
         
-        foreach ($usersWithoutCompanies as $user) {
+        foreach ($usersToDelete as $user) {
             $this->info("Deleting user: {$user->email}");
             DB::table('sessions')->where('user_id', $user->id)->delete();
             $user->delete();
