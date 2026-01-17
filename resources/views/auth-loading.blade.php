@@ -18,8 +18,11 @@
             } catch(e) {}
         })();
     </script>
-    <!-- Prefetch del dashboard mientras se muestra el video -->
+    <!-- Prefetch de recursos -->
     <link rel="prefetch" href="{{ $redirect }}" as="document">
+    <link rel="prefetch" href="/logo-withmia.webp" as="image">
+    <link rel="prefetch" href="/laurel-logo.webp" as="image">
+    <link rel="prefetch" href="/Logo-Atlantis.webp" as="image">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -73,7 +76,7 @@
             font-weight: 700;
         }
 
-        /* Iframe oculto para precargar el dashboard */
+        /* Iframe oculto para precargar */
         .preload-frame {
             position: absolute;
             width: 1px;
@@ -85,7 +88,7 @@
     </style>
 </head>
 <body>
-    <!-- Iframe oculto que precarga el dashboard mientras se ve el video -->
+    <!-- Iframe oculto que precarga la página destino -->
     <iframe id="preloadFrame" class="preload-frame" aria-hidden="true"></iframe>
 
     <!-- Video overlay -->
@@ -105,29 +108,58 @@
             var targetUrl = "{{ $redirect }}";
             var preloadFrame = document.getElementById('preloadFrame');
             var preloadReady = false;
+            var isLoginPage = targetUrl.includes('/login');
             
-            console.log('[Auth-Loading] Starting preload strategy...');
+            console.log('[Auth-Loading] Starting preload for:', targetUrl);
             
-            // 1. Después de 500ms, empezar a precargar el dashboard en iframe oculto
-            setTimeout(function() {
-                console.log('[Auth-Loading] Preloading dashboard in hidden iframe...');
-                preloadFrame.src = targetUrl;
-                
-                // Marcar como listo cuando cargue (o después de timeout)
-                preloadFrame.onload = function() {
-                    preloadReady = true;
-                    console.log('[Auth-Loading] Dashboard preloaded!');
-                };
-            }, 500);
+            // Precargar recursos comunes inmediatamente
+            var preloadImages = [
+                '/logo-withmia.webp',
+                '/laurel-logo.webp',
+                '/Logo-Atlantis.webp',
+                '/logo-animated.webm'
+            ];
             
-            // 2. A los 2 segundos, garantizar que preloadReady sea true
+            preloadImages.forEach(function(src) {
+                var img = new Image();
+                img.src = src;
+            });
+            
+            // Para login.html usar fetch para precargar el HTML
+            if (isLoginPage) {
+                fetch(targetUrl, { credentials: 'same-origin' })
+                    .then(function(response) {
+                        preloadReady = true;
+                        console.log('[Auth-Loading] Login page preloaded via fetch!');
+                    })
+                    .catch(function() {
+                        preloadReady = true;
+                    });
+            } else {
+                // Para dashboard, usar iframe
+                setTimeout(function() {
+                    preloadFrame.src = targetUrl;
+                    preloadFrame.onload = function() {
+                        preloadReady = true;
+                        console.log('[Auth-Loading] Page preloaded via iframe!');
+                    };
+                }, 300);
+            }
+            
+            // Garantizar que preloadReady sea true después de 2s
             setTimeout(function() {
                 preloadReady = true;
             }, 2000);
             
-            // 3. A los 3 segundos, redirigir (el dashboard ya debería estar en caché)
+            // A los 3 segundos, redirigir
             setTimeout(function() {
-                console.log('[Auth-Loading] Redirecting... (preload ready:', preloadReady, ')');
+                console.log('[Auth-Loading] Redirecting now... (preloaded:', preloadReady, ')');
+                window.location.replace(targetUrl);
+            }, 3000);
+        })();
+    </script>
+</body>
+</html>
                 window.location.replace(targetUrl);
             }, 3000);
         })();
