@@ -1337,10 +1337,12 @@ class EvolutionApiController extends Controller
                     'name' => $node['name'],
                 ];
                 
-                // Incluir credentials si existen
-                if (isset($node['credentials'])) {
-                    $cleanNode['credentials'] = $node['credentials'];
-                }
+                // ⚠️ NO incluir credentials hardcodeadas del template
+                // Las credenciales deben configurarse en N8N directamente
+                // porque los IDs son específicos de cada instalación
+                // if (isset($node['credentials'])) {
+                //     $cleanNode['credentials'] = $node['credentials'];
+                // }
                 
                 // Configurar webhook
                 if ($node['type'] === 'n8n-nodes-base.webhook') {
@@ -1396,7 +1398,12 @@ class EvolutionApiController extends Controller
                     }
                 }
                 
-                // 🎯 OPCIÓN B: Configurar webhook de Evolution API para que apunte DIRECTO a n8n
+                // 🎯 NOTA: NO configuramos webhook directo de Evolution a N8N
+                // El reenvío se hace desde el backend (EvolutionApiController::webhook)
+                // para tener mejor control, logs, y evitar eventos duplicados
+                // Si prefieres webhook directo, descomenta este bloque y comenta
+                // el reenvío en el método webhook()
+                /*
                 $evolutionWebhookResult = $this->evolutionApi->setWebhook(
                     $instance->instance_name,
                     $webhookUrl,
@@ -1408,12 +1415,8 @@ class EvolutionApiController extends Controller
                         'instance' => $instance->instance_name,
                         'n8n_webhook_url' => $webhookUrl
                     ]);
-                } else {
-                    Log::warning('⚠️ No se pudo configurar webhook de Evolution hacia n8n', [
-                        'instance' => $instance->instance_name,
-                        'error' => $evolutionWebhookResult['error'] ?? 'Unknown'
-                    ]);
                 }
+                */
                 
                 // Guardar referencia en la base de datos
                 DB::table('whatsapp_instances')
