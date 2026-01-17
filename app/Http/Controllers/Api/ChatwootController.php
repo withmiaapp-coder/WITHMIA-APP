@@ -250,7 +250,64 @@ class ChatwootController extends Controller
                 'error_occurred' => $errorOccurred
             ]);
 
-            // 🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
+            // � FALLBACK: Si la API falló, obtener conversaciones directamente de la DB
+            if ($errorOccurred && empty($allConversations)) {
+                Log::info("🔄 FALLBACK: Obteniendo conversaciones desde DB de Chatwoot");
+                
+                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+                
+                $conversationsFromDb = $chatwootDb->table('conversations')
+                    ->where('account_id', $this->accountId)
+                    ->where('inbox_id', $this->inboxId)
+                    ->orderBy('last_activity_at', 'desc')
+                    ->limit(50)
+                    ->get();
+                
+                // Obtener contactos
+                $contactIds = $conversationsFromDb->pluck('contact_id')->unique()->toArray();
+                $contacts = $chatwootDb->table('contacts')
+                    ->whereIn('id', $contactIds)
+                    ->get()
+                    ->keyBy('id');
+                
+                foreach ($conversationsFromDb as $conv) {
+                    $contact = $contacts[$conv->contact_id] ?? null;
+                    
+                    // Obtener último mensaje
+                    $lastMessage = $chatwootDb->table('messages')
+                        ->where('conversation_id', $conv->id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    
+                    $allConversations[] = [
+                        'id' => $conv->display_id, // El frontend espera display_id
+                        'account_id' => $conv->account_id,
+                        'inbox_id' => $conv->inbox_id,
+                        'status' => $conv->status == 0 ? 'open' : ($conv->status == 1 ? 'resolved' : 'pending'),
+                        'meta' => [
+                            'sender' => [
+                                'id' => $contact->id ?? null,
+                                'name' => $contact->name ?? 'Contacto',
+                                'phone_number' => $contact->phone_number ?? null,
+                                'identifier' => $contact->identifier ?? null
+                            ]
+                        ],
+                        'messages' => $lastMessage ? [[
+                            'id' => $lastMessage->id,
+                            'content' => $lastMessage->content,
+                            'message_type' => $lastMessage->message_type,
+                            'created_at' => strtotime($lastMessage->created_at)
+                        ]] : [],
+                        'created_at' => strtotime($conv->created_at),
+                        'last_activity_at' => strtotime($conv->last_activity_at),
+                        'from_db_fallback' => true
+                    ];
+                }
+                
+                Log::info("✅ FALLBACK exitoso: " . count($allConversations) . " conversaciones obtenidas de DB");
+            }
+
+            // �🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
             try {
                 $mergeResult = $this->deduplicationService->autoMergeDuplicates($this->inboxId);
                 if ($mergeResult['success'] && isset($mergeResult['merged']) && $mergeResult['merged'] > 0) {
@@ -517,6 +574,7 @@ class ChatwootController extends Controller
             $iteration = 0;
             $maxIterations = 50; // Máximo 1000 mensajes (50 * 20)
             $seenIds = []; // Para evitar loops infinitos
+            $apiError = false;
             
             Log::info("🔄 Iniciando fetch de TODOS los mensajes para conversación {$realConversationId} (requested: {$id})");
             
@@ -529,7 +587,8 @@ class ChatwootController extends Controller
                 ])->get($chatwootUrl, $queryParams);
                 
                 if (!$response->successful()) {
-                    Log::error("❌ Error en iteración {$iteration}: " . $response->status());
+                    Log::error("❌ Error en iteración {$iteration}: " . $response->status() . " - " . $response->body());
+                    $apiError = true;
                     break;
                 }
                 
@@ -581,6 +640,56 @@ class ChatwootController extends Controller
                     Log::info("📭 Batch incompleto ({$batchCount} < 20), fin de paginación");
                     break;
                 }
+            }
+            
+            // 🔄 FALLBACK: Si la API falló, obtener mensajes directamente de la DB
+            if ($apiError && empty($allMessages)) {
+                Log::info("🔄 FALLBACK: Obteniendo mensajes desde DB de Chatwoot");
+                
+                $messagesFromDb = $chatwootDb->table('messages')
+                    ->where('conversation_id', $realConversationId)
+                    ->orderBy('created_at', 'asc')
+                    ->limit(100)
+                    ->get();
+                
+                // Obtener info del contacto
+                $contact = $chatwootDb->table('contacts')
+                    ->where('id', $conversationFromDb->contact_id)
+                    ->first();
+                
+                // Obtener info del usuario (sender para mensajes salientes)
+                $chatwootUser = $chatwootDb->table('users')
+                    ->where('id', $this->userId)
+                    ->first();
+                
+                foreach ($messagesFromDb as $msg) {
+                    $sender = null;
+                    if ($msg->sender_type === 'Contact' && $contact) {
+                        $sender = [
+                            'id' => $contact->id,
+                            'name' => $contact->name ?? 'Contacto',
+                            'type' => 'contact',
+                            'phone_number' => $contact->phone_number
+                        ];
+                    } elseif ($msg->sender_type === 'User' && $chatwootUser) {
+                        $sender = [
+                            'id' => $chatwootUser->id,
+                            'name' => $chatwootUser->name ?? 'Agente',
+                            'type' => 'user'
+                        ];
+                    }
+                    
+                    $allMessages[] = [
+                        'id' => $msg->id,
+                        'content' => $msg->content,
+                        'message_type' => $msg->message_type,
+                        'created_at' => strtotime($msg->created_at),
+                        'sender' => $sender,
+                        'from_db_fallback' => true
+                    ];
+                }
+                
+                Log::info("✅ FALLBACK exitoso: " . count($allMessages) . " mensajes obtenidos de DB");
             }
             
             Log::info("🏁 Total mensajes obtenidos: " . count($allMessages) . " en {$iteration} iteraciones");
