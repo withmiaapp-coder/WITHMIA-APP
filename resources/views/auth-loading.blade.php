@@ -114,17 +114,14 @@
                 console.log('[Auth-Loading] Fading out video...');
                 overlay.classList.add('fade-out');
                 
-                // Después del fade (400ms), redirigir para URL correcta
+                // Después del fade (400ms), actualizar URL SIN recargar
                 setTimeout(function() {
-                    console.log('[Auth-Loading] Redirecting for correct URL...');
-                    window.location.replace(targetUrl);
+                    console.log('[Auth-Loading] Updating URL without reload...');
+                    // Cambiar URL en el navegador SIN recargar la página
+                    history.replaceState(null, '', targetUrl);
+                    // Remover el overlay completamente
+                    overlay.remove();
                 }, 400);
-            }, 3000);
-        })();
-    </script>
-</body>
-</html>
-                window.location.replace(targetUrl);
             }, 3000);
         })();
     </script>
