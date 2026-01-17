@@ -2160,6 +2160,57 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
 });
 
 // 🔧 FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
+// 🔧 FIX DIRECTO: Renombrar inbox forzosamente
+Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $correctInboxName = "WhatsApp {$instanceName}";
+        
+        // Obtener TODOS los inboxes
+        $allInboxes = $chatwootDb->table('inboxes')->get();
+        
+        // Buscar el inbox con account_id=1
+        $inbox = $chatwootDb->table('inboxes')->where('account_id', 1)->first();
+        
+        if (!$inbox) {
+            return response()->json([
+                'error' => 'No se encontró inbox con account_id=1',
+                'all_inboxes' => $allInboxes
+            ], 400);
+        }
+        
+        $oldName = $inbox->name;
+        
+        // Forzar actualización
+        $updated = $chatwootDb->table('inboxes')
+            ->where('id', $inbox->id)
+            ->update([
+                'name' => $correctInboxName,
+                'updated_at' => now()
+            ]);
+        
+        // Verificar después del update
+        $inboxAfter = $chatwootDb->table('inboxes')->where('id', $inbox->id)->first();
+        
+        return response()->json([
+            'success' => true,
+            'updated_rows' => $updated,
+            'inbox_id' => $inbox->id,
+            'old_name' => $oldName,
+            'new_name' => $correctInboxName,
+            'verification' => [
+                'name_after_update' => $inboxAfter->name,
+                'matches' => $inboxAfter->name === $correctInboxName
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
