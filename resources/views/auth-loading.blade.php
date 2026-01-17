@@ -127,35 +127,40 @@
             
             // Para login.html usar fetch para precargar el HTML
             if (isLoginPage) {
-                fetch(targetUrl, { credentials: 'same-origin' })
-                    .then(function(response) {
-                        preloadReady = true;
-                        console.log('[Auth-Loading] Login page preloaded via fetch!');
-                    })
-                    .catch(function() {
-                        preloadReady = true;
-                    });
-            } else {
-                // Para dashboard, usar iframe
+                // Empezar a precargar a los 2 segundos (1 segundo antes de redirigir)
                 setTimeout(function() {
+                    console.log('[Auth-Loading] Preloading login page...');
+                    fetch(targetUrl, { credentials: 'same-origin' })
+                        .then(function(response) {
+                            preloadReady = true;
+                            console.log('[Auth-Loading] Login page preloaded via fetch!');
+                        })
+                        .catch(function() {
+                            preloadReady = true;
+                        });
+                }, 2000);
+            } else {
+                // Para dashboard, usar iframe - empezar a los 2 segundos
+                setTimeout(function() {
+                    console.log('[Auth-Loading] Preloading dashboard in iframe...');
                     preloadFrame.src = targetUrl;
                     preloadFrame.onload = function() {
                         preloadReady = true;
                         console.log('[Auth-Loading] Page preloaded via iframe!');
                     };
-                }, 300);
+                }, 2000);
             }
             
-            // Garantizar que preloadReady sea true después de 2s
+            // Garantizar que preloadReady sea true después de 2.8s
             setTimeout(function() {
                 preloadReady = true;
-            }, 2000);
+            }, 2800);
             
-            // A los 2.5 segundos, redirigir (dando 0.5s extra de margen)
+            // A los 3 segundos, redirigir (el dashboard tuvo 1s para prepararse)
             setTimeout(function() {
                 console.log('[Auth-Loading] Redirecting now... (preloaded:', preloadReady, ')');
                 window.location.replace(targetUrl);
-            }, 2500);
+            }, 3000);
         })();
     </script>
 </body>
