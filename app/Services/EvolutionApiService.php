@@ -967,10 +967,10 @@ class EvolutionApiService
 
         $company = $user->company;
         
-        // CORREGIDO: Usar chatwoot_agent_token del usuario (registrado en access_tokens de Chatwoot)
-        // El chatwoot_api_key de la company es el channel identifier para Evolution API, NO para la API REST
+        // 🔧 FIX: Usar PLATFORM TOKEN para buscar inboxes (necesita permisos de admin)
+        // El chatwoot_agent_token del usuario no tiene acceso a la lista de inboxes
         $chatwootUrl = config('chatwoot.url');
-        $chatwootToken = $user->chatwoot_agent_token ?? config('chatwoot.token');
+        $chatwootToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
         $accountId = $company?->chatwoot_account_id ?? config('chatwoot.account_id', '1');
 
         // Buscar el inbox

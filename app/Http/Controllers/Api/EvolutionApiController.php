@@ -102,10 +102,10 @@ class EvolutionApiController extends Controller
         $company = $user->company;
         
         if ($company && $company->chatwoot_account_id) {
-            // IMPORTANTE: Usar el ACCESS TOKEN del usuario (chatwoot_agent_token)
-            // NO el channel token (chatwoot_api_key) - ese es solo para webhooks
-            // El access_token permite hacer requests a la API REST de Chatwoot
-            $accessToken = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+            // 🔧 FIX CRÍTICO: Para CREAR inboxes necesitamos el Platform Token (admin)
+            // El chatwoot_agent_token del usuario es solo para agentes, NO puede crear inboxes
+            // Usamos el CHATWOOT_PLATFORM_API_TOKEN que tiene permisos de admin
+            $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
             
             // IMPORTANTE: Usar company_slug para el nombre del inbox
             // Esto asegura consistencia con el sync automático que busca "WhatsApp {instanceName}"
@@ -119,9 +119,17 @@ class EvolutionApiController extends Controller
             // Esto soluciona el problema cuando el inbox fue eliminado pero chatwoot_inbox_id aún existe
             $autoCreate = true;
             
+            Log::info('🔧 Chatwoot config for user', [
+                'user_id' => $user->id,
+                'account_id' => $company->chatwoot_account_id,
+                'inbox_name' => $inboxName,
+                'auto_create' => $autoCreate,
+                'has_platform_token' => !empty($platformToken)
+            ]);
+            
             return [
                 'account_id' => $company->chatwoot_account_id,
-                'token' => $accessToken, // ACCESS TOKEN para API REST
+                'token' => $platformToken, // PLATFORM TOKEN para crear inboxes
                 'url' => config('chatwoot.url'),
                 'inbox_name' => $inboxName,
                 'auto_create' => $autoCreate
