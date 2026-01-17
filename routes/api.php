@@ -268,7 +268,114 @@ Route::get('/reset-all-databases/{confirm}', function ($confirm) {
     }
 });
 
-// 🔄 Actualizar workflow RAG existente con el nuevo template
+// � DIAGNOSTICAR INBOXES DE CHATWOOT - Ver configuración actual
+Route::get('/debug-chatwoot-inboxes', function () {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // Obtener todos los inboxes
+        $inboxes = $chatwootDb->table('inboxes')
+            ->select('inboxes.*')
+            ->get();
+        
+        $inboxesData = [];
+        foreach ($inboxes as $inbox) {
+            // Obtener canal asociado
+            $channel = null;
+            if ($inbox->channel_type === 'Channel::Api') {
+                $channel = $chatwootDb->table('channel_api')
+                    ->where('id', $inbox->channel_id)
+                    ->first();
+            }
+            
+            $inboxesData[] = [
+                'id' => $inbox->id,
+                'name' => $inbox->name,
+                'channel_type' => $inbox->channel_type,
+                'channel_id' => $inbox->channel_id,
+                'account_id' => $inbox->account_id,
+                'webhook_url' => $channel->webhook_url ?? null,
+                'has_webhook_error' => $channel && str_contains($channel->webhook_url ?? '', 'evolution-api') 
+                    && str_contains($channel->webhook_url ?? '', '/chatwoot/webhook'),
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'total_inboxes' => count($inboxesData),
+            'inboxes' => $inboxesData,
+            'recommendation' => 'Si hay webhook a evolution-api/chatwoot/webhook, usar /api/fix-chatwoot-inbox-webhook/{inboxId}'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// 🔧 ARREGLAR WEBHOOK DEL INBOX - Quitar el webhook inválido a Evolution
+Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // Obtener inbox
+        $inbox = $chatwootDb->table('inboxes')->find($inboxId);
+        if (!$inbox) {
+            return response()->json(['error' => 'Inbox no encontrado'], 404);
+        }
+        
+        // Obtener canal
+        if ($inbox->channel_type !== 'Channel::Api') {
+            return response()->json(['error' => 'Solo se pueden modificar inboxes de tipo Channel::Api'], 400);
+        }
+        
+        $channel = $chatwootDb->table('channel_api')
+            ->where('id', $inbox->channel_id)
+            ->first();
+        
+        if (!$channel) {
+            return response()->json(['error' => 'Canal no encontrado'], 404);
+        }
+        
+        $oldWebhook = $channel->webhook_url;
+        
+        // El webhook correcto debería ser a tu app, no a Evolution
+        // Evolution recibe mensajes vía su propio webhook global
+        // Chatwoot debería enviar webhooks a tu app
+        $newWebhook = 'https://app.withmia.com/api/chatwoot/webhook';
+        
+        // Actualizar webhook
+        $chatwootDb->table('channel_api')
+            ->where('id', $inbox->channel_id)
+            ->update([
+                'webhook_url' => $newWebhook,
+                'updated_at' => now()
+            ]);
+        
+        Log::info('✅ Webhook de inbox actualizado', [
+            'inbox_id' => $inboxId,
+            'old_webhook' => $oldWebhook,
+            'new_webhook' => $newWebhook
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Webhook actualizado correctamente',
+            'inbox_id' => $inboxId,
+            'inbox_name' => $inbox->name,
+            'old_webhook' => $oldWebhook,
+            'new_webhook' => $newWebhook
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error actualizando webhook de inbox', [
+            'inbox_id' => $inboxId,
+            'error' => $e->getMessage()
+        ]);
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// �🔄 Actualizar workflow RAG existente con el nuevo template
 Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
     try {
         $n8nService = app(\App\Services\N8nService::class);

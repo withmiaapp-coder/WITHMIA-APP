@@ -447,16 +447,16 @@ Route::get('/dashboard/{company}/conversaciones', function (Request $request, $c
     */
 });
 
-// Chatwoot API Routes - UNIFICADO: Usa Api\ChatwootController
+// Chatwoot API Routes
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/api/chatwoot/stats', [App\Http\Controllers\Api\ChatwootController::class, 'getDashboardStats']);
-    Route::get('/api/chatwoot/conversations', [App\Http\Controllers\Api\ChatwootController::class, 'getConversations']);
-    Route::get('/api/chatwoot/conversations/search', [App\Http\Controllers\Api\ChatwootController::class, 'searchConversations']);
-    Route::get('/api/chatwoot/contacts', [App\Http\Controllers\Api\ChatwootController::class, 'getContacts']);
+    Route::get('/api/chatwoot/stats', [App\Http\Controllers\ChatwootController::class, 'getDashboardStats']);
+    Route::get('/api/chatwoot/conversations', [App\Http\Controllers\ChatwootController::class, 'getConversationsV2']);
+    Route::get('/api/chatwoot/conversations/search', [App\Http\Controllers\ChatwootController::class, 'searchConversations']);
+    Route::get('/api/chatwoot/contacts', [App\Http\Controllers\ChatwootController::class, 'getContacts']);
     // Rutas adicionales para funcionalidades completas de Chatwoot
-    Route::get('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\Api\ChatwootController::class, 'getConversationMessages']);
-    Route::post('/api/chatwoot/conversations', [App\Http\Controllers\Api\ChatwootController::class, 'createConversation']);
-    Route::post('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\Api\ChatwootController::class, 'sendMessage']);
+    Route::get('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\ChatwootController::class, 'getConversationMessages']);
+    Route::post('/api/chatwoot/conversations', [App\Http\Controllers\ChatwootController::class, 'createConversation']);
+    Route::post('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\ChatwootController::class, 'sendMessage']);
 });
 
 // ============================================
