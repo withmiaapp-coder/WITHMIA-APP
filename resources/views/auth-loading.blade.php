@@ -18,6 +18,8 @@
             } catch(e) {}
         })();
     </script>
+    <!-- Prefetch del dashboard mientras se muestra el video -->
+    <link rel="prefetch" href="{{ $redirect }}" as="document">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -44,12 +46,6 @@
             justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             opacity: 1;
-            transition: opacity 0.3s ease-out;
-        }
-        
-        .video-overlay.fade-out {
-            opacity: 0;
-            pointer-events: none;
         }
         
         .video-container {
@@ -76,9 +72,22 @@
         .loading-text strong {
             font-weight: 700;
         }
+
+        /* Iframe oculto para precargar el dashboard */
+        .preload-frame {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
+    <!-- Iframe oculto que precarga el dashboard mientras se ve el video -->
+    <iframe id="preloadFrame" class="preload-frame" aria-hidden="true"></iframe>
+
     <!-- Video overlay -->
     <div id="videoOverlay" class="video-overlay">
         <div class="video-container">
@@ -94,18 +103,33 @@
     <script>
         (function() {
             var targetUrl = "{{ $redirect }}";
-            var overlay = document.getElementById('videoOverlay');
-            var minTime = 3000; // 3 segundos mínimo de video
+            var preloadFrame = document.getElementById('preloadFrame');
+            var preloadReady = false;
             
-            console.log('[Auth-Loading] Video showing, will redirect to:', targetUrl);
+            console.log('[Auth-Loading] Starting preload strategy...');
             
-            // Después del tiempo mínimo, redirigir SIN fade out
-            // El fade out causa el flash blanco/negro
+            // 1. Después de 500ms, empezar a precargar el dashboard en iframe oculto
             setTimeout(function() {
-                console.log('[Auth-Loading] Redirecting...');
-                // Redirigir inmediatamente sin fade para evitar flash
+                console.log('[Auth-Loading] Preloading dashboard in hidden iframe...');
+                preloadFrame.src = targetUrl;
+                
+                // Marcar como listo cuando cargue (o después de timeout)
+                preloadFrame.onload = function() {
+                    preloadReady = true;
+                    console.log('[Auth-Loading] Dashboard preloaded!');
+                };
+            }, 500);
+            
+            // 2. A los 2 segundos, garantizar que preloadReady sea true
+            setTimeout(function() {
+                preloadReady = true;
+            }, 2000);
+            
+            // 3. A los 3 segundos, redirigir (el dashboard ya debería estar en caché)
+            setTimeout(function() {
+                console.log('[Auth-Loading] Redirecting... (preload ready:', preloadReady, ')');
                 window.location.replace(targetUrl);
-            }, minTime);
+            }, 3000);
         })();
     </script>
 </body>
