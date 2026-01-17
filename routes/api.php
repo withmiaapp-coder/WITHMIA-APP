@@ -1314,7 +1314,8 @@ Route::get('/regenerate-all-chatwoot-tokens', function () {
 Route::get('/debug-chatwoot-status', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
-        $user = \App\Models\User::first();
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
         $company = $user->company;
         
         // Info del usuario en Laravel
@@ -1334,6 +1335,18 @@ Route::get('/debug-chatwoot-status', function () {
             'chatwoot_inbox_id' => $company->chatwoot_inbox_id ?? null
         ];
         
+        // Usuario en Chatwoot DB
+        $chatwootUser = $chatwootDb->table('users')
+            ->where('id', $user->chatwoot_agent_id)
+            ->first();
+        
+        $chatwootUserInfo = $chatwootUser ? [
+            'id' => $chatwootUser->id,
+            'email' => $chatwootUser->email,
+            'type' => $chatwootUser->type,
+            'name' => $chatwootUser->name
+        ] : ['exists' => false];
+        
         // Token en Chatwoot DB
         $chatwootToken = $chatwootDb->table('access_tokens')
             ->where('owner_type', 'User')
@@ -1344,6 +1357,8 @@ Route::get('/debug-chatwoot-status', function () {
             'exists' => true,
             'token_prefix' => substr($chatwootToken->token, 0, 8) . '...',
             'matches_laravel' => $chatwootToken->token === $user->chatwoot_agent_token,
+            'owner_type' => $chatwootToken->owner_type,
+            'owner_id' => $chatwootToken->owner_id,
             'created_at' => $chatwootToken->created_at
         ] : ['exists' => false];
         
@@ -1372,13 +1387,20 @@ Route::get('/debug-chatwoot-status', function () {
             ->where('account_id', $company->chatwoot_account_id ?? 1)
             ->count();
         
+        // Listar todos los inboxes
+        $inboxes = $chatwootDb->table('inboxes')
+            ->where('account_id', $company->chatwoot_account_id ?? 1)
+            ->get(['id', 'name', 'channel_type']);
+        
         return response()->json([
             'success' => true,
             'laravel_user' => $laravelInfo,
             'company' => $companyInfo,
+            'chatwoot_user' => $chatwootUserInfo,
             'chatwoot_token' => $chatwootTokenInfo,
             'api_test' => $apiTest,
-            'conversations_in_db' => $directCount
+            'conversations_in_db' => $directCount,
+            'inboxes' => $inboxes
         ]);
         
     } catch (\Exception $e) {
@@ -1386,6 +1408,65 @@ Route::get('/debug-chatwoot-status', function () {
             'success' => false,
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// 🔧 FIX: Corregir el tipo de usuario en Chatwoot si está mal
+Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = $userId 
+            ? \App\Models\User::findOrFail($userId)
+            : \App\Models\User::where('email', 'withmia.app@gmail.com')->first() ?? \App\Models\User::first();
+        
+        if (!$user->chatwoot_agent_id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Usuario no tiene chatwoot_agent_id'
+            ], 400);
+        }
+        
+        // Obtener usuario de Chatwoot
+        $chatwootUser = $chatwootDb->table('users')
+            ->where('id', $user->chatwoot_agent_id)
+            ->first();
+        
+        if (!$chatwootUser) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Usuario no existe en Chatwoot DB'
+            ], 404);
+        }
+        
+        $oldType = $chatwootUser->type;
+        
+        // Corregir el tipo si no es 'User'
+        if ($chatwootUser->type !== 'User') {
+            $chatwootDb->table('users')
+                ->where('id', $user->chatwoot_agent_id)
+                ->update(['type' => 'User']);
+            
+            Log::info('✅ Chatwoot user type fixed', [
+                'chatwoot_user_id' => $user->chatwoot_agent_id,
+                'old_type' => $oldType,
+                'new_type' => 'User'
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'user_id' => $user->id,
+            'chatwoot_user_id' => $user->chatwoot_agent_id,
+            'old_type' => $oldType,
+            'new_type' => 'User',
+            'action' => $oldType !== 'User' ? 'fixed' : 'already_correct'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
         ], 500);
     }
 });
