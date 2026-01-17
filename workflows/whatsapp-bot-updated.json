@@ -194,7 +194,7 @@
                                                                                  {
                                                                                      "id":  "collection-name-qdrant",
                                                                                      "name":  "instance.collection_name",
-                                                                                     "value":  "={{ $json.body.collection_name || 'coleccion' }}",
+                                                                                     "value":  "={{ $json.body.collection_name ? $json.body.collection_name : 'ERROR_NO_COLLECTION' }}",
                                                                                      "type":  "string"
                                                                                  }
                                                                              ]
@@ -957,7 +957,7 @@
                                          "toolDescription":  "Herramienta ** Buscar **\nUtiliza esta herramienta para buscar informacion acerca de las consultas que te hagan.",
                                          "qdrantCollection":  {
                                                                   "__rl":  true,
-                                                                  "value":  "={{ $('Normalización 01').item.json.instance.collection_name }}",
+                                                                  "value":  "={{ $('Normalización 01').first().json.instance.collection_name }}",
                                                                   "mode":  "id"
                                                               },
                                          "topK":  15,
