@@ -1,12 +1,12 @@
-{
+﻿{
     "name":  "Whatsapp MIA (Railway)",
     "nodes":  [
                   {
                       "parameters":  {
                                          "promptType":  "define",
-                                         "text":  "=Eres MIA®, asistente digital conversacional.\nSolo te activas cuando el usuario entrega su nombre, su rubro y, si es posible, el nombre de su empresa.\nDesde ese momento:\n\nNo vuelves a presentarte\n\nSimulas cómo automatizarías tareas reales\n\nRespondes como si estuvieras en WhatsApp\n\nNunca inventas la parte del usuario\n\nNunca respondes en bloque\n\nA partir de la cuarta interacción (o antes si fluye), invitas a agendar una reunión para activar MIA® en su negocio real\n\nNo respondas con punto suspendivo (...)\n\n\nThe user sent the following message\ntoday: {{ $now.format(\u0027dd MMM. yyyy\u0027, \u0027es\u0027) }}\nuser name: {{ $(\u0027Normalización 01\u0027).item.json.user.name }}\nuser number: {{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}\nmessage type:{{ $(\u0027Normalización 01\u0027).item.json.message.content_type }}\n\nmessage text or description:\n{{ $(\u0027pregunta_usuario\u0027).item.json.response }}",
+                                         "text":  "=Eres MIAÂ®, asistente digital conversacional.\nSolo te activas cuando el usuario entrega su nombre, su rubro y, si es posible, el nombre de su empresa.\nDesde ese momento:\n\nNo vuelves a presentarte\n\nSimulas cÃ³mo automatizarÃ­as tareas reales\n\nRespondes como si estuvieras en WhatsApp\n\nNunca inventas la parte del usuario\n\nNunca respondes en bloque\n\nA partir de la cuarta interacciÃ³n (o antes si fluye), invitas a agendar una reuniÃ³n para activar MIAÂ® en su negocio real\n\nNo respondas con punto suspendivo (...)\n\n\nThe user sent the following message\ntoday: {{ $now.format(\u0027dd MMM. yyyy\u0027, \u0027es\u0027) }}\nuser name: {{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.user.name }}\nuser number: {{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}\nmessage type:{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.content_type }}\n\nmessage text or description:\n{{ $(\u0027pregunta_usuario\u0027).item.json.response }}",
                                          "options":  {
-                                                         "systemMessage":  "=Eres MIA®, asistente digital conversacional de MIA - Marketing \u0026 Intelligence Artificial SpA.\n\nSolo te activas cuando el usuario entrega su nombre, su rubro y, si es posible, su empresa.\n\nDesde ahí:\n\n- Actúas como si ya estuvieras integrada en su empresa\n- El usuario actúa como su propio cliente\n- Tú respondes como asistente, en un mensaje a la vez\n- Nunca muestras ambos lados de la conversación\n- Nunca narras ni simulas al cliente: solo lo involucras\n- Siempre usas lenguaje natural, cercano y profesional\n- A partir del 4to mensaje (o antes si fluye), invitas a agendar\nNo respondas con punto suspendivo (...)\n\n🎯 OBJETIVO\n\nSimular con realismo cómo funciona MIA® dentro del negocio del usuario. Todo debe sentirse como una conversación real, inmersiva y personalizada.\n\n🧩 PRODUCTOS DE MIA®\n\n**Producto 1: MIA Conecta**  \nWhatsApp, 1.000 consultas/mes, 5 GB, catálogo en tiempo real. Activación en 15 min.  \n💰 $18 USD/mes + $0.30 extra por consulta\n\n**Producto 2: MIA Expande**  \nWhatsApp + Web + Instagram + Gmail + Facebook / 10 GB.  \n💰 $44 USD/mes\n\n**Producto 3: MIA Evoluciona**  \n200 consultas/día, tickets, CRM, reportes, 10.000 productos, 100 GB.  \n💰 $180 USD/mes\n\n**Producto 4: MIA Corporativa**  \nSolución personalizada para grandes empresas.  \n💰 Precio a definir\n\n**Producto 5: MIA Demo**  \nPrueba gratis 7 días en WhatsApp o Web (no ambos).  \n💰 $0 USD\n\n❗ Nunca mencionar precios a menos que el usuario lo solicite.\n\n🚫 PROMPT NEGATIVO — PROHIBIDO:\n\n- No escribir mensajes desde el lado del cliente\n- No narrar lo que diría un cliente\n- No decir “yo podría responder así…”\n- No mostrar ambos lados de la conversación\n- No prometer catálogos, fotos, archivos ni multimedia\n- No crear contenido gráfico ni confirmar pagos\n- No hacer llamadas, audios ni actuar como humano\n\nSolo respondes como una asistente conversacional automatizada.\n\n🚀 ACTIVACIÓN INMERSIVA (REGLA BASE)\n\nCuando el usuario diga “vamos” o entregue su rubro, inicias con:\n\n👉 **Pregúntame como lo haría un cliente de tu negocio, y te mostraré cómo MIA® respondería dentro de tu canal.**  \nYo te contesto como si ya estuviera trabajando contigo 💬\n\n🔁 Debes mantener al menos 3 respuestas seguidas antes de invitar a agendar.\n\n🔚 CIERRE FINAL (si no agenda)\n\nTambién puedes probar MIA® gratis por 7 días 🧪  \nSin tarjeta. Sin compromiso.  \n¿Te muestro cómo activarla?\n\n🔐 VALORES DE MIA®\n\n💬 Conversación real, sin guiones  \n👥 Cercanía profesional  \n⚡ Fluidez en cada canal  \n🧠 Sin promesas falsas  \n🎯 Acciones, no explicaciones\n\nRecordatorios Finales:\n\nEste es el enlace que le debes enviar a la gente cuando pida una reunión: https://calendly.com/a-diaz-withmia/30min \nNo ayudes a elegir un horario disponible ahora mismo porque aun no tienes la capacidad\n- Fecha y hora actual: {{ $now.format(\u0027dd MMM. yyyy\u0027, \u0027es\u0027) }}"
+                                                         "systemMessage":  "=Eres MIAÂ®, asistente digital conversacional de MIA - Marketing \u0026 Intelligence Artificial SpA.\n\nSolo te activas cuando el usuario entrega su nombre, su rubro y, si es posible, su empresa.\n\nDesde ahÃ­:\n\n- ActÃºas como si ya estuvieras integrada en su empresa\n- El usuario actÃºa como su propio cliente\n- TÃº respondes como asistente, en un mensaje a la vez\n- Nunca muestras ambos lados de la conversaciÃ³n\n- Nunca narras ni simulas al cliente: solo lo involucras\n- Siempre usas lenguaje natural, cercano y profesional\n- A partir del 4to mensaje (o antes si fluye), invitas a agendar\nNo respondas con punto suspendivo (...)\n\nðŸŽ¯ OBJETIVO\n\nSimular con realismo cÃ³mo funciona MIAÂ® dentro del negocio del usuario. Todo debe sentirse como una conversaciÃ³n real, inmersiva y personalizada.\n\nðŸ§© PRODUCTOS DE MIAÂ®\n\n**Producto 1: MIA Conecta**  \nWhatsApp, 1.000 consultas/mes, 5â€¯GB, catÃ¡logo en tiempo real. ActivaciÃ³n en 15 min.  \nðŸ’° $18 USD/mes + $0.30 extra por consulta\n\n**Producto 2: MIA Expande**  \nWhatsApp + Web + Instagram + Gmail + Facebook / 10â€¯GB.  \nðŸ’° $44 USD/mes\n\n**Producto 3: MIA Evoluciona**  \n200 consultas/dÃ­a, tickets, CRM, reportes, 10.000 productos, 100â€¯GB.  \nðŸ’° $180 USD/mes\n\n**Producto 4: MIA Corporativa**  \nSoluciÃ³n personalizada para grandes empresas.  \nðŸ’° Precio a definir\n\n**Producto 5: MIA Demo**  \nPrueba gratis 7 dÃ­as en WhatsApp o Web (no ambos).  \nðŸ’° $0 USD\n\nâ— Nunca mencionar precios a menos que el usuario lo solicite.\n\nðŸš« PROMPT NEGATIVO â€” PROHIBIDO:\n\n- No escribir mensajes desde el lado del cliente\n- No narrar lo que dirÃ­a un cliente\n- No decir â€œyo podrÃ­a responder asÃ­â€¦â€\n- No mostrar ambos lados de la conversaciÃ³n\n- No prometer catÃ¡logos, fotos, archivos ni multimedia\n- No crear contenido grÃ¡fico ni confirmar pagos\n- No hacer llamadas, audios ni actuar como humano\n\nSolo respondes como una asistente conversacional automatizada.\n\nðŸš€ ACTIVACIÃ“N INMERSIVA (REGLA BASE)\n\nCuando el usuario diga â€œvamosâ€ o entregue su rubro, inicias con:\n\nðŸ‘‰ **PregÃºntame como lo harÃ­a un cliente de tu negocio, y te mostrarÃ© cÃ³mo MIAÂ® responderÃ­a dentro de tu canal.**  \nYo te contesto como si ya estuviera trabajando contigo ðŸ’¬\n\nðŸ” Debes mantener al menos 3 respuestas seguidas antes de invitar a agendar.\n\nðŸ”š CIERRE FINAL (si no agenda)\n\nTambiÃ©n puedes probar MIAÂ® gratis por 7 dÃ­as ðŸ§ª  \nSin tarjeta. Sin compromiso.  \nÂ¿Te muestro cÃ³mo activarla?\n\nðŸ” VALORES DE MIAÂ®\n\nðŸ’¬ ConversaciÃ³n real, sin guiones  \nðŸ‘¥ CercanÃ­a profesional  \nâš¡ Fluidez en cada canal  \nðŸ§  Sin promesas falsas  \nðŸŽ¯ Acciones, no explicaciones\n\nRecordatorios Finales:\n\nEste es el enlace que le debes enviar a la gente cuando pida una reuniÃ³n: https://calendly.com/a-diaz-withmia/30min \nNo ayudes a elegir un horario disponibleÂ ahoraÂ mismo porque aun no tienes la capacidad\n- Fecha y hora actual: {{ $now.format(\u0027dd MMM. yyyy\u0027, \u0027es\u0027) }}"
                                                      }
                                      },
                       "type":  "@n8n/n8n-nodes-langchain.agent",
@@ -48,7 +48,7 @@
                   {
                       "parameters":  {
                                          "sessionIdType":  "customKey",
-                                         "sessionKey":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}",
+                                         "sessionKey":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}",
                                          "contextWindowLength":  20
                                      },
                       "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
@@ -63,13 +63,13 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
+                                         "url":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.name }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
                                                                                      {
                                                                                          "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
+                                                                                         "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.apikey }}"
                                                                                      }
                                                                                  ]
                                                               },
@@ -78,7 +78,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "number",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}"
+                                                                                       "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "text",
@@ -164,7 +164,7 @@
                                                                                  {
                                                                                      "id":  "092b895e-a7d8-4cdc-83a0-8f9180127dec",
                                                                                      "name":  "message.chat_id",
-                                                                                     "value":  "={{ $json.body.data.key?.remoteJid || $json.body.data.remoteJid || '' }}",
+                                                                                     "value":  "={{ $json.body.data.key?.remoteJid || $json.body.data.remoteJid || \u0027\u0027 }}",
                                                                                      "type":  "string"
                                                                                  },
                                                                                  {
@@ -194,7 +194,7 @@
                                                                                  {
                                                                                      "id":  "collection-name-qdrant",
                                                                                      "name":  "instance.collection_name",
-                                                                                     "value":  "={{ $json.body.collection_name ? $json.body.collection_name : 'ERROR_NO_COLLECTION' }}",
+                                                                                     "value":  "={{ $json.body.collection_name ? $json.body.collection_name : \u0027ERROR_NO_COLLECTION\u0027 }}",
                                                                                      "type":  "string"
                                                                                  }
                                                                              ]
@@ -210,7 +210,7 @@
                                        300
                                    ],
                       "id":  "bf8bc51a-e234-402e-b8a8-d30cf02f579f",
-                      "name":  "Normalización 01"
+                      "name":  "NormalizaciÃ³n 01"
                   },
                   {
                       "parameters":  {
@@ -226,7 +226,7 @@
                                                                                                          },
                                                                                              "conditions":  [
                                                                                                                 {
-                                                                                                                    "leftValue":  "={{ $(\u0027¿Quién Escribe?\u0027).item.json.message.content_type }}",
+                                                                                                                    "leftValue":  "={{ $(\u0027Â¿QuiÃ©n Escribe?\u0027).item.json.message.content_type }}",
                                                                                                                     "rightValue":  "audioaudioMessage",
                                                                                                                     "operator":  {
                                                                                                                                      "type":  "string",
@@ -251,7 +251,7 @@
                                                                                              "conditions":  [
                                                                                                                 {
                                                                                                                     "id":  "feeba954-4e77-435a-b747-b569edcb88c1",
-                                                                                                                    "leftValue":  "={{ $(\u0027¿Quién Escribe?\u0027).item.json.message.content_type }}",
+                                                                                                                    "leftValue":  "={{ $(\u0027Â¿QuiÃ©n Escribe?\u0027).item.json.message.content_type }}",
                                                                                                                     "rightValue":  "imageimageMessage",
                                                                                                                     "operator":  {
                                                                                                                                      "type":  "string",
@@ -276,7 +276,7 @@
                                                                                              "conditions":  [
                                                                                                                 {
                                                                                                                     "id":  "e36246d0-3a10-4473-b678-dea820e91f83",
-                                                                                                                    "leftValue":  "={{ $(\u0027¿Quién Escribe?\u0027).item.json.message.content_type }}",
+                                                                                                                    "leftValue":  "={{ $(\u0027Â¿QuiÃ©n Escribe?\u0027).item.json.message.content_type }}",
                                                                                                                     "rightValue":  "textconversation",
                                                                                                                     "operator":  {
                                                                                                                                      "type":  "string",
@@ -341,13 +341,13 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
+                                         "url":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.name }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
                                                                                      {
                                                                                          "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
+                                                                                         "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.apikey }}"
                                                                                      }
                                                                                  ]
                                                               },
@@ -356,7 +356,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "message.key.id",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.message_id }}"
+                                                                                       "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.message_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "convertToMp4",
@@ -428,13 +428,13 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
+                                         "url":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.name }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
                                                                                      {
                                                                                          "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
+                                                                                         "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.apikey }}"
                                                                                      }
                                                                                  ]
                                                               },
@@ -443,7 +443,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "message.key.id",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.message_id }}"
+                                                                                       "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.message_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "convertToMp4",
@@ -638,7 +638,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Unificación**",
+                                         "content":  "**UnificaciÃ³n**",
                                          "height":  680,
                                          "width":  220,
                                          "color":  6
@@ -655,7 +655,7 @@
                   {
                       "parameters":  {
                                          "operation":  "push",
-                                         "list":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}",
+                                         "list":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}",
                                          "messageData":  "={{ $json.chat_input }}",
                                          "tail":  true
                                      },
@@ -737,7 +737,7 @@
                       "parameters":  {
                                          "operation":  "get",
                                          "propertyName":  "message",
-                                         "key":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}",
+                                         "key":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}",
                                          "options":  {
 
                                                      }
@@ -866,7 +866,7 @@
                   {
                       "parameters":  {
                                          "operation":  "delete",
-                                         "key":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}"
+                                         "key":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}"
                                      },
                       "type":  "n8n-nodes-base.redis",
                       "typeVersion":  1,
@@ -885,7 +885,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Acción**",
+                                         "content":  "**AcciÃ³n**",
                                          "height":  680,
                                          "width":  220,
                                          "color":  5
@@ -934,7 +934,9 @@
                   {
                       "parameters":  {
                                          "model":  "text-embedding-3-small",
-                                         "options":  {}
+                                         "options":  {
+
+                                                     }
                                      },
                       "type":  "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
                       "typeVersion":  1,
@@ -957,7 +959,7 @@
                                          "toolDescription":  "Herramienta ** Buscar **\nUtiliza esta herramienta para buscar informacion acerca de las consultas que te hagan.",
                                          "qdrantCollection":  {
                                                                   "__rl":  true,
-                                                                  "value":  "={{ $('Normalización 01').first().json.instance.collection_name }}",
+                                                                  "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).first().json.instance.collection_name }}",
                                                                   "mode":  "id"
                                                               },
                                          "topK":  15,
@@ -982,7 +984,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Conexión BBDD \"Herramienta Buscar\"**",
+                                         "content":  "**ConexiÃ³n BBDD \"Herramienta Buscar\"**",
                                          "height":  320,
                                          "width":  480,
                                          "color":  4
@@ -1007,7 +1009,7 @@
                                          "messages":  {
                                                           "values":  [
                                                                          {
-                                                                             "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes más pequeñas de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oración ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"partel\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
+                                                                             "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes mÃ¡s pequeÃ±as de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oraciÃ³n ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"partel\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
                                                                          }
                                                                      ]
                                                       },
@@ -1063,13 +1065,13 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
+                                         "url":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.name }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
                                                                                      {
                                                                                          "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
+                                                                                         "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.apikey }}"
                                                                                      }
                                                                                  ]
                                                               },
@@ -1078,7 +1080,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "number",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}"
+                                                                                       "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "text",
@@ -1102,13 +1104,13 @@
                   {
                       "parameters":  {
                                          "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
+                                         "url":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.server_url }}/message/sendText/{{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.name }}",
                                          "sendHeaders":  true,
                                          "headerParameters":  {
                                                                   "parameters":  [
                                                                                      {
                                                                                          "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
+                                                                                         "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.instance.apikey }}"
                                                                                      }
                                                                                  ]
                                                               },
@@ -1117,7 +1119,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "number",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}"
+                                                                                       "value":  "={{ $(\u0027NormalizaciÃ³n 01\u0027).item.json.message.chat_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "text",
@@ -1168,7 +1170,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Envía Primera Respuesta**",
+                                         "content":  "**EnvÃ­a Primera Respuesta**",
                                          "height":  700,
                                          "width":  180,
                                          "color":  3
@@ -1184,7 +1186,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**¿Existe?**",
+                                         "content":  "**Â¿Existe?**",
                                          "height":  700,
                                          "width":  200,
                                          "color":  3
@@ -1200,7 +1202,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Catalogo de Productos y Envío de Imágenes**",
+                                         "content":  "**Catalogo de Productos y EnvÃ­o de ImÃ¡genes**",
                                          "height":  320,
                                          "width":  340,
                                          "color":  4
@@ -1288,7 +1290,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Envía Segunda Respuesta**",
+                                         "content":  "**EnvÃ­a Segunda Respuesta**",
                                          "height":  700,
                                          "width":  180,
                                          "color":  3
@@ -1304,7 +1306,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**Envía Tercera Respuesta**",
+                                         "content":  "**EnvÃ­a Tercera Respuesta**",
                                          "height":  700,
                                          "width":  180,
                                          "color":  3
@@ -1320,7 +1322,7 @@
                   },
                   {
                       "parameters":  {
-                                         "content":  "**¿Existe?**",
+                                         "content":  "**Â¿Existe?**",
                                          "height":  700,
                                          "width":  200,
                                          "color":  3
@@ -1368,59 +1370,7 @@
                   },
                   {
                       "parameters":  {
-                                         "toolDescription":  "Tool para enviar imagen del producto",
-                                         "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.server_url }}/message/sendMedia/{{ $(\u0027Normalización 01\u0027).item.json.instance.name }}",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalización 01\u0027).item.json.instance.apikey }}"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "bodyParameters":  {
-                                                                "parameters":  [
-                                                                                   {
-                                                                                       "name":  "number",
-                                                                                       "value":  "={{ $(\u0027Normalización 01\u0027).item.json.message.chat_id }}"
-                                                                                   },
-                                                                                   {
-                                                                                       "name":  "mediatype",
-                                                                                       "value":  "image"
-                                                                                   },
-                                                                                   {
-                                                                                       "name":  "mimetype",
-                                                                                       "value":  "image/jpeg"
-                                                                                   },
-                                                                                   {
-                                                                                       "name":  "caption",
-                                                                                       "value":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027parameters3_Value\u0027, `El nombre y el precio del producto`, \u0027string\u0027) }}"
-                                                                                   },
-                                                                                   {
-                                                                                       "name":  "media",
-                                                                                       "value":  "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI(\u0027parameters4_Value\u0027, `Url del google drive. debe tener exactamente esta estructura: https://drive.google.com/uc?id=[Idimagen]\u0026export=download`, \u0027string\u0027) }}"
-                                                                                   }
-                                                                               ]
-                                                            },
-                                         "options":  {
-
-                                                     }
-                                     },
-                      "type":  "n8n-nodes-base.httpRequestTool",
-                      "typeVersion":  4.2,
-                      "position":  [
-                                       3260,
-                                       820
-                                   ],
-                      "id":  "8695b024-75ae-440d-bdad-70433c6a56d9",
-                      "name":  "Send Image"
-                  },
-                  {
-                      "parameters":  {
-                                         "description":  "Tu haras que las respuesta sean naturales, si vas a enviar algo sobre los productos, debes enviarlos de buena forma, redactados bien, además con la imagen descargada"
+                                         "description":  "Tu haras que las respuesta sean naturales, si vas a enviar algo sobre los productos, debes enviarlos de buena forma, redactados bien, ademÃ¡s con la imagen descargada"
                                      },
                       "type":  "@n8n/n8n-nodes-langchain.toolThink",
                       "typeVersion":  1,
@@ -1506,7 +1456,7 @@
                                        300
                                    ],
                       "id":  "45c7186a-8975-421a-90ae-4e7db4866481",
-                      "name":  "¿Quién Escribe?"
+                      "name":  "Â¿QuiÃ©n Escribe?"
                   },
                   {
                       "parameters":  {
@@ -1563,7 +1513,7 @@
                   {
                       "parameters":  {
                                          "operation":  "delete",
-                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}"
+                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key?.remoteJid || $(\u0027EVOLUTIONO API\u0027).item.json.body.data.remoteJid || \u0027unknown\u0027 }}"
                                      },
                       "type":  "n8n-nodes-base.redis",
                       "typeVersion":  1,
@@ -1599,7 +1549,7 @@
                   {
                       "parameters":  {
                                          "operation":  "set",
-                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
+                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key?.remoteJid || $(\u0027EVOLUTIONO API\u0027).item.json.body.data.remoteJid || \u0027unknown\u0027 }}",
                                          "value":  "blocked-bot",
                                          "expire":  true,
                                          "ttl":  600
@@ -1668,7 +1618,7 @@
                       "parameters":  {
                                          "operation":  "get",
                                          "propertyName":  "bot-state",
-                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
+                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key?.remoteJid || $(\u0027EVOLUTIONO API\u0027).item.json.body.data.remoteJid || \u0027unknown\u0027 }}",
                                          "options":  {
 
                                                      }
@@ -1700,7 +1650,7 @@
                                                             "conditions":  [
                                                                                {
                                                                                    "id":  "78be9d09-ee25-4088-88a3-97c7b34618ba",
-                                                                                   "leftValue":  "={{ $json['bot-state'] }}",
+                                                                                   "leftValue":  "={{ $json[\u0027bot-state\u0027] }}",
                                                                                    "rightValue":  "",
                                                                                    "operator":  {
                                                                                                     "type":  "string",
@@ -1722,7 +1672,7 @@
                                        540
                                    ],
                       "id":  "c0376a66-4bfd-4a18-ba21-09fa52ef4964",
-                      "name":  "Verifica estado de la sesión"
+                      "name":  "Verifica estado de la sesiÃ³n"
                   },
                   {
                       "parameters":  {
@@ -1745,7 +1695,7 @@
                                          "descriptionType":  "manual",
                                          "toolDescription":  "Cuando el cliente escriba la palabra \"Humano\" o \"Persona\" ejecuta esta tool",
                                          "operation":  "set",
-                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
+                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key?.remoteJid || $(\u0027EVOLUTIONO API\u0027).item.json.body.data.remoteJid || \u0027unknown\u0027 }}",
                                          "value":  "blocked-bot",
                                          "expire":  true,
                                          "ttl":  600
@@ -1812,7 +1762,7 @@
                                                                                                   "fromMe":  false,
                                                                                                   "id":  "3FA940FD669933A3FF99"
                                                                                               },
-                                                                                      "pushName":  "Ángel",
+                                                                                      "pushName":  "Ãngel",
                                                                                       "status":  "DELIVERY_ACK",
                                                                                       "message":  {
                                                                                                       "messageContextInfo":  {
@@ -1888,18 +1838,18 @@
                                                "main":  [
                                                             [
                                                                 {
-                                                                    "node":  "Normalización 01",
+                                                                    "node":  "NormalizaciÃ³n 01",
                                                                     "type":  "main",
                                                                     "index":  0
                                                                 }
                                                             ]
                                                         ]
                                            },
-                        "Normalización 01":  {
+                        "NormalizaciÃ³n 01":  {
                                                   "main":  [
                                                                [
                                                                    {
-                                                                       "node":  "¿Quién Escribe?",
+                                                                       "node":  "Â¿QuiÃ©n Escribe?",
                                                                        "type":  "main",
                                                                        "index":  0
                                                                    }
@@ -2253,7 +2203,7 @@
                                                       ]
                                                   ]
                                   },
-                        "¿Quién Escribe?":  {
+                        "Â¿QuiÃ©n Escribe?":  {
                                                   "main":  [
                                                                [
                                                                    {
@@ -2304,14 +2254,14 @@
                                                  "main":  [
                                                               [
                                                                   {
-                                                                      "node":  "Verifica estado de la sesión",
+                                                                      "node":  "Verifica estado de la sesiÃ³n",
                                                                       "type":  "main",
                                                                       "index":  0
                                                                   }
                                                               ]
                                                           ]
                                              },
-                        "Verifica estado de la sesión":  {
+                        "Verifica estado de la sesiÃ³n":  {
                                                               "main":  [
                                                                            [
                                                                                {
@@ -2357,5 +2307,3 @@
 
              ]
 }
-
-
