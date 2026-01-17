@@ -1758,6 +1758,53 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
     }
 });
 
+// 🧹 Limpiar TODOS los cachés de conversaciones
+Route::get('/flush-all-conversation-cache', function () {
+    try {
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        
+        // Todas las posibles claves de caché
+        $cacheKeys = [
+            "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}",
+            "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}",
+            "conversations_user_1_inbox_1",
+            "conversations:inbox:1:user:1",
+            "chatwoot_conversations_{$user->id}",
+        ];
+        
+        $results = [];
+        foreach ($cacheKeys as $key) {
+            $results[$key] = \Illuminate\Support\Facades\Cache::forget($key);
+        }
+        
+        // También intentar flush de Redis directamente
+        try {
+            $redis = \Illuminate\Support\Facades\Redis::connection();
+            $keys = $redis->keys('*conversation*');
+            foreach ($keys as $key) {
+                $cleanKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
+                $redis->del($cleanKey);
+            }
+            $results['redis_keys_deleted'] = count($keys);
+        } catch (\Exception $e) {
+            $results['redis_error'] = $e->getMessage();
+        }
+        
+        return response()->json([
+            'success' => true,
+            'cache_keys_cleared' => $results,
+            'message' => 'Todos los cachés limpiados. Recarga la app.'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // 🧹 Limpiar caché de conversaciones y regenerar token
 Route::get('/clear-conversations-cache', function () {
     try {
