@@ -178,6 +178,7 @@ class ChatwootController extends Controller
             ]);
 
             // Bucle para cargar todas las páginas
+            $errorOccurred = false;
             while ($hasMorePages) {
                 $params = array_merge($baseParams, ['page' => $currentPage]);
 
@@ -234,8 +235,10 @@ class ChatwootController extends Controller
                 } else {
                     Log::error('Error fetching page', [
                         'page' => $currentPage,
-                        'status' => $response->status()
+                        'status' => $response->status(),
+                        'response' => $response->body()
                     ]);
+                    $errorOccurred = true;
                     $hasMorePages = false;
                 }
             }
@@ -243,7 +246,8 @@ class ChatwootController extends Controller
             Log::info('All conversations fetched successfully', [
                 'user_id' => $this->userId,
                 'total_pages' => $currentPage,
-                'total_conversations' => count($allConversations)
+                'total_conversations' => count($allConversations),
+                'error_occurred' => $errorOccurred
             ]);
 
             // 🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
@@ -262,15 +266,26 @@ class ChatwootController extends Controller
             // 🔗 DEDUPLICACIÓN: Unificar conversaciones duplicadas por identifiers de Evolution
             $allConversations = $this->deduplicateConversationsByEvolutionIdentifiers($allConversations);
 
-            // �💾 Guardar en caché para próximas cargas
-            Cache::put($cacheKey, $allConversations, $cacheTTL);
-            Cache::put($cacheKey . '_timestamp', now()->timestamp, $cacheTTL);
-            Log::info('💾 Conversations saved to CACHE', [
-                'cache_key' => $cacheKey,
-                'ttl_seconds' => $cacheTTL,
-                'timestamp' => now()->timestamp,
-                'total' => count($allConversations)
-            ]);
+            // 💾 Guardar en caché SOLO si no hubo error y hay conversaciones
+            // Si hubo error (401, etc) y tenemos 0 conversaciones, NO cachear para reintentar
+            if (!$errorOccurred || count($allConversations) > 0) {
+                Cache::put($cacheKey, $allConversations, $cacheTTL);
+                Cache::put($cacheKey . '_timestamp', now()->timestamp, $cacheTTL);
+                Log::info('💾 Conversations saved to CACHE', [
+                    'cache_key' => $cacheKey,
+                    'ttl_seconds' => $cacheTTL,
+                    'timestamp' => now()->timestamp,
+                    'total' => count($allConversations)
+                ]);
+            } else {
+                // Limpiar caché existente si hubo error
+                Cache::forget($cacheKey);
+                Cache::forget($cacheKey . '_timestamp');
+                Log::warning('⚠️ NOT caching due to error with 0 conversations', [
+                    'cache_key' => $cacheKey,
+                    'error_occurred' => $errorOccurred
+                ]);
+            }
 
             // Devolver estructura esperada por el frontend
             return response()->json([

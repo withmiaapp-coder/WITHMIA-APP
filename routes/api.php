@@ -1930,6 +1930,54 @@ Route::get('/debug-conversations-from-db', function () {
     }
 });
 
+// 🧹 FLUSH ALL: Limpiar TODO el caché de Redis
+Route::get('/flush-all-cache', function () {
+    try {
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        
+        $deletedKeys = [];
+        
+        // Todas las posibles claves de caché
+        $keysToDelete = [
+            "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}",
+            "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}_timestamp",
+            "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}",
+            "last_message_inbox_{$user->chatwoot_inbox_id}",
+            "conversations_user_1_inbox_1",
+            "conversations_user_1_inbox_1_timestamp",
+        ];
+        
+        foreach ($keysToDelete as $key) {
+            $existed = \Illuminate\Support\Facades\Cache::has($key);
+            \Illuminate\Support\Facades\Cache::forget($key);
+            $deletedKeys[$key] = $existed ? 'deleted' : 'not_found';
+        }
+        
+        // También intentar flush completo si es Redis
+        try {
+            \Illuminate\Support\Facades\Cache::flush();
+            $flushed = true;
+        } catch (\Exception $e) {
+            $flushed = false;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'keys_status' => $deletedKeys,
+            'full_flush' => $flushed,
+            'message' => 'Caché limpiado. Recarga la página.',
+            'next_step' => 'Visita https://app.withmia.com/dashboard/withmia-xrygbo y recarga con Ctrl+F5'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
