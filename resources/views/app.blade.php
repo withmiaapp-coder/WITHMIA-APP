@@ -25,12 +25,25 @@
 
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
-            html {
+            html, body {
                 background-color: oklch(1 0 0);
+                min-height: 100vh;
             }
 
-            html.dark {
+            html.dark, html.dark body {
                 background-color: oklch(0.145 0 0);
+            }
+
+            /* Prevenir flash blanco/negro durante la carga */
+            #app {
+                min-height: 100vh;
+                background-color: inherit;
+            }
+
+            /* Suavizar transición de carga */
+            body {
+                opacity: 1;
+                transition: opacity 0.15s ease-in;
             }
         </style>
 

@@ -25,22 +25,26 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
-            background-color: #fff;
+            /* Fondo blanco base para evitar flash negro */
+            background-color: oklch(1 0 0);
+            background-image: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
         }
         
         .video-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: inherit;
+            /* Mismo fondo que html/body */
+            background-color: oklch(1 0 0);
+            background-image: inherit;
             z-index: 999999;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            transition: opacity 0.5s ease-out;
+            opacity: 1;
+            transition: opacity 0.3s ease-out;
         }
         
         .video-overlay.fade-out {
@@ -95,17 +99,12 @@
             
             console.log('[Auth-Loading] Video showing, will redirect to:', targetUrl);
             
-            // Después del tiempo mínimo, redirigir
+            // Después del tiempo mínimo, redirigir SIN fade out
+            // El fade out causa el flash blanco/negro
             setTimeout(function() {
                 console.log('[Auth-Loading] Redirecting...');
-                
-                // Fade out suave
-                overlay.classList.add('fade-out');
-                
-                // Redirigir después del fade
-                setTimeout(function() {
-                    window.location.replace(targetUrl);
-                }, 400);
+                // Redirigir inmediatamente sin fade para evitar flash
+                window.location.replace(targetUrl);
             }, minTime);
         })();
     </script>
