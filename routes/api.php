@@ -1471,6 +1471,124 @@ Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
     }
 });
 
+// 🔍 DEBUG: Ver configuración de Evolution API + Chatwoot para una instancia
+Route::get('/debug-evolution-chatwoot/{instanceName}', function ($instanceName) {
+    try {
+        // 1. Obtener info de la instancia en Evolution API
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        
+        $instanceResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/instance/fetchInstances", [
+            'instanceName' => $instanceName
+        ]);
+        
+        $instances = $instanceResponse->json();
+        $instanceInfo = null;
+        if (is_array($instances)) {
+            foreach ($instances as $inst) {
+                if (($inst['instance']['instanceName'] ?? '') === $instanceName) {
+                    $instanceInfo = $inst;
+                    break;
+                }
+            }
+        }
+        
+        // 2. Obtener settings de Chatwoot de la instancia
+        $chatwootSettingsResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+        
+        $chatwootSettings = $chatwootSettingsResponse->json();
+        
+        // 3. Ver todos los inboxes en Chatwoot (directamente en DB)
+        $chatwootDb = DB::connection('chatwoot');
+        $allInboxes = $chatwootDb->table('inboxes')->get(['id', 'name', 'account_id', 'channel_type']);
+        
+        // 4. Contar conversaciones por inbox
+        $conversationsByInbox = $chatwootDb->table('conversations')
+            ->select('inbox_id', DB::raw('count(*) as total'))
+            ->groupBy('inbox_id')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'instance_name' => $instanceName,
+            'evolution_instance' => $instanceInfo ? [
+                'status' => $instanceInfo['instance']['status'] ?? null,
+                'integration' => $instanceInfo['instance']['integration'] ?? null,
+            ] : null,
+            'chatwoot_settings_from_evolution' => $chatwootSettings,
+            'all_chatwoot_inboxes' => $allInboxes,
+            'conversations_by_inbox' => $conversationsByInbox
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔧 FIX: Configurar/Reconfigurar Chatwoot en Evolution API
+Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) {
+    try {
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        $chatwootUrl = config('chatwoot.url');
+        $chatwootToken = config('chatwoot.token'); // Platform token
+        
+        // Obtener el account_id y crear inbox_name basado en la instancia
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() ?? \App\Models\User::first();
+        $company = $user->company;
+        $accountId = $company->chatwoot_account_id ?? '1';
+        
+        // Configurar Chatwoot en Evolution API
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey,
+            'Content-Type' => 'application/json'
+        ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
+            'enabled' => true,
+            'accountId' => (string) $accountId,
+            'token' => $chatwootToken,
+            'url' => $chatwootUrl,
+            'signMsg' => false,
+            'reopenConversation' => true,
+            'conversationPending' => false,
+            'nameInbox' => "WhatsApp {$instanceName}",
+            'mergeBrazilContacts' => false,
+            'importContacts' => false,
+            'importMessages' => false,
+            'daysLimitImportMessages' => 0
+        ]);
+        
+        Log::info('🔧 Chatwoot configured in Evolution API', [
+            'instance' => $instanceName,
+            'account_id' => $accountId,
+            'response_status' => $response->status(),
+            'response_body' => $response->json()
+        ]);
+        
+        return response()->json([
+            'success' => $response->successful(),
+            'instance' => $instanceName,
+            'account_id' => $accountId,
+            'chatwoot_url' => $chatwootUrl,
+            'inbox_name' => "WhatsApp {$instanceName}",
+            'evolution_response' => $response->json()
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Failed to setup Chatwoot in Evolution', ['error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::middleware(['web', 'auth'])->group(function () {
     
 });
