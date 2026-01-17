@@ -1646,6 +1646,118 @@ Route::middleware(['web', 'auth'])->group(function () {
     
 });
 
+// 🔍 DEBUG: Probar obtener mensajes de una conversación específica
+Route::get('/debug-conversation-messages/{conversationId}', function ($conversationId) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        $company = $user->company;
+        
+        // Info del usuario
+        $userInfo = [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'chatwoot_agent_token' => $user->chatwoot_agent_token ? substr($user->chatwoot_agent_token, 0, 8) . '...' : null,
+            'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+            'chatwoot_agent_id' => $user->chatwoot_agent_id
+        ];
+        
+        // 1. Buscar la conversación en la DB
+        $conversation = $chatwootDb->table('conversations')
+            ->where('id', $conversationId)
+            ->orWhere('display_id', $conversationId)
+            ->first();
+        
+        if (!$conversation) {
+            return response()->json([
+                'success' => false,
+                'error' => "Conversación no encontrada (id/display_id: {$conversationId})",
+                'user_info' => $userInfo
+            ], 404);
+        }
+        
+        // 2. Obtener mensajes de la DB
+        $messagesFromDb = $chatwootDb->table('messages')
+            ->where('conversation_id', $conversation->id)
+            ->orderBy('created_at', 'asc')
+            ->get(['id', 'content', 'message_type', 'sender_type', 'sender_id', 'created_at']);
+        
+        // 3. Obtener info del contacto
+        $contact = $chatwootDb->table('contacts')
+            ->where('id', $conversation->contact_id)
+            ->first(['id', 'name', 'email', 'phone_number', 'identifier']);
+        
+        // 4. Probar la API de Chatwoot con el token del usuario
+        $apiResult = null;
+        $chatwootUrl = config('chatwoot.url');
+        $accountId = $company->chatwoot_account_id ?? 1;
+        
+        if ($user->chatwoot_agent_token) {
+            // Primero probar obtener la conversación
+            $convResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $user->chatwoot_agent_token,
+                'Content-Type' => 'application/json'
+            ])->timeout(10)->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}");
+            
+            $apiResult['get_conversation'] = [
+                'status' => $convResponse->status(),
+                'success' => $convResponse->successful(),
+                'inbox_id_from_api' => $convResponse->successful() ? ($convResponse->json()['inbox_id'] ?? 'N/A') : null,
+                'error' => !$convResponse->successful() ? $convResponse->body() : null
+            ];
+            
+            // Luego probar obtener mensajes
+            $msgResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $user->chatwoot_agent_token,
+                'Content-Type' => 'application/json'
+            ])->timeout(10)->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
+            
+            $apiResult['get_messages'] = [
+                'status' => $msgResponse->status(),
+                'success' => $msgResponse->successful(),
+                'messages_count' => $msgResponse->successful() ? count($msgResponse->json()['payload'] ?? []) : 0,
+                'raw_response' => $msgResponse->json()
+            ];
+        }
+        
+        // 5. Verificar si hay mismatch de inbox_id
+        $inboxMismatch = $conversation->inbox_id != $user->chatwoot_inbox_id;
+        
+        return response()->json([
+            'success' => true,
+            'user_info' => $userInfo,
+            'conversation' => [
+                'id' => $conversation->id,
+                'display_id' => $conversation->display_id,
+                'inbox_id' => $conversation->inbox_id,
+                'contact_id' => $conversation->contact_id,
+                'status' => $conversation->status,
+                'assignee_id' => $conversation->assignee_id ?? null
+            ],
+            'inbox_mismatch' => $inboxMismatch,
+            'inbox_mismatch_details' => $inboxMismatch ? [
+                'conversation_inbox_id' => $conversation->inbox_id,
+                'user_inbox_id' => $user->chatwoot_inbox_id,
+                'problem' => 'El usuario tiene un inbox_id diferente al de la conversación'
+            ] : null,
+            'contact' => $contact,
+            'messages_in_db' => [
+                'count' => $messagesFromDb->count(),
+                'messages' => $messagesFromDb
+            ],
+            'api_test' => $apiResult
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
