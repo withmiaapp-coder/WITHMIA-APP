@@ -114,9 +114,10 @@ class EvolutionApiController extends Controller
                 ? "WhatsApp {$user->company_slug}" 
                 : "WhatsApp {$company->name}";
             
-            // Si la empresa ya tiene chatwoot_inbox_id, usar autoCreate=false
-            // para evitar crear inboxes duplicados al reconectar
-            $autoCreate = empty($company->chatwoot_inbox_id);
+            // 🔧 FIX: Siempre usar auto_create=true para asegurar que el inbox exista
+            // Evolution API NO crea duplicados si el inbox ya existe con el mismo nombre
+            // Esto soluciona el problema cuando el inbox fue eliminado pero chatwoot_inbox_id aún existe
+            $autoCreate = true;
             
             return [
                 'account_id' => $company->chatwoot_account_id,
@@ -345,6 +346,30 @@ class EvolutionApiController extends Controller
                     'instance' => $instanceName,
                     'error' => $syncResult['error']
                 ]);
+                
+                // 🔧 FIX: Si el inbox no existe en Chatwoot, limpiar el inbox_id guardado
+                // Esto forzará auto_create=true en la próxima reconexión
+                if (str_contains($syncResult['error'] ?? '', 'not found')) {
+                    $company = $user->company;
+                    if ($company && $company->chatwoot_inbox_id) {
+                        Log::warning('🗑️ Clearing stale chatwoot_inbox_id - inbox does not exist in Chatwoot', [
+                            'instance' => $instanceName,
+                            'old_inbox_id' => $company->chatwoot_inbox_id
+                        ]);
+                        $company->chatwoot_inbox_id = null;
+                        $company->save();
+                        
+                        // También limpiar del usuario
+                        if ($user->chatwoot_inbox_id) {
+                            $user->chatwoot_inbox_id = null;
+                            $user->save();
+                        }
+                        
+                        // Limpiar cache para forzar recreación
+                        \Cache::forget("inbox_sync_{$instanceName}");
+                        \Cache::forget("whatsapp_status_{$instanceName}");
+                    }
+                }
             }
         } catch (\Exception $e) {
             Log::error('Exception syncing Chatwoot inbox_id', [
