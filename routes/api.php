@@ -9,7 +9,184 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// 🔧 FIX TEMPORAL: Arreglar usuarios sin inbox_id
+// � REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token válido para el usuario
+Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // Obtener usuario de Laravel
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado en Laravel'], 404);
+        }
+        
+        // Verificar si tiene chatwoot_agent_id
+        if (!$user->chatwoot_agent_id) {
+            return response()->json([
+                'error' => 'Usuario no tiene chatwoot_agent_id',
+                'suggestion' => 'Ejecutar provisioning primero'
+            ], 400);
+        }
+        
+        // Verificar que el usuario existe en Chatwoot
+        $chatwootUser = $chatwootDb->table('users')->find($user->chatwoot_agent_id);
+        if (!$chatwootUser) {
+            return response()->json([
+                'error' => 'Usuario no encontrado en Chatwoot',
+                'chatwoot_agent_id' => $user->chatwoot_agent_id
+            ], 404);
+        }
+        
+        // Eliminar tokens anteriores del usuario
+        $deletedTokens = $chatwootDb->table('access_tokens')
+            ->where('owner_type', 'User')
+            ->where('owner_id', $user->chatwoot_agent_id)
+            ->delete();
+        
+        // Generar nuevo token
+        $newToken = \Illuminate\Support\Str::random(24);
+        
+        // Insertar en Chatwoot
+        $chatwootDb->table('access_tokens')->insert([
+            'owner_type' => 'User',
+            'owner_id' => $user->chatwoot_agent_id,
+            'token' => $newToken,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Actualizar en Laravel
+        $user->update([
+            'chatwoot_agent_token' => $newToken
+        ]);
+        
+        Log::info('✅ Token de Chatwoot regenerado', [
+            'user_id' => $userId,
+            'chatwoot_agent_id' => $user->chatwoot_agent_id,
+            'deleted_old_tokens' => $deletedTokens,
+            'new_token_prefix' => substr($newToken, 0, 8) . '...'
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Token regenerado exitosamente',
+            'user_id' => $userId,
+            'email' => $user->email,
+            'chatwoot_agent_id' => $user->chatwoot_agent_id,
+            'deleted_old_tokens' => $deletedTokens,
+            'new_token' => $newToken
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error regenerando token de Chatwoot', [
+            'user_id' => $userId,
+            'error' => $e->getMessage()
+        ]);
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔍 VERIFICAR ESTADO COMPLETO DE UN USUARIO EN CHATWOOT
+Route::get('/debug-user-chatwoot/{userId}', function ($userId) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+        
+        $company = $user->company;
+        
+        // Datos de Laravel
+        $laravelData = [
+            'id' => $user->id,
+            'email' => $user->email,
+            'name' => $user->name,
+            'company_slug' => $user->company_slug,
+            'chatwoot_agent_id' => $user->chatwoot_agent_id,
+            'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+            'chatwoot_agent_token' => $user->chatwoot_agent_token ? substr($user->chatwoot_agent_token, 0, 8) . '...' : null,
+            'chatwoot_agent_token_length' => strlen($user->chatwoot_agent_token ?? '')
+        ];
+        
+        $companyData = $company ? [
+            'id' => $company->id,
+            'name' => $company->name,
+            'slug' => $company->slug,
+            'chatwoot_account_id' => $company->chatwoot_account_id,
+            'chatwoot_inbox_id' => $company->chatwoot_inbox_id,
+            'chatwoot_api_key' => $company->chatwoot_api_key ? substr($company->chatwoot_api_key, 0, 8) . '...' : null
+        ] : null;
+        
+        // Datos de Chatwoot
+        $chatwootUser = $user->chatwoot_agent_id 
+            ? $chatwootDb->table('users')->find($user->chatwoot_agent_id) 
+            : null;
+        
+        $accessTokens = $user->chatwoot_agent_id 
+            ? $chatwootDb->table('access_tokens')
+                ->where('owner_type', 'User')
+                ->where('owner_id', $user->chatwoot_agent_id)
+                ->get()
+            : collect([]);
+        
+        $tokenMatch = false;
+        foreach ($accessTokens as $token) {
+            if ($token->token === $user->chatwoot_agent_token) {
+                $tokenMatch = true;
+                break;
+            }
+        }
+        
+        $accountUser = $user->chatwoot_agent_id && $company && $company->chatwoot_account_id
+            ? $chatwootDb->table('account_users')
+                ->where('user_id', $user->chatwoot_agent_id)
+                ->where('account_id', $company->chatwoot_account_id)
+                ->first()
+            : null;
+        
+        $inboxMember = $user->chatwoot_agent_id && $user->chatwoot_inbox_id
+            ? $chatwootDb->table('inbox_members')
+                ->where('user_id', $user->chatwoot_agent_id)
+                ->where('inbox_id', $user->chatwoot_inbox_id)
+                ->first()
+            : null;
+        
+        return response()->json([
+            'success' => true,
+            'laravel' => $laravelData,
+            'company' => $companyData,
+            'chatwoot' => [
+                'user_exists' => $chatwootUser ? true : false,
+                'user' => $chatwootUser ? [
+                    'id' => $chatwootUser->id,
+                    'email' => $chatwootUser->email,
+                    'name' => $chatwootUser->name
+                ] : null,
+                'access_tokens_count' => $accessTokens->count(),
+                'token_match' => $tokenMatch,
+                'account_user_exists' => $accountUser ? true : false,
+                'account_user_role' => $accountUser ? $accountUser->role : null,
+                'inbox_member_exists' => $inboxMember ? true : false
+            ],
+            'diagnosis' => [
+                'has_chatwoot_user' => $chatwootUser ? '✅' : '❌ No existe en Chatwoot',
+                'has_valid_token' => $tokenMatch ? '✅' : '❌ Token no coincide',
+                'has_account_access' => $accountUser ? '✅' : '❌ No tiene acceso a account',
+                'has_inbox_access' => $inboxMember ? '✅' : '❌ No tiene acceso a inbox',
+                'recommendation' => !$tokenMatch ? 'Ejecutar /api/regenerate-chatwoot-token/' . $userId : 'Token OK'
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// �🔧 FIX TEMPORAL: Arreglar usuarios sin inbox_id
 Route::get('/fix-user-inbox/{email}', function ($email) {
     $updated = DB::table('users')
         ->where('email', $email)
