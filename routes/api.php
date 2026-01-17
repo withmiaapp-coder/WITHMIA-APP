@@ -1252,6 +1252,144 @@ Route::get('/fix-all-chatwoot-tokens', function () {
     }
 });
 
+// 🔧 FIX FORZADO: Regenera TODOS los tokens de Chatwoot (borra los viejos y crea nuevos)
+Route::get('/regenerate-all-chatwoot-tokens', function () {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $users = \App\Models\User::whereNotNull('chatwoot_agent_id')->get();
+        $results = [];
+        
+        foreach ($users as $user) {
+            // BORRAR token existente si hay
+            $chatwootDb->table('access_tokens')
+                ->where('owner_type', 'User')
+                ->where('owner_id', $user->chatwoot_agent_id)
+                ->delete();
+            
+            // Crear nuevo token
+            $newToken = \Illuminate\Support\Str::random(24);
+            $chatwootDb->table('access_tokens')->insert([
+                'owner_type' => 'User',
+                'owner_id' => $user->chatwoot_agent_id,
+                'token' => $newToken,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            
+            // Actualizar en Laravel
+            $user->update(['chatwoot_agent_token' => $newToken]);
+            
+            $results[] = [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'chatwoot_agent_id' => $user->chatwoot_agent_id,
+                'action' => 'regenerated',
+                'token_prefix' => substr($newToken, 0, 8) . '...'
+            ];
+        }
+        
+        // Limpiar cache de conversaciones
+        \Illuminate\Support\Facades\Cache::flush();
+        
+        Log::info('🔄 All Chatwoot tokens REGENERATED', ['count' => count($results)]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Todos los tokens REGENERADOS (viejos borrados, nuevos creados)',
+            'total_users' => count($results),
+            'cache_cleared' => true,
+            'results' => $results
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Error regenerating Chatwoot tokens', ['error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔍 DEBUG: Ver estado de tokens y conversaciones
+Route::get('/debug-chatwoot-status', function () {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::first();
+        $company = $user->company;
+        
+        // Info del usuario en Laravel
+        $laravelInfo = [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'chatwoot_agent_id' => $user->chatwoot_agent_id,
+            'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+            'chatwoot_agent_token' => $user->chatwoot_agent_token ? substr($user->chatwoot_agent_token, 0, 8) . '...' : null
+        ];
+        
+        // Info de la company
+        $companyInfo = [
+            'company_id' => $company->id ?? null,
+            'chatwoot_account_id' => $company->chatwoot_account_id ?? null,
+            'chatwoot_api_key' => $company->chatwoot_api_key ? substr($company->chatwoot_api_key, 0, 8) . '...' : null,
+            'chatwoot_inbox_id' => $company->chatwoot_inbox_id ?? null
+        ];
+        
+        // Token en Chatwoot DB
+        $chatwootToken = $chatwootDb->table('access_tokens')
+            ->where('owner_type', 'User')
+            ->where('owner_id', $user->chatwoot_agent_id)
+            ->first();
+        
+        $chatwootTokenInfo = $chatwootToken ? [
+            'exists' => true,
+            'token_prefix' => substr($chatwootToken->token, 0, 8) . '...',
+            'matches_laravel' => $chatwootToken->token === $user->chatwoot_agent_token,
+            'created_at' => $chatwootToken->created_at
+        ] : ['exists' => false];
+        
+        // Probar API de Chatwoot
+        $apiTest = null;
+        if ($user->chatwoot_agent_token) {
+            $chatwootUrl = config('chatwoot.url');
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $user->chatwoot_agent_token,
+            ])->timeout(5)->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/conversations", [
+                'inbox_id' => $user->chatwoot_inbox_id,
+                'page' => 1,
+                'per_page' => 5
+            ]);
+            
+            $apiTest = [
+                'status' => $response->status(),
+                'success' => $response->successful(),
+                'conversations_count' => $response->successful() ? count($response->json()['data']['payload'] ?? []) : 0,
+                'error' => !$response->successful() ? $response->body() : null
+            ];
+        }
+        
+        // Contar conversaciones en Chatwoot DB directamente
+        $directCount = $chatwootDb->table('conversations')
+            ->where('account_id', $company->chatwoot_account_id ?? 1)
+            ->count();
+        
+        return response()->json([
+            'success' => true,
+            'laravel_user' => $laravelInfo,
+            'company' => $companyInfo,
+            'chatwoot_token' => $chatwootTokenInfo,
+            'api_test' => $apiTest,
+            'conversations_in_db' => $directCount
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 Route::middleware(['web', 'auth'])->group(function () {
     
 });
@@ -1264,4 +1402,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
     Route::post('/workflows/company/{companyId}/toggle', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'toggleWorkflow']);
 });
-
