@@ -2053,6 +2053,112 @@ Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
     }
 });
 
+// 🔧 SYNC COMPLETO: Sincronizar Evolution API con Chatwoot usando el inbox EXISTENTE
+Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceName) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        $company = $user->company;
+        $accountId = $company->chatwoot_account_id ?? 1;
+        
+        // 1. Obtener el inbox REAL de Chatwoot (el que ya existe)
+        $existingInbox = $chatwootDb->table('inboxes')
+            ->where('account_id', $accountId)
+            ->first();
+        
+        if (!$existingInbox) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No hay inbox en Chatwoot. Primero completa el onboarding.'
+            ], 400);
+        }
+        
+        $inboxName = $existingInbox->name;
+        $inboxId = $existingInbox->id;
+        
+        // 2. Obtener el channel_api para obtener el token correcto
+        $channelApi = $chatwootDb->table('channel_api')
+            ->where('id', $existingInbox->channel_id)
+            ->first();
+        
+        $channelToken = $channelApi->identifier ?? $company->chatwoot_api_key;
+        
+        // 3. Configurar Evolution API con los datos CORRECTOS
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        $chatwootUrl = config('chatwoot.url');
+        
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey,
+            'Content-Type' => 'application/json'
+        ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
+            'enabled' => true,
+            'accountId' => (string) $accountId,
+            'token' => $channelToken, // Token del channel_api (para webhook)
+            'url' => $chatwootUrl,
+            'signMsg' => false,
+            'reopenConversation' => true,
+            'conversationPending' => false,
+            'nameInbox' => $inboxName, // Nombre REAL del inbox existente
+            'mergeBrazilContacts' => false,
+            'importContacts' => false,
+            'importMessages' => false,
+            'daysLimitImportMessages' => 0,
+            'autoCreate' => false // NO crear inbox nuevo, usar el existente
+        ]);
+        
+        // 4. Actualizar el usuario con el inbox_id correcto
+        $user->chatwoot_inbox_id = $inboxId;
+        $user->save();
+        
+        // 5. Actualizar la company si es necesario
+        if ($company->chatwoot_inbox_id != $inboxId) {
+            $company->chatwoot_inbox_id = $inboxId;
+            $company->save();
+        }
+        
+        // 6. Limpiar caché
+        \Illuminate\Support\Facades\Cache::flush();
+        
+        Log::info('🔄 SYNC Evolution-Chatwoot completado', [
+            'instance' => $instanceName,
+            'inbox_name' => $inboxName,
+            'inbox_id' => $inboxId,
+            'account_id' => $accountId,
+            'channel_token' => substr($channelToken, 0, 8) . '...'
+        ]);
+        
+        return response()->json([
+            'success' => $response->successful(),
+            'instance' => $instanceName,
+            'chatwoot_config' => [
+                'account_id' => $accountId,
+                'inbox_id' => $inboxId,
+                'inbox_name' => $inboxName,
+                'channel_token' => substr($channelToken, 0, 8) . '...'
+            ],
+            'user_updated' => [
+                'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+                'chatwoot_agent_token' => substr($user->chatwoot_agent_token ?? '', 0, 8) . '...'
+            ],
+            'evolution_response' => $response->json(),
+            'next_steps' => [
+                '1' => 'El sistema está sincronizado',
+                '2' => 'Envía un mensaje desde WhatsApp',
+                '3' => 'Recarga la app para ver la conversación'
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
