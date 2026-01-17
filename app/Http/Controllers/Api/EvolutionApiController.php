@@ -1337,12 +1337,10 @@ class EvolutionApiController extends Controller
                     'name' => $node['name'],
                 ];
                 
-                // ⚠️ NO incluir credentials hardcodeadas del template
-                // Las credenciales deben configurarse en N8N directamente
-                // porque los IDs son específicos de cada instalación
-                // if (isset($node['credentials'])) {
-                //     $cleanNode['credentials'] = $node['credentials'];
-                // }
+                // Incluir credentials si existen (ya tienen IDs correctos en el template)
+                if (isset($node['credentials'])) {
+                    $cleanNode['credentials'] = $node['credentials'];
+                }
                 
                 // Configurar webhook
                 if ($node['type'] === 'n8n-nodes-base.webhook') {
