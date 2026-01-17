@@ -106,21 +106,27 @@
             var targetUrl = "{{ $redirect }}";
             var overlay = document.getElementById('videoOverlay');
             var backgroundFrame = document.getElementById('backgroundFrame');
+            var iframeLoaded = false;
             
-            console.log('[Auth-Loading] Video playing, destination loading behind...');
+            console.log('[Auth-Loading] Video playing, destination loading in iframe...');
             
-            // A los 3 segundos: fade out del video, revela el destino ya cargado
+            // Detectar cuando iframe termina de cargar
+            backgroundFrame.onload = function() {
+                iframeLoaded = true;
+                console.log('[Auth-Loading] Iframe loaded completely');
+            };
+            
+            // A los 3 segundos: fade out y navegar AL CONTENIDO del iframe
             setTimeout(function() {
                 console.log('[Auth-Loading] Fading out video...');
                 overlay.classList.add('fade-out');
                 
-                // Después del fade (400ms), actualizar URL SIN recargar
+                // Después del fade (400ms), navegar directamente
                 setTimeout(function() {
-                    console.log('[Auth-Loading] Updating URL without reload...');
-                    // Cambiar URL en el navegador SIN recargar la página
-                    history.replaceState(null, '', targetUrl);
-                    // Remover el overlay completamente
-                    overlay.remove();
+                    console.log('[Auth-Loading] Navigating to destination...');
+                    // Si iframe cargó, el contenido está en caché - redirect será instantáneo
+                    // Usamos location.href para navegar (caché del browser hace que sea rápido)
+                    window.location.href = targetUrl;
                 }, 400);
             }, 3000);
         })();
