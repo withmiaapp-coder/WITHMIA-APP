@@ -1700,10 +1700,10 @@
                                                             "conditions":  [
                                                                                {
                                                                                    "id":  "78be9d09-ee25-4088-88a3-97c7b34618ba",
-                                                                                   "leftValue":  "={{ $json[\u0027bot-state\u0027] }}",
+                                                                                   "leftValue":  "={{ $json['bot-state'] }}",
                                                                                    "rightValue":  "",
                                                                                    "operator":  {
-                                                                                                    "type":  "dateTime",
+                                                                                                    "type":  "string",
                                                                                                     "operation":  "exists",
                                                                                                     "singleValue":  true
                                                                                                 }
