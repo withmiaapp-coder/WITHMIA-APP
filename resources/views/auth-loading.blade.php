@@ -151,11 +151,11 @@
                 preloadReady = true;
             }, 2000);
             
-            // A los 3 segundos, redirigir
+            // A los 2.5 segundos, redirigir (dando 0.5s extra de margen)
             setTimeout(function() {
                 console.log('[Auth-Loading] Redirecting now... (preloaded:', preloadReady, ')');
                 window.location.replace(targetUrl);
-            }, 3000);
+            }, 2500);
         })();
     </script>
 </body>
