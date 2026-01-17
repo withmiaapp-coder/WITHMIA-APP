@@ -332,8 +332,8 @@ Route::get('/logout', function () {
         \Log::error('Logout error: ' . $e->getMessage());
     }
     
-    // Redirigir directamente al login (es página estática, carga rápido)
-    return redirect('/login');
+    // Mostrar pantalla de transición con video
+    return view('auth-loading', ['redirect' => '/login']);
 })->name('logout.get');
 
 // Ruta para mostrar pantalla de carga con video
