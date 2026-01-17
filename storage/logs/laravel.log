@@ -53,3 +53,31 @@
 [2025-11-23 14:13:09] production.INFO: Page fetched and filtered {"page":3,"conversations_in_page":16,"after_inbox_filter":16,"total_so_far":66,"evolutionapi_filtered":true} 
 [2025-11-23 14:13:09] production.INFO: All conversations fetched successfully {"user_id":1,"total_pages":4,"total_conversations":66} 
 [2025-11-23 14:13:09] production.INFO: 💾 Conversations saved to CACHE {"cache_key":"conversations_user_1_inbox_1","ttl_seconds":60,"timestamp":1763917989,"total":66} 
+[2026-01-17 19:13:03] local.ERROR: The C:\Users\angel\OneDrive - UNIVERSIDAD ANDRES BELLO\Documents\WITHMIA\mia-app\bootstrap\cache directory must be present and writable. {"exception":"[object] (Exception(code: 0): The C:\\Users\\angel\\OneDrive - UNIVERSIDAD ANDRES BELLO\\Documents\\WITHMIA\\mia-app\\bootstrap\\cache directory must be present and writable. at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php:179)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(132): Illuminate/Foundation/PackageManifest->write(Array)
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(108): Illuminate/Foundation/PackageManifest->build()
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(90): Illuminate/Foundation/PackageManifest->getManifest()
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(79): Illuminate/Foundation/PackageManifest->config('aliases')
+#4 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/RegisterFacades.php(26): Illuminate/Foundation/PackageManifest->aliases()
+#5 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/RegisterFacades->bootstrap(Object(Illuminate/Foundation/Application))
+#6 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(494): Illuminate/Foundation/Application->bootstrapWith(Array)
+#7 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(196): Illuminate/Foundation/Console/Kernel->bootstrap()
+#8 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate/Foundation/Console/Kernel->handle(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#9 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/artisan(16): Illuminate/Foundation/Application->handleCommand(Object(Symfony/Component/Console/Input/ArgvInput))
+#10 {main}
+"} 
+[2026-01-17 19:14:18] local.ERROR: The C:\Users\angel\OneDrive - UNIVERSIDAD ANDRES BELLO\Documents\WITHMIA\mia-app\bootstrap\cache directory must be present and writable. {"exception":"[object] (Exception(code: 0): The C:\\Users\\angel\\OneDrive - UNIVERSIDAD ANDRES BELLO\\Documents\\WITHMIA\\mia-app\\bootstrap\\cache directory must be present and writable. at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php:179)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(132): Illuminate/Foundation/PackageManifest->write(Array)
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(108): Illuminate/Foundation/PackageManifest->build()
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(90): Illuminate/Foundation/PackageManifest->getManifest()
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/PackageManifest.php(79): Illuminate/Foundation/PackageManifest->config('aliases')
+#4 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/RegisterFacades.php(26): Illuminate/Foundation/PackageManifest->aliases()
+#5 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(342): Illuminate/Foundation/Bootstrap/RegisterFacades->bootstrap(Object(Illuminate/Foundation/Application))
+#6 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(494): Illuminate/Foundation/Application->bootstrapWith(Array)
+#7 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(196): Illuminate/Foundation/Console/Kernel->bootstrap()
+#8 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate/Foundation/Console/Kernel->handle(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#9 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/artisan(16): Illuminate/Foundation/Application->handleCommand(Object(Symfony/Component/Console/Input/ArgvInput))
+#10 {main}
+"} 

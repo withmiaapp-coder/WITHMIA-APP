@@ -1,0 +1,23 @@
+[phases.setup]
+  nixPkgs = ['php83', 'php83Packages.composer', 'postgresql', 'php83Extensions.pdo', 'php83Extensions.pdo_pgsql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif', 'php83Extensions.redis', 'php83Extensions.pcntl']
+  nixLibs = ['libjpeg', 'libpng', 'freetype', 'zlib']
+
+[phases.install]
+  cmds = [
+    'composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs'
+  ]
+
+[phases.build]
+  cmds = [
+    'php artisan config:cache',
+    'php artisan event:cache',
+    'php artisan horizon:publish || true'
+  ]
+
+[start]
+  cmd = 'php artisan horizon'
+
+# Worker service using Laravel Horizon
+# - Auto-scaling workers based on queue load
+# - Dashboard at /horizon (admins only)
+# - Automatic retry and failure handling
