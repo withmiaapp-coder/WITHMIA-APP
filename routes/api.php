@@ -2218,11 +2218,15 @@ Route::get('/raw-inbox-check', function () {
     // Query directa sin caché
     $inboxes = $chatwootDb->select('SELECT id, name, account_id, channel_id, channel_type, updated_at FROM inboxes ORDER BY id');
     $channels = $chatwootDb->select('SELECT id, account_id, identifier FROM channel_api ORDER BY id');
+    $accessTokens = $chatwootDb->select('SELECT id, owner_id, owner_type, token FROM access_tokens ORDER BY id');
+    $users = $chatwootDb->select('SELECT id, name, email FROM users ORDER BY id');
     
     return response()->json([
         'timestamp' => now()->toIso8601String(),
         'inboxes' => $inboxes,
         'channel_api' => $channels,
+        'access_tokens' => $accessTokens,
+        'users' => $users,
         'connection' => config('database.connections.chatwoot.host')
     ]);
 });
