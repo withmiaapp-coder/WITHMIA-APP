@@ -615,7 +615,54 @@ class KnowledgeController extends Controller
             }
 
             if (!$webhookPath || !$workflowId) {
+                // Antes de crear, buscar si ya existe un workflow RAG para esta empresa en N8N
+                try {
+                    $searchResponse = Http::withHeaders([
+                        'X-N8N-API-KEY' => $n8nApiKey
+                    ])->get("{$n8nUrl}/api/v1/workflows");
+                    
+                    if ($searchResponse->successful()) {
+                        $workflows = $searchResponse->json()['data'] ?? [];
+                        $expectedName = "RAG Documents - {$companySlug}";
+                        
+                        foreach ($workflows as $wf) {
+                            if (stripos($wf['name'] ?? '', "RAG Documents - {$companySlug}") !== false || 
+                                stripos($wf['name'] ?? '', $expectedName) !== false) {
+                                // Encontramos un workflow existente, recuperar su info
+                                Log::info("Workflow RAG existente encontrado en N8N: {$wf['id']} - {$wf['name']}");
+                                
+                                // Extraer webhook path del workflow
+                                $existingWebhookPath = null;
+                                foreach ($wf['nodes'] ?? [] as $node) {
+                                    if ($node['type'] === 'n8n-nodes-base.webhook') {
+                                        $existingWebhookPath = $node['parameters']['path'] ?? null;
+                                        break;
+                                    }
+                                }
+                                
+                                // Guardar en settings de la empresa
+                                $settings = $company->settings ?? [];
+                                $settings['rag_workflow_id'] = $wf['id'];
+                                $settings['rag_webhook_path'] = $existingWebhookPath;
+                                $settings['rag_workflow_name'] = $wf['name'];
+                                $company->settings = $settings;
+                                $company->save();
+                                
+                                $workflowId = $wf['id'];
+                                $webhookPath = $existingWebhookPath;
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Could not search for existing workflows: " . $e->getMessage());
+                }
+            }
+
+            // Solo crear si definitivamente no existe
+            if (!$webhookPath || !$workflowId) {
                 // Create company-specific workflow
+                Log::info("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
                 $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
                 
                 if (!$result['success']) {

@@ -49,36 +49,38 @@ class PostOnboardingSetupJob implements ShouldQueue
 
         Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
 
-        // 1. Crear colección Qdrant
-        try {
-            Log::info("Creando colección Qdrant para: {$this->companySlug}");
-            $qdrantResult = $qdrantService->createCompanyCollection($this->companySlug);
-            
-            if ($qdrantResult['success']) {
-                Log::info("Colección Qdrant creada para {$this->companySlug}");
-            } else {
-                Log::error("Error creando colección Qdrant: " . ($qdrantResult['error'] ?? 'Unknown'));
-            }
-        } catch (\Exception $e) {
-            Log::error("Excepción creando colección Qdrant: " . $e->getMessage());
-        }
+        // NOTA: La colección Qdrant ya se crea en OnboardingController@processOnboardingCompletion
+        // No duplicamos aquí para evitar operaciones redundantes
 
-        // 2. Crear workflow RAG
+        // Crear workflow RAG (solo si no existe ya uno)
         try {
-            Log::info("Creando workflow RAG para: {$this->companySlug}");
-            $ragResult = $this->createRagWorkflow($company, $this->companySlug, $n8nService, $qdrantService);
+            // Verificar si ya existe un workflow RAG para esta empresa
+            $existingWorkflowId = $company->settings['rag_workflow_id'] ?? null;
             
-            if ($ragResult['success']) {
-                Log::info("Workflow RAG creado para {$this->companySlug}");
-                
-                $company->update([
-                    'settings' => array_merge($company->settings ?? [], [
-                        'rag_workflow_id' => $ragResult['workflow_id'] ?? null,
-                        'rag_webhook_url' => $ragResult['webhook_url'] ?? null
-                    ])
-                ]);
+            if ($existingWorkflowId) {
+                Log::info("Workflow RAG ya existe para {$this->companySlug}: {$existingWorkflowId}");
             } else {
-                Log::error("Error creando workflow RAG: " . ($ragResult['error'] ?? 'Unknown'));
+                Log::info("Creando workflow RAG para: {$this->companySlug}");
+                $ragResult = $this->createRagWorkflow($company, $this->companySlug, $n8nService, $qdrantService);
+                
+                if ($ragResult['success']) {
+                    Log::info("Workflow RAG creado para {$this->companySlug}", [
+                        'workflow_id' => $ragResult['workflow_id'],
+                        'webhook_path' => $ragResult['webhook_path'] ?? null
+                    ]);
+                    
+                    // Guardar con las mismas claves que espera KnowledgeController
+                    $company->update([
+                        'settings' => array_merge($company->settings ?? [], [
+                            'rag_workflow_id' => $ragResult['workflow_id'] ?? null,
+                            'rag_webhook_path' => $ragResult['webhook_path'] ?? null,
+                            'rag_webhook_url' => $ragResult['webhook_url'] ?? null,
+                            'rag_workflow_name' => "RAG Documents - {$this->companySlug}"
+                        ])
+                    ]);
+                } else {
+                    Log::error("Error creando workflow RAG: " . ($ragResult['error'] ?? 'Unknown'));
+                }
             }
         } catch (\Exception $e) {
             Log::error("Excepción creando workflow RAG: " . $e->getMessage());
@@ -149,6 +151,7 @@ class PostOnboardingSetupJob implements ShouldQueue
                     'success' => true,
                     'workflow_id' => $workflowId,
                     'webhook_url' => $webhookUrl,
+                    'webhook_path' => $webhookPath,
                     'collection_name' => $collectionName
                 ];
             }
