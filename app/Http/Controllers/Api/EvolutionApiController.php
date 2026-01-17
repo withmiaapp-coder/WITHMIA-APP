@@ -774,8 +774,13 @@ class EvolutionApiController extends Controller
                 // Verificar si tenemos webhook configurado
                 if ($instance && !empty($instance->n8n_webhook_url)) {
                     $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
-                    $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
-                    Log::info('📨 Reenviando mensaje a n8n', ['webhook' => $webhookPath, 'success' => $result['success']]);
+                    
+                    // Añadir collection_name al payload para Qdrant
+                    $webhookData = $request->all();
+                    $webhookData['collection_name'] = "company_{$instance->company_id}_knowledge";
+                    
+                    $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
+                    Log::info('📨 Reenviando mensaje a n8n', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);
                 } elseif ($instance && empty($instance->n8n_workflow_id)) {
                     // Si no hay workflow, intentar crearlo ahora
                     Log::info('⚠️ No hay workflow n8n, intentando crear...', ['instance' => $instanceName]);
@@ -784,8 +789,13 @@ class EvolutionApiController extends Controller
                     
                     if (!empty($instance->n8n_webhook_url)) {
                         $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
-                        $result = $this->n8nService->sendToWebhook($webhookPath, $request->all());
-                        Log::info('📨 Reenviando mensaje a n8n (workflow recién creado)', ['webhook' => $webhookPath, 'success' => $result['success']]);
+                        
+                        // Añadir collection_name al payload para Qdrant
+                        $webhookData = $request->all();
+                        $webhookData['collection_name'] = "company_{$instance->company_id}_knowledge";
+                        
+                        $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
+                        Log::info('📨 Reenviando mensaje a n8n (workflow recién creado)', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);
                     }
                 } else {
                     Log::warning('⚠️ Workflow existe pero sin webhook_url', ['instance' => $instanceName, 'workflow_id' => $instance->n8n_workflow_id ?? null]);

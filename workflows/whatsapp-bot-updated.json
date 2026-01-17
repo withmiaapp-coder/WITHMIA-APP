@@ -190,6 +190,12 @@
                                                                                      "name":  "user.name",
                                                                                      "value":  "={{ $json.body.data.pushName }}",
                                                                                      "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "collection-name-qdrant",
+                                                                                     "name":  "instance.collection_name",
+                                                                                     "value":  "={{ $json.body.collection_name || 'coleccion' }}",
+                                                                                     "type":  "string"
                                                                                  }
                                                                              ]
                                                          },
@@ -927,13 +933,32 @@
                   },
                   {
                       "parameters":  {
+                                         "model":  "text-embedding-3-small",
+                                         "options":  {}
+                                     },
+                      "type":  "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+                      "typeVersion":  1,
+                      "position":  [
+                                       2900,
+                                       900
+                                   ],
+                      "id":  "embeddings-openai-qdrant",
+                      "name":  "Embeddings OpenAI",
+                      "credentials":  {
+                                          "openAiApi":  {
+                                                            "id":  "3LGsmE1CAxRgxJaP",
+                                                            "name":  "OpenAI Account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
                                          "mode":  "retrieve-as-tool",
                                          "toolDescription":  "Herramienta ** Buscar **\nUtiliza esta herramienta para buscar informacion acerca de las consultas que te hagan.",
                                          "qdrantCollection":  {
                                                                   "__rl":  true,
-                                                                  "value":  "coleccion",
-                                                                  "mode":  "list",
-                                                                  "cachedResultName":  "coleccion"
+                                                                  "value":  "={{ $('Normalización 01').item.json.instance.collection_name }}",
+                                                                  "mode":  "id"
                                                               },
                                          "topK":  15,
                                          "options":  {
@@ -950,7 +975,7 @@
                       "name":  "Herramienta ** Buscar **",
                       "credentials":  {
                                           "qdrantApi":  {
-                                                            "id":  "eYH0VSgjW8WrINgu",
+                                                            "id":  "qyc3xy96D6zlUD8z",
                                                             "name":  "Qdrant Railway"
                                                         }
                                       }
@@ -2107,6 +2132,17 @@
                                                                          ]
                                                                      ]
                                                      },
+                        "Embeddings OpenAI":  {
+                                                  "ai_embedding":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "Herramienta ** Buscar **",
+                                                                               "type":  "ai_embedding",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                              },
                         "Humanizador":  {
                                             "ai_tool":  [
                                                             [
