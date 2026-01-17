@@ -2159,6 +2159,110 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
     }
 });
 
+// 🔧 FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
+Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        $company = $user->company;
+        $accountId = $company->chatwoot_account_id ?? 1;
+        
+        // Nombre correcto del inbox (con slug)
+        $correctInboxName = "WhatsApp {$instanceName}";
+        
+        // 1. Obtener el inbox actual
+        $existingInbox = $chatwootDb->table('inboxes')
+            ->where('account_id', $accountId)
+            ->first();
+        
+        if (!$existingInbox) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No hay inbox en Chatwoot'
+            ], 400);
+        }
+        
+        $oldName = $existingInbox->name;
+        
+        // 2. Renombrar el inbox en Chatwoot DB
+        $chatwootDb->table('inboxes')
+            ->where('id', $existingInbox->id)
+            ->update(['name' => $correctInboxName, 'updated_at' => now()]);
+        
+        // 3. Verificar la configuración de Evolution API
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        
+        $evolutionSettings = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+        
+        $currentEvolutionInbox = $evolutionSettings->json()['nameInbox'] ?? 'unknown';
+        
+        // 4. Si Evolution tiene otro nombre, actualizarlo
+        $evolutionUpdated = false;
+        if ($currentEvolutionInbox !== $correctInboxName) {
+            $channelApi = $chatwootDb->table('channel_api')
+                ->where('id', $existingInbox->channel_id)
+                ->first();
+            
+            $channelToken = $channelApi->identifier ?? $company->chatwoot_api_key;
+            $chatwootUrl = config('chatwoot.url');
+            
+            $updateResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'apikey' => $evolutionKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
+                'enabled' => true,
+                'accountId' => (string) $accountId,
+                'token' => $channelToken,
+                'url' => $chatwootUrl,
+                'signMsg' => false,
+                'reopenConversation' => true,
+                'conversationPending' => false,
+                'nameInbox' => $correctInboxName,
+                'mergeBrazilContacts' => false,
+                'importContacts' => false,
+                'importMessages' => false,
+                'daysLimitImportMessages' => 0,
+                'autoCreate' => false
+            ]);
+            
+            $evolutionUpdated = $updateResponse->successful();
+        }
+        
+        // 5. Limpiar caché
+        \Illuminate\Support\Facades\Cache::flush();
+        
+        Log::info('🔧 Inbox renombrado', [
+            'old_name' => $oldName,
+            'new_name' => $correctInboxName,
+            'inbox_id' => $existingInbox->id
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'inbox' => [
+                'id' => $existingInbox->id,
+                'old_name' => $oldName,
+                'new_name' => $correctInboxName
+            ],
+            'evolution' => [
+                'previous_inbox_name' => $currentEvolutionInbox,
+                'updated' => $evolutionUpdated
+            ],
+            'next_step' => 'Envía un mensaje desde WhatsApp y recarga la app'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
