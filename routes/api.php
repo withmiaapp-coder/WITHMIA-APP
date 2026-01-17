@@ -1392,6 +1392,24 @@ Route::get('/debug-chatwoot-status', function () {
             ->where('account_id', $company->chatwoot_account_id ?? 1)
             ->get(['id', 'name', 'channel_type']);
         
+        // Ver últimas conversaciones con detalles
+        $lastConversations = $chatwootDb->table('conversations')
+            ->where('account_id', $company->chatwoot_account_id ?? 1)
+            ->orderBy('id', 'desc')
+            ->limit(5)
+            ->get(['id', 'inbox_id', 'contact_id', 'display_id', 'status']);
+        
+        // Ver últimos mensajes
+        $conversationIds = $lastConversations->pluck('id')->toArray();
+        $lastMessages = [];
+        if (!empty($conversationIds)) {
+            $lastMessages = $chatwootDb->table('messages')
+                ->whereIn('conversation_id', $conversationIds)
+                ->orderBy('id', 'desc')
+                ->limit(10)
+                ->get(['id', 'conversation_id', 'content', 'message_type', 'sender_type', 'created_at']);
+        }
+        
         return response()->json([
             'success' => true,
             'laravel_user' => $laravelInfo,
@@ -1400,7 +1418,9 @@ Route::get('/debug-chatwoot-status', function () {
             'chatwoot_token' => $chatwootTokenInfo,
             'api_test' => $apiTest,
             'conversations_in_db' => $directCount,
-            'inboxes' => $inboxes
+            'inboxes' => $inboxes,
+            'last_conversations' => $lastConversations,
+            'last_messages' => $lastMessages
         ]);
         
     } catch (\Exception $e) {
