@@ -1758,53 +1758,6 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
     }
 });
 
-// 🧹 Limpiar TODOS los cachés de conversaciones
-Route::get('/flush-all-conversation-cache', function () {
-    try {
-        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
-            ?? \App\Models\User::first();
-        
-        // Todas las posibles claves de caché
-        $cacheKeys = [
-            "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}",
-            "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}",
-            "conversations_user_1_inbox_1",
-            "conversations:inbox:1:user:1",
-            "chatwoot_conversations_{$user->id}",
-        ];
-        
-        $results = [];
-        foreach ($cacheKeys as $key) {
-            $results[$key] = \Illuminate\Support\Facades\Cache::forget($key);
-        }
-        
-        // También intentar flush de Redis directamente
-        try {
-            $redis = \Illuminate\Support\Facades\Redis::connection();
-            $keys = $redis->keys('*conversation*');
-            foreach ($keys as $key) {
-                $cleanKey = str_replace(config('database.redis.options.prefix', ''), '', $key);
-                $redis->del($cleanKey);
-            }
-            $results['redis_keys_deleted'] = count($keys);
-        } catch (\Exception $e) {
-            $results['redis_error'] = $e->getMessage();
-        }
-        
-        return response()->json([
-            'success' => true,
-            'cache_keys_cleared' => $results,
-            'message' => 'Todos los cachés limpiados. Recarga la app.'
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
 // 🧹 Limpiar caché de conversaciones y regenerar token
 Route::get('/clear-conversations-cache', function () {
     try {
@@ -1890,6 +1843,83 @@ Route::get('/clear-conversations-cache', function () {
                 'error' => !$testResponse->successful() ? $testResponse->body() : null
             ],
             'next_step' => 'Recarga la página de la app'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔍 DEBUG: Ver conversaciones directamente de la DB de Chatwoot (sin API)
+Route::get('/debug-conversations-from-db', function () {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        $company = $user->company;
+        $accountId = $company->chatwoot_account_id ?? 1;
+        $inboxId = $user->chatwoot_inbox_id ?? 1;
+        
+        // Obtener conversaciones directamente de la DB
+        $conversations = $chatwootDb->table('conversations')
+            ->where('account_id', $accountId)
+            ->where('inbox_id', $inboxId)
+            ->orderBy('last_activity_at', 'desc')
+            ->limit(20)
+            ->get();
+        
+        // Obtener contactos
+        $contactIds = $conversations->pluck('contact_id')->unique()->toArray();
+        $contacts = $chatwootDb->table('contacts')
+            ->whereIn('id', $contactIds)
+            ->get()
+            ->keyBy('id');
+        
+        // Obtener mensajes de cada conversación
+        $conversationsWithData = [];
+        foreach ($conversations as $conv) {
+            $messages = $chatwootDb->table('messages')
+                ->where('conversation_id', $conv->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get(['id', 'content', 'message_type', 'sender_type', 'created_at']);
+            
+            $contact = $contacts[$conv->contact_id] ?? null;
+            
+            $conversationsWithData[] = [
+                'id' => $conv->id,
+                'display_id' => $conv->display_id,
+                'status' => $conv->status,
+                'inbox_id' => $conv->inbox_id,
+                'contact' => $contact ? [
+                    'id' => $contact->id,
+                    'name' => $contact->name,
+                    'phone_number' => $contact->phone_number,
+                    'identifier' => $contact->identifier
+                ] : null,
+                'last_activity_at' => $conv->last_activity_at,
+                'messages_count' => $messages->count(),
+                'last_messages' => $messages
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+                'chatwoot_agent_id' => $user->chatwoot_agent_id
+            ],
+            'query_params' => [
+                'account_id' => $accountId,
+                'inbox_id' => $inboxId
+            ],
+            'total_conversations' => $conversations->count(),
+            'conversations' => $conversationsWithData
         ]);
         
     } catch (\Exception $e) {
