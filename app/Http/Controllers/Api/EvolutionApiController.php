@@ -766,9 +766,9 @@ class EvolutionApiController extends Controller
                 $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             }
             
-            // 📨 SOLO reenviar a n8n eventos importantes (mensajes)
-            // No reenviar: labels.edit, presence.update, chats.set, messages.edited, etc.
-            $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT', 'messages.update', 'MESSAGES_UPDATE', 'send.message', 'SEND_MESSAGE'];
+            // 📨 SOLO reenviar a n8n mensajes NUEVOS del cliente
+            // NO reenviar: messages.update (estados), send.message (mensajes propios), etc.
+            $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT'];
             
             if (in_array($event, $eventsToForward)) {
                 // Verificar si tenemos webhook configurado
