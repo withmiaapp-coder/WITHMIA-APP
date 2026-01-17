@@ -1978,6 +1978,81 @@ Route::get('/flush-all-cache', function () {
     }
 });
 
+// 🔥 RESET COMPLETO: Eliminar todas las conversaciones y mensajes de Chatwoot
+Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
+    if ($confirm !== 'YES-DELETE-ALL') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Para confirmar, usa /api/reset-chatwoot-conversations/YES-DELETE-ALL',
+            'warning' => '⚠️ ESTO ELIMINARÁ TODAS LAS CONVERSACIONES Y MENSAJES'
+        ]);
+    }
+    
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() ?? \App\Models\User::first();
+        $company = $user->company;
+        $accountId = $company->chatwoot_account_id ?? 1;
+        $inboxId = $user->chatwoot_inbox_id ?? 1;
+        
+        // Contar antes de eliminar
+        $conversationsBefore = $chatwootDb->table('conversations')
+            ->where('account_id', $accountId)
+            ->count();
+        
+        $messagesBefore = $chatwootDb->table('messages')
+            ->whereIn('conversation_id', function ($query) use ($accountId) {
+                $query->select('id')
+                    ->from('conversations')
+                    ->where('account_id', $accountId);
+            })
+            ->count();
+        
+        // 1. Eliminar mensajes
+        $messagesDeleted = $chatwootDb->table('messages')
+            ->whereIn('conversation_id', function ($query) use ($accountId) {
+                $query->select('id')
+                    ->from('conversations')
+                    ->where('account_id', $accountId);
+            })
+            ->delete();
+        
+        // 2. Eliminar conversaciones
+        $conversationsDeleted = $chatwootDb->table('conversations')
+            ->where('account_id', $accountId)
+            ->delete();
+        
+        // 3. Limpiar caché
+        \Illuminate\Support\Facades\Cache::flush();
+        
+        Log::info('🔥 RESET CHATWOOT COMPLETADO', [
+            'account_id' => $accountId,
+            'conversations_deleted' => $conversationsDeleted,
+            'messages_deleted' => $messagesDeleted
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'before' => [
+                'conversations' => $conversationsBefore,
+                'messages' => $messagesBefore
+            ],
+            'deleted' => [
+                'conversations' => $conversationsDeleted,
+                'messages' => $messagesDeleted
+            ],
+            'cache_flushed' => true,
+            'next_step' => 'Recarga la app y envía un nuevo mensaje de WhatsApp para probar'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
