@@ -782,9 +782,9 @@ class EvolutionApiController extends Controller
                 } elseif ($instance && !empty($instance->n8n_webhook_url)) {
                     $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
                     
-                    // Añadir collection_name al payload para Qdrant
+                    // Añadir collection_name al payload para Qdrant (usa instance_name que es el slug)
                     $webhookData = $request->all();
-                    $webhookData['collection_name'] = "company_{$instance->company_id}_knowledge";
+                    $webhookData['collection_name'] = "company_{$instance->instance_name}_knowledge";
                     
                     $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
                     Log::info('📨 Reenviando mensaje a n8n', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);
@@ -797,9 +797,9 @@ class EvolutionApiController extends Controller
                     if (!empty($instance->n8n_webhook_url)) {
                         $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
                         
-                        // Añadir collection_name al payload para Qdrant
+                        // Añadir collection_name al payload para Qdrant (usa instance_name que es el slug)
                         $webhookData = $request->all();
-                        $webhookData['collection_name'] = "company_{$instance->company_id}_knowledge";
+                        $webhookData['collection_name'] = "company_{$instance->instance_name}_knowledge";
                         
                         $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
                         Log::info('📨 Reenviando mensaje a n8n (workflow recién creado)', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);

@@ -19,7 +19,7 @@ class WhatsAppInstanceController extends Controller
         $instance = DB::table('whatsapp_instances')
             ->where('instance_name', $instanceName)
             ->where('is_active', 1)
-            ->first(['company_id', 'instance_url']);
+            ->first(['company_id', 'instance_url', 'instance_name']);
 
         if (!$instance) {
             return response()->json([
@@ -32,7 +32,7 @@ class WhatsAppInstanceController extends Controller
             'company_id' => $instance->company_id,
             'instance_name' => $instanceName,
             'instance_url' => $instance->instance_url,
-            'collection_name' => "company_{$instance->company_id}_knowledge"
+            'collection_name' => "company_{$instance->instance_name}_knowledge"
         ]);
     }
 }
