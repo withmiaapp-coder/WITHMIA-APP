@@ -2310,6 +2310,45 @@ Route::get('/raw-inbox-check', function () {
     ]);
 });
 
+// 🔍 DEBUG: Ver mensajes recientes con attachments
+Route::get('/debug-recent-messages', function () {
+    $chatwootDb = DB::connection('chatwoot');
+    
+    // Obtener últimos 20 mensajes con sus attachments
+    $messages = $chatwootDb->select("
+        SELECT 
+            m.id,
+            m.content,
+            m.message_type,
+            m.content_type,
+            m.content_attributes,
+            m.created_at,
+            m.conversation_id,
+            c.display_id as conversation_display_id
+        FROM messages m
+        JOIN conversations c ON c.id = m.conversation_id
+        WHERE m.account_id = 1
+        ORDER BY m.created_at DESC
+        LIMIT 20
+    ");
+    
+    // Obtener attachments de esos mensajes
+    $messageIds = collect($messages)->pluck('id')->toArray();
+    $attachments = [];
+    if (!empty($messageIds)) {
+        $attachments = $chatwootDb->select("
+            SELECT * FROM attachments 
+            WHERE message_id IN (" . implode(',', $messageIds) . ")
+        ");
+    }
+    
+    return response()->json([
+        'timestamp' => now()->toIso8601String(),
+        'messages' => $messages,
+        'attachments' => $attachments
+    ]);
+});
+
 Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
