@@ -101,7 +101,12 @@ class EvolutionApiController extends Controller
         // Cargar la empresa del usuario
         $company = $user->company;
         
-        if ($company && $company->chatwoot_account_id && $company->chatwoot_api_key) {
+        if ($company && $company->chatwoot_account_id) {
+            // IMPORTANTE: Usar el ACCESS TOKEN del usuario (chatwoot_agent_token)
+            // NO el channel token (chatwoot_api_key) - ese es solo para webhooks
+            // El access_token permite hacer requests a la API REST de Chatwoot
+            $accessToken = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
+            
             // IMPORTANTE: Usar company_slug para el nombre del inbox
             // Esto asegura consistencia con el sync automático que busca "WhatsApp {instanceName}"
             // donde instanceName = company_slug
@@ -115,7 +120,7 @@ class EvolutionApiController extends Controller
             
             return [
                 'account_id' => $company->chatwoot_account_id,
-                'token' => $company->chatwoot_api_key,
+                'token' => $accessToken, // ACCESS TOKEN para API REST
                 'url' => config('chatwoot.url'),
                 'inbox_name' => $inboxName,
                 'auto_create' => $autoCreate
