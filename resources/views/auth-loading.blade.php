@@ -114,6 +114,9 @@
             var backgroundFrame = document.getElementById('backgroundFrame');
             var iframeLoaded = false;
             
+            // Construir URL absoluta para replaceState
+            var absoluteUrl = new URL(targetUrl, window.location.origin).href;
+            console.log('[Auth-Loading] Target URL:', absoluteUrl);
             console.log('[Auth-Loading] Video playing, destination loading in iframe...');
             
             // Detectar cuando iframe termina de cargar
@@ -129,14 +132,21 @@
                 
                 // Después del fade (400ms)
                 setTimeout(function() {
-                    console.log('[Auth-Loading] Activating iframe as main content...');
-                    // Remover overlay del DOM
-                    overlay.remove();
-                    // Activar iframe (z-index alto)
-                    backgroundFrame.classList.add('active');
-                    // Actualizar URL sin recargar
-                    history.replaceState(null, document.title, targetUrl);
-                    console.log('[Auth-Loading] Transition complete - iframe is now main content');
+                    try {
+                        console.log('[Auth-Loading] Activating iframe as main content...');
+                        // Remover overlay del DOM
+                        overlay.remove();
+                        // Activar iframe (z-index alto)
+                        backgroundFrame.classList.add('active');
+                        // Actualizar URL sin recargar - usar URL absoluta
+                        console.log('[Auth-Loading] Updating URL to:', absoluteUrl);
+                        history.replaceState({page: 'transitioned'}, '', absoluteUrl);
+                        console.log('[Auth-Loading] URL updated successfully. Current URL:', window.location.href);
+                    } catch (e) {
+                        console.error('[Auth-Loading] Error updating URL:', e);
+                        // Fallback: navegar directamente
+                        window.location.href = absoluteUrl;
+                    }
                 }, 400);
             }, 3000);
         })();
