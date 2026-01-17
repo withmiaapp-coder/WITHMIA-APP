@@ -1538,12 +1538,31 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
         $chatwootUrl = config('chatwoot.url');
-        $chatwootToken = config('chatwoot.token'); // Platform token
         
-        // Obtener el account_id y crear inbox_name basado en la instancia
+        // Obtener usuario y company
         $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() ?? \App\Models\User::first();
         $company = $user->company;
         $accountId = $company->chatwoot_account_id ?? '1';
+        
+        // IMPORTANTE: Usar el token del usuario (chatwoot_agent_token) 
+        // Este es el token registrado en access_tokens de Chatwoot
+        $chatwootToken = $user->chatwoot_agent_token;
+        
+        if (!$chatwootToken) {
+            return response()->json([
+                'success' => false,
+                'error' => 'El usuario no tiene chatwoot_agent_token. Ejecuta primero /api/regenerate-all-chatwoot-tokens'
+            ], 400);
+        }
+        
+        // Obtener el nombre del inbox existente de Chatwoot
+        $chatwootDb = DB::connection('chatwoot');
+        $existingInbox = $chatwootDb->table('inboxes')
+            ->where('account_id', $accountId)
+            ->first();
+        
+        // Usar el nombre del inbox existente o crear uno nuevo
+        $inboxName = $existingInbox ? $existingInbox->name : "WhatsApp {$company->name}";
         
         // Configurar Chatwoot en Evolution API
         $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -1557,16 +1576,19 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'signMsg' => false,
             'reopenConversation' => true,
             'conversationPending' => false,
-            'nameInbox' => "WhatsApp {$instanceName}",
+            'nameInbox' => $inboxName,
             'mergeBrazilContacts' => false,
             'importContacts' => false,
             'importMessages' => false,
-            'daysLimitImportMessages' => 0
+            'daysLimitImportMessages' => 0,
+            'autoCreate' => false // No crear inbox automáticamente, ya existe
         ]);
         
         Log::info('🔧 Chatwoot configured in Evolution API', [
             'instance' => $instanceName,
             'account_id' => $accountId,
+            'inbox_name' => $inboxName,
+            'token_prefix' => substr($chatwootToken, 0, 8) . '...',
             'response_status' => $response->status(),
             'response_body' => $response->json()
         ]);
@@ -1576,7 +1598,8 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'instance' => $instanceName,
             'account_id' => $accountId,
             'chatwoot_url' => $chatwootUrl,
-            'inbox_name' => "WhatsApp {$instanceName}",
+            'inbox_name' => $inboxName,
+            'token_used' => substr($chatwootToken, 0, 8) . '...',
             'evolution_response' => $response->json()
         ]);
         
