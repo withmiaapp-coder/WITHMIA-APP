@@ -38,10 +38,11 @@ class ChatwootController extends Controller
             ? $user->chatwoot_inbox_id 
             : null;
 
-        // PRIORIDAD: 1. Token de company, 2. Token de usuario, 3. Token platform
-        if ($company && $company->chatwoot_api_key) {
-            $this->chatwootToken = $company->chatwoot_api_key;
-        } elseif ($user && $user->chatwoot_agent_token) {
+        // PRIORIDAD CORREGIDA: 
+        // 1. Token del usuario (chatwoot_agent_token) - Es el token registrado en access_tokens de Chatwoot
+        // 2. Token platform (fallback para admin)
+        // NOTA: company->chatwoot_api_key es el channel identifier para Evolution API, NO para la API de Chatwoot
+        if ($user && $user->chatwoot_agent_token) {
             $this->chatwootToken = $user->chatwoot_agent_token;
         } else {
             $this->chatwootToken = env('CHATWOOT_PLATFORM_API_TOKEN');
@@ -54,7 +55,8 @@ class ChatwootController extends Controller
                 'email' => $user->email,
                 'company_slug' => $company ? $company->slug : null,
                 'account_id' => $this->accountId,
-                'inbox_id' => $this->inboxId
+                'inbox_id' => $this->inboxId,
+                'token_source' => $user->chatwoot_agent_token ? 'user_agent_token' : 'platform_token'
             ]);
         }
     }

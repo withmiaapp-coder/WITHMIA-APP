@@ -1105,6 +1105,153 @@ Route::post('/knowledge/chunk-stored', [\App\Http\Controllers\KnowledgeControlle
 // WhatsApp Instance lookup endpoint (no authentication - used by n8n)
 Route::get('/whatsapp/instance/{instanceName}/company', [\App\Http\Controllers\Api\WhatsAppInstanceController::class, 'getCompanyByInstance']);
 
+// 🔧 FIX: Reparar tokens de Chatwoot para usuarios existentes
+// Este endpoint crea el access_token en la base de datos de Chatwoot si no existe
+Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
+    try {
+        $user = $userId 
+            ? \App\Models\User::findOrFail($userId)
+            : \App\Models\User::first();
+        
+        if (!$user->chatwoot_agent_id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'El usuario no tiene chatwoot_agent_id asignado'
+            ], 400);
+        }
+        
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // Verificar si ya existe un token en Chatwoot
+        $existingToken = $chatwootDb->table('access_tokens')
+            ->where('owner_type', 'User')
+            ->where('owner_id', $user->chatwoot_agent_id)
+            ->first();
+        
+        if ($existingToken) {
+            // Ya existe, actualizar el token del usuario en Laravel con el de Chatwoot
+            $user->update([
+                'chatwoot_agent_token' => $existingToken->token
+            ]);
+            
+            Log::info('✅ Token sincronizado desde Chatwoot', [
+                'user_id' => $user->id,
+                'chatwoot_user_id' => $user->chatwoot_agent_id
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Token sincronizado desde Chatwoot existente',
+                'user_id' => $user->id,
+                'chatwoot_user_id' => $user->chatwoot_agent_id,
+                'token_prefix' => substr($existingToken->token, 0, 8) . '...',
+                'action' => 'synced_existing'
+            ]);
+        }
+        
+        // No existe, crear nuevo token en Chatwoot
+        $newToken = \Illuminate\Support\Str::random(24);
+        
+        $chatwootDb->table('access_tokens')->insert([
+            'owner_type' => 'User',
+            'owner_id' => $user->chatwoot_agent_id,
+            'token' => $newToken,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Actualizar en Laravel
+        $user->update([
+            'chatwoot_agent_token' => $newToken
+        ]);
+        
+        Log::info('✅ Nuevo token creado en Chatwoot', [
+            'user_id' => $user->id,
+            'chatwoot_user_id' => $user->chatwoot_agent_id
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Nuevo token creado en Chatwoot y sincronizado',
+            'user_id' => $user->id,
+            'chatwoot_user_id' => $user->chatwoot_agent_id,
+            'token_prefix' => substr($newToken, 0, 8) . '...',
+            'action' => 'created_new'
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Error fixing Chatwoot token', [
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔧 FIX: Reparar TODOS los tokens de Chatwoot para todos los usuarios
+Route::get('/fix-all-chatwoot-tokens', function () {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        $users = \App\Models\User::whereNotNull('chatwoot_agent_id')->get();
+        $results = [];
+        
+        foreach ($users as $user) {
+            // Verificar si ya existe un token en Chatwoot
+            $existingToken = $chatwootDb->table('access_tokens')
+                ->where('owner_type', 'User')
+                ->where('owner_id', $user->chatwoot_agent_id)
+                ->first();
+            
+            if ($existingToken) {
+                // Sincronizar
+                $user->update(['chatwoot_agent_token' => $existingToken->token]);
+                $results[] = [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'action' => 'synced',
+                    'token_prefix' => substr($existingToken->token, 0, 8) . '...'
+                ];
+            } else {
+                // Crear nuevo
+                $newToken = \Illuminate\Support\Str::random(24);
+                $chatwootDb->table('access_tokens')->insert([
+                    'owner_type' => 'User',
+                    'owner_id' => $user->chatwoot_agent_id,
+                    'token' => $newToken,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                $user->update(['chatwoot_agent_token' => $newToken]);
+                $results[] = [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'action' => 'created',
+                    'token_prefix' => substr($newToken, 0, 8) . '...'
+                ];
+            }
+        }
+        
+        Log::info('✅ All Chatwoot tokens fixed', ['count' => count($results)]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Todos los tokens reparados',
+            'total_users' => count($results),
+            'results' => $results
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('❌ Error fixing all Chatwoot tokens', ['error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::middleware(['web', 'auth'])->group(function () {
     
 });
@@ -1117,3 +1264,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
     Route::post('/workflows/company/{companyId}/toggle', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'toggleWorkflow']);
 });
+

@@ -61,8 +61,8 @@ class ChatwootProvisioningService
             $this->createInboxMember($chatwootUserId, $inboxId);
             Log::info("✅ Inbox member created");
 
-            // 7. Generar token de acceso único para el usuario (para API de Chatwoot)
-            $accessToken = $this->generateAccessToken();
+            // 7. Crear token de acceso en Chatwoot para el usuario (CRÍTICO para API de Chatwoot)
+            $accessToken = $this->createAccessToken($chatwootUserId);
 
             // 8. Actualizar Company en Laravel
             // chatwoot_api_key = token del channel (para Evolution API)
@@ -237,7 +237,35 @@ class ChatwootProvisioningService
     }
 
     /**
-     * Genera un token de acceso único
+     * Genera un token de acceso único y lo registra en la tabla access_tokens de Chatwoot
+     * IMPORTANTE: El token DEBE existir en la tabla access_tokens de Chatwoot
+     * para que sea válido en la API de Chatwoot
+     */
+    private function createAccessToken(int $chatwootUserId): string
+    {
+        // Generar token único
+        $token = Str::random(24);
+        
+        // Insertar en la tabla access_tokens de Chatwoot
+        // Esto es CRÍTICO - sin esto el token no funcionará con la API de Chatwoot
+        $this->chatwootDb->table('access_tokens')->insert([
+            'owner_type' => 'User',
+            'owner_id' => $chatwootUserId,
+            'token' => $token,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        Log::info('✅ Access token created in Chatwoot', [
+            'chatwoot_user_id' => $chatwootUserId,
+            'token_prefix' => substr($token, 0, 8) . '...'
+        ]);
+        
+        return $token;
+    }
+
+    /**
+     * @deprecated Use createAccessToken() instead - this method doesn't register the token in Chatwoot
      */
     private function generateAccessToken(): string
     {
@@ -282,8 +310,8 @@ class ChatwootProvisioningService
                 Log::info("✅ Agent added to inbox: ID={$inboxId}");
             }
 
-            // 4. Generar token para el agente
-            $accessToken = $this->generateAccessToken();
+            // 4. Crear token de acceso en Chatwoot para el agente
+            $accessToken = $this->createAccessToken($chatwootUserId);
 
             // 5. Actualizar el agente en Laravel
             $agent->update([
