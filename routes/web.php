@@ -324,7 +324,7 @@ Route::get('/check-session', [GoogleAuthController::class, 'checkSession'])->nam
 
 Route::get('/logout', function () {
     try {
-        // Borrar cookies localmente sin esperar al servidor
+        // Borrar cookies y sesión
         Auth::guard('web')->logout();
         request()->session()->flush();
         request()->session()->regenerateToken();
@@ -332,8 +332,8 @@ Route::get('/logout', function () {
         \Log::error('Logout error: ' . $e->getMessage());
     }
     
-    // Mostrar pantalla de carga con video antes de ir al login
-    return view('auth-loading', ['redirect' => '/login']);
+    // Redirigir directamente al login (es página estática, carga rápido)
+    return redirect('/login');
 })->name('logout.get');
 
 // Ruta para mostrar pantalla de carga con video
