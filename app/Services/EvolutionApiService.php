@@ -1028,4 +1028,132 @@ class EvolutionApiService
             ];
         }
     }
+
+    /**
+     * Obtener la configuración actual de Chatwoot para una instancia
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @return array
+     */
+    public function getChatwootConfig(string $instanceName): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->get("{$this->baseUrl}/chatwoot/find/{$instanceName}");
+
+            if (!$response->successful()) {
+                return [
+                    'success' => false,
+                    'error' => $response->json()['message'] ?? 'Failed to get Chatwoot config',
+                    'status' => $response->status()
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => $response->json()
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Reconfigurar la integración de Chatwoot para una instancia
+     * Útil para forzar la sincronización de mensajes
+     * 
+     * @param string $instanceName Nombre de la instancia
+     * @return array
+     */
+    public function reconfigureChatwoot(string $instanceName): array
+    {
+        try {
+            // Buscar la instancia de WhatsApp
+            $instance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
+            
+            if (!$instance) {
+                return [
+                    'success' => false,
+                    'error' => 'Instance not found'
+                ];
+            }
+
+            $company = $instance->company;
+            if (!$company) {
+                return [
+                    'success' => false,
+                    'error' => 'Company not found for instance'
+                ];
+            }
+
+            // Obtener configuración de Chatwoot
+            $chatwootUrl = config('chatwoot.url');
+            $chatwootToken = config('chatwoot.token');
+            $accountId = $company->chatwoot_account_id ?: config('chatwoot.account_id', '1');
+
+            // Reconfigurar la integración
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
+                'enabled' => true,
+                'account_id' => (string) $accountId,
+                'token' => $chatwootToken,
+                'url' => $chatwootUrl,
+                'sign_msg' => false, // false = no agregar firma, los mensajes se ven más limpios
+                'reopen_conversation' => true,
+                'conversation_pending' => false,
+                'name_inbox' => "WhatsApp {$instanceName}",
+                'merge_brazil_contacts' => true,
+                'import_contacts' => false,
+                'import_messages' => false,
+                'days_limit_import_messages' => 7,
+                // CRÍTICO: Este parámetro fuerza la sincronización de mensajes de la API
+                'auto_create' => true
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('Failed to reconfigure Chatwoot', [
+                    'instance' => $instanceName,
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => $response->json()['message'] ?? 'Failed to reconfigure Chatwoot',
+                    'status' => $response->status()
+                ];
+            }
+
+            Log::info('✅ Chatwoot reconfigured for instance', [
+                'instance' => $instanceName,
+                'account_id' => $accountId,
+                'url' => $chatwootUrl
+            ]);
+
+            return [
+                'success' => true,
+                'data' => $response->json(),
+                'message' => 'Chatwoot integration reconfigured successfully'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception reconfiguring Chatwoot', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
 }

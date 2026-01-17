@@ -2485,3 +2485,148 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
     Route::post('/workflows/company/{companyId}/toggle', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'toggleWorkflow']);
 });
+
+// =============================================================================
+// 🔧 DIAGNÓSTICO DE EVOLUTION-CHATWOOT
+// =============================================================================
+
+/**
+ * GET /api/evolution/chatwoot-config/{instanceName}
+ * Obtener la configuración actual de Chatwoot en Evolution API
+ */
+Route::middleware(['web', 'auth'])->get('/evolution/chatwoot-config/{instanceName}', function ($instanceName) {
+    try {
+        $evolutionService = app(\App\Services\EvolutionApiService::class);
+        $config = $evolutionService->getChatwootConfig($instanceName);
+        
+        return response()->json([
+            'success' => $config['success'],
+            'instance' => $instanceName,
+            'chatwoot_config' => $config['data'] ?? null,
+            'error' => $config['error'] ?? null,
+            'help' => 'Si los mensajes del bot no aparecen en la app, usa POST /api/evolution/reconfigure-chatwoot/{instanceName}'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * POST /api/evolution/reconfigure-chatwoot/{instanceName}
+ * Reconfigurar la integración de Chatwoot para forzar sincronización de mensajes
+ */
+Route::middleware(['web', 'auth'])->post('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
+    try {
+        $evolutionService = app(\App\Services\EvolutionApiService::class);
+        
+        // Primero obtener la configuración actual
+        $currentConfig = $evolutionService->getChatwootConfig($instanceName);
+        
+        // Reconfigurar
+        $result = $evolutionService->reconfigureChatwoot($instanceName);
+        
+        return response()->json([
+            'success' => $result['success'],
+            'instance' => $instanceName,
+            'previous_config' => $currentConfig['data'] ?? null,
+            'new_config' => $result['data'] ?? null,
+            'message' => $result['message'] ?? null,
+            'error' => $result['error'] ?? null,
+            'next_steps' => $result['success'] ? [
+                '1. Envía un mensaje de prueba desde WhatsApp',
+                '2. Espera la respuesta del bot',
+                '3. Recarga la conversación en la app',
+                '4. Ambos mensajes (entrante y saliente) deberían aparecer'
+            ] : null
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * GET /api/evolution/debug-instance/{instanceName}
+ * Información completa de diagnóstico de una instancia
+ */
+Route::middleware(['web', 'auth'])->get('/evolution/debug-instance/{instanceName}', function ($instanceName) {
+    try {
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        
+        // 1. Estado de conexión
+        $connectionState = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/instance/connectionState/{$instanceName}");
+        
+        // 2. Configuración de Chatwoot
+        $chatwootConfig = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+        
+        // 3. Configuración de Webhook
+        $webhookConfig = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/webhook/find/{$instanceName}");
+        
+        // 4. Buscar instancia en DB local
+        $localInstance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
+        
+        // 5. Buscar información de Chatwoot
+        $chatwootInfo = null;
+        if ($localInstance && $localInstance->company) {
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            $inbox = $chatwootDb->table('inboxes')
+                ->where('account_id', $localInstance->company->chatwoot_account_id ?: 1)
+                ->where('name', 'like', "%{$instanceName}%")
+                ->first();
+            
+            if ($inbox) {
+                $chatwootInfo = [
+                    'inbox_id' => $inbox->id,
+                    'inbox_name' => $inbox->name,
+                    'channel_type' => $inbox->channel_type,
+                    'channel_id' => $inbox->channel_id
+                ];
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'instance' => $instanceName,
+            'evolution_api' => [
+                'url' => $evolutionUrl,
+                'connection_state' => $connectionState->json(),
+                'chatwoot_config' => $chatwootConfig->json(),
+                'webhook_config' => $webhookConfig->json()
+            ],
+            'local_db' => $localInstance ? [
+                'id' => $localInstance->id,
+                'company_id' => $localInstance->company_id,
+                'status' => $localInstance->status,
+                'connected_at' => $localInstance->connected_at
+            ] : null,
+            'chatwoot' => $chatwootInfo,
+            'diagnosis' => [
+                'evolution_connected' => ($connectionState->json()['state'] ?? null) === 'open',
+                'chatwoot_enabled' => $chatwootConfig->json()['enabled'] ?? false,
+                'has_local_instance' => $localInstance !== null,
+                'has_chatwoot_inbox' => $chatwootInfo !== null
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
