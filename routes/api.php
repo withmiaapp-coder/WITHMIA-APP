@@ -1758,6 +1758,101 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
     }
 });
 
+// 🧹 Limpiar caché de conversaciones y regenerar token
+Route::get('/clear-conversations-cache', function () {
+    try {
+        $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
+            ?? \App\Models\User::first();
+        $company = $user->company;
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // 1. Limpiar caché de conversaciones
+        $cacheKey = "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}";
+        $cacheKey2 = "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}";
+        
+        $deleted1 = \Illuminate\Support\Facades\Cache::forget($cacheKey);
+        $deleted2 = \Illuminate\Support\Facades\Cache::forget($cacheKey2);
+        
+        // 2. Verificar token actual en Chatwoot DB
+        $tokenInChatwoot = $chatwootDb->table('access_tokens')
+            ->where('owner_type', 'User')
+            ->where('owner_id', $user->chatwoot_agent_id)
+            ->first();
+        
+        $tokenMatch = $tokenInChatwoot && $tokenInChatwoot->token === $user->chatwoot_agent_token;
+        
+        // 3. Si no coincide, regenerar
+        $regenerated = false;
+        if (!$tokenMatch) {
+            // Generar nuevo token
+            $newToken = bin2hex(random_bytes(32));
+            
+            // Eliminar tokens existentes
+            $chatwootDb->table('access_tokens')
+                ->where('owner_type', 'User')
+                ->where('owner_id', $user->chatwoot_agent_id)
+                ->delete();
+            
+            // Insertar nuevo token
+            $chatwootDb->table('access_tokens')->insert([
+                'owner_type' => 'User',
+                'owner_id' => $user->chatwoot_agent_id,
+                'token' => $newToken,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            
+            // Actualizar en Laravel
+            $user->chatwoot_agent_token = $newToken;
+            $user->save();
+            
+            $regenerated = true;
+        }
+        
+        // 4. Probar el token
+        $chatwootUrl = config('chatwoot.url');
+        $accountId = $company->chatwoot_account_id ?? 1;
+        $testResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $user->chatwoot_agent_token,
+        ])->timeout(10)->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations", [
+            'inbox_id' => $user->chatwoot_inbox_id,
+            'page' => 1,
+            'per_page' => 5
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'cache_cleared' => [
+                'key1' => $cacheKey,
+                'deleted1' => $deleted1,
+                'key2' => $cacheKey2,
+                'deleted2' => $deleted2
+            ],
+            'token_status' => [
+                'token_existed_in_chatwoot' => $tokenInChatwoot ? true : false,
+                'token_matched' => $tokenMatch,
+                'regenerated' => $regenerated,
+                'current_token_prefix' => substr($user->chatwoot_agent_token, 0, 8) . '...'
+            ],
+            'api_test' => [
+                'status' => $testResponse->status(),
+                'success' => $testResponse->successful(),
+                'conversations_count' => $testResponse->successful() 
+                    ? count($testResponse->json()['data']['payload'] ?? []) 
+                    : 0,
+                'error' => !$testResponse->successful() ? $testResponse->body() : null
+            ],
+            'next_step' => 'Recarga la página de la app'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
