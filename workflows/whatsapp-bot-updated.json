@@ -2181,17 +2181,6 @@
                                                  ]
                                              ]
                                 },
-                        "Send Image":  {
-                                           "ai_tool":  [
-                                                           [
-                                                               {
-                                                                   "node":  "AI Agent",
-                                                                   "type":  "ai_tool",
-                                                                   "index":  0
-                                                               }
-                                                           ]
-                                                       ]
-                                       },
                         "Think":  {
                                       "ai_tool":  [
                                                       [
