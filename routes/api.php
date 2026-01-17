@@ -2516,10 +2516,10 @@ Route::middleware(['web', 'auth'])->get('/evolution/chatwoot-config/{instanceNam
 });
 
 /**
- * POST /api/evolution/reconfigure-chatwoot/{instanceName}
+ * GET /api/evolution/reconfigure-chatwoot/{instanceName}
  * Reconfigurar la integración de Chatwoot para forzar sincronización de mensajes
  */
-Route::middleware(['web', 'auth'])->post('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
+Route::middleware(['web', 'auth'])->get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $evolutionService = app(\App\Services\EvolutionApiService::class);
         
