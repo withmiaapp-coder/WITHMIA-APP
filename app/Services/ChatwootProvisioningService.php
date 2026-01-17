@@ -44,7 +44,7 @@ class ChatwootProvisioningService
             Log::info("✅ User created: ID={$chatwootUserId}");
 
             // 3. Crear relación Account-User (administrator)
-            $this->createAccountUser($accountId, $chatwootUserId, 1); // role=1 (administrator)
+            $this->createAccountUser($accountId, $chatwootUserId, 0); // role=0 (administrator) - En Chatwoot: 0=admin, 1=agent
             Log::info("✅ Account-User relation created");
 
             // 4. Crear Channel API (con identifier/token para Evolution API)
@@ -160,6 +160,7 @@ class ChatwootProvisioningService
             'encrypted_password' => $hashedPassword,
             'uid' => $owner->email,
             'provider' => 'email',
+            'type' => 'User', // Tipo de usuario: 'User' o 'SuperAdmin'
             'confirmed_at' => now(),
             'created_at' => now(),
             'updated_at' => now()
@@ -176,7 +177,7 @@ class ChatwootProvisioningService
         $this->chatwootDb->table('account_users')->insert([
             'account_id' => $accountId,
             'user_id' => $userId,
-            'role' => $role, // 1 = administrator, 0 = agent
+            'role' => $role, // 0 = administrator, 1 = agent
             'created_at' => now(),
             'updated_at' => now()
         ]);
@@ -266,8 +267,8 @@ class ChatwootProvisioningService
             $chatwootUserId = $this->createChatwootUser($agent, $company->chatwoot_account_id);
             Log::info("✅ Agent user created: ID={$chatwootUserId}");
 
-            // 2. Asociar al Account con role de agent (0)
-            $agentRole = ($role === 'administrator') ? 1 : 0;
+            // 2. Asociar al Account con role correcto (0=admin, 1=agent)
+            $agentRole = ($role === 'administrator') ? 0 : 1;
             $this->createAccountUser($company->chatwoot_account_id, $chatwootUserId, $agentRole);
             Log::info("✅ Agent added to account with role={$agentRole}");
 
