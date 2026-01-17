@@ -2211,6 +2211,22 @@ Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
     }
 });
 
+// 🔍 DEBUG: Ver inbox directamente de la DB sin caché
+Route::get('/raw-inbox-check', function () {
+    $chatwootDb = DB::connection('chatwoot');
+    
+    // Query directa sin caché
+    $inboxes = $chatwootDb->select('SELECT id, name, account_id, channel_id, channel_type, updated_at FROM inboxes ORDER BY id');
+    $channels = $chatwootDb->select('SELECT id, account_id, identifier FROM channel_api ORDER BY id');
+    
+    return response()->json([
+        'timestamp' => now()->toIso8601String(),
+        'inboxes' => $inboxes,
+        'channel_api' => $channels,
+        'connection' => config('database.connections.chatwoot.host')
+    ]);
+});
+
 Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
