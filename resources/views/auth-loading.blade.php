@@ -35,6 +35,12 @@
             width: 100%; height: 100%;
             z-index: 1;
             border: none;
+            background: #ffffff;
+        }
+        
+        /* Cuando iframe está activo, tiene máximo z-index */
+        .background-frame.active {
+            z-index: 10000;
         }
         
         /* Video overlay ENCIMA del iframe (z-index 9999) */
@@ -116,17 +122,21 @@
                 console.log('[Auth-Loading] Iframe loaded completely');
             };
             
-            // A los 3 segundos: fade out y navegar AL CONTENIDO del iframe
+            // A los 3 segundos: fade out y mostrar iframe
             setTimeout(function() {
                 console.log('[Auth-Loading] Fading out video...');
                 overlay.classList.add('fade-out');
                 
-                // Después del fade (400ms), navegar directamente
+                // Después del fade (400ms)
                 setTimeout(function() {
-                    console.log('[Auth-Loading] Navigating to destination...');
-                    // Si iframe cargó, el contenido está en caché - redirect será instantáneo
-                    // Usamos location.href para navegar (caché del browser hace que sea rápido)
-                    window.location.href = targetUrl;
+                    console.log('[Auth-Loading] Activating iframe as main content...');
+                    // Remover overlay del DOM
+                    overlay.remove();
+                    // Activar iframe (z-index alto)
+                    backgroundFrame.classList.add('active');
+                    // Actualizar URL sin recargar
+                    history.replaceState(null, document.title, targetUrl);
+                    console.log('[Auth-Loading] Transition complete - iframe is now main content');
                 }, 400);
             }, 3000);
         })();
