@@ -63,6 +63,7 @@
         .video-overlay.fade-out {
             opacity: 0;
             pointer-events: none;
+            transition: opacity 0.2s ease-out;
         }
         
         .video-container {
@@ -125,19 +126,12 @@
                 console.log('[Auth-Loading] Iframe loaded completely');
             };
             
-            // A los 3 segundos: fade out y navegar
+            // A los 3 segundos: redirect inmediato (el caché hace que sea rápido)
             setTimeout(function() {
-                console.log('[Auth-Loading] Fading out video...');
-                overlay.classList.add('fade-out');
-                
-                // Después del fade (400ms) - navegar limpiamente
-                setTimeout(function() {
-                    console.log('[Auth-Loading] Navigating to:', absoluteUrl);
-                    // Usar top.location para navegar el frame principal
-                    // Esto limpia todos los iframes anidados y evita conflictos
-                    // El contenido ya está en caché del browser por el iframe
-                    top.location.replace(absoluteUrl);
-                }, 400);
+                console.log('[Auth-Loading] Navigating to:', absoluteUrl);
+                // Redirect directo - el iframe ya precargó todo en caché
+                // No hacemos fade porque el redirect es casi instantáneo con caché
+                top.location.replace(absoluteUrl);
             }, 3000);
         })();
     </script>
