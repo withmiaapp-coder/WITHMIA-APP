@@ -771,8 +771,10 @@ class EvolutionApiController extends Controller
             $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT'];
             
             if (in_array($event, $eventsToForward)) {
-                // Verificar si tenemos webhook configurado
-                if ($instance && !empty($instance->n8n_webhook_url)) {
+                // 🔄 DEDUPLICACIÓN: NO reenviar si ya procesamos este mensaje
+                if ($this->isMessageAlreadyProcessed($data)) {
+                    Log::info('⏭️ Duplicado: NO reenviando a n8n', ['message_id' => $data['key']['id'] ?? 'unknown']);
+                } elseif ($instance && !empty($instance->n8n_webhook_url)) {
                     $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
                     
                     // Añadir collection_name al payload para Qdrant
