@@ -422,6 +422,9 @@ class ChatwootController extends Controller
 
     /**
      * Obtener mensajes de una conversación específica - CON VALIDACIÓN DE SEGURIDAD
+     * 
+     * IMPORTANTE: El frontend envía display_id (ej: 72), pero la API de Chatwoot 
+     * necesita el id interno (ej: 1). Primero buscamos en la DB para obtener el id real.
      */
     public function getConversationMessages($id)
     {
@@ -439,17 +442,21 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 1: Obtener la conversación para validar permisos
-            $convResponse = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
-
-            if (!$convResponse->successful()) {
-                Log::warning('Conversación no encontrada', [
+            // PASO 0: Buscar la conversación en la DB para obtener el ID real
+            // El frontend puede enviar display_id o id, buscamos en ambos campos
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            $conversationFromDb = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where(function ($query) use ($id) {
+                    $query->where('id', $id)
+                          ->orWhere('display_id', $id);
+                })
+                ->first();
+            
+            if (!$conversationFromDb) {
+                Log::warning('Conversación no encontrada en DB', [
                     'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'status' => $convResponse->status()
+                    'conversation_id_requested' => $id
                 ]);
                 
                 return response()->json([
@@ -457,15 +464,23 @@ class ChatwootController extends Controller
                     'message' => 'Conversación no encontrada'
                 ], 404);
             }
+            
+            // Usar el ID real de la conversación
+            $realConversationId = $conversationFromDb->id;
+            
+            Log::info('Conversación encontrada en DB', [
+                'requested_id' => $id,
+                'real_id' => $realConversationId,
+                'display_id' => $conversationFromDb->display_id,
+                'inbox_id' => $conversationFromDb->inbox_id
+            ]);
 
-            $conversation = $convResponse->json();
-
-            // PASO 2: VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
-            if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {
+            // PASO 1: VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
+            if ($conversationFromDb->inbox_id != $this->inboxId) {
                 Log::warning('Intento de acceso no autorizado a conversación', [
                     'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'conversation_inbox_id' => $conversation['inbox_id'] ?? 'null',
+                    'conversation_id' => $realConversationId,
+                    'conversation_inbox_id' => $conversationFromDb->inbox_id,
                     'user_inbox_id' => $this->inboxId,
                     'account_id' => $this->accountId
                 ]);
@@ -476,16 +491,18 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 3: Si pasa la validación, obtener los mensajes
+            // PASO 2: Obtener los mensajes usando el ID REAL
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages');
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $realConversationId . '/messages');
 
             if ($response->successful()) {
                 Log::info('Mensajes obtenidos exitosamente', [
                     'user_id' => $this->userId,
-                    'conversation_id' => $id
+                    'conversation_id' => $realConversationId,
+                    'display_id' => $conversationFromDb->display_id,
+                    'messages_count' => count($response->json()['payload'] ?? [])
                 ]);
                 
                 return response()->json([
@@ -493,6 +510,12 @@ class ChatwootController extends Controller
                     'payload' => $response->json()
                 ]);
             }
+
+            Log::warning('Error al obtener mensajes de Chatwoot API', [
+                'conversation_id' => $realConversationId,
+                'status' => $response->status(),
+                'response' => $response->body()
+            ]);
 
             return response()->json([
                 'success' => false,
