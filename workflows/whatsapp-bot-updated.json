@@ -164,7 +164,7 @@
                                                                                  {
                                                                                      "id":  "092b895e-a7d8-4cdc-83a0-8f9180127dec",
                                                                                      "name":  "message.chat_id",
-                                                                                     "value":  "={{ $json.body.data.key.remoteJid }}",
+                                                                                     "value":  "={{ $json.body.data.key?.remoteJid || $json.body.data.remoteJid || '' }}",
                                                                                      "type":  "string"
                                                                                  },
                                                                                  {
@@ -1563,7 +1563,7 @@
                   {
                       "parameters":  {
                                          "operation":  "delete",
-                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key.remoteJid }}"
+                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}"
                                      },
                       "type":  "n8n-nodes-base.redis",
                       "typeVersion":  1,
@@ -1599,7 +1599,7 @@
                   {
                       "parameters":  {
                                          "operation":  "set",
-                                         "key":  "={{  $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key.remoteJid }}",
+                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
                                          "value":  "blocked-bot",
                                          "expire":  true,
                                          "ttl":  600
@@ -1668,7 +1668,7 @@
                       "parameters":  {
                                          "operation":  "get",
                                          "propertyName":  "bot-state",
-                                         "key":  "={{  $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key.remoteJid }}",
+                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
                                          "options":  {
 
                                                      }
@@ -1745,7 +1745,7 @@
                                          "descriptionType":  "manual",
                                          "toolDescription":  "Cuando el cliente escriba la palabra \"Humano\" o \"Persona\" ejecuta esta tool",
                                          "operation":  "set",
-                                         "key":  "={{ $(\u0027EVOLUTIONO API\u0027).item.json.body.data.key.remoteJid }}",
+                                         "key":  "={{ $('EVOLUTIONO API').item.json.body.data.key?.remoteJid || $('EVOLUTIONO API').item.json.body.data.remoteJid || 'unknown' }}",
                                          "value":  "blocked-bot",
                                          "expire":  true,
                                          "ttl":  600
