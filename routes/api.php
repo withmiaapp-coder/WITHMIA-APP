@@ -2349,6 +2349,31 @@ Route::get('/debug-recent-messages', function () {
     ]);
 });
 
+// 🧹 CLEANUP: Eliminar attachments vacíos/huérfanos
+Route::get('/cleanup-empty-attachments', function () {
+    $chatwootDb = DB::connection('chatwoot');
+    
+    // Contar attachments vacíos antes
+    $emptyBefore = $chatwootDb->select("
+        SELECT COUNT(*) as count FROM attachments 
+        WHERE (file_url IS NULL OR file_url = '') 
+        AND (external_url IS NULL OR external_url = '')
+    ");
+    
+    // Eliminar attachments vacíos
+    $deleted = $chatwootDb->delete("
+        DELETE FROM attachments 
+        WHERE (file_url IS NULL OR file_url = '') 
+        AND (external_url IS NULL OR external_url = '')
+    ");
+    
+    return response()->json([
+        'success' => true,
+        'empty_attachments_found' => $emptyBefore[0]->count ?? 0,
+        'deleted' => $deleted
+    ]);
+});
+
 Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');

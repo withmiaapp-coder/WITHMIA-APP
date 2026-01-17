@@ -3776,9 +3776,17 @@ const ConversationsInterface: React.FC = () => {
                         })()}
 
                         {/* Renderizar archivos adjuntos (imágenes, audios, documentos) */}
-                        {message.attachments && message.attachments.length > 0 && (
+                        {/* ✅ Filtrar attachments vacíos o inválidos */}
+                        {message.attachments && message.attachments.filter((att: any) => {
+                          // Solo mostrar attachments que tengan URL válida
+                          const url = att.file_url || att.data_url || att.url || '';
+                          return url && url.length > 0;
+                        }).length > 0 && (
                           <div className="mt-2 space-y-2">
-                            {message.attachments.map((att: any, idx: number) => {
+                            {message.attachments.filter((att: any) => {
+                              const url = att.file_url || att.data_url || att.url || '';
+                              return url && url.length > 0;
+                            }).map((att: any, idx: number) => {
                               // ✅ Chatwoot usa file_url, también soportar data_url como fallback
                               const rawUrl = att.file_url || att.data_url || att.url || '';
                               const fileType = att.file_type || att.content_type || '';
