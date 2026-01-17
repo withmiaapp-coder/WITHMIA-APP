@@ -2160,6 +2160,85 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
 });
 
 // 🔧 FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
+// 🔧 FIX: Actualizar Evolution con el token correcto de Chatwoot
+Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // 1. Obtener el access_token del usuario (para API REST)
+        $accessToken = $chatwootDb->table('access_tokens')
+            ->where('owner_type', 'User')
+            ->where('owner_id', 1)
+            ->first();
+        
+        // 2. Obtener el channel token (para webhook)
+        $channel = $chatwootDb->table('channel_api')
+            ->where('account_id', 1)
+            ->first();
+        
+        if (!$accessToken || !$channel) {
+            return response()->json([
+                'error' => 'No se encontró token o channel',
+                'access_token' => $accessToken,
+                'channel' => $channel
+            ], 400);
+        }
+        
+        // 3. Obtener configuración actual de Evolution
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        
+        $currentSettings = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+        
+        $currentConfig = $currentSettings->json();
+        
+        // 4. Actualizar Evolution con el ACCESS TOKEN (no el channel token)
+        // Evolution necesita el access_token para hacer requests a la API de Chatwoot
+        $updateResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey,
+            'Content-Type' => 'application/json'
+        ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
+            'enabled' => true,
+            'accountId' => '1',
+            'token' => $accessToken->token, // ACCESS TOKEN del usuario
+            'url' => config('chatwoot.url'),
+            'signMsg' => false,
+            'reopenConversation' => true,
+            'conversationPending' => false,
+            'nameInbox' => "WhatsApp {$instanceName}",
+            'mergeBrazilContacts' => false,
+            'importContacts' => false,
+            'importMessages' => false,
+            'daysLimitImportMessages' => 0,
+            'autoCreate' => true // Permitir crear contactos/conversaciones
+        ]);
+        
+        // 5. Verificar configuración después del update
+        $newSettings = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+        
+        return response()->json([
+            'success' => $updateResponse->successful(),
+            'tokens' => [
+                'channel_token' => $channel->identifier,
+                'access_token_used' => $accessToken->token,
+                'note' => 'Evolution ahora usa el access_token del usuario para API de Chatwoot'
+            ],
+            'previous_config' => $currentConfig,
+            'new_config' => $newSettings->json(),
+            'next_step' => 'Envía un mensaje de WhatsApp para probar'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // 🔧 FIX DIRECTO: Renombrar inbox forzosamente
 Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
     try {
