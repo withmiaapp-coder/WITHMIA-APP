@@ -2494,7 +2494,7 @@ Route::middleware('auth:sanctum')->group(function () {
  * GET /api/evolution/chatwoot-config/{instanceName}
  * Obtener la configuración actual de Chatwoot en Evolution API
  */
-Route::middleware(['web', 'auth'])->get('/evolution/chatwoot-config/{instanceName}', function ($instanceName) {
+Route::get('/evolution/chatwoot-config/{instanceName}', function ($instanceName) {
     try {
         $evolutionService = app(\App\Services\EvolutionApiService::class);
         $config = $evolutionService->getChatwootConfig($instanceName);
@@ -2519,7 +2519,7 @@ Route::middleware(['web', 'auth'])->get('/evolution/chatwoot-config/{instanceNam
  * GET /api/evolution/reconfigure-chatwoot/{instanceName}
  * Reconfigurar la integración de Chatwoot para forzar sincronización de mensajes
  */
-Route::middleware(['web', 'auth'])->get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
+Route::get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $evolutionService = app(\App\Services\EvolutionApiService::class);
         
@@ -2556,7 +2556,7 @@ Route::middleware(['web', 'auth'])->get('/evolution/reconfigure-chatwoot/{instan
  * GET /api/evolution/debug-instance/{instanceName}
  * Información completa de diagnóstico de una instancia
  */
-Route::middleware(['web', 'auth'])->get('/evolution/debug-instance/{instanceName}', function ($instanceName) {
+Route::get('/evolution/debug-instance/{instanceName}', function ($instanceName) {
     try {
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
