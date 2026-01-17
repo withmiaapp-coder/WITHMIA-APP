@@ -53,9 +53,10 @@ class ChatwootProvisioningService
             $channelToken = $channelData['identifier'];
             Log::info("✅ Channel API created: ID={$channelId}, Token={$channelToken}");
 
-            // 5. Crear Inbox
-            $inboxId = $this->createInbox($accountId, $channelId, $company->name);
-            Log::info("✅ Inbox created: ID={$inboxId}");
+            // 5. Crear Inbox (usar slug para multi-tenant)
+            $inboxName = $company->slug ?? Str::slug($company->name) . '-' . Str::random(6);
+            $inboxId = $this->createInbox($accountId, $channelId, $inboxName);
+            Log::info("✅ Inbox created: ID={$inboxId}, Name=WhatsApp {$inboxName}");
 
             // 6. Asociar User al Inbox
             $this->createInboxMember($chatwootUserId, $inboxId);
