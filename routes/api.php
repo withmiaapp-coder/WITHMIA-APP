@@ -1410,6 +1410,15 @@ Route::get('/debug-chatwoot-status', function () {
                 ->get(['id', 'conversation_id', 'content', 'message_type', 'sender_type', 'created_at']);
         }
         
+        // Ver contactos
+        $contactIds = $lastConversations->pluck('contact_id')->unique()->toArray();
+        $contacts = [];
+        if (!empty($contactIds)) {
+            $contacts = $chatwootDb->table('contacts')
+                ->whereIn('id', $contactIds)
+                ->get(['id', 'name', 'email', 'phone_number', 'identifier']);
+        }
+        
         return response()->json([
             'success' => true,
             'laravel_user' => $laravelInfo,
@@ -1420,7 +1429,8 @@ Route::get('/debug-chatwoot-status', function () {
             'conversations_in_db' => $directCount,
             'inboxes' => $inboxes,
             'last_conversations' => $lastConversations,
-            'last_messages' => $lastMessages
+            'last_messages' => $lastMessages,
+            'contacts' => $contacts
         ]);
         
     } catch (\Exception $e) {
