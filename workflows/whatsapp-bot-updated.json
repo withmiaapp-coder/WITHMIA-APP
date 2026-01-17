@@ -2343,7 +2343,9 @@
                     },
     "active":  true,
     "settings":  {
-                     "executionOrder":  "v1"
+                     "executionOrder":  "v1",
+                     "timezone":  "America/Santiago",
+                     "callerPolicy":  "workflowsFromSameOwner"
                  },
     "versionId":  "3cf1c361-cad0-4f39-8477-c8d09e5caf68",
     "meta":  {

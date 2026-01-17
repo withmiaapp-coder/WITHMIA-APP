@@ -1390,7 +1390,11 @@ class EvolutionApiController extends Controller
                 'name' => "WhatsApp Bot - {$workflowName}",
                 'nodes' => $cleanNodes,
                 'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
-                'settings' => ['executionOrder' => 'v1'],
+                'settings' => [
+                    'executionOrder' => 'v1',
+                    'timezone' => 'America/Santiago',
+                    'callerPolicy' => 'workflowsFromSameOwner'
+                ],
             ];
 
             // Crear en n8n via API
@@ -1593,7 +1597,11 @@ class EvolutionApiController extends Controller
                     'ai_memory' => [[['node' => 'AI Agent', 'type' => 'ai_memory', 'index' => 0]]]
                 ]
             ],
-            'settings' => ['executionOrder' => 'v1']
+            'settings' => [
+                'executionOrder' => 'v1',
+                'timezone' => 'America/Santiago',
+                'callerPolicy' => 'workflowsFromSameOwner'
+            ]
         ];
     }
 }
