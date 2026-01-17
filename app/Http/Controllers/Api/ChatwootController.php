@@ -432,6 +432,9 @@ class ChatwootController extends Controller
 
     /**
      * Obtener mensajes de una conversación específica - CON VALIDACIÓN DE SEGURIDAD Y CACHE
+     * 
+     * IMPORTANTE: El frontend envía display_id (ej: 72), pero la API de Chatwoot 
+     * necesita el id interno (ej: 1). Primero buscamos en la DB para obtener el id real.
      */
     public function getConversationMessages($id, Request $request = null)
     {
@@ -453,70 +456,60 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (incluye limit para diferentes páginas)
-            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$id}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
+            // 🔄 PASO 0: Buscar la conversación en la DB para obtener el ID real
+            // El frontend puede enviar display_id o id, buscamos en ambos campos
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            $conversationFromDb = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where(function ($query) use ($id) {
+                    $query->where('id', $id)
+                          ->orWhere('display_id', $id);
+                })
+                ->first();
+            
+            if (!$conversationFromDb) {
+                Log::warning('Conversación no encontrada en DB', [
+                    'user_id' => $this->userId,
+                    'conversation_id_requested' => $id
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Conversación no encontrada'
+                ], 404);
+            }
+            
+            // Usar el ID real de la conversación
+            $realConversationId = $conversationFromDb->id;
+            
+            Log::info('Conversación encontrada en DB', [
+                'requested_id' => $id,
+                'real_id' => $realConversationId,
+                'display_id' => $conversationFromDb->display_id,
+                'inbox_id' => $conversationFromDb->inbox_id
+            ]);
+
+            // VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
+            if ($conversationFromDb->inbox_id != $this->inboxId) {
+                Log::warning('Intento de acceso no autorizado a conversación', [
+                    'user_id' => $this->userId,
+                    'conversation_id' => $realConversationId,
+                    'conversation_inbox_id' => $conversationFromDb->inbox_id,
+                    'user_inbox_id' => $this->inboxId
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permiso para ver esta conversación'
+                ], 403);
+            }
+
+            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (usa ID real)
+            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$realConversationId}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
             $cacheTTL = 120; // ✅ 2 minutos (los mensajes nuevos llegan por WebSocket)
             
-            // 🚀 OPTIMIZACIÓN: Cache de validación de conversaciones (evita doble llamada)
-            $validationCacheKey = "conv_valid:inbox:{$this->inboxId}:conv:{$id}";
-            $isValidated = \Illuminate\Support\Facades\Cache::get($validationCacheKey);
-            
-            // Si ya validamos esta conversación recientemente, saltamos la verificación
-            if (!$isValidated) {
-                // PASO 1: Obtener la conversación para validar permisos
-                $convResponse = Http::timeout(5)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
-
-                if (!$convResponse->successful()) {
-                    Log::warning('Conversación no encontrada', [
-                        'user_id' => $this->userId,
-                        'conversation_id' => $id,
-                        'status' => $convResponse->status()
-                    ]);
-                    
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Conversación no encontrada'
-                    ], 404);
-                }
-
-                $conversation = $convResponse->json();
-
-                // PASO 2: VALIDACIÓN DE SEGURIDAD - Verificar que pertenece al inbox del usuario
-                if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {
-                    Log::warning('Intento de acceso no autorizado a conversación', [
-                        'user_id' => $this->userId,
-                        'conversation_id' => $id,
-                        'conversation_inbox_id' => $conversation['inbox_id'] ?? 'null',
-                        'user_inbox_id' => $this->inboxId,
-                        'account_id' => $this->accountId
-                    ]);
-                    
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'No tienes permiso para ver esta conversación'
-                    ], 403);
-                }
-                
-                // 🚀 Guardar validación en cache por 5 minutos
-                \Illuminate\Support\Facades\Cache::put($validationCacheKey, true, 300);
-            }
-
-            // 🚀 Intentar obtener mensajes desde cache (cache de TODOS los mensajes)
-            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            if ($cached && !$before) {
-                return response()->json([
-                    'success' => true,
-                    'payload' => $cached['payload'],
-                    'meta' => $cached['meta'] ?? [],
-                    'from_cache' => true
-                ]);
-            }
-
-            // PASO 3: Obtener TODOS los mensajes con loop de paginación
-            $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/messages';
+            // URL para obtener mensajes (usa ID REAL, no display_id)
+            $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $realConversationId . '/messages';
             
             // 🚀 LOOP: Obtener todos los mensajes iterando
             $allMessages = [];
@@ -525,7 +518,7 @@ class ChatwootController extends Controller
             $maxIterations = 50; // Máximo 1000 mensajes (50 * 20)
             $seenIds = []; // Para evitar loops infinitos
             
-            Log::info("🔄 Iniciando fetch de TODOS los mensajes para conversación {$id}");
+            Log::info("🔄 Iniciando fetch de TODOS los mensajes para conversación {$realConversationId} (requested: {$id})");
             
             while ($iteration < $maxIterations) {
                 $queryParams = $beforeId ? ['before' => $beforeId] : [];
