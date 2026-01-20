@@ -80,57 +80,29 @@ export default function Entrenamiento({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Generate welcome message content based on current data
+  const getWelcomeContent = () => {
+    const assistantName = onboardingData.assistant_name || 'tu asistente';
+    const companyName = onboardingData.company_name || 'tu empresa';
+    return `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`;
+  };
 
   // Fetch onboarding data on mount
   useEffect(() => {
     fetchOnboardingData();
   }, []);
 
-  // Initialize or update welcome message when onboarding data changes
-  useEffect(() => {
-    // Only create/update message after data has been fetched
-    if (!dataLoaded) return;
-    
-    const assistantName = onboardingData.assistant_name || 'tu asistente';
-    const companyName = onboardingData.company_name || 'tu empresa';
-    
-    const welcomeContent = `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`;
-    
-    setMessages(prevMessages => {
-      // If no messages yet, create welcome message
-      if (prevMessages.length === 0) {
-        return [{
-          id: "welcome",
-          role: "assistant",
-          content: welcomeContent,
-          timestamp: new Date(),
-        }];
-      }
-      
-      // Always update the welcome message if it's the first message
-      const firstMessage = prevMessages[0];
-      if (firstMessage.id === "welcome" && firstMessage.content !== welcomeContent) {
-        return [
-          { ...firstMessage, content: welcomeContent },
-          ...prevMessages.slice(1)
-        ];
-      }
-      
-      return prevMessages;
-    });
-  }, [dataLoaded, onboardingData.company_name, onboardingData.assistant_name]);
-
   const fetchOnboardingData = async () => {
     try {
       const response = await fetch("/api/onboarding-data");
       const data = await response.json();
+      console.log('Onboarding data received:', data);
       if (data.success && data.data) {
         setOnboardingData(data.data);
       }
-      setDataLoaded(true);
     } catch (error) {
       console.error("Error fetching onboarding data:", error);
       setDataLoaded(true); // Still mark as loaded to show default message
@@ -346,7 +318,17 @@ export default function Entrenamiento({
 
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
-                  {messages.map((msg) => (
+                  {/* Welcome message - always show first with dynamic content */}
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl px-3 py-2 bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md">
+                      <p className="text-sm whitespace-pre-wrap">{getWelcomeContent()}</p>
+                      <p className="text-[10px] mt-1 text-gray-400">
+                        {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                  {/* User messages */}
+                  {messages.filter(msg => msg.id !== "welcome").map((msg) => (
                     <div
                       key={msg.id}
                       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
