@@ -224,8 +224,8 @@ export default function Entrenamiento({
                 
                 {/* Chat Header */}
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-4 py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                    <Bot className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                    <img src="/logo-withmia.webp" alt="WITHMIA" className="w-8 h-8 object-contain" />
                   </div>
                   <div>
                     <h3 className="text-white font-semibold text-sm">WITHMIA</h3>
