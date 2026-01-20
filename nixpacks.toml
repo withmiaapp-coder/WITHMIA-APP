@@ -1,6 +1,7 @@
 [phases.setup]
-  nixPkgs = ['nodejs', 'php83', 'php83Packages.composer', 'postgresql', 'php83Extensions.pdo', 'php83Extensions.pdo_pgsql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif', 'php83Extensions.iconv', 'ffmpeg']
-  nixLibs = ['libjpeg', 'libpng', 'freetype', 'zlib']
+  nixPkgs = ['nodejs', 'php83', 'php83Packages.composer', 'postgresql', 'php83Extensions.pdo', 'php83Extensions.pdo_pgsql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.gd', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.fileinfo', 'php83Extensions.exif', 'php83Extensions.iconv', 'php83Extensions.pcntl', 'php83Extensions.redis', 'php83Extensions.opcache', 'libiconv', 'ffmpeg']
+  nixLibs = ['libjpeg', 'libpng', 'freetype', 'zlib', 'icu']
+  nixOverlays = ['https://github.com/railwayapp/nix-npm-overlay/archive/main.tar.gz']
 
 [phases.install]
   cmds = [
@@ -18,4 +19,4 @@
 [start]
   cmd = 'php artisan migrate --force && php artisan config:clear && php artisan route:clear && php artisan view:clear && PHP_INI_SCAN_DIR=/app php -c /app/php.ini artisan serve --host=0.0.0.0 --port=${PORT:-8080}'
 
-# Build trigger: 2026-01-20
+# Build trigger: 2026-01-20-v2
