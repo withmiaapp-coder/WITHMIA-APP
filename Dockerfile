@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libwebp-dev \
+    libcurl4-openssl-dev \
     zip \
     unzip \
     nodejs \
