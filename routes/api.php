@@ -9,6 +9,33 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
+// 🎓 SETUP TRAINING WORKFLOW PARA WITHMIA
+Route::get('/setup-training-withmia', function () {
+    try {
+        $company = \App\Models\Company::where('slug', 'withmia-zly7qn')->first();
+        if (!$company) {
+            return response()->json(['error' => 'Company not found'], 404);
+        }
+        
+        $company->update([
+            'settings' => array_merge($company->settings ?? [], [
+                'training_workflow_id' => 'tqUt0Ato7dBfjEoD',
+                'training_webhook_path' => 'training-withmia-zly7qn',
+                'training_webhook_url' => 'https://n8n-production-00dd.up.railway.app/webhook/training-withmia-zly7qn',
+                'training_workflow_name' => 'Training Chat - withmia-zly7qn'
+            ])
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Training workflow configurado para WITHMIA',
+            'settings' => $company->fresh()->settings
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // 🔧 FIX: Cambiar logo_url a TEXT para soportar base64
 Route::get('/fix-logo-column', function () {
     try {
