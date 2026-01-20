@@ -1389,6 +1389,9 @@ Route::middleware(['railway.auth:true'])->group(function () {
     Route::post('/company/logo', [\App\Http\Controllers\KnowledgeController::class, 'uploadCompanyLogo']);
     Route::post('/knowledge/upload-document', [\App\Http\Controllers\KnowledgeController::class, 'uploadDocument']);
     
+    // Training Chat - conversación para entrenar al bot
+    Route::post('/training/chat', [\App\Http\Controllers\KnowledgeController::class, 'trainingChat']);
+    
     // Documents
     Route::get('/documents', [\App\Http\Controllers\KnowledgeController::class, 'getDocuments']);
     Route::post('/documents/metadata', [\App\Http\Controllers\KnowledgeController::class, 'storeDocumentMetadata']);

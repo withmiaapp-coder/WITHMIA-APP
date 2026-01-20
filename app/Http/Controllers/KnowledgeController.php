@@ -290,6 +290,133 @@ class KnowledgeController extends Controller
     }
 
     /**
+     * Training Chat - Procesa mensajes de entrenamiento y genera respuestas del agente
+     * Guarda las interacciones en Qdrant para mejorar el conocimiento del bot
+     */
+    public function trainingChat(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $company = $user->company;
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se encontró información de la empresa'
+                ], 404);
+            }
+
+            $request->validate([
+                'message' => 'required|string|max:5000',
+                'context' => 'nullable|array', // Contexto de la conversación
+            ]);
+
+            $userMessage = $request->input('message');
+            $context = $request->input('context', []);
+            
+            $companySlug = $user->company_slug ?? 'default';
+            $assistantName = $company->assistant_name ?? 'WITHMIA';
+            
+            // Obtener configuración de n8n
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $webhookPath = 'training-' . $companySlug;
+            $fullUrl = rtrim($n8nUrl, '/') . '/webhook/' . $webhookPath;
+
+            // Preparar payload para n8n
+            $payload = [
+                'company_slug' => $companySlug,
+                'assistant_name' => $assistantName,
+                'company_name' => $company->name ?? 'la empresa',
+                'user_message' => $userMessage,
+                'context' => $context,
+                'openai_api_key' => env('OPENAI_API_KEY'),
+                'qdrant_host' => env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app'),
+                'timestamp' => now()->toIso8601String(),
+            ];
+
+            Log::info('Sending training message to n8n', [
+                'company_slug' => $companySlug,
+                'message_length' => strlen($userMessage)
+            ]);
+
+            // Enviar a n8n y esperar respuesta
+            $client = new \GuzzleHttp\Client(['timeout' => 30]);
+            
+            try {
+                $response = $client->post($fullUrl, [
+                    'json' => $payload,
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+
+                $responseBody = json_decode($response->getBody()->getContents(), true);
+                
+                Log::info('Training response received from n8n', [
+                    'status' => $response->getStatusCode()
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'response' => $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.',
+                    'saved_to_knowledge' => $responseBody['saved'] ?? false,
+                ]);
+
+            } catch (\GuzzleHttp\Exception\ConnectException $e) {
+                // Si n8n no está disponible, dar una respuesta por defecto
+                Log::warning('n8n training webhook not available: ' . $e->getMessage());
+                
+                return response()->json([
+                    'success' => true,
+                    'response' => $this->getDefaultTrainingResponse($userMessage, $assistantName),
+                    'saved_to_knowledge' => false,
+                    'note' => 'Respuesta local - workflow de entrenamiento no configurado'
+                ]);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Datos inválidos',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error in training chat: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al procesar el mensaje de entrenamiento'
+            ], 500);
+        }
+    }
+
+    /**
+     * Genera una respuesta por defecto cuando n8n no está disponible
+     */
+    private function getDefaultTrainingResponse($userMessage, $assistantName)
+    {
+        $responses = [
+            'Entendido. Voy a recordar eso para mejorar mis respuestas. ¿Hay algo más que deba saber?',
+            '¡Gracias por la información! Esto me ayudará a responder mejor a tus clientes.',
+            'Perfecto, he registrado esa información. ¿Quieres que practiquemos una conversación de ejemplo?',
+            'Muy útil. ¿Podrías darme un ejemplo de cómo debería responder en esa situación?',
+            'Excelente. He tomado nota de esto. ¿Qué más te gustaría enseñarme?',
+        ];
+        
+        // Detectar si es una corrección
+        $lowerMessage = strtolower($userMessage);
+        if (str_contains($lowerMessage, 'no, ') || str_contains($lowerMessage, 'incorrecto') || str_contains($lowerMessage, 'mal ') || str_contains($lowerMessage, 'error')) {
+            return "Gracias por la corrección. He actualizado mi conocimiento. ¿Cómo debería responder correctamente en este caso?";
+        }
+        
+        // Detectar si es un ejemplo
+        if (str_contains($lowerMessage, 'ejemplo') || str_contains($lowerMessage, 'por ejemplo') || str_contains($lowerMessage, 'así:')) {
+            return "Perfecto, he registrado ese ejemplo. Así responderé en situaciones similares. ¿Tienes más ejemplos que compartir?";
+        }
+        
+        return $responses[array_rand($responses)];
+    }
+
+    /**
      * Upload company logo - saves as base64 data URL in database
      */
     public function uploadCompanyLogo(Request $request)

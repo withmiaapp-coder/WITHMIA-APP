@@ -211,28 +211,71 @@ export default function Entrenamiento({
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const messageToSend = inputMessage.trim();
     setInputMessage("");
     setIsTyping(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
-      const aiResponses = [
-        "Entiendo. Voy a recordar eso para mejorar mis respuestas. ¿Hay algo más que deba saber?",
-        "¡Gracias por la información! Esto me ayudará a responder mejor a tus clientes.",
-        "Perfecto, he registrado esa información. ¿Quieres que practiquemos una conversación de ejemplo?",
-        "Muy útil. ¿Podrías darme un ejemplo de cómo debería responder en esa situación?",
-      ];
+    try {
+      // Get CSRF token
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
-      const assistantMessage: Message = {
+      // Build context from recent messages (last 5)
+      const recentMessages = messages.slice(-5).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const response = await fetch("/api/training/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": token,
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          message: messageToSend,
+          context: recentMessages,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.response,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        
+        // Mostrar indicador si se guardó en Qdrant
+        if (data.saved_to_knowledge) {
+          console.log('✅ Información guardada en la base de conocimiento');
+        }
+      } else {
+        // Fallback response on error
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "Lo siento, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error("Error sending training message:", error);
+      // Fallback response on network error
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
+        content: "No pude conectarme al servidor. Por favor, verifica tu conexión e inténtalo de nuevo.",
         timestamp: new Date(),
       };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
