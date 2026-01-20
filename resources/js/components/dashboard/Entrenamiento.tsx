@@ -90,19 +90,13 @@ export default function Entrenamiento({
 
   // Initialize welcome message when onboarding data is loaded
   useEffect(() => {
-    const assistantName = onboardingData.assistant_name || 'WITHMIA';
-    if (messages.length === 0 && onboardingData.company_name) {
+    const assistantName = onboardingData.assistant_name || 'tu asistente';
+    const companyName = onboardingData.company_name || 'tu empresa';
+    if (messages.length === 0) {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
-        timestamp: new Date(),
-      }]);
-    } else if (messages.length === 0) {
-      setMessages([{
-        id: "welcome",
-        role: "assistant",
-        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
         timestamp: new Date(),
       }]);
     }
