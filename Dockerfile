@@ -1,5 +1,5 @@
 # Dockerfile for WITHMIA-APP
-FROM php:8.3-cli
+FROM php:8.4-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -81,12 +81,22 @@ RUN php artisan view:cache || true
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
+# Create start script
+RUN echo '#!/bin/bash\n\
+php artisan migrate --force\n\
+php artisan config:clear\n\
+php artisan route:clear\n\
+php artisan view:clear\n\
+\n\
+# Start queue worker in background\n\
+php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &\n\
+\n\
+# Start web server\n\
+php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
 # Expose port
 EXPOSE 8080
 
 # Start command
-CMD php artisan migrate --force && \
-    php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan view:clear && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+CMD ["/bin/bash", "/app/start.sh"]
