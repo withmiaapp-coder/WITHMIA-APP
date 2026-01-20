@@ -76,7 +76,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\n// Generate unique ID\nconst uniqueId = `${prevData.filename.replace(/[^a-z0-9]/gi, '_')}_${prevData.chunk_index}_${Date.now()}`;\n\nreturn {\n  json: {\n    id: uniqueId,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\n// Generate UUID v4 for Qdrant (required format)\nconst uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === 'x' ? r : (r & 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
