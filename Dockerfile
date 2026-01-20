@@ -1,0 +1,91 @@
+# Dockerfile for WITHMIA-APP
+FROM php:8.3-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libpq-dev \
+    libzip-dev \
+    libicu-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libwebp-dev \
+    zip \
+    unzip \
+    nodejs \
+    npm \
+    ffmpeg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+    pdo \
+    pdo_pgsql \
+    pgsql \
+    mbstring \
+    xml \
+    curl \
+    zip \
+    gd \
+    intl \
+    bcmath \
+    fileinfo \
+    exif \
+    pcntl \
+    opcache
+
+# Install iconv extension (critical for Laravel)
+RUN docker-php-ext-install iconv
+
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copy package.json for npm
+COPY package.json package-lock.json ./
+
+# Install Node dependencies and build
+RUN npm ci --prefer-offline --no-audit
+
+# Copy the rest of the application
+COPY . .
+
+# Run composer scripts now that all files are present
+RUN composer dump-autoload --optimize
+
+# Build frontend assets
+RUN npm run build
+
+# Create storage link and cache views
+RUN php artisan storage:link || true
+RUN php artisan view:cache || true
+
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache
+
+# Expose port
+EXPOSE 8080
+
+# Start command
+CMD php artisan migrate --force && \
+    php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear && \
+    php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
