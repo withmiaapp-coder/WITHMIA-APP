@@ -323,4 +323,84 @@ class N8nWorkflowController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Crear workflow de entrenamiento para una empresa
+     * Este workflow permite entrenar el bot via chat, guardando ejemplos en Qdrant
+     */
+    public function createTrainingWorkflow(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            
+            if (!$user || !$user->company_slug) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario o empresa no encontrado'
+                ], 404);
+            }
+
+            $company = $user->company;
+            $companySlug = $user->company_slug;
+
+            // Verificar si ya existe
+            $existingWorkflowId = $company->settings['training_workflow_id'] ?? null;
+            if ($existingWorkflowId) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'El workflow de entrenamiento ya existe',
+                    'workflow_id' => $existingWorkflowId,
+                    'webhook_url' => $company->settings['training_webhook_url'] ?? null,
+                    'already_exists' => true
+                ]);
+            }
+
+            Log::info("Creando workflow de entrenamiento para: {$companySlug}");
+
+            // Crear el workflow
+            $result = $this->n8nService->createTrainingWorkflow($companySlug);
+
+            if (!$result['success']) {
+                Log::error('Error creando training workflow', [
+                    'company_slug' => $companySlug,
+                    'error' => $result['error'] ?? 'Unknown'
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear workflow: ' . ($result['error'] ?? 'Unknown error')
+                ], 500);
+            }
+
+            // Guardar configuración en la empresa
+            $company->update([
+                'settings' => array_merge($company->settings ?? [], [
+                    'training_workflow_id' => $result['workflow_id'] ?? null,
+                    'training_webhook_path' => $result['webhook_path'] ?? null,
+                    'training_webhook_url' => $result['webhook_url'] ?? null,
+                    'training_workflow_name' => "Training Chat - {$companySlug}"
+                ])
+            ]);
+
+            Log::info("✅ Training workflow creado exitosamente", [
+                'company_slug' => $companySlug,
+                'workflow_id' => $result['workflow_id']
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Workflow de entrenamiento creado y activado exitosamente',
+                'workflow_id' => $result['workflow_id'],
+                'webhook_url' => $result['webhook_url'],
+                'webhook_path' => $result['webhook_path']
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Exception creating training workflow', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

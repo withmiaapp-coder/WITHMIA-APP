@@ -86,6 +86,39 @@ class PostOnboardingSetupJob implements ShouldQueue
             Log::error("Excepción creando workflow RAG: " . $e->getMessage());
         }
 
+        // Crear workflow de ENTRENAMIENTO (Training Chat)
+        try {
+            $existingTrainingWorkflowId = $company->settings['training_workflow_id'] ?? null;
+            
+            if ($existingTrainingWorkflowId) {
+                Log::info("Workflow de Entrenamiento ya existe para {$this->companySlug}: {$existingTrainingWorkflowId}");
+            } else {
+                Log::info("Creando workflow de Entrenamiento para: {$this->companySlug}");
+                $trainingResult = $n8nService->createTrainingWorkflow($this->companySlug);
+                
+                if ($trainingResult['success']) {
+                    Log::info("✅ Workflow de Entrenamiento creado para {$this->companySlug}", [
+                        'workflow_id' => $trainingResult['workflow_id'],
+                        'webhook_path' => $trainingResult['webhook_path'] ?? null
+                    ]);
+                    
+                    // Guardar configuración del workflow de entrenamiento
+                    $company->update([
+                        'settings' => array_merge($company->settings ?? [], [
+                            'training_workflow_id' => $trainingResult['workflow_id'] ?? null,
+                            'training_webhook_path' => $trainingResult['webhook_path'] ?? null,
+                            'training_webhook_url' => $trainingResult['webhook_url'] ?? null,
+                            'training_workflow_name' => "Training Chat - {$this->companySlug}"
+                        ])
+                    ]);
+                } else {
+                    Log::error("Error creando workflow de Entrenamiento: " . ($trainingResult['error'] ?? 'Unknown'));
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Excepción creando workflow de Entrenamiento: " . $e->getMessage());
+        }
+
         // 3. Enviar correos
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {

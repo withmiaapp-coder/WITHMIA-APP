@@ -317,10 +317,17 @@ class KnowledgeController extends Controller
             $companySlug = $user->company_slug ?? 'default';
             $assistantName = $company->assistant_name ?? 'WITHMIA';
             
-            // Obtener configuración de n8n
+            // Obtener configuración de n8n - usar webhook personalizado de la empresa si existe
+            $settings = $company->settings ?? [];
             $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
-            $webhookPath = 'training-' . $companySlug;
-            $fullUrl = rtrim($n8nUrl, '/') . '/webhook/' . $webhookPath;
+            
+            // Usar la URL de webhook guardada en settings o construir una por defecto
+            if (!empty($settings['training_webhook_url'])) {
+                $fullUrl = $settings['training_webhook_url'];
+            } else {
+                $webhookPath = $settings['training_webhook_path'] ?? ('training-' . $companySlug);
+                $fullUrl = rtrim($n8nUrl, '/') . '/webhook/' . $webhookPath;
+            }
 
             // Preparar payload para n8n
             $payload = [

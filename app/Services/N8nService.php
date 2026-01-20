@@ -285,4 +285,95 @@ class N8nService
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Crear workflow de entrenamiento para una empresa
+     * Este workflow permite entrenar el bot via chat, guardando ejemplos en Qdrant
+     */
+    public function createTrainingWorkflow(string $companySlug): array
+    {
+        try {
+            $templatePath = base_path('workflows/training-chat.json');
+            
+            if (!file_exists($templatePath)) {
+                Log::error('Training workflow template not found', ['path' => $templatePath]);
+                return ['success' => false, 'error' => 'Template de entrenamiento no encontrado'];
+            }
+
+            $content = file_get_contents($templatePath);
+            // Remove BOM if present
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+            $templateWorkflow = json_decode($content, true);
+
+            if (!$templateWorkflow) {
+                Log::error('Invalid training workflow JSON');
+                return ['success' => false, 'error' => 'JSON del template inválido'];
+            }
+
+            // Generate unique webhook path for this company
+            $webhookPath = "training-{$companySlug}";
+            $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+
+            // Update webhook node with company-specific path
+            foreach ($templateWorkflow['nodes'] as &$node) {
+                if ($node['type'] === 'n8n-nodes-base.webhook') {
+                    $node['parameters']['path'] = $webhookPath;
+                    $node['webhookId'] = $newWebhookId;
+                }
+            }
+
+            // Update workflow name
+            $templateWorkflow['name'] = "Training Chat - {$companySlug}";
+            
+            // Remove fields that should not be in new workflow
+            unset($templateWorkflow['id']);
+            unset($templateWorkflow['versionId']);
+            unset($templateWorkflow['active']);
+            unset($templateWorkflow['pinData']);
+            
+            Log::info('Creating training workflow', [
+                'company_slug' => $companySlug,
+                'webhook_path' => $webhookPath
+            ]);
+
+            // Create the workflow in n8n
+            $result = $this->createWorkflow($templateWorkflow);
+
+            if ($result['success']) {
+                $workflowId = $result['data']['id'] ?? null;
+                $webhookUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}";
+
+                // Activate the workflow
+                if ($workflowId) {
+                    $activateResult = $this->activateWorkflow($workflowId);
+                    Log::info('Training workflow activation', [
+                        'workflow_id' => $workflowId,
+                        'activated' => $activateResult['success'] ?? false
+                    ]);
+                }
+
+                Log::info('✅ Training workflow created successfully', [
+                    'company_slug' => $companySlug,
+                    'workflow_id' => $workflowId,
+                    'webhook_url' => $webhookUrl
+                ]);
+
+                return [
+                    'success' => true,
+                    'workflow_id' => $workflowId,
+                    'webhook_url' => $webhookUrl,
+                    'webhook_path' => $webhookPath
+                ];
+            }
+
+            return ['success' => false, 'error' => $result['error'] ?? 'Error desconocido al crear workflow'];
+
+        } catch (\Exception $e) {
+            Log::error('Exception creating training workflow', [
+                'company_slug' => $companySlug,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

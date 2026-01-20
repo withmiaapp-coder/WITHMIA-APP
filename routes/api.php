@@ -2789,6 +2789,7 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
 // N8n Workflow Management
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workflows/create-for-company', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createWorkflowForCompany']);
+    Route::post('/workflows/create-training', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'createTrainingWorkflow']);
     Route::get('/workflows/company-list', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'listCompanyWorkflows']);
     Route::get('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'getCompanyWorkflow']);
     Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
