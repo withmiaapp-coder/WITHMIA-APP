@@ -1,0 +1,20 @@
+[phases.setup]
+  nixPkgs = ['php83', 'php83Packages.composer', 'postgresql', 'php83Extensions.pdo', 'php83Extensions.pdo_pgsql', 'php83Extensions.mbstring', 'php83Extensions.xml', 'php83Extensions.curl', 'php83Extensions.tokenizer', 'php83Extensions.zip', 'php83Extensions.intl', 'php83Extensions.bcmath', 'php83Extensions.redis', 'php83Extensions.pcntl', 'php83Extensions.sockets']
+  nixLibs = []
+
+[phases.install]
+  cmds = [
+    'composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs'
+  ]
+
+[phases.build]
+  cmds = [
+    'php artisan config:cache'
+  ]
+
+[start]
+  cmd = 'php artisan reverb:start --host=0.0.0.0 --port=${PORT:-8080}'
+
+# Reverb WebSocket Server
+# Este servicio maneja conexiones WebSocket para tiempo real
+# Requiere su propio dominio público (ej: reverb.withmia.com)
