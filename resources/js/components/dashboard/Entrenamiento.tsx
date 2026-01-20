@@ -543,7 +543,7 @@ export default function Entrenamiento({
               {editingOnboarding ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer text-gray-900 font-medium">
                       <input
                         type="radio"
                         checked={onboardingData.has_website === true}
@@ -553,11 +553,11 @@ export default function Entrenamiento({
                             has_website: true,
                           }))
                         }
-                        className="mr-2"
+                        className="mr-2 w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
                       />
                       Sí
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer text-gray-900 font-medium">
                       <input
                         type="radio"
                         checked={onboardingData.has_website === false}
@@ -568,7 +568,7 @@ export default function Entrenamiento({
                             website: "",
                           }))
                         }
-                        className="mr-2"
+                        className="mr-2 w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
                       />
                       No
                     </label>
@@ -648,7 +648,7 @@ export default function Entrenamiento({
                     className={`flex-1 px-4 py-3 border-2 rounded-lg transition-all ${
                       onboardingData.client_type === "interno"
                         ? "border-green-500 bg-green-50 text-green-700"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
                     }`}
                   >
                     <div className="text-center">
@@ -666,7 +666,7 @@ export default function Entrenamiento({
                     className={`flex-1 px-4 py-3 border-2 rounded-lg transition-all ${
                       onboardingData.client_type === "externo"
                         ? "border-orange-500 bg-orange-50 text-orange-700"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
                     }`}
                   >
                     <div className="text-center">
