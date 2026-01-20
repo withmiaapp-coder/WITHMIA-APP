@@ -120,6 +120,7 @@ interface UserMenuDropdownProps {
     email: string;
     plan?: string;
     logo_url?: string;
+    company?: string;
   };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -990,7 +991,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 firstName: safeUser.firstName,
                 email: safeUser.email,
                 plan: 'Gratis',
-                logo_url: onboardingData?.logo_url
+                logo_url: onboardingData?.logo_url,
+                company: safeUser.company
               }}
               isCollapsed={sidebarCollapsed}
               onToggleCollapse={() => setSidebarCollapsed(false)}
