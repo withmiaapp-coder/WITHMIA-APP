@@ -80,6 +80,7 @@ export default function Entrenamiento({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -90,33 +91,28 @@ export default function Entrenamiento({
 
   // Initialize or update welcome message when onboarding data is loaded
   useEffect(() => {
+    // Only create/update message after data has been fetched
+    if (!dataLoaded) return;
+    
     const assistantName = onboardingData.assistant_name || 'tu asistente';
     const companyName = onboardingData.company_name || 'tu empresa';
     
-    // Only update if we have actual data loaded (not defaults)
-    if (onboardingData.assistant_name || onboardingData.company_name) {
-      setMessages(prevMessages => {
-        // If no messages yet, create welcome message
-        if (prevMessages.length === 0) {
-          return [{
-            id: "welcome",
-            role: "assistant",
-            content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
-            timestamp: new Date(),
-          }];
-        }
-        // If only welcome message exists, update it
-        if (prevMessages.length === 1 && prevMessages[0].id === "welcome") {
-          return [{
-            ...prevMessages[0],
-            content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
-          }];
-        }
-        // If conversation already started, don't update
-        return prevMessages;
-      });
-    }
-  }, [onboardingData.company_name, onboardingData.assistant_name]);
+    const welcomeContent = `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`;
+    
+    setMessages(prevMessages => {
+      // If no messages yet or only welcome message exists, create/update it
+      if (prevMessages.length === 0 || (prevMessages.length === 1 && prevMessages[0].id === "welcome")) {
+        return [{
+          id: "welcome",
+          role: "assistant",
+          content: welcomeContent,
+          timestamp: new Date(),
+        }];
+      }
+      // If conversation already started, don't update
+      return prevMessages;
+    });
+  }, [dataLoaded, onboardingData.company_name, onboardingData.assistant_name]);
 
   const fetchOnboardingData = async () => {
     try {
@@ -125,8 +121,10 @@ export default function Entrenamiento({
       if (data.success && data.data) {
         setOnboardingData(data.data);
       }
+      setDataLoaded(true);
     } catch (error) {
       console.error("Error fetching onboarding data:", error);
+      setDataLoaded(true); // Still mark as loaded to show default message
     }
   };
 
