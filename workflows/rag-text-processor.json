@@ -76,7 +76,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\n// Generate UUID v4 for Qdrant (required format)\nconst uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === 'x' ? r : (r & 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+        "jsCode": "// Process ALL items and prepare data for Qdrant AND Laravel notification\nconst results = [];\nconst items = $input.all();\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const embedding = item.json.data[0].embedding;\n  const prevData = $('Split into Chunks').all()[i].json;\n\n  // Generate UUID v4 for Qdrant (required format)\n  const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n\n  results.push({\n    json: {\n      id: uuid,\n      vector: embedding,\n      payload: {\n        text: prevData.text,\n        filename: prevData.filename,\n        category: prevData.category,\n        company_slug: prevData.company_slug,\n        chunk_index: prevData.chunk_index,\n        total_chunks: prevData.total_chunks\n      },\n      collection_name: prevData.collection_name,\n      qdrant_host: prevData.qdrant_host,\n      // Add these for easy access in Notify Laravel\n      company_slug: prevData.company_slug,\n      filename: prevData.filename,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks\n    }\n  });\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -123,7 +123,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"company_slug\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.company_slug) }},\n  \"filename\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.filename) }},\n  \"chunk_id\": {{ JSON.stringify($('Prepare for Qdrant').item.json.id) }},\n  \"chunk_index\": {{ $('Prepare for Qdrant').item.json.payload.chunk_index }},\n  \"total_chunks\": {{ $('Prepare for Qdrant').item.json.payload.total_chunks }}\n}",
+        "jsonBody": "={\n  \"company_slug\": {{ JSON.stringify($('Prepare for Qdrant').item.json.company_slug) }},\n  \"filename\": {{ JSON.stringify($('Prepare for Qdrant').item.json.filename) }},\n  \"chunk_id\": {{ JSON.stringify($('Prepare for Qdrant').item.json.id) }},\n  \"chunk_index\": {{ $('Prepare for Qdrant').item.json.chunk_index }},\n  \"total_chunks\": {{ $('Prepare for Qdrant').item.json.total_chunks }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
