@@ -128,7 +128,13 @@ interface UserMenuDropdownProps {
 function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Reset logo error when logo_url changes
+  useEffect(() => {
+    setLogoError(false);
+  }, [user.logo_url]);
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
@@ -347,9 +353,18 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             <div className="flex flex-col items-center w-full">
               <div className="relative">
                 <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
-                  <span className="text-base font-bold text-white">
-                    {user.firstName.charAt(0).toUpperCase()}
-                  </span>
+                  {user.logo_url && !logoError ? (
+                    <img 
+                      src={user.logo_url} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : (
+                    <span className="text-base font-bold text-white">
+                      {user.firstName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
               </div>
@@ -359,9 +374,18 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             <div className="flex items-center space-x-3 w-full">
               <div className="relative flex-shrink-0">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
-                  <span className="text-base font-bold text-white">
-                    {user.firstName.charAt(0).toUpperCase()}
-                  </span>
+                  {user.logo_url && !logoError ? (
+                    <img 
+                      src={user.logo_url} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : (
+                    <span className="text-base font-bold text-white">
+                      {user.firstName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
               </div>
