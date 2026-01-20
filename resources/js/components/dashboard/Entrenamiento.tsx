@@ -89,7 +89,7 @@ export default function Entrenamiento({
     fetchOnboardingData();
   }, []);
 
-  // Initialize or update welcome message when onboarding data is loaded
+  // Initialize or update welcome message when onboarding data changes
   useEffect(() => {
     // Only create/update message after data has been fetched
     if (!dataLoaded) return;
@@ -100,8 +100,8 @@ export default function Entrenamiento({
     const welcomeContent = `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`;
     
     setMessages(prevMessages => {
-      // If no messages yet or only welcome message exists, create/update it
-      if (prevMessages.length === 0 || (prevMessages.length === 1 && prevMessages[0].id === "welcome")) {
+      // If no messages yet, create welcome message
+      if (prevMessages.length === 0) {
         return [{
           id: "welcome",
           role: "assistant",
@@ -109,7 +109,16 @@ export default function Entrenamiento({
           timestamp: new Date(),
         }];
       }
-      // If conversation already started, don't update
+      
+      // Always update the welcome message if it's the first message
+      const firstMessage = prevMessages[0];
+      if (firstMessage.id === "welcome" && firstMessage.content !== welcomeContent) {
+        return [
+          { ...firstMessage, content: welcomeContent },
+          ...prevMessages.slice(1)
+        ];
+      }
+      
       return prevMessages;
     });
   }, [dataLoaded, onboardingData.company_name, onboardingData.assistant_name]);
