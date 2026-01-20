@@ -314,6 +314,7 @@ class KnowledgeController extends Controller
 
             $documentId = DB::table('knowledge_documents')->insertGetId([
                 'company_id' => $company->id,
+                'title' => pathinfo($validated['filename'], PATHINFO_FILENAME),
                 'filename' => $validated['filename'],
                 'category' => $validated['category'],
                 'chunks_created' => $validated['chunks_created'] ?? 0,
@@ -504,6 +505,7 @@ class KnowledgeController extends Controller
                 
                 DB::table('knowledge_documents')->insert([
                     'company_id' => $company->id,
+                    'title' => pathinfo($validated['filename'], PATHINFO_FILENAME),
                     'filename' => $validated['filename'],
                     'category' => 'informacion', // Valid values: historia, producto, informacion, desarrollo
                     'chunks_created' => 1,
