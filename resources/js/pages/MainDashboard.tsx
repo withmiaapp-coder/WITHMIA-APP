@@ -352,12 +352,16 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             // Versión compacta - solo avatar
             <div className="flex flex-col items-center w-full">
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md overflow-hidden ${
+                  user.logo_url && !logoError 
+                    ? 'bg-white border border-gray-200' 
+                    : 'bg-gradient-to-br from-purple-500 to-purple-700'
+                }`}>
                   {user.logo_url && !logoError ? (
                     <img 
                       src={user.logo_url} 
                       alt="" 
-                      className="w-full h-full object-cover"
+                      className="w-7 h-7 object-contain"
                       onError={() => setLogoError(true)}
                     />
                   ) : (
@@ -373,12 +377,16 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             // Versión expandida - completa
             <div className="flex items-center space-x-3 w-full">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md overflow-hidden ${
+                  user.logo_url && !logoError 
+                    ? 'bg-white border border-gray-200' 
+                    : 'bg-gradient-to-br from-purple-500 to-purple-700'
+                }`}>
                   {user.logo_url && !logoError ? (
                     <img 
                       src={user.logo_url} 
                       alt="" 
-                      className="w-full h-full object-cover"
+                      className="w-8 h-8 object-contain"
                       onError={() => setLogoError(true)}
                     />
                   ) : (
