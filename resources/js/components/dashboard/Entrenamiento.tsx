@@ -195,7 +195,7 @@ export default function Entrenamiento({
       if (data.success && data.logo_url) {
         setOnboardingData(prev => ({ ...prev, logo_url: data.logo_url }));
         // Reload page to update sidebar logo
-        router.reload({ only: ['onboardingData'] });
+        window.location.reload();
       } else {
         alert('Error al subir el logo: ' + (data.error || 'Intente nuevamente'));
       }
