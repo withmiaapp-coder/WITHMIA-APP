@@ -169,6 +169,7 @@ class KnowledgeController extends Controller
     /**
      * Send company information to Qdrant for AI training
      * Creates a knowledge point with company name, description, and website
+     * First removes any existing "empresa" category points to avoid duplicates
      */
     private function sendCompanyInfoToQdrant($company, $user)
     {
@@ -201,9 +202,15 @@ class KnowledgeController extends Controller
                 return;
             }
 
+            $companySlug = $user->company_slug ?? 'default';
+            $qdrantHost = env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
+            $collectionName = 'company_' . preg_replace('/[^a-z0-9_-]/i', '_', strtolower($companySlug)) . '_knowledge';
+            
+            // First, delete existing "empresa" category points to avoid duplicates
+            $this->deleteCompanyInfoFromQdrant($qdrantHost, $collectionName);
+
             // Get n8n configuration - use company-specific webhook
             $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
-            $companySlug = $user->company_slug ?? 'default';
             
             // Use webhook path from company settings if available, otherwise use default pattern
             $webhookPath = $company->settings['rag_webhook_path'] ?? ('rag-' . $companySlug);
@@ -216,7 +223,7 @@ class KnowledgeController extends Controller
                 'category' => 'empresa',
                 'text' => $companyText,
                 'openai_api_key' => env('OPENAI_API_KEY'),
-                'qdrant_host' => env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app'),
+                'qdrant_host' => $qdrantHost,
             ];
 
             Log::info('Sending company info to Qdrant via n8n', [
@@ -238,6 +245,47 @@ class KnowledgeController extends Controller
         } catch (\Exception $e) {
             // Log but don't fail the main request
             Log::error('Error sending company info to Qdrant: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete existing company info (category="empresa") from Qdrant before updating
+     * This ensures only one version of company info exists at a time
+     */
+    private function deleteCompanyInfoFromQdrant($qdrantHost, $collectionName)
+    {
+        try {
+            $client = new \GuzzleHttp\Client(['timeout' => 10]);
+            
+            // Delete all points with category = "empresa"
+            $deleteUrl = rtrim($qdrantHost, '/') . '/collections/' . $collectionName . '/points/delete';
+            
+            $response = $client->post($deleteUrl, [
+                'json' => [
+                    'filter' => [
+                        'must' => [
+                            [
+                                'key' => 'category',
+                                'match' => [
+                                    'value' => 'empresa'
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+
+            Log::info('Deleted existing company info from Qdrant', [
+                'collection' => $collectionName,
+                'status' => $response->getStatusCode()
+            ]);
+
+        } catch (\Exception $e) {
+            // Log but don't fail - collection might not exist yet or no points to delete
+            Log::warning('Could not delete existing company info from Qdrant: ' . $e->getMessage());
         }
     }
 
