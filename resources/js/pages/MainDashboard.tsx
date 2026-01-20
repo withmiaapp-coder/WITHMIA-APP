@@ -119,6 +119,7 @@ interface UserMenuDropdownProps {
     firstName: string;
     email: string;
     plan?: string;
+    logo_url?: string;
   };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -345,10 +346,14 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             // Versión compacta - solo avatar
             <div className="flex flex-col items-center w-full">
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-base font-bold text-white">
-                    {user.firstName.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+                  {user.logo_url ? (
+                    <img src={user.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-base font-bold text-white">
+                      {user.firstName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
               </div>
@@ -357,10 +362,14 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             // Versión expandida - completa
             <div className="flex items-center space-x-3 w-full">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-base font-bold text-white">
-                    {user.firstName.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+                  {user.logo_url ? (
+                    <img src={user.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-base font-bold text-white">
+                      {user.firstName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
               </div>
@@ -964,7 +973,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               user={{
                 firstName: safeUser.firstName,
                 email: safeUser.email,
-                plan: 'Gratis'
+                plan: 'Gratis',
+                logo_url: onboardingData?.logo_url
               }}
               isCollapsed={sidebarCollapsed}
               onToggleCollapse={() => setSidebarCollapsed(false)}
