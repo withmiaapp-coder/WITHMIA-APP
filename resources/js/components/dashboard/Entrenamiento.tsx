@@ -500,7 +500,7 @@ export default function Entrenamiento({
                     }))
                   }
                   placeholder="Ej: Ana, Sofia, Max..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white placeholder-gray-400"
                 />
               ) : (
                 <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
@@ -525,7 +525,7 @@ export default function Entrenamiento({
                       company_name: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white"
                 />
               ) : (
                 <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
@@ -584,7 +584,7 @@ export default function Entrenamiento({
                         }))
                       }
                       placeholder="https://ejemplo.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white placeholder-gray-400"
                     />
                   )}
                 </div>
@@ -621,7 +621,7 @@ export default function Entrenamiento({
                     }))
                   }
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white resize-none"
                 />
               ) : (
                 <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-800 whitespace-pre-wrap text-sm">
