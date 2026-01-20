@@ -70,18 +70,47 @@ export default function Entrenamiento({
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   
   // Chat state
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: `¡Hola! 👋 Soy MIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name || "tu empresa"} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch onboarding data on mount
+  useEffect(() => {
+    fetchOnboardingData();
+  }, []);
+
+  // Initialize welcome message when onboarding data is loaded
+  useEffect(() => {
+    if (messages.length === 0 && onboardingData.company_name) {
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        content: `¡Hola! 👋 Soy MIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        timestamp: new Date(),
+      }]);
+    } else if (messages.length === 0) {
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        content: `¡Hola! 👋 Soy MIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        timestamp: new Date(),
+      }]);
+    }
+  }, [onboardingData.company_name]);
+
+  const fetchOnboardingData = async () => {
+    try {
+      const response = await fetch("/api/onboarding-data");
+      const data = await response.json();
+      if (data.success && data.data) {
+        setOnboardingData(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching onboarding data:", error);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,21 +123,26 @@ export default function Entrenamiento({
   const handleSaveOnboarding = async () => {
     setSavingOnboarding(true);
     try {
-      const response = await fetch("/api/company/onboarding", {
-        method: "POST",
+      // Obtener CSRF token
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
+      const response = await fetch("/api/onboarding-data", {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRF-TOKEN": token,
           Accept: "application/json",
         },
         credentials: "include",
         body: JSON.stringify(onboardingData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save onboarding data");
+      const data = await response.json();
+      if (data.success) {
+        setEditingOnboarding(false);
+      } else {
+        alert("Error al guardar: " + (data.error || "Intente nuevamente"));
       }
-
-      setEditingOnboarding(false);
     } catch (error) {
       console.error("Error saving onboarding:", error);
       alert("Error al guardar. Por favor intente nuevamente.");
