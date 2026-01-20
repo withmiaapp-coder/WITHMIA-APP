@@ -12,6 +12,8 @@ import {
   User,
   Sparkles,
   MessageCircle,
+  Upload,
+  Image,
 } from "lucide-react";
 
 interface OnboardingData {
@@ -20,6 +22,7 @@ interface OnboardingData {
   has_website: boolean;
   website: string;
   client_type: "interno" | "externo" | null;
+  logo_url?: string;
 }
 
 interface Message {
@@ -68,6 +71,8 @@ export default function Entrenamiento({
 
   const [editingOnboarding, setEditingOnboarding] = useState(false);
   const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   
   // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
@@ -151,6 +156,52 @@ export default function Entrenamiento({
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen válida');
+      return;
+    }
+
+    // Validar tamaño (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen no debe superar 2MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
+      const response = await fetch('/api/company/logo', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': token,
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success && data.logo_url) {
+        setOnboardingData(prev => ({ ...prev, logo_url: data.logo_url }));
+      } else {
+        alert('Error al subir el logo: ' + (data.error || 'Intente nuevamente'));
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      alert('Error al subir el logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -225,10 +276,14 @@ export default function Entrenamiento({
                 {/* Chat Header */}
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-4 py-3 flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
-                    <img src="/logo-withmia.webp" alt="WITHMIA" className="w-8 h-8 object-contain" />
+                    {onboardingData.logo_url ? (
+                      <img src={onboardingData.logo_url} alt={onboardingData.company_name || "Logo"} className="w-8 h-8 object-contain" />
+                    ) : (
+                      <img src="/logo-withmia.webp" alt="WITHMIA" className="w-8 h-8 object-contain" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">WITHMIA</h3>
+                    <h3 className="text-white font-semibold text-sm">{onboardingData.company_name || "WITHMIA"}</h3>
                     <p className="text-white/70 text-xs">Entrenamiento activo</p>
                   </div>
                   <div className="ml-auto flex items-center gap-1">
@@ -282,7 +337,7 @@ export default function Entrenamiento({
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Escribe para entrenar..."
-                      className="flex-1 px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
                     />
                     <button
                       onClick={handleSendMessage}
@@ -350,6 +405,49 @@ export default function Entrenamiento({
           </div>
 
           <div className="space-y-4">
+            {/* Company Logo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Image className="w-4 h-4 inline mr-1" />
+                Logo de la Empresa
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                  {onboardingData.logo_url ? (
+                    <img 
+                      src={onboardingData.logo_url} 
+                      alt="Logo" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <Building2 className="w-8 h-8 text-gray-400" />
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors text-sm disabled:opacity-50"
+                  >
+                    {uploadingLogo ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    {onboardingData.logo_url ? 'Cambiar logo' : 'Subir logo'}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP. Máx 2MB</p>
+                </div>
+              </div>
+            </div>
+
             {/* Company Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

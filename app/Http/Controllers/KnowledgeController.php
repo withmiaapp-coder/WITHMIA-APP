@@ -80,7 +80,8 @@ class KnowledgeController extends Controller
                 'company_description' => $company->description ?? '',
                 'has_website' => !empty($company->website),
                 'website' => $company->website ?? '',
-                'client_type' => $company->client_type ?? null
+                'client_type' => $company->client_type ?? null,
+                'logo_url' => $company->logo_url ?? null
             ];
             
             Log::info('getOnboardingData - Response:', $responseData);
@@ -154,6 +155,60 @@ class KnowledgeController extends Controller
             return response()->json([
                 'success' => false,
                 'error' => 'Error al actualizar datos'
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload company logo
+     */
+    public function uploadCompanyLogo(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $company = $user->company;
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No se encontró información de la empresa'
+                ], 404);
+            }
+
+            $request->validate([
+                'logo' => 'required|image|max:2048' // Max 2MB
+            ]);
+
+            $file = $request->file('logo');
+            
+            // Generate unique filename
+            $filename = 'company_' . $company->id . '_logo_' . time() . '.' . $file->getClientOriginalExtension();
+            
+            // Store in public storage
+            $path = $file->storeAs('logos', $filename, 'public');
+            
+            // Generate public URL
+            $logoUrl = '/storage/' . $path;
+            
+            // Update company logo_url
+            $company->update(['logo_url' => $logoUrl]);
+
+            return response()->json([
+                'success' => true,
+                'logo_url' => $logoUrl,
+                'message' => 'Logo subido correctamente'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Archivo inválido',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error uploading company logo: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al subir el logo'
             ], 500);
         }
     }
