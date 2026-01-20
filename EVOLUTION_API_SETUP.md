@@ -15,7 +15,7 @@ Evolution API needs to be deployed as a **separate service** in Railway.
 
 #### **1. Settings → Deploy:**
 - **Source**: Docker Image
-- **Image**: `atendai/evolution-api:v2.1.1`
+- **Image**: `atendai/evolution-api:v2.3.7`
 
 #### **2. Settings → Variables:**
 

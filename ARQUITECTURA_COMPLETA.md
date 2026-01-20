@@ -15,8 +15,8 @@
 | **Postgres** | PostgreSQL 17 + pgvector | postgres.railway.internal:5432 | ✅ Active | Base de datos principal |
 | **Redis** | Redis 7 | redis.railway.internal:6379 | ✅ Active | Cache, Queues, Sessions |
 | **Evolution API** | Latest | evolution-api.railway.internal | ✅ Active | WhatsApp Business API |
-| **n8n** | 2.2.6 | https://n8n-production-5f6d.up.railway.app | ✅ Active | Workflow automation |
-| **Qdrant** | 1.16.3 | https://qdrant-production-549b.up.railway.app | ✅ Active | Vector database (RAG) |
+| **n8n** | 2.2.6 | https://n8n-production-0dc2.up.railway.app | ✅ Active | Workflow automation |
+| **Qdrant** | 1.16.3 | https://qdrant-production-c156.up.railway.app | ✅ Active | Vector database (RAG) |
 | **Chatwoot** | Latest | chatwoot.railway.internal:3000 (interno) | ✅ Active | Customer support |
 
 ---

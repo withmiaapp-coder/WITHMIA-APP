@@ -105,7 +105,8 @@ class PostOnboardingSetupJob implements ShouldQueue
     private function createRagWorkflow(Company $company, string $companySlug, N8nService $n8nService, QdrantService $qdrantService): array
     {
         try {
-            $templatePath = base_path('workflows/rag-documents-updated.json');
+            // Use simplified text processor workflow (receives pre-extracted text from Laravel)
+            $templatePath = base_path('workflows/rag-text-processor.json');
             
             if (!file_exists($templatePath)) {
                 return ['success' => false, 'error' => 'Template not found'];

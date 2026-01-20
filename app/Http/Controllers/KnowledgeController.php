@@ -583,7 +583,7 @@ class KnowledgeController extends Controller
             }
 
             // Get Qdrant host
-            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-549b.up.railway.app');
+            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-c156.up.railway.app');
 
             // Check if company has a workflow, if not create one
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
@@ -1174,7 +1174,7 @@ const filename = body.filename || 'document.pdf';
 const category = body.category || 'general';
 const text = body.text || ''; // Texto ya extraído por Laravel
 const openaiApiKey = body.openai_api_key || '';
-const qdrantHost = body.qdrant_host || 'https://qdrant-production-549b.up.railway.app';
+const qdrantHost = body.qdrant_host || 'https://qdrant-production-c156.up.railway.app';
 
 // Crear nombre de colección
 const collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';

@@ -1,37 +1,65 @@
 <?php
-// Use environment variables from WITHMIA that reference POSTGRES
-$dbUrl = getenv('DATABASE_URL_CHATWOOT') ?: 'postgresql://postgres:SDYYzXiHXBzfUZBFEsMqvaRyJZovcXlT@postgres-vector.railway.internal:5432/chatwoot';
+/**
+ * Script para crear las bases de datos en el nuevo PostgreSQL con pgvector
+ */
 
+// Conexión pública del PostgreSQL-Vector
+$host = 'caboose.proxy.rlwy.net';
+$port = '29558';
+$user = 'postgres';
+$password = 'BOouQNZeuFKQDoFcOulcYdDdfjhdbNmu';
+
+echo "=== Configurando PostgreSQL Oficial en Railway ===\n\n";
+
+// Primero conectar a la base railway para crear DBs
 try {
-    // Parse the DATABASE_URL
-    $parsed = parse_url($dbUrl);
-    $host = $parsed['host'] ?? 'postgres-vector.railway.internal';
-    $port = $parsed['port'] ?? '5432';
-    $user = $parsed['user'] ?? 'postgres';
-    $password = $parsed['pass'] ?? '';
-    $dbname = ltrim($parsed['path'] ?? '/chatwoot', '/');
+    $dsn = "pgsql:host=$host;port=$port;dbname=railway";
+    $pdo = new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
     
-    echo "Connecting to: $host:$port/$dbname as $user\n";
+    echo "✅ Conexión exitosa a PostgreSQL\n\n";
     
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Listar bases de datos existentes
+    echo "📂 Bases de datos existentes:\n";
+    $stmt = $pdo->query("SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname");
+    $databases = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    echo "=== Connected to chatwoot database ===\n\n";
+    foreach ($databases as $db) {
+        echo "   - $db\n";
+    }
+    echo "\n";
     
-    // List tables
-    $result = $pdo->query("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename");
-    $tables = $result->fetchAll(PDO::FETCH_COLUMN);
-    
-    if (empty($tables)) {
-        echo "NO TABLES FOUND IN CHATWOOT DATABASE!\n";
-        echo "The database is empty - migrations need to be run.\n";
+    // Crear base de datos mia_app si no existe
+    if (!in_array('mia_app', $databases)) {
+        echo "🔧 Creando base de datos 'mia_app'...\n";
+        $pdo->exec("CREATE DATABASE mia_app");
+        echo "✅ Base de datos 'mia_app' creada\n";
     } else {
-        echo "Found " . count($tables) . " tables:\n";
-        foreach ($tables as $table) {
-            echo "  - $table\n";
-        }
+        echo "✅ Base de datos 'mia_app' ya existe\n";
     }
     
-} catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
+    // Crear base de datos chatwoot si no existe
+    if (!in_array('chatwoot', $databases)) {
+        echo "🔧 Creando base de datos 'chatwoot'...\n";
+        $pdo->exec("CREATE DATABASE chatwoot");
+        echo "✅ Base de datos 'chatwoot' creada\n";
+    } else {
+        echo "✅ Base de datos 'chatwoot' ya existe\n";
+    }
+    
+    // Verificar resultado final
+    echo "\n📂 Bases de datos finales:\n";
+    $stmt = $pdo->query("SELECT datname FROM pg_database WHERE datistemplate = false ORDER BY datname");
+    $databases = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    foreach ($databases as $db) {
+        $icon = in_array($db, ['mia_app', 'chatwoot']) ? '🔵' : '  ';
+        echo "   $icon $db\n";
+    }
+    
+    echo "\n✅ ¡PostgreSQL listo para WITHMIA y Chatwoot!\n";
+
+} catch (PDOException $e) {
+    echo "❌ Error: " . $e->getMessage() . "\n";
 }
