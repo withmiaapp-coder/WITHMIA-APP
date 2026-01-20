@@ -469,7 +469,7 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
                 'action' => $action,
                 'workflow_id' => $workflowId,
                 'activated' => $activateResult['success'],
-                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-dace.up.railway.app') . "/webhook/{$webhookPath}"
+                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}"
             ]);
         }
         

@@ -725,7 +725,7 @@ class KnowledgeController extends Controller
             }
 
             // Get Qdrant host
-            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-c156.up.railway.app');
+            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
 
             // Check if company has a workflow, if not create one
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
@@ -1137,9 +1137,9 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
     private function createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey)
     {
         try {
-            // Generate unique webhook path for this company
-            $webhookPath = "rag-{$companySlug}-" . substr(md5($companySlug . time()), 0, 8);
-            $workflowName = "RAG Documents - {$companyName}";
+            // Generate webhook path for this company (simple, predictable pattern)
+            $webhookPath = "rag-{$companySlug}";
+            $workflowName = "RAG Documents - {$companySlug}";
 
             // Workflow template - SIMPLIFICADO: texto ya extraído en Laravel
             $workflow = [
@@ -1155,9 +1155,20 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                         'type' => 'n8n-nodes-base.webhook',
                         'typeVersion' => 2,
                         'position' => [0, 300],
-                        'id' => 'webhook-upload',
-                        'name' => 'Webhook Upload',
+                        'id' => 'webhook-text',
+                        'name' => 'Webhook Receive Text',
                         'webhookId' => "rag-{$companySlug}"
+                    ],
+                    [
+                        'parameters' => [
+                            'respondWith' => 'json',
+                            'responseBody' => '={"success": true, "message": "Processing started", "filename": "{{ $json.body.filename || $json.filename }}"}'
+                        ],
+                        'type' => 'n8n-nodes-base.respondToWebhook',
+                        'typeVersion' => 1.1,
+                        'position' => [220, 160],
+                        'id' => 'respond-webhook',
+                        'name' => 'Respond Immediately'
                     ],
                     [
                         'parameters' => [
@@ -1166,19 +1177,8 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                         'type' => 'n8n-nodes-base.code',
                         'typeVersion' => 2,
                         'position' => [220, 300],
-                        'id' => 'process-input',
-                        'name' => 'Process Input'
-                    ],
-                    [
-                        'parameters' => [
-                            'respondWith' => 'json',
-                            'responseBody' => '={"success": true, "message": "Procesando documento", "filename": "{{ $json.filename }}", "text_length": {{ $json.text_length }}, "company": "' . $companyName . '"}'
-                        ],
-                        'type' => 'n8n-nodes-base.respondToWebhook',
-                        'typeVersion' => 1.1,
-                        'position' => [440, 160],
-                        'id' => 'respond-webhook',
-                        'name' => 'Respond Immediately'
+                        'id' => 'prepare-data',
+                        'name' => 'Prepare Data'
                     ],
                     [
                         'parameters' => [
@@ -1197,12 +1197,14 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                             'sendHeaders' => true,
                             'headerParameters' => [
                                 'parameters' => [
-                                    ['name' => 'Authorization', 'value' => '=Bearer {{ $("Process Input").first().json.openai_api_key }}']
+                                    ['name' => 'Authorization', 'value' => '=Bearer {{ $json.openai_api_key || $env.OPENAI_API_KEY }}'],
+                                    ['name' => 'Content-Type', 'value' => 'application/json']
                                 ]
                             ],
                             'sendBody' => true,
                             'specifyBody' => 'json',
-                            'jsonBody' => "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify(\$json.text) }}\n}"
+                            'jsonBody' => "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify(\$json.text) }}\n}",
+                            'options' => new \stdClass()
                         ],
                         'type' => 'n8n-nodes-base.httpRequest',
                         'typeVersion' => 4.2,
@@ -1223,31 +1225,58 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                     [
                         'parameters' => [
                             'method' => 'PUT',
-                            'url' => '={{ $("Process Input").first().json.qdrant_host }}/collections/{{ $json.collection_name }}/points',
+                            'url' => '={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points',
+                            'sendHeaders' => true,
+                            'headerParameters' => [
+                                'parameters' => [
+                                    ['name' => 'Content-Type', 'value' => 'application/json']
+                                ]
+                            ],
                             'sendBody' => true,
                             'specifyBody' => 'json',
                             'jsonBody' => "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify(\$json.id) }},\n    \"vector\": {{ JSON.stringify(\$json.vector) }},\n    \"payload\": {{ JSON.stringify(\$json.payload) }}\n  }]\n}",
-                            'options' => ['timeout' => 30000]
+                            'options' => new \stdClass()
                         ],
                         'type' => 'n8n-nodes-base.httpRequest',
                         'typeVersion' => 4.2,
                         'position' => [1100, 300],
                         'id' => 'store-qdrant',
                         'name' => 'Store in Qdrant'
+                    ],
+                    [
+                        'parameters' => [
+                            'method' => 'POST',
+                            'url' => 'https://app.withmia.com/api/knowledge/chunk-stored',
+                            'sendHeaders' => true,
+                            'headerParameters' => [
+                                'parameters' => [
+                                    ['name' => 'Content-Type', 'value' => 'application/json']
+                                ]
+                            ],
+                            'sendBody' => true,
+                            'specifyBody' => 'json',
+                            'jsonBody' => "={\n  \"company_slug\": {{ JSON.stringify(\$('Prepare for Qdrant').item.json.company_slug) }},\n  \"filename\": {{ JSON.stringify(\$('Prepare for Qdrant').item.json.filename) }},\n  \"chunk_id\": {{ JSON.stringify(\$('Prepare for Qdrant').item.json.id) }},\n  \"chunk_index\": {{ \$('Prepare for Qdrant').item.json.chunk_index }},\n  \"total_chunks\": {{ \$('Prepare for Qdrant').item.json.total_chunks }}\n}",
+                            'options' => new \stdClass()
+                        ],
+                        'type' => 'n8n-nodes-base.httpRequest',
+                        'typeVersion' => 4.2,
+                        'position' => [1320, 300],
+                        'id' => 'notify-laravel',
+                        'name' => 'Notify Laravel'
                     ]
                 ],
                 'connections' => [
-                    'Webhook Upload' => ['main' => [[['node' => 'Process Input', 'type' => 'main', 'index' => 0]]]],
-                    'Process Input' => ['main' => [[
+                    'Webhook Receive Text' => ['main' => [[
                         ['node' => 'Respond Immediately', 'type' => 'main', 'index' => 0],
-                        ['node' => 'Split into Chunks', 'type' => 'main', 'index' => 0]
+                        ['node' => 'Prepare Data', 'type' => 'main', 'index' => 0]
                     ]]],
+                    'Prepare Data' => ['main' => [[['node' => 'Split into Chunks', 'type' => 'main', 'index' => 0]]]],
                     'Split into Chunks' => ['main' => [[['node' => 'Generate Embeddings', 'type' => 'main', 'index' => 0]]]],
                     'Generate Embeddings' => ['main' => [[['node' => 'Prepare for Qdrant', 'type' => 'main', 'index' => 0]]]],
-                    'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]]
+                    'Prepare for Qdrant' => ['main' => [[['node' => 'Store in Qdrant', 'type' => 'main', 'index' => 0]]]],
+                    'Store in Qdrant' => ['main' => [[['node' => 'Notify Laravel', 'type' => 'main', 'index' => 0]]]]
                 ],
                 'settings' => ['executionOrder' => 'v1']
-                // NOTE: 'active' es read-only, se activa después de crear
             ];
 
             // Create workflow in n8n
@@ -1308,17 +1337,22 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
     private function getProcessInputCode()
     {
         return <<<'JS'
-// Extraer datos del body - TEXTO YA VIENE EXTRAÍDO DE LARAVEL
+// Extract data from body - Laravel sends text already extracted
 const body = $input.first().json.body || $input.first().json;
 
 const companySlug = body.company_slug || 'default';
 const filename = body.filename || 'document.pdf';
 const category = body.category || 'general';
-const text = body.text || ''; // Texto ya extraído por Laravel
+const text = body.text || '';
 const openaiApiKey = body.openai_api_key || '';
-const qdrantHost = body.qdrant_host || 'https://qdrant-production-c156.up.railway.app';
+const qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';
 
-// Crear nombre de colección
+// Validate text
+if (!text || text.length < 50) {
+  throw new Error('No text provided or text too short');
+}
+
+// Create collection name
 const collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';
 
 return {
@@ -1339,26 +1373,28 @@ JS;
     private function getChunkTextCode()
     {
         return <<<'JS'
-// Dividir texto en chunks optimizados para embeddings
-// Tomar datos de Process Input
-const processInput = $("Process Input").first().json;
-const text = processInput.text || '';
-const companySlug = processInput.company_slug;
-const filename = processInput.filename;
-const category = processInput.category;
-const collectionName = processInput.collection_name;
-const openaiApiKey = processInput.openai_api_key;
-const qdrantHost = processInput.qdrant_host;
+// Split text into chunks - LIMITED to ~6000 TOKENS (approx 24000 chars)
+const input = $input.first().json;
+const text = input.text || '';
+const companySlug = input.company_slug;
+const filename = input.filename;
+const category = input.category;
+const collectionName = input.collection_name;
+const openaiApiKey = input.openai_api_key;
+const qdrantHost = input.qdrant_host;
 
-// Tamaño óptimo para embeddings: ~1500 tokens = ~6000 caracteres
-const maxCharsPerChunk = 6000;
+// ~4 chars = 1 token approx. Limit 6000 tokens = 24000 chars
+// Use 20000 for safety margin
+const maxCharsPerChunk = 20000;
+const chunkOverlap = 500;
 const chunks = [];
 
+// If text is short, don't split
 if (text.length <= maxCharsPerChunk) {
   chunks.push(text);
 } else {
-  // Dividir por párrafos
-  const paragraphs = text.split(/\n\n+|(?<=\.)\s+(?=[A-Z])/);
+  // Split by paragraphs first
+  const paragraphs = text.split(/\n\n+/);
   let currentChunk = '';
   
   for (const para of paragraphs) {
@@ -1366,9 +1402,30 @@ if (text.length <= maxCharsPerChunk) {
       if (currentChunk.trim()) {
         chunks.push(currentChunk.trim());
       }
-      currentChunk = para;
+      
+      if (para.length > maxCharsPerChunk) {
+        const sentences = para.split(/(?<=[.!?])\s+/);
+        currentChunk = '';
+        for (const sentence of sentences) {
+          if (currentChunk.length + sentence.length > maxCharsPerChunk) {
+            if (currentChunk.trim()) chunks.push(currentChunk.trim());
+            if (sentence.length > maxCharsPerChunk) {
+              for (let i = 0; i < sentence.length; i += maxCharsPerChunk - chunkOverlap) {
+                chunks.push(sentence.substring(i, i + maxCharsPerChunk));
+              }
+              currentChunk = '';
+            } else {
+              currentChunk = sentence;
+            }
+          } else {
+            currentChunk += (currentChunk ? ' ' : '') + sentence;
+          }
+        }
+      } else {
+        currentChunk = para;
+      }
     } else {
-      currentChunk += (currentChunk ? ' ' : '') + para;
+      currentChunk += (currentChunk ? '\n\n' : '') + para;
     }
   }
   
@@ -1377,8 +1434,7 @@ if (text.length <= maxCharsPerChunk) {
   }
 }
 
-console.log(`Documento dividido en ${chunks.length} chunks`);
-
+// Return chunks as separate items
 return chunks.map((chunk, index) => ({
   json: {
     text: chunk,
@@ -1398,42 +1454,45 @@ JS;
     private function getPrepareQdrantCode()
     {
         return <<<'JS'
-// Procesar TODOS los items de embeddings
-const items = $input.all();
-const chunkItems = $('Split into Chunks').all();
+// Process ALL items and prepare data for Qdrant AND Laravel notification
 const results = [];
+const items = $input.all();
 
-// Generar UUID válido para Qdrant
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+for (let i = 0; i < items.length; i++) {
+  const item = items[i];
+  const embedding = item.json.data[0].embedding;
+  const prevData = $('Split into Chunks').all()[i].json;
+
+  // Generate UUID v4 for Qdrant (required format)
+  const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
-}
 
-for (let i = 0; i < items.length; i++) {
-  const embedding = items[i].json.data[0].embedding;
-  const chunkData = chunkItems[i].json;
-  
   results.push({
     json: {
-      id: generateUUID(),
+      id: uuid,
       vector: embedding,
       payload: {
-        text: chunkData.text,
-        filename: chunkData.filename,
-        category: chunkData.category,
-        company_slug: chunkData.company_slug,
-        chunk_index: chunkData.chunk_index,
-        total_chunks: chunkData.total_chunks
+        text: prevData.text,
+        filename: prevData.filename,
+        category: prevData.category,
+        company_slug: prevData.company_slug,
+        chunk_index: prevData.chunk_index,
+        total_chunks: prevData.total_chunks
       },
-      collection_name: chunkData.collection_name
+      collection_name: prevData.collection_name,
+      qdrant_host: prevData.qdrant_host,
+      // Add these for easy access in Notify Laravel
+      company_slug: prevData.company_slug,
+      filename: prevData.filename,
+      chunk_index: prevData.chunk_index,
+      total_chunks: prevData.total_chunks
     }
   });
 }
 
-console.log(`Preparados ${results.length} puntos para Qdrant`);
 return results;
 JS;
     }
