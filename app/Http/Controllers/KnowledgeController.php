@@ -239,7 +239,7 @@ class KnowledgeController extends Controller
     }
 
     /**
-     * Upload company logo
+     * Upload company logo - saves as base64 data URL in database
      */
     public function uploadCompanyLogo(Request $request)
     {
@@ -260,30 +260,19 @@ class KnowledgeController extends Controller
 
             $file = $request->file('logo');
             
-            // Generate unique filename
-            $extension = $file->getClientOriginalExtension();
-            $filename = 'company_' . $company->id . '_logo_' . time() . '.' . $extension;
+            // Convert image to base64 data URL (persists in database, survives deploys)
+            $imageData = file_get_contents($file->getRealPath());
+            $mimeType = $file->getMimeType();
+            $base64 = base64_encode($imageData);
+            $logoUrl = 'data:' . $mimeType . ';base64,' . $base64;
             
-            // Store directly in public/logos/ (works on Railway without symlink)
-            $destinationPath = public_path('logos');
-            
-            // Create directory if it doesn't exist
-            if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-            
-            // Move file to public folder
-            $file->move($destinationPath, $filename);
-            
-            // Generate public URL (direct path, no /storage/)
-            $logoUrl = '/logos/' . $filename;
-            
-            // Update company logo_url
+            // Update company logo_url with base64 data
             $company->update(['logo_url' => $logoUrl]);
 
-            Log::info('Logo uploaded successfully', [
+            Log::info('Logo uploaded successfully as base64', [
                 'company_id' => $company->id,
-                'logo_url' => $logoUrl
+                'mime_type' => $mimeType,
+                'size_bytes' => strlen($imageData)
             ]);
 
             return response()->json([
