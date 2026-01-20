@@ -51,7 +51,9 @@ class DashboardController extends Controller
             'current_tools' => isset($company->settings['onboarding']['current_tools']) && is_array($company->settings['onboarding']['current_tools'])
                 ? $company->settings['onboarding']['current_tools'] : [],
             'discovered_via' => isset($company->settings['onboarding']['discovered_via']) && is_array($company->settings['onboarding']['discovered_via'])
-                ? $company->settings['onboarding']['discovered_via'] : []
+                ? $company->settings['onboarding']['discovered_via'] : [],
+            'logo_url' => $company->logo_url ?? null,
+            'assistant_name' => $company->assistant_name ?? 'WITHMIA'
         ];
 
         // Estadisticas basicas (por ahora mockeadas, despues se conectaran con datos reales)

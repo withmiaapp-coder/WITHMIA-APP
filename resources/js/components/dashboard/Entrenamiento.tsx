@@ -23,6 +23,7 @@ interface OnboardingData {
   website: string;
   client_type: "interno" | "externo" | null;
   logo_url?: string;
+  assistant_name?: string;
 }
 
 interface Message {
@@ -88,22 +89,23 @@ export default function Entrenamiento({
 
   // Initialize welcome message when onboarding data is loaded
   useEffect(() => {
+    const assistantName = onboardingData.assistant_name || 'WITHMIA';
     if (messages.length === 0 && onboardingData.company_name) {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola! 👋 Soy WITHMIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
         timestamp: new Date(),
       }]);
     } else if (messages.length === 0) {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola! 👋 Soy WITHMIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
         timestamp: new Date(),
       }]);
     }
-  }, [onboardingData.company_name]);
+  }, [onboardingData.company_name, onboardingData.assistant_name]);
 
   const fetchOnboardingData = async () => {
     try {
@@ -283,7 +285,7 @@ export default function Entrenamiento({
                     )}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">{onboardingData.company_name || "WITHMIA"}</h3>
+                    <h3 className="text-white font-semibold text-sm">{onboardingData.assistant_name || "WITHMIA"}</h3>
                     <p className="text-white/70 text-xs">Entrenamiento activo</p>
                   </div>
                   <div className="ml-auto flex items-center gap-1">
@@ -446,6 +448,33 @@ export default function Entrenamiento({
                   <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP. Máx 2MB</p>
                 </div>
               </div>
+            </div>
+
+            {/* Assistant Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Bot className="w-4 h-4 inline mr-1" />
+                Nombre del Asistente
+              </label>
+              {editingOnboarding ? (
+                <input
+                  type="text"
+                  value={onboardingData.assistant_name || 'WITHMIA'}
+                  onChange={(e) =>
+                    setOnboardingData((prev) => ({
+                      ...prev,
+                      assistant_name: e.target.value,
+                    }))
+                  }
+                  placeholder="Ej: Ana, Sofia, Max..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              ) : (
+                <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
+                  {onboardingData.assistant_name || "WITHMIA"}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">Este es el nombre con el que tu IA se presentará a tus clientes</p>
             </div>
 
             {/* Company Name */}

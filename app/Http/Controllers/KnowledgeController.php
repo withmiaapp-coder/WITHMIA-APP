@@ -81,7 +81,8 @@ class KnowledgeController extends Controller
                 'has_website' => !empty($company->website),
                 'website' => $company->website ?? '',
                 'client_type' => $company->client_type ?? null,
-                'logo_url' => $company->logo_url ?? null
+                'logo_url' => $company->logo_url ?? null,
+                'assistant_name' => $company->assistant_name ?? 'WITHMIA'
             ];
             
             Log::info('getOnboardingData - Response:', $responseData);
@@ -121,7 +122,8 @@ class KnowledgeController extends Controller
                 'company_description' => 'nullable|string|max:2000',
                 'has_website' => 'nullable|boolean',
                 'website' => 'nullable|url|max:500',
-                'client_type' => 'nullable|in:interno,externo'
+                'client_type' => 'nullable|in:interno,externo',
+                'assistant_name' => 'nullable|string|max:100'
             ]);
 
             // Map fields to company table columns
@@ -130,8 +132,12 @@ class KnowledgeController extends Controller
             if (isset($validated['company_description'])) $updateData['description'] = $validated['company_description'];
             if (isset($validated['website'])) $updateData['website'] = $validated['website'];
             if (isset($validated['client_type'])) $updateData['client_type'] = $validated['client_type'];
+            if (isset($validated['assistant_name'])) $updateData['assistant_name'] = $validated['assistant_name'];
 
             $company->update($updateData);
+
+            // After saving, send company info to Qdrant for training
+            $this->sendCompanyInfoToQdrant($company, $user);
 
             return response()->json([
                 'success' => true,
@@ -141,7 +147,8 @@ class KnowledgeController extends Controller
                     'company_description' => $company->description,
                     'has_website' => !empty($company->website),
                     'website' => $company->website,
-                    'client_type' => $company->client_type
+                    'client_type' => $company->client_type,
+                    'assistant_name' => $company->assistant_name ?? 'WITHMIA'
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -156,6 +163,78 @@ class KnowledgeController extends Controller
                 'success' => false,
                 'error' => 'Error al actualizar datos'
             ], 500);
+        }
+    }
+
+    /**
+     * Send company information to Qdrant for AI training
+     * Creates a knowledge point with company name, description, and website
+     */
+    private function sendCompanyInfoToQdrant($company, $user)
+    {
+        try {
+            // Build the company info text for the knowledge base
+            $assistantName = $company->assistant_name ?? 'WITHMIA';
+            
+            $companyText = "INFORMACIÓN DE LA EMPRESA Y ASISTENTE\n\n";
+            $companyText .= "Nombre del Asistente de IA: " . $assistantName . "\n\n";
+            $companyText .= "Nombre de la Empresa: " . ($company->name ?? 'No especificado') . "\n\n";
+            
+            if (!empty($company->website)) {
+                $companyText .= "Sitio Web: " . $company->website . "\n\n";
+            }
+            
+            if (!empty($company->description)) {
+                $companyText .= "Descripción de la Empresa: " . $company->description . "\n\n";
+            }
+            
+            if (!empty($company->client_type)) {
+                $clientTypeText = $company->client_type === 'interno' ? 'Clientes internos (empleados)' : 'Clientes externos';
+                $companyText .= "Tipo de Clientes: " . $clientTypeText . "\n\n";
+            }
+            
+            $companyText .= "IMPORTANTE: Cuando respondas, debes identificarte como " . $assistantName . ", el asistente de inteligencia artificial de " . ($company->name ?? 'la empresa') . ".\n";
+
+            // Don't send if there's no meaningful content
+            if (strlen($companyText) < 60) {
+                Log::info('Company info too short to send to Qdrant');
+                return;
+            }
+
+            // Get n8n configuration
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-docker-production-4255.up.railway.app');
+            $webhookPath = '/webhook/rag-documents';
+            $fullUrl = rtrim($n8nUrl, '/') . $webhookPath;
+
+            // Prepare the payload (same structure as document uploads)
+            $payload = [
+                'company_slug' => $user->company_slug,
+                'filename' => 'informacion_empresa.txt',
+                'category' => 'empresa',
+                'text' => $companyText,
+                'openai_api_key' => env('OPENAI_API_KEY'),
+                'qdrant_host' => env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app'),
+            ];
+
+            Log::info('Sending company info to Qdrant via n8n', [
+                'company_slug' => $user->company_slug,
+                'text_length' => strlen($companyText)
+            ]);
+
+            // Send to n8n webhook (async, don't wait for response)
+            $client = new \GuzzleHttp\Client(['timeout' => 5]);
+            $client->postAsync($fullUrl, [
+                'json' => $payload,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ]
+            ])->wait(false); // Don't block
+
+            Log::info('Company info sent to Qdrant successfully');
+
+        } catch (\Exception $e) {
+            // Log but don't fail the main request
+            Log::error('Error sending company info to Qdrant: ' . $e->getMessage());
         }
     }
 
@@ -182,16 +261,30 @@ class KnowledgeController extends Controller
             $file = $request->file('logo');
             
             // Generate unique filename
-            $filename = 'company_' . $company->id . '_logo_' . time() . '.' . $file->getClientOriginalExtension();
+            $extension = $file->getClientOriginalExtension();
+            $filename = 'company_' . $company->id . '_logo_' . time() . '.' . $extension;
             
-            // Store in public storage
-            $path = $file->storeAs('logos', $filename, 'public');
+            // Store directly in public/logos/ (works on Railway without symlink)
+            $destinationPath = public_path('logos');
             
-            // Generate public URL
-            $logoUrl = '/storage/' . $path;
+            // Create directory if it doesn't exist
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+            
+            // Move file to public folder
+            $file->move($destinationPath, $filename);
+            
+            // Generate public URL (direct path, no /storage/)
+            $logoUrl = '/logos/' . $filename;
             
             // Update company logo_url
             $company->update(['logo_url' => $logoUrl]);
+
+            Log::info('Logo uploaded successfully', [
+                'company_id' => $company->id,
+                'logo_url' => $logoUrl
+            ]);
 
             return response()->json([
                 'success' => true,
