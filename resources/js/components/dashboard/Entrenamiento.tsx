@@ -270,30 +270,60 @@ export default function Entrenamiento({
         <div className="flex justify-center">
           <div className="relative">
             {/* Phone Frame */}
-            <div className="w-[320px] h-[640px] bg-gradient-to-b from-gray-800 to-gray-900 rounded-[3rem] p-2 shadow-2xl">
+            <div className="w-[380px] h-[780px] bg-gradient-to-b from-gray-800 to-gray-900 rounded-[3rem] p-2 shadow-2xl">
               {/* Phone Inner */}
               <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
-                {/* Phone Notch */}
-                <div className="h-8 bg-gradient-to-r from-violet-500 to-purple-500 flex items-center justify-center relative">
-                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-20 h-4 bg-black rounded-full"></div>
+                {/* Status Bar - iPhone style */}
+                <div className="h-12 bg-gradient-to-r from-violet-500 to-purple-500 flex items-end justify-between px-6 pb-1 relative">
+                  {/* Dynamic Island / Notch */}
+                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-24 h-7 bg-black rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-gray-800 rounded-full mr-2"></div>
+                    <div className="w-2 h-2 bg-gray-700 rounded-full"></div>
+                  </div>
+                  {/* Time */}
+                  <span className="text-white text-sm font-semibold">
+                    {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  {/* Status Icons */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Signal */}
+                    <div className="flex items-end gap-0.5 h-3">
+                      <div className="w-1 h-1 bg-white rounded-sm"></div>
+                      <div className="w-1 h-1.5 bg-white rounded-sm"></div>
+                      <div className="w-1 h-2 bg-white rounded-sm"></div>
+                      <div className="w-1 h-3 bg-white rounded-sm"></div>
+                    </div>
+                    {/* WiFi */}
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 18c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm-4.9-2.1l1.4 1.4c1.9-1.9 5.1-1.9 7 0l1.4-1.4c-2.7-2.7-7.1-2.7-9.8 0zM2.8 11.6l1.4 1.4c4.3-4.3 11.3-4.3 15.6 0l1.4-1.4c-5.1-5.1-13.3-5.1-18.4 0z"/>
+                    </svg>
+                    {/* Battery */}
+                    <div className="flex items-center gap-0.5">
+                      <div className="w-6 h-3 border border-white rounded-sm flex items-center p-0.5">
+                        <div className="w-full h-full bg-green-400 rounded-sm"></div>
+                      </div>
+                      <div className="w-0.5 h-1.5 bg-white rounded-r-sm"></div>
+                    </div>
+                    <span className="text-white text-xs font-medium">100%</span>
+                  </div>
                 </div>
                 
                 {/* Chat Header */}
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-4 py-3 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                  <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-md">
                     {onboardingData.logo_url ? (
-                      <img src={onboardingData.logo_url} alt={onboardingData.company_name || "Logo"} className="w-8 h-8 object-contain" />
+                      <img src={onboardingData.logo_url} alt={onboardingData.company_name || "Logo"} className="w-9 h-9 object-contain" />
                     ) : (
-                      <img src="/logo-withmia.webp" alt="WITHMIA" className="w-8 h-8 object-contain" />
+                      <img src="/logo-withmia.webp" alt="WITHMIA" className="w-9 h-9 object-contain" />
                     )}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">{onboardingData.assistant_name || "WITHMIA"}</h3>
+                    <h3 className="text-white font-semibold text-base">{onboardingData.assistant_name || "WITHMIA"}</h3>
                     <p className="text-white/70 text-xs">Entrenamiento activo</p>
                   </div>
-                  <div className="ml-auto flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-white/70 text-xs">En línea</span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-white/80 text-xs font-medium">En línea</span>
                   </div>
                 </div>
 
@@ -342,12 +372,12 @@ export default function Entrenamiento({
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Escribe para entrenar..."
-                      className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                      className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 focus:bg-white"
                     />
                     <button
                       onClick={handleSendMessage}
                       disabled={!inputMessage.trim() || isTyping}
-                      className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:shadow-lg transition-all"
+                      className="w-11 h-11 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:shadow-lg transition-all"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -355,8 +385,8 @@ export default function Entrenamiento({
                 </div>
 
                 {/* Home Indicator */}
-                <div className="h-6 bg-white flex items-center justify-center">
-                  <div className="w-32 h-1 bg-gray-300 rounded-full"></div>
+                <div className="h-8 bg-white flex items-center justify-center">
+                  <div className="w-36 h-1.5 bg-gray-300 rounded-full"></div>
                 </div>
               </div>
             </div>
