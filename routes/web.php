@@ -111,6 +111,133 @@ Route::get('/nuke-database', function () {
     ]);
 });
 
+// TEMP: BORRAR ABSOLUTAMENTE TODO - Laravel DB + Chatwoot + n8n + Qdrant + Redis
+Route::get('/nuke-everything', function () {
+    $secret = request()->input('secret');
+    
+    if ($secret !== 'withmia2026nukeall') {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $results = ['success' => true, 'cleaned' => []];
+    
+    // 1. LIMPIAR LARAVEL DB
+    try {
+        \DB::statement('SET session_replication_role = replica;');
+        
+        $tables = ['personal_access_tokens', 'sessions', 'knowledge_documents', 
+                   'whatsapp_instances', 'agent_invitations', 'pipeline_items', 
+                   'pipelines', 'usage_metrics', 'integrations', 'ai_agents', 
+                   'subscriptions', 'companies', 'users', 'model_has_roles',
+                   'model_has_permissions', 'cache', 'cache_locks', 'jobs', 'failed_jobs'];
+        
+        foreach ($tables as $table) {
+            try {
+                \DB::statement("TRUNCATE TABLE \"{$table}\" RESTART IDENTITY CASCADE");
+            } catch (\Exception $e) {}
+        }
+        
+        \DB::statement('SET session_replication_role = DEFAULT;');
+        $results['cleaned']['laravel_db'] = true;
+    } catch (\Exception $e) {
+        $results['cleaned']['laravel_db'] = 'Error: ' . $e->getMessage();
+    }
+    
+    // 2. LIMPIAR CHATWOOT DB (accounts creados por nosotros, ID > 1)
+    try {
+        $chatwootDb = \DB::connection('chatwoot');
+        $chatwootDb->statement('SET session_replication_role = replica;');
+        
+        // Borrar accounts creados (ID > 1, el 1 es el admin original)
+        $accountsDeleted = $chatwootDb->table('accounts')->where('id', '>', 1)->count();
+        
+        // Borrar en orden por foreign keys
+        $chatwootDb->table('inbox_members')->whereIn('inbox_id', function($q) {
+            $q->select('id')->from('inboxes')->where('account_id', '>', 1);
+        })->delete();
+        
+        $chatwootDb->table('channel_api')->whereIn('account_id', function($q) use ($chatwootDb) {
+            $q->select('id')->from('accounts')->where('id', '>', 1);
+        })->delete();
+        
+        $chatwootDb->table('inboxes')->where('account_id', '>', 1)->delete();
+        $chatwootDb->table('account_users')->where('account_id', '>', 1)->delete();
+        
+        // Borrar usuarios que solo pertenecen a accounts > 1
+        $chatwootDb->table('users')
+            ->whereNotIn('id', function($q) {
+                $q->select('user_id')->from('account_users')->where('account_id', '=', 1);
+            })
+            ->where('id', '>', 1)
+            ->delete();
+        
+        $chatwootDb->table('accounts')->where('id', '>', 1)->delete();
+        
+        $chatwootDb->statement('SET session_replication_role = DEFAULT;');
+        $results['cleaned']['chatwoot_db'] = "Deleted {$accountsDeleted} accounts";
+    } catch (\Exception $e) {
+        $results['cleaned']['chatwoot_db'] = 'Error: ' . $e->getMessage();
+    }
+    
+    // 3. LIMPIAR N8N WORKFLOWS
+    try {
+        $n8nUrl = config('services.n8n.url', env('N8N_URL'));
+        $n8nApiKey = config('services.n8n.api_key', env('N8N_API_KEY'));
+        
+        if ($n8nUrl && $n8nApiKey) {
+            $response = Http::withHeaders(['X-N8N-API-KEY' => $n8nApiKey])
+                ->get("{$n8nUrl}/api/v1/workflows");
+            
+            $workflows = $response->json()['data'] ?? [];
+            $deletedCount = 0;
+            
+            foreach ($workflows as $wf) {
+                Http::withHeaders(['X-N8N-API-KEY' => $n8nApiKey])
+                    ->delete("{$n8nUrl}/api/v1/workflows/{$wf['id']}");
+                $deletedCount++;
+            }
+            
+            $results['cleaned']['n8n'] = "Deleted {$deletedCount} workflows";
+        } else {
+            $results['cleaned']['n8n'] = 'N8N not configured';
+        }
+    } catch (\Exception $e) {
+        $results['cleaned']['n8n'] = 'Error: ' . $e->getMessage();
+    }
+    
+    // 4. LIMPIAR QDRANT COLLECTIONS
+    try {
+        $qdrantUrl = env('QDRANT_HOST', 'http://qdrant.railway.internal:6333');
+        // Para llamadas internas usar la URL interna, para externas usar la pública
+        $qdrantPublic = 'https://qdrant-production-f4e7.up.railway.app';
+        
+        $response = Http::get("{$qdrantPublic}/collections");
+        $collections = $response->json()['result']['collections'] ?? [];
+        $deletedCount = 0;
+        
+        foreach ($collections as $col) {
+            Http::delete("{$qdrantPublic}/collections/{$col['name']}");
+            $deletedCount++;
+        }
+        
+        $results['cleaned']['qdrant'] = "Deleted {$deletedCount} collections";
+    } catch (\Exception $e) {
+        $results['cleaned']['qdrant'] = 'Error: ' . $e->getMessage();
+    }
+    
+    // 5. LIMPIAR REDIS (flush cache y sessions)
+    try {
+        \Illuminate\Support\Facades\Redis::flushdb();
+        $results['cleaned']['redis'] = true;
+    } catch (\Exception $e) {
+        $results['cleaned']['redis'] = 'Error: ' . $e->getMessage();
+    }
+    
+    $results['message'] = '💥💥💥 NUCLEAR TOTAL - Todo limpiado: Laravel, Chatwoot, n8n, Qdrant, Redis';
+    
+    return response()->json($results);
+});
+
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
 // ============================================================================

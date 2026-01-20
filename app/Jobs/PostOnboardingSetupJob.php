@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Mail\OnboardingCompletedMail;
 use App\Mail\OnboardingCompletedNotificationMail;
+use App\Services\ChatwootProvisioningService;
 use App\Services\N8nService;
 use App\Services\QdrantService;
 use Illuminate\Bus\Queueable;
@@ -49,10 +50,48 @@ class PostOnboardingSetupJob implements ShouldQueue
 
         Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
 
-        // NOTA: La colección Qdrant ya se crea en OnboardingController@processOnboardingCompletion
-        // No duplicamos aquí para evitar operaciones redundantes
+        // 1. Crear colección Qdrant (rápido, ~100ms)
+        try {
+            Log::info("📦 Creando colección Qdrant para: {$this->companySlug}");
+            $qdrantResult = $qdrantService->createCompanyCollection($this->companySlug);
+            
+            if ($qdrantResult['success']) {
+                $collectionName = $qdrantResult['collection'];
+                Log::info("✅ Colección Qdrant creada: {$collectionName}");
+                
+                $company->update([
+                    'settings' => array_merge($company->settings ?? [], [
+                        'qdrant_collection' => $collectionName
+                    ])
+                ]);
+            } else {
+                Log::error("❌ Error creando colección Qdrant: " . ($qdrantResult['error'] ?? 'Unknown'));
+            }
+        } catch (\Exception $e) {
+            Log::error("❌ Excepción creando colección Qdrant: " . $e->getMessage());
+        }
 
-        // Crear workflow RAG (solo si no existe ya uno)
+        // 2. Provisionar cuenta Chatwoot (si no está ya provisionada)
+        if (!$company->chatwoot_provisioned) {
+            try {
+                Log::info("🚀 Provisionando Chatwoot para: {$company->name}");
+                $chatwootService = app(ChatwootProvisioningService::class);
+                $chatwootResult = $chatwootService->provisionCompanyAccount($company, $user);
+                
+                if ($chatwootResult['success'] ?? false) {
+                    Log::info("✅ Chatwoot provisionado exitosamente", [
+                        'account_id' => $chatwootResult['account']['id'] ?? null,
+                        'inbox_id' => $chatwootResult['inbox']['id'] ?? null
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error("❌ Error provisionando Chatwoot: " . $e->getMessage());
+            }
+        } else {
+            Log::info("ℹ️ Chatwoot ya provisionado para: {$company->name}");
+        }
+
+        // 3. Crear workflow RAG (solo si no existe ya uno)
         try {
             // Verificar si ya existe un workflow RAG para esta empresa
             $existingWorkflowId = $company->settings['rag_workflow_id'] ?? null;
@@ -86,7 +125,7 @@ class PostOnboardingSetupJob implements ShouldQueue
             Log::error("Excepción creando workflow RAG: " . $e->getMessage());
         }
 
-        // Crear workflow de ENTRENAMIENTO (Training Chat)
+        // 4. Crear workflow de ENTRENAMIENTO (Training Chat)
         try {
             $existingTrainingWorkflowId = $company->settings['training_workflow_id'] ?? null;
             
@@ -119,7 +158,7 @@ class PostOnboardingSetupJob implements ShouldQueue
             Log::error("Excepción creando workflow de Entrenamiento: " . $e->getMessage());
         }
 
-        // 3. Enviar correos
+        // 5. Enviar correos
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
                 Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));

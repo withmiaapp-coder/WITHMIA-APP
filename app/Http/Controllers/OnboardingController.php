@@ -384,60 +384,23 @@ class OnboardingController extends Controller
 
         Log::info("Empresa obtenida/creada: ID {$company->id}");
 
-        // Provisioning automático de Chatwoot - crea cuenta, usuario e inbox únicos
+        // 🚀 TODO el provisioning (Chatwoot, Qdrant, n8n) se hace en background
+        // El usuario va al dashboard INMEDIATAMENTE sin esperar
+        
+        // Disparar Job en background usando delay para asegurar que sea async
         try {
-            Log::info("Iniciando creacion automatica de cuenta Chatwoot para: {$user->email}");
-            $chatwootResult = $this->chatwootProvisioningService->provisionCompanyAccount($company, $user);
-            
-            if ($chatwootResult['success'] ?? false) {
-                Log::info("Cuenta Chatwoot creada exitosamente para: {$user->email}", [
-                    'account_id' => $chatwootResult['account']['id'] ?? null,
-                    'inbox_id' => $chatwootResult['inbox']['id'] ?? null
-                ]);
-            } else {
-                Log::error("Chatwoot provisioning falló para: {$user->email}", [
-                    'error' => $chatwootResult['error'] ?? 'Unknown'
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error("Excepción creando cuenta Chatwoot para {$user->email}: " . $e->getMessage());
-        }
-
-        // Crear colección de Qdrant para la base de conocimiento de la empresa
-        try {
-            Log::info("Creando colección Qdrant para: {$uniqueSlug}");
-            $qdrantResult = $this->qdrantService->createCompanyCollection($uniqueSlug);
-            
-            if ($qdrantResult['success']) {
-                $collectionName = $qdrantResult['collection'];
-                Log::info("Colección Qdrant creada: {$collectionName}", $qdrantResult);
-                
-                // Guardar nombre de colección en la empresa
-                $company->update([
-                    'settings' => array_merge($company->settings ?? [], [
-                        'qdrant_collection' => $collectionName
-                    ])
-                ]);
-            } else {
-                Log::error("Error creando colección Qdrant para {$uniqueSlug}: " . ($qdrantResult['error'] ?? 'Unknown'));
-            }
-        } catch (\Exception $e) {
-            Log::error("Excepción creando colección Qdrant para {$uniqueSlug}: " . $e->getMessage());
-        }
-
-        // 🚀 Dispatch Job DESPUÉS de enviar la respuesta (no bloquea al usuario)
-        // dispatchAfterResponse ejecuta el job después de que el usuario recibe su respuesta
-        try {
-            PostOnboardingSetupJob::dispatchAfterResponse(
+            // Usar dispatch()->delay() para forzar ejecución async
+            PostOnboardingSetupJob::dispatch(
                 $user->id,
                 $company->id,
                 $uniqueSlug,
                 request()->ip()
-            );
-            Log::info("PostOnboardingSetupJob scheduled after response para: {$uniqueSlug}");
+            )->delay(now()->addSeconds(1));
+            
+            Log::info("PostOnboardingSetupJob dispatched (async) para: {$uniqueSlug}");
         } catch (\Exception $e) {
-            Log::error("Error scheduling PostOnboardingSetupJob: " . $e->getMessage());
-            // No hacer fallback síncrono - dejar que el usuario vaya al dashboard rápido
+            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
+            // No bloquear - el usuario va al dashboard igual
         }
 
         return [
@@ -456,24 +419,22 @@ class OnboardingController extends Controller
         $user->update(['company_slug' => $uniqueSlug]);
         $company = $this->getOrCreateCompany($user, $uniqueSlug);
 
-        try {
-            Log::info("Iniciando creacion automatica de cuenta Chatwoot para: {$user->email}");
-            $chatwootResult = $this->chatwootProvisioningService->provisionCompanyAccount($company, $user);
-            Log::info("Cuenta Chatwoot creada exitosamente para: {$user->email}", [
-                'account_id' => $chatwootResult['account']['id'] ?? null,
-                'inbox_id' => $chatwootResult['inbox']['id'] ?? null
-            ]);
+        // Marcar onboarding como completado inmediatamente
+        $user->update([
+            'onboarding_completed' => true,
+            'onboarding_completed_at' => now()
+        ]);
 
-            if (isset($chatwootResult['account']['id'])) {
-                $company->update([
-                    'chatwoot_account_id' => $chatwootResult['account']['id'],
-                    'chatwoot_provisioned' => true,
-                    'chatwoot_provisioned_at' => now()
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error("Error creando cuenta Chatwoot para {$user->email}: " . $e->getMessage());
-        }
+        // Disparar Job en background para tareas pesadas (Chatwoot, n8n, emails)
+        // Esto permite que el usuario vea el dashboard de inmediato
+        \App\Jobs\PostOnboardingSetupJob::dispatch(
+            $user->id,
+            $company->id,
+            $uniqueSlug,
+            $request->ip() ?? '0.0.0.0'
+        );
+
+        Log::info("Onboarding completado para {$user->email}, redirigiendo a dashboard");
 
         return redirect()->route('dashboard.company', ['companySlug' => $uniqueSlug]);
     }

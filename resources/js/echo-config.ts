@@ -1,7 +1,7 @@
 /**
  * Laravel Echo Configuration for Real-time Broadcasting
  *
- * Este archivo configura Laravel Echo con Pusher para recibir
+ * Este archivo configura Laravel Echo con Reverb para recibir
  * eventos en tiempo real del servidor.
  */
 
@@ -9,7 +9,7 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import debugLog from '@/utils/debugLogger';
 
-// Asignar Pusher globalmente para que Echo lo encuentre
+// Pusher-js es requerido por Laravel Echo para conectarse a WebSockets
 declare global {
   interface Window {
     Pusher: typeof Pusher;
@@ -22,18 +22,23 @@ window.Pusher = Pusher;
 // Obtener CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-// Detectar si estamos usando Pusher real (sin wsHost) o Reverb (con wsHost)
-const pusherHost = import.meta.env.VITE_PUSHER_HOST;
-const isUsingPusherReal = !pusherHost || pusherHost === '';
+// Configuración de Reverb
+const reverbHost = import.meta.env.VITE_REVERB_HOST;
+const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
+const reverbPort = import.meta.env.VITE_REVERB_PORT || '443';
+const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
 
-// Configurar Laravel Echo con Pusher
+// Configurar Laravel Echo con Reverb
 const echoConfig: any = {
-  broadcaster: 'pusher',
-  key: import.meta.env.VITE_PUSHER_APP_KEY || 'local-app-key',
-  cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
-  forceTLS: true,
+  broadcaster: 'reverb',
+  key: reverbKey || 'local-app-key',
+  wsHost: reverbHost,
+  wsPort: parseInt(reverbPort),
+  wssPort: parseInt(reverbPort),
+  forceTLS: reverbScheme === 'https',
   encrypted: true,
   disableStats: true,
+  enabledTransports: ['ws', 'wss'],
 
   // Autenticación para canales privados
   authEndpoint: '/broadcasting/auth',
@@ -81,16 +86,7 @@ const echoConfig: any = {
   },
 };
 
-// Solo agregar wsHost si estamos usando Reverb (self-hosted)
-if (!isUsingPusherReal && pusherHost) {
-  echoConfig.wsHost = pusherHost;
-  echoConfig.wsPort = 443;
-  echoConfig.wssPort = 443;
-  echoConfig.enabledTransports = ['ws', 'wss'];
-  debugLog.log('🔧 Usando Reverb (self-hosted) en:', pusherHost);
-} else {
-  debugLog.log('🔧 Usando Pusher real, cluster:', import.meta.env.VITE_PUSHER_APP_CLUSTER);
-}
+debugLog.log('🔧 Conectando a Reverb en:', reverbHost);
 
 const echo = new Echo(echoConfig);
 
