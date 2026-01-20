@@ -9,7 +9,28 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// � REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token válido para el usuario
+// 🔧 FIX: Cambiar logo_url a TEXT para soportar base64
+Route::get('/fix-logo-column', function () {
+    try {
+        // Cambiar logo_url de VARCHAR a TEXT
+        DB::statement("ALTER TABLE companies ALTER COLUMN logo_url TYPE TEXT");
+        
+        // Limpiar los paths antiguos que ya no funcionan
+        DB::table('companies')->update(['logo_url' => null]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Columna logo_url cambiada a TEXT y limpiada. Sube el logo nuevamente.'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// 🔄 REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token válido para el usuario
 Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
     try {
         $chatwootDb = DB::connection('chatwoot');
