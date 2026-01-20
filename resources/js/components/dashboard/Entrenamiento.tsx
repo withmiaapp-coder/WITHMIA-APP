@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { router } from "@inertiajs/react";
 import {
   Building2,
   Globe,
@@ -193,6 +194,8 @@ export default function Entrenamiento({
       const data = await response.json();
       if (data.success && data.logo_url) {
         setOnboardingData(prev => ({ ...prev, logo_url: data.logo_url }));
+        // Reload page to update sidebar logo
+        router.reload({ only: ['onboardingData'] });
       } else {
         alert('Error al subir el logo: ' + (data.error || 'Intente nuevamente'));
       }
