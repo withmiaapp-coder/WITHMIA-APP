@@ -3,21 +3,13 @@ import {
   BookOpen,
   Upload,
   FileText,
-  Edit2,
-  Save,
-  X,
-  Check,
   Loader,
-  AlertCircle,
   Trash2,
-  Eye,
-  RefreshCw,
-  Download,
   Building2,
-  Globe,
   Users,
   Sparkles,
   AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,14 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-interface OnboardingData {
-  company_name: string;
-  company_description: string;
-  has_website: boolean;
-  website: string;
-  client_type: "interno" | "externo" | null;
-}
 
 interface Document {
   id: string;
@@ -48,7 +32,6 @@ interface Document {
 interface ConocimientosProps {
   user: any;
   company: any;
-  onboardingData?: OnboardingData;
 }
 
 const CATEGORIES = [
@@ -89,20 +72,7 @@ const ALLOWED_EXTENSIONS = [".pdf", ".txt", ".docx", ".md"];
 export default function Conocimientos({
   user,
   company,
-  onboardingData: initialOnboarding,
 }: ConocimientosProps) {
-  const [onboardingData, setOnboardingData] = useState<OnboardingData>(
-    initialOnboarding || {
-      company_name: company?.name || "",
-      company_description: company?.description || "",
-      has_website: false,
-      website: "",
-      client_type: null,
-    }
-  );
-
-  const [editingOnboarding, setEditingOnboarding] = useState(false);
-  const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("historia");
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
@@ -118,27 +88,10 @@ export default function Conocimientos({
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fetch onboarding data on mount
-  useEffect(() => {
-    fetchOnboardingData();
-  }, []);
-
   // Fetch documents on mount and category change
   useEffect(() => {
     fetchDocuments();
   }, [selectedCategory]);
-
-  const fetchOnboardingData = async () => {
-    try {
-      const response = await fetch("/api/onboarding-data");
-      const data = await response.json();
-      if (data.success && data.data) {
-        setOnboardingData(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching onboarding data:", error);
-    }
-  };
 
   const fetchDocuments = async () => {
     setLoadingDocuments(true);
@@ -199,34 +152,6 @@ export default function Conocimientos({
     }, 5000); // Poll every 5 seconds
     
     setPollingIntervals(prev => ({ ...prev, [filename]: intervalId }));
-  };
-
-  const handleSaveOnboarding = async () => {
-    setSavingOnboarding(true);
-    try {
-      // Obtener CSRF token
-      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      
-      const response = await fetch("/api/onboarding-data", {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "X-CSRF-TOKEN": token
-        },
-        body: JSON.stringify(onboardingData),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setEditingOnboarding(false);
-      } else {
-        alert("Error al guardar: " + (data.error || "Intente nuevamente"));
-      }
-    } catch (error) {
-      alert("Error de conexión");
-      console.error(error);
-    } finally {
-      setSavingOnboarding(false);
-    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -431,243 +356,6 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Grid for side-by-side sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Onboarding Data Section */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-cyan-600" />
-            <h2 className="text-2xl font-bold text-neutral-800">
-              Información de tu Empresa
-            </h2>
-          </div>
-          {!editingOnboarding ? (
-            <button
-              onClick={() => setEditingOnboarding(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-cyan-50 text-cyan-700 rounded-lg hover:bg-cyan-100 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              Editar
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditingOnboarding(false)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <X className="w-4 h-4" />
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveOnboarding}
-                disabled={savingOnboarding}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
-              >
-                {savingOnboarding ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Guardar
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Company Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre de la Empresa
-            </label>
-            {editingOnboarding ? (
-              <input
-                type="text"
-                value={onboardingData.company_name}
-                onChange={(e) =>
-                  setOnboardingData((prev) => ({
-                    ...prev,
-                    company_name: e.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
-            ) : (
-              <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
-                {onboardingData.company_name || "No especificado"}
-              </p>
-            )}
-          </div>
-
-          {/* Website */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Globe className="w-4 h-4 inline mr-1" />
-              Sitio Web
-            </label>
-            {editingOnboarding ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      checked={onboardingData.has_website === true}
-                      onChange={() =>
-                        setOnboardingData((prev) => ({
-                          ...prev,
-                          has_website: true,
-                        }))
-                      }
-                      className="mr-2"
-                    />
-                    Sí
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      checked={onboardingData.has_website === false}
-                      onChange={() =>
-                        setOnboardingData((prev) => ({
-                          ...prev,
-                          has_website: false,
-                          website: "",
-                        }))
-                      }
-                      className="mr-2"
-                    />
-                    No
-                  </label>
-                </div>
-                {onboardingData.has_website && (
-                  <input
-                    type="url"
-                    value={onboardingData.website}
-                    onChange={(e) =>
-                      setOnboardingData((prev) => ({
-                        ...prev,
-                        website: e.target.value,
-                      }))
-                    }
-                    placeholder="https://ejemplo.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  />
-                )}
-              </div>
-            ) : (
-              <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
-                {onboardingData.has_website ? (
-                  <a
-                    href={onboardingData.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-600 hover:underline"
-                  >
-                    {onboardingData.website}
-                  </a>
-                ) : (
-                  "Sin sitio web"
-                )}
-              </p>
-            )}
-          </div>
-
-          {/* Company Description */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descripción de la Empresa
-            </label>
-            {editingOnboarding ? (
-              <textarea
-                value={onboardingData.company_description}
-                onChange={(e) =>
-                  setOnboardingData((prev) => ({
-                    ...prev,
-                    company_description: e.target.value,
-                  }))
-                }
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
-            ) : (
-              <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-800 whitespace-pre-wrap">
-                {onboardingData.company_description || "No especificada"}
-              </p>
-            )}
-          </div>
-
-          {/* Client Type */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Users className="w-4 h-4 inline mr-1" />
-              Tipo de Cliente
-            </label>
-            {editingOnboarding ? (
-              <div className="flex gap-4">
-                <button
-                  onClick={() =>
-                    setOnboardingData((prev) => ({
-                      ...prev,
-                      client_type: "interno",
-                    }))
-                  }
-                  className={`flex-1 px-6 py-4 border-2 rounded-lg transition-all ${
-                    onboardingData.client_type === "interno"
-                      ? "border-green-500 bg-green-50 text-green-700"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">­</div>
-                    <div className="font-semibold">Cliente Interno</div>
-                    <div className="text-sm text-gray-500">
-                      Para equipos de tu empresa
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() =>
-                    setOnboardingData((prev) => ({
-                      ...prev,
-                      client_type: "externo",
-                    }))
-                  }
-                  className={`flex-1 px-6 py-4 border-2 rounded-lg transition-all ${
-                    onboardingData.client_type === "externo"
-                      ? "border-orange-500 bg-orange-50 text-orange-700"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">­</div>
-                    <div className="font-semibold">Cliente Externo</div>
-                    <div className="text-sm text-gray-500">
-                      Para tus clientes finales
-                    </div>
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <div
-                className={`px-4 py-3 rounded-lg ${
-                  onboardingData.client_type === "interno"
-                    ? "bg-green-50 text-green-700"
-                    : onboardingData.client_type === "externo"
-                    ? "bg-orange-50 text-orange-700"
-                    : "bg-gray-50 text-gray-800"
-                }`}
-              >
-                {onboardingData.client_type === "interno"
-                  ? "­ Cliente Interno - Para equipos de tu empresa"
-                  : onboardingData.client_type === "externo"
-                  ? "­ Cliente Externo - Para tus clientes finales"
-                  : "No especificado"}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Document Upload Section */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
         <div className="flex items-center gap-3 mb-6">
@@ -771,7 +459,6 @@ export default function Conocimientos({
         )}
       </div>
 
-      </div>
       {/* Documents List */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
         <div className="flex items-center gap-3 mb-6">

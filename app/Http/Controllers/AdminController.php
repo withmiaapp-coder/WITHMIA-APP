@@ -141,6 +141,7 @@ class AdminController extends Controller
 
     /**
      * API: Delete user
+     * NOTA: Usa Eloquent para activar UserObserver (elimina Evolution API, Qdrant, archivos, etc.)
      */
     public function deleteUser($id)
     {
@@ -154,13 +155,18 @@ class AdminController extends Controller
                 return response()->json(['error' => 'No puedes eliminarte a ti mismo'], 400);
             }
 
-            $affected = DB::table('users')
-                ->where('id', $id)
-                ->delete();
-
-            if ($affected === 0) {
+            // Usar Eloquent para activar el UserObserver (limpia Evolution API, Qdrant, archivos)
+            $user = \App\Models\User::find($id);
+            
+            if (!$user) {
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
+
+            // Esto dispara UserObserver::deleting() que limpia:
+            // - Instancia Evolution API
+            // - Colección Qdrant
+            // - Archivos Excel
+            $user->delete();
 
             // Invalidar caché
             Cache::forget('admin_users');

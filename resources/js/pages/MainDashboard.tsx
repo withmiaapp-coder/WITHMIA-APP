@@ -6,6 +6,7 @@ import TeamsManagement from '../components/TeamsManagement';
 import WhatsAppQRModal from '../components/WhatsAppQRModal';
 import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
+import Entrenamiento from '../components/dashboard/Entrenamiento';
 import AdminPanel from '../components/dashboard/AdminPanel';
 import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
@@ -58,7 +59,8 @@ import {
   Instagram,
   Facebook,
   Settings,
-  Package
+  Package,
+  GraduationCap
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -816,6 +818,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       gradient: 'from-cyan-500 to-blue-500'
     },
     { 
+      id: 'training', 
+      label: 'Entrenamiento', 
+      icon: GraduationCap, 
+      count: null,
+      gradient: 'from-violet-500 to-purple-500'
+    },
+    { 
       id: 'calendar', 
       label: 'Calendario', 
       icon: Calendar, 
@@ -1043,6 +1052,19 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             ) : activeSection === 'knowledge' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
                 <Conocimientos 
+                  user={user} 
+                  company={{
+                    id: user.company_id,
+                    name: user.company_name,
+                    slug: companySlug,
+                    description: user.company_description,
+                    settings: company?.settings
+                  }}
+                />
+              </div>
+            ) : activeSection === 'training' ? (
+              <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+                <Entrenamiento 
                   user={user} 
                   company={{
                     id: user.company_id,
