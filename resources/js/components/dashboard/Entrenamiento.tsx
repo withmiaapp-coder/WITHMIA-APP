@@ -88,17 +88,33 @@ export default function Entrenamiento({
     fetchOnboardingData();
   }, []);
 
-  // Initialize welcome message when onboarding data is loaded
+  // Initialize or update welcome message when onboarding data is loaded
   useEffect(() => {
     const assistantName = onboardingData.assistant_name || 'tu asistente';
     const companyName = onboardingData.company_name || 'tu empresa';
-    if (messages.length === 0) {
-      setMessages([{
-        id: "welcome",
-        role: "assistant",
-        content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
-        timestamp: new Date(),
-      }]);
+    
+    // Only update if we have actual data loaded (not defaults)
+    if (onboardingData.assistant_name || onboardingData.company_name) {
+      setMessages(prevMessages => {
+        // If no messages yet, create welcome message
+        if (prevMessages.length === 0) {
+          return [{
+            id: "welcome",
+            role: "assistant",
+            content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
+            timestamp: new Date(),
+          }];
+        }
+        // If only welcome message exists, update it
+        if (prevMessages.length === 1 && prevMessages[0].id === "welcome") {
+          return [{
+            ...prevMessages[0],
+            content: `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`,
+          }];
+        }
+        // If conversation already started, don't update
+        return prevMessages;
+      });
     }
   }, [onboardingData.company_name, onboardingData.assistant_name]);
 
