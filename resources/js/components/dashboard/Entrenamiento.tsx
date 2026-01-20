@@ -87,14 +87,14 @@ export default function Entrenamiento({
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola! 👋 Soy MIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        content: `¡Hola! 👋 Soy WITHMIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre ${onboardingData.company_name} y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
         timestamp: new Date(),
       }]);
     } else if (messages.length === 0) {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        content: `¡Hola! 👋 Soy MIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
+        content: `¡Hola! 👋 Soy WITHMIA, tu asistente de inteligencia artificial. Estoy aquí para aprender sobre tu empresa y ayudarte a entrenarme.\n\n¿En qué puedo ayudarte hoy?`,
         timestamp: new Date(),
       }]);
     }
@@ -203,7 +203,7 @@ export default function Entrenamiento({
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">Entrenamiento de IA</h1>
           <p className="text-sm text-neutral-500">
-            Entrena a MIA con información de tu empresa y ejemplos de conversación
+            Entrena a WITHMIA con información de tu empresa y ejemplos de conversación
           </p>
         </div>
       </div>
@@ -228,7 +228,7 @@ export default function Entrenamiento({
                     <Bot className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">MIA</h3>
+                    <h3 className="text-white font-semibold text-sm">WITHMIA</h3>
                     <p className="text-white/70 text-xs">Entrenamiento activo</p>
                   </div>
                   <div className="ml-auto flex items-center gap-1">
@@ -544,7 +544,7 @@ export default function Entrenamiento({
                 <ul className="mt-2 text-sm text-violet-700 space-y-1">
                   <li>• Proporciona ejemplos de conversaciones típicas</li>
                   <li>• Corrige las respuestas que no sean correctas</li>
-                  <li>• Describe cómo debe responder MIA a tus clientes</li>
+                  <li>• Describe cómo debe responder WITHMIA a tus clientes</li>
                 </ul>
               </div>
             </div>
