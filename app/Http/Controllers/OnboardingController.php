@@ -116,6 +116,8 @@ class OnboardingController extends Controller
             }
 
             $step = $request->input('step', 0);
+            
+            \Log::info("OnboardingController@store - Processing step: {$step} for user: {$user->id}");
 
             switch ($step) {
                 case 1: $this->saveUserData($request, $user); break;
@@ -125,8 +127,10 @@ class OnboardingController extends Controller
                 case 5: $this->saveVolumeData($request, $user); break;
                 case 6: $this->saveDiscoveryDataInternal($request, $user); break;
                 case 7:
+                    \Log::info("OnboardingController@store - STEP 7 - About to call processOnboardingCompletion");
                     $this->saveToolsData($request, $user);
                     $completionResult = $this->processOnboardingCompletion($request, $user);
+                    \Log::info("OnboardingController@store - STEP 7 - processOnboardingCompletion returned", ['result' => $completionResult]);
                     $user->refresh();
                     break;
             }
