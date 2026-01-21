@@ -249,6 +249,15 @@ export default function Entrenamiento({
         };
         setMessages((prev) => [...prev, assistantMessage]);
         
+        // 🔄 Si se cambió el nombre del asistente, actualizar el estado local
+        if (data.name_changed && data.new_name) {
+          setOnboardingData((prev) => ({
+            ...prev,
+            assistant_name: data.new_name,
+          }));
+          console.log('✅ Nombre del asistente actualizado a:', data.new_name);
+        }
+        
         // Mostrar indicador si se guardó en Qdrant
         if (data.saved_to_knowledge) {
           console.log('✅ Información guardada en la base de conocimiento');

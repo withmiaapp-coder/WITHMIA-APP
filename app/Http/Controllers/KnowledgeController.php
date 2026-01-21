@@ -314,6 +314,18 @@ class KnowledgeController extends Controller
             $userMessage = $request->input('message');
             $context = $request->input('context', []);
             
+            // 🔄 Detectar si el usuario quiere cambiar el nombre del asistente
+            $nameChangeResult = $this->detectAndUpdateAssistantName($userMessage, $company);
+            if ($nameChangeResult) {
+                return response()->json([
+                    'success' => true,
+                    'response' => $nameChangeResult['response'],
+                    'saved_to_knowledge' => false,
+                    'name_changed' => true,
+                    'new_name' => $nameChangeResult['new_name']
+                ]);
+            }
+            
             $companySlug = $user->company_slug ?? 'default';
             $assistantName = $company->assistant_name ?? 'WITHMIA';
             
@@ -394,6 +406,78 @@ class KnowledgeController extends Controller
                 'error' => 'Error al procesar el mensaje de entrenamiento'
             ], 500);
         }
+    }
+
+    /**
+     * Detecta si el usuario quiere cambiar el nombre del asistente y lo actualiza
+     * Retorna null si no hay cambio de nombre, o un array con el resultado si hubo cambio
+     */
+    private function detectAndUpdateAssistantName($message, $company)
+    {
+        $lowerMessage = mb_strtolower($message, 'UTF-8');
+        
+        // Patrones para detectar cambio de nombre
+        $patterns = [
+            // "te llamas X" / "te llamarás X" / "tu nombre es X" / "tu nombre será X"
+            '/(?:te\s+llamas?|te\s+llamar[áa]s|tu\s+nombre\s+(?:es|ser[áa]))\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+            // "ahora eres X" / "serás X"
+            '/(?:ahora\s+(?:eres|te\s+llamas|ser[áa]s))\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+            // "llámame X" (cuando quieren que el bot se llame así)
+            '/(?:ll[áa]mate|tu\s+nuevo\s+nombre\s+(?:es|ser[áa]))\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+            // "cámbiate el nombre a X" / "cambia tu nombre a X"
+            '/(?:c[áa]mbia(?:te)?(?:\s+el)?\s+nombre\s+a)\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+            // "de ahora en adelante te llamas X"
+            '/(?:de\s+ahora\s+en\s+adelante\s+te\s+llamas?)\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+            // "quiero que te llames X"
+            '/(?:quiero\s+que\s+te\s+llames?)\s+["\']?([a-záéíóúñü]+)["\']?/iu',
+        ];
+        
+        $newName = null;
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $message, $matches)) {
+                $newName = trim($matches[1]);
+                break;
+            }
+        }
+        
+        // Si no encontramos un nombre, retornamos null
+        if (!$newName) {
+            return null;
+        }
+        
+        // Capitalizar primera letra
+        $newName = mb_convert_case($newName, MB_CASE_TITLE, 'UTF-8');
+        
+        // Validar que el nombre sea razonable (2-50 caracteres)
+        if (mb_strlen($newName) < 2 || mb_strlen($newName) > 50) {
+            return null;
+        }
+        
+        $oldName = $company->assistant_name ?? 'WITHMIA';
+        
+        // Actualizar en la base de datos
+        $company->update(['assistant_name' => $newName]);
+        
+        Log::info('Assistant name changed via chat', [
+            'company_id' => $company->id,
+            'old_name' => $oldName,
+            'new_name' => $newName
+        ]);
+        
+        // Respuestas variadas para el cambio de nombre
+        $responses = [
+            "¡Perfecto! Ahora me llamo **{$newName}**. Así me presentaré a tus clientes. 😊",
+            "¡Entendido! De ahora en adelante soy **{$newName}**. ¿Hay algo más que deba saber sobre mí?",
+            "¡Genial! Mi nuevo nombre es **{$newName}**. Me gusta cómo suena. ¿Qué más te gustaría configurar?",
+            "¡Hecho! Ya no soy {$oldName}, ahora soy **{$newName}**. ¿Quieres enseñarme algo más?",
+        ];
+        
+        return [
+            'new_name' => $newName,
+            'old_name' => $oldName,
+            'response' => $responses[array_rand($responses)]
+        ];
     }
 
     /**
