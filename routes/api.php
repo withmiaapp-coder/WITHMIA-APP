@@ -3216,7 +3216,7 @@ Route::get('/debug/companies-info', function () {
                 'id' => $company->id,
                 'name' => $company->name,
                 'slug' => $company->slug,
-                'bot_name' => $company->bot_name,
+                'assistant_name' => $company->assistant_name,
                 'bot_personality' => $company->bot_personality,
                 'industry' => $company->industry,
                 'chatwoot_provisioned' => $company->chatwoot_provisioned,
