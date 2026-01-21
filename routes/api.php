@@ -3238,3 +3238,62 @@ Route::get('/debug/companies-info', function () {
         ], 500);
     }
 });
+
+// ============== DEBUG: Ver columnas de companies ==============
+Route::get('/debug/companies-columns', function () {
+    $columns = \DB::select("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'companies' ORDER BY ordinal_position");
+    return response()->json([
+        'success' => true,
+        'columns' => $columns
+    ]);
+});
+
+// ============== FIX: Agregar columna assistant_name si no existe ==============
+Route::get('/fix/add-assistant-name', function () {
+    try {
+        $hasColumn = \Schema::hasColumn('companies', 'assistant_name');
+        
+        if (!$hasColumn) {
+            \Schema::table('companies', function ($table) {
+                $table->string('assistant_name', 100)->nullable()->after('name');
+            });
+            return response()->json([
+                'success' => true,
+                'message' => 'Columna assistant_name agregada correctamente'
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'La columna assistant_name ya existe'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ============== UPDATE: Actualizar assistant_name de una empresa ==============
+Route::get('/update/company-assistant/{companyId}/{name}', function ($companyId, $name) {
+    try {
+        $company = \App\Models\Company::findOrFail($companyId);
+        $company->update(['assistant_name' => $name]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => "assistant_name actualizado a '{$name}'",
+            'company' => [
+                'id' => $company->id,
+                'name' => $company->name,
+                'assistant_name' => $company->assistant_name
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
