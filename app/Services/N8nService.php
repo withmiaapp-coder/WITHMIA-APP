@@ -330,6 +330,13 @@ class N8nService
             unset($templateWorkflow['versionId']);
             unset($templateWorkflow['active']);
             unset($templateWorkflow['pinData']);
+            unset($templateWorkflow['meta']);
+            unset($templateWorkflow['staticData']);
+            unset($templateWorkflow['notes']);
+            unset($templateWorkflow['tags']);
+            unset($templateWorkflow['triggerCount']);
+            unset($templateWorkflow['updatedAt']);
+            unset($templateWorkflow['createdAt']);
             
             Log::info('Creating training workflow', [
                 'company_slug' => $companySlug,

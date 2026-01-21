@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Company;
 use App\Jobs\PostOnboardingSetupJob;
+use App\Jobs\CreateQdrantCollectionJob;
+use App\Jobs\CreateN8nWorkflowsJob;
 use OpenAI;
 
 class OnboardingApiController extends Controller
@@ -125,6 +127,18 @@ class OnboardingApiController extends Controller
         
         if (!empty($data['company_name'])) {
             $company->update(['name' => $data['company_name']]);
+            
+            // 📦 Generar slug temporal y crear colección Qdrant AHORA (rápido, ~100ms)
+            // Esto se hace aquí para que cuando llegue al paso 7, ya esté listo
+            $tempSlug = Str::slug($data['company_name']) . '-' . strtolower(Str::random(6));
+            
+            try {
+                Log::info("📦 Pre-creating Qdrant collection in step 2 for: {$tempSlug}");
+                CreateQdrantCollectionJob::dispatchSync($company->id, $tempSlug);
+            } catch (\Exception $e) {
+                Log::error("Error pre-creating Qdrant: " . $e->getMessage());
+                // No bloquear el onboarding si falla
+            }
         }
         if (!empty($data['industry'])) {
             $company->update(['industry' => $data['industry']]);
@@ -198,18 +212,35 @@ class OnboardingApiController extends Controller
             $company->update(['slug' => $uniqueSlug]);
         }
 
-        // 🚀 Dispatch PostOnboardingSetupJob in background
+        // � Asegurar que Qdrant collection existe (si no se creó en paso 2)
+        if (empty($company->settings['qdrant_collection'])) {
+            try {
+                Log::info("📦 Creating Qdrant collection (was missing): {$uniqueSlug}");
+                CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
+            } catch (\Exception $e) {
+                Log::error("Error creating Qdrant: " . $e->getMessage());
+            }
+        }
+
+        // 🚀 Crear workflows n8n (RAG + Training) - ESTO ES LO IMPORTANTE
+        try {
+            Log::info("🚀 Creating n8n workflows for: {$uniqueSlug}");
+            CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
+            Log::info("✅ N8n workflows created for: {$uniqueSlug}");
+        } catch (\Exception $e) {
+            Log::error("Error creating n8n workflows: " . $e->getMessage());
+        }
+
+        // 📧 Enviar correos en background (no bloquea)
         try {
             PostOnboardingSetupJob::dispatch(
                 $user->id,
                 $company->id,
                 $uniqueSlug,
                 $request->ip() ?? '0.0.0.0'
-            )->delay(now()->addSeconds(1));
-            
-            Log::info("PostOnboardingSetupJob dispatched for: {$uniqueSlug}");
+            )->onConnection('sync');
         } catch (\Exception $e) {
-            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
+            Log::error("Error sending emails: " . $e->getMessage());
         }
 
         $dashboardUrl = route('dashboard.company', ['companySlug' => $uniqueSlug]) . '?auth_token=' . $user->auth_token;

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
@@ -9,7 +9,7 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// 🎓 SETUP TRAINING WORKFLOW PARA WITHMIA
+// ?? SETUP TRAINING WORKFLOW PARA WITHMIA
 Route::get('/setup-training-withmia', function () {
     try {
         $company = \App\Models\Company::where('slug', 'withmia-zly7qn')->first();
@@ -36,7 +36,7 @@ Route::get('/setup-training-withmia', function () {
     }
 });
 
-// 🔧 FIX: Cambiar logo_url a TEXT para soportar base64
+// ?? FIX: Cambiar logo_url a TEXT para soportar base64
 Route::get('/fix-logo-column', function () {
     try {
         // Cambiar logo_url de VARCHAR a TEXT
@@ -57,7 +57,7 @@ Route::get('/fix-logo-column', function () {
     }
 });
 
-// 🔄 REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token válido para el usuario
+// ?? REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token v�lido para el usuario
 Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -108,7 +108,7 @@ Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
             'chatwoot_agent_token' => $newToken
         ]);
         
-        Log::info('✅ Token de Chatwoot regenerado', [
+        Log::info('? Token de Chatwoot regenerado', [
             'user_id' => $userId,
             'chatwoot_agent_id' => $user->chatwoot_agent_id,
             'deleted_old_tokens' => $deletedTokens,
@@ -136,7 +136,7 @@ Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
     }
 });
 
-// 🔍 VERIFICAR ESTADO COMPLETO DE UN USUARIO EN CHATWOOT
+// ?? VERIFICAR ESTADO COMPLETO DE UN USUARIO EN CHATWOOT
 Route::get('/debug-user-chatwoot/{userId}', function ($userId) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -221,10 +221,10 @@ Route::get('/debug-user-chatwoot/{userId}', function ($userId) {
                 'inbox_member_exists' => $inboxMember ? true : false
             ],
             'diagnosis' => [
-                'has_chatwoot_user' => $chatwootUser ? '✅' : '❌ No existe en Chatwoot',
-                'has_valid_token' => $tokenMatch ? '✅' : '❌ Token no coincide',
-                'has_account_access' => $accountUser ? '✅' : '❌ No tiene acceso a account',
-                'has_inbox_access' => $inboxMember ? '✅' : '❌ No tiene acceso a inbox',
+                'has_chatwoot_user' => $chatwootUser ? '?' : '? No existe en Chatwoot',
+                'has_valid_token' => $tokenMatch ? '?' : '? Token no coincide',
+                'has_account_access' => $accountUser ? '?' : '? No tiene acceso a account',
+                'has_inbox_access' => $inboxMember ? '?' : '? No tiene acceso a inbox',
                 'recommendation' => !$tokenMatch ? 'Ejecutar /api/regenerate-chatwoot-token/' . $userId : 'Token OK'
             ]
         ]);
@@ -234,7 +234,7 @@ Route::get('/debug-user-chatwoot/{userId}', function ($userId) {
     }
 });
 
-// �🔧 FIX TEMPORAL: Arreglar usuarios sin inbox_id
+// ??? FIX TEMPORAL: Arreglar usuarios sin inbox_id
 Route::get('/fix-user-inbox/{email}', function ($email) {
     $updated = DB::table('users')
         ->where('email', $email)
@@ -251,7 +251,43 @@ Route::get('/fix-user-inbox/{email}', function ($email) {
     ]);
 });
 
-// 🔥 RESET TOTAL: Borra TODO (Laravel + Chatwoot) - SOLO PARA DESARROLLO
+// 🔐 CREAR SUPER ADMIN EN CHATWOOT
+Route::get('/create-chatwoot-superadmin/{email}/{password}', function ($email, $password) {
+    try {
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // Verificar si ya existe
+        $existing = $chatwootDb->table('users')->where('email', $email)->first();
+        if ($existing) {
+            return response()->json(['error' => 'Super Admin ya existe', 'id' => $existing->id], 400);
+        }
+        
+        // Crear Super Admin con type='SuperAdmin'
+        $id = $chatwootDb->table('users')->insertGetId([
+            'email' => $email,
+            'encrypted_password' => bcrypt($password),
+            'name' => 'Admin WITHMIA',
+            'type' => 'SuperAdmin',
+            'uid' => $email,
+            'provider' => 'email',
+            'confirmed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Super Admin creado',
+            'id' => $id,
+            'email' => $email,
+            'login_url' => 'https://chatwoot-production-50cc.up.railway.app/super_admin/sign_in'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// ??? RESET TOTAL: Borra TODO (Laravel + Chatwoot) - SOLO PARA DESARROLLO
 Route::get('/reset-all-databases/{confirm}', function ($confirm) {
     if ($confirm !== 'SI-BORRAR-TODO') {
         return response()->json([
@@ -265,7 +301,24 @@ Route::get('/reset-all-databases/{confirm}', function ($confirm) {
         // 1. Borrar tablas de Laravel (usuarios, empresas, etc)
         DB::statement('SET session_replication_role = replica;'); // Deshabilitar FK temporalmente
         
-        $laravelTables = ['users', 'companies', 'whatsapp_instances', 'sessions', 'cache', 'jobs', 'failed_jobs'];
+        $laravelTables = [
+            'personal_access_tokens',
+            'knowledge_documents', 
+            'whatsapp_instances',
+            'agent_invitations',
+            'pipeline_items',
+            'pipelines',
+            'usage_metrics',
+            'integrations',
+            'ai_agents',
+            'subscriptions',
+            'sessions',
+            'cache',
+            'jobs',
+            'failed_jobs',
+            'companies',
+            'users'
+        ];
         foreach ($laravelTables as $table) {
             try {
                 DB::table($table)->truncate();
@@ -287,9 +340,9 @@ Route::get('/reset-all-databases/{confirm}', function ($confirm) {
         foreach ($chatwootTables as $table) {
             try {
                 $chatwootDb->table($table)->truncate();
-                $results[] = "✅ Chatwoot truncated: {$table}";
+                $results[] = "? Chatwoot truncated: {$table}";
             } catch (\Exception $e) {
-                $results[] = "⚠️ Chatwoot skip {$table}: " . $e->getMessage();
+                $results[] = "?? Chatwoot skip {$table}: " . $e->getMessage();
             }
         }
         
@@ -299,11 +352,11 @@ Route::get('/reset-all-databases/{confirm}', function ($confirm) {
         
         // 3. Ejecutar migraciones de Laravel
         Artisan::call('migrate', ['--force' => true]);
-        $results[] = "✅ Laravel migrations executed";
+        $results[] = "? Laravel migrations executed";
         
         return response()->json([
             'success' => true,
-            'message' => '🔥 RESET COMPLETO',
+            'message' => '?? RESET COMPLETO',
             'results' => $results
         ]);
         
@@ -316,7 +369,7 @@ Route::get('/reset-all-databases/{confirm}', function ($confirm) {
     }
 });
 
-// � DIAGNOSTICAR INBOXES DE CHATWOOT - Ver configuración actual
+// ? DIAGNOSTICAR INBOXES DE CHATWOOT - Ver configuraci�n actual
 Route::get('/debug-chatwoot-inboxes', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -360,7 +413,7 @@ Route::get('/debug-chatwoot-inboxes', function () {
     }
 });
 
-// 🔧 ARREGLAR WEBHOOK DEL INBOX - Quitar el webhook inválido a Evolution
+// ?? ARREGLAR WEBHOOK DEL INBOX - Quitar el webhook inv�lido a Evolution
 Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -386,9 +439,9 @@ Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
         
         $oldWebhook = $channel->webhook_url;
         
-        // El webhook correcto debería ser a tu app, no a Evolution
-        // Evolution recibe mensajes vía su propio webhook global
-        // Chatwoot debería enviar webhooks a tu app
+        // El webhook correcto deber�a ser a tu app, no a Evolution
+        // Evolution recibe mensajes v�a su propio webhook global
+        // Chatwoot deber�a enviar webhooks a tu app
         $newWebhook = 'https://app.withmia.com/api/chatwoot/webhook';
         
         // Actualizar webhook
@@ -399,7 +452,7 @@ Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
                 'updated_at' => now()
             ]);
         
-        Log::info('✅ Webhook de inbox actualizado', [
+        Log::info('? Webhook de inbox actualizado', [
             'inbox_id' => $inboxId,
             'old_webhook' => $oldWebhook,
             'new_webhook' => $newWebhook
@@ -423,7 +476,7 @@ Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
     }
 });
 
-// �🔄 Actualizar workflow RAG existente con el nuevo template
+// ??? Actualizar workflow RAG existente con el nuevo template
 Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -507,7 +560,7 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
     }
 });
 
-// 🔄 Actualizar TODOS los workflows RAG de todas las empresas
+// ?? Actualizar TODOS los workflows RAG de todas las empresas
 Route::get('/update-all-rag-workflows', function () {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -628,7 +681,7 @@ if (!function_exists('getMinimalWorkflow')) {
     }
 }
 
-// 🔄 RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
+// ?? RESETEAR WORKFLOW PARA PRUEBAS (limpiar n8n_workflow_id)
 Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     $updated = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
         ->where('instance_name', $instanceName)
@@ -644,7 +697,7 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
-// 🔍 DEBUG: Ver usuarios en la base de datos
+// ?? DEBUG: Ver usuarios en la base de datos
 Route::get('/debug-users', function () {
     $users = \App\Models\User::all(['id', 'name', 'email', 'created_at']);
     return response()->json([
@@ -653,7 +706,7 @@ Route::get('/debug-users', function () {
     ]);
 });
 
-// 🔍 DEBUG: Ver tokens de usuarios
+// ?? DEBUG: Ver tokens de usuarios
 Route::get('/debug-tokens', function () {
     $users = \App\Models\User::all(['id', 'name', 'email', 'auth_token']);
     return response()->json([
@@ -670,7 +723,7 @@ Route::get('/debug-tokens', function () {
     ]);
 });
 
-// 🔍 DEBUG: Session info
+// ?? DEBUG: Session info
 Route::get('/debug-session', function (\Illuminate\Http\Request $request) {
     return response()->json([
         'authenticated' => \Illuminate\Support\Facades\Auth::check(),
@@ -685,7 +738,7 @@ Route::get('/debug-session', function (\Illuminate\Http\Request $request) {
     ]);
 });
 
-// 🔍 DEBUG: Limpiar caché de Redis
+// ?? DEBUG: Limpiar cach� de Redis
 Route::get('/clear-all-cache', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('cache:clear');
@@ -699,7 +752,7 @@ Route::get('/clear-all-cache', function () {
     }
 });
 
-// 🗑️ TRUNCATE ALL TABLES - Eliminar todos los datos manteniendo estructura
+// ??? TRUNCATE ALL TABLES - Eliminar todos los datos manteniendo estructura
 Route::get('/truncate-all-tables', function () {
     try {
         Artisan::call('db:truncate-all', ['--force' => true]);
@@ -718,7 +771,7 @@ Route::get('/truncate-all-tables', function () {
     }
 });
 
-// � RUN MIGRATIONS
+// ? RUN MIGRATIONS
 Route::get('/run-migrations', function () {
     try {
         Artisan::call('migrate', ['--force' => true]);
@@ -737,7 +790,7 @@ Route::get('/run-migrations', function () {
     }
 });
 
-// �🗑️ WIPE DATABASE - Solo estructura, sin datos
+// ???? WIPE DATABASE - Solo estructura, sin datos
 Route::get('/wipe-database', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
@@ -754,7 +807,7 @@ Route::get('/wipe-database', function () {
     }
 });
 
-// 🧹 CLEANUP TEST DATA - Keep only specified company
+// ?? CLEANUP TEST DATA - Keep only specified company
 Route::get('/cleanup-test-data/{keepSlug}', function ($keepSlug) {
     try {
         $output = \Illuminate\Support\Facades\Artisan::call('cleanup:test-data', [
@@ -770,7 +823,7 @@ Route::get('/cleanup-test-data/{keepSlug}', function ($keepSlug) {
     }
 });
 
-// ⚡ ACTIVAR WORKFLOW n8n
+// ? ACTIVAR WORKFLOW n8n
 Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -787,7 +840,7 @@ Route::get('/activate-workflow/{workflowId}', function ($workflowId) {
     }
 });
 
-// 🔧 ARREGLAR WORKFLOW EXISTENTE - Obtener, corregir nodos con error y actualizar
+// ?? ARREGLAR WORKFLOW EXISTENTE - Obtener, corregir nodos con error y actualizar
 Route::get('/fix-workflow/{workflowId}', function ($workflowId) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -827,10 +880,10 @@ Route::get('/fix-workflow/{workflowId}', function ($workflowId) {
                 }
             }
             
-            // Asegurar que parameters nunca es array vacío
+            // Asegurar que parameters nunca es array vac�o
             if (isset($node['parameters']) && is_array($node['parameters']) && empty($node['parameters'])) {
                 $node['parameters'] = new \stdClass();
-                $fixes[] = "Corregido parameters vacío en nodo '$nodeName'";
+                $fixes[] = "Corregido parameters vac�o en nodo '$nodeName'";
             }
             
             $fixedNodes[] = $node;
@@ -865,7 +918,7 @@ Route::get('/fix-workflow/{workflowId}', function ($workflowId) {
     }
 });
 
-// 🚀 CREAR WORKFLOW MINIMALISTA (sin template JSON)
+// ?? CREAR WORKFLOW MINIMALISTA (sin template JSON)
 Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -874,7 +927,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
         // Usar workflow minimalista directamente
         $workflow = getMinimalWorkflow($instanceName);
         
-        Log::info('🔧 Creando workflow minimalista', ['name' => $workflow['name']]);
+        Log::info('?? Creando workflow minimalista', ['name' => $workflow['name']]);
         
         // Crear en n8n
         $result = $n8nService->createWorkflow($workflow);
@@ -886,7 +939,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
             // Activar
             if ($workflowId) {
                 $activateResult = $n8nService->activateWorkflow($workflowId);
-                Log::info('✅ Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
+                Log::info('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
             }
             
             // Configurar webhook de Evolution hacia n8n
@@ -895,7 +948,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
                 $webhookUrl,
                 ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
             );
-            Log::info('🔗 Webhook Evolution configurado', ['result' => $evolutionResult]);
+            Log::info('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
             
             // Guardar en BD
             \Illuminate\Support\Facades\DB::table('whatsapp_instances')
@@ -919,7 +972,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
         return response()->json(['error' => 'Error creando workflow', 'details' => $result], 500);
         
     } catch (\Exception $e) {
-        Log::error('❌ Error creando workflow minimalista', ['error' => $e->getMessage()]);
+        Log::error('? Error creando workflow minimalista', ['error' => $e->getMessage()]);
         return response()->json([
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
@@ -927,7 +980,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
     }
 });
 
-// 🚀 CREAR WORKFLOW N8N MANUALMENTE
+// ?? CREAR WORKFLOW N8N MANUALMENTE
 Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
     try {
         $n8nService = app(\App\Services\N8nService::class);
@@ -953,7 +1006,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             return response()->json(['error' => 'Template no encontrado: ' . $templatePath], 404);
         }
         
-        // Limpiar BOM y caracteres problemáticos
+        // Limpiar BOM y caracteres problem�ticos
         $content = file_get_contents($templatePath);
         $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
         $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
@@ -988,17 +1041,17 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 }
             }
             
-            // 🔧 Configurar Qdrant con la colección correcta de la empresa
+            // ?? Configurar Qdrant con la colecci�n correcta de la empresa
             if ($node['type'] === '@n8n/n8n-nodes-langchain.vectorStoreQdrant') {
                 $cleanNode['parameters']['qdrantCollection'] = [
                     '__rl' => true,
                     'value' => $collectionName,
                     'mode' => 'id'
                 ];
-                Log::info("Configurando Qdrant con colección: {$collectionName}");
+                Log::info("Configurando Qdrant con colecci�n: {$collectionName}");
             }
             
-            // 🔧 Simplificar prompt del AI Agent para evitar error 500 de n8n
+            // ?? Simplificar prompt del AI Agent para evitar error 500 de n8n
             if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
                 $cleanNode['parameters']['text'] = "Responde como asistente de {$instanceName}";
                 $cleanNode['parameters']['options'] = [
@@ -1026,7 +1079,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             // Activar
             if ($workflowId) {
                 $activateResult = $n8nService->activateWorkflow($workflowId);
-                Log::info('✅ Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
+                Log::info('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
             }
             
             // Configurar webhook de Evolution hacia n8n
@@ -1035,7 +1088,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 $webhookUrl,
                 ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
             );
-            Log::info('🔗 Webhook Evolution configurado', ['result' => $evolutionResult]);
+            Log::info('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
             
             // Guardar en BD
             \Illuminate\Support\Facades\DB::table('whatsapp_instances')
@@ -1068,7 +1121,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
 // Health check endpoint for Railway
 Route::get('/health', function () {
     try {
-        // Verificar conexión a base de datos
+        // Verificar conexi�n a base de datos
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         
         return response()->json([
@@ -1087,7 +1140,7 @@ Route::get('/health', function () {
     }
 });
 
-// 🔧 DEBUG: Test broadcast - Solo verificar que Pusher funciona (no crea conversaciones)
+// ?? DEBUG: Test broadcast - Solo verificar que Pusher funciona (no crea conversaciones)
 Route::get('/test-broadcast/{inboxId}', function ($inboxId) {
     try {
         $key = config('broadcasting.connections.pusher.key');
@@ -1157,7 +1210,7 @@ Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId
         broadcast(new \App\Events\NewMessageReceived(
             [
                 'id' => rand(10000, 99999),
-                'content' => '🔔 Mensaje de prueba REAL ' . now()->format('H:i:s'),
+                'content' => '?? Mensaje de prueba REAL ' . now()->format('H:i:s'),
                 'message_type' => 0, // incoming
                 'created_at' => now()->toIso8601String(),
                 'sender' => [
@@ -1173,7 +1226,7 @@ Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId
         
         return response()->json([
             'status' => 'success',
-            'message' => "Broadcast REAL enviado a inbox.{$inboxId} para conversación {$conversationId}",
+            'message' => "Broadcast REAL enviado a inbox.{$inboxId} para conversaci�n {$conversationId}",
             'broadcast_driver' => config('broadcasting.default'),
         ]);
     } catch (\Exception $e) {
@@ -1184,9 +1237,9 @@ Route::get('/test-real-broadcast/{inboxId}/{conversationId}', function ($inboxId
     }
 });
 
-// Habilitar autenticación de canales de broadcasting
+// Habilitar autenticaci�n de canales de broadcasting
 
-// 🔧 SETUP: Ver webhooks de Chatwoot existentes
+// ?? SETUP: Ver webhooks de Chatwoot existentes
 Route::get('/setup-chatwoot-webhook', function () {
     try {
         $user = \App\Models\User::first();
@@ -1226,7 +1279,7 @@ Route::get('/setup-chatwoot-webhook', function () {
     }
 });
 
-// 🔧 RECREAR webhook de Chatwoot con ID=1 (elimina todos, resetea secuencia, crea nuevo)
+// ?? RECREAR webhook de Chatwoot con ID=1 (elimina todos, resetea secuencia, crea nuevo)
 Route::get('/recreate-chatwoot-webhook', function () {
     try {
         $user = \App\Models\User::first();
@@ -1242,7 +1295,7 @@ Route::get('/recreate-chatwoot-webhook', function () {
         $sequenceReset = false;
         $dbError = null;
         try {
-            // Usar la URL de Railway interna o externa según disponibilidad
+            // Usar la URL de Railway interna o externa seg�n disponibilidad
             $chatwootDbUrl = env('CHATWOOT_DATABASE_URL', 'postgresql://postgres:dzMmfzVhEDLgeRIAvRlWofFnagOyItjs@postgres.railway.internal:5432/chatwoot');
             $parsed = parse_url($chatwootDbUrl);
             $chatwootPdo = new \PDO(
@@ -1273,7 +1326,7 @@ Route::get('/recreate-chatwoot-webhook', function () {
             }
         }
         
-        // 2. Crear nuevo webhook (será ID=1 si el reset funcionó)
+        // 2. Crear nuevo webhook (ser� ID=1 si el reset funcion�)
         $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
             'api_access_token' => $apiKey,
             'Content-Type' => 'application/json'
@@ -1364,12 +1417,12 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     // Contactos
     Route::put('/contacts/{contactId}', [ChatwootController::class, 'updateContact']);
     
-    // Configuración
+    // Configuraci�n
     Route::get('/config', [ChatwootController::class, 'getConfig']);
 });
 
-// Proxy para archivos/imágenes de Chatwoot - SIN autenticación (las imágenes se cargan vía <img src>)
-// Usa controlador separado sin dependencias de autenticación
+// Proxy para archivos/im�genes de Chatwoot - SIN autenticaci�n (las im�genes se cargan v�a <img src>)
+// Usa controlador separado sin dependencias de autenticaci�n
 Route::get('/chatwoot-proxy/attachment-proxy', [\App\Http\Controllers\AttachmentProxyController::class, 'proxy']);
 
 // ============= BAILEYS WHATSAPP API ROUTES =============
@@ -1397,7 +1450,7 @@ Route::prefix('evolution-whatsapp')->group(function () {
     });
 });
 
-// Webhook para Evolution API → Chatwoot (formato legacy)
+// Webhook para Evolution API ? Chatwoot (formato legacy)
 Route::post('/chatwoot/webhook/{instance}', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
 
 Route::post('/chatwoot/webhook', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
@@ -1416,7 +1469,7 @@ Route::middleware(['railway.auth:true'])->group(function () {
     Route::post('/company/logo', [\App\Http\Controllers\KnowledgeController::class, 'uploadCompanyLogo']);
     Route::post('/knowledge/upload-document', [\App\Http\Controllers\KnowledgeController::class, 'uploadDocument']);
     
-    // Training Chat - conversación para entrenar al bot
+    // Training Chat - conversaci�n para entrenar al bot
     Route::post('/training/chat', [\App\Http\Controllers\KnowledgeController::class, 'trainingChat']);
     
     // Documents
@@ -1441,7 +1494,7 @@ Route::post('/knowledge/chunk-stored', [\App\Http\Controllers\KnowledgeControlle
 // WhatsApp Instance lookup endpoint (no authentication - used by n8n)
 Route::get('/whatsapp/instance/{instanceName}/company', [\App\Http\Controllers\Api\WhatsAppInstanceController::class, 'getCompanyByInstance']);
 
-// 🔧 FIX: Reparar tokens de Chatwoot para usuarios existentes
+// ?? FIX: Reparar tokens de Chatwoot para usuarios existentes
 // Este endpoint crea el access_token en la base de datos de Chatwoot si no existe
 Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
     try {
@@ -1470,7 +1523,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
                 'chatwoot_agent_token' => $existingToken->token
             ]);
             
-            Log::info('✅ Token sincronizado desde Chatwoot', [
+            Log::info('? Token sincronizado desde Chatwoot', [
                 'user_id' => $user->id,
                 'chatwoot_user_id' => $user->chatwoot_agent_id
             ]);
@@ -1501,7 +1554,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
             'chatwoot_agent_token' => $newToken
         ]);
         
-        Log::info('✅ Nuevo token creado en Chatwoot', [
+        Log::info('? Nuevo token creado en Chatwoot', [
             'user_id' => $user->id,
             'chatwoot_user_id' => $user->chatwoot_agent_id
         ]);
@@ -1516,7 +1569,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
         ]);
         
     } catch (\Exception $e) {
-        Log::error('❌ Error fixing Chatwoot token', [
+        Log::error('? Error fixing Chatwoot token', [
             'error' => $e->getMessage()
         ]);
         
@@ -1527,7 +1580,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
     }
 });
 
-// 🔧 FIX: Reparar TODOS los tokens de Chatwoot para todos los usuarios
+// ?? FIX: Reparar TODOS los tokens de Chatwoot para todos los usuarios
 Route::get('/fix-all-chatwoot-tokens', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -1570,7 +1623,7 @@ Route::get('/fix-all-chatwoot-tokens', function () {
             }
         }
         
-        Log::info('✅ All Chatwoot tokens fixed', ['count' => count($results)]);
+        Log::info('? All Chatwoot tokens fixed', ['count' => count($results)]);
         
         return response()->json([
             'success' => true,
@@ -1580,7 +1633,7 @@ Route::get('/fix-all-chatwoot-tokens', function () {
         ]);
         
     } catch (\Exception $e) {
-        Log::error('❌ Error fixing all Chatwoot tokens', ['error' => $e->getMessage()]);
+        Log::error('? Error fixing all Chatwoot tokens', ['error' => $e->getMessage()]);
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
@@ -1588,7 +1641,7 @@ Route::get('/fix-all-chatwoot-tokens', function () {
     }
 });
 
-// 🔧 FIX FORZADO: Regenera TODOS los tokens de Chatwoot (borra los viejos y crea nuevos)
+// ?? FIX FORZADO: Regenera TODOS los tokens de Chatwoot (borra los viejos y crea nuevos)
 Route::get('/regenerate-all-chatwoot-tokens', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -1627,7 +1680,7 @@ Route::get('/regenerate-all-chatwoot-tokens', function () {
         // Limpiar cache de conversaciones
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('🔄 All Chatwoot tokens REGENERATED', ['count' => count($results)]);
+        Log::info('?? All Chatwoot tokens REGENERATED', ['count' => count($results)]);
         
         return response()->json([
             'success' => true,
@@ -1638,7 +1691,7 @@ Route::get('/regenerate-all-chatwoot-tokens', function () {
         ]);
         
     } catch (\Exception $e) {
-        Log::error('❌ Error regenerating Chatwoot tokens', ['error' => $e->getMessage()]);
+        Log::error('? Error regenerating Chatwoot tokens', ['error' => $e->getMessage()]);
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
@@ -1646,7 +1699,7 @@ Route::get('/regenerate-all-chatwoot-tokens', function () {
     }
 });
 
-// 🔍 DEBUG: Ver estado de tokens y conversaciones
+// ?? DEBUG: Ver estado de tokens y conversaciones
 Route::get('/debug-chatwoot-status', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -1728,14 +1781,14 @@ Route::get('/debug-chatwoot-status', function () {
             ->where('account_id', $company->chatwoot_account_id ?? 1)
             ->get(['id', 'name', 'channel_type']);
         
-        // Ver últimas conversaciones con detalles
+        // Ver �ltimas conversaciones con detalles
         $lastConversations = $chatwootDb->table('conversations')
             ->where('account_id', $company->chatwoot_account_id ?? 1)
             ->orderBy('id', 'desc')
             ->limit(5)
             ->get(['id', 'inbox_id', 'contact_id', 'display_id', 'status']);
         
-        // Ver últimos mensajes
+        // Ver �ltimos mensajes
         $conversationIds = $lastConversations->pluck('id')->toArray();
         $lastMessages = [];
         if (!empty($conversationIds)) {
@@ -1778,7 +1831,7 @@ Route::get('/debug-chatwoot-status', function () {
     }
 });
 
-// 🔧 FIX: Corregir el tipo de usuario en Chatwoot si está mal
+// ?? FIX: Corregir el tipo de usuario en Chatwoot si est� mal
 Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -1813,7 +1866,7 @@ Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
                 ->where('id', $user->chatwoot_agent_id)
                 ->update(['type' => 'User']);
             
-            Log::info('✅ Chatwoot user type fixed', [
+            Log::info('? Chatwoot user type fixed', [
                 'chatwoot_user_id' => $user->chatwoot_agent_id,
                 'old_type' => $oldType,
                 'new_type' => 'User'
@@ -1837,7 +1890,7 @@ Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
     }
 });
 
-// 🔍 DEBUG: Ver configuración de Evolution API + Chatwoot para una instancia
+// ?? DEBUG: Ver configuraci�n de Evolution API + Chatwoot para una instancia
 Route::get('/debug-evolution-chatwoot/{instanceName}', function ($instanceName) {
     try {
         // 1. Obtener info de la instancia en Evolution API
@@ -1898,7 +1951,7 @@ Route::get('/debug-evolution-chatwoot/{instanceName}', function ($instanceName) 
     }
 });
 
-// 🔧 FIX: Configurar/Reconfigurar Chatwoot en Evolution API
+// ?? FIX: Configurar/Reconfigurar Chatwoot en Evolution API
 Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $evolutionUrl = config('evolution.api_url');
@@ -1947,10 +2000,10 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'importContacts' => false,
             'importMessages' => false,
             'daysLimitImportMessages' => 0,
-            'autoCreate' => false // No crear inbox automáticamente, ya existe
+            'autoCreate' => false // No crear inbox autom�ticamente, ya existe
         ]);
         
-        Log::info('🔧 Chatwoot configured in Evolution API', [
+        Log::info('?? Chatwoot configured in Evolution API', [
             'instance' => $instanceName,
             'account_id' => $accountId,
             'inbox_name' => $inboxName,
@@ -1970,7 +2023,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         ]);
         
     } catch (\Exception $e) {
-        Log::error('❌ Failed to setup Chatwoot in Evolution', ['error' => $e->getMessage()]);
+        Log::error('? Failed to setup Chatwoot in Evolution', ['error' => $e->getMessage()]);
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
@@ -1982,7 +2035,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     
 });
 
-// 🔍 DEBUG: Probar obtener mensajes de una conversación específica
+// ?? DEBUG: Probar obtener mensajes de una conversaci�n espec�fica
 Route::get('/debug-conversation-messages/{conversationId}', function ($conversationId) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -1999,7 +2052,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
             'chatwoot_agent_id' => $user->chatwoot_agent_id
         ];
         
-        // 1. Buscar la conversación en la DB
+        // 1. Buscar la conversaci�n en la DB
         $conversation = $chatwootDb->table('conversations')
             ->where('id', $conversationId)
             ->orWhere('display_id', $conversationId)
@@ -2008,7 +2061,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
         if (!$conversation) {
             return response()->json([
                 'success' => false,
-                'error' => "Conversación no encontrada (id/display_id: {$conversationId})",
+                'error' => "Conversaci�n no encontrada (id/display_id: {$conversationId})",
                 'user_info' => $userInfo
             ], 404);
         }
@@ -2030,7 +2083,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
         $accountId = $company->chatwoot_account_id ?? 1;
         
         if ($user->chatwoot_agent_token) {
-            // Primero probar obtener la conversación
+            // Primero probar obtener la conversaci�n
             $convResponse = \Illuminate\Support\Facades\Http::withHeaders([
                 'api_access_token' => $user->chatwoot_agent_token,
                 'Content-Type' => 'application/json'
@@ -2075,7 +2128,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
             'inbox_mismatch_details' => $inboxMismatch ? [
                 'conversation_inbox_id' => $conversation->inbox_id,
                 'user_inbox_id' => $user->chatwoot_inbox_id,
-                'problem' => 'El usuario tiene un inbox_id diferente al de la conversación'
+                'problem' => 'El usuario tiene un inbox_id diferente al de la conversaci�n'
             ] : null,
             'contact' => $contact,
             'messages_in_db' => [
@@ -2094,7 +2147,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
     }
 });
 
-// 🧹 Limpiar caché de conversaciones y regenerar token
+// ?? Limpiar cach� de conversaciones y regenerar token
 Route::get('/clear-conversations-cache', function () {
     try {
         $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
@@ -2102,7 +2155,7 @@ Route::get('/clear-conversations-cache', function () {
         $company = $user->company;
         $chatwootDb = DB::connection('chatwoot');
         
-        // 1. Limpiar caché de conversaciones
+        // 1. Limpiar cach� de conversaciones
         $cacheKey = "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}";
         $cacheKey2 = "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}";
         
@@ -2178,7 +2231,7 @@ Route::get('/clear-conversations-cache', function () {
                     : 0,
                 'error' => !$testResponse->successful() ? $testResponse->body() : null
             ],
-            'next_step' => 'Recarga la página de la app'
+            'next_step' => 'Recarga la p�gina de la app'
         ]);
         
     } catch (\Exception $e) {
@@ -2189,7 +2242,7 @@ Route::get('/clear-conversations-cache', function () {
     }
 });
 
-// 🔍 DEBUG: Ver conversaciones directamente de la DB de Chatwoot (sin API)
+// ?? DEBUG: Ver conversaciones directamente de la DB de Chatwoot (sin API)
 Route::get('/debug-conversations-from-db', function () {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -2214,7 +2267,7 @@ Route::get('/debug-conversations-from-db', function () {
             ->get()
             ->keyBy('id');
         
-        // Obtener mensajes de cada conversación
+        // Obtener mensajes de cada conversaci�n
         $conversationsWithData = [];
         foreach ($conversations as $conv) {
             $messages = $chatwootDb->table('messages')
@@ -2266,7 +2319,7 @@ Route::get('/debug-conversations-from-db', function () {
     }
 });
 
-// 🧹 FLUSH ALL: Limpiar TODO el caché de Redis
+// ?? FLUSH ALL: Limpiar TODO el cach� de Redis
 Route::get('/flush-all-cache', function () {
     try {
         $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
@@ -2274,7 +2327,7 @@ Route::get('/flush-all-cache', function () {
         
         $deletedKeys = [];
         
-        // Todas las posibles claves de caché
+        // Todas las posibles claves de cach�
         $keysToDelete = [
             "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}",
             "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}_timestamp",
@@ -2290,7 +2343,7 @@ Route::get('/flush-all-cache', function () {
             $deletedKeys[$key] = $existed ? 'deleted' : 'not_found';
         }
         
-        // También intentar flush completo si es Redis
+        // Tambi�n intentar flush completo si es Redis
         try {
             \Illuminate\Support\Facades\Cache::flush();
             $flushed = true;
@@ -2302,7 +2355,7 @@ Route::get('/flush-all-cache', function () {
             'success' => true,
             'keys_status' => $deletedKeys,
             'full_flush' => $flushed,
-            'message' => 'Caché limpiado. Recarga la página.',
+            'message' => 'Cach� limpiado. Recarga la p�gina.',
             'next_step' => 'Visita https://app.withmia.com/dashboard/withmia-xrygbo y recarga con Ctrl+F5'
         ]);
         
@@ -2314,13 +2367,13 @@ Route::get('/flush-all-cache', function () {
     }
 });
 
-// 🔥 RESET COMPLETO: Eliminar todas las conversaciones y mensajes de Chatwoot
+// ?? RESET COMPLETO: Eliminar todas las conversaciones y mensajes de Chatwoot
 Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
     if ($confirm !== 'YES-DELETE-ALL') {
         return response()->json([
             'success' => false,
             'message' => 'Para confirmar, usa /api/reset-chatwoot-conversations/YES-DELETE-ALL',
-            'warning' => '⚠️ ESTO ELIMINARÁ TODAS LAS CONVERSACIONES Y MENSAJES'
+            'warning' => '?? ESTO ELIMINAR� TODAS LAS CONVERSACIONES Y MENSAJES'
         ]);
     }
     
@@ -2358,10 +2411,10 @@ Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
             ->where('account_id', $accountId)
             ->delete();
         
-        // 3. Limpiar caché
+        // 3. Limpiar cach�
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('🔥 RESET CHATWOOT COMPLETADO', [
+        Log::info('?? RESET CHATWOOT COMPLETADO', [
             'account_id' => $accountId,
             'conversations_deleted' => $conversationsDeleted,
             'messages_deleted' => $messagesDeleted
@@ -2378,7 +2431,7 @@ Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
                 'messages' => $messagesDeleted
             ],
             'cache_flushed' => true,
-            'next_step' => 'Recarga la app y envía un nuevo mensaje de WhatsApp para probar'
+            'next_step' => 'Recarga la app y env�a un nuevo mensaje de WhatsApp para probar'
         ]);
         
     } catch (\Exception $e) {
@@ -2389,7 +2442,7 @@ Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
     }
 });
 
-// 🔧 SYNC COMPLETO: Sincronizar Evolution API con Chatwoot usando el inbox EXISTENTE
+// ?? SYNC COMPLETO: Sincronizar Evolution API con Chatwoot usando el inbox EXISTENTE
 Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -2454,10 +2507,10 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
             $company->save();
         }
         
-        // 6. Limpiar caché
+        // 6. Limpiar cach�
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('🔄 SYNC Evolution-Chatwoot completado', [
+        Log::info('?? SYNC Evolution-Chatwoot completado', [
             'instance' => $instanceName,
             'inbox_name' => $inboxName,
             'inbox_id' => $inboxId,
@@ -2480,9 +2533,9 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
             ],
             'evolution_response' => $response->json(),
             'next_steps' => [
-                '1' => 'El sistema está sincronizado',
-                '2' => 'Envía un mensaje desde WhatsApp',
-                '3' => 'Recarga la app para ver la conversación'
+                '1' => 'El sistema est� sincronizado',
+                '2' => 'Env�a un mensaje desde WhatsApp',
+                '3' => 'Recarga la app para ver la conversaci�n'
             ]
         ]);
         
@@ -2495,8 +2548,8 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
     }
 });
 
-// 🔧 FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
-// 🔧 FIX: Actualizar Evolution con el token correcto de Chatwoot
+// ?? FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
+// ?? FIX: Actualizar Evolution con el token correcto de Chatwoot
 Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -2514,13 +2567,13 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
         
         if (!$accessToken || !$channel) {
             return response()->json([
-                'error' => 'No se encontró token o channel',
+                'error' => 'No se encontr� token o channel',
                 'access_token' => $accessToken,
                 'channel' => $channel
             ], 400);
         }
         
-        // 3. Obtener configuración actual de Evolution
+        // 3. Obtener configuraci�n actual de Evolution
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
         
@@ -2551,7 +2604,7 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
             'autoCreate' => true // Permitir crear contactos/conversaciones
         ]);
         
-        // 5. Verificar configuración después del update
+        // 5. Verificar configuraci�n despu�s del update
         $newSettings = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey
         ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
@@ -2565,7 +2618,7 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
             ],
             'previous_config' => $currentConfig,
             'new_config' => $newSettings->json(),
-            'next_step' => 'Envía un mensaje de WhatsApp para probar'
+            'next_step' => 'Env�a un mensaje de WhatsApp para probar'
         ]);
         
     } catch (\Exception $e) {
@@ -2575,7 +2628,7 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
     }
 });
 
-// 🔧 FIX DIRECTO: Renombrar inbox forzosamente
+// ?? FIX DIRECTO: Renombrar inbox forzosamente
 Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
@@ -2589,14 +2642,14 @@ Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
         
         if (!$inbox) {
             return response()->json([
-                'error' => 'No se encontró inbox con account_id=1',
+                'error' => 'No se encontr� inbox con account_id=1',
                 'all_inboxes' => $allInboxes
             ], 400);
         }
         
         $oldName = $inbox->name;
         
-        // Forzar actualización
+        // Forzar actualizaci�n
         $updated = $chatwootDb->table('inboxes')
             ->where('id', $inbox->id)
             ->update([
@@ -2604,7 +2657,7 @@ Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
                 'updated_at' => now()
             ]);
         
-        // Verificar después del update
+        // Verificar despu�s del update
         $inboxAfter = $chatwootDb->table('inboxes')->where('id', $inbox->id)->first();
         
         return response()->json([
@@ -2626,11 +2679,11 @@ Route::get('/force-rename-inbox/{instanceName}', function ($instanceName) {
     }
 });
 
-// 🔍 DEBUG: Ver inbox directamente de la DB sin caché
+// ?? DEBUG: Ver inbox directamente de la DB sin cach�
 Route::get('/raw-inbox-check', function () {
     $chatwootDb = DB::connection('chatwoot');
     
-    // Query directa sin caché
+    // Query directa sin cach�
     $inboxes = $chatwootDb->select('SELECT id, name, account_id, channel_id, channel_type, updated_at FROM inboxes ORDER BY id');
     $channels = $chatwootDb->select('SELECT id, account_id, identifier FROM channel_api ORDER BY id');
     $accessTokens = $chatwootDb->select('SELECT id, owner_id, owner_type, token FROM access_tokens ORDER BY id');
@@ -2646,11 +2699,11 @@ Route::get('/raw-inbox-check', function () {
     ]);
 });
 
-// 🔍 DEBUG: Ver mensajes recientes con attachments
+// ?? DEBUG: Ver mensajes recientes con attachments
 Route::get('/debug-recent-messages', function () {
     $chatwootDb = DB::connection('chatwoot');
     
-    // Obtener últimos 20 mensajes con sus attachments
+    // Obtener �ltimos 20 mensajes con sus attachments
     $messages = $chatwootDb->select("
         SELECT 
             m.id,
@@ -2685,18 +2738,18 @@ Route::get('/debug-recent-messages', function () {
     ]);
 });
 
-// 🧹 CLEANUP: Eliminar attachments vacíos/huérfanos
+// ?? CLEANUP: Eliminar attachments vac�os/hu�rfanos
 Route::get('/cleanup-empty-attachments', function () {
     $chatwootDb = DB::connection('chatwoot');
     
-    // Contar attachments vacíos antes
+    // Contar attachments vac�os antes
     $emptyBefore = $chatwootDb->select("
         SELECT COUNT(*) as count FROM attachments 
         WHERE (file_url IS NULL OR file_url = '') 
         AND (external_url IS NULL OR external_url = '')
     ");
     
-    // Eliminar attachments vacíos
+    // Eliminar attachments vac�os
     $deleted = $chatwootDb->delete("
         DELETE FROM attachments 
         WHERE (file_url IS NULL OR file_url = '') 
@@ -2740,7 +2793,7 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
             ->where('id', $existingInbox->id)
             ->update(['name' => $correctInboxName, 'updated_at' => now()]);
         
-        // 3. Verificar la configuración de Evolution API
+        // 3. Verificar la configuraci�n de Evolution API
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
         
@@ -2782,10 +2835,10 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
             $evolutionUpdated = $updateResponse->successful();
         }
         
-        // 5. Limpiar caché
+        // 5. Limpiar cach�
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('🔧 Inbox renombrado', [
+        Log::info('?? Inbox renombrado', [
             'old_name' => $oldName,
             'new_name' => $correctInboxName,
             'inbox_id' => $existingInbox->id
@@ -2802,7 +2855,7 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
                 'previous_inbox_name' => $currentEvolutionInbox,
                 'updated' => $evolutionUpdated
             ],
-            'next_step' => 'Envía un mensaje desde WhatsApp y recarga la app'
+            'next_step' => 'Env�a un mensaje desde WhatsApp y recarga la app'
         ]);
         
     } catch (\Exception $e) {
@@ -2824,12 +2877,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // =============================================================================
-// 🔧 DIAGNÓSTICO DE EVOLUTION-CHATWOOT
+// ?? DIAGN�STICO DE EVOLUTION-CHATWOOT
 // =============================================================================
 
 /**
  * GET /api/evolution/chatwoot-config/{instanceName}
- * Obtener la configuración actual de Chatwoot en Evolution API
+ * Obtener la configuraci�n actual de Chatwoot en Evolution API
  */
 Route::get('/evolution/chatwoot-config/{instanceName}', function ($instanceName) {
     try {
@@ -2854,13 +2907,13 @@ Route::get('/evolution/chatwoot-config/{instanceName}', function ($instanceName)
 
 /**
  * GET /api/evolution/reconfigure-chatwoot/{instanceName}
- * Reconfigurar la integración de Chatwoot para forzar sincronización de mensajes
+ * Reconfigurar la integraci�n de Chatwoot para forzar sincronizaci�n de mensajes
  */
 Route::get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $evolutionService = app(\App\Services\EvolutionApiService::class);
         
-        // Primero obtener la configuración actual
+        // Primero obtener la configuraci�n actual
         $currentConfig = $evolutionService->getChatwootConfig($instanceName);
         
         // Reconfigurar
@@ -2874,10 +2927,10 @@ Route::get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instance
             'message' => $result['message'] ?? null,
             'error' => $result['error'] ?? null,
             'next_steps' => $result['success'] ? [
-                '1. Envía un mensaje de prueba desde WhatsApp',
+                '1. Env�a un mensaje de prueba desde WhatsApp',
                 '2. Espera la respuesta del bot',
-                '3. Recarga la conversación en la app',
-                '4. Ambos mensajes (entrante y saliente) deberían aparecer'
+                '3. Recarga la conversaci�n en la app',
+                '4. Ambos mensajes (entrante y saliente) deber�an aparecer'
             ] : null
         ]);
         
@@ -2891,24 +2944,24 @@ Route::get('/evolution/reconfigure-chatwoot/{instanceName}', function ($instance
 
 /**
  * GET /api/evolution/debug-instance/{instanceName}
- * Información completa de diagnóstico de una instancia
+ * Informaci�n completa de diagn�stico de una instancia
  */
 Route::get('/evolution/debug-instance/{instanceName}', function ($instanceName) {
     try {
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
         
-        // 1. Estado de conexión
+        // 1. Estado de conexi�n
         $connectionState = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey
         ])->timeout(10)->get("{$evolutionUrl}/instance/connectionState/{$instanceName}");
         
-        // 2. Configuración de Chatwoot
+        // 2. Configuraci�n de Chatwoot
         $chatwootConfig = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey
         ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
         
-        // 3. Configuración de Webhook
+        // 3. Configuraci�n de Webhook
         $webhookConfig = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey
         ])->timeout(10)->get("{$evolutionUrl}/webhook/find/{$instanceName}");
@@ -2916,7 +2969,7 @@ Route::get('/evolution/debug-instance/{instanceName}', function ($instanceName) 
         // 4. Buscar instancia en DB local
         $localInstance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
         
-        // 5. Buscar información de Chatwoot
+        // 5. Buscar informaci�n de Chatwoot
         $chatwootInfo = null;
         if ($localInstance && $localInstance->company) {
             $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
@@ -2964,6 +3017,224 @@ Route::get('/evolution/debug-instance/{instanceName}', function ($instanceName) 
             'success' => false,
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// ============== DEBUG: Verificar estado del onboarding ==============
+Route::get('/debug/onboarding-status', function () {
+    try {
+        $qdrantService = app(\App\Services\QdrantService::class);
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        // 1. Obtener todas las empresas
+        $companies = \App\Models\Company::all()->map(function ($company) use ($qdrantService) {
+            $settings = $company->settings ?? [];
+            
+            // Verificar si la colecci�n Qdrant existe
+            $qdrantCollectionName = $settings['qdrant_collection'] ?? $qdrantService->getCollectionName($company->slug);
+            $qdrantExists = $qdrantService->collectionExists($qdrantCollectionName);
+            
+            return [
+                'id' => $company->id,
+                'name' => $company->name,
+                'slug' => $company->slug,
+                'chatwoot_provisioned' => $company->chatwoot_provisioned,
+                'qdrant_collection' => $settings['qdrant_collection'] ?? null,
+                'qdrant_exists' => $qdrantExists,
+                'rag_workflow_id' => $settings['rag_workflow_id'] ?? null,
+                'rag_webhook_path' => $settings['rag_webhook_path'] ?? null,
+                'training_workflow_id' => $settings['training_workflow_id'] ?? null,
+                'training_webhook_path' => $settings['training_webhook_path'] ?? null,
+            ];
+        });
+        
+        // 2. Colecciones en Qdrant
+        $qdrantCollections = $qdrantService->getCollections();
+        
+        // 3. Workflows en n8n
+        $n8nWorkflows = [];
+        try {
+            $workflows = $n8nService->listWorkflows();
+            if ($workflows['success'] ?? false) {
+                $n8nWorkflows = collect($workflows['data'] ?? [])->map(function ($wf) {
+                    return [
+                        'id' => $wf['id'],
+                        'name' => $wf['name'],
+                        'active' => $wf['active'] ?? false,
+                    ];
+                })->toArray();
+            }
+        } catch (\Exception $e) {
+            $n8nWorkflows = ['error' => $e->getMessage()];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'timestamp' => now()->toIso8601String(),
+            'companies' => $companies,
+            'qdrant' => [
+                'url' => env('RAILWAY_SERVICE_QDRANT_URL'),
+                'collections' => $qdrantCollections
+            ],
+            'n8n' => [
+                'url' => env('N8N_URL'),
+                'workflows' => $n8nWorkflows
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// DEBUG: Recrear manualmente Qdrant collection y workflows para una empresa
+Route::post('/debug/recreate-onboarding/{companyId}', function ($companyId) {
+    try {
+        $company = \App\Models\Company::findOrFail($companyId);
+        $qdrantService = app(\App\Services\QdrantService::class);
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        $results = [
+            'company' => $company->name,
+            'slug' => $company->slug,
+            'qdrant' => null,
+            'rag_workflow' => null,
+            'training_workflow' => null,
+        ];
+        
+        // 1. Crear colecci�n Qdrant
+        $qdrantResult = $qdrantService->createCompanyCollection($company->slug);
+        $results['qdrant'] = $qdrantResult;
+        
+        if ($qdrantResult['success']) {
+            $company->update([
+                'settings' => array_merge($company->settings ?? [], [
+                    'qdrant_collection' => $qdrantResult['collection']
+                ])
+            ]);
+        }
+        
+        // 2. Crear workflow RAG si no existe
+        if (!($company->settings['rag_workflow_id'] ?? null)) {
+            $templatePath = base_path('workflows/rag-text-processor.json');
+            
+            if (file_exists($templatePath)) {
+                $content = file_get_contents($templatePath);
+                $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+                $templateWorkflow = json_decode($content, true);
+                
+                if ($templateWorkflow) {
+                    $collectionName = $qdrantService->getCollectionName($company->slug);
+                    $webhookPath = "rag-{$company->slug}";
+                    $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+                    
+                    foreach ($templateWorkflow['nodes'] as &$node) {
+                        if ($node['type'] === 'n8n-nodes-base.webhook') {
+                            $node['webhookId'] = $newWebhookId;
+                            $node['parameters']['path'] = $webhookPath;
+                        }
+                        if ($node['type'] === '@n8n/n8n-nodes-langchain.vectorStoreQdrant') {
+                            $node['parameters']['qdrantCollection']['__rl'] = true;
+                            $node['parameters']['qdrantCollection']['value'] = $collectionName;
+                            $node['parameters']['qdrantCollection']['mode'] = 'list';
+                        }
+                    }
+                    
+                    $templateWorkflow['name'] = "RAG Documents - {$company->slug}";
+                    unset($templateWorkflow['id']);
+                    
+                    $createResult = $n8nService->createWorkflow($templateWorkflow);
+                    $results['rag_workflow'] = $createResult;
+                    
+                    if ($createResult['success'] ?? false) {
+                        $n8nService->activateWorkflow($createResult['data']['id']);
+                        
+                        $company->update([
+                            'settings' => array_merge($company->settings ?? [], [
+                                'rag_workflow_id' => $createResult['data']['id'],
+                                'rag_webhook_path' => $webhookPath,
+                                'rag_webhook_url' => env('N8N_PUBLIC_URL') . "/webhook/{$webhookPath}",
+                                'rag_workflow_name' => "RAG Documents - {$company->slug}"
+                            ])
+                        ]);
+                    }
+                }
+            } else {
+                $results['rag_workflow'] = ['error' => 'Template not found'];
+            }
+        } else {
+            $results['rag_workflow'] = ['message' => 'Already exists', 'id' => $company->settings['rag_workflow_id']];
+        }
+        
+        // 3. Crear workflow Training si no existe
+        if (!($company->settings['training_workflow_id'] ?? null)) {
+            $trainingResult = $n8nService->createTrainingWorkflow($company->slug);
+            $results['training_workflow'] = $trainingResult;
+            
+            if ($trainingResult['success'] ?? false) {
+                $company->update([
+                    'settings' => array_merge($company->settings ?? [], [
+                        'training_workflow_id' => $trainingResult['workflow_id'] ?? null,
+                        'training_webhook_path' => $trainingResult['webhook_path'] ?? null,
+                        'training_webhook_url' => $trainingResult['webhook_url'] ?? null,
+                        'training_workflow_name' => "Training Chat - {$company->slug}"
+                    ])
+                ]);
+            }
+        } else {
+            $results['training_workflow'] = ['message' => 'Already exists', 'id' => $company->settings['training_workflow_id']];
+        }
+        
+        // Recargar company
+        $company->refresh();
+        
+        return response()->json([
+            'success' => true,
+            'results' => $results,
+            'updated_settings' => $company->settings
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+// ============== DEBUG: Ver info de empresas y bots ==============
+Route::get('/debug/companies-info', function () {
+    try {
+        $companies = \App\Models\Company::all()->map(function ($company) {
+            return [
+                'id' => $company->id,
+                'name' => $company->name,
+                'slug' => $company->slug,
+                'bot_name' => $company->bot_name,
+                'bot_personality' => $company->bot_personality,
+                'industry' => $company->industry,
+                'chatwoot_provisioned' => $company->chatwoot_provisioned,
+                'chatwoot_account_id' => $company->chatwoot_account_id,
+                'settings' => $company->settings,
+                'created_at' => $company->created_at,
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'total' => $companies->count(),
+            'companies' => $companies
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
         ], 500);
     }
 });

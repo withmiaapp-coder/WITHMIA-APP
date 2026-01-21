@@ -48,117 +48,13 @@ class PostOnboardingSetupJob implements ShouldQueue
             return;
         }
 
-        Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
+        Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug} (solo correos)");
 
-        // 1. Crear colección Qdrant (rápido, ~100ms)
-        try {
-            Log::info("📦 Creando colección Qdrant para: {$this->companySlug}");
-            $qdrantResult = $qdrantService->createCompanyCollection($this->companySlug);
-            
-            if ($qdrantResult['success']) {
-                $collectionName = $qdrantResult['collection'];
-                Log::info("✅ Colección Qdrant creada: {$collectionName}");
-                
-                $company->update([
-                    'settings' => array_merge($company->settings ?? [], [
-                        'qdrant_collection' => $collectionName
-                    ])
-                ]);
-            } else {
-                Log::error("❌ Error creando colección Qdrant: " . ($qdrantResult['error'] ?? 'Unknown'));
-            }
-        } catch (\Exception $e) {
-            Log::error("❌ Excepción creando colección Qdrant: " . $e->getMessage());
-        }
+        // NOTA: Qdrant y n8n workflows se crean en Jobs separados (CreateQdrantCollectionJob, CreateN8nWorkflowsJob)
+        // Este job ahora SOLO envía correos
+        // Chatwoot se provisiona DESPUÉS cuando el usuario lo necesite (no bloquea onboarding)
 
-        // 2. Provisionar cuenta Chatwoot (si no está ya provisionada)
-        if (!$company->chatwoot_provisioned) {
-            try {
-                Log::info("🚀 Provisionando Chatwoot para: {$company->name}");
-                $chatwootService = app(ChatwootProvisioningService::class);
-                $chatwootResult = $chatwootService->provisionCompanyAccount($company, $user);
-                
-                if ($chatwootResult['success'] ?? false) {
-                    Log::info("✅ Chatwoot provisionado exitosamente", [
-                        'account_id' => $chatwootResult['account']['id'] ?? null,
-                        'inbox_id' => $chatwootResult['inbox']['id'] ?? null
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error("❌ Error provisionando Chatwoot: " . $e->getMessage());
-            }
-        } else {
-            Log::info("ℹ️ Chatwoot ya provisionado para: {$company->name}");
-        }
-
-        // 3. Crear workflow RAG (solo si no existe ya uno)
-        try {
-            // Verificar si ya existe un workflow RAG para esta empresa
-            $existingWorkflowId = $company->settings['rag_workflow_id'] ?? null;
-            
-            if ($existingWorkflowId) {
-                Log::info("Workflow RAG ya existe para {$this->companySlug}: {$existingWorkflowId}");
-            } else {
-                Log::info("Creando workflow RAG para: {$this->companySlug}");
-                $ragResult = $this->createRagWorkflow($company, $this->companySlug, $n8nService, $qdrantService);
-                
-                if ($ragResult['success']) {
-                    Log::info("Workflow RAG creado para {$this->companySlug}", [
-                        'workflow_id' => $ragResult['workflow_id'],
-                        'webhook_path' => $ragResult['webhook_path'] ?? null
-                    ]);
-                    
-                    // Guardar con las mismas claves que espera KnowledgeController
-                    $company->update([
-                        'settings' => array_merge($company->settings ?? [], [
-                            'rag_workflow_id' => $ragResult['workflow_id'] ?? null,
-                            'rag_webhook_path' => $ragResult['webhook_path'] ?? null,
-                            'rag_webhook_url' => $ragResult['webhook_url'] ?? null,
-                            'rag_workflow_name' => "RAG Documents - {$this->companySlug}"
-                        ])
-                    ]);
-                } else {
-                    Log::error("Error creando workflow RAG: " . ($ragResult['error'] ?? 'Unknown'));
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Excepción creando workflow RAG: " . $e->getMessage());
-        }
-
-        // 4. Crear workflow de ENTRENAMIENTO (Training Chat)
-        try {
-            $existingTrainingWorkflowId = $company->settings['training_workflow_id'] ?? null;
-            
-            if ($existingTrainingWorkflowId) {
-                Log::info("Workflow de Entrenamiento ya existe para {$this->companySlug}: {$existingTrainingWorkflowId}");
-            } else {
-                Log::info("Creando workflow de Entrenamiento para: {$this->companySlug}");
-                $trainingResult = $n8nService->createTrainingWorkflow($this->companySlug);
-                
-                if ($trainingResult['success']) {
-                    Log::info("✅ Workflow de Entrenamiento creado para {$this->companySlug}", [
-                        'workflow_id' => $trainingResult['workflow_id'],
-                        'webhook_path' => $trainingResult['webhook_path'] ?? null
-                    ]);
-                    
-                    // Guardar configuración del workflow de entrenamiento
-                    $company->update([
-                        'settings' => array_merge($company->settings ?? [], [
-                            'training_workflow_id' => $trainingResult['workflow_id'] ?? null,
-                            'training_webhook_path' => $trainingResult['webhook_path'] ?? null,
-                            'training_webhook_url' => $trainingResult['webhook_url'] ?? null,
-                            'training_workflow_name' => "Training Chat - {$this->companySlug}"
-                        ])
-                    ]);
-                } else {
-                    Log::error("Error creando workflow de Entrenamiento: " . ($trainingResult['error'] ?? 'Unknown'));
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error("Excepción creando workflow de Entrenamiento: " . $e->getMessage());
-        }
-
-        // 5. Enviar correos
+        // Enviar correos (NO BLOQUEA - si falla, no importa)
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
                 Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));

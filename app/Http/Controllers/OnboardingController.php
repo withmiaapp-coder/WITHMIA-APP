@@ -18,6 +18,8 @@ use App\Services\ChatwootProvisioningService;
 use App\Services\QdrantService;
 use App\Services\N8nService;
 use App\Jobs\PostOnboardingSetupJob;
+use App\Jobs\CreateQdrantCollectionJob;
+use App\Jobs\CreateN8nWorkflowsJob;
 
 class OnboardingController extends Controller
 {
@@ -392,23 +394,35 @@ class OnboardingController extends Controller
 
         Log::info("Empresa obtenida/creada: ID {$company->id}");
 
-        // 🚀 TODO el provisioning (Chatwoot, Qdrant, n8n) se hace en background
-        // El usuario va al dashboard INMEDIATAMENTE sin esperar
-        
-        // Disparar Job en background usando delay para asegurar que sea async
+        // � Crear colección Qdrant
         try {
-            // Usar dispatch()->delay() para forzar ejecución async
-            PostOnboardingSetupJob::dispatch(
+            Log::info("📦 Creating Qdrant collection for: {$uniqueSlug}");
+            CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
+            Log::info("✅ Qdrant collection created for: {$uniqueSlug}");
+        } catch (\Exception $e) {
+            Log::error("Error creating Qdrant: " . $e->getMessage());
+        }
+
+        // 🚀 Crear workflows n8n (RAG + Training)
+        try {
+            Log::info("🚀 Creating n8n workflows for: {$uniqueSlug}");
+            CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
+            Log::info("✅ N8n workflows created for: {$uniqueSlug}");
+        } catch (\Exception $e) {
+            Log::error("Error creating n8n workflows: " . $e->getMessage());
+        }
+
+        // 📧 Enviar correos (no bloquea)
+        try {
+            PostOnboardingSetupJob::dispatchSync(
                 $user->id,
                 $company->id,
                 $uniqueSlug,
-                request()->ip()
-            )->delay(now()->addSeconds(1));
-            
-            Log::info("PostOnboardingSetupJob dispatched (async) para: {$uniqueSlug}");
+                request()->ip() ?? '0.0.0.0'
+            );
+            Log::info("PostOnboardingSetupJob completado para: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
-            // No bloquear - el usuario va al dashboard igual
         }
 
         return [
@@ -433,14 +447,22 @@ class OnboardingController extends Controller
             'onboarding_completed_at' => now()
         ]);
 
-        // Disparar Job en background para tareas pesadas (Chatwoot, n8n, emails)
-        // Esto permite que el usuario vea el dashboard de inmediato
-        \App\Jobs\PostOnboardingSetupJob::dispatch(
-            $user->id,
-            $company->id,
-            $uniqueSlug,
-            $request->ip() ?? '0.0.0.0'
-        );
+        // 🚀 Ejecutar Job SINCRÓNICAMENTE para asegurar que workflows se creen
+        try {
+            Log::info("Ejecutando PostOnboardingSetupJob sincrónicamente para: {$uniqueSlug}");
+            
+            \App\Jobs\PostOnboardingSetupJob::dispatchSync(
+                $user->id,
+                $company->id,
+                $uniqueSlug,
+                $request->ip() ?? '0.0.0.0'
+            );
+            
+            Log::info("PostOnboardingSetupJob completado para: {$uniqueSlug}");
+        } catch (\Exception $e) {
+            Log::error("Error en PostOnboardingSetupJob: " . $e->getMessage());
+            // Continuar aunque falle - el usuario ya tiene su dashboard
+        }
 
         Log::info("Onboarding completado para {$user->email}, redirigiendo a dashboard");
 
