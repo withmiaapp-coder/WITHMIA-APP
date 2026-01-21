@@ -81,6 +81,7 @@ export default function Entrenamiento({
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false); // Solo scroll después de enviar mensaje
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -117,9 +118,13 @@ export default function Entrenamiento({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Solo hacer scroll cuando shouldAutoScroll es true (después de enviar mensaje)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (shouldAutoScroll && messages.length > 0) {
+      scrollToBottom();
+      setShouldAutoScroll(false);
+    }
+  }, [messages, shouldAutoScroll]);
 
   const handleSaveOnboarding = async () => {
     setSavingOnboarding(true);
@@ -210,6 +215,7 @@ export default function Entrenamiento({
       timestamp: new Date(),
     };
 
+    setShouldAutoScroll(true); // Activar scroll al enviar mensaje
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage.trim();
     setInputMessage("");
@@ -247,6 +253,7 @@ export default function Entrenamiento({
           content: data.response,
           timestamp: new Date(),
         };
+        setShouldAutoScroll(true); // Scroll cuando llega respuesta
         setMessages((prev) => [...prev, assistantMessage]);
         
         // 🔄 Si se cambió el nombre del asistente, actualizar el estado local
@@ -270,6 +277,7 @@ export default function Entrenamiento({
           content: "Lo siento, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?",
           timestamp: new Date(),
         };
+        setShouldAutoScroll(true);
         setMessages((prev) => [...prev, errorMessage]);
       }
     } catch (error) {
