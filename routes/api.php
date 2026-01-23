@@ -483,7 +483,7 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
         $qdrantService = app(\App\Services\QdrantService::class);
         
         // Cargar template actualizado
-        $templatePath = base_path('workflows/rag-documents-updated.json');
+        $templatePath = base_path('workflows/rag-text-processor.json');
         if (!file_exists($templatePath)) {
             return response()->json(['error' => 'Template not found'], 404);
         }
@@ -567,7 +567,7 @@ Route::get('/update-all-rag-workflows', function () {
         $qdrantService = app(\App\Services\QdrantService::class);
         
         // Cargar template actualizado
-        $templatePath = base_path('workflows/rag-documents-updated.json');
+        $templatePath = base_path('workflows/rag-text-processor.json');
         if (!file_exists($templatePath)) {
             return response()->json(['error' => 'Template not found'], 404);
         }

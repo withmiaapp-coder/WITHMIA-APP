@@ -128,7 +128,7 @@ class CreateN8nWorkflowsJob implements ShouldQueue
     private function buildRagWorkflow(Company $company, N8nService $n8nService, QdrantService $qdrantService): array
     {
         try {
-            $templatePath = base_path('workflows/rag-documents-updated.json');
+            $templatePath = base_path('workflows/rag-text-processor.json');
             
             if (!file_exists($templatePath)) {
                 return ['success' => false, 'error' => 'RAG template not found'];
