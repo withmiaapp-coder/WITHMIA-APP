@@ -1208,6 +1208,7 @@ class KnowledgeController extends Controller
 
             // Get Qdrant host
             $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
+            $qdrantApiKey = $company->settings['qdrant_api_key'] ?? env('QDRANT_API_KEY', '');
 
             // Check if company has a workflow, if not create one
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
@@ -1337,6 +1338,7 @@ class KnowledgeController extends Controller
                 'text' => $extractedText, // Send text, not file
                 'openai_api_key' => $openaiApiKey,
                 'qdrant_host' => $qdrantHost,
+                'qdrant_api_key' => $qdrantApiKey,
             ]);
 
             if ($response->successful()) {
@@ -1388,13 +1390,61 @@ class KnowledgeController extends Controller
         
         try {
             if ($extension === 'pdf') {
-                // First try pdfparser for text-based PDFs
-                $parser = new \Smalot\PdfParser\Parser();
-                $pdf = $parser->parseContent($fileContent);
-                $extractedText = $pdf->getText();
+                // Method 1: Try pdftotext (poppler-utils) - BEST quality
+                $tempPdfPath = tempnam(sys_get_temp_dir(), 'pdf_');
+                file_put_contents($tempPdfPath, $fileContent);
+                
+                $pdftotext = shell_exec("which pdftotext 2>/dev/null");
+                
+                if ($pdftotext && trim($pdftotext)) {
+                    // pdftotext is available - use it (MUCH better extraction)
+                    $tempTxtPath = $tempPdfPath . '.txt';
+                    
+                    // -layout preserves layout, -enc UTF-8 ensures proper encoding
+                    $cmd = "pdftotext -layout -enc UTF-8 " . escapeshellarg($tempPdfPath) . " " . escapeshellarg($tempTxtPath) . " 2>&1";
+                    exec($cmd, $output, $returnCode);
+                    
+                    if ($returnCode === 0 && file_exists($tempTxtPath)) {
+                        $extractedText = file_get_contents($tempTxtPath);
+                        unlink($tempTxtPath);
+                        Log::info("pdftotext extraction: " . strlen($extractedText) . " characters");
+                    }
+                    
+                    unlink($tempPdfPath);
+                }
+                
+                // Method 2: Fallback to pdfparser if pdftotext failed or not available
+                if (strlen($extractedText) < 100) {
+                    Log::info("Falling back to pdfparser...");
+                    $parser = new \Smalot\PdfParser\Parser();
+                    $pdf = $parser->parseContent($fileContent);
+                    
+                    // Extract text from ALL pages individually
+                    $pages = $pdf->getPages();
+                    $allText = [];
+                    
+                    foreach ($pages as $pageNum => $page) {
+                        try {
+                            $pageText = $page->getText();
+                            if (!empty(trim($pageText))) {
+                                $allText[] = $pageText;
+                            }
+                        } catch (\Exception $e) {
+                            Log::warning("Error extracting page " . ($pageNum + 1) . ": " . $e->getMessage());
+                        }
+                    }
+                    
+                    $extractedText = implode("\n\n", $allText);
+                    
+                    // If page-by-page extraction failed, try the whole document
+                    if (strlen($extractedText) < 100) {
+                        $extractedText = $pdf->getText();
+                    }
+                    
+                    Log::info("pdfparser extraction: " . count($pages) . " pages, " . strlen($extractedText) . " chars total");
+                }
                 
                 // Fix UTF-8 encoding issues
-                // PDFs often have text in Latin-1 or Windows-1252 that needs conversion
                 if (!mb_check_encoding($extractedText, 'UTF-8')) {
                     // Try to detect and convert encoding
                     $detectedEncoding = mb_detect_encoding($extractedText, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ASCII'], true);
@@ -1412,11 +1462,11 @@ class KnowledgeController extends Controller
                 $extractedText = preg_replace('/\s+/', ' ', $extractedText);
                 $extractedText = trim($extractedText);
                 
-                Log::info("PDF text extraction: " . strlen($extractedText) . " characters");
+                Log::info("PDF final text: " . strlen($extractedText) . " characters");
                 
                 // If text is too short, it's likely a visual/scanned PDF - use GPT-4 Vision
-                if (strlen($extractedText) < 200) {
-                    Log::info("PDF has little text, using GPT-4 Vision for visual content");
+                if (strlen($extractedText) < 500) {
+                    Log::info("PDF has little text (" . strlen($extractedText) . " chars), using GPT-4 Vision for visual content");
                     $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
                 }
                 

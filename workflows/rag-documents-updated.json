@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Laravel ya extrajo el texto, solo preparamos los datos\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.txt';\nconst category = body.category || 'general';\nconst text = body.text || '';\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';\n\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\nif (!text || text.length < 50) {\n  throw new Error('No se recibió texto válido del documento.');\n}\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: text,\n    text_length: text.length,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost\n  }\n};"
+        "jsCode": "// Laravel ya extrajo el texto, solo preparamos los datos\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.txt';\nconst category = body.category || 'general';\nconst text = body.text || '';\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';\nconst qdrantApiKey = body.qdrant_api_key || '';\n\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\nif (!text || text.length < 50) {\n  throw new Error('No se recibió texto válido del documento.');\n}\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: text,\n    text_length: text.length,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    qdrant_api_key: qdrantApiKey\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -38,7 +38,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Dividir texto en chunks\nconst text = $input.first().json.text || '';\nconst companySlug = $input.first().json.company_slug;\nconst filename = $input.first().json.filename;\nconst category = $input.first().json.category;\nconst collectionName = $input.first().json.collection_name;\nconst openaiApiKey = $input.first().json.openai_api_key;\nconst qdrantHost = $input.first().json.qdrant_host;\n\nconst maxCharsPerChunk = 20000;\nconst chunks = [];\n\nif (text.length <= maxCharsPerChunk) {\n  chunks.push(text);\n} else {\n  const paragraphs = text.split(/\\n\\n+/);\n  let currentChunk = '';\n  \n  for (const para of paragraphs) {\n    if (currentChunk.length + para.length > maxCharsPerChunk) {\n      if (currentChunk.trim()) {\n        chunks.push(currentChunk.trim());\n      }\n      currentChunk = para;\n    } else {\n      currentChunk += (currentChunk ? '\\n\\n' : '') + para;\n    }\n  }\n  \n  if (currentChunk.trim()) {\n    chunks.push(currentChunk.trim());\n  }\n}\n\nreturn chunks.map((chunk, index) => ({\n  json: {\n    text: chunk,\n    chunk_index: index,\n    total_chunks: chunks.length,\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost\n  }\n}));"
+        "jsCode": "// Dividir texto en chunks - MÁXIMO 6000 chars (~1500 tokens) para embeddings\nconst text = $input.first().json.text || '';\nconst companySlug = $input.first().json.company_slug;\nconst filename = $input.first().json.filename;\nconst category = $input.first().json.category;\nconst collectionName = $input.first().json.collection_name;\nconst openaiApiKey = $input.first().json.openai_api_key;\nconst qdrantHost = $input.first().json.qdrant_host;\nconst qdrantApiKey = $input.first().json.qdrant_api_key;\n\nconst maxCharsPerChunk = 6000;\nconst chunks = [];\n\nif (text.length <= maxCharsPerChunk) {\n  chunks.push(text);\n} else {\n  const paragraphs = text.split(/\\n\\n+/);\n  let currentChunk = '';\n  \n  for (const para of paragraphs) {\n    if (currentChunk.length + para.length > maxCharsPerChunk) {\n      if (currentChunk.trim()) {\n        chunks.push(currentChunk.trim());\n      }\n      currentChunk = para.length > maxCharsPerChunk ? para.substring(0, maxCharsPerChunk) : para;\n    } else {\n      currentChunk += (currentChunk ? '\\n\\n' : '') + para;\n    }\n  }\n  \n  if (currentChunk.trim()) {\n    chunks.push(currentChunk.trim());\n  }\n}\n\nreturn chunks.map((chunk, index) => ({\n  json: {\n    text: chunk,\n    chunk_index: index,\n    total_chunks: chunks.length,\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    qdrant_api_key: qdrantApiKey\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -50,8 +50,19 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/embeddings",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.openai_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.text) }}\n}"
@@ -60,17 +71,11 @@
       "typeVersion": 4.2,
       "position": [880, 300],
       "id": "generate-embeddings",
-      "name": "Generate Embeddings",
-      "credentials": {
-        "openAiApi": {
-          "id": "3",
-          "name": "OpenAi account"
-        }
-      }
+      "name": "Generate Embeddings"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\n// ID ENTERO basado en timestamp + chunk_index\nconst timestamp = Date.now();\nconst chunkSuffix = prevData.chunk_index.toString().padStart(4, '0');\nconst pointId = parseInt(timestamp.toString() + chunkSuffix);\n\nreturn {\n  json: {\n    id: pointId,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks,\n      type: 'document',\n      updated_at: new Date().toISOString()\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+        "jsCode": "const item = $input.first();\nconst embedding = item.json.data[0].embedding;\nconst prevData = $('Split into Chunks').item.json;\n\n// ID ENTERO basado en timestamp + chunk_index\nconst timestamp = Date.now();\nconst chunkSuffix = prevData.chunk_index.toString().padStart(4, '0');\nconst pointId = parseInt(timestamp.toString() + chunkSuffix);\n\nreturn {\n  json: {\n    id: pointId,\n    vector: embedding,\n    payload: {\n      text: prevData.text,\n      filename: prevData.filename,\n      category: prevData.category,\n      company_slug: prevData.company_slug,\n      chunk_index: prevData.chunk_index,\n      total_chunks: prevData.total_chunks,\n      type: 'document',\n      updated_at: new Date().toISOString()\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host,\n    qdrant_api_key: prevData.qdrant_api_key\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -82,6 +87,19 @@
       "parameters": {
         "method": "PUT",
         "url": "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{ $json.qdrant_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"points\": [{\n    \"id\": {{ $json.id }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}",
@@ -99,7 +117,7 @@
         "url": "https://app.withmia.com/api/knowledge/chunk-stored",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"company_slug\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.company_slug) }},\n  \"filename\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.filename) }},\n  \"chunk_id\": {{ $('Prepare for Qdrant').item.json.id }},\n  \"chunk_index\": {{ $('Prepare for Qdrant').item.json.payload.chunk_index }}\n}",
+        "jsonBody": "={\n  \"company_slug\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.company_slug) }},\n  \"filename\": {{ JSON.stringify($('Prepare for Qdrant').item.json.payload.filename) }},\n  \"chunk_id\": {{ JSON.stringify(String($('Prepare for Qdrant').item.json.id)) }},\n  \"chunk_index\": {{ $('Prepare for Qdrant').item.json.payload.chunk_index }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
