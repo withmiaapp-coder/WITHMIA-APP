@@ -2,11 +2,10 @@
 # Updated: 2026-01-23 - Added poppler-utils for PDF extraction
 FROM php:8.4-cli
 
-# Force rebuild of this layer
-ARG CACHEBUST=20260123v2
-
 # Install system dependencies (including poppler-utils for pdftotext)
+# REBUILD FORCED: poppler-utils added at start of list
 RUN apt-get update && apt-get install -y \
+    poppler-utils \
     git \
     curl \
     libpng-dev \
@@ -24,7 +23,6 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     ffmpeg \
-    poppler-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
