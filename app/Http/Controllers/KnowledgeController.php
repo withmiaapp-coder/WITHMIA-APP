@@ -1329,9 +1329,11 @@ class KnowledgeController extends Controller
             }
 
             Log::info("Text extracted: " . strlen($extractedText) . " characters");
+            Log::info("Extracted text preview (first 500 chars): " . substr($extractedText, 0, 500));
+            Log::info("Extracted text preview (last 500 chars): " . substr($extractedText, -500));
 
-            // Send EXTRACTED TEXT to n8n (not the binary file)
-            $response = Http::timeout(120)->post($webhookUrl, [
+            // Prepare payload for n8n
+            $payload = [
                 'company_slug' => $companySlug,
                 'category' => $validated['category'],
                 'filename' => $validated['filename'],
@@ -1339,7 +1341,12 @@ class KnowledgeController extends Controller
                 'openai_api_key' => $openaiApiKey,
                 'qdrant_host' => $qdrantHost,
                 'qdrant_api_key' => $qdrantApiKey,
-            ]);
+            ];
+
+            Log::info("Payload to n8n - text length: " . strlen($payload['text']));
+
+            // Send EXTRACTED TEXT to n8n (not the binary file)
+            $response = Http::timeout(120)->post($webhookUrl, $payload);
 
             if ($response->successful()) {
                 Log::info("n8n RAG webhook responded successfully for {$validated['filename']}");
