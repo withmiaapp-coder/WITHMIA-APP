@@ -404,6 +404,9 @@ class KnowledgeController extends Controller
             $companySlug = $user->company_slug ?? 'default';
             $assistantName = $company->assistant_name ?? 'WITHMIA';
             
+            // 🧠 INTELIGENCIA: Detectar duplicados antes de guardar
+            $deduplicationResult = $this->intelligentTrainingStorage($userMessage, $company, $companySlug);
+            
             // Obtener configuración de n8n - usar webhook personalizado de la empresa si existe
             $settings = $company->settings ?? [];
             $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
@@ -416,7 +419,7 @@ class KnowledgeController extends Controller
                 $fullUrl = rtrim($n8nUrl, '/') . '/webhook/' . $webhookPath;
             }
 
-            // Preparar payload para n8n
+            // Preparar payload para n8n (ahora con información de deduplicación)
             $payload = [
                 'company_slug' => $companySlug,
                 'assistant_name' => $assistantName,
@@ -426,11 +429,15 @@ class KnowledgeController extends Controller
                 'openai_api_key' => env('OPENAI_API_KEY'),
                 'qdrant_host' => env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app'),
                 'timestamp' => now()->toIso8601String(),
+                // Agregar información de deduplicación
+                'deduplication' => $deduplicationResult,
             ];
 
             Log::info('Sending training message to n8n', [
                 'company_slug' => $companySlug,
-                'message_length' => strlen($userMessage)
+                'message_length' => strlen($userMessage),
+                'action' => $deduplicationResult['action'],
+                'similarity' => $deduplicationResult['similarity'] ?? null,
             ]);
 
             // Enviar a n8n y esperar respuesta
@@ -454,6 +461,8 @@ class KnowledgeController extends Controller
                     'success' => true,
                     'response' => $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.',
                     'saved_to_knowledge' => $responseBody['saved'] ?? false,
+                    'action' => $deduplicationResult['action'],
+                    'similarity' => $deduplicationResult['similarity'] ?? null,
                 ]);
 
             } catch (\GuzzleHttp\Exception\ConnectException $e) {
@@ -464,7 +473,8 @@ class KnowledgeController extends Controller
                     'success' => true,
                     'response' => $this->getDefaultTrainingResponse($userMessage, $assistantName),
                     'saved_to_knowledge' => false,
-                    'note' => 'Respuesta local - workflow de entrenamiento no configurado'
+                    'note' => 'Respuesta local - workflow de entrenamiento no configurado',
+                    'action' => $deduplicationResult['action'],
                 ]);
             }
 
@@ -480,6 +490,125 @@ class KnowledgeController extends Controller
                 'success' => false,
                 'error' => 'Error al procesar el mensaje de entrenamiento'
             ], 500);
+        }
+    }
+    
+    /**
+     * 🧠 DEDUPLICACIÓN INTELIGENTE: Detecta si el mensaje es similar a contenido existente
+     * 
+     * @param string $message Mensaje del usuario
+     * @param \App\Models\Company $company Empresa
+     * @param string $companySlug Slug de la empresa
+     * @return array ['action' => 'create'|'update', 'point_id' => string, 'similarity' => float]
+     */
+    private function intelligentTrainingStorage($message, $company, $companySlug)
+    {
+        try {
+            $qdrantService = app(QdrantService::class);
+            $collectionName = 'knowledge_' . $companySlug;
+            
+            // 1. Generar embedding del mensaje nuevo
+            $embedding = $qdrantService->generateEmbedding($message);
+            
+            // 2. Buscar puntos similares en Qdrant (top 3)
+            $qdrantHost = env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
+            $client = new \GuzzleHttp\Client(['timeout' => 10]);
+            
+            $searchResponse = $client->post("{$qdrantHost}/collections/{$collectionName}/points/search", [
+                'json' => [
+                    'vector' => $embedding,
+                    'limit' => 3,
+                    'with_payload' => true,
+                    'score_threshold' => 0.75, // Solo considerar si la similitud es > 75%
+                ]
+            ]);
+            
+            $searchResults = json_decode($searchResponse->getBody()->getContents(), true);
+            $results = $searchResults['result'] ?? [];
+            
+            // 3. Si no hay resultados similares, crear nuevo punto
+            if (empty($results)) {
+                $newPointId = 'training_' . time() . '_' . bin2hex(random_bytes(4));
+                
+                Log::info('No similar content found - creating new point', [
+                    'point_id' => $newPointId,
+                    'company_slug' => $companySlug,
+                ]);
+                
+                return [
+                    'action' => 'create',
+                    'point_id' => $newPointId,
+                    'similarity' => 0,
+                    'message' => 'Nueva información agregada',
+                ];
+            }
+            
+            // 4. Evaluar el punto más similar
+            $mostSimilar = $results[0];
+            $similarity = $mostSimilar['score'];
+            $existingId = $mostSimilar['id'];
+            $existingPayload = $mostSimilar['payload'] ?? [];
+            
+            // 5. Umbral de decisión: 0.85 (85% de similitud)
+            if ($similarity >= 0.85) {
+                // ES UN DUPLICADO O CORRECCIÓN - Actualizar el punto existente
+                Log::info('Similar content detected - updating existing point', [
+                    'point_id' => $existingId,
+                    'similarity' => $similarity,
+                    'company_slug' => $companySlug,
+                    'old_content' => substr($existingPayload['content'] ?? '', 0, 50),
+                    'new_content' => substr($message, 0, 50),
+                ]);
+                
+                // Actualizar el punto con el nuevo contenido
+                $qdrantService->upsertPoints($collectionName, [[
+                    'id' => $existingId,
+                    'vector' => $embedding,
+                    'payload' => [
+                        'content' => $message,
+                        'type' => 'training_message',
+                        'company_id' => $company->id,
+                        'company_slug' => $companySlug,
+                        'created_at' => $existingPayload['created_at'] ?? now()->toIso8601String(),
+                        'updated_at' => now()->toIso8601String(),
+                        'update_count' => ($existingPayload['update_count'] ?? 0) + 1,
+                    ]
+                ]]);
+                
+                return [
+                    'action' => 'update',
+                    'point_id' => $existingId,
+                    'similarity' => $similarity,
+                    'message' => 'Información actualizada (contenido similar detectado)',
+                ];
+            } else {
+                // ES INFORMACIÓN NUEVA (similarity < 0.85) - Crear nuevo punto
+                $newPointId = 'training_' . time() . '_' . bin2hex(random_bytes(4));
+                
+                Log::info('Moderately similar content found - creating new point', [
+                    'new_point_id' => $newPointId,
+                    'similarity_to_existing' => $similarity,
+                    'company_slug' => $companySlug,
+                ]);
+                
+                return [
+                    'action' => 'create',
+                    'point_id' => $newPointId,
+                    'similarity' => $similarity,
+                    'message' => 'Nueva información agregada (suficientemente diferente)',
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            // Si falla la deduplicación, crear nuevo punto por defecto
+            Log::warning('Deduplication failed, creating new point by default: ' . $e->getMessage());
+            
+            return [
+                'action' => 'create',
+                'point_id' => 'training_' . time() . '_' . bin2hex(random_bytes(4)),
+                'similarity' => 0,
+                'message' => 'Nueva información agregada (deduplicación no disponible)',
+            ];
         }
     }
 
