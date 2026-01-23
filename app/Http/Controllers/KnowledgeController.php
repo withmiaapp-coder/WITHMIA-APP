@@ -297,14 +297,18 @@ class KnowledgeController extends Controller
             $companyInfoText = implode("\n\n", $companyInfoParts);
             
             // UPSERT en Qdrant (mismo ID = sobrescribe, no duplica)
+            // Usar ID numérico porque Qdrant no acepta strings como ID
+            $pointId = $company->id;
+            
             $insertResult = $qdrantService->upsertPoints($collectionName, [
                 [
-                    'id' => 'company_info_' . $company->id, // Mismo ID = sobrescribe
+                    'id' => $pointId,
                     'vector' => $qdrantService->generateEmbedding($companyInfoText),
                     'payload' => [
                         'text' => $companyInfoText,
                         'source' => 'company_onboarding',
                         'type' => 'company_information',
+                        'company_id' => $company->id,
                         'updated_at' => now()->toIso8601String(),
                     ]
                 ]
@@ -583,7 +587,8 @@ class KnowledgeController extends Controller
                 ];
             } else {
                 // ES INFORMACIÓN NUEVA (similarity < 0.85) - Crear nuevo punto
-                $newPointId = 'training_' . time() . '_' . bin2hex(random_bytes(4));
+                // Usar timestamp como ID numérico (Qdrant requiere integer o UUID)
+                $newPointId = intval(microtime(true) * 10000) + random_int(1, 9999);
                 
                 Log::info('Moderately similar content found - creating new point', [
                     'new_point_id' => $newPointId,
@@ -605,7 +610,7 @@ class KnowledgeController extends Controller
             
             return [
                 'action' => 'create',
-                'point_id' => 'training_' . time() . '_' . bin2hex(random_bytes(4)),
+                'point_id' => intval(microtime(true) * 10000) + random_int(1, 9999),
                 'similarity' => 0,
                 'message' => 'Nueva información agregada (deduplicación no disponible)',
             ];

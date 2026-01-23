@@ -111,15 +111,18 @@ class CreateQdrantCollectionJob implements ShouldQueue
 
             $companyInfoText = implode("\n\n", $companyInfoParts);
             
-            // Insertar en Qdrant
+            // Insertar en Qdrant (usar entero como ID, Qdrant no acepta strings)
+            $pointId = $company->id; // Usar el ID numérico de la company
+            
             $insertResult = $qdrantService->upsertPoints($collectionName, [
                 [
-                    'id' => 'company_info_' . $company->id,
+                    'id' => $pointId,
                     'vector' => $qdrantService->generateEmbedding($companyInfoText),
                     'payload' => [
                         'text' => $companyInfoText,
                         'source' => 'company_onboarding',
                         'type' => 'company_information',
+                        'company_id' => $company->id,
                         'created_at' => now()->toIso8601String(),
                     ]
                 ]
