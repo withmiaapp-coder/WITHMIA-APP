@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Services\QdrantService;
 
 class KnowledgeController extends Controller
 {
@@ -136,8 +137,8 @@ class KnowledgeController extends Controller
 
             $company->update($updateData);
 
-            // After saving, send company info to Qdrant for training
-            $this->sendCompanyInfoToQdrant($company, $user);
+            // Actualizar información de la empresa en Qdrant
+            $this->updateCompanyInfoInQdrant($company);
 
             return response()->json([
                 'success' => true,
@@ -245,6 +246,80 @@ class KnowledgeController extends Controller
         } catch (\Exception $e) {
             // Log but don't fail the main request
             Log::error('Error sending company info to Qdrant: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualizar información de la empresa directamente en Qdrant (sobrescribe, no duplica)
+     */
+    private function updateCompanyInfoInQdrant($company)
+    {
+        try {
+            $qdrantService = app(QdrantService::class);
+            
+            // Obtener el nombre de la colección
+            $collectionName = $company->settings['qdrant_collection'] ?? null;
+            
+            if (!$collectionName) {
+                Log::warning('No Qdrant collection found for company', ['company_id' => $company->id]);
+                return;
+            }
+
+            // Construir el texto con toda la información de la empresa
+            $companyInfoParts = [];
+            
+            if (!empty($company->assistant_name)) {
+                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
+            }
+            
+            if (!empty($company->name)) {
+                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
+            }
+            
+            if (!empty($company->website)) {
+                $companyInfoParts[] = "Sitio Web: {$company->website}";
+            }
+            
+            if (!empty($company->description)) {
+                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
+            }
+
+            if (!empty($company->client_type)) {
+                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
+                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
+            }
+            
+            if (empty($companyInfoParts)) {
+                Log::info("No company info to update in Qdrant for company {$company->id}");
+                return;
+            }
+
+            $companyInfoText = implode("\n\n", $companyInfoParts);
+            
+            // UPSERT en Qdrant (mismo ID = sobrescribe, no duplica)
+            $insertResult = $qdrantService->upsertPoints($collectionName, [
+                [
+                    'id' => 'company_info_' . $company->id, // Mismo ID = sobrescribe
+                    'vector' => $qdrantService->generateEmbedding($companyInfoText),
+                    'payload' => [
+                        'text' => $companyInfoText,
+                        'source' => 'company_onboarding',
+                        'type' => 'company_information',
+                        'updated_at' => now()->toIso8601String(),
+                    ]
+                ]
+            ]);
+
+            if ($insertResult['success']) {
+                Log::info("✅ Company information updated in Qdrant (upsert with same ID)", [
+                    'company_id' => $company->id,
+                    'collection' => $collectionName
+                ]);
+            } else {
+                Log::error("❌ Failed to update company info in Qdrant: " . ($insertResult['error'] ?? 'Unknown'));
+            }
+        } catch (\Exception $e) {
+            Log::error("❌ Exception updating company info in Qdrant: " . $e->getMessage());
         }
     }
 
