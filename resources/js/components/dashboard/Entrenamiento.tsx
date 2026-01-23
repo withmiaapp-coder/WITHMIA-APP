@@ -238,6 +238,7 @@ export default function Entrenamiento({
           "X-CSRF-TOKEN": token,
           "Accept": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           message: messageToSend,
           context: recentMessages,
