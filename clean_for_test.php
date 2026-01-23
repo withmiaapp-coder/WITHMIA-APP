@@ -42,17 +42,22 @@ try {
     echo "   ❌ Error: " . $e->getMessage() . "\n";
 }
 
-// 2. Limpiar N8N workflows (mantener usuario)
+// 2. Limpiar N8N workflows (mantener usuario y credenciales)
 echo "\n2️⃣  LIMPIANDO N8N WORKFLOWS...\n";
 try {
     $pdo = new PDO("pgsql:host=$host;port=$port;dbname=n8n", $user, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
+    // Limpiar ejecuciones primero
+    $pdo->exec("DELETE FROM n8n.execution_entity");
+    echo "   ✅ Ejecuciones eliminadas\n";
+    
     $pdo->exec("DELETE FROM n8n.workflow_entity");
     echo "   ✅ Workflows eliminados\n";
     
-    $pdo->exec("DELETE FROM n8n.credentials_entity");
-    echo "   ✅ Credentials eliminados\n";
+    // NO borrar credenciales - son compartidas y necesarias
+    // $pdo->exec("DELETE FROM n8n.credentials_entity");
+    echo "   ℹ️  Credenciales preservadas (OpenAI, Redis, Qdrant)\n";
     
 } catch (Exception $e) {
     echo "   ⚠️  " . $e->getMessage() . "\n";
