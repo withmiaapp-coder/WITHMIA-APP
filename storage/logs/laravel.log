@@ -1441,3 +1441,71 @@
 #17 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/check_company_status.php(9): Illuminate/Database/Query/Builder->first()
 #18 {main}
 "} 
+[2026-01-23 15:00:51] production.ERROR: SQLSTATE[08006] [7] connection to server at "127.0.0.1", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections? (Connection: pgsql, Host: 127.0.0.1, Port: 5432, Database: laravel, SQL: select * from "companies" limit 1) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 7): SQLSTATE[08006] [7] connection to server at \"127.0.0.1\", port 5432 failed: Connection refused (0x0000274D/10061)
+\tIs the server running on that host and accepting TCP/IP connections? (Connection: pgsql, Host: 127.0.0.1, Port: 5432, Database: laravel, SQL: select * from \"companies\" limit 1) at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php:838)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback('select * from \"...', Array, Object(Closure))
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(411): Illuminate/Database/Connection->run('select * from \"...', Array, Object(Closure))
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3368): Illuminate/Database/Connection->select('select * from \"...', Array, true)
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3353): Illuminate/Database/Query/Builder->runSelect()
+#4 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3943): Illuminate/Database/Query/Builder->Illuminate/Database/Query/{closure}()
+#5 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3352): Illuminate/Database/Query/Builder->onceWithColumns(Array, Object(Closure))
+#6 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Concerns/BuildsQueries.php(366): Illuminate/Database/Query/Builder->get(Array)
+#7 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/check_rag_config.php(12): Illuminate/Database/Query/Builder->first()
+#8 {main}
+
+[previous exception] [object] (PDOException(code: 7): SQLSTATE[08006] [7] connection to server at \"127.0.0.1\", port 5432 failed: Connection refused (0x0000274D/10061)
+\tIs the server running on that host and accepting TCP/IP connections? at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php:66)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(66): PDO->__construct('pgsql:host=127....', 'root', Object(SensitiveParameterValue), Array)
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(44): Illuminate/Database/Connectors/Connector->createPdoConnection('pgsql:host=127....', 'root', Object(SensitiveParameterValue), Array)
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/PostgresConnector.php(35): Illuminate/Database/Connectors/Connector->createConnection('pgsql:host=127....', Array, Array)
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/ConnectionFactory.php(186): Illuminate/Database/Connectors/PostgresConnector->connect(Array)
+#4 [internal function]: Illuminate/Database/Connectors/ConnectionFactory->Illuminate/Database/Connectors/{closure}()
+#5 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1257): call_user_func(Object(Closure))
+#6 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1295): Illuminate/Database/Connection->getPdo()
+#7 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(525): Illuminate/Database/Connection->getReadPdo()
+#8 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(420): Illuminate/Database/Connection->getPdoForSelect(true)
+#9 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(827): Illuminate/Database/Connection->Illuminate/Database/{closure}('select * from \"...', Array)
+#10 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback('select * from \"...', Array, Object(Closure))
+#11 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(411): Illuminate/Database/Connection->run('select * from \"...', Array, Object(Closure))
+#12 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3368): Illuminate/Database/Connection->select('select * from \"...', Array, true)
+#13 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3353): Illuminate/Database/Query/Builder->runSelect()
+#14 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3943): Illuminate/Database/Query/Builder->Illuminate/Database/Query/{closure}()
+#15 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3352): Illuminate/Database/Query/Builder->onceWithColumns(Array, Object(Closure))
+#16 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Concerns/BuildsQueries.php(366): Illuminate/Database/Query/Builder->get(Array)
+#17 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/check_rag_config.php(12): Illuminate/Database/Query/Builder->first()
+#18 {main}
+"} 
+[2026-01-23 15:18:49] production.ERROR: SQLSTATE[08006] [7] connection to server at "127.0.0.1", port 5432 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections? (Connection: pgsql, Host: 127.0.0.1, Port: 5432, Database: laravel, SQL: SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT IN ('migrations', 'spatial_ref_sys')) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 7): SQLSTATE[08006] [7] connection to server at \"127.0.0.1\", port 5432 failed: Connection refused (0x0000274D/10061)
+\tIs the server running on that host and accepting TCP/IP connections? (Connection: pgsql, Host: 127.0.0.1, Port: 5432, Database: laravel, SQL: SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT IN ('migrations', 'spatial_ref_sys')) at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php:838)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback('SELECT tablenam...', Array, Object(Closure))
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(411): Illuminate/Database/Connection->run('SELECT tablenam...', Array, Object(Closure))
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->select('SELECT tablenam...')
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call('select', Array)
+#4 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/clean_all_data.php(17): Illuminate/Support/Facades/Facade::__callStatic('select', Array)
+#5 {main}
+
+[previous exception] [object] (PDOException(code: 7): SQLSTATE[08006] [7] connection to server at \"127.0.0.1\", port 5432 failed: Connection refused (0x0000274D/10061)
+\tIs the server running on that host and accepting TCP/IP connections? at C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php:66)
+[stacktrace]
+#0 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(66): PDO->__construct('pgsql:host=127....', 'root', Object(SensitiveParameterValue), Array)
+#1 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(44): Illuminate/Database/Connectors/Connector->createPdoConnection('pgsql:host=127....', 'root', Object(SensitiveParameterValue), Array)
+#2 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/PostgresConnector.php(35): Illuminate/Database/Connectors/Connector->createConnection('pgsql:host=127....', Array, Array)
+#3 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connectors/ConnectionFactory.php(186): Illuminate/Database/Connectors/PostgresConnector->connect(Array)
+#4 [internal function]: Illuminate/Database/Connectors/ConnectionFactory->Illuminate/Database/Connectors/{closure}()
+#5 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1257): call_user_func(Object(Closure))
+#6 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1295): Illuminate/Database/Connection->getPdo()
+#7 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(525): Illuminate/Database/Connection->getReadPdo()
+#8 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(420): Illuminate/Database/Connection->getPdoForSelect(true)
+#9 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(827): Illuminate/Database/Connection->Illuminate/Database/{closure}('SELECT tablenam...', Array)
+#10 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(794): Illuminate/Database/Connection->runQueryCallback('SELECT tablenam...', Array, Object(Closure))
+#11 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/Connection.php(411): Illuminate/Database/Connection->run('SELECT tablenam...', Array, Object(Closure))
+#12 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(491): Illuminate/Database/Connection->select('SELECT tablenam...')
+#13 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate/Database/DatabaseManager->__call('select', Array)
+#14 C:/Users/angel/OneDrive - UNIVERSIDAD ANDRES BELLO/Documents/WITHMIA/mia-app/clean_all_data.php(17): Illuminate/Support/Facades/Facade::__callStatic('select', Array)
+#15 {main}
+"} 
