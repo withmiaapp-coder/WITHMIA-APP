@@ -63,11 +63,75 @@ class CreateQdrantCollectionJob implements ShouldQueue
                         'qdrant_collection' => $collectionName
                     ])
                 ]);
+
+                // Insertar información de la empresa como punto #1
+                $this->insertCompanyInfo($qdrantService, $collectionName, $company);
             } else {
                 Log::error("❌ Failed to create Qdrant collection: " . ($result['error'] ?? 'Unknown'));
             }
         } catch (\Exception $e) {
             Log::error("❌ Exception creating Qdrant collection: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Inserta la información de la empresa como punto #1 en Qdrant
+     */
+    private function insertCompanyInfo(QdrantService $qdrantService, string $collectionName, Company $company): void
+    {
+        try {
+            // Construir el texto con toda la información de la empresa
+            $companyInfoParts = [];
+            
+            if (!empty($company->assistant_name)) {
+                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
+            }
+            
+            if (!empty($company->company_name)) {
+                $companyInfoParts[] = "Nombre de la Empresa: {$company->company_name}";
+            }
+            
+            if (!empty($company->website)) {
+                $companyInfoParts[] = "Sitio Web: {$company->website}";
+            }
+            
+            if (!empty($company->company_description)) {
+                $companyInfoParts[] = "Descripción de la Empresa: {$company->company_description}";
+            }
+
+            if (!empty($company->client_type)) {
+                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
+                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
+            }
+            
+            if (empty($companyInfoParts)) {
+                Log::info("No company info to insert for: {$this->companySlug}");
+                return;
+            }
+
+            $companyInfoText = implode("\n\n", $companyInfoParts);
+            
+            // Insertar en Qdrant
+            $insertResult = $qdrantService->upsertPoints($collectionName, [
+                [
+                    'id' => 'company_info_' . $company->id,
+                    'vector' => $qdrantService->generateEmbedding($companyInfoText),
+                    'payload' => [
+                        'text' => $companyInfoText,
+                        'source' => 'company_onboarding',
+                        'type' => 'company_information',
+                        'created_at' => now()->toIso8601String(),
+                    ]
+                ]
+            ]);
+
+            if ($insertResult['success']) {
+                Log::info("✅ Company information inserted as point #1 in Qdrant for: {$this->companySlug}");
+            } else {
+                Log::error("❌ Failed to insert company info: " . ($insertResult['error'] ?? 'Unknown'));
+            }
+        } catch (\Exception $e) {
+            Log::error("❌ Exception inserting company info to Qdrant: " . $e->getMessage());
         }
     }
 }

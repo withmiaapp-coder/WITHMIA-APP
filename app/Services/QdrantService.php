@@ -180,6 +180,79 @@ class QdrantService
     }
 
     /**
+     * Insertar/actualizar puntos en una colección
+     */
+    public function upsertPoints(string $collectionName, array $points): array
+    {
+        try {
+            $response = $this->request('PUT', "/collections/{$collectionName}/points", [
+                'points' => $points
+            ]);
+
+            if ($response['success']) {
+                Log::info("Qdrant: Points upserted successfully", [
+                    'collection' => $collectionName,
+                    'count' => count($points)
+                ]);
+                
+                return [
+                    'success' => true,
+                    'message' => 'Points upserted successfully'
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $response['error'] ?? 'Unknown error'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("Qdrant: Error upserting points", [
+                'collection' => $collectionName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generar embedding usando OpenAI
+     */
+    public function generateEmbedding(string $text): array
+    {
+        try {
+            $openaiKey = env('OPENAI_API_KEY');
+            
+            if (!$openaiKey) {
+                throw new \Exception('OpenAI API key not configured');
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $openaiKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(30)->post('https://api.openai.com/v1/embeddings', [
+                'input' => $text,
+                'model' => 'text-embedding-3-small'
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['data'][0]['embedding'];
+            }
+
+            throw new \Exception("OpenAI API error: " . $response->body());
+
+        } catch (\Exception $e) {
+            Log::error("Error generating embedding", ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
      * Hacer una petición HTTP a Qdrant
      */
     private function request(string $method, string $endpoint, array $data = []): array
