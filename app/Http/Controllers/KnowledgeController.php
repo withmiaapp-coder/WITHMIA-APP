@@ -211,7 +211,7 @@ class KnowledgeController extends Controller
             $this->deleteCompanyInfoFromQdrant($qdrantHost, $collectionName);
 
             // Get n8n configuration - use company-specific webhook
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app');
             
             // Use webhook path from company settings if available, otherwise use default pattern
             $webhookPath = $company->settings['rag_webhook_path'] ?? ('rag-' . $companySlug);
@@ -420,7 +420,7 @@ class KnowledgeController extends Controller
             
             // Obtener configuración de n8n - usar webhook personalizado de la empresa si existe
             $settings = $company->settings ?? [];
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app');
             
             // Usar la URL de webhook guardada en settings o construir una por defecto
             if (!empty($settings['training_webhook_url'])) {
@@ -1193,7 +1193,7 @@ class KnowledgeController extends Controller
             $companyName = $company->name ?? $companySlug;
             
             // Get n8n configuration
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app');
             $n8nApiKey = env('N8N_API_KEY');
 
             // Get OpenAI API key - company specific or fallback to global
@@ -1997,7 +1997,7 @@ JS;
                 return response()->json(['success' => false, 'error' => 'No company found'], 404);
             }
 
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app');
             $n8nApiKey = env('N8N_API_KEY');
 
             // Try to delete the old workflow if it exists

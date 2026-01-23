@@ -63,8 +63,8 @@
       "name": "Generate Embeddings",
       "credentials": {
         "openAiApi": {
-          "id": "3",
-          "name": "OpenAi account"
+          "id": "dcd358ecf51bbe2d7f686dbc",
+          "name": "OpenAI API"
         }
       }
     },

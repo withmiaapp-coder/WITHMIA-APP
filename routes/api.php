@@ -21,7 +21,7 @@ Route::get('/setup-training-withmia', function () {
             'settings' => array_merge($company->settings ?? [], [
                 'training_workflow_id' => 'tqUt0Ato7dBfjEoD',
                 'training_webhook_path' => 'training-withmia-zly7qn',
-                'training_webhook_url' => 'https://n8n-production-00dd.up.railway.app/webhook/training-withmia-zly7qn',
+                'training_webhook_url' => 'https://n8n-production-8de5.up.railway.app/webhook/training-withmia-zly7qn',
                 'training_workflow_name' => 'Training Chat - withmia-zly7qn'
             ])
         ]);
@@ -549,7 +549,7 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
                 'action' => $action,
                 'workflow_id' => $workflowId,
                 'activated' => $activateResult['success'],
-                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}"
+                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app') . "/webhook/{$webhookPath}"
             ]);
         }
         

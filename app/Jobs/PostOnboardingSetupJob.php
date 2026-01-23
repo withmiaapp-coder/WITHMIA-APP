@@ -110,7 +110,7 @@ class PostOnboardingSetupJob implements ShouldQueue
 
             if ($result['success']) {
                 $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}";
+                $webhookUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-8de5.up.railway.app') . "/webhook/{$webhookPath}";
 
                 if ($workflowId) {
                     $n8nService->activateWorkflow($workflowId);
