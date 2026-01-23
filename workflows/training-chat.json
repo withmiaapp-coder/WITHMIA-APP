@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract training data from webhook\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst assistantName = body.assistant_name || 'MIA';\nconst companyName = body.company_name || 'la empresa';\nconst userMessage = body.user_message || '';\nconst conversationHistory = body.conversation_history || [];\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';\nconst timestamp = new Date().toISOString();\n\n// Create collection name\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\n// Build system prompt for the training agent\nconst systemPrompt = `Eres ${assistantName}, el asistente de entrenamiento de ${companyName}.\n\nTu rol es:\n1. Ayudar al usuario a entrenar y mejorar el bot de la empresa\n2. Entender ejemplos de conversaciones que te den\n3. Aprender correcciones sobre cómo deberías responder\n4. Registrar información importante sobre la empresa y sus clientes\n\nCuando el usuario te de un ejemplo o corrección:\n- Confirma que lo has entendido\n- Muestra cómo responderías en esa situación\n- Pregunta si hay más ejemplos o información\n\nSé amigable, profesional y muestra que estás aprendiendo.`;\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    assistant_name: assistantName,\n    company_name: companyName,\n    user_message: userMessage,\n    conversation_history: conversationHistory,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    timestamp: timestamp,\n    system_prompt: systemPrompt\n  }\n};"
+        "jsCode": "// Extract training data from webhook\nconst body = $input.first().json.body || $input.first().json;\n\n// Fix mojibake - UTF-8 interpreted as Latin-1\nfunction fixMojibake(str) {\n  if (!str) return str;\n  const replacements = [\n    ['Ã¡', 'á'], ['Ã©', 'é'], ['Ã­', 'í'], ['Ã³', 'ó'], ['Ãº', 'ú'],\n    ['Ã±', 'ñ'], ['Ã¼', 'ü'], ['Ã ', 'à'], ['Ã¨', 'è'], ['Ã¬', 'ì'],\n    ['Ã²', 'ò'], ['Ã¹', 'ù'], ['Ã¤', 'ä'], ['Ã«', 'ë'], ['Ã¯', 'ï'],\n    ['Ã¶', 'ö'], ['Ã¿', 'ÿ'], ['Ã§', 'ç'],\n    ['Â¡', '¡'], ['Â¿', '¿'], ['Âº', 'º'], ['Âª', 'ª']\n  ];\n  let fixed = str;\n  for (const [bad, good] of replacements) {\n    fixed = fixed.split(bad).join(good);\n  }\n  return fixed;\n}\n\nconst companySlug = body.company_slug || 'default';\nconst assistantName = fixMojibake(body.assistant_name) || 'MIA';\nconst companyName = fixMojibake(body.company_name) || 'la empresa';\nconst userMessage = fixMojibake(body.user_message) || '';\nconst conversationHistory = body.conversation_history || [];\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';\nconst timestamp = new Date().toISOString();\n\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\nconst systemPrompt = `Eres ${assistantName}, el asistente de entrenamiento de ${companyName}.\n\nTu rol es:\n1. Ayudar al usuario a entrenar y mejorar el bot de la empresa\n2. Entender ejemplos de conversaciones que te den\n3. Aprender correcciones sobre cómo deberías responder\n4. Registrar información importante sobre la empresa y sus clientes\n\nCuando el usuario te de un ejemplo o corrección:\n- Confirma que lo has entendido\n- Muestra cómo responderías en esa situación\n- Pregunta si hay más ejemplos o información\n\nSé amigable, profesional y muestra que estás aprendiendo.`;\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    assistant_name: assistantName,\n    company_name: companyName,\n    user_message: userMessage,\n    conversation_history: conversationHistory,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    timestamp: timestamp,\n    system_prompt: systemPrompt\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -38,7 +38,7 @@
             },
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -72,7 +72,7 @@
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -95,7 +95,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build context from Qdrant results and prepare OpenAI request\nconst prevData = $('Prepare Search').first().json;\nconst searchResults = $input.first().json.result || [];\n\n// Extract relevant context from search results\nlet contextText = '';\nif (searchResults && searchResults.length > 0) {\n  contextText = searchResults\n    .filter(r => r.score > 0.5)\n    .map(r => r.payload?.text || '')\n    .filter(t => t)\n    .join('\\n\\n---\\n\\n');\n}\n\nif (!contextText) {\n  contextText = 'Sin contexto previo en la base de conocimiento.';\n}\n\n// Build messages array for chat completion\nconst messages = [\n  {\n    role: 'system',\n    content: prevData.system_prompt + '\\n\\nCONTEXTO DE LA EMPRESA (información ya aprendida):\\n' + contextText\n  }\n];\n\n// Add conversation history if available\nif (prevData.conversation_history && prevData.conversation_history.length > 0) {\n  for (const msg of prevData.conversation_history.slice(-10)) {\n    messages.push({\n      role: msg.role || 'user',\n      content: msg.content || msg.message || ''\n    });\n  }\n}\n\n// Add current user message\nmessages.push({\n  role: 'user',\n  content: prevData.user_message\n});\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
+        "jsCode": "// Build context from Qdrant results and prepare OpenAI request\nconst prevData = $('Prepare Search').first().json;\nconst searchResults = $input.first().json.result || [];\n\nlet contextText = '';\nif (searchResults && searchResults.length > 0) {\n  contextText = searchResults\n    .filter(r => r.score > 0.5)\n    .map(r => r.payload?.text || '')\n    .filter(t => t)\n    .join('\\n\\n---\\n\\n');\n}\n\nif (!contextText) {\n  contextText = 'Sin contexto previo en la base de conocimiento.';\n}\n\nconst messages = [\n  {\n    role: 'system',\n    content: prevData.system_prompt + '\\n\\nCONTEXTO DE LA EMPRESA (información ya aprendida):\\n' + contextText\n  }\n];\n\nif (prevData.conversation_history && prevData.conversation_history.length > 0) {\n  for (const msg of prevData.conversation_history.slice(-10)) {\n    messages.push({\n      role: msg.role || 'user',\n      content: msg.content || msg.message || ''\n    });\n  }\n}\n\nmessages.push({\n  role: 'user',\n  content: prevData.user_message\n});\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -116,7 +116,7 @@
             },
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -133,7 +133,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Process AI response and decide if we should save\nconst prevData = $('Build Context & Messages').first().json;\nconst aiResponse = $input.first().json.choices[0].message.content || '';\n\n// Keywords that indicate this should be saved as knowledge\nconst saveKeywords = [\n  'ejemplo', 'así deberías', 'responde así', 'cuando pregunten',\n  'siempre', 'nunca', 'importante', 'recuerda', 'nuestro',\n  'nuestros', 'vendemos', 'ofrecemos', 'horario', 'precio',\n  'correcto', 'incorrecto', 'mejor', 'información', 'producto',\n  'servicio', 'cliente', 'empresa', 'política', 'procedimiento'\n];\n\nconst lowerMessage = prevData.user_message.toLowerCase();\nconst shouldSave = saveKeywords.some(kw => lowerMessage.includes(kw)) || prevData.user_message.length > 100;\n\n// Prepare text to save (if applicable)\nlet textToSave = '';\nif (shouldSave) {\n  textToSave = `EJEMPLO DE ENTRENAMIENTO\\n\\nUsuario: ${prevData.user_message}\\n\\nRespuesta del asistente: ${aiResponse}\\n\\nFecha: ${prevData.timestamp}`;\n}\n\nreturn {\n  json: {\n    response: aiResponse,\n    should_save: shouldSave,\n    text_to_save: textToSave,\n    company_slug: prevData.company_slug,\n    collection_name: prevData.collection_name,\n    openai_api_key: prevData.openai_api_key,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+        "jsCode": "// Process AI response and decide if we should save\nconst prevData = $('Build Context & Messages').first().json;\n\n// Fix mojibake\nfunction fixMojibake(str) {\n  if (!str) return str;\n  const replacements = [\n    ['Ã¡', 'á'], ['Ã©', 'é'], ['Ã­', 'í'], ['Ã³', 'ó'], ['Ãº', 'ú'],\n    ['Ã±', 'ñ'], ['Ã¼', 'ü'], ['Ã ', 'à'], ['Ã¨', 'è'], ['Ã¬', 'ì'],\n    ['Ã²', 'ò'], ['Ã¹', 'ù'], ['Ã¤', 'ä'], ['Ã«', 'ë'], ['Ã¯', 'ï'],\n    ['Ã¶', 'ö'], ['Ã¿', 'ÿ'], ['Ã§', 'ç'],\n    ['Â¡', '¡'], ['Â¿', '¿'], ['Âº', 'º'], ['Âª', 'ª']\n  ];\n  let fixed = str;\n  for (const [bad, good] of replacements) {\n    fixed = fixed.split(bad).join(good);\n  }\n  return fixed;\n}\n\nconst aiResponse = fixMojibake($input.first().json.choices[0].message.content || '');\nconst userMessage = fixMojibake(prevData.user_message);\n\nconst saveKeywords = [\n  'ejemplo', 'así deberías', 'responde así', 'cuando pregunten',\n  'siempre', 'nunca', 'importante', 'recuerda', 'nuestro',\n  'nuestros', 'vendemos', 'ofrecemos', 'horario', 'precio',\n  'correcto', 'incorrecto', 'mejor', 'información', 'producto',\n  'servicio', 'cliente', 'empresa', 'política', 'procedimiento'\n];\n\nconst lowerMessage = userMessage.toLowerCase();\nconst shouldSave = saveKeywords.some(kw => lowerMessage.includes(kw)) || userMessage.length > 100;\n\nlet textToSave = '';\nif (shouldSave) {\n  textToSave = `EJEMPLO DE ENTRENAMIENTO\\n\\nUsuario: ${userMessage}\\n\\nRespuesta del asistente: ${aiResponse}\\n\\nFecha: ${prevData.timestamp}`;\n}\n\nreturn {\n  json: {\n    response: aiResponse,\n    should_save: shouldSave,\n    text_to_save: textToSave,\n    company_slug: prevData.company_slug,\n    collection_name: prevData.collection_name,\n    openai_api_key: prevData.openai_api_key,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -181,7 +181,7 @@
             },
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -198,7 +198,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare point for Qdrant\nconst prevData = $('Process Response').first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\n// Generate UUID v4\nconst uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === 'x' ? r : (r & 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: prevData.text_to_save,\n      filename: 'training_examples.txt',\n      category: 'entrenamiento',\n      company_slug: prevData.company_slug,\n      chunk_index: 0,\n      total_chunks: 1\n    },\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host,\n    response: prevData.response\n  }\n};"
+        "jsCode": "// Prepare point for Qdrant with UTF-8 mojibake fix\nconst shouldSaveData = $('Should Save?').first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\n// Fix mojibake - UTF-8 interpreted as Latin-1\nfunction fixMojibake(text) {\n  if (!text) return '';\n  const replacements = [\n    ['Ã¡', 'á'], ['Ã©', 'é'], ['Ã­', 'í'], ['Ã³', 'ó'], ['Ãº', 'ú'],\n    ['Ã±', 'ñ'], ['Ã¼', 'ü'], ['Ã ', 'à'], ['Ã¨', 'è'], ['Ã¬', 'ì'],\n    ['Ã²', 'ò'], ['Ã¹', 'ù'], ['Ã¤', 'ä'], ['Ã«', 'ë'], ['Ã¯', 'ï'],\n    ['Ã¶', 'ö'], ['Ã¿', 'ÿ'], ['Ã§', 'ç'],\n    ['Â¡', '¡'], ['Â¿', '¿'], ['Âº', 'º'], ['Âª', 'ª']\n  ];\n  let fixed = text;\n  for (const [bad, good] of replacements) {\n    fixed = fixed.split(bad).join(good);\n  }\n  return fixed;\n}\n\nconst textToSave = fixMojibake(shouldSaveData.text_to_save || '');\n\n// Generate UUID v4\nconst uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === 'x' ? r : (r & 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: textToSave,\n      filename: 'training_examples.txt',\n      category: 'entrenamiento',\n      company_slug: shouldSaveData.company_slug,\n      chunk_index: 0,\n      total_chunks: 1\n    },\n    collection_name: shouldSaveData.collection_name,\n    qdrant_host: shouldSaveData.qdrant_host,\n    response: fixMojibake(shouldSaveData.response || '')\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -215,7 +215,7 @@
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -259,91 +259,43 @@
   ],
   "connections": {
     "Webhook Training Chat": {
-      "main": [
-        [
-          {"node": "Prepare Training Data", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Prepare Training Data", "type": "main", "index": 0}]]
     },
     "Prepare Training Data": {
-      "main": [
-        [
-          {"node": "Embed User Query", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Embed User Query", "type": "main", "index": 0}]]
     },
     "Embed User Query": {
-      "main": [
-        [
-          {"node": "Prepare Search", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Prepare Search", "type": "main", "index": 0}]]
     },
     "Prepare Search": {
-      "main": [
-        [
-          {"node": "Search Qdrant Context", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Search Qdrant Context", "type": "main", "index": 0}]]
     },
     "Search Qdrant Context": {
-      "main": [
-        [
-          {"node": "Build Context & Messages", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Build Context & Messages", "type": "main", "index": 0}]]
     },
     "Build Context & Messages": {
-      "main": [
-        [
-          {"node": "Call OpenAI Chat", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Call OpenAI Chat", "type": "main", "index": 0}]]
     },
     "Call OpenAI Chat": {
-      "main": [
-        [
-          {"node": "Process Response", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Process Response", "type": "main", "index": 0}]]
     },
     "Process Response": {
-      "main": [
-        [
-          {"node": "Should Save?", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Should Save?", "type": "main", "index": 0}]]
     },
     "Should Save?": {
       "main": [
-        [
-          {"node": "Generate Embedding", "type": "main", "index": 0}
-        ],
-        [
-          {"node": "Return Not Saved Response", "type": "main", "index": 0}
-        ]
+        [{"node": "Generate Embedding", "type": "main", "index": 0}],
+        [{"node": "Return Not Saved Response", "type": "main", "index": 0}]
       ]
     },
     "Generate Embedding": {
-      "main": [
-        [
-          {"node": "Prepare Qdrant Point", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Prepare Qdrant Point", "type": "main", "index": 0}]]
     },
     "Prepare Qdrant Point": {
-      "main": [
-        [
-          {"node": "Store in Qdrant", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Store in Qdrant", "type": "main", "index": 0}]]
     },
     "Store in Qdrant": {
-      "main": [
-        [
-          {"node": "Return Saved Response", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[{"node": "Return Saved Response", "type": "main", "index": 0}]]
     }
   },
   "settings": {
@@ -354,5 +306,5 @@
     "instanceId": "withmia-training"
   },
   "pinData": {},
-  "notes": "Workflow para entrenamiento del bot via chat. Usa HTTP Request nodes sin credenciales hardcodeadas. El usuario puede dar ejemplos, correcciones e información que se guarda en Qdrant."
+  "notes": "Workflow para entrenamiento del bot via chat. Incluye corrección de mojibake UTF-8 en 3 nodos: Prepare Training Data, Process Response, y Prepare Qdrant Point."
 }

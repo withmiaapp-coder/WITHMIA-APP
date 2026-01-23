@@ -236,7 +236,7 @@ class KnowledgeController extends Controller
             $client->postAsync($fullUrl, [
                 'json' => $payload,
                 'headers' => [
-                    'Content-Type' => 'application/json',
+                    'Content-Type' => 'application/json; charset=utf-8',
                 ]
             ])->wait(false); // Don't block
 
@@ -274,7 +274,7 @@ class KnowledgeController extends Controller
                     ]
                 ],
                 'headers' => [
-                    'Content-Type' => 'application/json',
+                    'Content-Type' => 'application/json; charset=utf-8',
                 ]
             ]);
 
@@ -365,7 +365,7 @@ class KnowledgeController extends Controller
                 $response = $client->post($fullUrl, [
                     'json' => $payload,
                     'headers' => [
-                        'Content-Type' => 'application/json',
+                        'Content-Type' => 'application/json; charset=utf-8',
                     ]
                 ]);
 

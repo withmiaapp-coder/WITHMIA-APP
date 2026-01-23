@@ -88,7 +88,7 @@ class N8nService
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                'Content-Type' => 'application/json; charset=utf-8',
             ])->post("{$this->baseUrl}/api/v1/workflows", $workflowData);
 
             if ($response->successful()) {
@@ -126,7 +126,7 @@ class N8nService
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                'Content-Type' => 'application/json; charset=utf-8',
             ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $workflowData);
 
             if ($response->successful()) {
@@ -158,7 +158,7 @@ class N8nService
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                'Content-Type' => 'application/json; charset=utf-8',
             ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
             if ($response->successful()) {
@@ -188,7 +188,7 @@ class N8nService
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                'Content-Type' => 'application/json; charset=utf-8',
             ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/deactivate", []);
 
             if ($response->successful()) {
@@ -233,7 +233,7 @@ class N8nService
             $response = Http::withHeaders([
                 'X-N8N-API-KEY' => $this->apiKey,
                 'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
+                'Content-Type' => 'application/json; charset=utf-8',
             ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/execute", $data);
 
             if ($response->successful()) {

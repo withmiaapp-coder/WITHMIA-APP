@@ -59,7 +59,7 @@
             },
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -93,7 +93,7 @@
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },
@@ -117,7 +117,7 @@
           "parameters": [
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             }
           ]
         },

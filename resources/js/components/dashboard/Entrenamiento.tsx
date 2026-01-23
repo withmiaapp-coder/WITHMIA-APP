@@ -363,11 +363,11 @@ export default function Entrenamiento({
                 
                 {/* Chat Header */}
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-4 py-3 flex items-center gap-3">
-                  <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-md">
+                  <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
                     {onboardingData.logo_url ? (
-                      <img src={onboardingData.logo_url} alt={onboardingData.company_name || "Logo"} className="w-9 h-9 object-contain" />
+                      <img src={onboardingData.logo_url} alt="Logo" className="w-full h-full object-contain" />
                     ) : (
-                      <img src="/logo-withmia.webp" alt="WITHMIA" className="w-9 h-9 object-contain" />
+                      <img src="/logo-withmia.webp" alt="Logo" className="w-full h-full object-contain" />
                     )}
                   </div>
                   <div>

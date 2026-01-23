@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway proxies for proper HTTPS detection
         $middleware->trustProxies(at: '*');
         
+        // UTF-8 encoding middleware - MUST be first to handle all requests
+        $middleware->prepend(\App\Http\Middleware\ForceUtf8::class);
+        
         // Railway auth token middleware (before auth)
         $middleware->append(\App\Http\Middleware\RailwayAuthToken::class);
         
@@ -31,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.clean' => \App\Http\Middleware\AuthWithoutRedirectText::class,
             'railway.auth' => \App\Http\Middleware\RailwayAuthToken::class,
+            'utf8' => \App\Http\Middleware\ForceUtf8::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

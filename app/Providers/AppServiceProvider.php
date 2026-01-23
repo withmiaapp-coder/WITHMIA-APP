@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Http\JsonResponse;
 use App\Models\User;
 use App\Observers\UserObserver;
 
@@ -21,6 +22,33 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ========== UTF-8 Encoding Configuration ==========
+        // Set internal encoding to UTF-8
+        if (function_exists('mb_internal_encoding')) {
+            mb_internal_encoding('UTF-8');
+        }
+        
+        // Set default charset for mb functions
+        if (function_exists('mb_http_output')) {
+            mb_http_output('UTF-8');
+        }
+        
+        // Set regex encoding
+        if (function_exists('mb_regex_encoding')) {
+            mb_regex_encoding('UTF-8');
+        }
+        
+        // Force JSON responses to use UTF-8 and not escape unicode
+        JsonResponse::macro('withUtf8', function () {
+            /** @var JsonResponse $this */
+            return $this->setEncodingOptions(
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            );
+        });
+        
+        // Set default timezone
+        date_default_timezone_set(config('app.timezone', 'UTC'));
+        
         // Disable observer en logout para mayor rapidez
         if (request()->is('logout')) {
             return;

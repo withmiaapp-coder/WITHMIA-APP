@@ -1,0 +1,1001 @@
+﻿{
+    "updatedAt":  "2026-01-22T10:38:18.646Z",
+    "createdAt":  "2026-01-21T12:03:37.344Z",
+    "id":  "TpaSZ3i1HDcVBp41",
+    "name":  "Training Chat - withmia-cu4l2z",
+    "description":  null,
+    "active":  true,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "training-withmia-cu4l2z",
+                                         "responseMode":  "lastNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       0,
+                                       300
+                                   ],
+                      "id":  "webhook-training",
+                      "name":  "Webhook Training Chat",
+                      "webhookId":  "ae6b8987-bffc-42ad-a435-07f53c260d77"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Extract training data from webhook\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || \u0027default\u0027;\nconst assistantName = body.assistant_name || \u0027MIA\u0027;\nconst companyName = body.company_name || \u0027la empresa\u0027;\nconst userMessage = body.user_message || \u0027\u0027;\nconst conversationHistory = body.conversation_history || [];\nconst openaiApiKey = body.openai_api_key || \u0027\u0027;\nconst qdrantHost = body.qdrant_host || \u0027https://qdrant-production-f4e7.up.railway.app\u0027;\nconst timestamp = new Date().toISOString();\n\n// Create collection name\nconst collectionName = \u0027company_\u0027 + companySlug.replace(/[^a-z0-9_-]/gi, \u0027_\u0027).toLowerCase() + \u0027_knowledge\u0027;\n\n// Build system prompt for the training agent\nconst systemPrompt = `Eres ${assistantName}, el asistente de entrenamiento de ${companyName}.\n\nTu rol es:\n1. Ayudar al usuario a entrenar y mejorar el bot de la empresa\n2. Entender ejemplos de conversaciones que te den\n3. Aprender correcciones sobre cómo deberías responder\n4. Registrar información importante sobre la empresa y sus clientes\n\nCuando el usuario te de un ejemplo o corrección:\n- Confirma que lo has entendido\n- Muestra cómo responderías en esa situación\n- Pregunta si hay más ejemplos o información\n\nSé amigable, profesional y muestra que estás aprendiendo.`;\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    assistant_name: assistantName,\n    company_name: companyName,\n    user_message: userMessage,\n    conversation_history: conversationHistory,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    timestamp: timestamp,\n    system_prompt: systemPrompt\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       220,
+                                       300
+                                   ],
+                      "id":  "prepare-training",
+                      "name":  "Prepare Training Data"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "https://api.openai.com/v1/embeddings",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.user_message) }}\n}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       440,
+                                       300
+                                   ],
+                      "id":  "embed-query",
+                      "name":  "Embed User Query"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Prepare Qdrant search request\nconst prevData = $(\u0027Prepare Training Data\u0027).first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\nreturn {\n  json: {\n    ...prevData,\n    query_vector: embedding\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       660,
+                                       300
+                                   ],
+                      "id":  "prepare-search",
+                      "name":  "Prepare Search"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points/search",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={\n  \"vector\": {{ JSON.stringify($json.query_vector) }},\n  \"limit\": 5,\n  \"with_payload\": true\n}",
+                                         "options":  {
+                                                         "response":  {
+                                                                          "response":  {
+                                                                                           "neverError":  true
+                                                                                       }
+                                                                      }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       880,
+                                       300
+                                   ],
+                      "id":  "search-qdrant",
+                      "name":  "Search Qdrant Context"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Build context from Qdrant results and prepare OpenAI request\nconst prevData = $(\u0027Prepare Search\u0027).first().json;\nconst searchResults = $input.first().json.result || [];\n\n// Extract relevant context from search results\nlet contextText = \u0027\u0027;\nif (searchResults \u0026\u0026 searchResults.length \u003e 0) {\n  contextText = searchResults\n    .filter(r =\u003e r.score \u003e 0.5)\n    .map(r =\u003e r.payload?.text || \u0027\u0027)\n    .filter(t =\u003e t)\n    .join(\u0027\\n\\n---\\n\\n\u0027);\n}\n\nif (!contextText) {\n  contextText = \u0027Sin contexto previo en la base de conocimiento.\u0027;\n}\n\n// Build messages array for chat completion\nconst messages = [\n  {\n    role: \u0027system\u0027,\n    content: prevData.system_prompt + \u0027\\n\\nCONTEXTO DE LA EMPRESA (información ya aprendida):\\n\u0027 + contextText\n  }\n];\n\n// Add conversation history if available\nif (prevData.conversation_history \u0026\u0026 prevData.conversation_history.length \u003e 0) {\n  for (const msg of prevData.conversation_history.slice(-10)) {\n    messages.push({\n      role: msg.role || \u0027user\u0027,\n      content: msg.content || msg.message || \u0027\u0027\n    });\n  }\n}\n\n// Add current user message\nmessages.push({\n  role: \u0027user\u0027,\n  content: prevData.user_message\n});\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1100,
+                                       300
+                                   ],
+                      "id":  "build-context",
+                      "name":  "Build Context \u0026 Messages"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "https://api.openai.com/v1/chat/completions",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": {{ JSON.stringify($json.messages) }},\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1320,
+                                       300
+                                   ],
+                      "id":  "call-openai",
+                      "name":  "Call OpenAI Chat"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Process AI response and decide if we should save\nconst prevData = $(\u0027Build Context \u0026 Messages\u0027).first().json;\nconst aiResponse = $input.first().json.choices[0].message.content || \u0027\u0027;\n\n// Keywords that indicate this should be saved as knowledge\nconst saveKeywords = [\n  \u0027ejemplo\u0027, \u0027así deberías\u0027, \u0027responde así\u0027, \u0027cuando pregunten\u0027,\n  \u0027siempre\u0027, \u0027nunca\u0027, \u0027importante\u0027, \u0027recuerda\u0027, \u0027nuestro\u0027,\n  \u0027nuestros\u0027, \u0027vendemos\u0027, \u0027ofrecemos\u0027, \u0027horario\u0027, \u0027precio\u0027,\n  \u0027correcto\u0027, \u0027incorrecto\u0027, \u0027mejor\u0027, \u0027información\u0027, \u0027producto\u0027,\n  \u0027servicio\u0027, \u0027cliente\u0027, \u0027empresa\u0027, \u0027política\u0027, \u0027procedimiento\u0027\n];\n\nconst lowerMessage = prevData.user_message.toLowerCase();\nconst shouldSave = saveKeywords.some(kw =\u003e lowerMessage.includes(kw)) || prevData.user_message.length \u003e 100;\n\n// Prepare text to save (if applicable)\nlet textToSave = \u0027\u0027;\nif (shouldSave) {\n  textToSave = `EJEMPLO DE ENTRENAMIENTO\\n\\nUsuario: ${prevData.user_message}\\n\\nRespuesta del asistente: ${aiResponse}\\n\\nFecha: ${prevData.timestamp}`;\n}\n\nreturn {\n  json: {\n    response: aiResponse,\n    should_save: shouldSave,\n    text_to_save: textToSave,\n    company_slug: prevData.company_slug,\n    collection_name: prevData.collection_name,\n    openai_api_key: prevData.openai_api_key,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1540,
+                                       300
+                                   ],
+                      "id":  "process-response",
+                      "name":  "Process Response"
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "save-condition",
+                                                                                   "leftValue":  "={{ $json.should_save }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ]
+                                                        }
+                                     },
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       1760,
+                                       300
+                                   ],
+                      "id":  "should-save",
+                      "name":  "Should Save?"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "https://api.openai.com/v1/embeddings",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.text_to_save) }}\n}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1980,
+                                       200
+                                   ],
+                      "id":  "generate-embedding",
+                      "name":  "Generate Embedding"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Prepare point for Qdrant - Get data from Should Save? node which preserves Process Response data\nconst shouldSaveData = $(\u0027Should Save?\u0027).first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\n// Get text_to_save - it should be passed through from Process Response\nconst textToSave = shouldSaveData.text_to_save || \u0027\u0027;\n\n// Generate UUID v4\nconst uuid = \u0027xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx\u0027.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === \u0027x\u0027 ? r : (r \u0026 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: textToSave,\n      filename: \u0027training_examples.txt\u0027,\n      category: \u0027entrenamiento\u0027,\n      company_slug: shouldSaveData.company_slug,\n      chunk_index: 0,\n      total_chunks: 1\n    },\n    collection_name: shouldSaveData.collection_name,\n    qdrant_host: shouldSaveData.qdrant_host,\n    response: shouldSaveData.response\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2200,
+                                       200
+                                   ],
+                      "id":  "prepare-qdrant-point",
+                      "name":  "Prepare Qdrant Point"
+                  },
+                  {
+                      "parameters":  {
+                                         "method":  "PUT",
+                                         "url":  "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json; charset=utf-8"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify($json.id) }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}",
+                                         "options":  {
+                                                         "response":  {
+                                                                          "response":  {
+                                                                                           "neverError":  true
+                                                                                       }
+                                                                      }
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2420,
+                                       200
+                                   ],
+                      "id":  "store-in-qdrant",
+                      "name":  "Store in Qdrant"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Return response (saved path)\nconst prevData = $(\u0027Prepare Qdrant Point\u0027).first().json;\nreturn {\n  json: {\n    response: prevData.response,\n    saved: true,\n    message: \u0027Guardado en la base de conocimiento\u0027\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2640,
+                                       200
+                                   ],
+                      "id":  "return-saved",
+                      "name":  "Return Saved Response"
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Return response (not saved path)\nconst prevData = $(\u0027Process Response\u0027).first().json;\nreturn {\n  json: {\n    response: prevData.response,\n    saved: false\n  }\n};"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1980,
+                                       400
+                                   ],
+                      "id":  "return-not-saved",
+                      "name":  "Return Not Saved Response"
+                  }
+              ],
+    "connections":  {
+                        "Webhook Training Chat":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Prepare Training Data",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Prepare Training Data":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Embed User Query",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Embed User Query":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Prepare Search",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Prepare Search":  {
+                                               "main":  [
+                                                            [
+                                                                {
+                                                                    "node":  "Search Qdrant Context",
+                                                                    "type":  "main",
+                                                                    "index":  0
+                                                                }
+                                                            ]
+                                                        ]
+                                           },
+                        "Search Qdrant Context":  {
+                                                      "main":  [
+                                                                   [
+                                                                       {
+                                                                           "node":  "Build Context \u0026 Messages",
+                                                                           "type":  "main",
+                                                                           "index":  0
+                                                                       }
+                                                                   ]
+                                                               ]
+                                                  },
+                        "Build Context \u0026 Messages":  {
+                                                              "main":  [
+                                                                           [
+                                                                               {
+                                                                                   "node":  "Call OpenAI Chat",
+                                                                                   "type":  "main",
+                                                                                   "index":  0
+                                                                               }
+                                                                           ]
+                                                                       ]
+                                                          },
+                        "Call OpenAI Chat":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Process Response",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Process Response":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Should Save?",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Should Save?":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "Generate Embedding",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ],
+                                                          [
+                                                              {
+                                                                  "node":  "Return Not Saved Response",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "Generate Embedding":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Prepare Qdrant Point",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Prepare Qdrant Point":  {
+                                                     "main":  [
+                                                                  [
+                                                                      {
+                                                                          "node":  "Store in Qdrant",
+                                                                          "type":  "main",
+                                                                          "index":  0
+                                                                      }
+                                                                  ]
+                                                              ]
+                                                 },
+                        "Store in Qdrant":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Return Saved Response",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ]
+                                                         ]
+                                            }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "callerPolicy":  "workflowsFromSameOwner",
+                     "availableInMCP":  false
+                 },
+    "staticData":  null,
+    "meta":  null,
+    "pinData":  null,
+    "versionId":  "57f52c92-a3f6-4c13-bd64-f08dd40fd512",
+    "activeVersionId":  "57f52c92-a3f6-4c13-bd64-f08dd40fd512",
+    "versionCounter":  15,
+    "triggerCount":  1,
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-01-21T12:03:37.344Z",
+                       "createdAt":  "2026-01-21T12:03:37.344Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "TpaSZ3i1HDcVBp41",
+                       "projectId":  "xTd3sCipE5n9J7cT",
+                       "project":  {
+                                       "updatedAt":  "2026-01-20T18:27:24.557Z",
+                                       "createdAt":  "2026-01-20T17:56:33.441Z",
+                                       "id":  "xTd3sCipE5n9J7cT",
+                                       "name":  "WITHMIA ADMIN \u003cautomatiza@withmia.com\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "creatorId":  "b7265033-31e1-41ed-80fe-3d7813405792",
+                                       "projectRelations":  [
+                                                                {
+                                                                    "updatedAt":  "2026-01-20T17:56:33.441Z",
+                                                                    "createdAt":  "2026-01-20T17:56:33.441Z",
+                                                                    "userId":  "b7265033-31e1-41ed-80fe-3d7813405792",
+                                                                    "projectId":  "xTd3sCipE5n9J7cT",
+                                                                    "user":  {
+                                                                                 "updatedAt":  "2026-01-22T10:28:19.745Z",
+                                                                                 "createdAt":  "2026-01-20T17:56:21.365Z",
+                                                                                 "id":  "b7265033-31e1-41ed-80fe-3d7813405792",
+                                                                                 "email":  "automatiza@withmia.com",
+                                                                                 "firstName":  "WITHMIA",
+                                                                                 "lastName":  "ADMIN",
+                                                                                 "personalizationAnswers":  {
+                                                                                                                "version":  "v4",
+                                                                                                                "personalization_survey_submitted_at":  "2026-01-20T18:27:34.477Z",
+                                                                                                                "personalization_survey_n8n_version":  "2.4.4",
+                                                                                                                "companySize":  "\u003c20",
+                                                                                                                "companyType":  "saas",
+                                                                                                                "role":  "business-owner",
+                                                                                                                "reportedSource":  "google"
+                                                                                                            },
+                                                                                 "settings":  {
+                                                                                                  "userActivated":  true,
+                                                                                                  "firstSuccessfulWorkflowId":  "TpaSZ3i1HDcVBp41",
+                                                                                                  "userActivatedAt":  1768997340725
+                                                                                              },
+                                                                                 "disabled":  false,
+                                                                                 "mfaEnabled":  false,
+                                                                                 "lastActiveAt":  "2026-01-22",
+                                                                                 "isPending":  false
+                                                                             }
+                                                                }
+                                                            ]
+                                   }
+                   }
+               ],
+    "tags":  [
+
+             ],
+    "activeVersion":  {
+                          "updatedAt":  "2026-01-22T10:35:15.467Z",
+                          "createdAt":  "2026-01-22T10:35:15.467Z",
+                          "versionId":  "57f52c92-a3f6-4c13-bd64-f08dd40fd512",
+                          "workflowId":  "TpaSZ3i1HDcVBp41",
+                          "nodes":  [
+                                        {
+                                            "parameters":  {
+                                                               "httpMethod":  "POST",
+                                                               "path":  "training-withmia-cu4l2z",
+                                                               "responseMode":  "lastNode",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.webhook",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             0,
+                                                             300
+                                                         ],
+                                            "id":  "webhook-training",
+                                            "name":  "Webhook Training Chat",
+                                            "webhookId":  "ae6b8987-bffc-42ad-a435-07f53c260d77"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Extract training data from webhook\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || \u0027default\u0027;\nconst assistantName = body.assistant_name || \u0027MIA\u0027;\nconst companyName = body.company_name || \u0027la empresa\u0027;\nconst userMessage = body.user_message || \u0027\u0027;\nconst conversationHistory = body.conversation_history || [];\nconst openaiApiKey = body.openai_api_key || \u0027\u0027;\nconst qdrantHost = body.qdrant_host || \u0027https://qdrant-production-f4e7.up.railway.app\u0027;\nconst timestamp = new Date().toISOString();\n\n// Create collection name\nconst collectionName = \u0027company_\u0027 + companySlug.replace(/[^a-z0-9_-]/gi, \u0027_\u0027).toLowerCase() + \u0027_knowledge\u0027;\n\n// Build system prompt for the training agent\nconst systemPrompt = `Eres ${assistantName}, el asistente de entrenamiento de ${companyName}.\n\nTu rol es:\n1. Ayudar al usuario a entrenar y mejorar el bot de la empresa\n2. Entender ejemplos de conversaciones que te den\n3. Aprender correcciones sobre cómo deberías responder\n4. Registrar información importante sobre la empresa y sus clientes\n\nCuando el usuario te de un ejemplo o corrección:\n- Confirma que lo has entendido\n- Muestra cómo responderías en esa situación\n- Pregunta si hay más ejemplos o información\n\nSé amigable, profesional y muestra que estás aprendiendo.`;\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    assistant_name: assistantName,\n    company_name: companyName,\n    user_message: userMessage,\n    conversation_history: conversationHistory,\n    collection_name: collectionName,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    timestamp: timestamp,\n    system_prompt: systemPrompt\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             220,
+                                                             300
+                                                         ],
+                                            "id":  "prepare-training",
+                                            "name":  "Prepare Training Data"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "https://api.openai.com/v1/embeddings",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Authorization",
+                                                                                                               "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                                           },
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json; charset=utf-8"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "specifyBody":  "json",
+                                                               "jsonBody":  "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.user_message) }}\n}",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             440,
+                                                             300
+                                                         ],
+                                            "id":  "embed-query",
+                                            "name":  "Embed User Query"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Prepare Qdrant search request\nconst prevData = $(\u0027Prepare Training Data\u0027).first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\nreturn {\n  json: {\n    ...prevData,\n    query_vector: embedding\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             660,
+                                                             300
+                                                         ],
+                                            "id":  "prepare-search",
+                                            "name":  "Prepare Search"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points/search",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json; charset=utf-8"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "specifyBody":  "json",
+                                                               "jsonBody":  "={\n  \"vector\": {{ JSON.stringify($json.query_vector) }},\n  \"limit\": 5,\n  \"with_payload\": true\n}",
+                                                               "options":  {
+                                                                               "response":  {
+                                                                                                "response":  {
+                                                                                                                 "neverError":  true
+                                                                                                             }
+                                                                                            }
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             880,
+                                                             300
+                                                         ],
+                                            "id":  "search-qdrant",
+                                            "name":  "Search Qdrant Context"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Build context from Qdrant results and prepare OpenAI request\nconst prevData = $(\u0027Prepare Search\u0027).first().json;\nconst searchResults = $input.first().json.result || [];\n\n// Extract relevant context from search results\nlet contextText = \u0027\u0027;\nif (searchResults \u0026\u0026 searchResults.length \u003e 0) {\n  contextText = searchResults\n    .filter(r =\u003e r.score \u003e 0.5)\n    .map(r =\u003e r.payload?.text || \u0027\u0027)\n    .filter(t =\u003e t)\n    .join(\u0027\\n\\n---\\n\\n\u0027);\n}\n\nif (!contextText) {\n  contextText = \u0027Sin contexto previo en la base de conocimiento.\u0027;\n}\n\n// Build messages array for chat completion\nconst messages = [\n  {\n    role: \u0027system\u0027,\n    content: prevData.system_prompt + \u0027\\n\\nCONTEXTO DE LA EMPRESA (información ya aprendida):\\n\u0027 + contextText\n  }\n];\n\n// Add conversation history if available\nif (prevData.conversation_history \u0026\u0026 prevData.conversation_history.length \u003e 0) {\n  for (const msg of prevData.conversation_history.slice(-10)) {\n    messages.push({\n      role: msg.role || \u0027user\u0027,\n      content: msg.content || msg.message || \u0027\u0027\n    });\n  }\n}\n\n// Add current user message\nmessages.push({\n  role: \u0027user\u0027,\n  content: prevData.user_message\n});\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             1100,
+                                                             300
+                                                         ],
+                                            "id":  "build-context",
+                                            "name":  "Build Context \u0026 Messages"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "https://api.openai.com/v1/chat/completions",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Authorization",
+                                                                                                               "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                                           },
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json; charset=utf-8"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "specifyBody":  "json",
+                                                               "jsonBody":  "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": {{ JSON.stringify($json.messages) }},\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             1320,
+                                                             300
+                                                         ],
+                                            "id":  "call-openai",
+                                            "name":  "Call OpenAI Chat"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Process AI response and decide if we should save\nconst prevData = $(\u0027Build Context \u0026 Messages\u0027).first().json;\nconst aiResponse = $input.first().json.choices[0].message.content || \u0027\u0027;\n\n// Keywords that indicate this should be saved as knowledge\nconst saveKeywords = [\n  \u0027ejemplo\u0027, \u0027así deberías\u0027, \u0027responde así\u0027, \u0027cuando pregunten\u0027,\n  \u0027siempre\u0027, \u0027nunca\u0027, \u0027importante\u0027, \u0027recuerda\u0027, \u0027nuestro\u0027,\n  \u0027nuestros\u0027, \u0027vendemos\u0027, \u0027ofrecemos\u0027, \u0027horario\u0027, \u0027precio\u0027,\n  \u0027correcto\u0027, \u0027incorrecto\u0027, \u0027mejor\u0027, \u0027información\u0027, \u0027producto\u0027,\n  \u0027servicio\u0027, \u0027cliente\u0027, \u0027empresa\u0027, \u0027política\u0027, \u0027procedimiento\u0027\n];\n\nconst lowerMessage = prevData.user_message.toLowerCase();\nconst shouldSave = saveKeywords.some(kw =\u003e lowerMessage.includes(kw)) || prevData.user_message.length \u003e 100;\n\n// Prepare text to save (if applicable)\nlet textToSave = \u0027\u0027;\nif (shouldSave) {\n  textToSave = `EJEMPLO DE ENTRENAMIENTO\\n\\nUsuario: ${prevData.user_message}\\n\\nRespuesta del asistente: ${aiResponse}\\n\\nFecha: ${prevData.timestamp}`;\n}\n\nreturn {\n  json: {\n    response: aiResponse,\n    should_save: shouldSave,\n    text_to_save: textToSave,\n    company_slug: prevData.company_slug,\n    collection_name: prevData.collection_name,\n    openai_api_key: prevData.openai_api_key,\n    qdrant_host: prevData.qdrant_host\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             1540,
+                                                             300
+                                                         ],
+                                            "id":  "process-response",
+                                            "name":  "Process Response"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "conditions":  {
+                                                                                  "options":  {
+                                                                                                  "caseSensitive":  true,
+                                                                                                  "leftValue":  "",
+                                                                                                  "typeValidation":  "strict"
+                                                                                              },
+                                                                                  "conditions":  [
+                                                                                                     {
+                                                                                                         "id":  "save-condition",
+                                                                                                         "leftValue":  "={{ $json.should_save }}",
+                                                                                                         "rightValue":  true,
+                                                                                                         "operator":  {
+                                                                                                                          "type":  "boolean",
+                                                                                                                          "operation":  "equals"
+                                                                                                                      }
+                                                                                                     }
+                                                                                                 ]
+                                                                              }
+                                                           },
+                                            "type":  "n8n-nodes-base.if",
+                                            "typeVersion":  2.2,
+                                            "position":  [
+                                                             1760,
+                                                             300
+                                                         ],
+                                            "id":  "should-save",
+                                            "name":  "Should Save?"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "POST",
+                                                               "url":  "https://api.openai.com/v1/embeddings",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Authorization",
+                                                                                                               "value":  "=Bearer {{ $json.openai_api_key }}"
+                                                                                                           },
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json; charset=utf-8"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "specifyBody":  "json",
+                                                               "jsonBody":  "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.text_to_save) }}\n}",
+                                                               "options":  {
+
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             1980,
+                                                             200
+                                                         ],
+                                            "id":  "generate-embedding",
+                                            "name":  "Generate Embedding"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Prepare point for Qdrant - Get data from Should Save? node which preserves Process Response data\nconst shouldSaveData = $(\u0027Should Save?\u0027).first().json;\nconst embedding = $input.first().json.data[0].embedding;\n\n// Get text_to_save - it should be passed through from Process Response\nconst textToSave = shouldSaveData.text_to_save || \u0027\u0027;\n\n// Generate UUID v4\nconst uuid = \u0027xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx\u0027.replace(/[xy]/g, function(c) {\n  const r = Math.random() * 16 | 0;\n  const v = c === \u0027x\u0027 ? r : (r \u0026 0x3 | 0x8);\n  return v.toString(16);\n});\n\nreturn {\n  json: {\n    id: uuid,\n    vector: embedding,\n    payload: {\n      text: textToSave,\n      filename: \u0027training_examples.txt\u0027,\n      category: \u0027entrenamiento\u0027,\n      company_slug: shouldSaveData.company_slug,\n      chunk_index: 0,\n      total_chunks: 1\n    },\n    collection_name: shouldSaveData.collection_name,\n    qdrant_host: shouldSaveData.qdrant_host,\n    response: shouldSaveData.response\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             2200,
+                                                             200
+                                                         ],
+                                            "id":  "prepare-qdrant-point",
+                                            "name":  "Prepare Qdrant Point"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "method":  "PUT",
+                                                               "url":  "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points",
+                                                               "sendHeaders":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "name":  "Content-Type",
+                                                                                                               "value":  "application/json; charset=utf-8"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "sendBody":  true,
+                                                               "specifyBody":  "json",
+                                                               "jsonBody":  "={\n  \"points\": [{\n    \"id\": {{ JSON.stringify($json.id) }},\n    \"vector\": {{ JSON.stringify($json.vector) }},\n    \"payload\": {{ JSON.stringify($json.payload) }}\n  }]\n}",
+                                                               "options":  {
+                                                                               "response":  {
+                                                                                                "response":  {
+                                                                                                                 "neverError":  true
+                                                                                                             }
+                                                                                            }
+                                                                           }
+                                                           },
+                                            "type":  "n8n-nodes-base.httpRequest",
+                                            "typeVersion":  4.2,
+                                            "position":  [
+                                                             2420,
+                                                             200
+                                                         ],
+                                            "id":  "store-in-qdrant",
+                                            "name":  "Store in Qdrant"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Return response (saved path)\nconst prevData = $(\u0027Prepare Qdrant Point\u0027).first().json;\nreturn {\n  json: {\n    response: prevData.response,\n    saved: true,\n    message: \u0027Guardado en la base de conocimiento\u0027\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             2640,
+                                                             200
+                                                         ],
+                                            "id":  "return-saved",
+                                            "name":  "Return Saved Response"
+                                        },
+                                        {
+                                            "parameters":  {
+                                                               "jsCode":  "// Return response (not saved path)\nconst prevData = $(\u0027Process Response\u0027).first().json;\nreturn {\n  json: {\n    response: prevData.response,\n    saved: false\n  }\n};"
+                                                           },
+                                            "type":  "n8n-nodes-base.code",
+                                            "typeVersion":  2,
+                                            "position":  [
+                                                             1980,
+                                                             400
+                                                         ],
+                                            "id":  "return-not-saved",
+                                            "name":  "Return Not Saved Response"
+                                        }
+                                    ],
+                          "connections":  {
+                                              "Webhook Training Chat":  {
+                                                                            "main":  [
+                                                                                         [
+                                                                                             {
+                                                                                                 "node":  "Prepare Training Data",
+                                                                                                 "type":  "main",
+                                                                                                 "index":  0
+                                                                                             }
+                                                                                         ]
+                                                                                     ]
+                                                                        },
+                                              "Prepare Training Data":  {
+                                                                            "main":  [
+                                                                                         [
+                                                                                             {
+                                                                                                 "node":  "Embed User Query",
+                                                                                                 "type":  "main",
+                                                                                                 "index":  0
+                                                                                             }
+                                                                                         ]
+                                                                                     ]
+                                                                        },
+                                              "Embed User Query":  {
+                                                                       "main":  [
+                                                                                    [
+                                                                                        {
+                                                                                            "node":  "Prepare Search",
+                                                                                            "type":  "main",
+                                                                                            "index":  0
+                                                                                        }
+                                                                                    ]
+                                                                                ]
+                                                                   },
+                                              "Prepare Search":  {
+                                                                     "main":  [
+                                                                                  [
+                                                                                      {
+                                                                                          "node":  "Search Qdrant Context",
+                                                                                          "type":  "main",
+                                                                                          "index":  0
+                                                                                      }
+                                                                                  ]
+                                                                              ]
+                                                                 },
+                                              "Search Qdrant Context":  {
+                                                                            "main":  [
+                                                                                         [
+                                                                                             {
+                                                                                                 "node":  "Build Context \u0026 Messages",
+                                                                                                 "type":  "main",
+                                                                                                 "index":  0
+                                                                                             }
+                                                                                         ]
+                                                                                     ]
+                                                                        },
+                                              "Build Context \u0026 Messages":  {
+                                                                                    "main":  [
+                                                                                                 [
+                                                                                                     {
+                                                                                                         "node":  "Call OpenAI Chat",
+                                                                                                         "type":  "main",
+                                                                                                         "index":  0
+                                                                                                     }
+                                                                                                 ]
+                                                                                             ]
+                                                                                },
+                                              "Call OpenAI Chat":  {
+                                                                       "main":  [
+                                                                                    [
+                                                                                        {
+                                                                                            "node":  "Process Response",
+                                                                                            "type":  "main",
+                                                                                            "index":  0
+                                                                                        }
+                                                                                    ]
+                                                                                ]
+                                                                   },
+                                              "Process Response":  {
+                                                                       "main":  [
+                                                                                    [
+                                                                                        {
+                                                                                            "node":  "Should Save?",
+                                                                                            "type":  "main",
+                                                                                            "index":  0
+                                                                                        }
+                                                                                    ]
+                                                                                ]
+                                                                   },
+                                              "Should Save?":  {
+                                                                   "main":  [
+                                                                                [
+                                                                                    {
+                                                                                        "node":  "Generate Embedding",
+                                                                                        "type":  "main",
+                                                                                        "index":  0
+                                                                                    }
+                                                                                ],
+                                                                                [
+                                                                                    {
+                                                                                        "node":  "Return Not Saved Response",
+                                                                                        "type":  "main",
+                                                                                        "index":  0
+                                                                                    }
+                                                                                ]
+                                                                            ]
+                                                               },
+                                              "Generate Embedding":  {
+                                                                         "main":  [
+                                                                                      [
+                                                                                          {
+                                                                                              "node":  "Prepare Qdrant Point",
+                                                                                              "type":  "main",
+                                                                                              "index":  0
+                                                                                          }
+                                                                                      ]
+                                                                                  ]
+                                                                     },
+                                              "Prepare Qdrant Point":  {
+                                                                           "main":  [
+                                                                                        [
+                                                                                            {
+                                                                                                "node":  "Store in Qdrant",
+                                                                                                "type":  "main",
+                                                                                                "index":  0
+                                                                                            }
+                                                                                        ]
+                                                                                    ]
+                                                                       },
+                                              "Store in Qdrant":  {
+                                                                      "main":  [
+                                                                                   [
+                                                                                       {
+                                                                                           "node":  "Return Saved Response",
+                                                                                           "type":  "main",
+                                                                                           "index":  0
+                                                                                       }
+                                                                                   ]
+                                                                               ]
+                                                                  }
+                                          },
+                          "authors":  "WITHMIA ADMIN",
+                          "name":  null,
+                          "description":  null,
+                          "autosaved":  false,
+                          "workflowPublishHistory":  [
+                                                         {
+                                                             "createdAt":  "2026-01-22T10:35:43.013Z",
+                                                             "id":  9,
+                                                             "workflowId":  "TpaSZ3i1HDcVBp41",
+                                                             "versionId":  "57f52c92-a3f6-4c13-bd64-f08dd40fd512",
+                                                             "event":  "activated",
+                                                             "userId":  "b7265033-31e1-41ed-80fe-3d7813405792"
+                                                         },
+                                                         {
+                                                             "createdAt":  "2026-01-22T10:38:18.823Z",
+                                                             "id":  10,
+                                                             "workflowId":  "TpaSZ3i1HDcVBp41",
+                                                             "versionId":  "57f52c92-a3f6-4c13-bd64-f08dd40fd512",
+                                                             "event":  "activated",
+                                                             "userId":  "b7265033-31e1-41ed-80fe-3d7813405792"
+                                                         }
+                                                     ]
+                      }
+}

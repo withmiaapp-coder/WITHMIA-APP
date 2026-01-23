@@ -186,8 +186,9 @@ class QdrantService
     {
         try {
             $headers = [
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json'
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Accept' => 'application/json',
+                'Accept-Charset' => 'utf-8'
             ];
 
             if ($this->apiKey) {
