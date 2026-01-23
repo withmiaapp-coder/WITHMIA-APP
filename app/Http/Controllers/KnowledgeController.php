@@ -374,11 +374,17 @@ class KnowledgeController extends Controller
      */
     public function trainingChat(Request $request)
     {
+        Log::info('🔴🔴🔴 TrainingChat ENTRANDO');
+        
         try {
             $user = Auth::user();
+            Log::info('TrainingChat - User: ' . ($user ? $user->id : 'NULL'));
+            
             $company = $user->company;
+            Log::info('TrainingChat - Company: ' . ($company ? $company->slug : 'NULL'));
             
             if (!$company) {
+                Log::error('TrainingChat - No company found');
                 return response()->json([
                     'success' => false,
                     'error' => 'No se encontró información de la empresa'
@@ -391,6 +397,7 @@ class KnowledgeController extends Controller
             ]);
 
             $userMessage = $request->input('message');
+            Log::info('TrainingChat - Message received: ' . substr($userMessage, 0, 100));
             $context = $request->input('context', []);
             
             // 🔄 Detectar si el usuario quiere cambiar el nombre del asistente
