@@ -49,7 +49,7 @@ try {
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $path = $node['parameters']['path'] ?? 'N/A';
                 echo "   Webhook Path: $path\n";
-                echo "   URL Completa: https://n8n-production-8de5.up.railway.app/webhook/$path\n";
+                echo "   URL Completa: https://n8n-production-00dd.up.railway.app/webhook/$path\n";;
             }
         }
     }
@@ -61,6 +61,6 @@ try {
 // Ver qué URL debería usar Laravel
 echo "\n=== URL que Laravel debería usar ===\n";
 $webhookPath = $settings['rag_webhook_path'] ?? "rag-documents-{$company->slug}";
-$expectedUrl = "https://n8n-production-8de5.up.railway.app/webhook/$webhookPath";
+$expectedUrl = "https://n8n-production-00dd.up.railway.app/webhook/$webhookPath";
 echo "Webhook Path esperado: $webhookPath\n";
 echo "URL Completa esperada: $expectedUrl\n";

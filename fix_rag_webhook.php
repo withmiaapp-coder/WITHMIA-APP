@@ -23,7 +23,7 @@ echo "📋 Empresa: {$company['name']}\n";
 $settings = json_decode($company['settings'], true);
 
 // Valores correctos (del workflow real en n8n)
-$correctN8nUrl = 'https://n8n-production-8de5.up.railway.app';
+$correctN8nUrl = 'https://n8n-production-00dd.up.railway.app';
 $correctRagWebhookPath = 'rag-documents-withmia-jpaoid';
 $correctTrainingWebhookPath = 'training-withmia-jpaoid';
 

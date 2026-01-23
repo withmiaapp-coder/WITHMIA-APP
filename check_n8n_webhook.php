@@ -20,7 +20,7 @@ if ($workflow) {
         }
     }
     echo "\nURL completa del webhook:\n";
-    echo "https://n8n-production-8de5.up.railway.app/webhook/rag-documents-withmia-jpaoid\n";
+    echo "https://n8n-production-00dd.up.railway.app/webhook/" . ($node['parameters']['path'] ?? 'unknown') . "\n";
 }
 
 echo "\n=== Últimas ejecuciones ===\n";

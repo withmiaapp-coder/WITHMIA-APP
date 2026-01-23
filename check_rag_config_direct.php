@@ -52,7 +52,7 @@ if (empty($workflows)) {
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $path = $node['parameters']['path'] ?? 'N/A';
                 echo "   Webhook Path: $path\n";
-                echo "   URL: https://n8n-production-8de5.up.railway.app/webhook/$path\n";
+                echo "   URL: https://n8n-production-00dd.up.railway.app/webhook/$path\n";
             }
         }
     }
