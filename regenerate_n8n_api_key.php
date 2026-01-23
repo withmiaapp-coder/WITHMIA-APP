@@ -54,9 +54,16 @@ try {
         $stmt->execute([$jwt, $user['id']]);
         echo "✅ API Key actualizado en base de datos\n";
     } else {
-        // Crear nuevo
-        $stmt = $pdo->prepare("INSERT INTO n8n.user_api_keys (\"userId\", \"apiKey\", \"label\", \"createdAt\", \"updatedAt\") VALUES (?, ?, 'WITHMIA API Key', NOW(), NOW())");
-        $stmt->execute([$user['id'], $jwt]);
+        // Crear nuevo - generar UUID para ID
+        $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+        $stmt = $pdo->prepare("INSERT INTO n8n.user_api_keys (\"id\", \"userId\", \"apiKey\", \"label\", \"createdAt\", \"updatedAt\") VALUES (?, ?, ?, 'WITHMIA API Key', NOW(), NOW())");
+        $stmt->execute([$uuid, $user['id'], $jwt]);
         echo "✅ API Key creado en base de datos\n";
     }
     

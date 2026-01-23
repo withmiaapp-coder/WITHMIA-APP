@@ -83,25 +83,24 @@ class CreateQdrantCollectionJob implements ShouldQueue
             // Construir el texto con toda la información de la empresa
             $companyInfoParts = [];
             
-            if (!empty($company->assistant_name)) {
-                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
+            // Nombre de la empresa (campo: name)
+            if (!empty($company->name)) {
+                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
             }
             
-            if (!empty($company->company_name)) {
-                $companyInfoParts[] = "Nombre de la Empresa: {$company->company_name}";
+            // Descripción de la empresa (campo: description)
+            if (!empty($company->description)) {
+                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
             }
             
+            // Sitio web
             if (!empty($company->website)) {
                 $companyInfoParts[] = "Sitio Web: {$company->website}";
             }
             
-            if (!empty($company->company_description)) {
-                $companyInfoParts[] = "Descripción de la Empresa: {$company->company_description}";
-            }
-
-            if (!empty($company->client_type)) {
-                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
-                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
+            // Nombre del asistente (si existe)
+            if (!empty($company->assistant_name)) {
+                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
             }
             
             if (empty($companyInfoParts)) {
