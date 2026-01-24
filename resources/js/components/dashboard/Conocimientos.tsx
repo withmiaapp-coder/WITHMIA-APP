@@ -364,39 +364,68 @@ export default function Conocimientos({
             className="relative w-56 h-56"
             style={{ perspective: '800px' }}
           >
-            {/* Orbit 1 - Horizontal (middle) */}
-            <div 
-              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
-              style={{ 
-                transform: 'rotateX(70deg)',
-                transformStyle: 'preserve-3d'
-              }}
-            />
-            
-            {/* Orbit 2 - Tilted 60deg */}
-            <div 
-              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
-              style={{ 
-                transform: 'rotateX(70deg) rotateY(60deg)',
-                transformStyle: 'preserve-3d'
-              }}
-            />
-            
-            {/* Orbit 3 - Tilted -60deg */}
-            <div 
-              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
-              style={{ 
-                transform: 'rotateX(70deg) rotateY(-60deg)',
-                transformStyle: 'preserve-3d'
-              }}
-            />
+            {/* Back half of orbits (behind brain) */}
+            <div className="absolute inset-4">
+              {/* Orbit 1 back */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg)',
+                  clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
+                }}
+              />
+              {/* Orbit 2 back */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg) rotateY(60deg)',
+                  clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
+                }}
+              />
+              {/* Orbit 3 back */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg) rotateY(-60deg)',
+                  clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
+                }}
+              />
+            </div>
             
             {/* Brain Image - centered */}
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center z-10">
               <img 
                 src="/images/brain organ-pana.svg" 
                 alt="Cerebro - Conocimientos" 
                 className="w-36 h-36 object-contain"
+              />
+            </div>
+
+            {/* Front half of orbits (in front of brain) */}
+            <div className="absolute inset-4 z-20">
+              {/* Orbit 1 front */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg)',
+                  clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
+                }}
+              />
+              {/* Orbit 2 front */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg) rotateY(60deg)',
+                  clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
+                }}
+              />
+              {/* Orbit 3 front */}
+              <div 
+                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                style={{ 
+                  transform: 'rotateX(70deg) rotateY(-60deg)',
+                  clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
+                }}
               />
             </div>
           </div>
