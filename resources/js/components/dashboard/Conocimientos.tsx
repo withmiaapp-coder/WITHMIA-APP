@@ -648,7 +648,7 @@ export default function Conocimientos({
               <textarea
                 value={editPayload}
                 onChange={(e) => setEditPayload(e.target.value)}
-                className="w-full h-32 text-xs font-mono p-2 border border-cyan-200 rounded bg-white resize-none"
+                className="w-full h-32 text-xs font-mono p-2 border border-cyan-200 rounded bg-white text-gray-800 resize-none"
                 placeholder="Contenido del fragmento..."
               />
               <div className="flex justify-end gap-2 mt-2">
