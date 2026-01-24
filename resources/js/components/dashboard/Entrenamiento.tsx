@@ -218,6 +218,16 @@ export default function Entrenamiento({
     setShouldAutoScroll(true); // Activar scroll al enviar mensaje
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage.trim();
+    
+    // 🔧 DEBUG: Log encoding info
+    console.log('📝 Training message debug:', {
+      originalMessage: messageToSend,
+      messageLength: messageToSend.length,
+      // Check for problematic characters
+      hasAccents: /[áéíóúñÁÉÍÓÚÑ]/.test(messageToSend),
+      charCodes: messageToSend.slice(0, 50).split('').map(c => c.charCodeAt(0)),
+    });
+    
     setInputMessage("");
     setIsTyping(true);
 

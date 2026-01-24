@@ -377,6 +377,14 @@ class KnowledgeController extends Controller
     {
         Log::info('🔴🔴🔴 TrainingChat ENTRANDO');
         
+        // 🔧 DEBUG: Log raw request body
+        $rawBody = $request->getContent();
+        Log::info('TrainingChat - RAW BODY', [
+            'raw_body_length' => strlen($rawBody),
+            'raw_body_hex' => bin2hex(substr($rawBody, 0, 200)),
+            'raw_body_preview' => substr($rawBody, 0, 300),
+        ]);
+        
         try {
             $user = Auth::user();
             Log::info('TrainingChat - User: ' . ($user ? $user->id : 'NULL'));
