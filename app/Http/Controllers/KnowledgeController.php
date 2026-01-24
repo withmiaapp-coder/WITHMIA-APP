@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Services\QdrantService;
+use App\Helpers\Utf8Helper;
 
 class KnowledgeController extends Controller
 {
@@ -468,9 +469,19 @@ class KnowledgeController extends Controller
                     'status' => $response->getStatusCode()
                 ]);
 
+                // 🔧 Corregir encoding UTF-8/mojibake de la respuesta de n8n
+                $rawResponse = $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.';
+                $cleanResponse = Utf8Helper::fix($rawResponse);
+                
+                Log::info('Response encoding fixed', [
+                    'original_length' => strlen($rawResponse),
+                    'fixed_length' => strlen($cleanResponse),
+                    'had_mojibake' => Utf8Helper::hasMojibake($rawResponse)
+                ]);
+
                 return response()->json([
                     'success' => true,
-                    'response' => $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.',
+                    'response' => $cleanResponse,
                     'saved_to_knowledge' => $responseBody['saved'] ?? false,
                     'action' => $deduplicationResult['action'],
                     'similarity' => $deduplicationResult['similarity'] ?? null,

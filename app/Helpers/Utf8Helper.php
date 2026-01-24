@@ -49,20 +49,42 @@ class Utf8Helper
             return null;
         }
 
-        // Primer intento: reemplazo directo de mojibake conocido
+        // 0. Detectar si el texto viene con encoding Latin-1 interpretado como UTF-8
+        // Esto ocurre cuando n8n o OpenAI envían texto con encoding incorrecto
+        $fixed = $text;
+        
+        // Detectar patrón común: texto que parece tener doble encoding
+        // Por ejemplo: "información" -> bytes UTF-8 leídos como Latin-1 y re-encodados
+        if (preg_match('/[\xC2-\xDF][\x80-\xBF]/', $text)) {
+            // Intentar decodificar como si fuera UTF-8 doble-encodado
+            $decoded = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $text);
+            if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
+                $fixed = $decoded;
+            }
+        }
+
+        // 1. Reemplazo directo de mojibake conocido
         $fixed = str_replace(
             array_keys(self::$mojibakeMap),
             array_values(self::$mojibakeMap),
-            $text
+            $fixed
         );
 
-        // Segundo intento: si todavía hay problemas, intentar reconversión
+        // 2. Remover caracteres de reemplazo Unicode (U+FFFD = �)
+        // Esto ocurre cuando hay bytes inválidos que no se pueden decodificar
+        $fixed = str_replace("\u{FFFD}", '', $fixed);
+        $fixed = str_replace('�', '', $fixed); // También el literal
+        
+        // 3. Si todavía hay problemas, intentar reconversión
         if (!mb_check_encoding($fixed, 'UTF-8')) {
             $detected = mb_detect_encoding($fixed, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
             if ($detected && $detected !== 'UTF-8') {
                 $fixed = mb_convert_encoding($fixed, 'UTF-8', $detected);
             }
         }
+
+        // 4. Último recurso: convertir a UTF-8 forzando y limpiando bytes inválidos
+        $fixed = mb_convert_encoding($fixed, 'UTF-8', 'UTF-8');
 
         return $fixed;
     }
@@ -75,6 +97,12 @@ class Utf8Helper
      */
     public static function hasMojibake(string $text): bool
     {
+        // Verificar caracter de reemplazo Unicode (indica bytes inválidos)
+        if (str_contains($text, "\u{FFFD}") || str_contains($text, '�')) {
+            return true;
+        }
+        
+        // Verificar patrones de mojibake conocidos
         foreach (array_keys(self::$mojibakeMap) as $pattern) {
             if (str_contains($text, $pattern)) {
                 return true;
