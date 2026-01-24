@@ -170,6 +170,115 @@ class QdrantService
     }
 
     /**
+     * Obtener puntos de una colección con scroll
+     */
+    public function getPoints(string $collectionName, int $limit = 100, ?string $offset = null): array
+    {
+        try {
+            $data = [
+                'limit' => $limit,
+                'with_payload' => true,
+                'with_vector' => false
+            ];
+            
+            if ($offset) {
+                $data['offset'] = $offset;
+            }
+
+            $response = $this->request('POST', "/collections/{$collectionName}/points/scroll", $data);
+            
+            if ($response['success']) {
+                return [
+                    'success' => true,
+                    'points' => $response['data']['result']['points'] ?? [],
+                    'next_offset' => $response['data']['result']['next_page_offset'] ?? null
+                ];
+            }
+
+            return ['success' => false, 'error' => $response['error'] ?? 'Error fetching points'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Obtener un punto específico por ID
+     */
+    public function getPoint(string $collectionName, string $pointId): array
+    {
+        try {
+            $response = $this->request('POST', "/collections/{$collectionName}/points", [
+                'ids' => [$pointId],
+                'with_payload' => true,
+                'with_vector' => false
+            ]);
+            
+            if ($response['success'] && !empty($response['data']['result'])) {
+                return [
+                    'success' => true,
+                    'point' => $response['data']['result'][0] ?? null
+                ];
+            }
+
+            return ['success' => false, 'error' => 'Point not found'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Actualizar el payload de un punto
+     */
+    public function updatePointPayload(string $collectionName, string $pointId, array $payload): array
+    {
+        try {
+            $response = $this->request('POST', "/collections/{$collectionName}/points/payload", [
+                'points' => [$pointId],
+                'payload' => $payload
+            ]);
+            
+            if ($response['success']) {
+                return [
+                    'success' => true,
+                    'message' => 'Point updated successfully'
+                ];
+            }
+
+            return ['success' => false, 'error' => $response['error'] ?? 'Error updating point'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Eliminar puntos de una colección
+     */
+    public function deletePoints(string $collectionName, array $pointIds): array
+    {
+        try {
+            $response = $this->request('POST', "/collections/{$collectionName}/points/delete", [
+                'points' => $pointIds
+            ]);
+            
+            if ($response['success']) {
+                Log::info("Qdrant: Points deleted", [
+                    'collection' => $collectionName,
+                    'count' => count($pointIds)
+                ]);
+                
+                return [
+                    'success' => true,
+                    'message' => 'Points deleted successfully'
+                ];
+            }
+
+            return ['success' => false, 'error' => $response['error'] ?? 'Error deleting points'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Obtener el nombre de la colección para una empresa
      */
     public function getCollectionName(string $companySlug): string

@@ -1483,6 +1483,13 @@ Route::middleware(['web', 'railway.auth:true'])->group(function () {
     
     // Reset workflow (creates new simplified workflow for company)
     Route::post('/documents/reset-workflow', [\App\Http\Controllers\KnowledgeController::class, 'resetWorkflow']);
+    
+    // Qdrant Points CRUD
+    Route::get('/qdrant/points', [\App\Http\Controllers\KnowledgeController::class, 'getQdrantPoints']);
+    Route::get('/qdrant/points/{pointId}', [\App\Http\Controllers\KnowledgeController::class, 'getQdrantPoint']);
+    Route::put('/qdrant/points/{pointId}', [\App\Http\Controllers\KnowledgeController::class, 'updateQdrantPoint']);
+    Route::delete('/qdrant/points/{pointId}', [\App\Http\Controllers\KnowledgeController::class, 'deleteQdrantPoint']);
+    Route::delete('/qdrant/points', [\App\Http\Controllers\KnowledgeController::class, 'deleteQdrantPoints']);
 });
 
 // Public webhook endpoint for n8n (no authentication)

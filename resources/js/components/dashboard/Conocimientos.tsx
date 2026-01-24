@@ -11,6 +11,13 @@ import {
   AlertTriangle,
   RefreshCw,
   Brain,
+  Database,
+  Edit3,
+  Eye,
+  X,
+  Save,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +35,12 @@ interface Document {
   category: string;
   uploaded_at: string;
   chunks_created?: number;
+}
+
+interface QdrantPoint {
+  id: string | number;
+  payload: Record<string, any>;
+  vector?: number[];
 }
 
 interface ConocimientosProps {
@@ -89,10 +102,112 @@ export default function Conocimientos({
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Qdrant points state
+  const [qdrantPoints, setQdrantPoints] = useState<QdrantPoint[]>([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
+  const [qdrantCollection, setQdrantCollection] = useState<string>('');
+  const [selectedPoint, setSelectedPoint] = useState<QdrantPoint | null>(null);
+  const [editingPoint, setEditingPoint] = useState<QdrantPoint | null>(null);
+  const [editPayload, setEditPayload] = useState<string>('');
+  const [savingPoint, setSavingPoint] = useState(false);
+  const [deletingPointId, setDeletingPointId] = useState<string | number | null>(null);
+  const [expandedPointId, setExpandedPointId] = useState<string | number | null>(null);
+
   // Fetch documents on mount and category change
   useEffect(() => {
     fetchDocuments();
   }, [selectedCategory]);
+
+  // Fetch Qdrant points on mount
+  useEffect(() => {
+    fetchQdrantPoints();
+  }, []);
+
+  const fetchQdrantPoints = async () => {
+    setLoadingPoints(true);
+    try {
+      const response = await fetch('/api/qdrant/points?limit=100', {
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setQdrantPoints(data.points || []);
+        setQdrantCollection(data.collection || '');
+      }
+    } catch (error) {
+      console.error('Error fetching Qdrant points:', error);
+    } finally {
+      setLoadingPoints(false);
+    }
+  };
+
+  const deleteQdrantPoint = async (pointId: string | number) => {
+    setDeletingPointId(pointId);
+    try {
+      const response = await fetch(`/api/qdrant/points/${pointId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setQdrantPoints(prev => prev.filter(p => p.id !== pointId));
+        if (selectedPoint?.id === pointId) setSelectedPoint(null);
+        if (editingPoint?.id === pointId) setEditingPoint(null);
+      } else {
+        alert('Error al eliminar punto: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting Qdrant point:', error);
+      alert('Error al eliminar punto');
+    } finally {
+      setDeletingPointId(null);
+    }
+  };
+
+  const startEditingPoint = (point: QdrantPoint) => {
+    setEditingPoint(point);
+    setEditPayload(JSON.stringify(point.payload, null, 2));
+  };
+
+  const savePointPayload = async () => {
+    if (!editingPoint) return;
+    
+    setSavingPoint(true);
+    try {
+      const payload = JSON.parse(editPayload);
+      const response = await fetch(`/api/qdrant/points/${editingPoint.id}`, {
+        method: 'PUT',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify({ payload })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setQdrantPoints(prev => prev.map(p => 
+          p.id === editingPoint.id ? { ...p, payload } : p
+        ));
+        setEditingPoint(null);
+        setEditPayload('');
+      } else {
+        alert('Error al guardar: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving point:', error);
+      alert('Error al guardar. Verifica que el JSON sea válido.');
+    } finally {
+      setSavingPoint(false);
+    }
+  };
 
   const fetchDocuments = async () => {
     setLoadingDocuments(true);
@@ -357,11 +472,12 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain Illustration with Orbits */}
-      <div className="flex justify-center py-2">
-        <div className="flex flex-col items-center gap-2">
+      {/* Brain Illustration with Orbits + Qdrant Points Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-2">
+        {/* Left: Brain with Orbits */}
+        <div className="flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-cyan-50 rounded-xl p-6 border border-slate-200">
           <div 
-            className="relative w-56 h-56"
+            className="relative w-72 h-72"
             style={{ perspective: '800px' }}
           >
             {/* Back half of orbits (behind brain) */}
@@ -397,7 +513,7 @@ export default function Conocimientos({
               <img 
                 src="/images/brain organ-pana.svg" 
                 alt="Cerebro - Conocimientos" 
-                className="w-36 h-36 object-contain"
+                className="w-48 h-48 object-contain"
               />
             </div>
 
@@ -477,12 +593,6 @@ export default function Conocimientos({
               </div>
             )}
           </div>
-          
-          {documents.length > 0 && (
-            <div className="text-sm text-neutral-400">
-              {documents.length} documento{documents.length !== 1 ? 's' : ''} en órbita
-            </div>
-          )}
 
           {/* Keyframes for orbit animations */}
           <style>{`
@@ -499,6 +609,156 @@ export default function Conocimientos({
               to { transform: rotateX(70deg) rotateY(-60deg) rotateZ(360deg); }
             }
           `}</style>
+        </div>
+
+        {/* Right: Qdrant Points Panel */}
+        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-lg flex flex-col max-h-[400px]">
+          <div className="flex items-center gap-3 mb-4">
+            <Database className="w-5 h-5 text-purple-600" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold text-neutral-800">Vectores Qdrant</h3>
+              {qdrantCollection && (
+                <p className="text-xs text-neutral-400 truncate" title={qdrantCollection}>
+                  {qdrantCollection}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={fetchQdrantPoints}
+              disabled={loadingPoints}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Refrescar"
+            >
+              <RefreshCw className={`w-4 h-4 text-gray-600 ${loadingPoints ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {/* Edit Point Modal */}
+          {editingPoint && (
+            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-purple-800">
+                  Editando punto: {String(editingPoint.id).slice(0, 12)}...
+                </span>
+                <button
+                  onClick={() => { setEditingPoint(null); setEditPayload(''); }}
+                  className="p-1 hover:bg-purple-100 rounded"
+                >
+                  <X className="w-4 h-4 text-purple-600" />
+                </button>
+              </div>
+              <textarea
+                value={editPayload}
+                onChange={(e) => setEditPayload(e.target.value)}
+                className="w-full h-32 text-xs font-mono p-2 border border-purple-200 rounded bg-white resize-none"
+                placeholder="JSON payload..."
+              />
+              <div className="flex justify-end gap-2 mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setEditingPoint(null); setEditPayload(''); }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={savePointPayload}
+                  disabled={savingPoint}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {savingPoint ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span className="ml-1">Guardar</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Points List */}
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {loadingPoints ? (
+              <div className="text-center py-6">
+                <Loader className="w-8 h-8 mx-auto text-purple-500 animate-spin mb-2" />
+                <p className="text-gray-500 text-sm">Cargando puntos...</p>
+              </div>
+            ) : qdrantPoints.length === 0 ? (
+              <div className="text-center py-6">
+                <Database className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">No hay puntos en la colección</p>
+                <p className="text-xs text-gray-400">Los puntos aparecerán cuando subas documentos</p>
+              </div>
+            ) : (
+              qdrantPoints.map((point) => {
+                const isExpanded = expandedPointId === point.id;
+                const content = point.payload?.text || point.payload?.content || '';
+                const source = point.payload?.source || point.payload?.filename || 'Sin fuente';
+                
+                return (
+                  <div
+                    key={point.id}
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        onClick={() => setExpandedPointId(isExpanded ? null : point.id)}
+                        className="p-1 hover:bg-gray-200 rounded mt-0.5"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <code className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
+                            {String(point.id).slice(0, 8)}...
+                          </code>
+                          <span className="text-xs text-gray-400 truncate" title={source}>
+                            {source.length > 20 ? source.slice(0, 20) + '...' : source}
+                          </span>
+                        </div>
+                        {isExpanded && (
+                          <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border max-h-32 overflow-y-auto">
+                            <pre className="whitespace-pre-wrap font-mono text-[11px]">
+                              {content ? content.slice(0, 500) + (content.length > 500 ? '...' : '') : 'Sin contenido de texto'}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEditingPoint(point)}
+                          className="p-1.5 hover:bg-blue-100 text-blue-600 rounded transition-colors"
+                          title="Editar payload"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteQdrantPoint(point.id)}
+                          disabled={deletingPointId === point.id}
+                          className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors"
+                          title="Eliminar punto"
+                        >
+                          {deletingPointId === point.id ? (
+                            <Loader className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          
+          {qdrantPoints.length > 0 && (
+            <div className="mt-3 pt-3 border-t text-xs text-gray-400 text-center">
+              {qdrantPoints.length} punto{qdrantPoints.length !== 1 ? 's' : ''} en total
+            </div>
+          )}
         </div>
       </div>
 
