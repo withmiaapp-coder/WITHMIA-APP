@@ -356,174 +356,175 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Document Upload Section */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <Upload className="w-6 h-6 text-cyan-600" />
-          <h2 className="text-2xl font-bold text-neutral-800">
-            Subir Documentos
-          </h2>
-        </div>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Document Upload Section */}
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <Upload className="w-6 h-6 text-cyan-600" />
+            <h2 className="text-xl font-bold text-neutral-800">
+              Subir Documentos
+            </h2>
+          </div>
 
-        {/* Category Selector */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  isSelected
-                    ? "border-cyan-500 bg-cyan-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Icon
-                  className={`w-6 h-6 mx-auto mb-2 ${
-                    isSelected ? "text-cyan-600" : "text-gray-400"
-                  }`}
-                />
-                <div
-                  className={`text-sm font-medium text-center ${
-                    isSelected ? "text-cyan-700" : "text-gray-600"
+          {/* Category Selector */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    isSelected
+                      ? "border-cyan-500 bg-cyan-50"
+                      : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  {cat.label}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Drag and Drop Zone */}
-        <div
-          onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${
-            isDragging
-              ? "border-cyan-500 bg-cyan-50"
-              : "border-gray-300 hover:border-gray-400 bg-gray-50"
-          }`}
-        >
-          <Upload
-            className={`w-16 h-16 mx-auto mb-4 ${
-              isDragging ? "text-cyan-500" : "text-gray-400"
-            }`}
-          />
-          <p className="text-lg font-medium text-gray-700 mb-2">
-            Arrastra archivos aquí o haz clic para seleccionar
-          </p>
-          <p className="text-sm text-gray-500 mb-4">
-            Tipos soportados: PDF, TXT, DOCX, MD (máximo 10MB)
-          </p>
-          <label className="inline-block px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 cursor-pointer transition-colors">
-            Seleccionar Archivos
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.txt,.docx,.md"
-              onChange={handleFileInput}
-              className="hidden"
-            />
-          </label>
-        </div>
-
-        {/* Upload Progress */}
-        {uploadingFiles.length > 0 && (
-          <div className="mt-6 space-y-3">
-            {uploadingFiles.map((fileId) => (
-              <div key={fileId} className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    {fileId.split("-")[0]}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {uploadProgress[fileId] || 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-cyan-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress[fileId] || 0}%` }}
+                  <Icon
+                    className={`w-5 h-5 mx-auto mb-1 ${
+                      isSelected ? "text-cyan-600" : "text-gray-400"
+                    }`}
                   />
-                </div>
-              </div>
-            ))}
+                  <div
+                    className={`text-xs font-medium text-center ${
+                      isSelected ? "text-cyan-700" : "text-gray-600"
+                    }`}
+                  >
+                    {cat.label}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        )}
-      </div>
 
-      {/* Documents List */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <FileText className="w-6 h-6 text-cyan-600" />
-          <h2 className="text-2xl font-bold text-neutral-800">
-            Documentos Subidos
-          </h2>
-          <button
-            onClick={fetchDocuments}
-            disabled={loadingDocuments}
-            className="ml-auto p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          {/* Drag and Drop Zone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+              isDragging
+                ? "border-cyan-500 bg-cyan-50"
+                : "border-gray-300 hover:border-gray-400 bg-gray-50"
+            }`}
           >
-            <RefreshCw
-              className={`w-5 h-5 text-gray-600 ${
-                loadingDocuments ? "animate-spin" : ""
+            <Upload
+              className={`w-12 h-12 mx-auto mb-3 ${
+                isDragging ? "text-cyan-500" : "text-gray-400"
               }`}
             />
-          </button>
-        </div>
-
-        {loadingDocuments ? (
-          <div className="text-center py-12">
-            <Loader className="w-12 h-12 mx-auto text-cyan-500 animate-spin mb-4" />
-            <p className="text-gray-500">Cargando documentos...</p>
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">No hay documentos en esta categoría</p>
-            <p className="text-sm text-gray-400">
-              Sube tu primer documento para comenzar
+            <p className="text-sm font-medium text-gray-700 mb-1">
+              Arrastra archivos aquí o haz clic para seleccionar
             </p>
+            <p className="text-xs text-gray-500 mb-4">
+              Tipos soportados: PDF, TXT, DOCX, MD (máximo 10MB)
+            </p>
+            <label className="inline-block px-4 py-2 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 cursor-pointer transition-colors">
+              Seleccionar Archivos
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.txt,.docx,.md"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </label>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <FileText className="w-8 h-8 text-cyan-600" />
-                  <div>
-                    <p className="font-medium text-gray-800">{doc.filename}</p>
-                    <p className="text-sm text-gray-500">
-                      Subido:{" "}
-                      {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
-                      {doc.chunks_created &&
-                        ` • ${doc.chunks_created} fragmentos`}
-                    </p>
+
+          {/* Upload Progress */}
+          {uploadingFiles.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {uploadingFiles.map((fileId) => (
+                <div key={fileId} className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-gray-700">
+                      {fileId.split("-")[0]}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {uploadProgress[fileId] || 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-cyan-600 h-1.5 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress[fileId] || 0}%` }}
+                    />
                   </div>
                 </div>
-                <div className="flex gap-2">
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Documents List */}
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg h-fit">
+          <div className="flex items-center gap-3 mb-6">
+            <FileText className="w-6 h-6 text-cyan-600" />
+            <h2 className="text-xl font-bold text-neutral-800">
+              Documentos Subidos
+            </h2>
+            <button
+              onClick={fetchDocuments}
+              disabled={loadingDocuments}
+              className="ml-auto p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <RefreshCw
+                className={`w-5 h-5 text-gray-600 ${
+                  loadingDocuments ? "animate-spin" : ""
+                }`}
+              />
+            </button>
+          </div>
+
+          {loadingDocuments ? (
+            <div className="text-center py-8">
+              <Loader className="w-10 h-10 mx-auto text-cyan-500 animate-spin mb-3" />
+              <p className="text-gray-500 text-sm">Cargando documentos...</p>
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 text-sm">No hay documentos en esta categoría</p>
+              <p className="text-xs text-gray-400">
+                Sube tu primer documento para comenzar
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="w-6 h-6 text-cyan-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 text-sm truncate">{doc.filename}</p>
+                      <p className="text-xs text-gray-500">
+                        Subido:{" "}
+                        {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
+                        {doc.chunks_created &&
+                          ` • ${doc.chunks_created} fragmentos`}
+                      </p>
+                    </div>
+                  </div>
                   <button
                     onClick={() => openDeleteModal(doc)}
-                    className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                    className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex-shrink-0"
                     title="Eliminar"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
