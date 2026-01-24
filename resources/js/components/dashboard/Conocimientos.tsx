@@ -357,39 +357,86 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain Illustration - Lucide Brain Icon */}
-      <div className="flex justify-center py-6">
-        <div className="relative">
-          {/* Glow effect behind brain */}
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-full blur-2xl opacity-20 scale-150" />
+      {/* Brain with Orbiting Documents - Jimmy Neutron Style */}
+      <div className="flex justify-center py-8">
+        <div className="relative w-48 h-48">
+          {/* Orbital rings */}
+          <div className="absolute inset-0 border-2 border-cyan-200/30 rounded-full" />
+          <div className="absolute inset-4 border-2 border-blue-200/30 rounded-full" />
+          <div className="absolute inset-8 border-2 border-purple-200/30 rounded-full" />
           
-          {/* Brain icon container */}
-          <div className="relative p-6 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-3xl border border-cyan-100 shadow-lg">
-            <Brain 
-              className="w-24 h-24 text-transparent bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 bg-clip-text" 
-              style={{ 
-                stroke: 'url(#brainGradient)',
-                strokeWidth: 1.5
-              }}
-            />
-            {/* SVG gradient definition for the stroke */}
-            <svg width="0" height="0" className="absolute">
-              <defs>
-                <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#06b6d4" />
-                  <stop offset="50%" stopColor="#3b82f6" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
+          {/* Central Brain */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-cyan-400/20 rounded-full blur-xl scale-150" />
+              <Brain className="w-16 h-16 text-neutral-300 relative z-10" strokeWidth={1.25} />
+            </div>
           </div>
-          
-          {/* Floating dots decoration */}
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-cyan-400 rounded-full animate-pulse" />
-          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute top-1/2 -right-4 w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+
+          {/* Orbiting documents - show up to 6 */}
+          {documents.slice(0, 6).map((doc, index) => {
+            const totalDocs = Math.min(documents.length, 6);
+            const angle = (360 / totalDocs) * index;
+            const orbitIndex = index % 3; // Which orbit ring (0, 1, 2)
+            const radius = 80 - (orbitIndex * 16); // 80px, 64px, 48px
+            const duration = 8 + (orbitIndex * 4); // 8s, 12s, 16s - different speeds
+            const delay = index * 0.5;
+            
+            return (
+              <div
+                key={doc.id}
+                className="absolute left-1/2 top-1/2 -ml-2 -mt-2"
+                style={{
+                  animation: `orbit${orbitIndex} ${duration}s linear infinite`,
+                  animationDelay: `${delay}s`,
+                }}
+              >
+                <div 
+                  className="w-4 h-4 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-lg shadow-cyan-400/50"
+                  title={doc.filename}
+                />
+              </div>
+            );
+          })}
+
+          {/* Show uploading files as pulsing orbs */}
+          {uploadingFiles.map((fileId, index) => (
+            <div
+              key={fileId}
+              className="absolute left-1/2 top-1/2 -ml-2 -mt-2"
+              style={{
+                animation: `orbit${index % 3} ${6}s linear infinite`,
+              }}
+            >
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 shadow-lg shadow-yellow-400/50 animate-pulse" />
+            </div>
+          ))}
+
+          {/* CSS Keyframes for orbits */}
+          <style>{`
+            @keyframes orbit0 {
+              from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+              to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+            }
+            @keyframes orbit1 {
+              from { transform: rotate(0deg) translateX(64px) rotate(0deg); }
+              to { transform: rotate(-360deg) translateX(64px) rotate(360deg); }
+            }
+            @keyframes orbit2 {
+              from { transform: rotate(0deg) translateX(48px) rotate(0deg); }
+              to { transform: rotate(360deg) translateX(48px) rotate(-360deg); }
+            }
+          `}</style>
         </div>
       </div>
+
+      {/* Document count indicator */}
+      {documents.length > 0 && (
+        <div className="text-center text-sm text-neutral-400">
+          {documents.length} documento{documents.length !== 1 ? 's' : ''} en órbita
+        </div>
+      )}
 
       {/* Two Column Layout - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
