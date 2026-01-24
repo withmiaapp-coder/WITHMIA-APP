@@ -173,7 +173,9 @@ export default function Conocimientos({
 
   const startEditingPoint = (point: QdrantPoint) => {
     setEditingPoint(point);
-    setEditPayload(JSON.stringify(point.payload, null, 2));
+    // Solo mostrar el texto, no el JSON completo
+    const textContent = point.payload?.text || point.payload?.content || '';
+    setEditPayload(textContent);
   };
 
   const savePointPayload = async () => {
@@ -181,7 +183,12 @@ export default function Conocimientos({
     
     setSavingPoint(true);
     try {
-      const payload = JSON.parse(editPayload);
+      // Mantener el payload original pero actualizar solo el texto
+      const updatedPayload = {
+        ...editingPoint.payload,
+        text: editPayload,
+        content: editPayload
+      };
       const response = await fetch(`/api/qdrant/points/${editingPoint.id}`, {
         method: 'PUT',
         headers: {
@@ -189,12 +196,12 @@ export default function Conocimientos({
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
         },
-        body: JSON.stringify({ payload })
+        body: JSON.stringify({ payload: updatedPayload })
       });
       const data = await response.json();
       if (data.success) {
         setQdrantPoints(prev => prev.map(p => 
-          p.id === editingPoint.id ? { ...p, payload } : p
+          p.id === editingPoint.id ? { ...p, payload: updatedPayload } : p
         ));
         setEditingPoint(null);
         setEditPayload('');
@@ -203,7 +210,7 @@ export default function Conocimientos({
       }
     } catch (error) {
       console.error('Error saving point:', error);
-      alert('Error al guardar. Verifica que el JSON sea válido.');
+      alert('Error al guardar los cambios.');
     } finally {
       setSavingPoint(false);
     }
@@ -648,8 +655,8 @@ export default function Conocimientos({
               <textarea
                 value={editPayload}
                 onChange={(e) => setEditPayload(e.target.value)}
-                className="w-full h-32 text-xs font-mono p-2 border border-cyan-200 rounded bg-white text-gray-800 resize-none"
-                placeholder="Contenido del fragmento..."
+                className="w-full h-40 text-sm p-3 border border-cyan-200 rounded bg-white text-gray-800 resize-none leading-relaxed"
+                placeholder="Escribe aquí el contenido del fragmento de conocimiento..."
               />
               <div className="flex justify-end gap-2 mt-2">
                 <Button
