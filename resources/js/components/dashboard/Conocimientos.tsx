@@ -357,143 +357,155 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain with 3D Orbiting Documents */}
-      <div className="flex justify-center py-8">
-        <div className="relative w-52 h-52" style={{ perspective: '800px' }}>
+      {/* Brain with Atom-style Orbiting Documents */}
+      <div className="flex justify-center py-6">
+        <div className="relative w-40 h-40">
           
-          {/* 3D Orbital ring 1 - horizontal tilt */}
-          <div 
-            className="absolute inset-0 border border-neutral-200 rounded-full"
-            style={{ 
-              transform: 'rotateX(75deg)',
-              animation: 'spin3d 20s linear infinite'
-            }}
-          />
-          
-          {/* 3D Orbital ring 2 - diagonal tilt */}
-          <div 
-            className="absolute inset-4 border border-neutral-300 rounded-full"
-            style={{ 
-              transform: 'rotateX(75deg) rotateY(45deg)',
-              animation: 'spin3d 15s linear infinite reverse'
-            }}
-          />
-          
-          {/* 3D Orbital ring 3 - opposite diagonal */}
-          <div 
-            className="absolute inset-8 border border-neutral-200 rounded-full"
-            style={{ 
-              transform: 'rotateX(75deg) rotateY(-45deg)',
-              animation: 'spin3d 25s linear infinite'
-            }}
-          />
-          
-          {/* Central Brain - Gray, no glow */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Brain className="w-14 h-14 text-neutral-400" strokeWidth={1.25} />
+          {/* Central Brain */}
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Brain className="w-12 h-12 text-neutral-400" strokeWidth={1.25} />
           </div>
 
-          {/* 3D Orbiting documents container */}
+          {/* Orbit 1 - tilted 60deg on X axis */}
           <div 
             className="absolute inset-0"
             style={{ 
               transformStyle: 'preserve-3d',
-              animation: 'spin3d 12s linear infinite'
+              perspective: '500px'
             }}
           >
-            {documents.slice(0, 6).map((doc, index) => {
-              const totalDocs = Math.min(documents.length, 6);
-              const angle = (360 / totalDocs) * index;
-              
-              return (
-                <div
-                  key={doc.id}
-                  className="absolute left-1/2 top-1/2"
-                  style={{
-                    transform: `rotateX(75deg) rotateZ(${angle}deg) translateX(90px)`,
-                    transformOrigin: 'center center',
+            <div 
+              className="absolute inset-0 border border-neutral-300 rounded-full"
+              style={{ transform: 'rotateX(60deg)' }}
+            />
+            {documents.length > 0 && (
+              <div
+                className="absolute inset-0"
+                style={{ 
+                  transform: 'rotateX(60deg)',
+                  animation: 'orbitSpin 8s linear infinite'
+                }}
+              >
+                <div 
+                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
+                  style={{ 
+                    left: '50%', 
+                    top: '0',
+                    marginLeft: '-5px',
+                    marginTop: '-5px',
+                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
                   }}
-                >
-                  <div 
-                    className="w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-neutral-400 shadow-sm"
-                    title={doc.filename}
-                    style={{
-                      transform: `rotateZ(${-angle}deg) rotateX(-75deg)`,
-                    }}
-                  />
-                </div>
-              );
-            })}
+                  title={documents[0]?.filename}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Second orbit layer - different speed */}
-          <div 
-            className="absolute inset-0"
-            style={{ 
-              transformStyle: 'preserve-3d',
-              animation: 'spin3d 18s linear infinite reverse'
-            }}
-          >
-            {documents.slice(0, 4).map((doc, index) => {
-              const totalDocs = Math.min(documents.length, 4);
-              const angle = (360 / totalDocs) * index + 45;
-              
-              return (
-                <div
-                  key={`inner-${doc.id}`}
-                  className="absolute left-1/2 top-1/2"
-                  style={{
-                    transform: `rotateX(75deg) rotateY(45deg) rotateZ(${angle}deg) translateX(65px)`,
-                    transformOrigin: 'center center',
+          {/* Orbit 2 - tilted 60deg on X, 60deg on Y (diagonal) */}
+          {documents.length > 1 && (
+            <div 
+              className="absolute inset-0"
+              style={{ 
+                transformStyle: 'preserve-3d',
+                perspective: '500px'
+              }}
+            >
+              <div 
+                className="absolute inset-0 border border-neutral-300 rounded-full"
+                style={{ transform: 'rotateX(60deg) rotateY(60deg)' }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{ 
+                  transform: 'rotateX(60deg) rotateY(60deg)',
+                  animation: 'orbitSpin 10s linear infinite reverse'
+                }}
+              >
+                <div 
+                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
+                  style={{ 
+                    left: '50%', 
+                    top: '0',
+                    marginLeft: '-5px',
+                    marginTop: '-5px',
+                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
                   }}
-                >
-                  <div 
-                    className="w-2.5 h-2.5 -ml-1 -mt-1 rounded-full bg-neutral-300 shadow-sm"
-                    style={{
-                      transform: `rotateZ(${-angle}deg) rotateY(-45deg) rotateX(-75deg)`,
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
+                  title={documents[1]?.filename}
+                />
+              </div>
+            </div>
+          )}
 
-          {/* Uploading files - pulsing */}
+          {/* Orbit 3 - tilted 60deg on X, -60deg on Y (opposite diagonal) */}
+          {documents.length > 2 && (
+            <div 
+              className="absolute inset-0"
+              style={{ 
+                transformStyle: 'preserve-3d',
+                perspective: '500px'
+              }}
+            >
+              <div 
+                className="absolute inset-0 border border-neutral-300 rounded-full"
+                style={{ transform: 'rotateX(60deg) rotateY(-60deg)' }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{ 
+                  transform: 'rotateX(60deg) rotateY(-60deg)',
+                  animation: 'orbitSpin 12s linear infinite'
+                }}
+              >
+                <div 
+                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
+                  style={{ 
+                    left: '50%', 
+                    top: '0',
+                    marginLeft: '-5px',
+                    marginTop: '-5px',
+                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
+                  }}
+                  title={documents[2]?.filename}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Uploading files indicator */}
           {uploadingFiles.length > 0 && (
             <div 
               className="absolute inset-0"
               style={{ 
                 transformStyle: 'preserve-3d',
-                animation: 'spin3d 6s linear infinite'
+                perspective: '500px'
               }}
             >
-              {uploadingFiles.map((fileId, index) => {
-                const angle = (360 / uploadingFiles.length) * index;
-                return (
-                  <div
-                    key={fileId}
-                    className="absolute left-1/2 top-1/2"
-                    style={{
-                      transform: `rotateX(75deg) rotateZ(${angle}deg) translateX(90px)`,
-                    }}
-                  >
-                    <div 
-                      className="w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-cyan-500 animate-pulse shadow-lg shadow-cyan-500/50"
-                      style={{
-                        transform: `rotateZ(${-angle}deg) rotateX(-75deg)`,
-                      }}
-                    />
-                  </div>
-                );
-              })}
+              <div
+                className="absolute inset-0"
+                style={{ 
+                  transform: 'rotateX(60deg)',
+                  animation: 'orbitSpin 4s linear infinite'
+                }}
+              >
+                <div 
+                  className="absolute w-3 h-3 bg-cyan-500 rounded-full animate-pulse"
+                  style={{ 
+                    left: '50%', 
+                    top: '0',
+                    marginLeft: '-6px',
+                    marginTop: '-6px',
+                    boxShadow: '0 0 10px rgba(6,182,212,0.6)'
+                  }}
+                />
+              </div>
             </div>
           )}
 
-          {/* CSS Keyframes for 3D rotation */}
+          {/* CSS Keyframes */}
           <style>{`
-            @keyframes spin3d {
-              from { transform: rotateX(75deg) rotateZ(0deg); }
-              to { transform: rotateX(75deg) rotateZ(360deg); }
+            @keyframes orbitSpin {
+              from { transform: rotateX(60deg) rotateY(var(--rotateY, 0deg)) rotateZ(0deg); }
+              to { transform: rotateX(60deg) rotateY(var(--rotateY, 0deg)) rotateZ(360deg); }
             }
           `}</style>
         </div>
