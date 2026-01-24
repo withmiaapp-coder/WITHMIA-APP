@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Middleware para forzar encoding UTF-8 en toda la aplicación
@@ -16,13 +17,29 @@ class ForceUtf8
      * Mapeo de caracteres mojibake comunes (UTF-8 interpretado como Latin-1)
      * Estos son los patrones más comunes de corrupción
      */
-    private array $mojibakeMap = [];
+    private array $mojibakeMap = [
+        // Replacement character - el byte original se perdió
+        "\u{FFFD}" => '?',
+        "�" => '?',
+    ];
 
     /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // 🔴 DEBUG: Log raw input at middleware level (before any processing)
+        $rawInput = file_get_contents('php://input');
+        if (strlen($rawInput) > 0 && strlen($rawInput) < 5000) {
+            Log::info('🔴 ForceUtf8 Middleware - RAW INPUT', [
+                'uri' => $request->getRequestUri(),
+                'content_type' => $request->header('Content-Type'),
+                'raw_hex' => bin2hex(substr($rawInput, 0, 200)),
+                'raw_preview' => substr($rawInput, 0, 300),
+                'has_replacement_char' => str_contains($rawInput, "\u{FFFD}") || str_contains($rawInput, '�'),
+            ]);
+        }
+        
         // Sanitizar input si viene con encoding incorrecto
         $this->sanitizeInput($request);
         
