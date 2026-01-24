@@ -357,10 +357,14 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain Icon - Clean and Minimal */}
-      <div className="flex justify-center py-4">
+      {/* Brain Illustration */}
+      <div className="flex justify-center py-2">
         <div className="flex flex-col items-center gap-2">
-          <Brain className="w-14 h-14 text-neutral-400" strokeWidth={1.25} />
+          <img 
+            src="/images/brain organ-pana.svg" 
+            alt="Cerebro - Conocimientos" 
+            className="w-48 h-48 object-contain"
+          />
           {documents.length > 0 && (
             <div className="text-sm text-neutral-400">
               {documents.length} documento{documents.length !== 1 ? 's' : ''} cargado{documents.length !== 1 ? 's' : ''}
