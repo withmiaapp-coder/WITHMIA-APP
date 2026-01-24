@@ -357,14 +357,50 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain Illustration */}
+      {/* Brain Illustration with Orbits */}
       <div className="flex justify-center py-2">
         <div className="flex flex-col items-center gap-2">
-          <img 
-            src="/images/brain organ-pana.svg" 
-            alt="Cerebro - Conocimientos" 
-            className="w-48 h-48 object-contain"
-          />
+          <div 
+            className="relative w-56 h-56"
+            style={{ perspective: '800px' }}
+          >
+            {/* Orbit 1 - Horizontal (middle) */}
+            <div 
+              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
+              style={{ 
+                transform: 'rotateX(70deg)',
+                transformStyle: 'preserve-3d'
+              }}
+            />
+            
+            {/* Orbit 2 - Tilted 60deg */}
+            <div 
+              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
+              style={{ 
+                transform: 'rotateX(70deg) rotateY(60deg)',
+                transformStyle: 'preserve-3d'
+              }}
+            />
+            
+            {/* Orbit 3 - Tilted -60deg */}
+            <div 
+              className="absolute inset-4 border-2 border-cyan-300 rounded-full opacity-60"
+              style={{ 
+                transform: 'rotateX(70deg) rotateY(-60deg)',
+                transformStyle: 'preserve-3d'
+              }}
+            />
+            
+            {/* Brain Image - centered */}
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <img 
+                src="/images/brain organ-pana.svg" 
+                alt="Cerebro - Conocimientos" 
+                className="w-36 h-36 object-contain"
+              />
+            </div>
+          </div>
+          
           {documents.length > 0 && (
             <div className="text-sm text-neutral-400">
               {documents.length} documento{documents.length !== 1 ? 's' : ''} cargado{documents.length !== 1 ? 's' : ''}
