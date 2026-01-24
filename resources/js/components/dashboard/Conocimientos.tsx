@@ -10,6 +10,7 @@ import {
   Sparkles,
   AlertTriangle,
   RefreshCw,
+  Brain,
 } from "lucide-react";
 import {
   Dialog,
@@ -356,107 +357,37 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain Illustration - Easy to replace with custom image */}
-      <div className="flex justify-center py-4">
-        {/* PARA CAMBIAR LA IMAGEN: Reemplaza este SVG por una etiqueta <img src="/tu-imagen.png" /> */}
-        <div className="relative w-64 h-40">
-          <svg 
-            viewBox="0 0 400 250" 
-            className="w-full h-full"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Background glow effect */}
-            <defs>
-              <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8"/>
-                <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.9"/>
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.8"/>
-              </linearGradient>
-              <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.6"/>
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.6"/>
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            
-            {/* Neural connections (background lines) */}
-            <g stroke="url(#connectionGradient)" strokeWidth="1.5" fill="none" opacity="0.5">
-              <path d="M80,125 Q120,80 160,100" className="animate-pulse"/>
-              <path d="M160,100 Q200,60 240,90"/>
-              <path d="M240,90 Q280,50 320,80" className="animate-pulse" style={{animationDelay: '0.5s'}}/>
-              <path d="M80,125 Q130,160 180,140"/>
-              <path d="M180,140 Q230,180 280,150" className="animate-pulse" style={{animationDelay: '1s'}}/>
-              <path d="M280,150 Q310,120 320,80"/>
-            </g>
-
-            {/* Brain left hemisphere */}
-            <path 
-              d="M120,125 
-                 C100,90 110,50 150,45 
-                 C180,40 195,60 200,80
-                 C200,100 195,120 200,140
-                 C195,160 180,180 150,175
-                 C110,170 100,160 120,125"
-              fill="url(#brainGradient)"
-              filter="url(#glow)"
-              opacity="0.9"
+      {/* Brain Illustration - Lucide Brain Icon */}
+      <div className="flex justify-center py-6">
+        <div className="relative">
+          {/* Glow effect behind brain */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-full blur-2xl opacity-20 scale-150" />
+          
+          {/* Brain icon container */}
+          <div className="relative p-6 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-3xl border border-cyan-100 shadow-lg">
+            <Brain 
+              className="w-24 h-24 text-transparent bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 bg-clip-text" 
+              style={{ 
+                stroke: 'url(#brainGradient)',
+                strokeWidth: 1.5
+              }}
             />
-            
-            {/* Brain right hemisphere */}
-            <path 
-              d="M280,125 
-                 C300,90 290,50 250,45 
-                 C220,40 205,60 200,80
-                 C200,100 205,120 200,140
-                 C205,160 220,180 250,175
-                 C290,170 300,160 280,125"
-              fill="url(#brainGradient)"
-              filter="url(#glow)"
-              opacity="0.9"
-            />
-
-            {/* Brain folds/details - left */}
-            <g stroke="#fff" strokeWidth="2" fill="none" opacity="0.4">
-              <path d="M130,80 Q150,70 160,85"/>
-              <path d="M125,110 Q155,95 170,115"/>
-              <path d="M130,145 Q155,155 165,140"/>
-            </g>
-
-            {/* Brain folds/details - right */}
-            <g stroke="#fff" strokeWidth="2" fill="none" opacity="0.4">
-              <path d="M270,80 Q250,70 240,85"/>
-              <path d="M275,110 Q245,95 230,115"/>
-              <path d="M270,145 Q245,155 235,140"/>
-            </g>
-
-            {/* Central connection (corpus callosum) */}
-            <ellipse cx="200" cy="110" rx="15" ry="40" fill="url(#brainGradient)" opacity="0.7"/>
-
-            {/* Neural nodes (glowing dots) */}
-            <g filter="url(#glow)">
-              <circle cx="80" cy="125" r="6" fill="#06b6d4" className="animate-pulse"/>
-              <circle cx="160" cy="100" r="5" fill="#3b82f6" className="animate-pulse" style={{animationDelay: '0.3s'}}/>
-              <circle cx="240" cy="90" r="5" fill="#8b5cf6" className="animate-pulse" style={{animationDelay: '0.6s'}}/>
-              <circle cx="320" cy="80" r="6" fill="#06b6d4" className="animate-pulse" style={{animationDelay: '0.9s'}}/>
-              <circle cx="180" cy="140" r="4" fill="#3b82f6" className="animate-pulse" style={{animationDelay: '0.4s'}}/>
-              <circle cx="280" cy="150" r="5" fill="#8b5cf6" className="animate-pulse" style={{animationDelay: '0.7s'}}/>
-              <circle cx="200" cy="110" r="7" fill="#fff" opacity="0.8" className="animate-pulse"/>
-            </g>
-
-            {/* Floating knowledge symbols */}
-            <g fill="#06b6d4" opacity="0.6">
-              <text x="60" y="60" fontSize="16" fontFamily="system-ui">💡</text>
-              <text x="330" y="180" fontSize="14" fontFamily="system-ui">📚</text>
-              <text x="50" y="180" fontSize="14" fontFamily="system-ui">🔬</text>
-              <text x="340" y="60" fontSize="16" fontFamily="system-ui">✨</text>
-            </g>
-          </svg>
+            {/* SVG gradient definition for the stroke */}
+            <svg width="0" height="0" className="absolute">
+              <defs>
+                <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="50%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          
+          {/* Floating dots decoration */}
+          <div className="absolute -top-2 -right-2 w-4 h-4 bg-cyan-400 rounded-full animate-pulse" />
+          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute top-1/2 -right-4 w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
       </div>
 
