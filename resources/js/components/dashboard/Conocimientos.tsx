@@ -357,7 +357,7 @@ export default function Conocimientos({
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Document Upload Section */}
         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
           <div className="flex items-center gap-3 mb-6">

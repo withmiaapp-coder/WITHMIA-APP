@@ -1,0 +1,141 @@
+﻿{
+    "Webhook Training Chat":  {
+                                  "main":  [
+                                               [
+                                                   {
+                                                       "node":  "Prepare Training Data",
+                                                       "type":  "main",
+                                                       "index":  0
+                                                   }
+                                               ]
+                                           ]
+                              },
+    "Prepare Training Data":  {
+                                  "main":  [
+                                               [
+                                                   {
+                                                       "node":  "Embed User Query",
+                                                       "type":  "main",
+                                                       "index":  0
+                                                   }
+                                               ]
+                                           ]
+                              },
+    "Embed User Query":  {
+                             "main":  [
+                                          [
+                                              {
+                                                  "node":  "Prepare Search",
+                                                  "type":  "main",
+                                                  "index":  0
+                                              }
+                                          ]
+                                      ]
+                         },
+    "Prepare Search":  {
+                           "main":  [
+                                        [
+                                            {
+                                                "node":  "Search Qdrant Context",
+                                                "type":  "main",
+                                                "index":  0
+                                            }
+                                        ]
+                                    ]
+                       },
+    "Search Qdrant Context":  {
+                                  "main":  [
+                                               [
+                                                   {
+                                                       "node":  "Build Context \u0026 Messages",
+                                                       "type":  "main",
+                                                       "index":  0
+                                                   }
+                                               ]
+                                           ]
+                              },
+    "Build Context \u0026 Messages":  {
+                                          "main":  [
+                                                       [
+                                                           {
+                                                               "node":  "Call OpenAI Chat",
+                                                               "type":  "main",
+                                                               "index":  0
+                                                           }
+                                                       ]
+                                                   ]
+                                      },
+    "Call OpenAI Chat":  {
+                             "main":  [
+                                          [
+                                              {
+                                                  "node":  "Process Response",
+                                                  "type":  "main",
+                                                  "index":  0
+                                              }
+                                          ]
+                                      ]
+                         },
+    "Process Response":  {
+                             "main":  [
+                                          [
+                                              {
+                                                  "node":  "Should Save?",
+                                                  "type":  "main",
+                                                  "index":  0
+                                              }
+                                          ]
+                                      ]
+                         },
+    "Should Save?":  {
+                         "main":  [
+                                      [
+                                          {
+                                              "node":  "Generate Embedding",
+                                              "type":  "main",
+                                              "index":  0
+                                          }
+                                      ],
+                                      [
+                                          {
+                                              "node":  "Return Not Saved Response",
+                                              "type":  "main",
+                                              "index":  0
+                                          }
+                                      ]
+                                  ]
+                     },
+    "Generate Embedding":  {
+                               "main":  [
+                                            [
+                                                {
+                                                    "node":  "Prepare Qdrant Point",
+                                                    "type":  "main",
+                                                    "index":  0
+                                                }
+                                            ]
+                                        ]
+                           },
+    "Prepare Qdrant Point":  {
+                                 "main":  [
+                                              [
+                                                  {
+                                                      "node":  "Store in Qdrant",
+                                                      "type":  "main",
+                                                      "index":  0
+                                                  }
+                                              ]
+                                          ]
+                             },
+    "Store in Qdrant":  {
+                            "main":  [
+                                         [
+                                             {
+                                                 "node":  "Return Saved Response",
+                                                 "type":  "main",
+                                                 "index":  0
+                                             }
+                                         ]
+                                     ]
+                        }
+}
