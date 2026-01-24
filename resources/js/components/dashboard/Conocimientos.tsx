@@ -611,17 +611,15 @@ export default function Conocimientos({
           `}</style>
         </div>
 
-        {/* Right: Qdrant Points Panel */}
+        {/* Right: Memory Panel */}
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-lg flex flex-col max-h-[400px]">
           <div className="flex items-center gap-3 mb-4">
-            <Database className="w-5 h-5 text-purple-600" />
+            <Brain className="w-5 h-5 text-cyan-600" />
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-neutral-800">Vectores Qdrant</h3>
-              {qdrantCollection && (
-                <p className="text-xs text-neutral-400 truncate" title={qdrantCollection}>
-                  {qdrantCollection}
-                </p>
-              )}
+              <h3 className="text-lg font-bold text-neutral-800">Memoria de WITHMIA</h3>
+              <p className="text-xs text-neutral-400">
+                Fragmentos de conocimiento almacenados
+              </p>
             </div>
             <button
               onClick={fetchQdrantPoints}
@@ -633,25 +631,25 @@ export default function Conocimientos({
             </button>
           </div>
 
-          {/* Edit Point Modal */}
+          {/* Edit Fragment Modal */}
           {editingPoint && (
-            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="mb-4 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-purple-800">
-                  Editando punto: {String(editingPoint.id).slice(0, 12)}...
+                <span className="text-sm font-medium text-cyan-800">
+                  Editando fragmento
                 </span>
                 <button
                   onClick={() => { setEditingPoint(null); setEditPayload(''); }}
-                  className="p-1 hover:bg-purple-100 rounded"
+                  className="p-1 hover:bg-cyan-100 rounded"
                 >
-                  <X className="w-4 h-4 text-purple-600" />
+                  <X className="w-4 h-4 text-cyan-600" />
                 </button>
               </div>
               <textarea
                 value={editPayload}
                 onChange={(e) => setEditPayload(e.target.value)}
-                className="w-full h-32 text-xs font-mono p-2 border border-purple-200 rounded bg-white resize-none"
-                placeholder="JSON payload..."
+                className="w-full h-32 text-xs font-mono p-2 border border-cyan-200 rounded bg-white resize-none"
+                placeholder="Contenido del fragmento..."
               />
               <div className="flex justify-end gap-2 mt-2">
                 <Button
@@ -665,7 +663,7 @@ export default function Conocimientos({
                   size="sm"
                   onClick={savePointPayload}
                   disabled={savingPoint}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-cyan-600 hover:bg-cyan-700"
                 >
                   {savingPoint ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   <span className="ml-1">Guardar</span>
@@ -674,18 +672,18 @@ export default function Conocimientos({
             </div>
           )}
 
-          {/* Points List */}
+          {/* Fragments List */}
           <div className="flex-1 overflow-y-auto space-y-2">
             {loadingPoints ? (
               <div className="text-center py-6">
-                <Loader className="w-8 h-8 mx-auto text-purple-500 animate-spin mb-2" />
-                <p className="text-gray-500 text-sm">Cargando puntos...</p>
+                <Loader className="w-8 h-8 mx-auto text-cyan-500 animate-spin mb-2" />
+                <p className="text-gray-500 text-sm">Cargando memoria...</p>
               </div>
             ) : qdrantPoints.length === 0 ? (
               <div className="text-center py-6">
-                <Database className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500 text-sm">No hay puntos en la colección</p>
-                <p className="text-xs text-gray-400">Los puntos aparecerán cuando subas documentos</p>
+                <Brain className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">WITHMIA aún no tiene memoria</p>
+                <p className="text-xs text-gray-400">Sube documentos para que aprenda</p>
               </div>
             ) : (
               qdrantPoints.map((point) => {
@@ -696,7 +694,7 @@ export default function Conocimientos({
                 return (
                   <div
                     key={point.id}
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors"
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-cyan-200 transition-colors"
                   >
                     <div className="flex items-start gap-2">
                       <button
@@ -711,11 +709,9 @@ export default function Conocimientos({
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <code className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
-                            {String(point.id).slice(0, 8)}...
-                          </code>
-                          <span className="text-xs text-gray-400 truncate" title={source}>
-                            {source.length > 20 ? source.slice(0, 20) + '...' : source}
+                          <FileText className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-700 truncate font-medium" title={source}>
+                            {source.length > 25 ? source.slice(0, 25) + '...' : source}
                           </span>
                         </div>
                         {isExpanded && (
@@ -729,8 +725,8 @@ export default function Conocimientos({
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => startEditingPoint(point)}
-                          className="p-1.5 hover:bg-blue-100 text-blue-600 rounded transition-colors"
-                          title="Editar payload"
+                          className="p-1.5 hover:bg-cyan-100 text-cyan-600 rounded transition-colors"
+                          title="Editar contenido"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
@@ -738,7 +734,7 @@ export default function Conocimientos({
                           onClick={() => deleteQdrantPoint(point.id)}
                           disabled={deletingPointId === point.id}
                           className="p-1.5 hover:bg-red-100 text-red-600 rounded transition-colors"
-                          title="Eliminar punto"
+                          title="Eliminar fragmento"
                         >
                           {deletingPointId === point.id ? (
                             <Loader className="w-3.5 h-3.5 animate-spin" />
@@ -756,7 +752,7 @@ export default function Conocimientos({
           
           {qdrantPoints.length > 0 && (
             <div className="mt-3 pt-3 border-t text-xs text-gray-400 text-center">
-              {qdrantPoints.length} punto{qdrantPoints.length !== 1 ? 's' : ''} en total
+              {qdrantPoints.length} fragmento{qdrantPoints.length !== 1 ? 's' : ''} de conocimiento
             </div>
           )}
         </div>
