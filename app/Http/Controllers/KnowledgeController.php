@@ -469,15 +469,26 @@ class KnowledgeController extends Controller
                     'status' => $response->getStatusCode()
                 ]);
 
-                // 🔧 Corregir encoding UTF-8/mojibake de la respuesta de n8n
+                // 🔧 Obtener respuesta y asegurar UTF-8 correcto
                 $rawResponse = $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.';
-                $cleanResponse = Utf8Helper::fix($rawResponse);
                 
-                Log::info('Response encoding fixed', [
+                // Forzar encoding UTF-8 correcto - la respuesta de n8n a veces viene mal
+                $cleanResponse = mb_convert_encoding($rawResponse, 'UTF-8', 'UTF-8');
+                
+                // Si detectamos el caracter de reemplazo, removerlo
+                $cleanResponse = preg_replace('/\x{FFFD}/u', '', $cleanResponse);
+                
+                Log::info('Response processed', [
                     'original_length' => strlen($rawResponse),
-                    'fixed_length' => strlen($cleanResponse),
-                    'had_mojibake' => Utf8Helper::hasMojibake($rawResponse)
+                    'clean_length' => strlen($cleanResponse),
+                    'sample' => mb_substr($cleanResponse, 0, 100)
                 ]);
+
+                // Si la respuesta tiene caracteres corruptos, usar respuesta local
+                if (preg_match('/[\x80-\xFF]/', $cleanResponse) && !mb_check_encoding($cleanResponse, 'UTF-8')) {
+                    Log::warning('Response has encoding issues, using local response');
+                    $cleanResponse = $this->getDefaultTrainingResponse($userMessage, $assistantName);
+                }
 
                 return response()->json([
                     'success' => true,
@@ -485,7 +496,7 @@ class KnowledgeController extends Controller
                     'saved_to_knowledge' => $responseBody['saved'] ?? false,
                     'action' => $deduplicationResult['action'],
                     'similarity' => $deduplicationResult['similarity'] ?? null,
-                ]);
+                ], 200, ['Content-Type' => 'application/json; charset=utf-8']);
 
             } catch (\GuzzleHttp\Exception\ConnectException $e) {
                 // Si n8n no está disponible, dar una respuesta por defecto
@@ -712,24 +723,52 @@ class KnowledgeController extends Controller
      */
     private function getDefaultTrainingResponse($userMessage, $assistantName)
     {
-        $responses = [
-            'Entendido. Voy a recordar eso para mejorar mis respuestas. ¿Hay algo más que deba saber?',
-            '¡Gracias por la información! Esto me ayudará a responder mejor a tus clientes.',
-            'Perfecto, he registrado esa información. ¿Quieres que practiquemos una conversación de ejemplo?',
-            'Muy útil. ¿Podrías darme un ejemplo de cómo debería responder en esa situación?',
-            'Excelente. He tomado nota de esto. ¿Qué más te gustaría enseñarme?',
-        ];
+        $lowerMessage = mb_strtolower($userMessage, 'UTF-8');
         
-        // Detectar si es una corrección
-        $lowerMessage = strtolower($userMessage);
-        if (str_contains($lowerMessage, 'no, ') || str_contains($lowerMessage, 'incorrecto') || str_contains($lowerMessage, 'mal ') || str_contains($lowerMessage, 'error')) {
-            return "Gracias por la corrección. He actualizado mi conocimiento. ¿Cómo debería responder correctamente en este caso?";
+        // Detectar horarios
+        if (str_contains($lowerMessage, 'horario') || str_contains($lowerMessage, 'atendemos') || 
+            str_contains($lowerMessage, '24 horas') || str_contains($lowerMessage, 'abierto')) {
+            return "Gracias por la informacion sobre el horario de atencion. He entendido que la empresa ofrece este horario. Si un cliente pregunta, podre responder de la siguiente manera:\n\n\"Hola! Estamos aqui para ayudarte en el horario que me indicaste. No dudes en contactarnos en cualquier momento.\"\n\nHay mas ejemplos o informacion que te gustaria compartir?";
+        }
+        
+        // Detectar preguntas sobre nombre
+        if (str_contains($lowerMessage, 'como te llamas') || str_contains($lowerMessage, 'tu nombre') ||
+            str_contains($lowerMessage, 'quien eres')) {
+            return "Soy {$assistantName}, tu asistente virtual. Estoy aqui para ayudarte a entrenar y mejorar las respuestas del bot. Que te gustaria ensenarme hoy?";
+        }
+        
+        // Detectar si es una correccion
+        if (str_contains($lowerMessage, 'no, ') || str_contains($lowerMessage, 'incorrecto') || 
+            str_contains($lowerMessage, 'mal ') || str_contains($lowerMessage, 'error')) {
+            return "Gracias por la correccion. He actualizado mi conocimiento. Como deberia responder correctamente en este caso?";
         }
         
         // Detectar si es un ejemplo
-        if (str_contains($lowerMessage, 'ejemplo') || str_contains($lowerMessage, 'por ejemplo') || str_contains($lowerMessage, 'así:')) {
-            return "Perfecto, he registrado ese ejemplo. Así responderé en situaciones similares. ¿Tienes más ejemplos que compartir?";
+        if (str_contains($lowerMessage, 'ejemplo') || str_contains($lowerMessage, 'por ejemplo') || 
+            str_contains($lowerMessage, 'asi:')) {
+            return "Perfecto, he registrado ese ejemplo. Asi respondere en situaciones similares. Tienes mas ejemplos que compartir?";
         }
+        
+        // Detectar informacion de contacto
+        if (str_contains($lowerMessage, 'telefono') || str_contains($lowerMessage, 'whatsapp') ||
+            str_contains($lowerMessage, 'email') || str_contains($lowerMessage, 'contacto')) {
+            return "Excelente! He registrado la informacion de contacto. Cuando un cliente pregunte como contactarlos, podre darle estos datos. Hay algo mas que deba saber?";
+        }
+        
+        // Detectar precios
+        if (str_contains($lowerMessage, 'precio') || str_contains($lowerMessage, 'costo') ||
+            str_contains($lowerMessage, 'vale') || str_contains($lowerMessage, 'cobr')) {
+            return "Entendido! He tomado nota de la informacion de precios. Esto me ayudara a responder consultas sobre costos. Quieres agregar mas detalles sobre precios o promociones?";
+        }
+        
+        // Respuestas generales
+        $responses = [
+            "Entendido! He registrado esta informacion. Hay algo mas que deba saber?",
+            "Gracias por la informacion! Esto me ayudara a responder mejor a tus clientes.",
+            "Perfecto, he guardado eso. Quieres que practiquemos una conversacion de ejemplo?",
+            "Muy util! Podrias darme un ejemplo de como deberia responder en esa situacion?",
+            "Excelente! He tomado nota. Que mas te gustaria ensenarme?",
+        ];
         
         return $responses[array_rand($responses)];
     }
