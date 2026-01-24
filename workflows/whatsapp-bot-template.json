@@ -1,0 +1,397 @@
+{
+    "name": "WhatsApp Bot - {{COMPANY_SLUG}}",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "whatsapp-{{COMPANY_SLUG}}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [-480, 300],
+            "id": "webhook-whatsapp",
+            "name": "Evolution API Webhook",
+            "webhookId": "whatsapp-{{COMPANY_SLUG}}"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "instance-server-url",
+                            "name": "instance.server_url",
+                            "value": "={{ $json.body.server_url }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "instance-name",
+                            "name": "instance.name",
+                            "value": "={{ $json.body.instance }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "instance-apikey",
+                            "name": "instance.apikey",
+                            "value": "={{ $json.body.apikey }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-id",
+                            "name": "message.message_id",
+                            "value": "={{ $json.body.data.key.id }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-chat-id",
+                            "name": "message.chat_id",
+                            "value": "={{ $json.body.data.key?.remoteJid || $json.body.data.remoteJid || '' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-content-type",
+                            "name": "message.content_type",
+                            "value": "={{ $json.body.data.message.extendedTextMessage ? 'text': '' }}{{ $json.body.data.message.conversation ? 'text': '' }}{{ $json.body.data.message.audioMessage ? 'audio': '' }}{{ $json.body.data.message.imageMessage ? 'image': '' }}{{ $json.body.data.messageType }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-content",
+                            "name": "message.content",
+                            "value": "={{ $json.body.data.message.extendedTextMessage?.text || '' }}{{ $json.body.data.message.imageMessage?.caption || '' }}{{ $json.body.data.message.conversation || '' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-timestamp",
+                            "name": "message.timestamp",
+                            "value": "={{ $json.body.date_time.toDateTime().toISO() }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "user-name",
+                            "name": "user.name",
+                            "value": "={{ $json.body.data.pushName }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "collection-name",
+                            "name": "config.collection_name",
+                            "value": "company_{{COMPANY_SLUG}}_knowledge",
+                            "type": "string"
+                        },
+                        {
+                            "id": "qdrant-host",
+                            "name": "config.qdrant_host",
+                            "value": "https://qdrant-production-f4e7.up.railway.app",
+                            "type": "string"
+                        },
+                        {
+                            "id": "openai-api-key",
+                            "name": "config.openai_api_key",
+                            "value": "={{OPENAI_API_KEY}}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "assistant-name",
+                            "name": "config.assistant_name",
+                            "value": "{{ASSISTANT_NAME}}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "company-name",
+                            "name": "config.company_name",
+                            "value": "{{COMPANY_NAME}}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [-280, 300],
+            "id": "normalize-data",
+            "name": "Normalize Data"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-from-me",
+                            "leftValue": "={{ $json.body.data.key?.fromMe }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [-80, 300],
+            "id": "check-sender",
+            "name": "Is From User?"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Build context and call OpenAI\nconst input = $input.first().json;\nconst userMessage = input.message.content || '';\nconst userName = input.user.name || 'Usuario';\nconst assistantName = input.config.assistant_name || 'MIA';\nconst companyName = input.config.company_name || 'la empresa';\nconst openaiApiKey = input.config.openai_api_key;\nconst qdrantHost = input.config.qdrant_host;\nconst collectionName = input.config.collection_name;\n\n// System prompt for WhatsApp bot\nconst systemPrompt = `Eres ${assistantName}, el asistente virtual de ${companyName}.\n\nRespondes mensajes de WhatsApp de forma:\n- Breve y directa (máximo 2-3 oraciones)\n- Amigable y profesional\n- Sin usar markdown ni formato especial\n- Como si fuera una conversación natural\n\nSi no sabes algo, ofrece conectar con un humano.`;\n\nreturn {\n  json: {\n    ...input,\n    user_message: userMessage,\n    user_name: userName,\n    system_prompt: systemPrompt,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost,\n    collection_name: collectionName\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [140, 300],
+            "id": "prepare-context",
+            "name": "Prepare Context"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/embeddings",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.openai_api_key }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.user_message) }}\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [360, 300],
+            "id": "embed-query",
+            "name": "Embed User Query"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $('Prepare Context').item.json.qdrant_host }}/collections/{{ $('Prepare Context').item.json.collection_name }}/points/search",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"vector\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"limit\": 5,\n  \"with_payload\": true\n}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [580, 300],
+            "id": "search-qdrant",
+            "name": "Search Qdrant Context"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Build messages for OpenAI Chat\nconst prevData = $('Prepare Context').first().json;\nconst searchResults = $input.first().json.result || [];\n\n// Build context from Qdrant results\nlet contextText = '';\nif (searchResults && searchResults.length > 0) {\n  contextText = searchResults\n    .filter(r => r.score > 0.5)\n    .map(r => r.payload?.text || '')\n    .filter(t => t)\n    .join('\\n\\n');\n}\n\nif (!contextText) {\n  contextText = 'Sin contexto adicional disponible.';\n}\n\nconst messages = [\n  {\n    role: 'system',\n    content: prevData.system_prompt + '\\n\\nCONTEXTO DE LA EMPRESA:\\n' + contextText\n  },\n  {\n    role: 'user',\n    content: prevData.user_message\n  }\n];\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [800, 300],
+            "id": "build-messages",
+            "name": "Build Messages"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.openai_api_key }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": {{ JSON.stringify($json.messages) }},\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1020, 300],
+            "id": "call-openai",
+            "name": "Call OpenAI Chat"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract response and prepare for sending\nconst openaiResponse = $input.first().json;\nconst prevData = $('Prepare Context').first().json;\nconst aiResponse = openaiResponse.choices[0].message.content || '';\n\nreturn {\n  json: {\n    instance: prevData.instance,\n    message: prevData.message,\n    ai_response: aiResponse\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1240, 300],
+            "id": "process-response",
+            "name": "Process Response"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.instance.server_url }}/message/sendText/{{ $json.instance.name }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $json.instance.apikey }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.message.chat_id) }},\n  \"text\": {{ JSON.stringify($json.ai_response) }}\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1460, 300],
+            "id": "send-response",
+            "name": "Send WhatsApp Response"
+        }
+    ],
+    "connections": {
+        "Evolution API Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize Data": {
+            "main": [
+                [
+                    {
+                        "node": "Is From User?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is From User?": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Context",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Context": {
+            "main": [
+                [
+                    {
+                        "node": "Embed User Query",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Embed User Query": {
+            "main": [
+                [
+                    {
+                        "node": "Search Qdrant Context",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Search Qdrant Context": {
+            "main": [
+                [
+                    {
+                        "node": "Build Messages",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build Messages": {
+            "main": [
+                [
+                    {
+                        "node": "Call OpenAI Chat",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Call OpenAI Chat": {
+            "main": [
+                [
+                    {
+                        "node": "Process Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Response": {
+            "main": [
+                [
+                    {
+                        "node": "Send WhatsApp Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "America/Santiago",
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "tags": []
+}

@@ -1001,7 +1001,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         ]);
         
         // Cargar template
-        $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+        $templatePath = base_path('workflows/whatsapp-bot-template.json');
         if (!file_exists($templatePath)) {
             return response()->json(['error' => 'Template no encontrado: ' . $templatePath], 404);
         }
@@ -1016,6 +1016,26 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             // Fallback a workflow minimalista
             $templateWorkflow = getMinimalWorkflow($instanceName);
         }
+        
+        // Get company settings for placeholders
+        $company = $instance ? \App\Models\Company::where('slug', $companySlug)->first() : null;
+        $companyName = $company ? ($company->name ?? $instanceName) : $instanceName;
+        $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+        $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+        
+        // Replace placeholders in template
+        $templateJson = json_encode($templateWorkflow);
+        $replacements = [
+            '{{COMPANY_SLUG}}' => $companySlug ?? 'default',
+            '{{COMPANY_NAME}}' => $companyName,
+            '{{ASSISTANT_NAME}}' => $assistantName,
+            '{{OPENAI_API_KEY}}' => $openaiApiKey,
+            '{{INSTANCE_NAME}}' => $instanceName,
+        ];
+        foreach ($replacements as $placeholder => $value) {
+            $templateJson = str_replace($placeholder, $value, $templateJson);
+        }
+        $templateWorkflow = json_decode($templateJson, true);
         
         // Limpiar nodos
         $newWebhookId = \Illuminate\Support\Str::uuid()->toString();

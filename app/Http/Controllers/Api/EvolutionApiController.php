@@ -1339,7 +1339,7 @@ class EvolutionApiController extends Controller
             ]);
 
             // Intentar cargar template del archivo
-            $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+            $templatePath = base_path('workflows/whatsapp-bot-template.json');
             $templateWorkflow = null;
             
             if (file_exists($templatePath)) {
@@ -1365,6 +1365,27 @@ class EvolutionApiController extends Controller
                 Log::info('🔧 Usando workflow minimalista embebido');
                 $templateWorkflow = $this->getMinimalWorkflowTemplate($workflowName, $instance->instance_name);
             }
+
+            // Get company for settings
+            $company = \App\Models\Company::find($instance->company_id);
+            $companySlug = $company ? ($company->slug ?? 'company_' . $instance->company_id) : 'company_' . $instance->company_id;
+            $companyName = $company ? ($company->name ?? $workflowName) : $workflowName;
+            $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+            $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+            
+            // Replace placeholders in the template
+            $templateJson = json_encode($templateWorkflow);
+            $replacements = [
+                '{{COMPANY_SLUG}}' => $companySlug,
+                '{{COMPANY_NAME}}' => $companyName,
+                '{{ASSISTANT_NAME}}' => $assistantName,
+                '{{OPENAI_API_KEY}}' => $openaiApiKey,
+                '{{INSTANCE_NAME}}' => $instance->instance_name,
+            ];
+            foreach ($replacements as $placeholder => $value) {
+                $templateJson = str_replace($placeholder, $value, $templateJson);
+            }
+            $templateWorkflow = json_decode($templateJson, true);
 
             // Limpiar y personalizar nodos
             $cleanNodes = [];

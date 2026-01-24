@@ -35,7 +35,7 @@ class N8nWorkflowController extends Controller
 
         try {
             // 1. Cargar el template del workflow desde el archivo local
-            $templatePath = base_path('workflows/whatsapp-bot-updated.json');
+            $templatePath = base_path('workflows/whatsapp-bot-template.json');
             
             if (!file_exists($templatePath)) {
                 Log::error('Template de workflow no encontrado', ['path' => $templatePath]);
@@ -124,6 +124,30 @@ class N8nWorkflowController extends Controller
         // Remover ID para que n8n genere uno nuevo
         unset($workflow['id']);
         
+        // Get company for settings
+        $company = \App\Models\Company::find($companyId);
+        $companySlug = $company ? ($company->slug ?? 'company_' . $companyId) : 'company_' . $companyId;
+        $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+        $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+        
+        // Convert to JSON string for replacements
+        $workflowJson = json_encode($workflow);
+        
+        // Replace all placeholders
+        $replacements = [
+            '{{COMPANY_SLUG}}' => $companySlug,
+            '{{COMPANY_NAME}}' => $companyName,
+            '{{ASSISTANT_NAME}}' => $assistantName,
+            '{{OPENAI_API_KEY}}' => $openaiApiKey,
+            '{{INSTANCE_NAME}}' => $instanceName,
+        ];
+        
+        foreach ($replacements as $placeholder => $value) {
+            $workflowJson = str_replace($placeholder, $value, $workflowJson);
+        }
+        
+        $workflow = json_decode($workflowJson, true);
+        
         // Personalizar nombre
         $workflow['name'] = "WhatsApp Bot - {$companyName}";
         
@@ -136,23 +160,6 @@ class N8nWorkflowController extends Controller
                 $node['webhookId'] = $newWebhookId;
                 if (isset($node['parameters']['path'])) {
                     $node['parameters']['path'] = "whatsapp-{$instanceName}";
-                }
-            }
-
-            // Personalizar session key para memoria
-            if ($node['type'] === '@n8n/n8n-nodes-langchain.memoryBufferWindow') {
-                if (isset($node['parameters']['sessionKey'])) {
-                    $node['parameters']['sessionKey'] = "company_{$companyId}_" . '={{ $json.message.chat_id }}';
-                }
-            }
-
-            // Personalizar claves de Redis si se usan
-            if (in_array($node['type'], ['n8n-nodes-base.redis', 'n8n-nodes-base.redisTool'])) {
-                if (isset($node['parameters']['key'])) {
-                    $currentKey = $node['parameters']['key'];
-                    if (strpos($currentKey, 'company_') === false) {
-                        $node['parameters']['key'] = "company_{$companyId}_{$currentKey}";
-                    }
                 }
             }
         }
