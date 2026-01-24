@@ -368,7 +368,7 @@ export default function Conocimientos({
             <div className="absolute inset-4">
               {/* Orbit 1 back */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg)',
                   clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
@@ -376,7 +376,7 @@ export default function Conocimientos({
               />
               {/* Orbit 2 back */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg) rotateY(60deg)',
                   clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
@@ -384,7 +384,7 @@ export default function Conocimientos({
               />
               {/* Orbit 3 back */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg) rotateY(-60deg)',
                   clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
@@ -405,7 +405,7 @@ export default function Conocimientos({
             <div className="absolute inset-4 z-20">
               {/* Orbit 1 front */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg)',
                   clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
@@ -413,7 +413,7 @@ export default function Conocimientos({
               />
               {/* Orbit 2 front */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg) rotateY(60deg)',
                   clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
@@ -421,20 +421,84 @@ export default function Conocimientos({
               />
               {/* Orbit 3 front */}
               <div 
-                className="absolute inset-0 border-2 border-cyan-300 rounded-full opacity-60"
+                className="absolute inset-0 border-[3px] border-cyan-400 rounded-full opacity-50"
                 style={{ 
                   transform: 'rotateX(70deg) rotateY(-60deg)',
                   clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)'
                 }}
               />
             </div>
+
+            {/* Orbiting electrons (documents) */}
+            {documents.slice(0, 3).map((doc, index) => (
+              <div
+                key={doc.id}
+                className="absolute inset-4 z-30"
+                style={{
+                  animation: `orbit${index + 1} ${8 + index * 2}s linear infinite`,
+                  transform: index === 0 ? 'rotateX(70deg)' : 
+                             index === 1 ? 'rotateX(70deg) rotateY(60deg)' : 
+                             'rotateX(70deg) rotateY(-60deg)'
+                }}
+              >
+                <div 
+                  className="absolute w-4 h-4 bg-cyan-500 rounded-full shadow-lg"
+                  style={{
+                    top: '0%',
+                    left: '50%',
+                    marginLeft: '-8px',
+                    marginTop: '-8px',
+                    boxShadow: '0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4)'
+                  }}
+                  title={doc.filename}
+                />
+              </div>
+            ))}
+
+            {/* Uploading indicator */}
+            {uploadingFiles.length > 0 && (
+              <div
+                className="absolute inset-4 z-30"
+                style={{
+                  animation: 'orbit1 3s linear infinite',
+                  transform: 'rotateX(70deg)'
+                }}
+              >
+                <div 
+                  className="absolute w-4 h-4 bg-yellow-400 rounded-full animate-pulse"
+                  style={{
+                    top: '0%',
+                    left: '50%',
+                    marginLeft: '-8px',
+                    marginTop: '-8px',
+                    boxShadow: '0 0 10px rgba(250, 204, 21, 0.8)'
+                  }}
+                />
+              </div>
+            )}
           </div>
           
           {documents.length > 0 && (
             <div className="text-sm text-neutral-400">
-              {documents.length} documento{documents.length !== 1 ? 's' : ''} cargado{documents.length !== 1 ? 's' : ''}
+              {documents.length} documento{documents.length !== 1 ? 's' : ''} en órbita
             </div>
           )}
+
+          {/* Keyframes for orbit animations */}
+          <style>{`
+            @keyframes orbit1 {
+              from { transform: rotateX(70deg) rotateZ(0deg); }
+              to { transform: rotateX(70deg) rotateZ(360deg); }
+            }
+            @keyframes orbit2 {
+              from { transform: rotateX(70deg) rotateY(60deg) rotateZ(0deg); }
+              to { transform: rotateX(70deg) rotateY(60deg) rotateZ(360deg); }
+            }
+            @keyframes orbit3 {
+              from { transform: rotateX(70deg) rotateY(-60deg) rotateZ(0deg); }
+              to { transform: rotateX(70deg) rotateY(-60deg) rotateZ(360deg); }
+            }
+          `}</style>
         </div>
       </div>
 
