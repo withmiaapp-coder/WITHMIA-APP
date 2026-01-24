@@ -282,7 +282,7 @@
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "// Return response (saved path)\nconst prevData = $(\u0027Prepare Qdrant Point\u0027).first().json;\nreturn {\n  json: {\n    response: prevData.response,\n    saved: true,\n    message: \u0027Guardado en la base de conocimiento\u0027\n  }\n};"
+                                         "jsCode":  "// Return response (saved path)\nconst processData = $(\u0027Process Response\u0027).first().json;\nreturn {\n  json: {\n    response: processData.ai_response,\n    saved: true,\n    message: \u0027Guardado en la base de conocimiento\u0027\n  }\n};"
                                      },
                       "type":  "n8n-nodes-base.code",
                       "typeVersion":  2,
