@@ -689,7 +689,25 @@ export default function Conocimientos({
               qdrantPoints.map((point) => {
                 const isExpanded = expandedPointId === point.id;
                 const content = point.payload?.text || point.payload?.content || '';
-                const source = point.payload?.source || point.payload?.filename || 'Sin fuente';
+                
+                // Determinar la fuente de forma amigable
+                let source = 'Sin fuente';
+                const type = point.payload?.type || '';
+                const filename = point.payload?.filename || point.payload?.source || '';
+                const category = point.payload?.category || '';
+                
+                if (filename) {
+                  source = filename;
+                } else if (type === 'chat_training' || type === 'training' || category === 'training') {
+                  source = 'Entrenamiento de chat';
+                } else if (type === 'company_info' || type === 'onboarding' || category === 'company_onboarding') {
+                  source = 'Información de empresa';
+                } else if (type) {
+                  // Capitalizar el type como fallback
+                  source = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                } else if (category) {
+                  source = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                }
                 
                 return (
                   <div
