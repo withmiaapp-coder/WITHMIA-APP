@@ -357,166 +357,17 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Brain with Atom-style Orbiting Documents */}
-      <div className="flex justify-center py-6">
-        <div className="relative w-40 h-40">
-          
-          {/* Central Brain */}
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <Brain className="w-12 h-12 text-neutral-400" strokeWidth={1.25} />
-          </div>
-
-          {/* Orbit 1 - tilted 60deg on X axis */}
-          <div 
-            className="absolute inset-0"
-            style={{ 
-              transformStyle: 'preserve-3d',
-              perspective: '500px'
-            }}
-          >
-            <div 
-              className="absolute inset-0 border border-neutral-300 rounded-full"
-              style={{ transform: 'rotateX(60deg)' }}
-            />
-            {documents.length > 0 && (
-              <div
-                className="absolute inset-0"
-                style={{ 
-                  transform: 'rotateX(60deg)',
-                  animation: 'orbitSpin 8s linear infinite'
-                }}
-              >
-                <div 
-                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
-                  style={{ 
-                    left: '50%', 
-                    top: '0',
-                    marginLeft: '-5px',
-                    marginTop: '-5px',
-                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
-                  }}
-                  title={documents[0]?.filename}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Orbit 2 - tilted 60deg on X, 60deg on Y (diagonal) */}
-          {documents.length > 1 && (
-            <div 
-              className="absolute inset-0"
-              style={{ 
-                transformStyle: 'preserve-3d',
-                perspective: '500px'
-              }}
-            >
-              <div 
-                className="absolute inset-0 border border-neutral-300 rounded-full"
-                style={{ transform: 'rotateX(60deg) rotateY(60deg)' }}
-              />
-              <div
-                className="absolute inset-0"
-                style={{ 
-                  transform: 'rotateX(60deg) rotateY(60deg)',
-                  animation: 'orbitSpin 10s linear infinite reverse'
-                }}
-              >
-                <div 
-                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
-                  style={{ 
-                    left: '50%', 
-                    top: '0',
-                    marginLeft: '-5px',
-                    marginTop: '-5px',
-                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
-                  }}
-                  title={documents[1]?.filename}
-                />
-              </div>
+      {/* Brain Icon - Clean and Minimal */}
+      <div className="flex justify-center py-4">
+        <div className="flex flex-col items-center gap-2">
+          <Brain className="w-14 h-14 text-neutral-400" strokeWidth={1.25} />
+          {documents.length > 0 && (
+            <div className="text-sm text-neutral-400">
+              {documents.length} documento{documents.length !== 1 ? 's' : ''} cargado{documents.length !== 1 ? 's' : ''}
             </div>
           )}
-
-          {/* Orbit 3 - tilted 60deg on X, -60deg on Y (opposite diagonal) */}
-          {documents.length > 2 && (
-            <div 
-              className="absolute inset-0"
-              style={{ 
-                transformStyle: 'preserve-3d',
-                perspective: '500px'
-              }}
-            >
-              <div 
-                className="absolute inset-0 border border-neutral-300 rounded-full"
-                style={{ transform: 'rotateX(60deg) rotateY(-60deg)' }}
-              />
-              <div
-                className="absolute inset-0"
-                style={{ 
-                  transform: 'rotateX(60deg) rotateY(-60deg)',
-                  animation: 'orbitSpin 12s linear infinite'
-                }}
-              >
-                <div 
-                  className="absolute w-2.5 h-2.5 bg-neutral-400 rounded-full"
-                  style={{ 
-                    left: '50%', 
-                    top: '0',
-                    marginLeft: '-5px',
-                    marginTop: '-5px',
-                    boxShadow: '0 0 6px rgba(0,0,0,0.15)'
-                  }}
-                  title={documents[2]?.filename}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Uploading files indicator */}
-          {uploadingFiles.length > 0 && (
-            <div 
-              className="absolute inset-0"
-              style={{ 
-                transformStyle: 'preserve-3d',
-                perspective: '500px'
-              }}
-            >
-              <div
-                className="absolute inset-0"
-                style={{ 
-                  transform: 'rotateX(60deg)',
-                  animation: 'orbitSpin 4s linear infinite'
-                }}
-              >
-                <div 
-                  className="absolute w-3 h-3 bg-cyan-500 rounded-full animate-pulse"
-                  style={{ 
-                    left: '50%', 
-                    top: '0',
-                    marginLeft: '-6px',
-                    marginTop: '-6px',
-                    boxShadow: '0 0 10px rgba(6,182,212,0.6)'
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* CSS Keyframes */}
-          <style>{`
-            @keyframes orbitSpin {
-              from { transform: rotateX(60deg) rotateY(var(--rotateY, 0deg)) rotateZ(0deg); }
-              to { transform: rotateX(60deg) rotateY(var(--rotateY, 0deg)) rotateZ(360deg); }
-            }
-          `}</style>
         </div>
       </div>
-
-      {/* Document count indicator */}
-      {documents.length > 0 && (
-        <div className="text-center text-sm text-neutral-400">
-          {documents.length} documento{documents.length !== 1 ? 's' : ''} en órbita
-        </div>
-      )}
 
       {/* Two Column Layout - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
