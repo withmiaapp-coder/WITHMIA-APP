@@ -392,7 +392,7 @@ export default function Conocimientos({
             />
             
             {/* Brain Image - centered */}
-            <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="absolute inset-0 flex items-center justify-center">
               <img 
                 src="/images/brain organ-pana.svg" 
                 alt="Cerebro - Conocimientos" 
