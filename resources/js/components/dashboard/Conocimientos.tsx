@@ -475,7 +475,7 @@ export default function Conocimientos({
       {/* Brain Illustration with Orbits + Qdrant Points Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-2">
         {/* Left: Brain with Orbits */}
-        <div className="flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-cyan-50 rounded-xl p-6 border border-slate-200">
+        <div className="flex flex-col items-center justify-center">
           <div 
             className="relative w-72 h-72"
             style={{ perspective: '800px' }}
