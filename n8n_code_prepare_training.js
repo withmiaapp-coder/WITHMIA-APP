@@ -1,13 +1,23 @@
 // Extract training data from webhook
 const body = $input.first().json.body || $input.first().json;
 
-// NOTA: Ya no necesitamos fixMojibake porque Laravel envía UTF-8 correctamente
-// Solo pasamos los datos directamente
+// Función para asegurar que el texto es UTF-8 válido
+function ensureUTF8(str) {
+  if (!str) return '';
+  // Si el string ya es válido, devolverlo tal cual
+  try {
+    // Intentar decodificar como UTF-8
+    return decodeURIComponent(encodeURIComponent(str));
+  } catch (e) {
+    // Si falla, intentar limpiar caracteres inválidos
+    return str.replace(/[\uFFFD\uFFFE\uFFFF]/g, '');
+  }
+}
 
 const companySlug = body.company_slug || 'default';
-const assistantName = body.assistant_name || 'MIA';
-const companyName = body.company_name || 'la empresa';
-const userMessage = body.user_message || '';
+const assistantName = ensureUTF8(body.assistant_name) || 'MIA';
+const companyName = ensureUTF8(body.company_name) || 'la empresa';
+const userMessage = ensureUTF8(body.user_message) || '';
 const conversationHistory = body.conversation_history || body.context || [];
 const openaiApiKey = body.openai_api_key || '';
 const qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';
