@@ -342,9 +342,9 @@ export default function Conocimientos({
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4 mb-8">
+      <div className="flex items-center space-x-4">
         <div className="p-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl shadow-lg">
           <BookOpen className="w-6 h-6 text-white" />
         </div>
@@ -356,10 +356,10 @@ export default function Conocimientos({
         </div>
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Two Column Layout - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Document Upload Section */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg">
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg flex flex-col">
           <div className="flex items-center gap-3 mb-6">
             <Upload className="w-6 h-6 text-cyan-600" />
             <h2 className="text-xl font-bold text-neutral-800">
@@ -367,8 +367,8 @@ export default function Conocimientos({
             </h2>
           </div>
 
-          {/* Category Selector */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          {/* Category Selector - 4 columns for better layout */}
+          <div className="grid grid-cols-4 gap-2 mb-6">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;
               const isSelected = selectedCategory === cat.id;
@@ -462,7 +462,7 @@ export default function Conocimientos({
         </div>
 
         {/* Right Column - Documents List */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg h-fit">
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg flex flex-col">
           <div className="flex items-center gap-3 mb-6">
             <FileText className="w-6 h-6 text-cyan-600" />
             <h2 className="text-xl font-bold text-neutral-800">
@@ -481,49 +481,51 @@ export default function Conocimientos({
             </button>
           </div>
 
-          {loadingDocuments ? (
-            <div className="text-center py-8">
-              <Loader className="w-10 h-10 mx-auto text-cyan-500 animate-spin mb-3" />
-              <p className="text-gray-500 text-sm">Cargando documentos...</p>
-            </div>
-          ) : documents.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 text-sm">No hay documentos en esta categoría</p>
-              <p className="text-xs text-gray-400">
-                Sube tu primer documento para comenzar
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-6 h-6 text-cyan-600 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-800 text-sm truncate">{doc.filename}</p>
-                      <p className="text-xs text-gray-500">
-                        Subido:{" "}
-                        {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
-                        {doc.chunks_created &&
-                          ` • ${doc.chunks_created} fragmentos`}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => openDeleteModal(doc)}
-                    className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex-shrink-0"
-                    title="Eliminar"
+          <div className="flex-1 min-h-[300px]">
+            {loadingDocuments ? (
+              <div className="text-center py-8">
+                <Loader className="w-10 h-10 mx-auto text-cyan-500 animate-spin mb-3" />
+                <p className="text-gray-500 text-sm">Cargando documentos...</p>
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500 text-sm">No hay documentos en esta categoría</p>
+                <p className="text-xs text-gray-400">
+                  Sube tu primer documento para comenzar
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="w-6 h-6 text-cyan-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 text-sm truncate">{doc.filename}</p>
+                        <p className="text-xs text-gray-500">
+                          Subido:{" "}
+                          {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
+                          {doc.chunks_created &&
+                            ` • ${doc.chunks_created} fragmentos`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openDeleteModal(doc)}
+                      className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex-shrink-0"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
