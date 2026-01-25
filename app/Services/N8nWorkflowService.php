@@ -24,13 +24,14 @@ class N8nWorkflowService
     }
 
     /**
-     * Crear workflow de Chatwoot Bot para una empresa
+     * Crear workflow de WITHMIA Bot para una empresa
      * 100% aislado - sin valores hardcodeados
+     * Soporta todos los canales de Chatwoot (WhatsApp, Email, Web, etc)
      */
     public function createChatwootBotWorkflow(Company $company): ?array
     {
-        // Cargar template
-        $templatePath = base_path('workflows/chatwoot-bot-template-clean.json');
+        // Cargar template Único WITHMIA
+        $templatePath = base_path('workflows/withmia-bot-template.json');
         
         if (!file_exists($templatePath)) {
             Log::error('Chatwoot bot template not found', ['path' => $templatePath]);
@@ -81,10 +82,10 @@ class N8nWorkflowService
                 // Activar workflow
                 $this->activateWorkflow($workflowId);
 
-                // Guardar en la empresa
+                // Guardar en la empresa - UNIFICADO: usar withmia-{slug}
                 $company->update([
                     'n8n_whatsapp_workflow_id' => $workflowId,
-                    'n8n_whatsapp_webhook_path' => "chatwoot-{$company->slug}",
+                    'n8n_whatsapp_webhook_path' => "withmia-{$company->slug}",
                 ]);
 
                 Log::info('Chatwoot bot workflow created', [
@@ -166,10 +167,11 @@ class N8nWorkflowService
 
     /**
      * Obtener URL del webhook para una empresa
+     * UNIFICADO: usar withmia-{slug} para todos los canales de Chatwoot
      */
     public function getWebhookUrl(Company $company): string
     {
-        return "{$this->n8nUrl}/webhook/chatwoot-{$company->slug}";
+        return "{$this->n8nUrl}/webhook/withmia-{$company->slug}";
     }
 
     /**

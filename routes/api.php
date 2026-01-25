@@ -650,9 +650,9 @@ Route::get('/update-all-rag-workflows', function () {
 // Helper para workflow minimalista
 if (!function_exists('getMinimalWorkflow')) {
     function getMinimalWorkflow(string $instanceName): array {
-        $webhookPath = "whatsapp-{$instanceName}";
+        $webhookPath = "withmia-{$instanceName}";
         return [
-            'name' => "WhatsApp Bot - {$instanceName}",
+            'name' => "WITHMIA Bot - {$instanceName}",
             'nodes' => [
                 [
                     'parameters' => [
@@ -665,7 +665,7 @@ if (!function_exists('getMinimalWorkflow')) {
                     'typeVersion' => 2,
                     'position' => [0, 0],
                     'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'Webhook WhatsApp',
+                    'name' => 'Webhook WITHMIA',
                     'webhookId' => \Illuminate\Support\Str::uuid()->toString()
                 ]
             ],
@@ -994,8 +994,8 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             'collection_name' => $collectionName
         ]);
         
-        // Cargar template
-        $templatePath = base_path('workflows/whatsapp-bot-template.json');
+        // Cargar template WITHMIA
+        $templatePath = base_path('workflows/withmia-bot-template.json');
         if (!file_exists($templatePath)) {
             return response()->json(['error' => 'Template no encontrado: ' . $templatePath], 404);
         }
@@ -1069,7 +1069,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $cleanNode['webhookId'] = $newWebhookId;
                 if (isset($cleanNode['parameters']['path'])) {
-                    $cleanNode['parameters']['path'] = "whatsapp-{$instanceName}";
+                    $cleanNode['parameters']['path'] = "withmia-{$instanceName}";
                 }
             }
             
@@ -1077,7 +1077,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         }
         
         $cleanWorkflow = [
-            'name' => "WhatsApp Bot - {$instanceName}",
+            'name' => "WITHMIA Bot - {$instanceName}",
             'nodes' => $cleanNodes,
             'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
             'settings' => ['executionOrder' => 'v1'],

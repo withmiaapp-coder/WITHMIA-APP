@@ -35,7 +35,7 @@ class N8nWorkflowController extends Controller
 
         try {
             // 1. Cargar el template del workflow desde el archivo local
-            $templatePath = base_path('workflows/whatsapp-bot-template.json');
+            $templatePath = base_path('workflows/withmia-bot-template.json');
             
             if (!file_exists($templatePath)) {
                 Log::error('Template de workflow no encontrado', ['path' => $templatePath]);
@@ -167,7 +167,7 @@ class N8nWorkflowController extends Controller
         $workflow = json_decode($workflowJson, true);
         
         // Personalizar nombre
-        $workflow['name'] = "WhatsApp Bot - {$companyName}";
+        $workflow['name'] = "WITHMIA Bot - {$companyName}";
         
         // Generar nuevo webhook ID
         $newWebhookId = Str::uuid()->toString();
@@ -177,7 +177,7 @@ class N8nWorkflowController extends Controller
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $node['webhookId'] = $newWebhookId;
                 if (isset($node['parameters']['path'])) {
-                    $node['parameters']['path'] = "whatsapp-{$instanceName}";
+                    $node['parameters']['path'] = "withmia-{$instanceName}";
                 }
             }
         }

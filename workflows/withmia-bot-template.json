@@ -1,18 +1,18 @@
 {
-    "name": "WhatsApp Bot - {{COMPANY_SLUG}}",
+    "name": "WITHMIA Bot - {{COMPANY_SLUG}}",
     "nodes": [
         {
             "parameters": {
                 "httpMethod": "POST",
-                "path": "chatwoot-{{COMPANY_SLUG}}",
+                "path": "withmia-{{COMPANY_SLUG}}",
                 "options": {}
             },
             "type": "n8n-nodes-base.webhook",
             "typeVersion": 2,
             "position": [-480, 300],
-            "id": "webhook-chatwoot",
-            "name": "Chatwoot Webhook",
-            "webhookId": "chatwoot-{{COMPANY_SLUG}}"
+            "id": "webhook-withmia",
+            "name": "WITHMIA Webhook",
+            "webhookId": "withmia-{{COMPANY_SLUG}}"
         },
         {
             "parameters": {
@@ -353,7 +353,7 @@
         }
     ],
     "connections": {
-        "Chatwoot Webhook": {
+        "WITHMIA Webhook": {
             "main": [
                 [
                     {

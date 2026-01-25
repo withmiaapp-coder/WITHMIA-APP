@@ -1339,7 +1339,7 @@ class EvolutionApiController extends Controller
             ]);
 
             // Intentar cargar template del archivo
-            $templatePath = base_path('workflows/whatsapp-bot-template.json');
+            $templatePath = base_path('workflows/withmia-bot-template.json');
             $templateWorkflow = null;
             
             if (file_exists($templatePath)) {
@@ -1435,7 +1435,7 @@ class EvolutionApiController extends Controller
                 if ($node['type'] === 'n8n-nodes-base.webhook') {
                     $cleanNode['webhookId'] = $newWebhookId;
                     if (isset($cleanNode['parameters']['path'])) {
-                        $cleanNode['parameters']['path'] = "whatsapp-{$instance->instance_name}";
+                        $cleanNode['parameters']['path'] = "withmia-{$instance->instance_name}";
                     }
                 }
                 
@@ -1444,7 +1444,7 @@ class EvolutionApiController extends Controller
 
             // Crear workflow limpio
             $cleanWorkflow = [
-                'name' => "WhatsApp Bot - {$workflowName}",
+                'name' => "WITHMIA Bot - {$workflowName}",
                 'nodes' => $cleanNodes,
                 'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
                 'settings' => [
@@ -1586,10 +1586,10 @@ class EvolutionApiController extends Controller
      */
     private function getMinimalWorkflowTemplate(string $workflowName, string $instanceName): array
     {
-        $webhookPath = "whatsapp-{$instanceName}";
+        $webhookPath = "withmia-{$instanceName}";
         
         return [
-            'name' => "WhatsApp Bot - {$workflowName}",
+            'name' => "WITHMIA Bot - {$workflowName}",
             'nodes' => [
                 [
                     'parameters' => [
@@ -1602,7 +1602,7 @@ class EvolutionApiController extends Controller
                     'typeVersion' => 2,
                     'position' => [0, 0],
                     'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'Webhook WhatsApp',
+                    'name' => 'Webhook WITHMIA',
                     'webhookId' => \Illuminate\Support\Str::uuid()->toString()
                 ],
                 [

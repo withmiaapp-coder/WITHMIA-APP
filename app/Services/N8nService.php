@@ -252,11 +252,12 @@ class N8nService
 
     /**
      * Obtener URL del webhook de un workflow
+     * UNIFICADO: usar withmia-{instance} para todos los canales
      */
     public function getWebhookUrl(string $instanceName): string
     {
         $publicUrl = env('N8N_PUBLIC_URL', env('N8N_URL', 'https://n8n-production-00dd.up.railway.app'));
-        return "{$publicUrl}/webhook/whatsapp-{$instanceName}";
+        return "{$publicUrl}/webhook/withmia-{$instanceName}";
     }
 
     /**
