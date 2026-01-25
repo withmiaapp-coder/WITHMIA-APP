@@ -1023,6 +1023,18 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
         $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
         
+        // Get n8n credential IDs
+        $credentialIds = $n8nService->getCredentialIds();
+        $openaiCredentialId = $credentialIds['openai']['id'] ?? '';
+        $openaiCredentialName = $credentialIds['openai']['name'] ?? 'OpenAI Account';
+        $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
+        $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
+        
+        Log::info('Credentials obtenidas', [
+            'openai_id' => $openaiCredentialId,
+            'qdrant_id' => $qdrantCredentialId
+        ]);
+        
         // Replace placeholders in template
         $templateJson = json_encode($templateWorkflow);
         $appUrl = env('APP_URL', 'https://app.withmia.com');
@@ -1033,6 +1045,10 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             '{{OPENAI_API_KEY}}' => $openaiApiKey,
             '{{INSTANCE_NAME}}' => $instanceName,
             '{{APP_URL}}' => $appUrl,
+            '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
+            '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
+            '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
+            '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
         ];
         foreach ($replacements as $placeholder => $value) {
             $templateJson = str_replace($placeholder, $value, $templateJson);
@@ -1061,24 +1077,6 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 if (isset($cleanNode['parameters']['path'])) {
                     $cleanNode['parameters']['path'] = "whatsapp-{$instanceName}";
                 }
-            }
-            
-            // ?? Configurar Qdrant con la colecci�n correcta de la empresa
-            if ($node['type'] === '@n8n/n8n-nodes-langchain.vectorStoreQdrant') {
-                $cleanNode['parameters']['qdrantCollection'] = [
-                    '__rl' => true,
-                    'value' => $collectionName,
-                    'mode' => 'id'
-                ];
-                Log::info("Configurando Qdrant con colecci�n: {$collectionName}");
-            }
-            
-            // ?? Simplificar prompt del AI Agent para evitar error 500 de n8n
-            if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
-                $cleanNode['parameters']['text'] = "Responde como asistente de {$instanceName}";
-                $cleanNode['parameters']['options'] = [
-                    'systemMessage' => "Eres MIA, asistente digital. Responde de forma profesional y amigable."
-                ];
             }
             
             $cleanNodes[] = $cleanNode;

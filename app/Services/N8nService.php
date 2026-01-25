@@ -383,4 +383,75 @@ class N8nService
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Obtener todas las credentials de n8n
+     */
+    public function getCredentials(): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Accept' => 'application/json',
+            ])->get("{$this->baseUrl}/api/v1/credentials");
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->json('data', [])
+                ];
+            }
+
+            Log::error('n8n getCredentials error', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            return ['success' => false, 'error' => 'Error al obtener credentials'];
+        } catch (\Exception $e) {
+            Log::error('n8n getCredentials exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Buscar credential por tipo (ej: openAiApi, qdrantApi)
+     */
+    public function findCredentialByType(string $type): ?array
+    {
+        $result = $this->getCredentials();
+        
+        if (!$result['success']) {
+            return null;
+        }
+
+        foreach ($result['data'] as $credential) {
+            if (($credential['type'] ?? '') === $type) {
+                return $credential;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Obtener IDs de credentials para el template del workflow
+     * Retorna un array con los IDs de OpenAI y Qdrant
+     */
+    public function getCredentialIds(): array
+    {
+        $openAiCredential = $this->findCredentialByType('openAiApi');
+        $qdrantCredential = $this->findCredentialByType('qdrantApi');
+
+        return [
+            'openai' => [
+                'id' => $openAiCredential['id'] ?? null,
+                'name' => $openAiCredential['name'] ?? 'OpenAI Account'
+            ],
+            'qdrant' => [
+                'id' => $qdrantCredential['id'] ?? null,
+                'name' => $qdrantCredential['name'] ?? 'Qdrant'
+            ]
+        ];
+    }
 }

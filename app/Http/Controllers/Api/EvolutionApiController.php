@@ -1374,6 +1374,18 @@ class EvolutionApiController extends Controller
             $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
             $appUrl = env('APP_URL', 'https://app.withmia.com');
             
+            // Get n8n credential IDs
+            $credentialIds = $this->n8nService->getCredentialIds();
+            $openaiCredentialId = $credentialIds['openai']['id'] ?? '';
+            $openaiCredentialName = $credentialIds['openai']['name'] ?? 'OpenAI Account';
+            $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
+            $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
+            
+            Log::info('Credentials obtenidas para workflow Evolution', [
+                'openai_id' => $openaiCredentialId,
+                'qdrant_id' => $qdrantCredentialId
+            ]);
+            
             // Replace placeholders in the template
             $templateJson = json_encode($templateWorkflow);
             $replacements = [
@@ -1383,6 +1395,10 @@ class EvolutionApiController extends Controller
                 '{{OPENAI_API_KEY}}' => $openaiApiKey,
                 '{{INSTANCE_NAME}}' => $instance->instance_name,
                 '{{APP_URL}}' => $appUrl,
+                '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
+                '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
+                '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
+                '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
             ];
             foreach ($replacements as $placeholder => $value) {
                 $templateJson = str_replace($placeholder, $value, $templateJson);
@@ -1420,21 +1436,6 @@ class EvolutionApiController extends Controller
                     $cleanNode['webhookId'] = $newWebhookId;
                     if (isset($cleanNode['parameters']['path'])) {
                         $cleanNode['parameters']['path'] = "whatsapp-{$instance->instance_name}";
-                    }
-                }
-                
-                // Simplificar prompt del AI Agent para evitar error 500
-                if ($node['type'] === '@n8n/n8n-nodes-langchain.agent') {
-                    $cleanNode['parameters']['text'] = "Responde como asistente de {$workflowName}";
-                    $cleanNode['parameters']['options'] = [
-                        'systemMessage' => "Eres MIA, asistente digital de {$workflowName}. Responde de forma profesional y amigable."
-                    ];
-                }
-                
-                // Configurar memoria por empresa
-                if ($node['type'] === '@n8n/n8n-nodes-langchain.memoryBufferWindow') {
-                    if (isset($cleanNode['parameters']['sessionKey'])) {
-                        $cleanNode['parameters']['sessionKey'] = "company_{$instance->company_id}_" . '={{ $json.message.chat_id }}';
                     }
                 }
                 

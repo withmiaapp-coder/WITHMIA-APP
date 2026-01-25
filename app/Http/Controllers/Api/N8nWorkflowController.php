@@ -131,6 +131,18 @@ class N8nWorkflowController extends Controller
         $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
         $appUrl = env('APP_URL', 'https://app.withmia.com');
         
+        // Get n8n credential IDs
+        $credentialIds = $this->n8nService->getCredentialIds();
+        $openaiCredentialId = $credentialIds['openai']['id'] ?? '';
+        $openaiCredentialName = $credentialIds['openai']['name'] ?? 'OpenAI Account';
+        $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
+        $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
+        
+        Log::info('Credentials obtenidas para workflow', [
+            'openai_id' => $openaiCredentialId,
+            'qdrant_id' => $qdrantCredentialId
+        ]);
+        
         // Convert to JSON string for replacements
         $workflowJson = json_encode($workflow);
         
@@ -142,6 +154,10 @@ class N8nWorkflowController extends Controller
             '{{OPENAI_API_KEY}}' => $openaiApiKey,
             '{{INSTANCE_NAME}}' => $instanceName,
             '{{APP_URL}}' => $appUrl,
+            '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
+            '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
+            '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
+            '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
         ];
         
         foreach ($replacements as $placeholder => $value) {
