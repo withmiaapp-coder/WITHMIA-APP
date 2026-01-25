@@ -5,7 +5,7 @@
 
 // Configuración
 $n8nUrl = 'https://n8n-production-00dd.up.railway.app';
-$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZjIxOTY0YS1lN2M5LTQwM2EtODQxZC03NTNhZjJmOTY5MmMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4OTI3OTIwLCJleHAiOjE3NzE0NzAwMDB9.aievcAOvNUpxTrwK3ZERPVEx5EOO5AtF4MKqG6xcvus';
+$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzZjOTE2Ny0zZTA4LTRkN2QtYTY5ZC1iOTUxZjY0MWJiZGYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5Mjk3OTc3fQ.aCNw5pXWbnyy_JDk24TsYN69T61acaEqoELhrtNtlI0';
 $companySlug = 'withmia-zly7qn'; // Tu company slug
 
 echo "=== CREANDO WORKFLOW DE TRAINING PARA {$companySlug} ===\n\n";

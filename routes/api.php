@@ -3357,3 +3357,99 @@ Route::get('/n8n/company-config/{companySlug}', function ($companySlug) {
         ], 500);
     }
 });
+
+// ============== N8N: Obtener configuración de empresa por nombre de inbox (Chatwoot) ==============
+Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
+    try {
+        // El inbox name en Evolution/Chatwoot tiene formato "WhatsApp {instance_name}"
+        // Ejemplo: "WhatsApp withmia-nfudrg"
+        $instanceName = str_replace('WhatsApp ', '', $inboxName);
+        
+        // Buscar la empresa por instance_name en evolution_instances
+        $company = \App\Models\Company::whereJsonContains('evolution_instances', [['name' => $instanceName]])->first();
+        
+        // Si no encuentra, intenta buscar por slug similar
+        if (!$company) {
+            $company = \App\Models\Company::where('slug', 'like', '%' . str_replace('-', '%', $instanceName) . '%')->first();
+        }
+        
+        // Si aún no encuentra, intenta con el slug directo
+        if (!$company) {
+            $company = \App\Models\Company::where('slug', $instanceName)->first();
+        }
+        
+        // SIN FALLBACKS - si no hay empresa, error
+        if (!$company) {
+            \Log::warning('Company not found for inbox', ['inbox' => $inboxName, 'instance' => $instanceName]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Empresa no encontrada para inbox: ' . $inboxName
+            ], 404);
+        }
+        
+        // Obtener datos de la instancia de Evolution
+        $evolutionInstances = $company->evolution_instances ?? [];
+        $evolutionInstance = collect($evolutionInstances)->first(function ($inst) use ($instanceName) {
+            return ($inst['name'] ?? '') === $instanceName;
+        }) ?? [];
+        
+        // Validar que tenga Evolution configurado
+        $evolutionApiUrl = $company->settings['evolution_api_url'] ?? null;
+        $evolutionApiKey = $company->settings['evolution_api_key'] ?? null;
+        
+        if (!$evolutionApiUrl || !$evolutionApiKey) {
+            \Log::warning('Company missing Evolution config', ['company' => $company->slug]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Empresa ' . $company->slug . ' no tiene Evolution API configurado'
+            ], 400);
+        }
+        
+        // Respuesta 100% dinámica sin fallbacks
+        return response()->json([
+            'success' => true,
+            // Datos de empresa
+            'company_slug' => $company->slug,
+            'company_name' => $company->name,
+            'assistant_name' => $company->assistant_name,
+            'ai_prompt' => $company->settings['ai_prompt'] ?? null,
+            // Qdrant
+            'qdrant_collection' => 'company_' . $company->slug . '_knowledge',
+            // Evolution API - SIN FALLBACKS
+            'evolution_instance' => $instanceName,
+            'evolution_api_url' => $evolutionApiUrl,
+            'evolution_api_key' => $evolutionApiKey,
+            // Chatwoot (si aplica)
+            'chatwoot_api_token' => $company->settings['chatwoot_api_token'] ?? null,
+            'chatwoot_account_id' => $company->settings['chatwoot_account_id'] ?? null
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error getting company config by inbox: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ============== N8N: Notificar respuesta a Laravel (para Reverb/WebSocket) ==============
+Route::post('/n8n/notify-response', function (Request $request) {
+    try {
+        $data = $request->all();
+        
+        // Broadcast via Reverb para actualizar UI en tiempo real
+        event(new \App\Events\WhatsAppMessageReceived(
+            $data['company_slug'] ?? '',
+            $data['conversation_id'] ?? 0,
+            $data['message'] ?? '',
+            $data['phone'] ?? '',
+            'outgoing'
+        ));
+        
+        return response()->json(['success' => true]);
+    } catch (\Exception $e) {
+        \Log::error('Error notifying response: ' . $e->getMessage());
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+

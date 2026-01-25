@@ -5,7 +5,7 @@
  */
 
 $n8nUrl = 'https://n8n-production-00dd.up.railway.app';
-$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzZjOTE2Ny0zZTA4LTRkN2QtYTY5ZC1iOTUxZjY0MWJiZGYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5MTk4NTcyLCJleHAiOjE3NzE3MjkyMDB9.gK_J04oPUuFqyKmYK322DyqRLxjkicYL-3B7rquWdco';
+$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzZjOTE2Ny0zZTA4LTRkN2QtYTY5ZC1iOTUxZjY0MWJiZGYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5Mjk3OTc3fQ.aCNw5pXWbnyy_JDk24TsYN69T61acaEqoELhrtNtlI0';
 $workflowId = 'YPhNu14uIWJ87ZaP';
 
 // New improved chunking code

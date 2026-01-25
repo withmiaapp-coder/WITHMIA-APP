@@ -4,7 +4,7 @@
  */
 
 $n8nUrl = 'https://n8n-production-00dd.up.railway.app';
-$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzZjOTE2Ny0zZTA4LTRkN2QtYTY5ZC1iOTUxZjY0MWJiZGYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5MTkzNTg2LCJleHAiOjE3NzE3MjkyMDB9.7qI26BCExGUZqaRLJ5nWn0LpLXaunjOlHWkUIIXKBnY';
+$apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNzZjOTE2Ny0zZTA4LTRkN2QtYTY5ZC1iOTUxZjY0MWJiZGYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY5Mjk3OTc3fQ.aCNw5pXWbnyy_JDk24TsYN69T61acaEqoELhrtNtlI0';
 
 $ch = curl_init("$n8nUrl/api/v1/workflows");
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
