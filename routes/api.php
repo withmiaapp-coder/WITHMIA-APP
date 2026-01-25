@@ -3528,19 +3528,23 @@ Route::get('/n8n/company-config/{companySlug}', function ($companySlug) {
 // ============== N8N: Obtener configuración de empresa por nombre de inbox (Chatwoot) ==============
 Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
     try {
-        // El inbox name en Evolution/Chatwoot tiene formato "WhatsApp {instance_name}"
-        // Ejemplo: "WhatsApp withmia-nfudrg"
-        $instanceName = str_replace('WhatsApp ', '', $inboxName);
+        // El inbox name puede tener formatos:
+        // - "WhatsApp withmia-nfudrg" (prefijo WhatsApp)
+        // - "withmia-nfudrg" (solo instance name)
+        $instanceName = preg_replace('/^WhatsApp\s+/i', '', $inboxName);
         
-        // Buscar la empresa por instance_name en evolution_instances
-        $company = \App\Models\Company::whereJsonContains('evolution_instances', [['name' => $instanceName]])->first();
+        // Buscar en whatsapp_instances por instance_name
+        $whatsappInstance = \App\Models\WhatsappInstance::where('instance_name', $instanceName)->first();
         
-        // Si no encuentra, intenta buscar por slug similar
-        if (!$company) {
-            $company = \App\Models\Company::where('slug', 'like', '%' . str_replace('-', '%', $instanceName) . '%')->first();
+        // Si no encuentra, intentar buscar por coincidencia parcial
+        if (!$whatsappInstance) {
+            $whatsappInstance = \App\Models\WhatsappInstance::where('instance_name', 'like', '%' . $instanceName . '%')->first();
         }
         
-        // Si aún no encuentra, intenta con el slug directo
+        // Obtener la company asociada
+        $company = $whatsappInstance ? $whatsappInstance->company : null;
+        
+        // Si no hay instancia, intentar buscar company por slug
         if (!$company) {
             $company = \App\Models\Company::where('slug', $instanceName)->first();
         }
@@ -3554,17 +3558,20 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
             ], 404);
         }
         
-        // Obtener datos de la instancia de Evolution
-        $evolutionInstances = $company->evolution_instances ?? [];
-        $evolutionInstance = collect($evolutionInstances)->first(function ($inst) use ($instanceName) {
-            return ($inst['name'] ?? '') === $instanceName;
-        }) ?? [];
+        // Obtener la instancia activa de la empresa si no la tenemos
+        if (!$whatsappInstance) {
+            $whatsappInstance = \App\Models\WhatsappInstance::where('company_id', $company->id)
+                ->where('is_active', true)
+                ->first();
+        }
+        
+        // Obtener Evolution API URL y Key de la instancia o settings de company
+        $evolutionApiUrl = $whatsappInstance?->instance_url ?? $company->settings['evolution_api_url'] ?? config('services.evolution.base_url');
+        $evolutionApiKey = $whatsappInstance?->api_key ?? $company->settings['evolution_api_key'] ?? null;
+        $evolutionInstanceName = $whatsappInstance?->instance_name ?? $instanceName;
         
         // Validar que tenga Evolution configurado
-        $evolutionApiUrl = $company->settings['evolution_api_url'] ?? null;
-        $evolutionApiKey = $company->settings['evolution_api_key'] ?? null;
-        
-        if (!$evolutionApiUrl || !$evolutionApiKey) {
+        if (!$evolutionApiUrl) {
             \Log::warning('Company missing Evolution config', ['company' => $company->slug]);
             return response()->json([
                 'success' => false,
@@ -3572,26 +3579,29 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
             ], 400);
         }
         
-        // Respuesta 100% dinámica sin fallbacks
+        // Respuesta 100% dinámica
         return response()->json([
             'success' => true,
             // Datos de empresa
             'company_slug' => $company->slug,
             'company_name' => $company->name,
-            'assistant_name' => $company->assistant_name,
+            'assistant_name' => $company->assistant_name ?? 'MIA',
             'ai_prompt' => $company->settings['ai_prompt'] ?? null,
             // Qdrant
-            'qdrant_collection' => 'company_' . $company->slug . '_knowledge',
-            // Evolution API - SIN FALLBACKS
-            'evolution_instance' => $instanceName,
-            'evolution_api_url' => $evolutionApiUrl,
+            'collection_name' => 'company_' . $company->slug . '_knowledge',
+            // Evolution API
+            'evolution_instance_name' => $evolutionInstanceName,
+            'evolution_server_url' => $evolutionApiUrl,
             'evolution_api_key' => $evolutionApiKey,
-            // Chatwoot (si aplica)
+            // Chatwoot
             'chatwoot_api_token' => $company->settings['chatwoot_api_token'] ?? null,
             'chatwoot_account_id' => $company->settings['chatwoot_account_id'] ?? null
         ]);
     } catch (\Exception $e) {
-        \Log::error('Error getting company config by inbox: ' . $e->getMessage());
+        \Log::error('Error getting company config by inbox: ' . $e->getMessage(), [
+            'inbox' => $inboxName,
+            'trace' => $e->getTraceAsString()
+        ]);
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
