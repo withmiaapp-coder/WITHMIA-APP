@@ -433,8 +433,25 @@ class KnowledgeController extends Controller
             $companySlug = $user->company_slug ?? 'default';
             $assistantName = $company->assistant_name ?? 'WITHMIA';
             
-            // 🧠 INTELIGENCIA: Detectar duplicados antes de guardar
-            $deduplicationResult = $this->intelligentTrainingStorage($userMessage, $company, $companySlug);
+            // 🔍 DETECTAR SI ES PREGUNTA (simulación de cliente) vs INFORMACIÓN (entrenamiento)
+            $isQuestion = $this->detectIfQuestion($userMessage);
+            
+            // Si es una pregunta, NO guardar en Qdrant - solo responder con el conocimiento existente
+            $deduplicationResult = null;
+            if (!$isQuestion) {
+                // 🧠 INTELIGENCIA: Detectar duplicados antes de guardar (solo si NO es pregunta)
+                $deduplicationResult = $this->intelligentTrainingStorage($userMessage, $company, $companySlug);
+            } else {
+                Log::info('TrainingChat - Detected as QUESTION, skipping storage', [
+                    'message' => substr($userMessage, 0, 100)
+                ]);
+                $deduplicationResult = [
+                    'action' => 'skip',
+                    'point_id' => null,
+                    'similarity' => 0,
+                    'message' => 'Pregunta detectada - solo responder, no guardar',
+                ];
+            }
             
             // Obtener configuración de n8n - usar webhook personalizado de la empresa si existe
             $settings = $company->settings ?? [];
@@ -657,6 +674,109 @@ class KnowledgeController extends Controller
                 'message' => 'Nueva información agregada (deduplicación no disponible)',
             ];
         }
+    }
+
+    /**
+     * 🔍 DETECTAR SI ES PREGUNTA (simulación de cliente) vs INFORMACIÓN (entrenamiento)
+     * 
+     * Las preguntas son consultas que el usuario hace para probar el bot, 
+     * NO deben guardarse como conocimiento.
+     * 
+     * La información de entrenamiento son datos que el usuario quiere que el bot aprenda.
+     * 
+     * @param string $message Mensaje del usuario
+     * @return bool True si es pregunta, False si es información para entrenar
+     */
+    private function detectIfQuestion($message)
+    {
+        $lowerMessage = mb_strtolower(trim($message), 'UTF-8');
+        
+        // 1. Detectar signos de interrogación (al inicio o al final)
+        if (preg_match('/^¿|^\?|\?$/', $message)) {
+            Log::info('detectIfQuestion: Detected by interrogation marks');
+            return true;
+        }
+        
+        // 2. Palabras interrogativas al inicio del mensaje
+        $questionStarters = [
+            'qué', 'que', 'cuál', 'cual', 'cuáles', 'cuales',
+            'cómo', 'como', 'cuándo', 'cuando', 'cuánto', 'cuanto',
+            'cuánta', 'cuanta', 'cuántos', 'cuantos', 'cuántas', 'cuantas',
+            'dónde', 'donde', 'quién', 'quien', 'quiénes', 'quienes',
+            'por qué', 'por que', 'para qué', 'para que',
+            'tienen', 'tienes', 'hay', 'existe', 'existen',
+            'puedo', 'puedes', 'pueden', 'podría', 'podrían',
+            'es posible', 'se puede', 'me pueden', 'me puedes',
+        ];
+        
+        foreach ($questionStarters as $starter) {
+            if (str_starts_with($lowerMessage, $starter . ' ') || $lowerMessage === $starter) {
+                Log::info('detectIfQuestion: Detected by question starter', ['starter' => $starter]);
+                return true;
+            }
+        }
+        
+        // 3. Patrones de preguntas comunes
+        $questionPatterns = [
+            '/^¿/',                                    // Empieza con ¿
+            '/\?$/',                                   // Termina con ?
+            '/^(qué|cuál|cómo|cuándo|dónde|quién|por qué|para qué)\s/iu',  // Interrogativas
+            '/^(tienen|tienes|hay|existe|puedo|pueden|es posible)\s/iu',   // Verbos de consulta
+            '/^(me (pueden|puedes|podrías|podría) (decir|explicar|ayudar))/iu',
+            '/^(quisiera saber|necesito saber|me gustaría saber)/iu',
+            '/^(a qué hora|cuál es el horario|qué horario)/iu',
+            '/horario.*(tienen|tienes|es|son)\s*\??$/iu',  // "¿horario de atención tienen?"
+            '/precio.*(tienen|tienes|es|son|cuesta)\s*\??$/iu',
+            '/^(está|están|estás) (abierto|disponible|cerrado)/iu',
+        ];
+        
+        foreach ($questionPatterns as $pattern) {
+            if (preg_match($pattern, $message)) {
+                Log::info('detectIfQuestion: Detected by pattern', ['pattern' => $pattern]);
+                return true;
+            }
+        }
+        
+        // 4. Palabras clave de información/entrenamiento (NO es pregunta si tiene estas)
+        $trainingKeywords = [
+            'nuestro horario es', 'nuestros horarios son', 'el horario es', 'los horarios son',
+            'abrimos', 'cerramos', 'trabajamos', 'atendemos',
+            'nuestro precio', 'nuestros precios', 'el precio es', 'los precios son', 'cuesta', 'vale',
+            'vendemos', 'ofrecemos', 'tenemos disponible',
+            'nuestra dirección', 'nuestra direccion', 'estamos ubicados', 'nos ubicamos',
+            'nuestro teléfono', 'nuestro telefono', 'llámanos', 'llamanos', 'contáctanos',
+            'nuestro email', 'nuestro correo', 'escríbenos', 'escribenos',
+            'recuerda que', 'importante:', 'nota:', 'información:',
+            'cuando pregunten', 'si alguien pregunta', 'si te preguntan',
+            'responde que', 'debes responder', 'responde así', 'la respuesta es',
+            'ejemplo:', 'por ejemplo',
+        ];
+        
+        foreach ($trainingKeywords as $keyword) {
+            if (stripos($lowerMessage, $keyword) !== false) {
+                Log::info('detectIfQuestion: NOT a question - training keyword found', ['keyword' => $keyword]);
+                return false; // Es información de entrenamiento, NO pregunta
+            }
+        }
+        
+        // 5. Si el mensaje es muy corto y parece consulta simple
+        $wordCount = str_word_count($lowerMessage);
+        if ($wordCount <= 5 && (
+            stripos($lowerMessage, 'horario') !== false ||
+            stripos($lowerMessage, 'precio') !== false ||
+            stripos($lowerMessage, 'direccion') !== false ||
+            stripos($lowerMessage, 'dirección') !== false ||
+            stripos($lowerMessage, 'telefono') !== false ||
+            stripos($lowerMessage, 'teléfono') !== false ||
+            stripos($lowerMessage, 'abierto') !== false ||
+            stripos($lowerMessage, 'cerrado') !== false
+        )) {
+            Log::info('detectIfQuestion: Short message looks like question');
+            return true;
+        }
+        
+        // Por defecto, asumir que es información de entrenamiento
+        return false;
     }
 
     /**
