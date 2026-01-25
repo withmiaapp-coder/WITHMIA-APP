@@ -354,14 +354,16 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
             <div className="flex flex-col items-center w-full">
               <div className="relative">
                 {user.logo_url && !logoError ? (
-                  <img 
-                    src={user.logo_url} 
-                    alt="" 
-                    className="w-12 h-12 rounded-lg object-contain shadow-md hover:scale-105 transition-transform"
-                    onError={() => setLogoError(true)}
-                  />
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-md overflow-hidden hover:scale-105 transition-transform">
+                    <img 
+                      src={user.logo_url} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                      onError={() => setLogoError(true)}
+                    />
+                  </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
                     <span className="text-base font-bold text-white">
                       {user.firstName.charAt(0).toUpperCase()}
                     </span>
