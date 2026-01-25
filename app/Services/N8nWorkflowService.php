@@ -40,10 +40,14 @@ class N8nWorkflowService
 
         $template = file_get_contents($templatePath);
 
-        // Reemplazar placeholders - SOLO estos valores son específicos por instancia n8n
+        // Reemplazar TODOS los placeholders del template
         $replacements = [
             '{{COMPANY_SLUG}}' => $company->slug,
+            '{{COMPANY_NAME}}' => $company->name ?? $company->slug,
             '{{APP_URL}}' => $this->appUrl,
+            '{{EVOLUTION_API_URL}}' => config('evolution.api_url'),
+            '{{EVOLUTION_API_KEY}}' => config('evolution.api_key'),
+            '{{CHATWOOT_API_TOKEN}}' => $company->settings['chatwoot_api_token'] ?? config('chatwoot.token'),
             '{{OPENAI_CREDENTIAL_ID}}' => $this->openaiCredentialId,
             '{{QDRANT_CREDENTIAL_ID}}' => $this->qdrantCredentialId,
         ];

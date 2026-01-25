@@ -99,43 +99,43 @@
                         {
                             "id": "message-chat-id",
                             "name": "message.chat_id",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.sender?.phone_number || $('Chatwoot Webhook').item.json.body.conversation?.meta?.sender?.phone_number || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.sender?.phone_number || $('WITHMIA Webhook').item.json.body.conversation?.meta?.sender?.phone_number || '' }}",
                             "type": "string"
                         },
                         {
                             "id": "message-content",
                             "name": "message.content",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.content || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.content || '' }}",
                             "type": "string"
                         },
                         {
                             "id": "message-content-type",
                             "name": "message.content_type",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.content_type || 'text' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.content_type || 'text' }}",
                             "type": "string"
                         },
                         {
                             "id": "user-name",
                             "name": "user.name",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.sender?.name || 'Usuario' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.sender?.name || 'Usuario' }}",
                             "type": "string"
                         },
                         {
                             "id": "conversation-id",
                             "name": "conversation.id",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.conversation?.id || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.conversation?.id || '' }}",
                             "type": "number"
                         },
                         {
                             "id": "inbox-id",
                             "name": "inbox.id",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.inbox?.id || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.inbox?.id || '' }}",
                             "type": "number"
                         },
                         {
                             "id": "inbox-name",
                             "name": "inbox.name",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.inbox?.name || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.inbox?.name || '' }}",
                             "type": "string"
                         },
                         {
@@ -159,7 +159,7 @@
                         {
                             "id": "chatwoot-account-id",
                             "name": "chatwoot.account_id",
-                            "value": "={{ $('Chatwoot Webhook').item.json.body.account?.id || 1 }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body.account?.id || 1 }}",
                             "type": "number"
                         },
                         {
@@ -239,8 +239,8 @@
             "name": "OpenAI Chat Model",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{N8N_OPENAI_CREDENTIAL_ID}}",
-                    "name": "{{N8N_OPENAI_CREDENTIAL_NAME}}"
+                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "name": "OpenAI Account"
                 }
             }
         },
@@ -275,8 +275,8 @@
             "name": "Buscar en Base de Conocimientos",
             "credentials": {
                 "qdrantApi": {
-                    "id": "{{N8N_QDRANT_CREDENTIAL_ID}}",
-                    "name": "{{N8N_QDRANT_CREDENTIAL_NAME}}"
+                    "id": "{{QDRANT_CREDENTIAL_ID}}",
+                    "name": "Qdrant"
                 }
             }
         },
@@ -297,8 +297,8 @@
             "name": "OpenAI Embeddings",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{N8N_OPENAI_CREDENTIAL_ID}}",
-                    "name": "{{N8N_OPENAI_CREDENTIAL_NAME}}"
+                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "name": "OpenAI Account"
                 }
             }
         },
@@ -339,7 +339,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "={{APP_URL}}/api/n8n/notify-response",
+                "url": "{{APP_URL}}/api/n8n/notify-response",
                 "sendBody": true,
                 "specifyBody": "json",
                 "jsonBody": "={\n  \"company_slug\": \"{{COMPANY_SLUG}}\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
