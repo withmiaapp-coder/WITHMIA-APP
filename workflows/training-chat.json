@@ -236,7 +236,7 @@
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "// Get data from the node that passed through Should Save?\nconst prevData = $('Should Save?').first().json;\nconst embedding = $input.first().json.data[0].embedding;\nconst timestamp = new Date().toISOString();\nconst dedup = prevData.deduplication || {};\nconst action = dedup.action || 'create';\nconst pointId = dedup.point_id || Date.now();\n\n// Extract only the useful knowledge from user message\n// Remove training format, keep only the actual information\nconst userMsg = prevData.user_message || '';\n\n// The text to save is just the user's information, clean and simple\nconst knowledgeText = userMsg.trim();\n\nreturn {\n  json: {\n    collection_name: prevData.collection_name,\n    qdrant_host: prevData.qdrant_host,\n    action: action,\n    point: {\n      id: pointId,\n      vector: embedding,\n      payload: {\n        text: knowledgeText,\n        content: knowledgeText,\n        type: 'training_message',\n        category: 'entrenamiento',\n        company_slug: prevData.company_slug,\n        action: action,\n        similarity: dedup.similarity || 0,\n        last_updated: timestamp\n      }\n    }\n  }\n};"
+                                         "jsCode":  "const processData = $('Process Response').first().json;\n\n// Check if we should skip saving\nif (processData.should_save === false) {\n  // Return skip marker - Store in Qdrant will check this\n  return {\n    json: {\n      skip_save: true,\n      ai_response: processData.ai_response\n    }\n  };\n}\n\nconst embedding = $input.first().json.data[0].embedding;\nconst timestamp = new Date().toISOString();\nconst dedup = processData.deduplication || {};\nconst action = dedup.action || 'create';\nconst pointId = dedup.point_id || Date.now();\n\nconst userMsg = processData.user_message || '';\nconst knowledgeText = userMsg.trim();\n\nreturn {\n  json: {\n    skip_save: false,\n    collection_name: processData.collection_name,\n    qdrant_host: processData.qdrant_host,\n    ai_response: processData.ai_response,\n    action: action,\n    point: {\n      id: pointId,\n      vector: embedding,\n      payload: {\n        text: knowledgeText,\n        content: knowledgeText,\n        type: 'training_message',\n        category: 'entrenamiento',\n        company_slug: processData.company_slug,\n        action: action,\n        similarity: dedup.similarity || 0,\n        last_updated: timestamp\n      }\n    }\n  }\n};"
                                      },
                       "type":  "n8n-nodes-base.code",
                       "typeVersion":  2,
@@ -249,30 +249,10 @@
                   },
                   {
                       "parameters":  {
-                                         "method":  "PUT",
-                                         "url":  "={{ $json.qdrant_host }}/collections/{{ $json.collection_name }}/points",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "Content-Type",
-                                                                                         "value":  "application/json; charset=utf-8"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "specifyBody":  "json",
-                                         "jsonBody":  "={\n  \"points\": [{\n    \"id\": {{ $json.point.id }},\n    \"vector\": {{ JSON.stringify($json.point.vector) }},\n    \"payload\": {{ JSON.stringify($json.point.payload) }}\n  }]\n}",
-                                         "options":  {
-                                                         "response":  {
-                                                                          "response":  {
-                                                                                           "neverError":  true
-                                                                                       }
-                                                                      }
-                                                     }
+                                         "jsCode":  "const data = $input.first().json;\n\n// If skip_save is true, just pass through\nif (data.skip_save === true) {\n  return {\n    json: {\n      skipped: true,\n      ai_response: data.ai_response\n    }\n  };\n}\n\n// Make the Qdrant request\nconst qdrantHost = data.qdrant_host;\nconst collectionName = data.collection_name;\nconst point = data.point;\n\nconst response = await this.helpers.httpRequest({\n  method: 'PUT',\n  url: `${qdrantHost}/collections/${collectionName}/points`,\n  headers: {\n    'Content-Type': 'application/json; charset=utf-8'\n  },\n  body: {\n    points: [{\n      id: point.id,\n      vector: point.vector,\n      payload: point.payload\n    }]\n  },\n  json: true\n});\n\nreturn {\n  json: {\n    skipped: false,\n    stored: true,\n    ai_response: data.ai_response,\n    qdrant_response: response\n  }\n};"
                                      },
-                      "type":  "n8n-nodes-base.httpRequest",
-                      "typeVersion":  4.2,
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
                       "position":  [
                                        2420,
                                        200
@@ -282,7 +262,7 @@
                   },
                   {
                       "parameters":  {
-                                         "jsCode":  "// Return response (saved path)\nconst processData = $(\u0027Process Response\u0027).first().json;\nreturn {\n  json: {\n    response: processData.ai_response,\n    saved: true,\n    message: \u0027Guardado en la base de conocimiento\u0027\n  }\n};"
+                                         "jsCode":  "const data = $input.first().json;\nreturn {\n  json: {\n    response: data.ai_response,\n    saved: !data.skipped,\n    message: data.skipped ? 'Respuesta sin guardar' : 'Guardado en la base de conocimiento'\n  }\n};"
                                      },
                       "type":  "n8n-nodes-base.code",
                       "typeVersion":  2,
