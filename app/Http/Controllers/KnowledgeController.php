@@ -205,14 +205,14 @@ class KnowledgeController extends Controller
             }
 
             $companySlug = $user->company_slug ?? 'default';
-            $qdrantHost = env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
+            $qdrantHost = config('services.qdrant.host');
             $collectionName = 'company_' . preg_replace('/[^a-z0-9_-]/i', '_', strtolower($companySlug)) . '_knowledge';
             
             // First, delete existing "empresa" category points to avoid duplicates
             $this->deleteCompanyInfoFromQdrant($qdrantHost, $collectionName);
 
             // Get n8n configuration - use company-specific webhook
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = config('services.n8n.base_url');
             
             // Use webhook path from company settings if available, otherwise use default pattern
             $webhookPath = $company->settings['rag_webhook_path'] ?? ('rag-' . $companySlug);
@@ -455,7 +455,7 @@ class KnowledgeController extends Controller
             
             // Obtener configuración de n8n - usar webhook personalizado de la empresa si existe
             $settings = $company->settings ?? [];
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
+            $n8nUrl = config('services.n8n.base_url');
             
             // Usar la URL de webhook guardada en settings o construir una por defecto
             if (!empty($settings['training_webhook_url'])) {
@@ -474,7 +474,7 @@ class KnowledgeController extends Controller
                 'user_message' => Utf8Helper::ensureUtf8($userMessage),
                 'context' => $context,
                 'openai_api_key' => env('OPENAI_API_KEY'),
-                'qdrant_host' => env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app'),
+                'qdrant_host' => config('services.qdrant.host'),
                 'timestamp' => now()->toIso8601String(),
                 // Agregar información de deduplicación
                 'deduplication' => $deduplicationResult,
@@ -574,7 +574,7 @@ class KnowledgeController extends Controller
             $embedding = $qdrantService->generateEmbedding($message);
             
             // 2. Buscar puntos similares en Qdrant (top 3)
-            $qdrantHost = env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
+            $qdrantHost = config('services.qdrant.host');
             $client = new \GuzzleHttp\Client(['timeout' => 10]);
             
             $searchResponse = $client->post("{$qdrantHost}/collections/{$collectionName}/points/search", [
@@ -1348,8 +1348,8 @@ class KnowledgeController extends Controller
             $companyName = $company->name ?? $companySlug;
             
             // Get n8n configuration
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
-            $n8nApiKey = env('N8N_API_KEY');
+            $n8nUrl = config('services.n8n.base_url');
+            $n8nApiKey = config('services.n8n.api_key');
 
             // Get OpenAI API key - company specific or fallback to global
             $openaiApiKey = $company->settings['openai_api_key'] ?? env('OPENAI_API_KEY');
@@ -1362,8 +1362,8 @@ class KnowledgeController extends Controller
             }
 
             // Get Qdrant host
-            $qdrantHost = $company->settings['qdrant_host'] ?? env('QDRANT_HOST', 'https://qdrant-production-f4e7.up.railway.app');
-            $qdrantApiKey = $company->settings['qdrant_api_key'] ?? env('QDRANT_API_KEY', '');
+            $qdrantHost = $company->settings['qdrant_host'] ?? config('services.qdrant.host');
+            $qdrantApiKey = $company->settings['qdrant_api_key'] ?? config('services.qdrant.api_key');
 
             // Check if company has a workflow, if not create one
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
@@ -2217,8 +2217,8 @@ JS;
                 return response()->json(['success' => false, 'error' => 'No company found'], 404);
             }
 
-            $n8nUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app');
-            $n8nApiKey = env('N8N_API_KEY');
+            $n8nUrl = config('services.n8n.base_url');
+            $n8nApiKey = config('services.n8n.api_key');
 
             // Try to delete the old workflow if it exists
             $oldWorkflowId = $company->settings['rag_workflow_id'] ?? null;

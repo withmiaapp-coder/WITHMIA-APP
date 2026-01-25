@@ -13,6 +13,8 @@ return [
 
     'api_url' => env('EVOLUTION_API_URL', 'http://localhost:8080'),
     
+    'base_url' => env('EVOLUTION_API_URL', 'http://localhost:8080'),
+    
     'api_key' => env('EVOLUTION_API_KEY', 'withmia_evolution_api_key_2025_secure_token'),
     
     /*

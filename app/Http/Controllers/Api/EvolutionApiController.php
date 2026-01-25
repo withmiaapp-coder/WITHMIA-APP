@@ -772,7 +772,7 @@ class EvolutionApiController extends Controller
                 DB::table('whatsapp_instances')->insert([
                     'instance_name' => $instanceName,
                     'company_id' => $companyId,
-                    'instance_url' => config('evolution.base_url', 'https://evolution-api-production-2adf.up.railway.app'),
+                    'instance_url' => config('evolution.base_url'),
                     'is_active' => 1,
                     'created_at' => now(),
                     'updated_at' => now()

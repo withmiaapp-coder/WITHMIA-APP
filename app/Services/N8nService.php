@@ -256,7 +256,7 @@ class N8nService
      */
     public function getWebhookUrl(string $instanceName): string
     {
-        $publicUrl = env('N8N_PUBLIC_URL', env('N8N_URL', 'https://n8n-production-00dd.up.railway.app'));
+        $publicUrl = config('services.n8n.base_url');
         return "{$publicUrl}/webhook/withmia-{$instanceName}";
     }
 
@@ -349,7 +349,7 @@ class N8nService
 
             if ($result['success']) {
                 $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}";
+                $webhookUrl = config('services.n8n.base_url') . "/webhook/{$webhookPath}";
 
                 // Activate the workflow
                 if ($workflowId) {

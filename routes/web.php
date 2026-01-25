@@ -207,9 +207,9 @@ Route::get('/nuke-everything', function () {
     
     // 4. LIMPIAR QDRANT COLLECTIONS
     try {
-        $qdrantUrl = env('QDRANT_HOST', 'http://qdrant.railway.internal:6333');
-        // Para llamadas internas usar la URL interna, para externas usar la pública
-        $qdrantPublic = 'https://qdrant-production-f4e7.up.railway.app';
+        $qdrantUrl = config('services.qdrant.host');
+        // Para llamadas externas usar la URL configurada
+        $qdrantPublic = $qdrantUrl;
         
         $response = Http::get("{$qdrantPublic}/collections");
         $collections = $response->json()['result']['collections'] ?? [];

@@ -136,11 +136,12 @@ Route::get('/migrate-workflows-to-withmia', function () {
                 $slug = str_replace('withmia-', '', $newWebhookPath);
                 
                 // Actualizar whatsapp_instances
+                $n8nBaseUrl = config('services.n8n.base_url');
                 DB::table('whatsapp_instances')
                     ->where('instance_name', $slug)
                     ->orWhere('n8n_workflow_id', $workflowId)
                     ->update([
-                        'n8n_webhook_url' => "https://n8n-production-00dd.up.railway.app/webhook/{$newWebhookPath}",
+                        'n8n_webhook_url' => "{$n8nBaseUrl}/webhook/{$newWebhookPath}",
                         'updated_at' => now()
                     ]);
                 
@@ -160,7 +161,8 @@ Route::get('/migrate-workflows-to-withmia', function () {
                                 foreach ($webhooks as $webhook) {
                                     // Si el webhook apunta al path viejo
                                     if (str_contains($webhook['url'] ?? '', $oldWebhookPath)) {
-                                        $newWebhookUrl = "https://n8n-production-00dd.up.railway.app/webhook/{$newWebhookPath}";
+                                        $n8nBaseUrl = config('services.n8n.base_url');
+                                        $newWebhookUrl = "{$n8nBaseUrl}/webhook/{$newWebhookPath}";
                                         
                                         \Illuminate\Support\Facades\Http::withHeaders([
                                             'api_access_token' => $chatwootToken,
@@ -445,7 +447,7 @@ Route::get('/create-chatwoot-superadmin/{email}/{password}', function ($email, $
             'message' => 'Super Admin creado',
             'id' => $id,
             'email' => $email,
-            'login_url' => 'https://chatwoot-production-50cc.up.railway.app/super_admin/sign_in'
+            'login_url' => config('services.chatwoot.base_url') . '/super_admin/sign_in'
         ]);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
@@ -714,7 +716,7 @@ Route::get('/update-rag-workflow/{companySlug}', function ($companySlug) {
                 'action' => $action,
                 'workflow_id' => $workflowId,
                 'activated' => $activateResult['success'],
-                'webhook_url' => env('N8N_PUBLIC_URL', 'https://n8n-production-00dd.up.railway.app') . "/webhook/{$webhookPath}"
+                'webhook_url' => config('services.n8n.base_url') . "/webhook/{$webhookPath}"
             ]);
         }
         
@@ -3510,7 +3512,7 @@ Route::get('/n8n/company-config/{companySlug}', function ($companySlug) {
             'company_name' => $company->name ?? $companySlug,
             'company_slug' => $company->slug,
             'openai_api_key' => $company->settings['openai_api_key'] ?? env('OPENAI_API_KEY'),
-            'qdrant_host' => env('QDRANT_URL', 'https://qdrant-production-f4e7.up.railway.app'),
+            'qdrant_host' => config('services.qdrant.host'),
             'collection_name' => 'company_' . $company->slug . '_knowledge'
         ]);
     } catch (\Exception $e) {
@@ -3650,7 +3652,14 @@ Route::get('/debug/whatsapp-instances', function () {
 // ============== FIX: Actualizar n8n_webhook_url para usar patrón withmia- ==============
 Route::get('/fix/update-n8n-webhook-urls', function () {
     try {
-        $n8nBaseUrl = config('services.n8n.base_url', 'https://n8n-production-00dd.up.railway.app');
+        $n8nBaseUrl = config('services.n8n.base_url');
+        
+        if (!$n8nBaseUrl) {
+            return response()->json([
+                'success' => false,
+                'error' => 'N8N_PUBLIC_URL not configured. Set N8N_PUBLIC_URL environment variable.'
+            ], 500);
+        }
         
         // Obtener todas las instancias
         $instances = \DB::table('whatsapp_instances')->get();
