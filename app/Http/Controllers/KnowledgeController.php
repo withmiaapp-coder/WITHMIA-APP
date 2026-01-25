@@ -1573,55 +1573,48 @@ class KnowledgeController extends Controller
         // This is the most common case with pdftotext/pdfparser
         if (preg_match('/\xC3[\x80-\xBF]/', $text)) {
             // Check if this looks like double-encoded UTF-8
-            // Double-encoded: á becomes Ã¡ (C3 83 C2 A1 or similar)
             $testDecode = @utf8_decode($text);
             if ($testDecode && mb_check_encoding($testDecode, 'UTF-8')) {
                 // Verify that decoding produced valid Spanish characters
-                if (preg_match('/[áéíóúñüÁÉÍÓÚÑÜ]/u', $testDecode)) {
+                if (preg_match('/[\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1]/', $testDecode)) {
                     Log::info("Fixed double-encoded UTF-8 using utf8_decode");
                     $text = $testDecode;
                 }
             }
         }
         
-        // Method 2: String replacements for specific mojibake patterns
-        // These patterns occur when UTF-8 text is incorrectly decoded as Latin-1
+        // Method 2: Byte sequence replacements for mojibake patterns
+        // All using hex escape sequences to avoid encoding issues in source code
         $replacements = [
-            // Common mojibake patterns (4-byte sequences)
-            "Ã¡" => "á", "Ã©" => "é", "Ã­" => "í", "Ã³" => "ó", "Ãº" => "ú",
-            "Ã±" => "ñ", "Ã¼" => "ü", "Ã" => "Á", "Ã‰" => "É", "Ã" => "Í",
-            "Ã"" => "Ó", "Ãš" => "Ú", "Ã'" => "Ñ", "Ãœ" => "Ü",
-            // Byte sequence replacements (more robust)
-            "\xC3\x83\xC2\xA1" => "á",  // á double-encoded
-            "\xC3\x83\xC2\xA9" => "é",  // é double-encoded
-            "\xC3\x83\xC2\xAD" => "í",  // í double-encoded
-            "\xC3\x83\xC2\xB3" => "ó",  // ó double-encoded
-            "\xC3\x83\xC2\xBA" => "ú",  // ú double-encoded
-            "\xC3\x83\xC2\xB1" => "ñ",  // ñ double-encoded
-            "\xC3\x83\xC2\xBC" => "ü",  // ü double-encoded
-            "\xC3\x83\xC2\x81" => "Á",  // Á double-encoded
-            "\xC3\x83\xC2\x89" => "É",  // É double-encoded
-            "\xC3\x83\xC2\x8D" => "Í",  // Í double-encoded
-            "\xC3\x83\xC2\x93" => "Ó",  // Ó double-encoded
-            "\xC3\x83\xC2\x9A" => "Ú",  // Ú double-encoded
-            "\xC3\x83\xC2\x91" => "Ñ",  // Ñ double-encoded
-            "\xC3\x83\xC2\x9C" => "Ü",  // Ü double-encoded
-            // Special characters
-            "â€"" => "–", "â€"" => "—", "â€œ" => """, "â€" => """,
-            "â€™" => "'", "â€˜" => "'", "â€¢" => "•", "â€¦" => "…",
-            // Preserve question and exclamation marks  
-            "\xC2\xBF" => "¿", "\xC2\xA1" => "¡",
+            // 4-byte mojibake -> correct 2-byte UTF-8
+            "\xC3\x83\xC2\xA1" => "\xC3\xA1",  // á
+            "\xC3\x83\xC2\xA9" => "\xC3\xA9",  // é
+            "\xC3\x83\xC2\xAD" => "\xC3\xAD",  // í
+            "\xC3\x83\xC2\xB3" => "\xC3\xB3",  // ó
+            "\xC3\x83\xC2\xBA" => "\xC3\xBA",  // ú
+            "\xC3\x83\xC2\xB1" => "\xC3\xB1",  // ñ
+            "\xC3\x83\xC2\xBC" => "\xC3\xBC",  // ü
+            "\xC3\x83\xC2\x81" => "\xC3\x81",  // Á
+            "\xC3\x83\xC2\x89" => "\xC3\x89",  // É
+            "\xC3\x83\xC2\x8D" => "\xC3\x8D",  // Í
+            "\xC3\x83\xC2\x93" => "\xC3\x93",  // Ó
+            "\xC3\x83\xC2\x9A" => "\xC3\x9A",  // Ú
+            "\xC3\x83\xC2\x91" => "\xC3\x91",  // Ñ
+            "\xC3\x83\xC2\x9C" => "\xC3\x9C",  // Ü
+            // Keep inverted punctuation
+            "\xC2\xBF" => "\xC2\xBF",  // ¿
+            "\xC2\xA1" => "\xC2\xA1",  // ¡
         ];
         
         $text = str_replace(array_keys($replacements), array_values($replacements), $text);
         
-        // Method 3: If we still detect Ã (0xC3 0x83) pattern, try mb_convert_encoding
-        if (strpos($text, "\xC3\x83") !== false || preg_match('/Ã[±©³ºá]/u', $text)) {
+        // Method 3: If we still detect double-encoding pattern, try mb_convert_encoding
+        if (strpos($text, "\xC3\x83") !== false) {
             Log::info("Still detecting mojibake patterns, trying mb_convert_encoding");
             
             // Try ISO-8859-1 to UTF-8 conversion
             $fixed = @mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
-            if ($fixed && preg_match('/[áéíóúñ]/u', $fixed)) {
+            if ($fixed && preg_match('/[\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1]/', $fixed)) {
                 $text = $fixed;
                 Log::info("Fixed using ISO-8859-1 conversion");
             }
@@ -1639,7 +1632,7 @@ class KnowledgeController extends Controller
         // Final validation for json_encode
         if (@json_encode(['test' => $text]) === false) {
             Log::warning("JSON encode still failing, applying aggressive cleanup");
-            $text = preg_replace('/[^\x20-\x7E\xA0-\xFF\n\r\t]/u', '', $text);
+            $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
         }
         
         if (strlen($text) !== $originalLength) {
