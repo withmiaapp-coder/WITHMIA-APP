@@ -2411,6 +2411,11 @@ JS;
             $qdrantService = app(QdrantService::class);
             $collectionName = $qdrantService->getCollectionName($company->slug);
             
+            // Convert to proper type: integer if numeric, otherwise keep as string (UUID)
+            if (is_numeric($pointId)) {
+                $pointId = (int) $pointId;
+            }
+            
             $result = $qdrantService->deletePoints($collectionName, [$pointId]);
             
             if (!$result['success']) {
