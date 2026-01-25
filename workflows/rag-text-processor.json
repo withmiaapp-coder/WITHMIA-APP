@@ -179,6 +179,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner"
   }
 }
