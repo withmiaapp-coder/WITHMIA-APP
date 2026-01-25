@@ -357,11 +357,11 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
                   <img 
                     src={user.logo_url} 
                     alt="" 
-                    className="w-9 h-9 rounded-xl object-cover shadow-md"
+                    className="w-12 h-12 rounded-lg object-contain shadow-md hover:scale-105 transition-transform"
                     onError={() => setLogoError(true)}
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
                     <span className="text-base font-bold text-white">
                       {user.firstName.charAt(0).toUpperCase()}
                     </span>
