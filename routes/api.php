@@ -51,6 +51,177 @@ Route::get('/fix-logo-column', function () {
     }
 });
 
+// 🔄 MIGRACIÓN: Actualizar workflows de n8n de whatsapp-{slug} a withmia-{slug}
+Route::get('/migrate-workflows-to-withmia', function () {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        $results = [];
+        $chatwootUrl = config('chatwoot.url');
+        $chatwootToken = config('chatwoot.platform_token');
+        
+        // 1. Obtener todos los workflows de n8n
+        $workflowsResult = $n8nService->getWorkflows();
+        if (!$workflowsResult['success']) {
+            return response()->json(['error' => 'No se pudieron obtener workflows de n8n'], 500);
+        }
+        
+        $workflows = $workflowsResult['data'] ?? [];
+        Log::info('🔄 Iniciando migración de workflows', ['total' => count($workflows)]);
+        
+        foreach ($workflows as $workflow) {
+            $workflowId = $workflow['id'];
+            $workflowName = $workflow['name'] ?? '';
+            
+            // Solo migrar workflows de WhatsApp Bot
+            if (!str_contains($workflowName, 'WhatsApp Bot') && !str_contains($workflowName, 'WITHMIA Bot')) {
+                continue;
+            }
+            
+            // Obtener workflow completo
+            $fullWorkflow = $n8nService->getWorkflow($workflowId);
+            if (!$fullWorkflow['success']) {
+                $results[] = ['workflow_id' => $workflowId, 'status' => 'error', 'message' => 'No se pudo obtener'];
+                continue;
+            }
+            
+            $workflowData = $fullWorkflow['data'];
+            $needsUpdate = false;
+            $oldWebhookPath = null;
+            $newWebhookPath = null;
+            
+            // Buscar y actualizar nodos webhook
+            foreach ($workflowData['nodes'] as &$node) {
+                if ($node['type'] === 'n8n-nodes-base.webhook') {
+                    $currentPath = $node['parameters']['path'] ?? '';
+                    
+                    // Si usa el patrón viejo whatsapp-{slug}
+                    if (str_starts_with($currentPath, 'whatsapp-')) {
+                        $slug = str_replace('whatsapp-', '', $currentPath);
+                        $oldWebhookPath = $currentPath;
+                        $newWebhookPath = "withmia-{$slug}";
+                        
+                        $node['parameters']['path'] = $newWebhookPath;
+                        $node['name'] = 'WITHMIA Webhook';
+                        $node['id'] = 'webhook-withmia';
+                        $needsUpdate = true;
+                        
+                        Log::info("🔄 Actualizando webhook path", [
+                            'workflow_id' => $workflowId,
+                            'old_path' => $oldWebhookPath,
+                            'new_path' => $newWebhookPath
+                        ]);
+                    }
+                }
+            }
+            
+            if (!$needsUpdate) {
+                $results[] = ['workflow_id' => $workflowId, 'name' => $workflowName, 'status' => 'skipped', 'message' => 'Ya usa withmia- o no es WhatsApp Bot'];
+                continue;
+            }
+            
+            // Actualizar nombre del workflow
+            $workflowData['name'] = str_replace('WhatsApp Bot', 'WITHMIA Bot', $workflowData['name']);
+            
+            // Desactivar antes de actualizar
+            $n8nService->deactivateWorkflow($workflowId);
+            
+            // Actualizar workflow en n8n
+            $updateResult = $n8nService->updateWorkflow($workflowId, $workflowData);
+            
+            if ($updateResult['success']) {
+                // Reactivar workflow
+                $n8nService->activateWorkflow($workflowId);
+                
+                // Extraer slug del path
+                $slug = str_replace('withmia-', '', $newWebhookPath);
+                
+                // Actualizar whatsapp_instances
+                DB::table('whatsapp_instances')
+                    ->where('instance_name', $slug)
+                    ->orWhere('n8n_workflow_id', $workflowId)
+                    ->update([
+                        'n8n_webhook_url' => "https://n8n-production-00dd.up.railway.app/webhook/{$newWebhookPath}",
+                        'updated_at' => now()
+                    ]);
+                
+                // Actualizar webhook de Chatwoot si existe
+                if ($chatwootUrl && $chatwootToken) {
+                    try {
+                        // Buscar company por slug
+                        $company = \App\Models\Company::where('slug', $slug)->first();
+                        if ($company && $company->chatwoot_account_id) {
+                            // Obtener webhooks existentes
+                            $webhooksResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                                'api_access_token' => $chatwootToken
+                            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks");
+                            
+                            if ($webhooksResponse->successful()) {
+                                $webhooks = $webhooksResponse->json('payload.webhooks', []);
+                                foreach ($webhooks as $webhook) {
+                                    // Si el webhook apunta al path viejo
+                                    if (str_contains($webhook['url'] ?? '', $oldWebhookPath)) {
+                                        $newWebhookUrl = "https://n8n-production-00dd.up.railway.app/webhook/{$newWebhookPath}";
+                                        
+                                        \Illuminate\Support\Facades\Http::withHeaders([
+                                            'api_access_token' => $chatwootToken,
+                                            'Content-Type' => 'application/json'
+                                        ])->patch("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks/{$webhook['id']}", [
+                                            'url' => $newWebhookUrl
+                                        ]);
+                                        
+                                        Log::info("✅ Chatwoot webhook actualizado", [
+                                            'webhook_id' => $webhook['id'],
+                                            'new_url' => $newWebhookUrl
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("⚠️ No se pudo actualizar Chatwoot webhook", ['error' => $e->getMessage()]);
+                    }
+                }
+                
+                $results[] = [
+                    'workflow_id' => $workflowId,
+                    'name' => $workflowData['name'],
+                    'status' => 'migrated',
+                    'old_path' => $oldWebhookPath,
+                    'new_path' => $newWebhookPath
+                ];
+            } else {
+                // Reactivar aunque haya fallado
+                $n8nService->activateWorkflow($workflowId);
+                $results[] = [
+                    'workflow_id' => $workflowId,
+                    'name' => $workflowName,
+                    'status' => 'error',
+                    'message' => $updateResult['error'] ?? 'Error desconocido'
+                ];
+            }
+        }
+        
+        $migrated = count(array_filter($results, fn($r) => $r['status'] === 'migrated'));
+        $skipped = count(array_filter($results, fn($r) => $r['status'] === 'skipped'));
+        $errors = count(array_filter($results, fn($r) => $r['status'] === 'error'));
+        
+        return response()->json([
+            'success' => true,
+            'summary' => [
+                'total_workflows' => count($workflows),
+                'migrated' => $migrated,
+                'skipped' => $skipped,
+                'errors' => $errors
+            ],
+            'results' => $results
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error en migración de workflows', ['error' => $e->getMessage()]);
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // ?? REGENERAR TOKEN DE CHATWOOT - Crea un nuevo access_token v�lido para el usuario
 Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
     try {
