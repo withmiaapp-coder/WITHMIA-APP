@@ -3618,3 +3618,78 @@ Route::post('/n8n/notify-response', function (Request $request) {
     }
 });
 
+// ============== DEBUG: Ver estado de whatsapp_instances con campos n8n ==============
+Route::get('/debug/whatsapp-instances', function () {
+    try {
+        $instances = \DB::table('whatsapp_instances')->get();
+        
+        return response()->json([
+            'success' => true,
+            'total' => $instances->count(),
+            'instances' => $instances->map(function ($i) {
+                return [
+                    'id' => $i->id,
+                    'instance_name' => $i->instance_name,
+                    'company_id' => $i->company_id,
+                    'company_slug' => $i->company_slug ?? null,
+                    'n8n_workflow_id' => $i->n8n_workflow_id ?? null,
+                    'n8n_webhook_url' => $i->n8n_webhook_url ?? null,
+                    'is_active' => $i->is_active ?? null,
+                    'updated_at' => $i->updated_at ?? null,
+                ];
+            })
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ============== FIX: Actualizar n8n_webhook_url para usar patrón withmia- ==============
+Route::get('/fix/update-n8n-webhook-urls', function () {
+    try {
+        $n8nBaseUrl = config('services.n8n.base_url', 'https://n8n-production-00dd.up.railway.app');
+        
+        // Obtener todas las instancias
+        $instances = \DB::table('whatsapp_instances')->get();
+        $updated = [];
+        
+        foreach ($instances as $instance) {
+            // Determinar el slug (instance_name o company_slug)
+            $slug = $instance->company_slug ?? $instance->instance_name;
+            
+            // Nuevo webhook URL usando patrón withmia-{slug}
+            $newWebhookUrl = "{$n8nBaseUrl}/webhook/withmia-{$slug}";
+            
+            // Actualizar en BD
+            \DB::table('whatsapp_instances')
+                ->where('id', $instance->id)
+                ->update([
+                    'n8n_webhook_url' => $newWebhookUrl,
+                    'company_slug' => $slug,
+                    'updated_at' => now()
+                ]);
+            
+            $updated[] = [
+                'id' => $instance->id,
+                'instance_name' => $instance->instance_name,
+                'old_webhook' => $instance->n8n_webhook_url,
+                'new_webhook' => $newWebhookUrl
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Actualizados ' . count($updated) . ' registros',
+            'updated' => $updated
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
