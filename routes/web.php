@@ -539,10 +539,18 @@ Route::middleware('auth')->group(function () {
 Route::get('/dashboard/{company}/conversaciones', function (Request $request, $company) {
     $user = auth()->user();
     $company = $user->company()->where('slug', $company)->firstOrFail();
-
+    
+    // ✅ Pasar información de Chatwoot dinámica desde config/environment
+    $chatwootUrl = config('chatwoot.url') ?? env('CHATWOOT_URL') ?? env('CHATWOOT_API_BASE_URL');
+    
     return Inertia::render('Conversaciones', [
         'user' => $user,
-        'company' => $company
+        'company' => $company,
+        'chatwoot' => [
+            'url' => $chatwootUrl,
+            'inbox_id' => $user->chatwoot_inbox_id ?? $company->chatwoot_inbox_id ?? 1,
+            'account_id' => $company->chatwoot_account_id ?? 1,
+        ]
     ]);
     })->name('dashboard.conversaciones');
 

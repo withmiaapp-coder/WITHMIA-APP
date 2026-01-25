@@ -9,26 +9,20 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// ?? SETUP TRAINING WORKFLOW PARA WITHMIA
-Route::get('/setup-training-withmia', function () {
+// ?? SETUP TRAINING WORKFLOW - DINÁMICO por company_slug
+Route::get('/setup-training-workflow/{companySlug}', function ($companySlug) {
     try {
-        $company = \App\Models\Company::where('slug', 'withmia-zly7qn')->first();
+        $company = \App\Models\Company::where('slug', $companySlug)->first();
         if (!$company) {
             return response()->json(['error' => 'Company not found'], 404);
         }
         
-        $company->update([
-            'settings' => array_merge($company->settings ?? [], [
-                'training_workflow_id' => 'tqUt0Ato7dBfjEoD',
-                'training_webhook_path' => 'training-withmia-zly7qn',
-                'training_webhook_url' => 'https://n8n-production-00dd.up.railway.app/webhook/training-withmia-zly7qn',
-                'training_workflow_name' => 'Training Chat - withmia-zly7qn'
-            ])
-        ]);
+        // Usar CreateN8nWorkflowsJob para crear workflows dinámicamente
+        \App\Jobs\CreateN8nWorkflowsJob::dispatchSync($company->id, $companySlug);
         
         return response()->json([
             'success' => true,
-            'message' => 'Training workflow configurado para WITHMIA',
+            'message' => "Training workflow configurado para {$companySlug}",
             'settings' => $company->fresh()->settings
         ]);
     } catch (\Exception $e) {

@@ -64,15 +64,17 @@ class DashboardController extends Controller
             'active_tools' => count($onboardingData['tools'] ?? [])
         ];
 
-        // 🚀 INFORMACIÓN CHATWOOT - MEJORADA con inbox_id dinámico
+        // 🚀 INFORMACIÓN CHATWOOT - MEJORADA con inbox_id y url dinámicos
         $inboxId = $user->chatwoot_inbox_id ?? $company->chatwoot_inbox_id ?? 1;
+        $chatwootUrl = config('chatwoot.url') ?? env('CHATWOOT_URL') ?? env('CHATWOOT_API_BASE_URL');
         
         $chatwootStatus = [
             'provisioned' => $company->chatwoot_provisioned ?? false,
             'account_id' => $company->chatwoot_account_id ?? 1,
-            'inbox_id' => $inboxId, // ✅ NUEVO: inbox_id dinámico
+            'inbox_id' => $inboxId, // ✅ inbox_id dinámico
+            'url' => $chatwootUrl, // ✅ NUEVO: url dinámico desde config
             'provisioned_at' => $company->chatwoot_provisioned_at ?? null,
-            'available' => env('CHATWOOT_API_BASE_URL') ? true : false,
+            'available' => !empty($chatwootUrl),
             'auto_provision' => true
         ];
 
