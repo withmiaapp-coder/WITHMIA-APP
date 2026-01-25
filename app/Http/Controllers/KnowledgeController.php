@@ -2370,6 +2370,11 @@ JS;
             $qdrantService = app(QdrantService::class);
             $collectionName = $qdrantService->getCollectionName($company->slug);
             
+            // Convert to proper type: integer if numeric, otherwise keep as string (UUID)
+            if (is_numeric($pointId)) {
+                $pointId = (int) $pointId;
+            }
+            
             $payload = $request->get('payload', []);
             
             $result = $qdrantService->updatePointPayload($collectionName, $pointId, $payload);

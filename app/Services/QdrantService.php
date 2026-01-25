@@ -229,9 +229,14 @@ class QdrantService
     /**
      * Actualizar el payload de un punto
      */
-    public function updatePointPayload(string $collectionName, string $pointId, array $payload): array
+    public function updatePointPayload(string $collectionName, int|string $pointId, array $payload): array
     {
         try {
+            // Ensure proper type for Qdrant API
+            if (is_numeric($pointId)) {
+                $pointId = (int) $pointId;
+            }
+            
             $response = $this->request('POST', "/collections/{$collectionName}/points/payload", [
                 'points' => [$pointId],
                 'payload' => $payload
