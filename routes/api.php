@@ -3534,11 +3534,11 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
         $instanceName = preg_replace('/^WhatsApp\s+/i', '', $inboxName);
         
         // Buscar en whatsapp_instances por instance_name
-        $whatsappInstance = \App\Models\WhatsappInstance::where('instance_name', $instanceName)->first();
+        $whatsappInstance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
         
         // Si no encuentra, intentar buscar por coincidencia parcial
         if (!$whatsappInstance) {
-            $whatsappInstance = \App\Models\WhatsappInstance::where('instance_name', 'like', '%' . $instanceName . '%')->first();
+            $whatsappInstance = \App\Models\WhatsAppInstance::where('instance_name', 'like', '%' . $instanceName . '%')->first();
         }
         
         // Obtener la company asociada
@@ -3560,7 +3560,7 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
         
         // Obtener la instancia activa de la empresa si no la tenemos
         if (!$whatsappInstance) {
-            $whatsappInstance = \App\Models\WhatsappInstance::where('company_id', $company->id)
+            $whatsappInstance = \App\Models\WhatsAppInstance::where('company_id', $company->id)
                 ->where('is_active', true)
                 ->first();
         }
