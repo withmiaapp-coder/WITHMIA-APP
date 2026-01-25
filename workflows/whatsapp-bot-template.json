@@ -16,90 +16,102 @@
         },
         {
             "parameters": {
+                "method": "GET",
+                "url": "{{APP_URL}}/api/n8n/company-config/{{COMPANY_SLUG}}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [-280, 300],
+            "id": "get-company-config",
+            "name": "Get Company Config"
+        },
+        {
+            "parameters": {
                 "assignments": {
                     "assignments": [
                         {
                             "id": "instance-server-url",
                             "name": "instance.server_url",
-                            "value": "={{ $json.body.server_url }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.server_url }}",
                             "type": "string"
                         },
                         {
                             "id": "instance-name",
                             "name": "instance.name",
-                            "value": "={{ $json.body.instance }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.instance }}",
                             "type": "string"
                         },
                         {
                             "id": "instance-apikey",
                             "name": "instance.apikey",
-                            "value": "={{ $json.body.apikey }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.apikey }}",
                             "type": "string"
                         },
                         {
                             "id": "message-id",
                             "name": "message.message_id",
-                            "value": "={{ $json.body.data.key.id }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.data.key.id }}",
                             "type": "string"
                         },
                         {
                             "id": "message-chat-id",
                             "name": "message.chat_id",
-                            "value": "={{ $json.body.data.key?.remoteJid || $json.body.data.remoteJid || '' }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.data.key?.remoteJid || $('Evolution API Webhook').item.json.body.data.remoteJid || '' }}",
                             "type": "string"
                         },
                         {
                             "id": "message-content-type",
                             "name": "message.content_type",
-                            "value": "={{ $json.body.data.message.extendedTextMessage ? 'text': '' }}{{ $json.body.data.message.conversation ? 'text': '' }}{{ $json.body.data.message.audioMessage ? 'audio': '' }}{{ $json.body.data.message.imageMessage ? 'image': '' }}{{ $json.body.data.messageType }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.data.message.extendedTextMessage ? 'text': '' }}{{ $('Evolution API Webhook').item.json.body.data.message.conversation ? 'text': '' }}{{ $('Evolution API Webhook').item.json.body.data.message.audioMessage ? 'audio': '' }}{{ $('Evolution API Webhook').item.json.body.data.message.imageMessage ? 'image': '' }}{{ $('Evolution API Webhook').item.json.body.data.messageType }}",
                             "type": "string"
                         },
                         {
                             "id": "message-content",
                             "name": "message.content",
-                            "value": "={{ $json.body.data.message.extendedTextMessage?.text || '' }}{{ $json.body.data.message.imageMessage?.caption || '' }}{{ $json.body.data.message.conversation || '' }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.data.message.extendedTextMessage?.text || '' }}{{ $('Evolution API Webhook').item.json.body.data.message.imageMessage?.caption || '' }}{{ $('Evolution API Webhook').item.json.body.data.message.conversation || '' }}",
                             "type": "string"
                         },
                         {
                             "id": "message-timestamp",
                             "name": "message.timestamp",
-                            "value": "={{ $json.body.date_time.toDateTime().toISO() }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.date_time }}",
                             "type": "string"
                         },
                         {
                             "id": "user-name",
                             "name": "user.name",
-                            "value": "={{ $json.body.data.pushName }}",
+                            "value": "={{ $('Evolution API Webhook').item.json.body.data.pushName }}",
                             "type": "string"
                         },
                         {
                             "id": "collection-name",
                             "name": "config.collection_name",
-                            "value": "company_{{COMPANY_SLUG}}_knowledge",
+                            "value": "={{ $json.collection_name || 'company_{{COMPANY_SLUG}}_knowledge' }}",
                             "type": "string"
                         },
                         {
                             "id": "qdrant-host",
                             "name": "config.qdrant_host",
-                            "value": "https://qdrant-production-f4e7.up.railway.app",
+                            "value": "={{ $json.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app' }}",
                             "type": "string"
                         },
                         {
                             "id": "openai-api-key",
                             "name": "config.openai_api_key",
-                            "value": "={{OPENAI_API_KEY}}",
+                            "value": "={{ $json.openai_api_key }}",
                             "type": "string"
                         },
                         {
                             "id": "assistant-name",
                             "name": "config.assistant_name",
-                            "value": "{{ASSISTANT_NAME}}",
+                            "value": "={{ $json.assistant_name || 'MIA' }}",
                             "type": "string"
                         },
                         {
                             "id": "company-name",
                             "name": "config.company_name",
-                            "value": "{{COMPANY_NAME}}",
+                            "value": "={{ $json.company_name || '{{COMPANY_NAME}}' }}",
                             "type": "string"
                         }
                     ]
@@ -108,7 +120,7 @@
             },
             "type": "n8n-nodes-base.set",
             "typeVersion": 3.4,
-            "position": [-280, 300],
+            "position": [-80, 300],
             "id": "normalize-data",
             "name": "Normalize Data"
         },
@@ -124,7 +136,7 @@
                     "conditions": [
                         {
                             "id": "check-from-me",
-                            "leftValue": "={{ $json.body.data.key?.fromMe }}",
+                            "leftValue": "={{ $('Evolution API Webhook').item.json.body.data.key?.fromMe }}",
                             "rightValue": false,
                             "operator": {
                                 "type": "boolean",
@@ -138,7 +150,7 @@
             },
             "type": "n8n-nodes-base.if",
             "typeVersion": 2.2,
-            "position": [-80, 300],
+            "position": [140, 300],
             "id": "check-sender",
             "name": "Is From User?"
         },
@@ -148,7 +160,7 @@
             },
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
-            "position": [140, 300],
+            "position": [360, 300],
             "id": "prepare-context",
             "name": "Prepare Context"
         },
@@ -171,14 +183,14 @@
                 },
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($json.user_message) }}\n}",
+                "jsonBody": "={\n  \"input\": {{ JSON.stringify($json.user_message) }},\n  \"model\": \"text-embedding-3-small\"\n}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.2,
-            "position": [360, 300],
-            "id": "embed-query",
-            "name": "Embed User Query"
+            "position": [580, 300],
+            "id": "generate-embedding",
+            "name": "Generate Embedding"
         },
         {
             "parameters": {
@@ -206,17 +218,17 @@
             },
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.2,
-            "position": [580, 300],
+            "position": [800, 300],
             "id": "search-qdrant",
             "name": "Search Qdrant Context"
         },
         {
             "parameters": {
-                "jsCode": "// Build messages for OpenAI Chat\nconst prevData = $('Prepare Context').first().json;\nconst searchResults = $input.first().json.result || [];\n\n// Build context from Qdrant results\nlet contextText = '';\nif (searchResults && searchResults.length > 0) {\n  contextText = searchResults\n    .filter(r => r.score > 0.5)\n    .map(r => r.payload?.text || '')\n    .filter(t => t)\n    .join('\\n\\n');\n}\n\nif (!contextText) {\n  contextText = 'Sin contexto adicional disponible.';\n}\n\nconst messages = [\n  {\n    role: 'system',\n    content: prevData.system_prompt + '\\n\\nCONTEXTO DE LA EMPRESA:\\n' + contextText\n  },\n  {\n    role: 'user',\n    content: prevData.user_message\n  }\n];\n\nreturn {\n  json: {\n    ...prevData,\n    context_text: contextText,\n    messages: messages\n  }\n};"
+                "jsCode": "// Build messages array for OpenAI\nconst prepareContext = $('Prepare Context').item.json;\nconst qdrantResults = $input.first().json;\n\n// Extract context from Qdrant results\nlet context = '';\nif (qdrantResults.result && Array.isArray(qdrantResults.result)) {\n  const relevantDocs = qdrantResults.result\n    .filter(r => r.score > 0.7)\n    .map(r => r.payload?.content || r.payload?.text || '')\n    .filter(t => t.length > 0);\n  \n  if (relevantDocs.length > 0) {\n    context = '\\n\\nInformación relevante de la base de conocimientos:\\n' + relevantDocs.join('\\n---\\n');\n  }\n}\n\nconst messages = [\n  {\n    role: 'system',\n    content: prepareContext.system_prompt + context\n  },\n  {\n    role: 'user',\n    content: `${prepareContext.user_name}: ${prepareContext.user_message}`\n  }\n];\n\nreturn {\n  json: {\n    messages,\n    openai_api_key: prepareContext.openai_api_key,\n    instance: prepareContext.instance,\n    message: prepareContext.message\n  }\n};"
             },
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
-            "position": [800, 300],
+            "position": [1020, 300],
             "id": "build-messages",
             "name": "Build Messages"
         },
@@ -244,17 +256,17 @@
             },
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.2,
-            "position": [1020, 300],
+            "position": [1240, 300],
             "id": "call-openai",
             "name": "Call OpenAI Chat"
         },
         {
             "parameters": {
-                "jsCode": "// Extract response and prepare for sending\nconst openaiResponse = $input.first().json;\nconst prevData = $('Prepare Context').first().json;\nconst aiResponse = openaiResponse.choices[0].message.content || '';\n\nreturn {\n  json: {\n    instance: prevData.instance,\n    message: prevData.message,\n    ai_response: aiResponse\n  }\n};"
+                "jsCode": "// Extract response and prepare for sending\nconst input = $input.first().json;\nconst buildMessages = $('Build Messages').item.json;\n\nlet responseText = 'Lo siento, no pude procesar tu mensaje. ¿Podrías intentarlo de nuevo?';\n\nif (input.choices && input.choices[0] && input.choices[0].message) {\n  responseText = input.choices[0].message.content;\n}\n\n// Clean response for WhatsApp (remove markdown)\nresponseText = responseText\n  .replace(/\\*\\*/g, '')\n  .replace(/\\*/g, '')\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/`/g, '')\n  .trim();\n\nreturn {\n  json: {\n    response_text: responseText,\n    instance: buildMessages.instance,\n    message: buildMessages.message\n  }\n};"
             },
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
-            "position": [1240, 300],
+            "position": [1460, 300],
             "id": "process-response",
             "name": "Process Response"
         },
@@ -273,18 +285,29 @@
                 },
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.message.chat_id) }},\n  \"text\": {{ JSON.stringify($json.ai_response) }}\n}",
+                "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.message.chat_id) }},\n  \"text\": {{ JSON.stringify($json.response_text) }}\n}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.2,
-            "position": [1460, 300],
+            "position": [1680, 300],
             "id": "send-response",
             "name": "Send WhatsApp Response"
         }
     ],
     "connections": {
         "Evolution API Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Get Company Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Company Config": {
             "main": [
                 [
                     {
@@ -321,14 +344,14 @@
             "main": [
                 [
                     {
-                        "node": "Embed User Query",
+                        "node": "Generate Embedding",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "Embed User Query": {
+        "Generate Embedding": {
             "main": [
                 [
                     {

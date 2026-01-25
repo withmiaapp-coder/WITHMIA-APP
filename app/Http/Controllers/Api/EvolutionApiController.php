@@ -1370,8 +1370,9 @@ class EvolutionApiController extends Controller
             $company = \App\Models\Company::find($instance->company_id);
             $companySlug = $company ? ($company->slug ?? 'company_' . $instance->company_id) : 'company_' . $instance->company_id;
             $companyName = $company ? ($company->name ?? $workflowName) : $workflowName;
-            $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+            $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
             $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+            $appUrl = env('APP_URL', 'https://app.withmia.com');
             
             // Replace placeholders in the template
             $templateJson = json_encode($templateWorkflow);
@@ -1381,6 +1382,7 @@ class EvolutionApiController extends Controller
                 '{{ASSISTANT_NAME}}' => $assistantName,
                 '{{OPENAI_API_KEY}}' => $openaiApiKey,
                 '{{INSTANCE_NAME}}' => $instance->instance_name,
+                '{{APP_URL}}' => $appUrl,
             ];
             foreach ($replacements as $placeholder => $value) {
                 $templateJson = str_replace($placeholder, $value, $templateJson);

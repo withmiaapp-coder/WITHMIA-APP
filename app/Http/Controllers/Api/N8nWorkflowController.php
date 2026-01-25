@@ -127,8 +127,9 @@ class N8nWorkflowController extends Controller
         // Get company for settings
         $company = \App\Models\Company::find($companyId);
         $companySlug = $company ? ($company->slug ?? 'company_' . $companyId) : 'company_' . $companyId;
-        $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+        $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
         $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+        $appUrl = env('APP_URL', 'https://app.withmia.com');
         
         // Convert to JSON string for replacements
         $workflowJson = json_encode($workflow);
@@ -140,6 +141,7 @@ class N8nWorkflowController extends Controller
             '{{ASSISTANT_NAME}}' => $assistantName,
             '{{OPENAI_API_KEY}}' => $openaiApiKey,
             '{{INSTANCE_NAME}}' => $instanceName,
+            '{{APP_URL}}' => $appUrl,
         ];
         
         foreach ($replacements as $placeholder => $value) {

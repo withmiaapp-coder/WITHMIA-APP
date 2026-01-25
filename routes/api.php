@@ -1020,17 +1020,19 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         // Get company settings for placeholders
         $company = $instance ? \App\Models\Company::where('slug', $companySlug)->first() : null;
         $companyName = $company ? ($company->name ?? $instanceName) : $instanceName;
-        $assistantName = $company ? ($company->settings['assistant_name'] ?? 'MIA') : 'MIA';
+        $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
         $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
         
         // Replace placeholders in template
         $templateJson = json_encode($templateWorkflow);
+        $appUrl = env('APP_URL', 'https://app.withmia.com');
         $replacements = [
             '{{COMPANY_SLUG}}' => $companySlug ?? 'default',
             '{{COMPANY_NAME}}' => $companyName,
             '{{ASSISTANT_NAME}}' => $assistantName,
             '{{OPENAI_API_KEY}}' => $openaiApiKey,
             '{{INSTANCE_NAME}}' => $instanceName,
+            '{{APP_URL}}' => $appUrl,
         ];
         foreach ($replacements as $placeholder => $value) {
             $templateJson = str_replace($placeholder, $value, $templateJson);
@@ -3321,6 +3323,39 @@ Route::get('/update/company-assistant/{companyId}/{name}', function ($companyId,
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ============== N8N: Obtener configuración de empresa por slug (para workflows dinámicos) ==============
+Route::get('/n8n/company-config/{companySlug}', function ($companySlug) {
+    try {
+        $company = \App\Models\Company::where('slug', $companySlug)->first();
+        
+        if (!$company) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Empresa no encontrada',
+                'assistant_name' => 'MIA',
+                'company_name' => $companySlug
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'assistant_name' => $company->assistant_name ?? 'MIA',
+            'company_name' => $company->name ?? $companySlug,
+            'company_slug' => $company->slug,
+            'openai_api_key' => $company->settings['openai_api_key'] ?? env('OPENAI_API_KEY'),
+            'qdrant_host' => env('QDRANT_URL', 'https://qdrant-production-f4e7.up.railway.app'),
+            'collection_name' => 'company_' . $company->slug . '_knowledge'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'assistant_name' => 'MIA',
+            'company_name' => $companySlug
         ], 500);
     }
 });
