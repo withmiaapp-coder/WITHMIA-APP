@@ -1568,59 +1568,62 @@ class KnowledgeController extends Controller
     private function fixUtf8Mojibake($text)
     {
         $originalLength = strlen($text);
+        $originalSample = mb_substr($text, 0, 100);
         
-        // Method 1: Try utf8_decode first (handles UTF-8 double-encoded as Latin-1)
-        // This is the most common case with pdftotext/pdfparser
-        if (preg_match('/\xC3[\x80-\xBF]/', $text)) {
-            // Check if this looks like double-encoded UTF-8
-            $testDecode = @utf8_decode($text);
-            if ($testDecode && mb_check_encoding($testDecode, 'UTF-8')) {
-                // Verify that decoding produced valid Spanish characters
-                if (preg_match('/[\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1]/', $testDecode)) {
-                    Log::info("Fixed double-encoded UTF-8 using utf8_decode");
-                    $text = $testDecode;
-                }
-            }
-        }
+        Log::info("fixUtf8Mojibake - Input sample (first 100 chars): " . $originalSample);
+        Log::info("fixUtf8Mojibake - Input bytes: " . bin2hex(substr($text, 0, 50)));
         
-        // Method 2: Byte sequence replacements for mojibake patterns
-        // All using hex escape sequences to avoid encoding issues in source code
-        $replacements = [
-            // 4-byte mojibake -> correct 2-byte UTF-8
-            "\xC3\x83\xC2\xA1" => "\xC3\xA1",  // á
-            "\xC3\x83\xC2\xA9" => "\xC3\xA9",  // é
-            "\xC3\x83\xC2\xAD" => "\xC3\xAD",  // í
-            "\xC3\x83\xC2\xB3" => "\xC3\xB3",  // ó
-            "\xC3\x83\xC2\xBA" => "\xC3\xBA",  // ú
-            "\xC3\x83\xC2\xB1" => "\xC3\xB1",  // ñ
-            "\xC3\x83\xC2\xBC" => "\xC3\xBC",  // ü
-            "\xC3\x83\xC2\x81" => "\xC3\x81",  // Á
-            "\xC3\x83\xC2\x89" => "\xC3\x89",  // É
-            "\xC3\x83\xC2\x8D" => "\xC3\x8D",  // Í
-            "\xC3\x83\xC2\x93" => "\xC3\x93",  // Ó
-            "\xC3\x83\xC2\x9A" => "\xC3\x9A",  // Ú
-            "\xC3\x83\xC2\x91" => "\xC3\x91",  // Ñ
-            "\xC3\x83\xC2\x9C" => "\xC3\x9C",  // Ü
-            // Keep inverted punctuation
-            "\xC2\xBF" => "\xC2\xBF",  // ¿
-            "\xC2\xA1" => "\xC2\xA1",  // ¡
+        // Method 1: Direct string replacement for visible mojibake patterns
+        // When pdftotext outputs "Ã³" as actual characters (not bytes), we need string replacement
+        $visibleMojibake = [
+            // These are the VISIBLE mojibake patterns (as strings, not bytes)
+            "\xC3\x83\xC2\xB3" => "\xC3\xB3",  // Ã³ -> ó (4-byte to 2-byte)
+            "\xC3\x83\xC2\xA1" => "\xC3\xA1",  // Ã¡ -> á
+            "\xC3\x83\xC2\xA9" => "\xC3\xA9",  // Ã© -> é  
+            "\xC3\x83\xC2\xAD" => "\xC3\xAD",  // Ã­ -> í
+            "\xC3\x83\xC2\xBA" => "\xC3\xBA",  // Ãº -> ú
+            "\xC3\x83\xC2\xB1" => "\xC3\xB1",  // Ã± -> ñ
+            "\xC3\x83\xC2\xBC" => "\xC3\xBC",  // Ã¼ -> ü
+            "\xC3\x83\xC2\x81" => "\xC3\x81",  // Ã -> Á
+            "\xC3\x83\xC2\x89" => "\xC3\x89",  // Ã‰ -> É
+            "\xC3\x83\xC2\x8D" => "\xC3\x8D",  // Ã -> Í
+            "\xC3\x83\xC2\x93" => "\xC3\x93",  // Ã" -> Ó
+            "\xC3\x83\xC2\x9A" => "\xC3\x9A",  // Ãš -> Ú
+            "\xC3\x83\xC2\x91" => "\xC3\x91",  // Ã' -> Ñ
+            "\xC3\x83\xC2\x9C" => "\xC3\x9C",  // Ãœ -> Ü
         ];
         
-        $text = str_replace(array_keys($replacements), array_values($replacements), $text);
+        $text = str_replace(array_keys($visibleMojibake), array_values($visibleMojibake), $text);
         
-        // Method 3: If we still detect double-encoding pattern, try mb_convert_encoding
-        if (strpos($text, "\xC3\x83") !== false) {
-            Log::info("Still detecting mojibake patterns, trying mb_convert_encoding");
+        // Method 2: THE KEY FIX - UTF-8 interpreted as Latin-1 then re-encoded to UTF-8
+        // This is the most common PDF mojibake pattern
+        // The text was UTF-8, but pdftotext read it as Latin-1, then output as UTF-8
+        // So we need: UTF-8 -> Latin-1 (decode) -> UTF-8 (what we want)
+        $fixed = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');
+        if ($fixed !== false && $fixed !== $text) {
+            // Check if conversion produced valid Spanish characters
+            $hasSpanishAfter = preg_match('/[áéíóúñüÁÉÍÓÚÑÜ¿¡]/u', $fixed);
+            $hadMojibeforeFix = preg_match('/[\xC3][\x80-\xBF][\xC2][\x80-\xBF]/', $text);
             
-            // Try ISO-8859-1 to UTF-8 conversion
-            $fixed = @mb_convert_encoding($text, 'ISO-8859-1', 'UTF-8');
-            if ($fixed && preg_match('/[\xC3\xA1\xC3\xA9\xC3\xAD\xC3\xB3\xC3\xBA\xC3\xB1]/', $fixed)) {
+            Log::info("mb_convert_encoding attempt - hasSpanish: {$hasSpanishAfter}, hadMojibake: {$hadMojibeforeFix}");
+            
+            if ($hasSpanishAfter || $hadMojibeforeFix) {
                 $text = $fixed;
-                Log::info("Fixed using ISO-8859-1 conversion");
+                Log::info("Applied Windows-1252 decode - Output sample: " . mb_substr($text, 0, 100));
             }
         }
         
-        // Method 4: iconv with transliteration as last resort
+        // Method 3: Try utf8_decode for double-encoded UTF-8
+        if (preg_match('/\xC3\x83/', $text)) {
+            Log::info("Still detecting C3 83 pattern, trying utf8_decode");
+            $decoded = @utf8_decode($text);
+            if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
+                $text = $decoded;
+                Log::info("Applied utf8_decode");
+            }
+        }
+        
+        // Method 4: Clean invalid UTF-8 sequences
         if (!mb_check_encoding($text, 'UTF-8')) {
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
             Log::info("Applied iconv UTF-8 cleanup");
@@ -1635,9 +1638,9 @@ class KnowledgeController extends Controller
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
         }
         
-        if (strlen($text) !== $originalLength) {
-            Log::info("UTF-8 mojibake fix applied, length changed: {$originalLength} -> " . strlen($text));
-        }
+        $finalSample = mb_substr($text, 0, 100);
+        Log::info("fixUtf8Mojibake - Output sample: " . $finalSample);
+        Log::info("fixUtf8Mojibake - Length changed: {$originalLength} -> " . strlen($text));
         
         return $text;
     }
