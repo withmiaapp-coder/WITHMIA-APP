@@ -3166,6 +3166,33 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // =============================================================================
+// 🔐 PERMISOS Y ROL DEL USUARIO
+// =============================================================================
+Route::middleware('auth:sanctum')->group(function () {
+    // Obtener permisos del usuario actual
+    Route::get('/user/permissions', function (Request $request) {
+        $user = $request->user();
+        return response()->json([
+            'success' => true,
+            'role' => $user->role ?? 'admin',
+            'is_admin' => $user->isAdmin(),
+            'is_agent' => $user->isAgent(),
+            'permissions' => $user->getPermissions(),
+        ]);
+    });
+    
+    // Verificar si tiene un permiso específico
+    Route::get('/user/has-permission/{permission}', function (Request $request, $permission) {
+        $user = $request->user();
+        return response()->json([
+            'success' => true,
+            'permission' => $permission,
+            'has_permission' => $user->hasPermission($permission),
+        ]);
+    });
+});
+
+// =============================================================================
 // ?? DIAGN�STICO DE EVOLUTION-CHATWOOT
 // =============================================================================
 

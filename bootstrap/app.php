@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.clean' => \App\Http\Middleware\AuthWithoutRedirectText::class,
             'railway.auth' => \App\Http\Middleware\RailwayAuthToken::class,
             'utf8' => \App\Http\Middleware\ForceUtf8::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -76,6 +76,9 @@ import {
   checkRateLimit
 } from '../utils/security-utils';
 
+// ====== IMPORTAR HOOK DE PERMISOS ======
+import { usePermissions } from '../hooks/usePermissions';
+
 interface User {
   id: number;
   name: string;
@@ -432,6 +435,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
   
+  // ====== PERMISOS DEL USUARIO ======
+  const { isAdmin, isAgent, hasPermission } = usePermissions();
+  
   // ====== INBOX ID ======
   const inboxId = chatwoot?.inbox_id || user.chatwoot_inbox_id || null;
   
@@ -477,14 +483,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   }, [user, companySlug]);
   
   const [mounted, setMounted] = useState(false);
-  // Restaurar secci�n guardada o usar 'dashboard' por defecto
+  // Restaurar sección guardada o usar 'dashboard' por defecto
   // Si hay query param 'conversation', forzar a 'chats'
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== 'undefined') {
       // Si hay query param conversation, ir directamente a chats
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('conversation')) {
-        console.log('?? Query param conversation detectado, forzando activeSection a chats');
+        console.log('🔀 Query param conversation detectado, forzando activeSection a chats');
         localStorage.setItem('dashboardActiveSection', 'chats');
         return 'chats';
       }
@@ -492,6 +498,29 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
     return 'dashboard';
   });
+  
+  // ====== REDIRIGIR AGENTES A CHATS SI INTENTAN ACCEDER A SECCIONES SIN PERMISO ======
+  useEffect(() => {
+    // Si es agente y está en una sección que no puede ver, redirigir a chats
+    if (isAgent && activeSection === 'dashboard' && !hasPermission('dashboard.view')) {
+      console.log('🔀 Agente sin permiso de dashboard, redirigiendo a chats');
+      setActiveSection('chats');
+      localStorage.setItem('dashboardActiveSection', 'chats');
+    }
+    // Si está en una sección de configuración sin permiso
+    const sectionsRequiringPermission: Record<string, string> = {
+      'insights': 'integrations.manage',
+      'knowledge': 'training.manage',
+      'training': 'training.manage',
+      'reports': 'settings.view',
+    };
+    const requiredPermission = sectionsRequiringPermission[activeSection];
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      console.log(`🔀 Sin permiso para ${activeSection}, redirigiendo a chats`);
+      setActiveSection('chats');
+      localStorage.setItem('dashboardActiveSection', 'chats');
+    }
+  }, [isAgent, activeSection, hasPermission]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   // Restaurar estado de WhatsApp desde secureStorage (encriptado)
@@ -849,13 +878,15 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
 
   const sidebarItems = [
-    { 
+    // Dashboard - solo admins
+    ...(hasPermission('dashboard.view') ? [{ 
       id: 'dashboard', 
       label: 'Inicio', 
       icon: Sparkles, 
       count: null,
       gradient: 'from-amber-500 to-yellow-500'
-    },
+    }] : []),
+    // Conversaciones - todos (pero agentes solo ven las asignadas)
     { 
       id: 'chats', 
       label: 'Conversaciones', 
@@ -863,34 +894,39 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       count: (conversations || []).filter(c => c.status === "open").length,
       gradient: 'from-blue-500 to-indigo-500'
     },
-    { 
+    // Equipo - solo si puede ver equipos
+    ...(hasPermission('teams.view') ? [{ 
       id: 'people', 
       label: 'Equipo', 
       icon: Users, 
       count: (agents || []).length,
       gradient: 'from-emerald-500 to-green-500'
-    },
-    { 
+    }] : []),
+    // Integraciones - solo admins
+    ...(hasPermission('integrations.manage') ? [{ 
       id: 'insights', 
       label: 'Integración', 
       icon: Lightbulb, 
       count: integrationsCount,
       gradient: 'from-gray-500 to-slate-600'
-    },
-    { 
+    }] : []),
+    // Conocimientos - solo admins
+    ...(hasPermission('training.manage') ? [{ 
       id: 'knowledge', 
       label: 'Conocimientos', 
       icon: BookOpen, 
       count: null,
       gradient: 'from-cyan-500 to-blue-500'
-    },
-    { 
+    }] : []),
+    // Entrenamiento - solo admins
+    ...(hasPermission('training.manage') ? [{ 
       id: 'training', 
       label: 'Entrenamiento', 
       icon: GraduationCap, 
       count: null,
       gradient: 'from-violet-500 to-purple-500'
-    },
+    }] : []),
+    // Calendario - todos (próximamente)
     { 
       id: 'calendar', 
       label: 'Calendario', 
@@ -898,15 +934,16 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       count: null,
       gradient: 'from-rose-500 to-pink-500'
     },
-    { 
+    // Productos - solo admins
+    ...(hasPermission('settings.view') ? [{ 
       id: 'reports', 
       label: 'Productos', 
       icon: Package, 
       count: null,
       gradient: 'from-orange-500 to-red-500'
-    },
-    // Admin Panel - solo visible para admins
-    ...(user?.role === 'admin' ? [{
+    }] : []),
+    // Admin Panel - solo superadmins
+    ...(isAdmin && user?.role === 'admin' ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,

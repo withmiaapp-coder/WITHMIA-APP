@@ -269,13 +269,13 @@ class TeamInvitationController extends Controller
         }
 
         try {
-            // Crear usuario en nuestra BD
+            // Crear usuario en nuestra BD - IMPORTANTE: usar company_slug
             $user = User::create([
                 'name' => $request->name,
                 'email' => $invitation->email,
                 'password' => Hash::make($request->password),
-                'company_id' => $invitation->company_id,
-                'role' => $invitation->role,
+                'company_slug' => $invitation->company->slug,
+                'role' => $invitation->role === 'administrator' ? 'admin' : 'agent',
                 'email_verified_at' => now(),
             ]);
 
