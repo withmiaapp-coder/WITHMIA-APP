@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from 'react';
 
 // ============================================================================
 // SISTEMA UNIFICADO DE NOTIFICACIONES v2.0
@@ -669,7 +669,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   // PROVIDER VALUE
   // ============================================================================
-  const value: GlobalNotificationContextType = {
+  const value = useMemo<GlobalNotificationContextType>(() => ({
     notifications,
     notificationHistory: notifications, // Alias para compatibilidad con NotificationCenter
     unreadCount,
@@ -687,9 +687,27 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     showDesktopNotification,
     isWebSocketConnected,
     subscribeToMessages,
-  };
+  }), [
+    notifications,
+    unreadCount,
+    settings,
+    toasts,
+    dismissToast,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+    removeNotification,
+    removeNotificationsByConversation,
+    updateSettings,
+    playNotificationSound,
+    showDesktopNotification,
+    isWebSocketConnected,
+    subscribeToMessages,
+  ]);
 
-  return (    <GlobalNotificationContext.Provider value={value}>
+  return (
+    <GlobalNotificationContext.Provider value={value}>
       {children}
     </GlobalNotificationContext.Provider>
   );
