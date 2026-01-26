@@ -141,6 +141,34 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     }
   }, [notifications]);
 
+  // 🔄 MANEJO DE VISIBILIDAD: Reconectar cuando la pestaña vuelve a ser visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('👁️ [GLOBAL] Pestaña visible - verificando conexión WebSocket');
+        
+        // Forzar reconexión del WebSocket si es necesario
+        if (window.Echo?.connector?.pusher?.connection) {
+          const connection = window.Echo.connector.pusher.connection;
+          const state = connection.state;
+          
+          console.log('👁️ [GLOBAL] Estado WebSocket:', state);
+          
+          if (state !== 'connected') {
+            console.log('🔄 [GLOBAL] Reconectando WebSocket...');
+            connection.connect();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Verificar si estamos en horario silencioso
   const isQuietHours = useCallback(() => {
     if (!settings.quietHoursEnabled) return false;

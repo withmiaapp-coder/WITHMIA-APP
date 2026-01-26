@@ -30,13 +30,20 @@ console.log('🔧 VITE_REVERB_APP_KEY:', import.meta.env.VITE_REVERB_APP_KEY);
 console.log('🔧 VITE_REVERB_PORT:', import.meta.env.VITE_REVERB_PORT);
 console.log('🔧 VITE_REVERB_SCHEME:', import.meta.env.VITE_REVERB_SCHEME);
 
-// Configuración de Reverb con fallbacks robustos
-const reverbHost = import.meta.env.VITE_REVERB_HOST || 'reverb-production-4b5c.up.railway.app';
-const reverbKey = import.meta.env.VITE_REVERB_APP_KEY || 'e14571c517c74fa41d385702598de8f9';
+// Configuración de Reverb - SIN HARDCODES (las variables deben venir del .env)
+const reverbHost = import.meta.env.VITE_REVERB_HOST;
+const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
 const reverbPort = import.meta.env.VITE_REVERB_PORT || '443';
 const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
 
-console.log('🔧 Using Reverb config:', { reverbHost, reverbKey, reverbPort, reverbScheme });
+// Validación: Si no hay host o key, mostrar error claro
+if (!reverbHost || !reverbKey) {
+  console.error('❌ REVERB CONFIG ERROR: Missing required environment variables');
+  console.error('❌ Required: VITE_REVERB_HOST and VITE_REVERB_APP_KEY');
+  console.error('❌ Please configure these in your .env file or Railway variables');
+}
+
+console.log('🔧 Using Reverb config:', { reverbHost, reverbKey: reverbKey ? '***' : 'MISSING', reverbPort, reverbScheme });
 
 // Configurar Laravel Echo con Reverb
 const echoConfig: any = {
