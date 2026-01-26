@@ -1,0 +1,55 @@
+# Dockerfile.reverb - Specific for Laravel Reverb WebSocket Server
+FROM php:8.3-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpq-dev \
+    libzip-dev \
+    libicu-dev \
+    zip \
+    unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    pgsql \
+    zip \
+    intl \
+    bcmath \
+    pcntl \
+    sockets
+
+# Install Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Copy application files
+COPY . .
+
+# Run post-install scripts
+RUN composer dump-autoload --optimize
+
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache
+
+# Expose port (Railway will override this)
+EXPOSE 8080
+
+# Start command - PORT will be injected by Railway at runtime
+CMD ["sh", "-c", "echo 'Starting Reverb on port $PORT' && php artisan config:clear && php artisan reverb:start --host=0.0.0.0 --port=${PORT:-8080}"]
