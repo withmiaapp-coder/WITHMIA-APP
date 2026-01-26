@@ -359,8 +359,35 @@
                 "method": "POST",
                 "url": "{{APP_URL}}/api/n8n/notify-response",
                 "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={\n  \"company_slug\": \"{{COMPANY_SLUG}}\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"inbox_id\": {{ $json.inbox.id || 1 }},\n  \"account_id\": {{ $json.chatwoot.account_id || 1 }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
+                "specifyBody": "keypair",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "company_slug",
+                            "value": "{{COMPANY_SLUG}}"
+                        },
+                        {
+                            "name": "conversation_id",
+                            "value": "={{ $json.conversation.id }}"
+                        },
+                        {
+                            "name": "inbox_id",
+                            "value": "={{ $json.inbox.id || 1 }}"
+                        },
+                        {
+                            "name": "account_id",
+                            "value": "={{ $json.chatwoot.account_id || 1 }}"
+                        },
+                        {
+                            "name": "message",
+                            "value": "={{ $json.response_text }}"
+                        },
+                        {
+                            "name": "phone",
+                            "value": "={{ $json.message.chat_id }}"
+                        }
+                    ]
+                },
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
