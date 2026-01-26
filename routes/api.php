@@ -3559,6 +3559,50 @@ Route::get('/update/company-assistant/{companyId}/{name}', function ($companyId,
     }
 });
 
+// Actualizar instance_url de WhatsApp Instance
+Route::get('/update/whatsapp-instance-url/{instanceName}', function ($instanceName, \Illuminate\Http\Request $request) {
+    try {
+        $newUrl = $request->query('url', 'https://evolution-api-production-a7b5.up.railway.app');
+        $newApiKey = $request->query('apikey');
+        
+        $instance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
+        
+        if (!$instance) {
+            return response()->json([
+                'success' => false,
+                'error' => "Instancia '{$instanceName}' no encontrada"
+            ], 404);
+        }
+        
+        $oldUrl = $instance->instance_url;
+        $oldApiKey = $instance->api_key;
+        
+        $updateData = ['instance_url' => $newUrl];
+        if ($newApiKey) {
+            $updateData['api_key'] = $newApiKey;
+        }
+        
+        $instance->update($updateData);
+        
+        return response()->json([
+            'success' => true,
+            'message' => "WhatsApp instance actualizada",
+            'instance' => [
+                'id' => $instance->id,
+                'instance_name' => $instance->instance_name,
+                'old_url' => $oldUrl,
+                'new_url' => $instance->instance_url,
+                'old_api_key' => $oldApiKey ? '***' : null,
+                'new_api_key' => $instance->api_key ? '***' : null
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
 // ============== N8N: Obtener configuración de empresa por slug (para workflows dinámicos) ==============
 Route::get('/n8n/company-config/{companySlug}', function ($companySlug) {
     try {
