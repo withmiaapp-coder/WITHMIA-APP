@@ -71,7 +71,7 @@ export const NotificationBell: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="relative">
       {/* Botón de campana */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -160,7 +160,7 @@ export const NotificationBell: React.FC = () => {
                         {/* Avatar */}
                         <div className="flex-shrink-0">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold relative">
-                            {notification.avatar || notification.contactName.charAt(0)}
+                            {notification.avatar || notification.name.charAt(0)}
                             {!notification.read && (
                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
                             )}
@@ -173,7 +173,7 @@ export const NotificationBell: React.FC = () => {
                             <h4 className={`text-sm font-semibold truncate ${
                               !notification.read ? 'text-gray-900' : 'text-gray-600'
                             }`}>
-                              {notification.contactName}
+                              {notification.name}
                             </h4>
                             <button
                               onClick={(e) => {
@@ -243,6 +243,6 @@ export const NotificationBell: React.FC = () => {
           `}</style>
         </>
       )}
-    </>
+    </div>
   );
 };
