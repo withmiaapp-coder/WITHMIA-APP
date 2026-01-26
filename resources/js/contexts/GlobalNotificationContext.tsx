@@ -1,10 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { useRealtimeConversations } from '@/hooks/useRealtimeConversations';
 
 // ============================================================================
-// CONTEXTO GLOBAL DE NOTIFICACIONES (OPTIMIZADO)
-// Este contexto maneja notificaciones globales con suscripción WebSocket propia.
-// Funciona en TODAS las secciones del dashboard, no solo en Chats.
+// SISTEMA UNIFICADO DE NOTIFICACIONES v2.0
+// 
+// Este es el ÚNICO sistema de notificaciones de la aplicación.
+// Incluye:
+// - Suscripción WebSocket centralizada (siempre activa)
+// - Manejo de estado de notificaciones
+// - Sonido, vibración, desktop notifications
+// - Deduplicación de mensajes
+// - Rate limiting
+// 
+// Otros componentes NO deben tener sus propias suscripciones WebSocket
+// para notificaciones. Deben usar subscribeToMessages() de este contexto.
 // ============================================================================
 
 interface Notification {
@@ -25,26 +33,46 @@ interface NotificationSettings {
   badgeEnabled: boolean;
   toastEnabled: boolean;
   volumeLevel: number;
-  // Nuevas configuraciones
   quietHoursEnabled?: boolean;
   quietHoursStart?: string;
   quietHoursEnd?: string;
   groupNotifications?: boolean;
 }
 
+// Eventos que el contexto emite para que otros componentes puedan reaccionar
+export interface WebSocketMessageEvent {
+  type: 'new_message' | 'message_updated' | 'conversation_updated';
+  conversationId: number;
+  message?: any;
+  conversation?: any;
+  event: any; // Evento raw del WebSocket
+}
+
 interface GlobalNotificationContextType {
+  // Estado de notificaciones
   notifications: Notification[];
   unreadCount: number;
   settings: NotificationSettings;
+  
+  // Acciones de notificaciones
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   clearAll: () => void;
-  updateSettings: (settings: Partial<NotificationSettings>) => void;
-  playNotificationSound: () => void;
   removeNotification: (id: string) => void;
   removeNotificationsByConversation: (conversationId: number) => void;
-  showDesktopNotification: (title: string, body: string) => void;
+  updateSettings: (settings: Partial<NotificationSettings>) => void;
+  
+  // Efectos
+  playNotificationSound: (priority?: string) => void;
+  showDesktopNotification: (title: string, body: string, options?: { conversationId?: number }) => void;
+  
+  // Estado de conexión WebSocket
+  isWebSocketConnected: boolean;
+  
+  // Para componentes que necesitan saber de mensajes nuevos en tiempo real
+  // (como ConversationsInterface para actualizar la UI)
+  subscribeToMessages: (callback: (event: WebSocketMessageEvent) => void) => () => void;
 }
 
 const GlobalNotificationContext = createContext<GlobalNotificationContextType | undefined>(undefined);
@@ -68,8 +96,12 @@ const SOUND_MAP: Record<string, string> = {
 };
 
 export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProps> = ({ children, inboxId }) => {
+  // ============================================================================
+  // ESTADO
+  // ============================================================================
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
     enabled: true,
     soundEnabled: true,
@@ -83,21 +115,141 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     groupNotifications: true,
   });
 
-  // Cache de audio por prioridad (lazy loading)
+  // ============================================================================
+  // REFS
+  // ============================================================================
   const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
   const originalTitle = useRef<string>('');
   const lastNotificationTime = useRef<number>(0);
-  const RATE_LIMIT_MS = 1000; // Mínimo 1 segundo entre notificaciones
-  
-  // 🔒 DEDUPLICACIÓN: Set para trackear mensajes ya procesados
   const processedMessageIds = useRef<Set<string>>(new Set());
   const lastNotificationPerConversation = useRef<Map<number, number>>(new Map());
-  const CONVERSATION_RATE_LIMIT_MS = 3000; // Mínimo 3 segundos entre notificaciones de la misma conversación
+  const messageSubscribers = useRef<Set<(event: WebSocketMessageEvent) => void>>(new Set());
+  const channelRef = useRef<any>(null);
+  const echoRef = useRef<any>(null);
+  
+  // Rate limits
+  const RATE_LIMIT_MS = 1000;
+  const CONVERSATION_RATE_LIMIT_MS = 3000;
 
-  // Cargar configuración desde localStorage
+  // ============================================================================
+  // UTILIDADES (definidas antes de usarlas)
+  // ============================================================================
+  const isQuietHours = useCallback(() => {
+    if (!settings.quietHoursEnabled) return false;
+    
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const [startH, startM] = (settings.quietHoursStart || '22:00').split(':').map(Number);
+    const [endH, endM] = (settings.quietHoursEnd || '08:00').split(':').map(Number);
+    
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    
+    if (startMinutes > endMinutes) {
+      return currentTime >= startMinutes || currentTime < endMinutes;
+    }
+    
+    return currentTime >= startMinutes && currentTime < endMinutes;
+  }, [settings.quietHoursEnabled, settings.quietHoursStart, settings.quietHoursEnd]);
+
+  // ============================================================================
+  // SONIDO
+  // ============================================================================
+  const playNotificationSound = useCallback((priority: string = 'medium') => {
+    if (!settings.soundEnabled || isQuietHours()) return;
+
+    const now = Date.now();
+    if (now - lastNotificationTime.current < RATE_LIMIT_MS) return;
+    lastNotificationTime.current = now;
+
+    try {
+      const soundPath = SOUND_MAP[priority] || SOUND_MAP.medium;
+      
+      if (!audioCache.current.has(priority)) {
+        const audio = new Audio(soundPath);
+        audio.preload = 'auto';
+        audio.onerror = () => audioCache.current.delete(priority);
+        audioCache.current.set(priority, audio);
+      }
+      
+      const audio = audioCache.current.get(priority);
+      if (!audio) return;
+      
+      audio.volume = settings.volumeLevel / 100;
+      audio.currentTime = 0;
+      
+      audio.play().catch(() => {
+        // Browser policy - silent fail
+      });
+    } catch (error) {
+      // Silent fail
+    }
+  }, [settings.soundEnabled, settings.volumeLevel, isQuietHours]);
+
+  // ============================================================================
+  // DESKTOP NOTIFICATION
+  // ============================================================================
+  const showDesktopNotification = useCallback((title: string, body: string, options?: { conversationId?: number }) => {
+    if (!settings.desktopEnabled || isQuietHours()) return;
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: '/logo-withmia.webp',
+        badge: '/logo-withmia.webp',
+        tag: options?.conversationId ? `conv-${options.conversationId}` : undefined,
+        silent: false,
+      } as NotificationOptions);
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      setTimeout(() => notification.close(), 5000);
+    }
+  }, [settings.desktopEnabled, isQuietHours]);
+
+  // ============================================================================
+  // AGREGAR NOTIFICACIÓN
+  // ============================================================================
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    if (!settings.enabled) return;
+    
+    // Verificar si la conversación está silenciada
+    const mutedConversations = (window as any).__mutedConversations as Set<number> | undefined;
+    if (mutedConversations?.has(notification.conversationId)) {
+      return;
+    }
+
+    const newNotification: Notification = {
+      ...notification,
+      id: `notif-${Date.now()}-${Math.random()}`,
+      timestamp: new Date(),
+      read: false,
+    };
+
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
+    setUnreadCount(prev => prev + 1);
+
+    playNotificationSound(notification.priority || 'medium');
+    showDesktopNotification(
+      `Nuevo mensaje de ${notification.contactName}`,
+      notification.message,
+      { conversationId: notification.conversationId }
+    );
+
+    console.log('🔔 [UNIFIED] Notificación agregada:', notification.contactName);
+  }, [settings.enabled, playNotificationSound, showDesktopNotification]);
+
+  // ============================================================================
+  // INICIALIZACIÓN
+  // ============================================================================
   useEffect(() => {
     originalTitle.current = document.title;
 
+    // Cargar configuración desde localStorage
     const saved = localStorage.getItem('globalNotificationSettings');
     if (saved) {
       try {
@@ -123,9 +275,250 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         console.error('Error loading notifications:', e);
       }
     }
+
+    console.log('🔔 [UNIFIED] Sistema de notificaciones unificado INICIADO');
   }, []);
 
-  // Actualizar badge en el título
+  // ============================================================================
+  // WEBSOCKET CENTRALIZADO
+  // ============================================================================
+  useEffect(() => {
+    if (!inboxId) {
+      console.log('⚠️ [UNIFIED] No hay inboxId, WebSocket no iniciado');
+      return;
+    }
+
+    const initializeWebSocket = async () => {
+      try {
+        const { default: echo } = await import('../echo-config');
+        echoRef.current = echo;
+
+        const channelName = `inbox.${inboxId}`;
+        console.log(`🔌 [UNIFIED] Conectando a canal: ${channelName}`);
+
+        const channel = echo.private(channelName);
+        channelRef.current = channel;
+
+        // Suscripción exitosa
+        channel.subscribed(() => {
+          console.log(`✅ [UNIFIED] Canal ${channelName} SUSCRITO`);
+        });
+
+        // Error en canal
+        channel.error((error: any) => {
+          console.error(`❌ [UNIFIED] Error en canal ${channelName}:`, error);
+        });
+
+        // ========================================
+        // LISTENER: Nuevo mensaje
+        // ========================================
+        channel.listen('.message.received', (event: any) => {
+          console.log('📩 [UNIFIED] Nuevo mensaje:', event?.message?.id);
+          
+          // Filtrar mensajes de prueba
+          if (event?.message?.test === true || event?.test === true) {
+            return;
+          }
+          
+          const convId = event?.conversation_id || event?.conversation?.id;
+          if (!convId || convId <= 0) {
+            return;
+          }
+
+          // Deduplicación
+          const messageKey = `${convId}-${event?.message?.id}`;
+          if (processedMessageIds.current.has(messageKey)) {
+            console.log('🔄 [UNIFIED] Mensaje ya procesado:', messageKey);
+            return;
+          }
+          processedMessageIds.current.add(messageKey);
+          
+          // Limpiar IDs antiguos
+          if (processedMessageIds.current.size > 200) {
+            const iterator = processedMessageIds.current.values();
+            const firstItem = iterator.next().value;
+            if (firstItem) {
+              processedMessageIds.current.delete(firstItem);
+            }
+          }
+
+          // Notificar a todos los suscriptores (ConversationsInterface, etc.)
+          const wsEvent: WebSocketMessageEvent = {
+            type: 'new_message',
+            conversationId: convId,
+            message: event?.message,
+            conversation: event?.conversation,
+            event,
+          };
+          
+          messageSubscribers.current.forEach(callback => {
+            try {
+              callback(wsEvent);
+            } catch (err) {
+              console.error('Error en subscriber:', err);
+            }
+          });
+
+          // Crear notificación solo para mensajes incoming
+          const messageType = event?.message?.message_type ?? event?.message_type;
+          const isIncoming = messageType === 0 || messageType === 'incoming';
+          
+          if (isIncoming) {
+            // Rate limit por conversación
+            const now = Date.now();
+            const lastTime = lastNotificationPerConversation.current.get(convId) || 0;
+            
+            if (now - lastTime >= CONVERSATION_RATE_LIMIT_MS) {
+              lastNotificationPerConversation.current.set(convId, now);
+              
+              // Filtrar mensajes de sistema
+              const content = event?.message?.content || '';
+              const systemKeywords = ['Connection successfully', 'QRCode', 'Instance created', 'Connecting...'];
+              const isSystem = systemKeywords.some(k => content.includes(k));
+              
+              if (!isSystem) {
+                const contactName = event?.conversation?.meta?.sender?.name || 
+                                   event?.sender?.name || 'Contacto';
+                
+                // Agregar notificación
+                addNotification({
+                  conversationId: convId,
+                  contactName,
+                  message: content.substring(0, 100) || 'Nuevo mensaje',
+                  priority: 'medium',
+                  avatar: contactName.charAt(0).toUpperCase(),
+                });
+              }
+            }
+          }
+        });
+
+        // ========================================
+        // LISTENER: Conversación actualizada
+        // ========================================
+        channel.listen('.conversation.updated', (event: any) => {
+          console.log('🔄 [UNIFIED] Conversación actualizada:', event?.conversation?.id || event?.id);
+          
+          const convId = event?.conversation?.id || event?.id;
+          if (!convId) return;
+
+          const wsEvent: WebSocketMessageEvent = {
+            type: 'conversation_updated',
+            conversationId: convId,
+            conversation: event?.conversation || event,
+            event,
+          };
+          
+          messageSubscribers.current.forEach(callback => {
+            try {
+              callback(wsEvent);
+            } catch (err) {
+              console.error('Error en subscriber:', err);
+            }
+          });
+        });
+
+        // ========================================
+        // LISTENER: Mensaje actualizado (status)
+        // ========================================
+        channel.listen('.message.updated', (event: any) => {
+          console.log('📝 [UNIFIED] Mensaje actualizado:', event?.message?.id);
+          
+          const convId = event?.conversation_id || event?.message?.conversation_id;
+          if (!convId) return;
+
+          const wsEvent: WebSocketMessageEvent = {
+            type: 'message_updated',
+            conversationId: convId,
+            message: event?.message,
+            event,
+          };
+          
+          messageSubscribers.current.forEach(callback => {
+            try {
+              callback(wsEvent);
+            } catch (err) {
+              console.error('Error en subscriber:', err);
+            }
+          });
+        });
+
+        // ========================================
+        // ESTADO DE CONEXIÓN
+        // ========================================
+        const connector = echo.connector as any;
+        if (connector?.pusher?.connection) {
+          const connection = connector.pusher.connection;
+
+          connection.bind('connected', () => {
+            console.log('✅ [UNIFIED] WebSocket CONECTADO');
+            setIsWebSocketConnected(true);
+          });
+
+          connection.bind('disconnected', () => {
+            console.log('⚠️ [UNIFIED] WebSocket DESCONECTADO');
+            setIsWebSocketConnected(false);
+          });
+
+          connection.bind('error', (err: any) => {
+            console.error('❌ [UNIFIED] Error WebSocket:', err);
+          });
+
+          // Estado inicial
+          if (connection.state === 'connected') {
+            setIsWebSocketConnected(true);
+          }
+        }
+
+      } catch (error) {
+        console.error('❌ [UNIFIED] Error inicializando WebSocket:', error);
+        setIsWebSocketConnected(false);
+      }
+    };
+
+    initializeWebSocket();
+
+    // Cleanup
+    return () => {
+      if (channelRef.current && inboxId) {
+        console.log(`🔌 [UNIFIED] Desconectando de canal: inbox.${inboxId}`);
+        try {
+          channelRef.current.stopListening('.message.received');
+          channelRef.current.stopListening('.message.updated');
+          channelRef.current.stopListening('.conversation.updated');
+          if (echoRef.current) {
+            echoRef.current.leave(`inbox.${inboxId}`);
+          }
+        } catch (error) {
+          console.error('Error limpiando WebSocket:', error);
+        }
+      }
+    };
+  }, [inboxId, addNotification]);
+
+  // ============================================================================
+  // RECONEXIÓN AL VOLVER A LA PESTAÑA
+  // ============================================================================
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (window.Echo?.connector?.pusher?.connection) {
+          const connection = window.Echo.connector.pusher.connection;
+          if (connection.state !== 'connected') {
+            console.log('🔄 [UNIFIED] Reconectando WebSocket...');
+            connection.connect();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // ============================================================================
+  // ACTUALIZAR BADGE DEL TÍTULO
+  // ============================================================================
   useEffect(() => {
     if (settings.badgeEnabled && unreadCount > 0) {
       document.title = `(${unreadCount}) ${originalTitle.current}`;
@@ -134,169 +527,18 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     }
   }, [unreadCount, settings.badgeEnabled]);
 
-  // Guardar notificaciones en localStorage
+  // ============================================================================
+  // PERSISTIR NOTIFICACIONES
+  // ============================================================================
   useEffect(() => {
     if (notifications.length > 0) {
       localStorage.setItem('globalNotifications', JSON.stringify(notifications.slice(0, 50)));
     }
   }, [notifications]);
 
-  // 🔄 MANEJO DE VISIBILIDAD: Reconectar cuando la pestaña vuelve a ser visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ [GLOBAL] Pestaña visible - verificando conexión WebSocket');
-        
-        // Forzar reconexión del WebSocket si es necesario
-        if (window.Echo?.connector?.pusher?.connection) {
-          const connection = window.Echo.connector.pusher.connection;
-          const state = connection.state;
-          
-          console.log('👁️ [GLOBAL] Estado WebSocket:', state);
-          
-          if (state !== 'connected') {
-            console.log('🔄 [GLOBAL] Reconectando WebSocket...');
-            connection.connect();
-          }
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // Verificar si estamos en horario silencioso
-  const isQuietHours = useCallback(() => {
-    if (!settings.quietHoursEnabled) return false;
-    
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    
-    const [startH, startM] = (settings.quietHoursStart || '22:00').split(':').map(Number);
-    const [endH, endM] = (settings.quietHoursEnd || '08:00').split(':').map(Number);
-    
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    
-    // Manejar caso de cruce de medianoche (ej: 22:00 a 08:00)
-    if (startMinutes > endMinutes) {
-      return currentTime >= startMinutes || currentTime < endMinutes;
-    }
-    
-    return currentTime >= startMinutes && currentTime < endMinutes;
-  }, [settings.quietHoursEnabled, settings.quietHoursStart, settings.quietHoursEnd]);
-
-  // Reproducir sonido con lazy loading y prioridad
-  const playNotificationSound = useCallback((priority: string = 'medium') => {
-    if (!settings.soundEnabled || isQuietHours()) return;
-
-    // Rate limiting
-    const now = Date.now();
-    if (now - lastNotificationTime.current < RATE_LIMIT_MS) {
-      return;
-    }
-    lastNotificationTime.current = now;
-
-    try {
-      const soundPath = SOUND_MAP[priority] || SOUND_MAP.medium;
-      
-      // Lazy loading: crear audio solo cuando se necesita
-      if (!audioCache.current.has(priority)) {
-        const audio = new Audio(soundPath);
-        audio.preload = 'auto';
-        // Add error handler for loading issues
-        audio.onerror = () => {
-          console.warn(`No se pudo cargar el sonido: ${soundPath}`);
-          audioCache.current.delete(priority);
-        };
-        audioCache.current.set(priority, audio);
-      }
-      
-      const audio = audioCache.current.get(priority);
-      if (!audio) return;
-      
-      audio.volume = settings.volumeLevel / 100;
-      audio.currentTime = 0;
-      
-      // Use a promise with better error handling
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          // Browser may require user interaction first - this is normal
-          if (err.name === 'NotAllowedError' || err.name === 'NotSupportedError') {
-            // Silent fail - browser policy, not an error
-          } else {
-            console.warn('No se pudo reproducir el sonido:', err.message);
-          }
-        });
-      }
-    } catch (error) {
-      // Silent fail for audio issues
-    }
-  }, [settings.soundEnabled, settings.volumeLevel, isQuietHours]);
-
-  // Mostrar notificación de escritorio
-  const showDesktopNotification = useCallback((title: string, body: string, options?: { conversationId?: number }) => {
-    if (!settings.desktopEnabled || isQuietHours()) return;
-
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const notification = new Notification(title, {
-        body,
-        icon: '/logo-withmia.webp',
-        badge: '/logo-withmia.webp',
-        tag: options?.conversationId ? `conv-${options.conversationId}` : undefined, // Agrupa por conversación
-        renotify: true,
-        silent: false,
-      });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-
-      setTimeout(() => notification.close(), 5000);
-    }
-  }, [settings.desktopEnabled, isQuietHours]);
-
-  // Agregar notificación
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-    if (!settings.enabled) return;
-    
-    // 🔇 Verificar si la conversación está silenciada
-    const mutedConversations = (window as any).__mutedConversations as Set<number> | undefined;
-    if (mutedConversations?.has(notification.conversationId)) {
-      console.log(`🔇 Notificación silenciada para conversación ${notification.conversationId}`);
-      return; // No mostrar notificación para conversaciones silenciadas
-    }
-
-    const newNotification: Notification = {
-      ...notification,
-      id: `notif-${Date.now()}-${Math.random()}`,
-      timestamp: new Date(),
-      read: false,
-    };
-
-    // Siempre agregar nueva notificación (sin agrupar)
-    // Mantener máximo 50 notificaciones
-    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
-    setUnreadCount(prev => prev + 1);
-
-    // Efectos con prioridad
-    playNotificationSound(notification.priority || 'medium');
-    showDesktopNotification(
-      `Nuevo mensaje de ${notification.contactName}`,
-      notification.message,
-      { conversationId: notification.conversationId }
-    );
-
-    console.log('🔔 Notificación agregada:', newNotification);
-  }, [settings.enabled, playNotificationSound, showDesktopNotification]);
-
-  // Marcar como leída
+  // ============================================================================
+  // ACCIONES DE NOTIFICACIONES
+  // ============================================================================
   const markAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>
       prev.map(notif =>
@@ -306,20 +548,17 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     setUnreadCount(prev => Math.max(0, prev - 1));
   }, []);
 
-  // Marcar todas como leídas
   const markAllAsRead = useCallback(() => {
     setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
     setUnreadCount(0);
   }, []);
 
-  // Limpiar todas
   const clearAll = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);
     localStorage.removeItem('globalNotifications');
   }, []);
 
-  // Remover notificación por ID
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => {
       const notification = prev.find(n => n.id === id);
@@ -330,7 +569,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     });
   }, []);
 
-  // Remover todas las notificaciones de una conversación
   const removeNotificationsByConversation = useCallback((conversationId: number) => {
     setNotifications(prev => {
       const removedUnread = prev.filter(n => n.conversationId === conversationId && !n.read).length;
@@ -341,7 +579,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     });
   }, []);
 
-  // Actualizar configuración
   const updateSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
@@ -350,165 +587,37 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     });
   }, []);
 
-  // DEBUG: Log cuando el contexto se monta
-  useEffect(() => {
-    console.log(' [GLOBAL] GlobalNotificationContext MONTADO y escuchando eventos');
+  // ============================================================================
+  // SUSCRIPCIÓN A MENSAJES (para ConversationsInterface y otros componentes)
+  // ============================================================================
+  const subscribeToMessages = useCallback((callback: (event: WebSocketMessageEvent) => void) => {
+    messageSubscribers.current.add(callback);
+    console.log(`📡 [UNIFIED] Subscriber agregado. Total: ${messageSubscribers.current.size}`);
+    
     return () => {
-      console.log(' [GLOBAL] GlobalNotificationContext DESMONTADO');
+      messageSubscribers.current.delete(callback);
+      console.log(`📡 [UNIFIED] Subscriber removido. Total: ${messageSubscribers.current.size}`);
     };
   }, []);
 
-
-
-  // Escuchar eventos de limpieza de notificaciones desde otras partes de la app
+  // ============================================================================
+  // ESCUCHAR EVENTOS EXTERNOS (para limpiar notificaciones)
+  // ============================================================================
   useEffect(() => {
     const handleClearNotifications = (event: CustomEvent) => {
       const { conversationId } = event.detail;
       if (conversationId) {
         removeNotificationsByConversation(conversationId);
-        console.log(`🗑️ [GLOBAL] Notificaciones removidas por evento para conversación ${conversationId}`);
       }
     };
 
     window.addEventListener('clearNotifications', handleClearNotifications as EventListener);
-    return () => {
-      window.removeEventListener('clearNotifications', handleClearNotifications as EventListener);
-    };
+    return () => window.removeEventListener('clearNotifications', handleClearNotifications as EventListener);
   }, [removeNotificationsByConversation]);
 
-  // Escuchar eventos de nuevos mensajes desde ConversationsInterface
-  // (Evita suscripción WebSocket duplicada)
-  useEffect(() => {
-    const handleNewMessage = (event: CustomEvent) => {
-      const { conversationId, contactName, message, priority, avatar } = event.detail;
-      
-      if (conversationId) {
-        addNotification({
-          conversationId,
-          contactName: contactName || 'Contacto',
-          message: (message || 'Nuevo mensaje').substring(0, 100),
-          priority: priority || 'medium',
-          avatar: avatar || contactName?.charAt(0)?.toUpperCase() || 'C',
-        });
-      }
-    };
-
-    window.addEventListener('newChatwootMessage', handleNewMessage as EventListener);
-    console.log('🔔 [GLOBAL] GlobalNotificationContext escuchando evento newChatwootMessage');
-    
-    return () => {
-      window.removeEventListener('newChatwootMessage', handleNewMessage as EventListener);
-    };
-  }, [addNotification]);
-
-  // 🌐 SUSCRIPCIÓN WEBSOCKET DIRECTA
-  // Esto asegura que recibas notificaciones en TODAS las secciones del dashboard,
-  // no solo cuando estás en la sección de Chats.
-  // La deduplicación se maneja en addNotification() (groupNotifications)
-  useRealtimeConversations({
-    inboxId,
-    enabled: settings.enabled && inboxId !== null,
-    onNewMessage: (event) => {
-      console.log('🔔 [GLOBAL-WS] Evento recibido:', JSON.stringify(event, null, 2).substring(0, 500));
-      
-      // Solo notificar mensajes INCOMING (no los que tú envías)
-      // Chatwoot: message_type 0 = incoming, 1 = outgoing
-      // El evento puede tener la estructura: event.message (todo el payload) o event.message.message_type
-      const messageType = event?.message?.message_type ?? event?.message_type;
-      const isIncoming = messageType === 0 || messageType === 'incoming';
-      
-      console.log('🔔 [GLOBAL-WS] messageType:', messageType, 'isIncoming:', isIncoming);
-      
-      if (!isIncoming) {
-        console.log('🔔 [GLOBAL-WS] Mensaje NO es incoming, ignorando');
-        return;
-      }
-
-      // 🔒 DEDUPLICACIÓN POR MESSAGE ID
-      const messageId = event?.message?.id || event?.id;
-      const conversationId = event?.conversation?.id || event?.conversation_id;
-      
-      if (!conversationId || conversationId <= 0) {
-        console.log('⚠️ [GLOBAL-WS] conversation_id inválido, ignorando');
-        return;
-      }
-      
-      // Crear clave única para este mensaje
-      const messageKey = `${conversationId}-${messageId}`;
-      
-      if (processedMessageIds.current.has(messageKey)) {
-        console.log('🔄 [GLOBAL-WS] Mensaje ya procesado, ignorando:', messageKey);
-        return;
-      }
-      
-      // Marcar como procesado
-      processedMessageIds.current.add(messageKey);
-      
-      // Limpiar mensajes antiguos del Set (mantener máximo 100)
-      if (processedMessageIds.current.size > 100) {
-        const firstItem = processedMessageIds.current.values().next().value;
-        processedMessageIds.current.delete(firstItem);
-      }
-      
-      // 🔒 RATE LIMIT POR CONVERSACIÓN
-      const now = Date.now();
-      const lastTime = lastNotificationPerConversation.current.get(conversationId) || 0;
-      
-      if (now - lastTime < CONVERSATION_RATE_LIMIT_MS) {
-        console.log(`⏱️ [GLOBAL-WS] Rate limit para conversación ${conversationId}, ignorando`);
-        return;
-      }
-      
-      lastNotificationPerConversation.current.set(conversationId, now);
-      
-      // 🚫 FILTRAR MENSAJES DE SISTEMA/CONEXIÓN DE WHATSAPP
-      const messageContent = event?.message?.content || event?.content || '';
-      const systemMessages = [
-        'Connection successfully established',
-        'QRCode successfully generated',
-        'Instance created',
-        'Connecting...',
-        'Disconnected',
-        '🚀 Connection',
-        '⚡ QRCode',
-      ];
-      
-      const isSystemMessage = systemMessages.some(sm => 
-        messageContent.toLowerCase().includes(sm.toLowerCase())
-      );
-      
-      if (isSystemMessage) {
-        console.log('🔧 [GLOBAL-WS] Mensaje de sistema detectado, ignorando:', messageContent.substring(0, 50));
-        return;
-      }
-
-      console.log('🔔 [GLOBAL-WS] Nuevo mensaje recibido vía WebSocket:', conversationId);
-
-      // Extraer información del evento
-      const contactName = event?.conversation?.meta?.sender?.name || 
-                         event?.conversation?.contact?.name ||
-                         event?.sender?.name ||
-                         'Contacto';
-
-      if (conversationId) {
-        addNotification({
-          conversationId,
-          contactName,
-          message: messageContent.substring(0, 100) || 'Nuevo mensaje',
-          priority: (event?.conversation?.unread_count || 0) > 3 ? 'high' : 'medium',
-          avatar: contactName.charAt(0).toUpperCase(),
-        });
-      }
-    },
-    onConversationUpdated: (event) => {
-      // Podemos usar esto para actualizar el estado si necesario
-      console.log('🔄 [GLOBAL-WS] Conversación actualizada:', event?.conversation?.id || event?.id);
-    },
-    onConnectionChange: (connected) => {
-      console.log(`🔌 [GLOBAL-WS] WebSocket ${connected ? 'conectado' : 'desconectado'}`);
-    },
-  });
-
+  // ============================================================================
+  // PROVIDER VALUE
+  // ============================================================================
   const value: GlobalNotificationContextType = {
     notifications,
     unreadCount,
@@ -522,6 +631,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     updateSettings,
     playNotificationSound,
     showDesktopNotification,
+    isWebSocketConnected,
+    subscribeToMessages,
   };
 
   return (

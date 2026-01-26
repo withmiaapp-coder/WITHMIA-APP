@@ -62,7 +62,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useConversations } from '../hooks/useChatwoot';
-import { useCombinedRealtime } from '../hooks/useRealtimeConversations';
+import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
 import { useNotifications } from '../hooks/useNotifications';
 import NotificationToast from './NotificationToast.tsx';
 // FASE 3: Nuevos componentes y hooks (Filtros)
@@ -899,374 +899,217 @@ const ConversationsInterface: React.FC = () => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
   
-  // 🎯 NUEVO: Usar hook combinado de tiempo real con WebSocket (sin polling)
-  const {
-    isConnected,
-    wsConnected,
-    lastEventTime,
-    usingFallback
-  } = useCombinedRealtime({
-    inboxId: userInboxId,
-    enabled: realtimeEnabled && userInboxId !== null,
-    onUpdate: async () => {
-      // Retornar cantidad de actualizaciones para el algoritmo de backoff
-      const updateCount = await fetchUpdatedConversations();
-      return updateCount;
-    },
-    onConversationUpdated: (event) => {
-      // 🔄 Usar debounced fetch en lugar de directo
-      debouncedFetchConversations();
-    },
-    onMessageUpdated: (event) => {
-      // 📝 Actualizar estado del mensaje (sent, delivered, read)
-      const messageId = event?.message?.id;
-      const newStatus = event?.message?.status;
+  // 🎯 SISTEMA UNIFICADO: Obtener contexto global de notificaciones
+  const globalNotifications = useGlobalNotifications();
+  const isConnected = globalNotifications?.isWebSocketConnected ?? false;
+  const wsConnected = isConnected;
+  const [lastEventTime, setLastEventTime] = useState<Date | null>(null);
+  const usingFallback = false; // Ya no usamos fallback, solo WebSocket
+  
+  // 🔌 SUSCRIPCIÓN AL WEBSOCKET UNIFICADO
+  // Este efecto conecta al sistema de WebSocket central y maneja los eventos
+  useEffect(() => {
+    if (!globalNotifications || !realtimeEnabled || !userInboxId) {
+      return;
+    }
+    
+    const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
+      setLastEventTime(new Date());
       
-      if (messageId && newStatus) {
-        debugLog.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
+      if (wsEvent.type === 'conversation_updated') {
+        // 🔄 Actualizar lista de conversaciones
+        debouncedFetchConversations();
+        return;
+      }
+      
+      if (wsEvent.type === 'message_updated') {
+        // 📝 Actualizar estado del mensaje (sent, delivered, read)
+        const messageId = wsEvent.message?.id;
+        const newStatus = wsEvent.message?.status;
         
-        _setActiveConversation((prev: any) => {
-          if (!prev || !prev.messages) return prev;
+        if (messageId && newStatus) {
+          debugLog.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
           
-          const updatedMessages = prev.messages.map((msg: any) => {
-            if (msg.id === messageId || (msg._isOptimistic && msg.source_id === event?.message?.source_id)) {
-              return { ...msg, status: newStatus, _isOptimistic: false };
-            }
-            return msg;
+          _setActiveConversation((prev: any) => {
+            if (!prev || !prev.messages) return prev;
+            
+            const updatedMessages = prev.messages.map((msg: any) => {
+              if (msg.id === messageId || (msg._isOptimistic && msg.source_id === wsEvent.message?.source_id)) {
+                return { ...msg, status: newStatus, _isOptimistic: false };
+              }
+              return msg;
+            });
+            
+            return { ...prev, messages: updatedMessages };
           });
-          
-          return { ...prev, messages: updatedMessages };
-        });
-      }
-    },
-    onNewMessage: async (event) => {
-      // ?? DEDUPLICACI?N: Crear ID ??nico del evento
-      const eventId = `${event?.message?.id || 'unknown'}-${event?.timestamp || Date.now()}`;
-
-      debugLog.log(' ========== NUEVO MENSAJE RECIBIDO ==========');
-      debugLog.log(' EventID:', eventId);
-      debugLog.log(' Evento completo:', JSON.stringify(event, null, 2));
-      debugLog.log(' Conversaci??n activa ID:', activeConversationRef.current?.id);
-      debugLog.log(' Conversation ID del evento:', event?.conversation_id);
-      debugLog.log(' ??Coinciden?:', event?.conversation_id === activeConversationRef.current?.id);
-
-      // Verificar duplicados
-      if (processedEventsRef.current.has(eventId)) {
-        debugLog.log('?? Evento duplicado, omitiendo');
-        return;
-      }
-
-      processedEventsRef.current.add(eventId);
-      
-      // 🧪 FILTRAR MENSAJES DE PRUEBA - No crear conversaciones falsas
-      if (event?.message?.test === true || event?.test === true) {
-        debugLog.log('🧪 Mensaje de PRUEBA detectado - ignorando para evitar conversaciones falsas');
+        }
         return;
       }
       
-      // 🔢 Verificar que conversation_id sea válido (no IDs de prueba como 999)
-      const convId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;
-      if (!convId || convId <= 0) {
-        debugLog.log('⚠️ conversation_id inválido:', convId, '- ignorando');
-        return;
-      }
-      
-      // ⚠️ NO FILTRAR NADA MÁS - Dejar que Laravel maneje los filtros
-      // El backend ya filtra mensajes fromMe, aquí solo procesamos
-      debugLog.log('✅ Procesando evento normalmente (filtros en backend)');
-
-      // Obtener el conversation_id del evento
-      const conversationId = event?.conversation_id || event?.conversation?.id || event?.message?.conversation_id;
-
-      //  ACTUALIZACIÓN OPTIMISTA: Actualizar conversación localmente INMEDIATAMENTE
-      setConversations((prevConversations: any[]) => {
-        const conversationId = event.conversation_id;
-        const newTimestamp = event.timestamp || event.message?.created_at || new Date().toISOString();
-
-        debugLog.log(' Iniciando actualización optimista para conversación:', conversationId);
-        debugLog.log(' Nuevo timestamp:', newTimestamp);
-
-        // Buscar si la conversación ya existe
-        const existingIndex = prevConversations.findIndex((conv: any) => conv.id === conversationId);
-
-        let updated;
-        if (existingIndex !== -1) {
-          // Conversación existe - actualizar
-          updated = prevConversations.map((conv: any) => {
-            if (conv.id === conversationId) {
-              // ✅ Solo incrementar unread_count si:
-              // 1. Es mensaje INCOMING (no outgoing)
-              // 2. La conversación NO está activa actualmente
-              const messageType = event.message?.message_type;
-              const isOutgoing = messageType === 1 || messageType === 'outgoing';
-              const isActiveConversation = activeConversation?.id === conversationId;
-              const shouldIncrementUnread = !isOutgoing && !isActiveConversation;
-              
-              const updatedConv = {
-                ...conv,
-                last_message: {
-                  content: event.message?.content || event.content || '',
-                  created_at: event.message?.created_at || newTimestamp,
-                  timestamp: event.message?.created_at || new Date(newTimestamp).getTime() / 1000,
-                  message_type: event.message?.message_type || 0,
-                  sender: event.sender || event.message?.sender
-                },
-                // Si la conversación está activa, mantener unread_count en 0
-                unread_count: isActiveConversation ? 0 : (shouldIncrementUnread ? (conv.unread_count || 0) + 1 : (conv.unread_count || 0)),
-                updated_at: newTimestamp,
-                timestamp: new Date(newTimestamp).getTime() / 1000,
-                last_activity_at: new Date(newTimestamp).getTime() / 1000
-              };
-              debugLog.log('📝 Conversación actualizada:', updatedConv.id, 'isActive:', isActiveConversation, 'unread:', updatedConv.unread_count);
-              return updatedConv;
-            }
-            return conv;
-          });
-        } else {
-          // Conversación NO existe - agregarla desde el evento
-          debugLog.log(' Conversación nueva detectada - agregando:', conversationId);
-          // Construir conversación con estructura completa
-          const sender = event.sender || event.message?.sender || { name: 'Nuevo contacto' };
-          const newConv = {
-            ...(event.message?.conversation || event.conversation || {}),
-            id: conversationId,
-            inbox_id: event.inbox_id,
-            status: 'open',
-            unread_count: 1,
-            meta: {
-              sender: sender,
-              assignee: null,
-              team: null
-            },
-            contact: {
-              id: sender.id || 0,
-              name: sender.name || 'Nuevo contacto',
-              email: sender.email || '',
-              phone_number: sender.phone_number || '',
-              avatarUrl: sender.thumbnail || sender.avatar || null
-            },
-            last_message: {
-              content: event.message?.content || event.content || '',
-              created_at: event.message?.created_at || newTimestamp,
-              timestamp: new Date(event.message?.created_at || newTimestamp).getTime() / 1000,
-              message_type: event.message?.message_type || 0,
-              sender: sender
-            },
-            labels: [],
-            timestamp: new Date(newTimestamp).getTime() / 1000,
-            last_activity_at: new Date(newTimestamp).getTime() / 1000,
-            created_at: newTimestamp,
-            updated_at: newTimestamp
-          };
-          // Agregar solo si no existe ya (prevenir duplicados)
-          const alreadyExists = prevConversations.some(c => c.id === conversationId);
-          updated = alreadyExists ? prevConversations : [newConv, ...prevConversations];
-          debugLog.log(' Nueva conversación agregada al inicio');
+      if (wsEvent.type === 'new_message') {
+        const event = wsEvent.event;
+        const conversationId = wsEvent.conversationId;
+        
+        // ?? DEDUPLICACIÓN
+        const eventId = `${wsEvent.message?.id || 'unknown'}-${Date.now()}`;
+        if (processedEventsRef.current.has(eventId)) {
+          return;
+        }
+        processedEventsRef.current.add(eventId);
+        
+        // Limpiar eventos antiguos
+        if (processedEventsRef.current.size > 50) {
+          const iterator = processedEventsRef.current.values();
+          const firstItem = iterator.next().value;
+          if (firstItem) processedEventsRef.current.delete(firstItem);
         }
 
-        // Ordenar por timestamp (más reciente primero)
-        const sorted = updated.sort((a: any, b: any) => {
-          const timeA = a.last_activity_at || a.timestamp || new Date(a.updated_at || 0).getTime() / 1000;
-          const timeB = b.last_activity_at || b.timestamp || new Date(b.updated_at || 0).getTime() / 1000;
-          return timeB - timeA;
-        });
+        debugLog.log('📩 [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);
 
-        debugLog.log(' Primera conversación después de ordenar:', sorted[0]?.id, sorted[0]?.meta?.sender?.name);
-        return sorted;
-      });
+        // 🔄 ACTUALIZACIÓN OPTIMISTA de la lista de conversaciones
+        setConversations((prevConversations: any[]) => {
+          const newTimestamp = event?.timestamp || event?.message?.created_at || new Date().toISOString();
+          const existingIndex = prevConversations.findIndex((conv: any) => conv.id === conversationId);
 
-      debugLog.log(' Conversation ID encontrado:', conversationId);
-
-
-      //  NOTIFICACIÓN DE NUEVO MENSAJE
-      // ✅ FILTRO: Solo notificar mensajes INCOMING (no outgoing)
-      const messageType = event?.message?.message_type;
-      const isIncoming = messageType === 0 || messageType === 'incoming';
-      const isOutgoing = messageType === 1 || messageType === 'outgoing';
-      
-      debugLog.log('🔔 Filtro de notificación:', { messageType, isIncoming, isOutgoing, pasaFiltro: isIncoming && !isOutgoing });
-      
-      if (event?.message && event?.conversation && isIncoming && !isOutgoing) {
-        const contactName = event.conversation.contact_name || event.sender?.name || event.contact?.name || 'Nuevo contacto';
-        const messageContent = event.message.content || event.content || 'Nuevo mensaje';
-        const priority = (event.conversation.unread_count || 0) > 3 ? 'high' : 'medium';
-        
-        // Notificación local (hook useNotifications)
-        notifications.notify({
-          conversationId: event.conversation.id || event.conversation_id || 0,
-          conversationName: contactName,
-          message: messageContent,
-          priority,
-          avatar: contactName.charAt(0),
-          assignedToMe: true,
-          onClickNotification: () => {
-            if (event.conversation_id) {
-              const conv = conversations.find((c: any) => c.id === event.conversation_id);
-              if (conv) {
-                _setActiveConversation(conv);
+          let updated;
+          if (existingIndex !== -1) {
+            updated = prevConversations.map((conv: any) => {
+              if (conv.id === conversationId) {
+                const messageType = event?.message?.message_type;
+                const isOutgoing = messageType === 1 || messageType === 'outgoing';
+                const isActiveConversation = activeConversation?.id === conversationId;
+                const shouldIncrementUnread = !isOutgoing && !isActiveConversation;
+                
+                return {
+                  ...conv,
+                  last_message: {
+                    content: event?.message?.content || '',
+                    created_at: event?.message?.created_at || newTimestamp,
+                    timestamp: new Date(newTimestamp).getTime() / 1000,
+                    message_type: event?.message?.message_type || 0,
+                    sender: event?.sender || event?.message?.sender
+                  },
+                  unread_count: isActiveConversation ? 0 : (shouldIncrementUnread ? (conv.unread_count || 0) + 1 : (conv.unread_count || 0)),
+                  updated_at: newTimestamp,
+                  timestamp: new Date(newTimestamp).getTime() / 1000,
+                  last_activity_at: new Date(newTimestamp).getTime() / 1000
+                };
               }
-            }
+              return conv;
+            });
+          } else {
+            // Nueva conversación
+            const sender = event?.sender || event?.message?.sender || { name: 'Nuevo contacto' };
+            const newConv = {
+              id: conversationId,
+              inbox_id: event?.inbox_id,
+              status: 'open',
+              unread_count: 1,
+              meta: { sender, assignee: null, team: null },
+              contact: {
+                id: sender.id || 0,
+                name: sender.name || 'Nuevo contacto',
+                email: sender.email || '',
+                phone_number: sender.phone_number || '',
+                avatarUrl: sender.thumbnail || sender.avatar || null
+              },
+              last_message: {
+                content: event?.message?.content || '',
+                created_at: event?.message?.created_at || newTimestamp,
+                timestamp: new Date(newTimestamp).getTime() / 1000,
+                message_type: event?.message?.message_type || 0,
+                sender
+              },
+              labels: [],
+              timestamp: new Date(newTimestamp).getTime() / 1000,
+              last_activity_at: new Date(newTimestamp).getTime() / 1000,
+              created_at: newTimestamp,
+              updated_at: newTimestamp
+            };
+            const alreadyExists = prevConversations.some(c => c.id === conversationId);
+            updated = alreadyExists ? prevConversations : [newConv, ...prevConversations];
           }
+
+          return updated.sort((a: any, b: any) => {
+            const timeA = a.last_activity_at || a.timestamp || 0;
+            const timeB = b.last_activity_at || b.timestamp || 0;
+            return timeB - timeA;
+          });
         });
-        
-        // 📢 Emitir evento global para GlobalNotificationContext (sin duplicar WebSocket)
-        window.dispatchEvent(new CustomEvent('newChatwootMessage', {
-          detail: {
-            conversationId: event.conversation.id || event.conversation_id,
-            contactName,
-            message: messageContent,
-            priority,
-            avatar: contactName.charAt(0).toUpperCase(),
-          }
-        }));
-        
-        debugLog.log('✅ Notificación enviada para nuevo mensaje');
-      }
 
-      // Limpiar eventos antiguos
-      if (processedEventsRef.current.size > 50) {
-        const firstItem = processedEventsRef.current.values().next().value;
-        processedEventsRef.current.delete(firstItem);
-      }
-
-      // Si el mensaje es para la conversación activa, agregar mensaje en tiempo real
-      // ✅ AGREGAR TODOS los mensajes (incoming y outgoing) - verificar duplicados por ID
-      const currentActiveConv = activeConversationRef.current;
-      
-      if (currentActiveConv && currentActiveConv.id === conversationId) {
-        debugLog.log("💬 Mensaje para conversación activa - Agregando en tiempo real...");
-        try {
-          // Normalizar message_type a número (0 = incoming, 1 = outgoing)
-          const rawMsgType = event.message?.message_type;
+        // 💬 Agregar mensaje a la conversación activa si corresponde
+        const currentActiveConv = activeConversationRef.current;
+        
+        if (currentActiveConv && currentActiveConv.id === conversationId) {
+          const rawMsgType = wsEvent.message?.message_type;
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
-          
-          // Normalizar sender a string 'agent' o 'contact' para el renderizado
-          // El renderizador usa message.sender === 'agent' para posicionar el mensaje
           const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
           
-          // Construir el nuevo mensaje desde el evento
           const newMessage = {
-            id: event.message?.id || event.id || Date.now(),
-            content: event.message?.content || event.content || '',
+            id: wsEvent.message?.id || Date.now(),
+            content: wsEvent.message?.content || '',
             message_type: normalizedMsgType,
-            created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
-            sender: normalizedSender, // Usar string normalizado, no el objeto del webhook
-            attachments: event.message?.attachments || [],
-            source_id: event.message?.source_id || event.source_id || null,
-            content_type: event.message?.content_type || 'text',
-            private: event.message?.private || false,
-            status: event.message?.status || 'sent'
+            created_at: wsEvent.message?.created_at || new Date().toISOString(),
+            sender: normalizedSender,
+            attachments: wsEvent.message?.attachments || [],
+            source_id: wsEvent.message?.source_id || null,
+            content_type: wsEvent.message?.content_type || 'text',
+            private: wsEvent.message?.private || false,
+            status: wsEvent.message?.status || 'sent'
           };
           
-          // Actualizar activeConversation con el nuevo mensaje
           _setActiveConversation((prev: any) => {
             if (!prev || prev.id !== conversationId) return prev;
             
-            // Verificar si el mensaje ya existe (evitar duplicados)
             const existingMessages = prev.messages || [];
             
-            // Buscar duplicado por:
-            // 1. Mismo ID numérico
-            // 2. Mensaje optimista/pending con mismo contenido (para mensajes outgoing recientes)
+            // Verificar duplicados
             const messageExists = existingMessages.some((m: any) => {
-              // Duplicado exacto por ID
               if (m.id === newMessage.id) return true;
-              
-              // Para mensajes outgoing, verificar si hay un mensaje optimista/pending con mismo contenido
               if (newMessage.message_type === 1 || newMessage.sender === 'agent') {
-                const isOptimisticOrPending = (
-                  m._isOptimistic || 
-                  m.status === 'sending' || 
-                  m.status === 'sent' ||
-                  String(m.id).startsWith('temp-') || 
-                  String(m.id).startsWith('pending-')
-                );
-                
-                if (isOptimisticOrPending && m.content === newMessage.content) {
-                  debugLog.log('🔄 Detectado mensaje duplicado (optimista→real):', m.id, '→', newMessage.id);
-                  return true;
-                }
+                const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-');
+                if (isOptimistic && m.content === newMessage.content) return true;
               }
-              
               return false;
             });
             
             if (messageExists) {
-              debugLog.log('⚠️ Mensaje ya existe en el chat, ignorando duplicado:', newMessage.id);
-              // En lugar de ignorar, reemplazar el mensaje optimista con el real
+              // Reemplazar mensaje optimista con el real
               const updatedMessages = existingMessages.map((m: any) => {
-                // Reemplazar mensaje optimista/pending con el mensaje real
-                if (
-                  (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) &&
-                  m.content === newMessage.content &&
-                  (newMessage.message_type === 1 || newMessage.sender === 'agent')
-                ) {
-                  debugLog.log('✅ Reemplazando mensaje optimista con real:', m.id, '→', newMessage.id);
+                if ((m._isOptimistic || String(m.id).startsWith('temp-')) && 
+                    m.content === newMessage.content && 
+                    (newMessage.message_type === 1 || newMessage.sender === 'agent')) {
                   return { ...newMessage, _isOptimistic: false };
                 }
                 return m;
               });
-              
-              // ✅ NUEVO: Actualizar caché con mensajes actualizados
-              if (updateMessagesCache) {
-                updateMessagesCache(prev.id, updatedMessages);
-              }
-              
-              return {
-                ...prev,
-                messages: updatedMessages
-              };
+              if (updateMessagesCache) updateMessagesCache(prev.id, updatedMessages);
+              return { ...prev, messages: updatedMessages };
             }
             
-            debugLog.log('✅ Agregando nuevo mensaje al chat:', newMessage.id, newMessage.content);
             const newMessages = [...existingMessages, newMessage];
-            
-            // ✅ NUEVO: Actualizar caché con nuevo mensaje
-            if (updateMessagesCache) {
-              updateMessagesCache(prev.id, newMessages);
-            }
-            
-            return {
-              ...prev,
-              messages: newMessages
-            };
+            if (updateMessagesCache) updateMessagesCache(prev.id, newMessages);
+            return { ...prev, messages: newMessages };
           });
-          
-          debugLog.log('💬 Mensaje agregado exitosamente al chat');
-        } catch (error) {
-          debugLog.error('❌ Error agregando mensaje al chat:', error);
-        }
-      } else {
-        // 🆕 NUEVO: Si la conversación NO está activa, agregar mensaje al caché
-        // para que cuando el usuario abra esa conversación, el mensaje ya esté ahí
-        debugLog.log('💾 Mensaje para conversación INACTIVA - agregando al caché:', conversationId);
-        
-        // Normalizar el mensaje
-        const rawMsgType = event.message?.message_type;
-        const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
-        const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
-        
-        const newMessage = {
-          id: event.message?.id || event.id || Date.now(),
-          content: event.message?.content || event.content || '',
-          message_type: normalizedMsgType,
-          created_at: event.message?.created_at || event.timestamp || new Date().toISOString(),
-          sender: normalizedSender,
-          attachments: event.message?.attachments || [],
-          source_id: event.message?.source_id || event.source_id || null,
-          content_type: event.message?.content_type || 'text',
-          private: event.message?.private || false,
-          status: event.message?.status || 'sent'
-        };
-        
-        // Agregar al caché aunque la conversación no esté activa
-        if (addMessageToCache && conversationId) {
+        } else if (addMessageToCache && conversationId) {
+          // Agregar al caché para conversación inactiva
+          const rawMsgType = wsEvent.message?.message_type;
+          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
+          const newMessage = {
+            id: wsEvent.message?.id || Date.now(),
+            content: wsEvent.message?.content || '',
+            message_type: normalizedMsgType,
+            created_at: wsEvent.message?.created_at || new Date().toISOString(),
+            sender: normalizedMsgType === 1 ? 'agent' : 'contact',
+            attachments: wsEvent.message?.attachments || [],
+          };
           addMessageToCache(conversationId, newMessage);
-          debugLog.log('✅ Mensaje agregado al caché para conversación inactiva:', conversationId);
         }
       }
-    }
-  });
+    });
+    
+    return unsubscribe;
+  }, [globalNotifications, realtimeEnabled, userInboxId, activeConversation?.id, debouncedFetchConversations, _setActiveConversation, setConversations, updateMessagesCache, addMessageToCache]);
 
   //  HOOK DE NOTIFICACIONES
   // ELIMINADO: Declaraci??n duplicada de notifications
