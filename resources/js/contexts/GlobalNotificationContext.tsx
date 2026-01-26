@@ -712,11 +712,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   const subscribeToMessages = useCallback((callback: (event: WebSocketMessageEvent) => void) => {
     messageSubscribers.current.add(callback);
-    console.log(`📡 [UNIFIED] Subscriber agregado. Total: ${messageSubscribers.current.size}`);
     
     // Entregar mensajes pendientes que llegaron cuando no había subscribers
     if (pendingMessages.current.length > 0) {
-      console.log(`📬 [UNIFIED] Entregando ${pendingMessages.current.length} mensajes pendientes`);
+      const pendingCount = pendingMessages.current.length;
       const messages = [...pendingMessages.current];
       pendingMessages.current = [];
       
@@ -729,12 +728,16 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             console.error('Error entregando mensaje pendiente:', err);
           }
         });
-      }, 100);
+        
+        // Emitir evento para que ConversationsInterface recargue la lista
+        if (pendingCount > 0) {
+          window.dispatchEvent(new CustomEvent('refreshConversations'));
+        }
+      }, 150);
     }
     
     return () => {
       messageSubscribers.current.delete(callback);
-      console.log(`📡 [UNIFIED] Subscriber removido. Total: ${messageSubscribers.current.size}`);
     };
   }, []);
 

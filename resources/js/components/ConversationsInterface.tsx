@@ -772,7 +772,21 @@ const ConversationsInterface: React.FC = () => {
     };
   }, []);
   
-  // 🔔 Escuchar evento selectConversation desde NotificationBell y query params
+  // � Escuchar evento para refrescar conversaciones cuando hay mensajes pendientes
+  useEffect(() => {
+    const handleRefreshConversations = () => {
+      if (fetchUpdatedConversations) {
+        fetchUpdatedConversations();
+      }
+    };
+    
+    window.addEventListener('refreshConversations', handleRefreshConversations);
+    return () => {
+      window.removeEventListener('refreshConversations', handleRefreshConversations);
+    };
+  }, [fetchUpdatedConversations]);
+  
+  // �🔔 Escuchar evento selectConversation desde NotificationBell y query params
   const pendingConversationRef = useRef<number | null>(null);
   const hasCheckedQueryParamRef = useRef(false);
   
@@ -964,7 +978,10 @@ const ConversationsInterface: React.FC = () => {
     }
     hasSubscribedRef.current = true;
     
-    console.log('🔌 [ConversationsInterface] Suscribiéndose a WebSocket (una sola vez)');
+    // Log solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔌 [ConversationsInterface] Suscribiéndose a WebSocket');
+    }
     
     const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
       setLastEventTime(new Date());
@@ -1180,7 +1197,6 @@ const ConversationsInterface: React.FC = () => {
     });
     
     return () => {
-      console.log('🔌 [ConversationsInterface] Desuscribiéndose de WebSocket');
       hasSubscribedRef.current = false;
       unsubscribe();
     };
