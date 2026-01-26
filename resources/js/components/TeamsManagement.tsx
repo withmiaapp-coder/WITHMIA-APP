@@ -78,7 +78,7 @@ const TeamModal: React.FC<{
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               Nombre del Equipo *
             </label>
             <input
@@ -86,13 +86,13 @@ const TeamModal: React.FC<{
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej: Ventas, Soporte, Marketing..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               Descripción
             </label>
             <textarea
@@ -100,7 +100,7 @@ const TeamModal: React.FC<{
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe el propósito de este equipo..."
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none text-gray-900 placeholder-gray-500 bg-white"
             />
           </div>
           
@@ -112,7 +112,7 @@ const TeamModal: React.FC<{
               onChange={(e) => setAllowAutoAssign(e.target.checked)}
               className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
             />
-            <label htmlFor="autoAssign" className="text-sm text-gray-700">
+            <label htmlFor="autoAssign" className="text-sm text-gray-800 font-medium">
               Permitir asignación automática de conversaciones
             </label>
           </div>
@@ -354,7 +354,7 @@ const InviteMemberModal: React.FC<{
             )}
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Email *
               </label>
               <input
@@ -362,13 +362,13 @@ const InviteMemberModal: React.FC<{
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="correo@ejemplo.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Nombre (opcional)
               </label>
               <input
@@ -376,18 +376,18 @@ const InviteMemberModal: React.FC<{
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nombre del invitado"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Rol
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
               >
                 <option value="agent">Agente</option>
                 <option value="administrator">Administrador</option>
@@ -395,13 +395,13 @@ const InviteMemberModal: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Agregar a equipo (opcional)
               </label>
               <select
                 value={teamId || ''}
                 onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
               >
                 <option value="">Sin equipo asignado</option>
                 {teams.map(team => (

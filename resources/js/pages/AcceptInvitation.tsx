@@ -193,7 +193,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               Tu Nombre
             </label>
             <div className="relative">
@@ -203,7 +203,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="¿Cómo te llamas?"
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder-gray-500 bg-white ${
                   formErrors.name ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
@@ -212,7 +212,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               Contraseña
             </label>
             <div className="relative">
@@ -222,7 +222,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder-gray-500 bg-white ${
                   formErrors.password ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
@@ -231,7 +231,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-800 mb-2">
               Confirmar Contraseña
             </label>
             <div className="relative">
@@ -241,7 +241,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
                 value={passwordConfirmation}
                 onChange={(e) => setPasswordConfirmation(e.target.value)}
                 placeholder="Repite tu contraseña"
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder-gray-500 bg-white ${
                   formErrors.password_confirmation ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
