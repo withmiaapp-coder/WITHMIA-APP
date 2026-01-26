@@ -51,5 +51,6 @@ RUN chmod -R 775 storage bootstrap/cache
 # Expose port (Railway will override this)
 EXPOSE 8080
 
-# Start command - PORT will be injected by Railway at runtime
-CMD ["sh", "-c", "echo 'Starting Reverb on port $PORT' && php artisan config:clear && php artisan reverb:start --host=0.0.0.0 --port=${PORT:-8080}"]
+# Start command - using PORT env var with default 8080
+# Note: We MUST clear config cache because it may have been built with $PORT literal
+CMD ["sh", "-c", "php artisan config:clear && php artisan cache:clear && php artisan reverb:start --host=0.0.0.0 --port=8080"]
