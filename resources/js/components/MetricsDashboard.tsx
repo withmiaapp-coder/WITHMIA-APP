@@ -46,17 +46,18 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     const pending = filteredConvs.filter(c => c.status === 'pending').length;
     const unread = filteredConvs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
-    // Total de mensajes
+    // Total de mensajes - usar messages_count si está disponible, sino estimar
     const totalMessages = filteredConvs.reduce((sum, c) => {
-      return sum + (c.messages?.length || 0);
+      // Priorizar messages_count de la API, luego messages.length, luego estimar basado en actividad
+      return sum + (c.messages_count || c.messages?.length || (c.last_message ? 1 : 0));
     }, 0);
 
-    // Mensajes por tipo
+    // Mensajes por tipo - usar datos de last_message si no hay messages array
     let agentMessages = 0;
     let clientMessages = 0;
     
     filteredConvs.forEach(conv => {
-      if (conv.messages) {
+      if (conv.messages && conv.messages.length > 0) {
         conv.messages.forEach((msg: any) => {
           if (msg.message_type === 1 || msg.sender === 'agent') {
             agentMessages++;
@@ -64,6 +65,15 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             clientMessages++;
           }
         });
+      } else if (conv.last_message) {
+        // Estimar basado en el último mensaje y el conteo de unread
+        const lastMsgType = conv.last_message.message_type;
+        const isAgentLast = lastMsgType === 1 || conv.last_message.sender === 'agent';
+        // Aproximación: el agente responde a cada mensaje del cliente
+        const estimatedTotal = conv.messages_count || 2;
+        const half = Math.floor(estimatedTotal / 2);
+        agentMessages += half;
+        clientMessages += estimatedTotal - half;
       }
     });
 
@@ -101,20 +111,32 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
     const avgResponseTime = responseCount > 0 ? totalResponseTime / responseCount : 0;
 
-    // Top 5 contactos más activos
+    // Top 5 contactos más activos - usar messages_count o estimar
     const contactActivity = new Map<string, { name: string; count: number; phone: string }>();
     
     filteredConvs.forEach(conv => {
-      const contactId = conv.contact?.id || conv.id;
-      const existing = contactActivity.get(contactId);
-      const messageCount = conv.messages?.length || 0;
+      const contactId = conv.contact?.id || conv.meta?.sender?.id || conv.id;
+      const existing = contactActivity.get(String(contactId));
+      // Usar messages_count de la API, o contar mensajes si existen, o estimar 1 por conversación
+      const messageCount = conv.messages_count || conv.messages?.length || 1;
+      
+      // Obtener nombre del contacto desde varias fuentes posibles
+      const contactName = conv.contact?.name || 
+                          conv.meta?.sender?.name || 
+                          conv.contact?.phone_number || 
+                          conv.meta?.sender?.phone_number ||
+                          'Sin nombre';
+      
+      const contactPhone = conv.contact?.phone_number || 
+                           conv.meta?.sender?.phone_number ||
+                           conv.meta?.sender?.identifier || '';
       
       if (existing) {
         existing.count += messageCount;
       } else {
-        contactActivity.set(contactId, {
-          name: conv.contact?.name || 'Sin nombre',
-          phone: conv.contact?.phone_number || '',
+        contactActivity.set(String(contactId), {
+          name: contactName,
+          phone: contactPhone,
           count: messageCount
         });
       }

@@ -358,16 +358,19 @@ export const useConversations = () => {
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
               status: conv.meta?.sender?.availability_status || 'offline'
             },
+            meta: conv.meta, // Incluir meta para acceso a sender info
             last_message: buildLastMessage(conv),
             status: conv.status,
             priority: conv.priority || 'medium',
             labels: conv.labels || [],
             unread_count: conv.unread_count || 0,
+            messages_count: conv.messages_count || 0, // Añadir conteo de mensajes
             inbox_id: conv.inbox_id,
             account_id: conv.account_id,
             assignee_id: conv.assignee?.id || null,
             assignee: conv.assignee || null,
-            updated_at: conv.last_activity_at || conv.updated_at
+            updated_at: conv.last_activity_at || conv.updated_at,
+            created_at: conv.created_at
           };
           
           // Actualizar cache
