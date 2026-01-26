@@ -10,7 +10,6 @@ import Entrenamiento from '../components/dashboard/Entrenamiento';
 import AdminPanel from '../components/dashboard/AdminPanel';
 import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
-import { GlobalNotificationProvider } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
@@ -899,8 +898,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   };
 
   return (
-    <GlobalNotificationProvider inboxId={inboxId}>
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
         {/* Sidebar Premium - MEJORADO: Mejor contraste */}
         <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200/80 flex-shrink-0 shadow-xl shadow-slate-300/40 transition-all duration-150 ease-out relative`}>
           
@@ -1221,7 +1219,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           </div>
         </div>
       )}
-    </GlobalNotificationProvider>
+    </div>
   );
 }
 
