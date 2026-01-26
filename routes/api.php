@@ -3779,3 +3779,30 @@ Route::get('/fix/update-n8n-webhook-urls', function () {
     }
 });
 
+// Actualizar Evolution API URL de una empresa
+Route::get('/update/company-evolution-url/{companyId}', function ($companyId, \Illuminate\Http\Request $request) {
+    try {
+        $newUrl = $request->query('url', 'https://evolution-api-production-a7b5.up.railway.app');
+        
+        $company = \App\Models\Company::findOrFail($companyId);
+        $oldUrl = $company->evolution_api_url;
+        
+        $company->update(['evolution_api_url' => $newUrl]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => "evolution_api_url actualizado",
+            'company' => [
+                'id' => $company->id,
+                'name' => $company->name,
+                'old_url' => $oldUrl,
+                'new_url' => $company->evolution_api_url
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
