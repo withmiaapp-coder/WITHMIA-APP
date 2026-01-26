@@ -710,6 +710,30 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     return () => clearInterval(timer);
   }, []);
 
+  // Escuchar evento para navegar a conversación sin recargar página
+  useEffect(() => {
+    const handleNavigateToConversation = (event: CustomEvent) => {
+      const { conversationId } = event.detail;
+      console.log('🔔 [MainDashboard] Navegando a conversación sin recargar:', conversationId);
+      
+      // 1. Cambiar sección a chats (sin recargar)
+      localStorage.setItem('dashboardActiveSection', 'chats');
+      setActiveSection('chats');
+      
+      // 2. Emitir evento para que ConversationsInterface seleccione la conversación
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('selectConversation', {
+          detail: { conversationId }
+        }));
+      }, 100);
+    };
+    
+    window.addEventListener('navigateToConversation', handleNavigateToConversation as EventListener);
+    return () => {
+      window.removeEventListener('navigateToConversation', handleNavigateToConversation as EventListener);
+    };
+  }, []);
+
   // Verificar status de WhatsApp con Reverb (WebSocket en tiempo real)
   useEffect(() => {
     // Carga inicial
@@ -1237,28 +1261,21 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   );
 }
 
-// Componente separado para manejar toasts globales con navegaci�n
+// Componente separado para manejar toasts globales con navegación
 function GlobalNotificationToast({ activeSection, companySlug }: { activeSection: string; companySlug: string }) {
   const globalNotifications = useGlobalNotifications();
   
   const handleToastClick = (conversationId: number) => {
-    console.log('?? Toast click - conversationId:', conversationId, 'activeSection:', activeSection, 'companySlug:', companySlug);
+    console.log('📍 Toast click - conversationId:', conversationId, 'activeSection:', activeSection, 'companySlug:', companySlug);
     
     // Dismiss the toast
     globalNotifications?.dismissToast(conversationId);
     
-    // Si estamos en chats (conversaciones), emitir evento
-    if (activeSection === 'chats') {
-      window.dispatchEvent(new CustomEvent('selectConversation', {
-        detail: { conversationId }
-      }));
-    } else {
-      // Si estamos en otra secci�n, navegar directamente a /dashboard/{companySlug}?conversation=X
-      // Esto evita el redirect 302 que pierde el query param
-      const targetUrl = `/dashboard/${companySlug}?conversation=${conversationId}`;
-      console.log('?? Navegando desde toast a:', targetUrl);
-      window.location.href = targetUrl;
-    }
+    // Siempre emitir evento para navegar a la conversación sin recargar
+    // El evento cambiará la sección a 'chats' y seleccionará la conversación
+    window.dispatchEvent(new CustomEvent('navigateToConversation', {
+      detail: { conversationId }
+    }));
   };
   
   if (!globalNotifications) return null;

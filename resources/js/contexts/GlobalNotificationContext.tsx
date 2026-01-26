@@ -150,6 +150,9 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const addNotificationRef = useRef<typeof addNotification | null>(null);
   const processedConversationUpdates = useRef<Set<string>>(new Set());
   
+  // Cola de mensajes perdidos (cuando no hay subscribers)
+  const pendingMessages = useRef<WebSocketMessageEvent[]>([]);
+  
   // Rate limits
   const RATE_LIMIT_MS = 1000;
   const CONVERSATION_RATE_LIMIT_MS = 3000;
@@ -422,13 +425,23 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             event,
           };
           
-          messageSubscribers.current.forEach(callback => {
-            try {
-              callback(wsEvent);
-            } catch (err) {
-              console.error('Error en subscriber:', err);
+          // Si no hay subscribers, guardar en cola para entregar después
+          if (messageSubscribers.current.size === 0) {
+            console.log('⏳ [UNIFIED] No hay subscribers, guardando mensaje en cola:', convId);
+            pendingMessages.current.push(wsEvent);
+            // Mantener solo los últimos 20 mensajes pendientes
+            if (pendingMessages.current.length > 20) {
+              pendingMessages.current.shift();
             }
-          });
+          } else {
+            messageSubscribers.current.forEach(callback => {
+              try {
+                callback(wsEvent);
+              } catch (err) {
+                console.error('Error en subscriber:', err);
+              }
+            });
+          }
 
           // Crear notificación solo para mensajes incoming
           const messageType = event?.message?.message_type ?? event?.message_type;
@@ -700,6 +713,24 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const subscribeToMessages = useCallback((callback: (event: WebSocketMessageEvent) => void) => {
     messageSubscribers.current.add(callback);
     console.log(`📡 [UNIFIED] Subscriber agregado. Total: ${messageSubscribers.current.size}`);
+    
+    // Entregar mensajes pendientes que llegaron cuando no había subscribers
+    if (pendingMessages.current.length > 0) {
+      console.log(`📬 [UNIFIED] Entregando ${pendingMessages.current.length} mensajes pendientes`);
+      const messages = [...pendingMessages.current];
+      pendingMessages.current = [];
+      
+      // Entregar con pequeño delay para asegurar que el componente esté listo
+      setTimeout(() => {
+        messages.forEach(wsEvent => {
+          try {
+            callback(wsEvent);
+          } catch (err) {
+            console.error('Error entregando mensaje pendiente:', err);
+          }
+        });
+      }, 100);
+    }
     
     return () => {
       messageSubscribers.current.delete(callback);
