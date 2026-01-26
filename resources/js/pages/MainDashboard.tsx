@@ -716,6 +716,12 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       const { conversationId } = event.detail;
       // Navegando a conversación sin recargar
       
+      // 🔔 LIMPIAR NOTIFICACIONES INMEDIATAMENTE al navegar
+      // Esto asegura que se limpien aunque la conversación ya esté seleccionada
+      window.dispatchEvent(new CustomEvent('clearNotifications', {
+        detail: { conversationId }
+      }));
+      
       // 1. Cambiar sección a chats (sin recargar)
       localStorage.setItem('dashboardActiveSection', 'chats');
       setActiveSection('chats');
