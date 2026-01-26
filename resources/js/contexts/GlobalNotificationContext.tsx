@@ -409,11 +409,20 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     inboxId,
     enabled: settings.enabled && inboxId !== null,
     onNewMessage: (event) => {
+      console.log('🔔 [GLOBAL-WS] Evento recibido:', JSON.stringify(event, null, 2).substring(0, 500));
+      
       // Solo notificar mensajes INCOMING (no los que tú envías)
-      const messageType = event?.message?.message_type;
+      // Chatwoot: message_type 0 = incoming, 1 = outgoing
+      // El evento puede tener la estructura: event.message (todo el payload) o event.message.message_type
+      const messageType = event?.message?.message_type ?? event?.message_type;
       const isIncoming = messageType === 0 || messageType === 'incoming';
       
-      if (!isIncoming) return;
+      console.log('🔔 [GLOBAL-WS] messageType:', messageType, 'isIncoming:', isIncoming);
+      
+      if (!isIncoming) {
+        console.log('🔔 [GLOBAL-WS] Mensaje NO es incoming, ignorando');
+        return;
+      }
 
       // 🔒 DEDUPLICACIÓN POR MESSAGE ID
       const messageId = event?.message?.id || event?.id;
