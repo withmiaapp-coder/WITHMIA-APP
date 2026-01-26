@@ -477,9 +477,17 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   }, [user, companySlug]);
   
   const [mounted, setMounted] = useState(false);
-  // Restaurar seccio³n guardada o usar 'dashboard' por defecto
+  // Restaurar sección guardada o usar 'dashboard' por defecto
+  // Si hay query param 'conversation', forzar a 'chats'
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== 'undefined') {
+      // Si hay query param conversation, ir directamente a chats
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('conversation')) {
+        console.log('🔔 Query param conversation detectado, forzando activeSection a chats');
+        localStorage.setItem('dashboardActiveSection', 'chats');
+        return 'chats';
+      }
       return localStorage.getItem('dashboardActiveSection') || 'dashboard';
     }
     return 'dashboard';
@@ -1239,8 +1247,8 @@ function GlobalNotificationToast({ activeSection }: { activeSection: string }) {
     // Dismiss the toast
     globalNotifications?.dismissToast(conversationId);
     
-    // Si estamos en conversaciones, emitir evento
-    if (activeSection === 'conversations') {
+    // Si estamos en chats (conversaciones), emitir evento
+    if (activeSection === 'chats') {
       window.dispatchEvent(new CustomEvent('selectConversation', {
         detail: { conversationId }
       }));
