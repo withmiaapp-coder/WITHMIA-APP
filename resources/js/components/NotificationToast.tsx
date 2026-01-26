@@ -63,13 +63,8 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
             cursor-pointer
           `}
           onClick={() => {
-            console.log('🔥🔥🔥 CLICK EN TOAST DETECTADO 🔥🔥🔥');
-            console.log('📍 Conversación ID:', toast.conversationId);
-            console.log('📍 onClickToast existe?', !!onClickToast);
             if (onClickToast) {
               onClickToast(toast.conversationId);
-            } else {
-              console.error('❌ onClickToast NO está definido!');
             }
           }}
         >

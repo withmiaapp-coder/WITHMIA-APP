@@ -714,7 +714,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   useEffect(() => {
     const handleNavigateToConversation = (event: CustomEvent) => {
       const { conversationId } = event.detail;
-      console.log('🔔 [MainDashboard] Navegando a conversación sin recargar:', conversationId);
+      // Navegando a conversación sin recargar
       
       // 1. Cambiar sección a chats (sin recargar)
       localStorage.setItem('dashboardActiveSection', 'chats');
@@ -1266,7 +1266,7 @@ function GlobalNotificationToast({ activeSection, companySlug }: { activeSection
   const globalNotifications = useGlobalNotifications();
   
   const handleToastClick = (conversationId: number) => {
-    console.log('📍 Toast click - conversationId:', conversationId, 'activeSection:', activeSection, 'companySlug:', companySlug);
+    // Toast click
     
     // Dismiss the toast
     globalNotifications?.dismissToast(conversationId);

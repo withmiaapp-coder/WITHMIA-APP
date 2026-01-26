@@ -289,7 +289,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       { conversationId: notification.conversationId }
     );
 
-    console.log('🔔 [UNIFIED] Notificación agregada:', notification.name);
+    // Notificación agregada
   }, [settings.enabled, settings.toastEnabled, playNotificationSound, showDesktopNotification]);
   
   // Mantener ref actualizada para uso en useEffect sin causar re-renders
@@ -337,7 +337,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       }
     }
 
-    console.log('🔔 [UNIFIED] Sistema de notificaciones unificado INICIADO');
+    // Sistema de notificaciones iniciado
   }, []);
 
   // ============================================================================
@@ -355,14 +355,14 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         echoRef.current = echo;
 
         const channelName = `inbox.${inboxId}`;
-        console.log(`🔌 [UNIFIED] Conectando a canal: ${channelName}`);
+        // Conectando a canal
 
         const channel = echo.private(channelName);
         channelRef.current = channel;
 
         // Suscripción exitosa
         channel.subscribed(() => {
-          console.log(`✅ [UNIFIED] Canal ${channelName} SUSCRITO`);
+          // Canal suscrito
         });
 
         // Error en canal
@@ -375,13 +375,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         channel.listen('.message.received', (event: any) => {
           const messageId = event?.message?.id;
-          console.log('📩 [UNIFIED] Nuevo mensaje recibido:', {
-            messageId,
-            conversationId: event?.conversation_id,
-            content: event?.message?.content?.substring(0, 30),
-            subscriberCount: messageSubscribers.current.size,
-            fullEvent: event
-          });
           
           // Filtrar mensajes de prueba o sin ID válido
           if (event?.message?.test === true || event?.test === true) {
@@ -390,7 +383,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           
           // Validar que el mensaje tenga un ID válido
           if (!messageId || messageId === undefined || messageId === null) {
-            console.log('⚠️ [UNIFIED] Mensaje sin ID válido, ignorando');
             return;
           }
           
@@ -402,7 +394,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           // Deduplicación
           const messageKey = `${convId}-${messageId}`;
           if (processedMessageIds.current.has(messageKey)) {
-            console.log('🔄 [UNIFIED] Mensaje ya procesado:', messageKey);
             return;
           }
           processedMessageIds.current.add(messageKey);
@@ -427,7 +418,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           
           // Si no hay subscribers, guardar en cola para entregar después
           if (messageSubscribers.current.size === 0) {
-            console.log('⏳ [UNIFIED] No hay subscribers, guardando mensaje en cola:', convId);
             pendingMessages.current.push(wsEvent);
             // Mantener solo los últimos 20 mensajes pendientes
             if (pendingMessages.current.length > 20) {
@@ -520,7 +510,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             if (firstItem) processedConversationUpdates.current.delete(firstItem);
           }
           
-          console.log('🔄 [UNIFIED] Conversación actualizada:', convId);
+          // Conversación actualizada silenciosamente
 
           const wsEvent: WebSocketMessageEvent = {
             type: 'conversation_updated',
@@ -542,7 +532,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // LISTENER: Mensaje actualizado (status)
         // ========================================
         channel.listen('.message.updated', (event: any) => {
-          console.log('📝 [UNIFIED] Mensaje actualizado:', event?.message?.id);
+          // Mensaje actualizado
           
           const convId = event?.conversation_id || event?.message?.conversation_id;
           if (!convId) return;
@@ -601,7 +591,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     // Cleanup
     return () => {
       if (channelRef.current && inboxId) {
-        console.log(`🔌 [UNIFIED] Desconectando de canal: inbox.${inboxId}`);
+        // Desconectando
         try {
           channelRef.current.stopListening('.message.received');
           channelRef.current.stopListening('.message.updated');
@@ -625,7 +615,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         if (window.Echo?.connector?.pusher?.connection) {
           const connection = window.Echo.connector.pusher.connection;
           if (connection.state !== 'connected') {
-            console.log('🔄 [UNIFIED] Reconectando WebSocket...');
+            // Reconectando
             connection.connect();
           }
         }

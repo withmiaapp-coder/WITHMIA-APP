@@ -799,7 +799,7 @@ const ConversationsInterface: React.FC = () => {
     if (conversationParam) {
       const conversationId = parseInt(conversationParam, 10);
       if (!isNaN(conversationId)) {
-        console.log('🔔 Query param detectado al montar:', conversationId);
+        // Query param detectado
         pendingConversationRef.current = conversationId;
         hasCheckedQueryParamRef.current = true;
         // Limpiar query param inmediatamente para evitar problemas
@@ -811,18 +811,18 @@ const ConversationsInterface: React.FC = () => {
   useEffect(() => {
     // Función para seleccionar conversación por ID
     const selectConversationById = (conversationId: number) => {
-      console.log('🔔 selectConversationById llamado:', conversationId, 'conversations.length:', conversations?.length);
+      // selectConversationById llamado
       
       if (!conversations || conversations.length === 0) {
         // Guardar para intentar después cuando se carguen las conversaciones
         pendingConversationRef.current = conversationId;
-        console.log('⏳ Conversaciones no cargadas, guardando pendiente:', conversationId);
+        // Guardando conversación pendiente
         return false;
       }
       
       const conversation = conversations.find((c: any) => c.id === conversationId);
       if (conversation) {
-        console.log('✅ Seleccionando conversación desde notificación:', conversationId);
+        // Seleccionando conversación
         pendingConversationRef.current = null; // Limpiar pendiente
         _setActiveConversation({
           ...conversation,
@@ -1110,15 +1110,7 @@ const ConversationsInterface: React.FC = () => {
         // 💬 Agregar mensaje a la conversación activa si corresponde
         const currentActiveConv = activeConversationRef.current;
         
-        console.log('📩 [WS-DEBUG] Verificando si agregar mensaje:', {
-          conversationId,
-          conversationIdType: typeof conversationId,
-          currentActiveConvId: currentActiveConv?.id,
-          currentActiveConvIdType: typeof currentActiveConv?.id,
-          matchLoose: currentActiveConv?.id == conversationId,
-          matchStrict: currentActiveConv?.id === conversationId,
-          messageContent: wsEvent.message?.content?.substring(0, 30)
-        });
+        // Debug desactivado en producción
         
         // Usar comparación numérica para evitar problemas de tipos
         if (currentActiveConv && Number(currentActiveConv.id) === Number(conversationId)) {
@@ -1126,12 +1118,7 @@ const ConversationsInterface: React.FC = () => {
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
           const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
           
-          console.log('📩 [WS-DEBUG] Agregando mensaje a conversación activa:', {
-            messageId: wsEvent.message?.id,
-            content: wsEvent.message?.content?.substring(0, 30),
-            type: normalizedMsgType,
-            sender: normalizedSender
-          });
+          // Mensaje agregado silenciosamente
           
           const newMessage = {
             id: wsEvent.message?.id || Date.now(),

@@ -57,7 +57,7 @@ export const NotificationBell: React.FC = () => {
     // Estamos en conversaciones si el path incluye /dashboard/
     const isInDashboard = currentPath.startsWith('/dashboard');
     
-    console.log('🔔 NotificationBell click:', { conversationId, currentPath, companySlug, isInDashboard });
+    // Click en notificación
     
     // Cerrar el dropdown
     setIsOpen(false);
