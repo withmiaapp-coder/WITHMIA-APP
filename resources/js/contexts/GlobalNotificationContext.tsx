@@ -442,16 +442,38 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
               const isSystem = systemKeywords.some(k => content.includes(k));
               
               if (!isSystem && addNotificationRef.current) {
-                const contactName = event?.conversation?.meta?.sender?.name || 
-                                   event?.sender?.name || 'Contacto';
+                // Obtener información del contacto
+                const sender = event?.conversation?.meta?.sender || event?.sender || event?.message?.sender || {};
+                const senderName = sender?.name || '';
+                const senderPhone = sender?.phone_number || sender?.identifier || '';
+                
+                // Determinar el nombre a mostrar:
+                // 1. Si tiene nombre guardado (que no sea un número de teléfono), usarlo
+                // 2. Si no, usar el número de teléfono
+                // 3. Si no hay nada, usar 'Contacto'
+                const isPhoneNumber = (str: string) => /^[\+]?[\d\s\-\(\)]+$/.test(str.trim());
+                
+                let displayName: string;
+                if (senderName && !isPhoneNumber(senderName)) {
+                  // Tiene un nombre real guardado
+                  displayName = senderName;
+                } else if (senderPhone) {
+                  // Usar el número de teléfono
+                  displayName = senderPhone;
+                } else if (senderName) {
+                  // El nombre es un número, usarlo tal cual
+                  displayName = senderName;
+                } else {
+                  displayName = 'Contacto';
+                }
                 
                 // Agregar notificación usando ref para evitar re-renders
                 addNotificationRef.current({
                   conversationId: convId,
-                  name: contactName,
+                  name: displayName,
                   message: content.substring(0, 100) || 'Nuevo mensaje',
                   priority: 'medium',
-                  avatar: contactName.charAt(0).toUpperCase(),
+                  avatar: displayName.charAt(0).toUpperCase(),
                 });
               }
             }
