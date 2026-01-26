@@ -1079,10 +1079,24 @@ const ConversationsInterface: React.FC = () => {
         // 💬 Agregar mensaje a la conversación activa si corresponde
         const currentActiveConv = activeConversationRef.current;
         
+        console.log('📩 [WS-DEBUG] Verificando si agregar mensaje:', {
+          conversationId,
+          currentActiveConvId: currentActiveConv?.id,
+          match: currentActiveConv?.id === conversationId,
+          messageContent: wsEvent.message?.content?.substring(0, 30)
+        });
+        
         if (currentActiveConv && currentActiveConv.id === conversationId) {
           const rawMsgType = wsEvent.message?.message_type;
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
           const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
+          
+          console.log('📩 [WS-DEBUG] Agregando mensaje a conversación activa:', {
+            messageId: wsEvent.message?.id,
+            content: wsEvent.message?.content?.substring(0, 30),
+            type: normalizedMsgType,
+            sender: normalizedSender
+          });
           
           const newMessage = {
             id: wsEvent.message?.id || Date.now(),
