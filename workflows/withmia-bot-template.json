@@ -360,7 +360,7 @@
                 "url": "{{APP_URL}}/api/n8n/notify-response",
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={\n  \"company_slug\": \"{{COMPANY_SLUG}}\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
+                "jsonBody": "={\n  \"company_slug\": \"{{COMPANY_SLUG}}\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"inbox_id\": {{ $json.inbox.id || 1 }},\n  \"account_id\": {{ $json.chatwoot.account_id || 1 }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
