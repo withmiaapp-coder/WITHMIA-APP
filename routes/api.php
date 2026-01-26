@@ -3725,18 +3725,29 @@ Route::post('/n8n/notify-response', function (Request $request) {
     try {
         $data = $request->all();
         
-        // Broadcast via Reverb para actualizar UI en tiempo real
-        event(new \App\Events\WhatsAppMessageReceived(
-            $data['company_slug'] ?? '',
-            $data['conversation_id'] ?? 0,
-            $data['message'] ?? '',
-            $data['phone'] ?? '',
-            'outgoing'
-        ));
+        // Validar datos mínimos
+        $companySlug = $data['company_slug'] ?? '';
+        $conversationId = (int) ($data['conversation_id'] ?? 0);
+        $message = $data['message'] ?? '';
+        $phone = $data['phone'] ?? '';
+        
+        // Solo broadcast si hay datos válidos
+        if ($companySlug && $conversationId > 0) {
+            event(new \App\Events\WhatsAppMessageReceived(
+                $companySlug,
+                $conversationId,
+                $message,
+                $phone,
+                'outgoing'
+            ));
+        }
         
         return response()->json(['success' => true]);
     } catch (\Exception $e) {
-        \Log::error('Error notifying response: ' . $e->getMessage());
+        \Log::error('Error notifying response: ' . $e->getMessage(), [
+            'data' => $request->all(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
     }
 });
