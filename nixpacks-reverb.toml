@@ -13,7 +13,7 @@
   ]
 
 [start]
-  cmd = 'php artisan reverb:start --host=0.0.0.0 --port=${PORT:-8080}'
+  cmd = "php artisan reverb:start --host=0.0.0.0 --port=${PORT:-8080}"
 
 # Reverb WebSocket Server
 # Este servicio maneja conexiones WebSocket para tiempo real
