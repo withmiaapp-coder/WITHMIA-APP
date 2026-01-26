@@ -147,6 +147,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const messageSubscribers = useRef<Set<(event: WebSocketMessageEvent) => void>>(new Set());
   const channelRef = useRef<any>(null);
   const echoRef = useRef<any>(null);
+  const addNotificationRef = useRef<typeof addNotification | null>(null);
+  const processedConversationUpdates = useRef<Set<string>>(new Set());
   
   // Rate limits
   const RATE_LIMIT_MS = 1000;
@@ -287,6 +289,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     console.log('🔔 [UNIFIED] Notificación agregada:', notification.name);
   }, [settings.enabled, settings.toastEnabled, playNotificationSound, showDesktopNotification]);
   
+  // Mantener ref actualizada para uso en useEffect sin causar re-renders
+  useEffect(() => {
+    addNotificationRef.current = addNotification;
+  }, [addNotification]);
+  
   // ============================================================================
   // DISMISS TOAST
   // ============================================================================
@@ -364,10 +371,17 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // LISTENER: Nuevo mensaje
         // ========================================
         channel.listen('.message.received', (event: any) => {
-          console.log('📩 [UNIFIED] Nuevo mensaje:', event?.message?.id);
+          const messageId = event?.message?.id;
+          console.log('📩 [UNIFIED] Nuevo mensaje:', messageId);
           
-          // Filtrar mensajes de prueba
+          // Filtrar mensajes de prueba o sin ID válido
           if (event?.message?.test === true || event?.test === true) {
+            return;
+          }
+          
+          // Validar que el mensaje tenga un ID válido
+          if (!messageId || messageId === undefined || messageId === null) {
+            console.log('⚠️ [UNIFIED] Mensaje sin ID válido, ignorando');
             return;
           }
           
@@ -377,7 +391,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           }
 
           // Deduplicación
-          const messageKey = `${convId}-${event?.message?.id}`;
+          const messageKey = `${convId}-${messageId}`;
           if (processedMessageIds.current.has(messageKey)) {
             console.log('🔄 [UNIFIED] Mensaje ya procesado:', messageKey);
             return;
@@ -427,12 +441,12 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
               const systemKeywords = ['Connection successfully', 'QRCode', 'Instance created', 'Connecting...'];
               const isSystem = systemKeywords.some(k => content.includes(k));
               
-              if (!isSystem) {
+              if (!isSystem && addNotificationRef.current) {
                 const contactName = event?.conversation?.meta?.sender?.name || 
                                    event?.sender?.name || 'Contacto';
                 
-                // Agregar notificación (usa 'name' en lugar de 'contactName')
-                addNotification({
+                // Agregar notificación usando ref para evitar re-renders
+                addNotificationRef.current({
                   conversationId: convId,
                   name: contactName,
                   message: content.substring(0, 100) || 'Nuevo mensaje',
@@ -448,10 +462,24 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // LISTENER: Conversación actualizada
         // ========================================
         channel.listen('.conversation.updated', (event: any) => {
-          console.log('🔄 [UNIFIED] Conversación actualizada:', event?.conversation?.id || event?.id);
-          
           const convId = event?.conversation?.id || event?.id;
           if (!convId) return;
+          
+          // Deduplicar actualizaciones de conversación (dentro de 500ms)
+          const updateKey = `conv-${convId}-${Math.floor(Date.now() / 500)}`;
+          if (processedConversationUpdates.current.has(updateKey)) {
+            return;
+          }
+          processedConversationUpdates.current.add(updateKey);
+          
+          // Limpiar keys antiguos
+          if (processedConversationUpdates.current.size > 50) {
+            const iterator = processedConversationUpdates.current.values();
+            const firstItem = iterator.next().value;
+            if (firstItem) processedConversationUpdates.current.delete(firstItem);
+          }
+          
+          console.log('🔄 [UNIFIED] Conversación actualizada:', convId);
 
           const wsEvent: WebSocketMessageEvent = {
             type: 'conversation_updated',
@@ -545,7 +573,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         }
       }
     };
-  }, [inboxId, addNotification]);
+  }, [inboxId]); // Solo depende de inboxId, addNotification se accede via ref
 
   // ============================================================================
   // RECONEXIÓN AL VOLVER A LA PESTAÑA
