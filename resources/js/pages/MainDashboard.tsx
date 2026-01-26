@@ -10,7 +10,8 @@ import Entrenamiento from '../components/dashboard/Entrenamiento';
 import AdminPanel from '../components/dashboard/AdminPanel';
 import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
-import { GlobalNotificationProvider } from '../contexts/GlobalNotificationContext';
+import NotificationToast from '../components/NotificationToast';
+import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
@@ -1221,7 +1222,43 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           </div>
         </div>
       )}
+      
+      {/* Global Notification Toast - Navegación a conversaciones */}
+      <GlobalNotificationToast activeSection={activeSection} />
     </GlobalNotificationProvider>
+  );
+}
+
+// Componente separado para manejar toasts globales con navegación
+function GlobalNotificationToast({ activeSection }: { activeSection: string }) {
+  const globalNotifications = useGlobalNotifications();
+  
+  const handleToastClick = (conversationId: number) => {
+    console.log('🔔 Toast click - conversationId:', conversationId, 'activeSection:', activeSection);
+    
+    // Dismiss the toast
+    globalNotifications?.dismissToast(conversationId);
+    
+    // Si estamos en conversaciones, emitir evento
+    if (activeSection === 'conversations') {
+      window.dispatchEvent(new CustomEvent('selectConversation', {
+        detail: { conversationId }
+      }));
+    } else {
+      // Si estamos en otra sección, navegar a conversaciones
+      console.log('🔔 Navegando desde toast a /dashboard?conversation=' + conversationId);
+      window.location.href = `/dashboard?conversation=${conversationId}`;
+    }
+  };
+  
+  if (!globalNotifications) return null;
+  
+  return (
+    <NotificationToast 
+      toasts={globalNotifications.toasts || []}
+      onDismiss={(id) => globalNotifications.dismissToast(id)}
+      onClickToast={handleToastClick}
+    />
   );
 }
 

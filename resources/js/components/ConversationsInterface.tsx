@@ -4850,14 +4850,7 @@ const ConversationsInterface: React.FC = () => {
         </div>
       )}
 
-      <NotificationToast 
-        toasts={globalNotifications?.toasts || []}
-        onDismiss={(id) => globalNotifications?.dismissToast(id)}
-        onClickToast={(conversationId) => {
-          const conv = conversations.find((c: any) => c.id === conversationId);
-          if (conv) _setActiveConversation(conv);
-        }}
-      />
+      {/* NotificationToast ahora está en MainDashboard para funcionar en todas las secciones */}
       <NotificationCenter 
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
