@@ -48,9 +48,13 @@ RUN composer dump-autoload --optimize
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
-# Expose port (Railway will override this)
+# Copy the startup script
+COPY start-reverb.sh /app/start-reverb.sh
+RUN chmod +x /app/start-reverb.sh
+
+# Expose port (Railway will override this with $PORT)
 EXPOSE 8080
 
-# Start command - using PORT env var with default 8080
-# Note: We MUST clear config cache because it may have been built with $PORT literal
-CMD ["sh", "-c", "php artisan config:clear && php artisan cache:clear && php artisan reverb:start --host=0.0.0.0 --port=8080"]
+# Start command - Railway provides PORT env variable
+# Using shell form to properly expand $PORT variable
+CMD /app/start-reverb.sh
