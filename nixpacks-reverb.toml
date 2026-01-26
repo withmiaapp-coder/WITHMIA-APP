@@ -9,11 +9,12 @@
 
 [phases.build]
   cmds = [
-    'php artisan config:cache'
+    'php artisan config:cache',
+    'chmod +x start-reverb.sh'
   ]
 
 [start]
-  cmd = "sh -c 'php artisan reverb:start --host=0.0.0.0 --port=$PORT'"
+  cmd = "./start-reverb.sh"
 
 # Reverb WebSocket Server
 # Este servicio maneja conexiones WebSocket para tiempo real
