@@ -3805,6 +3805,52 @@ Route::post('/n8n/notify-response', function (Request $request) {
     }
 });
 
+// ============== DEBUG: Test WebSocket broadcast ==============
+Route::get('/debug/test-websocket/{inboxId}', function ($inboxId) {
+    try {
+        $inboxId = (int) $inboxId;
+        
+        // Info del driver de broadcast
+        $broadcastDriver = config('broadcasting.default');
+        $reverbHost = config('reverb.servers.reverb.host');
+        
+        // Crear mensaje de prueba con timestamp único
+        $testMessage = [
+            'content' => '🧪 Test WebSocket - ' . now()->format('H:i:s'),
+            'message_type' => 'outgoing',
+            'sender' => ['name' => 'System Test', 'type' => 'test'],
+            'created_at' => now()->toIso8601String(),
+            'test' => true,
+        ];
+        
+        // Enviar evento
+        event(new \App\Events\NewMessageReceived(
+            $testMessage,
+            999, // conversation_id de prueba
+            $inboxId,
+            1 // account_id
+        ));
+        
+        return response()->json([
+            'success' => true,
+            'broadcast_driver' => $broadcastDriver,
+            'reverb_host' => $reverbHost,
+            'channel' => "private-inbox.{$inboxId}",
+            'event_name' => 'message.received',
+            'message' => "Evento enviado a inbox.{$inboxId}",
+            'payload_preview' => $testMessage,
+            'timestamp' => now()->toIso8601String(),
+            'hint' => 'Abre la consola del navegador (F12) para ver si llega el evento'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // ============== DEBUG: Ver estado de whatsapp_instances con campos n8n ==============
 Route::get('/debug/whatsapp-instances', function () {
     try {
