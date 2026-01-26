@@ -774,10 +774,31 @@ const ConversationsInterface: React.FC = () => {
   
   // 🔔 Escuchar evento selectConversation desde NotificationBell y query params
   const pendingConversationRef = useRef<number | null>(null);
+  const hasCheckedQueryParamRef = useRef(false);
+  
+  // Efecto separado para manejar query params - se ejecuta solo una vez al montar
+  useEffect(() => {
+    if (hasCheckedQueryParamRef.current) return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationParam = urlParams.get('conversation');
+    if (conversationParam) {
+      const conversationId = parseInt(conversationParam, 10);
+      if (!isNaN(conversationId)) {
+        console.log('🔔 Query param detectado al montar:', conversationId);
+        pendingConversationRef.current = conversationId;
+        hasCheckedQueryParamRef.current = true;
+        // Limpiar query param inmediatamente para evitar problemas
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
   
   useEffect(() => {
     // Función para seleccionar conversación por ID
     const selectConversationById = (conversationId: number) => {
+      console.log('🔔 selectConversationById llamado:', conversationId, 'conversations.length:', conversations?.length);
+      
       if (!conversations || conversations.length === 0) {
         // Guardar para intentar después cuando se carguen las conversaciones
         pendingConversationRef.current = conversationId;
@@ -787,7 +808,7 @@ const ConversationsInterface: React.FC = () => {
       
       const conversation = conversations.find((c: any) => c.id === conversationId);
       if (conversation) {
-        console.log('🔔 Seleccionando conversación desde notificación:', conversationId);
+        console.log('✅ Seleccionando conversación desde notificación:', conversationId);
         pendingConversationRef.current = null; // Limpiar pendiente
         _setActiveConversation({
           ...conversation,
@@ -800,27 +821,16 @@ const ConversationsInterface: React.FC = () => {
           markConversationAsRead(conversationId);
         }
         return true;
+      } else {
+        console.log('❌ Conversación no encontrada en lista:', conversationId);
       }
       return false;
     };
 
     // Si hay una conversación pendiente y ahora tenemos conversaciones, seleccionarla
     if (pendingConversationRef.current && conversations && conversations.length > 0) {
+      console.log('🔔 Intentando seleccionar conversación pendiente:', pendingConversationRef.current);
       selectConversationById(pendingConversationRef.current);
-    }
-
-    // Revisar query param al cargar
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversationParam = urlParams.get('conversation');
-    if (conversationParam) {
-      const conversationId = parseInt(conversationParam, 10);
-      if (!isNaN(conversationId)) {
-        const selected = selectConversationById(conversationId);
-        // Solo limpiar query param si se seleccionó exitosamente
-        if (selected) {
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-      }
     }
 
     // Escuchar evento personalizado
