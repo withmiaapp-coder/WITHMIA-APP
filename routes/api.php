@@ -864,6 +864,30 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
+// ?? ACTUALIZAR WORKFLOW (fijar n8n_workflow_id y n8n_webhook_url)
+Route::post('/update-workflow/{instanceName}', function ($instanceName, \Illuminate\Http\Request $request) {
+    $workflowId = $request->input('n8n_workflow_id');
+    $webhookUrl = $request->input('n8n_webhook_url');
+    
+    $updateData = ['updated_at' => now()];
+    if ($workflowId) $updateData['n8n_workflow_id'] = $workflowId;
+    if ($webhookUrl) $updateData['n8n_webhook_url'] = $webhookUrl;
+    
+    $updated = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+        ->where('instance_name', $instanceName)
+        ->update($updateData);
+    
+    $instance = \Illuminate\Support\Facades\DB::table('whatsapp_instances')
+        ->where('instance_name', $instanceName)
+        ->first();
+    
+    return response()->json([
+        'success' => $updated > 0,
+        'message' => $updated > 0 ? 'Workflow updated successfully' : 'No instance found',
+        'instance' => $instance
+    ]);
+});
+
 // ?? DEBUG: Ver usuarios en la base de datos
 Route::get('/debug-users', function () {
     $users = \App\Models\User::all(['id', 'name', 'email', 'created_at']);
