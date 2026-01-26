@@ -78,7 +78,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline --no-audit
 
 # Copy the rest of the application (bust cache with timestamp)
-ARG CACHEBUST=1
+ARG CACHEBUST=2
 COPY . .
 
 # Run composer scripts now that all files are present
