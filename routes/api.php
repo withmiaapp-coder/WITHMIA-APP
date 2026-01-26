@@ -3731,19 +3731,71 @@ Route::post('/n8n/notify-response', function (Request $request) {
         $conversationId = (int) ($data['conversation_id'] ?? 0);
         $message = $data['message'] ?? '';
         $phone = $data['phone'] ?? '';
+        $inboxId = (int) ($data['inbox_id'] ?? 0);
+        $accountId = (int) ($data['account_id'] ?? 0);
         
-        // Solo broadcast si hay datos válidos
-        if ($companySlug && $conversationId > 0) {
-            event(new \App\Events\WhatsAppMessageReceived(
-                $companySlug,
-                $conversationId,
-                $message,
-                $phone,
-                'outgoing'
-            ));
+        // Obtener datos de Chatwoot desde la Company asociada
+        $company = null;
+        if ($companySlug) {
+            $company = \App\Models\Company::where('slug', $companySlug)->first();
         }
         
-        return response()->json(['success' => true]);
+        // Si no encontramos por slug, buscar por WhatsAppInstance
+        if (!$company && $companySlug) {
+            $instance = \App\Models\WhatsAppInstance::where('company_slug', $companySlug)
+                ->where('is_active', true)
+                ->with('company')
+                ->first();
+            $company = $instance?->company;
+        }
+        
+        // Obtener inbox_id de la company si no viene en el request
+        if (!$inboxId && $company) {
+            $inboxId = (int) ($company->chatwoot_inbox_id ?? 0);
+        }
+        
+        // Obtener account_id de la company si no viene en el request
+        if (!$accountId && $company) {
+            $accountId = (int) ($company->chatwoot_account_id ?? 0);
+        }
+        
+        // Solo broadcast si hay datos válidos
+        if ($conversationId > 0 && $inboxId > 0 && $accountId > 0) {
+            // Enviar al canal inbox.{id} para actualizar UI de conversaciones
+            event(new \App\Events\NewMessageReceived(
+                [
+                    'content' => $message,
+                    'message_type' => 'outgoing',
+                    'sender' => ['name' => 'MIA', 'type' => 'agent_bot'],
+                    'created_at' => now()->toIso8601String(),
+                ],
+                $conversationId,
+                $inboxId,
+                $accountId
+            ));
+            
+            \Log::info('Notificación WebSocket enviada', [
+                'company_slug' => $companySlug,
+                'conversation_id' => $conversationId,
+                'inbox_id' => $inboxId,
+                'account_id' => $accountId,
+                'message_preview' => substr($message, 0, 50)
+            ]);
+        } else {
+            \Log::warning('No se pudo enviar notificación WebSocket - datos incompletos', [
+                'company_slug' => $companySlug,
+                'conversation_id' => $conversationId,
+                'inbox_id' => $inboxId,
+                'account_id' => $accountId,
+            ]);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'broadcast_sent' => ($conversationId > 0 && $inboxId > 0 && $accountId > 0),
+            'channel' => "inbox.{$inboxId}",
+            'account_id' => $accountId
+        ]);
     } catch (\Exception $e) {
         \Log::error('Error notifying response: ' . $e->getMessage(), [
             'data' => $request->all(),
@@ -3853,6 +3905,59 @@ Route::get('/update/company-evolution-url/{companyId}', function ($companyId, \I
                 'name' => $company->name,
                 'old_url' => $oldUrl,
                 'new_url' => $company->evolution_api_url
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// Actualizar datos de Chatwoot de una empresa (account_id, inbox_id)
+Route::get('/update/company-chatwoot/{companyId}', function ($companyId, \Illuminate\Http\Request $request) {
+    try {
+        $accountId = $request->query('account_id');
+        $inboxId = $request->query('inbox_id');
+        
+        if (!$accountId && !$inboxId) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Debe proporcionar account_id o inbox_id como query params'
+            ], 400);
+        }
+        
+        $company = \App\Models\Company::findOrFail($companyId);
+        
+        $updates = [];
+        $oldValues = [];
+        
+        if ($accountId) {
+            $oldValues['chatwoot_account_id'] = $company->chatwoot_account_id;
+            $updates['chatwoot_account_id'] = (int) $accountId;
+        }
+        
+        if ($inboxId) {
+            $oldValues['chatwoot_inbox_id'] = $company->chatwoot_inbox_id;
+            $updates['chatwoot_inbox_id'] = (int) $inboxId;
+        }
+        
+        $company->update($updates);
+        $company->refresh();
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Datos de Chatwoot actualizados para company {$company->name}",
+            'company' => [
+                'id' => $company->id,
+                'name' => $company->name,
+                'slug' => $company->slug,
+                'old_values' => $oldValues,
+                'new_values' => [
+                    'chatwoot_account_id' => $company->chatwoot_account_id,
+                    'chatwoot_inbox_id' => $company->chatwoot_inbox_id
+                ]
             ]
         ]);
     } catch (\Exception $e) {
