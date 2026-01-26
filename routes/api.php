@@ -865,6 +865,47 @@ Route::get('/reset-workflow/{instanceName}', function ($instanceName) {
     ]);
 });
 
+// 🧹 LIMPIAR MENSAJES DE SISTEMA DE CHATWOOT
+Route::post('/cleanup-system-messages/{inboxName?}', function ($inboxName = null) {
+    $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+    
+    // Patrones de mensajes de sistema que deben ser eliminados
+    $systemPatterns = [
+        '%Connection successfully established%',
+        '%QRCode generated%',
+        '%Waiting for QR Code%',
+        '%Connecting...%',
+        '%Connected!%',
+        '%Disconnected%',
+    ];
+    
+    $deletedCount = 0;
+    
+    foreach ($systemPatterns as $pattern) {
+        $query = $chatwootDb->table('messages')->where('content', 'LIKE', $pattern);
+        
+        // Si se especificó un inbox, filtrar por ese inbox
+        if ($inboxName) {
+            $inbox = $chatwootDb->table('inboxes')->where('name', 'LIKE', "%{$inboxName}%")->first();
+            if ($inbox) {
+                $conversationIds = $chatwootDb->table('conversations')
+                    ->where('inbox_id', $inbox->id)
+                    ->pluck('id');
+                $query->whereIn('conversation_id', $conversationIds);
+            }
+        }
+        
+        $count = $query->delete();
+        $deletedCount += $count;
+    }
+    
+    return response()->json([
+        'success' => true,
+        'message' => "Deleted {$deletedCount} system messages",
+        'deleted_count' => $deletedCount
+    ]);
+});
+
 // ?? ACTUALIZAR WORKFLOW (fijar n8n_workflow_id y n8n_webhook_url)
 Route::post('/update-workflow/{instanceName}', function ($instanceName, \Illuminate\Http\Request $request) {
     $workflowId = $request->input('n8n_workflow_id');

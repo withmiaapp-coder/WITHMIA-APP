@@ -50,6 +50,24 @@
                                 "type": "boolean",
                                 "operation": "equals"
                             }
+                        },
+                        {
+                            "id": "check-not-system-message",
+                            "leftValue": "={{ ($json.body.content || '').toLowerCase() }}",
+                            "rightValue": "connection",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notContains"
+                            }
+                        },
+                        {
+                            "id": "check-not-qrcode",
+                            "leftValue": "={{ ($json.body.content || '').toLowerCase() }}",
+                            "rightValue": "qrcode",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notContains"
+                            }
                         }
                     ],
                     "combinator": "and"
