@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
   TrendingUp,
   MessageCircle,
@@ -8,7 +8,8 @@ import {
   AlertCircle,
   ArrowUp,
   ArrowDown,
-  Activity
+  Activity,
+  Loader2
 } from 'lucide-react';
 
 interface MetricsDashboardProps {
@@ -16,14 +17,102 @@ interface MetricsDashboardProps {
   timeRange?: 'today' | 'week' | 'month' | 'all';
 }
 
+interface BackendStats {
+  totalConversations: number;
+  activeConversations: number;
+  totalMessages: number;
+  agentMessages: number;
+  clientMessages: number;
+  topContacts: { name: string; phone: string; count: number }[];
+  avgResponseTime: string;
+}
+
 const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   conversations,
   timeRange = 'all'
 }) => {
+  const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  
+  // Cargar estadísticas reales del backend
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoadingStats(true);
+        const response = await fetch('/api/chatwoot-proxy/dashboard-stats', {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setBackendStats(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
   
   const metrics = useMemo(() => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
+    
+    // Si tenemos estadísticas del backend, usarlas
+    if (backendStats) {
+      // Calcular datos adicionales desde conversations para gráficos
+      let filteredConvs = conversations;
+      if (timeRange !== 'all') {
+        const cutoff = timeRange === 'today' ? now - dayMs :
+                       timeRange === 'week' ? now - (7 * dayMs) :
+                       timeRange === 'month' ? now - (30 * dayMs) : 0;
+        
+        filteredConvs = conversations.filter(conv => {
+          const timestamp = conv.created_at || 0;
+          const convTime = typeof timestamp === 'number' ? timestamp * 1000 : new Date(timestamp).getTime();
+          return convTime >= cutoff;
+        });
+      }
+      
+      const resolved = filteredConvs.filter(c => c.status === 'resolved').length;
+      const pending = filteredConvs.filter(c => c.status === 'pending').length;
+      const unread = filteredConvs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+      const resolutionRate = backendStats.totalConversations > 0 
+        ? ((resolved / backendStats.totalConversations) * 100).toFixed(1) 
+        : '0';
+      
+      // Actividad por hora
+      const hourlyActivity = new Array(24).fill(0);
+      const dailyActivity = new Array(7).fill(0).map((_, i) => ({
+        day: new Date(now - (6 - i) * dayMs).toLocaleDateString('es-ES', { weekday: 'short' }),
+        count: 0
+      }));
+      
+      return {
+        total: backendStats.totalConversations,
+        open: backendStats.activeConversations,
+        resolved,
+        pending,
+        unread,
+        totalMessages: backendStats.totalMessages,
+        agentMessages: backendStats.agentMessages,
+        clientMessages: backendStats.clientMessages,
+        avgResponseTime: 0, // El backend lo devuelve como string
+        topContacts: backendStats.topContacts,
+        hourlyActivity,
+        dailyActivity,
+        resolutionRate
+      };
+    }
     
     // Filtrar por rango de tiempo
     let filteredConvs = conversations;
@@ -199,7 +288,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       dailyActivity,
       resolutionRate
     };
-  }, [conversations, timeRange]);
+  }, [conversations, timeRange, backendStats]);
 
   const formatTime = (seconds: number) => {
     if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -232,6 +321,18 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       </div>
     </div>
   );
+
+  // Mostrar loading mientras carga las estadísticas
+  if (loadingStats) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
+          <p className="text-gray-600">Cargando estadísticas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -284,7 +385,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           title="Tiempo Promedio Respuesta"
-          value={formatTime(metrics.avgResponseTime)}
+          value={backendStats?.avgResponseTime || formatTime(metrics.avgResponseTime)}
           icon={<Clock className="w-6 h-6 text-white" />}
           color="bg-gradient-to-r from-purple-500 to-purple-600"
         />

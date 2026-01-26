@@ -204,55 +204,90 @@ class ChatwootController extends Controller
     public function getDashboardStats()
     {
         try {
-            // Obtener conversaciones reales para calcular stats
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations', [
-                'inbox_id' => $this->inboxId // FILTRO DE SEGURIDAD
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                $conversations = $data['data']['payload'] ?? [];
-
-                // FILTRO ADICIONAL: En caso de que la API no respete el parámetro
-                if ($this->inboxId) {
-                    $conversations = array_filter($conversations, function($conv) {
-                        return isset($conv['inbox_id']) && $conv['inbox_id'] == $this->inboxId;
-                    });
-                }
-
-                // Procesar estadísticas reales
-                $totalConversations = count($conversations);
-                $activeConversations = count(array_filter($conversations, function($conv) {
-                    return $conv['status'] === 'open';
-                }));
-
-                // Calcular tiempo promedio de respuesta (simulado por ahora)
-                $avgResponseTime = '2.5';
-
+            // SEGURIDAD: Validar inbox
+            if (!$this->inboxId) {
                 return response()->json([
                     'success' => true,
                     'data' => [
-                        'totalConversations' => $totalConversations,
-                        'activeConversations' => $activeConversations,
-                        'avgResponseTime' => $avgResponseTime . ' min',
-                        'satisfactionRate' => 85, // Simulado por ahora
+                        'totalConversations' => 0,
+                        'activeConversations' => 0,
+                        'totalMessages' => 0,
+                        'agentMessages' => 0,
+                        'clientMessages' => 0,
+                        'topContacts' => [],
+                        'avgResponseTime' => '0 min',
                     ]
                 ]);
             }
 
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Obtener conversaciones del inbox
+            $conversations = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->get();
+            
+            $conversationIds = $conversations->pluck('id')->toArray();
+            
+            $totalConversations = count($conversationIds);
+            $activeConversations = $conversations->where('status', 0)->count(); // 0 = open
+            
+            // Obtener estadísticas de mensajes reales
+            $messageStats = $chatwootDb->table('messages')
+                ->whereIn('conversation_id', $conversationIds)
+                ->where('message_type', '!=', 2) // Excluir activity messages
+                ->selectRaw('
+                    COUNT(*) as total,
+                    SUM(CASE WHEN message_type = 1 THEN 1 ELSE 0 END) as agent_messages,
+                    SUM(CASE WHEN message_type = 0 THEN 1 ELSE 0 END) as client_messages
+                ')
+                ->first();
+            
+            $totalMessages = $messageStats->total ?? 0;
+            $agentMessages = $messageStats->agent_messages ?? 0;
+            $clientMessages = $messageStats->client_messages ?? 0;
+            
+            // Top 5 contactos más activos (por cantidad de mensajes)
+            $topContacts = $chatwootDb->table('messages as m')
+                ->join('conversations as c', 'm.conversation_id', '=', 'c.id')
+                ->join('contacts as ct', 'c.contact_id', '=', 'ct.id')
+                ->whereIn('m.conversation_id', $conversationIds)
+                ->where('m.message_type', '!=', 2)
+                ->groupBy('ct.id', 'ct.name', 'ct.phone_number')
+                ->selectRaw('ct.id, ct.name, ct.phone_number, COUNT(m.id) as message_count')
+                ->orderByDesc('message_count')
+                ->limit(5)
+                ->get()
+                ->map(function ($contact) {
+                    return [
+                        'name' => $contact->name ?: 'Sin nombre',
+                        'phone' => $contact->phone_number ?: '',
+                        'count' => $contact->message_count
+                    ];
+                })
+                ->toArray();
+
             return response()->json([
-                'success' => false,
-                'message' => 'No se pudieron obtener las estadísticas'
-            ], 500);
+                'success' => true,
+                'data' => [
+                    'totalConversations' => $totalConversations,
+                    'activeConversations' => $activeConversations,
+                    'totalMessages' => $totalMessages,
+                    'agentMessages' => $agentMessages,
+                    'clientMessages' => $clientMessages,
+                    'topContacts' => $topContacts,
+                    'avgResponseTime' => '2.5 min', // TODO: Calcular real
+                    'satisfactionRate' => 85,
+                ]
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Stats Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId,
                 'account_id' => $this->accountId,
-                'inbox_id' => $this->inboxId
+                'inbox_id' => $this->inboxId,
+                'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
                 'success' => false,
