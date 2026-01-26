@@ -94,29 +94,35 @@ class ChatwootController extends Controller
 
             // Cache key único por usuario/inbox
             $cacheKey = "conversations:inbox:{$this->inboxId}:user:{$this->userId}";
-            $cacheTTL = 300; // 5 minutos
+            $cacheTTL = 60; // 1 minuto (reducido para mayor reactividad)
 
-            // Intentar obtener desde Redis
-            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            
-            if ($cached) {
-                Log::info('✅ Conversaciones servidas desde Redis cache', [
-                    'user_id' => $this->userId,
-                    'inbox_id' => $this->inboxId,
-                    'cache_key' => $cacheKey,
-                    'conversations_count' => count($cached)
-                ]);
+            // Permitir forzar refresh con header o query param
+            $forceRefresh = $request->header('X-Force-Refresh') === 'true' || 
+                           $request->query('force_refresh') === 'true';
 
-                return response()->json([
-                    'success' => true,
-                    'data' => ['payload' => $cached],
-                    'meta' => [
-                        'current_page' => 1,
-                        'total_pages' => 1,
-                        'total_count' => count($cached),
-                        'from_cache' => true
-                    ]
-                ]);
+            // Intentar obtener desde Redis (solo si no se fuerza refresh)
+            if (!$forceRefresh) {
+                $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+                
+                if ($cached) {
+                    Log::info('✅ Conversaciones servidas desde Redis cache', [
+                        'user_id' => $this->userId,
+                        'inbox_id' => $this->inboxId,
+                        'cache_key' => $cacheKey,
+                        'conversations_count' => count($cached)
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => ['payload' => $cached],
+                        'meta' => [
+                            'current_page' => 1,
+                            'total_pages' => 1,
+                            'total_count' => count($cached),
+                            'from_cache' => true
+                        ]
+                    ]);
+                }
             }
 
             // No hay cache, obtener desde Chatwoot API
