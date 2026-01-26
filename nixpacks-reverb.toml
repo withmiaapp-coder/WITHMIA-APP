@@ -9,7 +9,6 @@
 
 [phases.build]
   cmds = [
-    'php artisan config:cache',
     'chmod +x start-reverb.sh'
   ]
 
