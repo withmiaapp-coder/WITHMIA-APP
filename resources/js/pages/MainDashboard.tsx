@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+﻿import { Head, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import ConversationsInterface from '../components/ConversationsInterface';
@@ -100,7 +100,7 @@ interface Chatwoot {
 interface Stats {
   conversations: number;
   leads: number;
-  Conversión_rate: number;
+  ConversiÃ³n_rate: number;
   active_tools: number;
 }
 
@@ -113,7 +113,7 @@ interface Props {
   companySlug: string;
 }
 
-// ====== COMPONENTE: MENÚ DESPLEGABLE DE USUARIO ======
+// ====== COMPONENTE: MENÃš DESPLEGABLE DE USUARIO ======
 interface UserMenuDropdownProps {
   user: {
     firstName: string;
@@ -172,7 +172,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: FileText,
-      label: 'Documentación',
+      label: 'DocumentaciÃ³n',
       onClick: null,
       className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
       isDisabled: true
@@ -210,7 +210,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: Settings,
-      label: 'Configuración',
+      label: 'ConfiguraciÃ³n',
       onClick: null,
       className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
       isDisabled: true
@@ -227,7 +227,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: ChevronRight,
-      label: 'Cerrar sesión',
+      label: 'Cerrar sesiÃ³n',
       onClick: () => {
         window.location.href = '/logout';
       },
@@ -293,7 +293,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
                     )}
                   </button>
 
-                  {/* Submenú de Ayuda */}
+                  {/* SubmenÃº de Ayuda */}
                   {item.hasSubmenu && showHelpSubmenu && (
                     <div 
                       className="absolute left-full bg-white rounded-xl shadow-2xl border border-neutral-200 min-w-[220px] z-[9999]"
@@ -350,7 +350,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
           className="flex items-center w-full hover:bg-neutral-50 rounded-lg px-2 py-1.5 transition-all duration-200"
         >
           {isCollapsed ? (
-            // Versión compacta - solo avatar
+            // VersiÃ³n compacta - solo avatar
             <div className="flex flex-col items-center w-full">
               <div className="relative">
                 {user.logo_url && !logoError ? (
@@ -373,7 +373,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
               </div>
             </div>
           ) : (
-            // Versión expandida - completa
+            // VersiÃ³n expandida - completa
             <div className="flex items-center space-x-3 w-full">
               <div className="relative flex-shrink-0">
                 {user.logo_url && !logoError ? (
@@ -404,7 +404,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
                 </div>
               </div>
 
-              {/* Indicador de menú (tres puntos verticales) */}
+              {/* Indicador de menÃº (tres puntos verticales) */}
               <div className={`transition-transform duration-200 flex items-center justify-center ${isOpen ? 'rotate-90' : ''}`}>
                 <svg 
                   width="20" 
@@ -436,47 +436,47 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   
   useEffect(() => {
     if (inboxId) {
-      console.log('✅ Inbox ID disponible:', inboxId);
+      console.log('âœ… Inbox ID disponible:', inboxId);
     } else {
-      console.warn('⚠️ No se encontró inbox_id. El WebSocket de conversaciones no estará disponible.');
+      console.warn('âš ï¸ No se encontrÃ³ inbox_id. El WebSocket de conversaciones no estarÃ¡ disponible.');
     }
   }, [inboxId]);
   
-  // ====== VALIDACIÓN DE SEGURIDAD ======
+  // ====== VALIDACIÃ“N DE SEGURIDAD ======
   useEffect(() => {
     // Validar companySlug
     if (!validators.isValidCompanySlug(companySlug)) {
-      console.error('🛡️ SEGURIDAD: Company slug inválido');
+      console.error('ðŸ›¡ï¸ SEGURIDAD: Company slug invÃ¡lido');
       window.location.href = '/error';
       return;
     }
     
     // Validar user
     if (!user || !user.id || !user.name || !user.email) {
-      console.error('🛡️ SEGURIDAD: Datos de usuario inválidos');
+      console.error('ðŸ›¡ï¸ SEGURIDAD: Datos de usuario invÃ¡lidos');
       window.location.href = '/login';
       return;
     }
     
     // Validar email
     if (!validators.isValidEmail(user.email)) {
-      console.error('🛡️ SEGURIDAD: Email de usuario inválido');
+      console.error('ðŸ›¡ï¸ SEGURIDAD: Email de usuario invÃ¡lido');
       window.location.href = '/login';
       return;
     }
     
     // Validar nombre (contra XSS)
     if (!validators.isSafeString(user.name)) {
-      console.error('🛡️ SEGURIDAD: Nombre de usuario contiene caracteres peligrosos');
+      console.error('ðŸ›¡ï¸ SEGURIDAD: Nombre de usuario contiene caracteres peligrosos');
       window.location.href = '/login';
       return;
     }
     
-    console.log('✅ Validaciones de seguridad pasadas');
+    console.log('âœ… Validaciones de seguridad pasadas');
   }, [user, companySlug]);
   
   const [mounted, setMounted] = useState(false);
-  // Restaurar sección guardada o usar 'dashboard' por defecto
+  // Restaurar secciÃ³n guardada o usar 'dashboard' por defecto
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('dashboardActiveSection') || 'dashboard';
@@ -517,13 +517,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     return false;
   });
 
-  // Función para mostrar notificaciones
+  // FunciÃ³n para mostrar notificaciones
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({show: true, message, type});
     setTimeout(() => setNotification({show: false, message: '', type: 'success'}), 3000);
   };
 
-  // Función para verificar el status de WhatsApp con seguridad mejorada
+  // FunciÃ³n para verificar el status de WhatsApp con seguridad mejorada
   const checkWhatsAppStatus = async () => {
     try {
       const response = await secureFetch(
@@ -557,10 +557,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(`🚨 Error al verificar WhatsApp: ${error.message}`);
+        console.error(`ðŸš¨ Error al verificar WhatsApp: ${error.message}`);
         showNotification(error.message, 'error');
         
-        // Si es error de autenticación, redirigir al login
+        // Si es error de autenticaciÃ³n, redirigir al login
         if (error.type === 'auth') {
           setTimeout(() => {
             window.location.href = '/login';
@@ -572,7 +572,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   };
 
-  // Función para desconectar WhatsApp con seguridad mejorada
+  // FunciÃ³n para desconectar WhatsApp con seguridad mejorada
   const disconnectWhatsApp = async () => {
     try {
       const response = await secureFetch(
@@ -595,22 +595,22 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         // Actualizar estado local sin recargar
         setWhatsAppStatus('disconnected');
         secureStorage.remove(`whatsapp:status:${companySlug}`);
-        showNotification("✅ WhatsApp desconectado exitosamente", 'success');
+        showNotification("âœ… WhatsApp desconectado exitosamente", 'success');
       } else {
-        showNotification("❌ Error al desconectar WhatsApp", 'error');
+        showNotification("âŒ Error al desconectar WhatsApp", 'error');
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(`🚨 Error al desconectar WhatsApp: ${error.message}`);
+        console.error(`ðŸš¨ Error al desconectar WhatsApp: ${error.message}`);
         showNotification(error.message, 'error');
       } else {
         console.error("Error inesperado:", error);
-        showNotification("❌ Error al desconectar WhatsApp", 'error');
+        showNotification("âŒ Error al desconectar WhatsApp", 'error');
       }
     }
   };
 
-  // Función para obtener configuraciones de WhatsApp (Evolution API)
+  // FunciÃ³n para obtener configuraciones de WhatsApp (Evolution API)
   const fetchWhatsAppSettings = async () => {
     try {
       const response = await secureFetch(
@@ -633,7 +633,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   };
 
-  // Función para actualizar configuraciones de WhatsApp (Evolution API)
+  // FunciÃ³n para actualizar configuraciones de WhatsApp (Evolution API)
   const updateWhatsAppSettings = async (settings: typeof whatsAppSettings) => {
     setIsUpdatingWhatsAppSettings(true);
     try {
@@ -648,23 +648,23 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       const data = await response.json();
       if (data.success) {
         setWhatsAppSettings(settings);
-        showNotification("✅ Configuraciones guardadas exitosamente", 'success');
+        showNotification("âœ… Configuraciones guardadas exitosamente", 'success');
       } else {
-        showNotification("❌ Error al guardar configuraciones", 'error');
+        showNotification("âŒ Error al guardar configuraciones", 'error');
       }
     } catch (error) {
       console.error("Error al actualizar configuraciones de WhatsApp:", error);
-      showNotification("❌ Error al guardar configuraciones", 'error');
+      showNotification("âŒ Error al guardar configuraciones", 'error');
     } finally {
       setIsUpdatingWhatsAppSettings(false);
     }
   };
 
-  // Integración real con Chatwoot
+  // IntegraciÃ³n real con Chatwoot
   const { conversations } = useConversations();
   const { agents } = useAgents();
 
-  // Función para contar Integraciónes realmente conectadas
+  // FunciÃ³n para contar IntegraciÃ³nes realmente conectadas
   const getConnectedIntegrationsCount = () => {
     let connected = 0;
     
@@ -673,20 +673,20 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       connected++;
     }
     
-    // Instagram - NO conectado (próximamente)
-    // connected++; // Comentado hasta que esté realmente conectado
+    // Instagram - NO conectado (prÃ³ximamente)
+    // connected++; // Comentado hasta que estÃ© realmente conectado
     
-    // Messenger - NO conectado (próximamente)  
-    // connected++; // Comentado hasta que esté realmente conectado
+    // Messenger - NO conectado (prÃ³ximamente)  
+    // connected++; // Comentado hasta que estÃ© realmente conectado
     
-    // WhatsApp API Oficial - NO conectado (configurar cuando esté listo)
-    // connected++; // Comentado hasta que esté realmente conectado
+    // WhatsApp API Oficial - NO conectado (configurar cuando estÃ© listo)
+    // connected++; // Comentado hasta que estÃ© realmente conectado
     
-    // Chat WEB Plugins WordPress - NO conectado (configurar cuando esté listo)
-    // connected++; // Comentado hasta que esté realmente conectado
+    // Chat WEB Plugins WordPress - NO conectado (configurar cuando estÃ© listo)
+    // connected++; // Comentado hasta que estÃ© realmente conectado
     
-    // Gmail - NO conectado (configurar cuando esté listo)
-    // connected++; // Comentado hasta que esté realmente conectado
+    // Gmail - NO conectado (configurar cuando estÃ© listo)
+    // connected++; // Comentado hasta que estÃ© realmente conectado
     
     return connected;
   };
@@ -710,7 +710,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     // Subscribirse a eventos de WhatsApp en tiempo real
     const channelName = `company.${companySlug}.whatsapp`;
     subscribe(channelName, 'WhatsAppStatusChanged', (data: any) => {
-      console.log('📡 WhatsApp status actualizado vía WebSocket:', data);
+      console.log('ðŸ“¡ WhatsApp status actualizado vÃ­a WebSocket:', data);
       // Actualizar estado directamente sin hacer request
       if (data.status) {
         setWhatsappConnected(data.status.connected || false);
@@ -730,13 +730,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   }, [sidebarCollapsed]);
 
-  // Función para manejar navegación (mantener embed dentro del dashboard)
-  // OPTIMIZADO: flushSync para forzar actualización COMPLETAMENTE síncrona
+  // FunciÃ³n para manejar navegaciÃ³n (mantener embed dentro del dashboard)
+  // OPTIMIZADO: flushSync para forzar actualizaciÃ³n COMPLETAMENTE sÃ­ncrona
   const handleNavigation = useCallback((itemId: string) => {
-    // Prevenir clicks duplicados si ya estamos en esa sección
+    // Prevenir clicks duplicados si ya estamos en esa secciÃ³n
     if (itemId === activeSection) return;
     
-    // Actualización síncrona a localStorage ANTES de cualquier render
+    // ActualizaciÃ³n sÃ­ncrona a localStorage ANTES de cualquier render
     if (typeof window !== 'undefined') {
       localStorage.setItem('dashboardActiveSection', itemId);
     }
@@ -758,16 +758,16 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const safeStats = {
     conversations: (conversations || []).filter(c => c.status === "open").length,
     leads: stats?.leads || 34,
-    Conversión_rate: stats?.Conversión_rate || 28,
+    ConversiÃ³n_rate: stats?.ConversiÃ³n_rate || 28,
     revenue: 15847,
     growth: 23.5,
     satisfaction: 98
   };
 
-  // Datos humanizados mejorados con más contexto
+  // Datos humanizados mejorados con mÃ¡s contexto
   const recentActivities = [
     { 
-      name: 'María González', 
+      name: 'MarÃ­a GonzÃ¡lez', 
       action: 'Acaba de hacer una pregunta sobre pricing', 
       time: '2 min', 
       avatar: 'M', 
@@ -778,7 +778,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     },
     { 
       name: 'Carlos Ruiz', 
-      action: 'Programó demo para mañana 10:00 AM', 
+      action: 'ProgramÃ³ demo para maÃ±ana 10:00 AM', 
       time: '8 min', 
       avatar: 'C', 
       color: 'from-blue-400 to-indigo-500', 
@@ -787,8 +787,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       channel: 'Website'
     },
     { 
-      name: 'Ana López', 
-      action: 'Solicitó cotización personalizada', 
+      name: 'Ana LÃ³pez', 
+      action: 'SolicitÃ³ cotizaciÃ³n personalizada', 
       time: '15 min', 
       avatar: 'A', 
       color: 'from-emerald-400 to-green-500', 
@@ -798,7 +798,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     },
     { 
       name: 'Roberto Silva', 
-      action: 'Compartió feedback positivo ⭐⭐⭐⭐⭐', 
+      action: 'CompartiÃ³ feedback positivo â­â­â­â­â­', 
       time: '32 min', 
       avatar: 'R', 
       color: 'from-purple-400 to-violet-500', 
@@ -833,7 +833,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     },
     { 
       id: 'insights', 
-      label: 'Integración', 
+      label: 'IntegraciÃ³n', 
       icon: Lightbulb, 
       count: integrationsCount,
       gradient: 'from-gray-500 to-slate-600'
@@ -884,18 +884,18 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
-    if (hour < 12) return '¡Buenos días';
-    if (hour < 18) return '¡Buenas tardes';
-    return '¡Buenas noches';
+    if (hour < 12) return 'Â¡Buenos dÃ­as';
+    if (hour < 18) return 'Â¡Buenas tardes';
+    return 'Â¡Buenas noches';
   };
 
   const getTimeIcon = () => {
     const hour = currentTime.getHours();
-    if (hour < 6) return '🌙';
-    if (hour < 12) return '🌅';
-    if (hour < 18) return '☀️';
-    if (hour < 21) return '🌆';
-    return '🌙';
+    if (hour < 6) return 'ðŸŒ™';
+    if (hour < 12) return 'ðŸŒ…';
+    if (hour < 18) return 'â˜€ï¸';
+    if (hour < 21) return 'ðŸŒ†';
+    return 'ðŸŒ™';
   };
 
   return (
@@ -918,7 +918,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 <div className="flex-1">
                   <h1 className="font-bold text-neutral-800 tracking-tight leading-tight" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
                   <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>Administrador</p>
-                  <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
+                  <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> Â®</p>
                 </div>
               )}
             </div>
@@ -955,7 +955,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                         {item.label}
                       </span>
                       {activeSection === item.id && (
-                        <div className="text-xs text-neutral-400 font-medium">Sección activa</div>
+                        <div className="text-xs text-neutral-400 font-medium">SecciÃ³n activa</div>
                       )}
                     </div>
                   )}
@@ -976,7 +976,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                   </div>
                 )}
                 
-                {/* Badge de contador cuando está colapsado */}
+                {/* Badge de contador cuando estÃ¡ colapsado */}
                 {sidebarCollapsed && (item.count !== null && item.count !== undefined) && item.count > 0 && (
                   <div className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                     <span className="text-xs text-white font-bold">{item.count}</span>
@@ -986,7 +986,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             ))}
           </nav>
 
-          {/* User Profile Premium con Menú Desplegable */}
+          {/* User Profile Premium con MenÃº Desplegable */}
           <div className="absolute bottom-3 inset-x-3">
             <UserMenuDropdown 
               user={{
@@ -1005,7 +1005,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           {!sidebarCollapsed && (
             <div className="absolute bottom-22 inset-x-3">
               <div className="flex items-center justify-between px-2 py-1.5">
-                <p className="text-xs font-medium text-neutral-400">Versión 1.0.0</p>
+                <p className="text-xs font-medium text-neutral-400">VersiÃ³n 1.0.0</p>
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   className="p-1 hover:bg-slate-100 rounded transition-all duration-200 text-neutral-400 hover:text-neutral-600"
@@ -1058,7 +1058,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             {/* Contenido Condicional */}
             {activeSection === 'chats' ? (
               <div className="h-full w-full">
-                {/* Chat completamente integrado sin m���+�rgenes */}
+                {/* Chat completamente integrado sin mï¿½ï¿½ï¿½+ï¿½rgenes */}
                 <div className="w-full h-full">
                   <ConversationsInterface />
                 </div>
@@ -1114,7 +1114,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               </div>
             ) : activeSection === 'calendar' ? (
               <div className="min-h-[700px] p-8">
-                {/* Sección Calendario */}
+                {/* SecciÃ³n Calendario */}
                 <div className="max-w-7xl mx-auto">
                   <div className="mb-8">
                     <div className="flex items-center space-x-4 mb-2">
@@ -1135,12 +1135,12 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       </div>
                       <h2 className="text-2xl font-bold text-neutral-800 mb-4">Sistema de Calendario</h2>
                       <p className="text-neutral-500 mb-6">
-                        Aquí podrás gestionar tus citas, reuniones y eventos. 
-                        Integra con Google Calendar y sincroniza automáticamente tus reservas.
+                        AquÃ­ podrÃ¡s gestionar tus citas, reuniones y eventos. 
+                        Integra con Google Calendar y sincroniza automÃ¡ticamente tus reservas.
                       </p>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-lg">
                         <Sparkles className="w-5 h-5" />
-                        <span className="font-medium">🔜 Próximamente disponible</span>
+                        <span className="font-medium">ðŸ”œ PrÃ³ximamente disponible</span>
                       </div>
                     </div>
                   </div>
@@ -1148,7 +1148,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               </div>
             ) : activeSection === 'reports' ? (
               <div className="min-h-[700px] p-8">
-                {/* Sección Productos */}
+                {/* SecciÃ³n Productos */}
                 <div className="max-w-7xl mx-auto">
                   <div className="mb-8">
                     <div className="flex items-center space-x-4 mb-2">
@@ -1157,7 +1157,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       </div>
                       <div>
                         <h1 className="text-4xl font-bold text-neutral-800">Productos</h1>
-                        <p className="text-lg text-neutral-500">Catálogo de productos y servicios</p>
+                        <p className="text-lg text-neutral-500">CatÃ¡logo de productos y servicios</p>
                       </div>
                     </div>
                   </div>
@@ -1167,14 +1167,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       <div className="mb-6">
                         <Package className="w-20 h-20 mx-auto text-orange-500" />
                       </div>
-                      <h2 className="text-2xl font-bold text-neutral-800 mb-4">Catálogo de Productos</h2>
+                      <h2 className="text-2xl font-bold text-neutral-800 mb-4">CatÃ¡logo de Productos</h2>
                       <p className="text-neutral-500 mb-6">
-                        Gestiona tu catálogo de productos y servicios. 
-                        MIA podrá responder preguntas sobre precios, disponibilidad y características de tus productos.
+                        Gestiona tu catÃ¡logo de productos y servicios. 
+                        MIA podrÃ¡ responder preguntas sobre precios, disponibilidad y caracterÃ­sticas de tus productos.
                       </p>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg">
                         <Sparkles className="w-5 h-5" />
-                        <span className="font-medium">🔜 Próximamente disponible</span>
+                        <span className="font-medium">ðŸ”œ PrÃ³ximamente disponible</span>
                       </div>
                     </div>
                   </div>
@@ -1202,7 +1202,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         isOpen={showWhatsAppModal}
         onClose={() => setShowWhatsAppModal(false)}
         onConnected={() => {
-          // Recargar p+�+�-����-�gina para actualizar todo el dashboard
+          // Recargar p+ï¿½+ï¿½-ï¿½ï¿½ï¿½ï¿½-ï¿½gina para actualizar todo el dashboard
           setTimeout(() => {
             window.location.reload();
           }, 1500);
