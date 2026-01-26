@@ -54,20 +54,18 @@ export const NotificationBell: React.FC = () => {
     const pathParts = currentPath.split('/').filter(Boolean);
     const companySlug = pathParts.length > 1 ? pathParts[1] : pathParts[0];
     
-    // Estamos en conversaciones si el path incluye /dashboard/ y estamos en la sección de chats
+    // Estamos en conversaciones si el path incluye /dashboard/
     const isInDashboard = currentPath.startsWith('/dashboard');
     
     console.log('🔔 NotificationBell click:', { conversationId, currentPath, companySlug, isInDashboard });
     
-    // Emitir evento para que ConversationsInterface seleccione la conversación
-    window.dispatchEvent(new CustomEvent('selectConversation', {
+    // Cerrar el dropdown
+    setIsOpen(false);
+    
+    // Usar evento para navegar sin recargar (igual que el toast)
+    window.dispatchEvent(new CustomEvent('navigateToConversation', {
       detail: { conversationId }
     }));
-    
-    // Navegar directamente a /dashboard/{companySlug}?conversation=X para evitar el redirect 302
-    const targetUrl = `/dashboard/${companySlug}?conversation=${conversationId}`;
-    console.log('🔔 Navegando a:', targetUrl);
-    window.location.href = targetUrl;
   };
 
   return (

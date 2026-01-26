@@ -940,17 +940,31 @@ const ConversationsInterface: React.FC = () => {
   const debouncedFetchConversationsRef = useRef(debouncedFetchConversations);
   const updateMessagesCacheRef = useRef(updateMessagesCache);
   const addMessageToCacheRef = useRef(addMessageToCache);
+  const globalNotificationsRef = useRef(globalNotifications);
+  const hasSubscribedRef = useRef(false);
   
   useEffect(() => {
     debouncedFetchConversationsRef.current = debouncedFetchConversations;
     updateMessagesCacheRef.current = updateMessagesCache;
     addMessageToCacheRef.current = addMessageToCache;
+    globalNotificationsRef.current = globalNotifications;
   });
   
+  // Suscripción estable al WebSocket - solo se ejecuta cuando cambian las dependencias críticas
   useEffect(() => {
+    // Solo suscribirse si tenemos todo lo necesario
     if (!globalNotifications || !realtimeEnabled || !userInboxId) {
       return;
     }
+    
+    // Evitar suscripciones duplicadas - solo suscribirse una vez
+    if (hasSubscribedRef.current) {
+      console.log('🔌 [ConversationsInterface] Ya suscrito, ignorando');
+      return;
+    }
+    hasSubscribedRef.current = true;
+    
+    console.log('🔌 [ConversationsInterface] Suscribiéndose a WebSocket (una sola vez)');
     
     const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
       setLastEventTime(new Date());
@@ -1165,13 +1179,17 @@ const ConversationsInterface: React.FC = () => {
       }
     });
     
-    return unsubscribe;
+    return () => {
+      console.log('🔌 [ConversationsInterface] Desuscribiéndose de WebSocket');
+      hasSubscribedRef.current = false;
+      unsubscribe();
+    };
   }, [globalNotifications, realtimeEnabled, userInboxId]);
 
   //  HOOK DE NOTIFICACIONES
-  // ELIMINADO: Declaraci??n duplicada de notifications
+  // ELIMINADO: Declaración duplicada de notifications
   
-  // ?? NUEVO: Referencias para virtualizaci??n
+  // 📊 NUEVO: Referencias para virtualización
   const conversationsListRef = useRef<HTMLDivElement>(null);
   
   //  Mensajes filtrados (sin privados, ordenados por fecha)
