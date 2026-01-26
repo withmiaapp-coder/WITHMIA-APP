@@ -180,17 +180,34 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       if (!audioCache.current.has(priority)) {
         const audio = new Audio(soundPath);
         audio.preload = 'auto';
+        // Add error handler for loading issues
+        audio.onerror = () => {
+          console.warn(`No se pudo cargar el sonido: ${soundPath}`);
+          audioCache.current.delete(priority);
+        };
         audioCache.current.set(priority, audio);
       }
       
-      const audio = audioCache.current.get(priority)!;
+      const audio = audioCache.current.get(priority);
+      if (!audio) return;
+      
       audio.volume = settings.volumeLevel / 100;
       audio.currentTime = 0;
-      audio.play().catch(err => {
-        console.warn('No se pudo reproducir el sonido:', err);
-      });
+      
+      // Use a promise with better error handling
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          // Browser may require user interaction first - this is normal
+          if (err.name === 'NotAllowedError' || err.name === 'NotSupportedError') {
+            // Silent fail - browser policy, not an error
+          } else {
+            console.warn('No se pudo reproducir el sonido:', err.message);
+          }
+        });
+      }
     } catch (error) {
-      console.warn('Error al reproducir sonido:', error);
+      // Silent fail for audio issues
     }
   }, [settings.soundEnabled, settings.volumeLevel, isQuietHours]);
 
@@ -201,8 +218,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     if ('Notification' in window && Notification.permission === 'granted') {
       const notification = new Notification(title, {
         body,
-        icon: '/icons/logo-withmia.png',
-        badge: '/icons/logo-withmia.png',
+        icon: '/logo-withmia.webp',
+        badge: '/logo-withmia.webp',
         tag: options?.conversationId ? `conv-${options.conversationId}` : undefined, // Agrupa por conversación
         renotify: true,
         silent: false,
@@ -448,7 +465,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     },
     onConversationUpdated: (event) => {
       // Podemos usar esto para actualizar el estado si necesario
-      console.log('🔄 [GLOBAL-WS] Conversación actualizada:', event?.id);
+      console.log('🔄 [GLOBAL-WS] Conversación actualizada:', event?.conversation?.id || event?.id);
     },
     onConnectionChange: (connected) => {
       console.log(`🔌 [GLOBAL-WS] WebSocket ${connected ? 'conectado' : 'desconectado'}`);
