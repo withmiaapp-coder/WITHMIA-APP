@@ -1,4 +1,5 @@
 # Dockerfile.reverb - Specific for Laravel Reverb WebSocket Server
+# Updated: 2026-01-26 12:05
 FROM php:8.4-cli
 
 # Install system dependencies
