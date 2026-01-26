@@ -3563,7 +3563,7 @@ Route::get('/update/company-assistant/{companyId}/{name}', function ($companyId,
 // Actualizar instance_url de WhatsApp Instance
 Route::get('/update/whatsapp-instance-url/{instanceName}', function ($instanceName, \Illuminate\Http\Request $request) {
     try {
-        $newUrl = $request->query('url', 'https://evolution-api-production-a7b5.up.railway.app');
+        $newUrl = $request->query('url', config('evolution.server_url'));
         $newApiKey = $request->query('apikey');
         
         $instance = \App\Models\WhatsAppInstance::where('instance_name', $instanceName)->first();
@@ -3936,7 +3936,7 @@ Route::get('/fix/update-n8n-webhook-urls', function () {
 // Actualizar Evolution API URL de una empresa
 Route::get('/update/company-evolution-url/{companyId}', function ($companyId, \Illuminate\Http\Request $request) {
     try {
-        $newUrl = $request->query('url', 'https://evolution-api-production-a7b5.up.railway.app');
+        $newUrl = $request->query('url', config('evolution.server_url'));
         
         $company = \App\Models\Company::findOrFail($companyId);
         $oldUrl = $company->evolution_api_url;
