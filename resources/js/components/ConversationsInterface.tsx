@@ -63,7 +63,7 @@ import {
 } from 'lucide-react';
 import { useConversations } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
-import { useNotifications } from '../hooks/useNotifications';
+// NOTA: useNotifications eliminado - ahora usamos el sistema unificado GlobalNotificationContext
 import NotificationToast from './NotificationToast.tsx';
 // FASE 3: Nuevos componentes y hooks (Filtros)
 import AdvancedFilters from './AdvancedFilters';
@@ -277,7 +277,8 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
   };
 
 const ConversationsInterface: React.FC = () => {
-  const notifications = useNotifications();
+  // 🔔 SISTEMA UNIFICADO: Usamos el contexto global para notificaciones
+  // (ya no usamos useNotifications() - todo está en GlobalNotificationContext)
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -4822,8 +4823,8 @@ const ConversationsInterface: React.FC = () => {
       )}
 
       <NotificationToast 
-        toasts={notifications.toasts}
-        onDismiss={notifications.dismissToast}
+        toasts={globalNotifications?.toasts || []}
+        onDismiss={(id) => globalNotifications?.dismissToast(id)}
         onClickToast={(conversationId) => {
           const conv = conversations.find((c: any) => c.id === conversationId);
           if (conv) _setActiveConversation(conv);
@@ -4832,12 +4833,12 @@ const ConversationsInterface: React.FC = () => {
       <NotificationCenter 
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
-        notifications={notifications.notificationHistory}
-        unreadCount={notifications.unreadCount}
-        onMarkAsRead={notifications.markAsRead}
-        onMarkAllAsRead={notifications.markAllAsRead}
+        notifications={globalNotifications?.notificationHistory || []}
+        unreadCount={globalNotifications?.unreadCount || 0}
+        onMarkAsRead={(id) => globalNotifications?.markAsRead(id)}
+        onMarkAllAsRead={() => globalNotifications?.markAllAsRead()}
         onClearAll={() => {
-          notifications.markAllAsRead();
+          globalNotifications?.markAllAsRead();
           setShowNotificationCenter(false);
         }}
         onClickNotification={(conversationId) => {
@@ -4847,8 +4848,10 @@ const ConversationsInterface: React.FC = () => {
             setShowNotificationCenter(false);
           }
         }}
+        onRemoveNotification={(id) => globalNotifications?.removeNotification(id)}
+        onRemoveNotificationsByConversation={(conversationId) => globalNotifications?.removeNotificationsByConversation(conversationId)}
       />
-      <NotificationSettings notifications={notifications} />
+      {/* NotificationSettings eliminado - ahora usa GlobalNotificationContext */}
 
       {/* FASE 3: Componentes de filtros avanzados */}
       <AdvancedFilters

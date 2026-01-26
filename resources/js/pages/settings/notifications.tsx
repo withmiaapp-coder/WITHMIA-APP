@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useGlobalNotifications } from '@/contexts/GlobalNotificationContext';
 import { Bell, Smartphone, MessageCircle, AlertCircle, Check } from 'lucide-react';
 
 interface NotificationSettings {
@@ -24,8 +24,10 @@ export default function NotificationsSettings() {
   });
 
   const [saved, setSaved] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
 
-  const notificationsHook = useNotifications();
+  // Usar sistema unificado de notificaciones
+  const globalNotifications = useGlobalNotifications();
 
   useEffect(() => {
     // Cargar configuración guardada
@@ -33,18 +35,25 @@ export default function NotificationsSettings() {
     if (savedSettings) {
       setSettings(JSON.parse(savedSettings));
     }
+    // Verificar permiso actual
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
+    }
   }, []);
 
   // Solicitar permisos cuando se active las notificaciones de escritorio
   useEffect(() => {
-    if (settings.desktopNotifications && notificationsHook.permission !== 'granted') {
-      notificationsHook.requestPermission().then(result => {
-        if (result === 'denied') {
-          alert('⚠️ Has bloqueado las notificaciones de escritorio. Para activarlas, permite las notificaciones en la configuración de tu navegador.');
-        }
-      });
+    if (settings.desktopNotifications && permission !== 'granted') {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(result => {
+          setPermission(result);
+          if (result === 'denied') {
+            alert('⚠️ Has bloqueado las notificaciones de escritorio. Para activarlas, permite las notificaciones en la configuración de tu navegador.');
+          }
+        });
+      }
     }
-  }, [settings.desktopNotifications]);
+  }, [settings.desktopNotifications, permission]);
 
   const handleToggle = (key: keyof NotificationSettings) => {
     setSettings(prev => ({
@@ -56,11 +65,13 @@ export default function NotificationsSettings() {
   const handleSave = () => {
     localStorage.setItem('notificationSettings', JSON.stringify(settings));
     
-    // Sincronizar con el hook de notificaciones
-    notificationsHook.updateConfig({
-      desktopEnabled: settings.desktopNotifications,
-      soundEnabled: settings.soundEnabled
-    });
+    // Sincronizar con el sistema unificado de notificaciones
+    if (globalNotifications) {
+      globalNotifications.updateSettings({
+        desktopEnabled: settings.desktopNotifications,
+        soundEnabled: settings.soundEnabled
+      });
+    }
     
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -195,14 +206,15 @@ export default function NotificationsSettings() {
       <div className="flex justify-between items-center pt-6 mt-8 border-t border-gray-200">
         <button
           onClick={() => {
-            notificationsHook.notify({
-              conversationId: 999,
-              conversationName: 'Prueba de Notificación',
-              message: '¡Las notificaciones están funcionando correctamente! 🎉',
-              priority: 'high',
-              avatar: 'P',
-              assignedToMe: true
-            });
+            if (globalNotifications) {
+              globalNotifications.addNotification({
+                conversationId: 999,
+                name: 'Prueba de Notificación',
+                message: '¡Las notificaciones están funcionando correctamente! 🎉',
+                priority: 'high',
+                avatar: 'P',
+              });
+            }
           }}
           className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-2 border border-gray-300"
         >

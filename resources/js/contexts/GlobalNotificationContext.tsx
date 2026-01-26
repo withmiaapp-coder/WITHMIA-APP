@@ -15,15 +15,27 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 // para notificaciones. Deben usar subscribeToMessages() de este contexto.
 // ============================================================================
 
+// Interfaz compatible con NotificationCenter
 interface Notification {
-  id: string;
+  id: number;
   conversationId: number;
-  contactName: string;
+  name: string;        // Nombre del contacto
+  avatar: string;      // Avatar/inicial
   message: string;
   timestamp: Date;
   read: boolean;
   priority: 'urgent' | 'high' | 'medium' | 'low';
-  avatar?: string;
+}
+
+// Interfaz para Toast (compatible con NotificationToast)
+interface Toast {
+  id: number;
+  conversationId: number;
+  avatar: string;
+  name: string;
+  message: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  timestamp: Date;
 }
 
 interface NotificationSettings {
@@ -49,17 +61,22 @@ export interface WebSocketMessageEvent {
 }
 
 interface GlobalNotificationContextType {
-  // Estado de notificaciones
+  // Estado de notificaciones (historial)
   notifications: Notification[];
+  notificationHistory: Notification[]; // Alias para compatibilidad
   unreadCount: number;
   settings: NotificationSettings;
   
+  // Toasts (notificaciones efímeras)
+  toasts: Toast[];
+  dismissToast: (id: number) => void;
+  
   // Acciones de notificaciones
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
-  markAsRead: (notificationId: string) => void;
+  markAsRead: (notificationId: number) => void;
   markAllAsRead: () => void;
   clearAll: () => void;
-  removeNotification: (id: string) => void;
+  removeNotification: (id: number) => void;
   removeNotificationsByConversation: (conversationId: number) => void;
   updateSettings: (settings: Partial<NotificationSettings>) => void;
   
@@ -100,6 +117,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ESTADO
   // ============================================================================
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -114,6 +132,9 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     quietHoursEnd: '08:00',
     groupNotifications: true,
   });
+  
+  // Contador para IDs únicos
+  const notificationIdCounter = useRef(Date.now());
 
   // ============================================================================
   // REFS
@@ -223,25 +244,55 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       return;
     }
 
+    const id = ++notificationIdCounter.current;
+    
     const newNotification: Notification = {
       ...notification,
-      id: `notif-${Date.now()}-${Math.random()}`,
+      id,
       timestamp: new Date(),
       read: false,
     };
 
+    // Agregar al historial de notificaciones
     setNotifications(prev => [newNotification, ...prev].slice(0, 50));
     setUnreadCount(prev => prev + 1);
+    
+    // Agregar toast si está habilitado
+    if (settings.toastEnabled) {
+      const newToast: Toast = {
+        id,
+        conversationId: notification.conversationId,
+        avatar: notification.avatar || notification.name.charAt(0).toUpperCase(),
+        name: notification.name,
+        message: notification.message,
+        priority: notification.priority,
+        timestamp: new Date(),
+      };
+      
+      setToasts(prev => [...prev, newToast]);
+      
+      // Auto-dismiss toast después de 5 segundos
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, 5000);
+    }
 
     playNotificationSound(notification.priority || 'medium');
     showDesktopNotification(
-      `Nuevo mensaje de ${notification.contactName}`,
+      `Nuevo mensaje de ${notification.name}`,
       notification.message,
       { conversationId: notification.conversationId }
     );
 
-    console.log('🔔 [UNIFIED] Notificación agregada:', notification.contactName);
-  }, [settings.enabled, playNotificationSound, showDesktopNotification]);
+    console.log('🔔 [UNIFIED] Notificación agregada:', notification.name);
+  }, [settings.enabled, settings.toastEnabled, playNotificationSound, showDesktopNotification]);
+  
+  // ============================================================================
+  // DISMISS TOAST
+  // ============================================================================
+  const dismissToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   // ============================================================================
   // INICIALIZACIÓN
@@ -380,10 +431,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
                 const contactName = event?.conversation?.meta?.sender?.name || 
                                    event?.sender?.name || 'Contacto';
                 
-                // Agregar notificación
+                // Agregar notificación (usa 'name' en lugar de 'contactName')
                 addNotification({
                   conversationId: convId,
-                  contactName,
+                  name: contactName,
                   message: content.substring(0, 100) || 'Nuevo mensaje',
                   priority: 'medium',
                   avatar: contactName.charAt(0).toUpperCase(),
@@ -539,7 +590,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   // ACCIONES DE NOTIFICACIONES
   // ============================================================================
-  const markAsRead = useCallback((notificationId: string) => {
+  const markAsRead = useCallback((notificationId: number) => {
     setNotifications(prev =>
       prev.map(notif =>
         notif.id === notificationId ? { ...notif, read: true } : notif
@@ -559,7 +610,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     localStorage.removeItem('globalNotifications');
   }, []);
 
-  const removeNotification = useCallback((id: string) => {
+  const removeNotification = useCallback((id: number) => {
     setNotifications(prev => {
       const notification = prev.find(n => n.id === id);
       if (notification && !notification.read) {
@@ -620,8 +671,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   const value: GlobalNotificationContextType = {
     notifications,
+    notificationHistory: notifications, // Alias para compatibilidad con NotificationCenter
     unreadCount,
     settings,
+    toasts,
+    dismissToast,
     addNotification,
     markAsRead,
     markAllAsRead,
@@ -635,8 +689,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     subscribeToMessages,
   };
 
-  return (
-    <GlobalNotificationContext.Provider value={value}>
+  return (    <GlobalNotificationContext.Provider value={value}>
       {children}
     </GlobalNotificationContext.Provider>
   );
