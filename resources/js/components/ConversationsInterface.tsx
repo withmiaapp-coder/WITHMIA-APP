@@ -1081,12 +1081,16 @@ const ConversationsInterface: React.FC = () => {
         
         console.log('📩 [WS-DEBUG] Verificando si agregar mensaje:', {
           conversationId,
+          conversationIdType: typeof conversationId,
           currentActiveConvId: currentActiveConv?.id,
-          match: currentActiveConv?.id === conversationId,
+          currentActiveConvIdType: typeof currentActiveConv?.id,
+          matchLoose: currentActiveConv?.id == conversationId,
+          matchStrict: currentActiveConv?.id === conversationId,
           messageContent: wsEvent.message?.content?.substring(0, 30)
         });
         
-        if (currentActiveConv && currentActiveConv.id === conversationId) {
+        // Usar comparación numérica para evitar problemas de tipos
+        if (currentActiveConv && Number(currentActiveConv.id) === Number(conversationId)) {
           const rawMsgType = wsEvent.message?.message_type;
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
           const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
@@ -1112,7 +1116,7 @@ const ConversationsInterface: React.FC = () => {
           };
           
           _setActiveConversation((prev: any) => {
-            if (!prev || prev.id !== conversationId) return prev;
+            if (!prev || Number(prev.id) !== Number(conversationId)) return prev;
             
             const existingMessages = prev.messages || [];
             

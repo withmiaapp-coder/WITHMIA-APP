@@ -372,7 +372,13 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         channel.listen('.message.received', (event: any) => {
           const messageId = event?.message?.id;
-          console.log('📩 [UNIFIED] Nuevo mensaje:', messageId);
+          console.log('📩 [UNIFIED] Nuevo mensaje recibido:', {
+            messageId,
+            conversationId: event?.conversation_id,
+            content: event?.message?.content?.substring(0, 30),
+            subscriberCount: messageSubscribers.current.size,
+            fullEvent: event
+          });
           
           // Filtrar mensajes de prueba o sin ID válido
           if (event?.message?.test === true || event?.test === true) {
