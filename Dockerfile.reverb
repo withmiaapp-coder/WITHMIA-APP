@@ -1,5 +1,5 @@
 # Dockerfile.reverb - Specific for Laravel Reverb WebSocket Server
-FROM php:8.3-cli
+FROM php:8.4-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -8,13 +8,18 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
     libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libwebp-dev \
     zip \
     unzip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install \
     pdo \
     pdo_pgsql \
     pgsql \
@@ -22,7 +27,8 @@ RUN docker-php-ext-install \
     intl \
     bcmath \
     pcntl \
-    sockets
+    sockets \
+    gd
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
