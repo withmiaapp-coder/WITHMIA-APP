@@ -1096,11 +1096,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 </div>
               </div>
             ) : activeSection === 'people' ? (
-              <div className="min-h-[700px]">
-
-                <div className="bg-white/95 backdrop-blur-sm  shadow-lg shadow-gray-200/30 border border-slate-200 overflow-hidden">
-                  <TeamsManagement />
-                </div>
+              <div className="h-full w-full">
+                <TeamsManagement />
               </div>
             ) : activeSection === 'insights' ? (
               <IntegrationSection
