@@ -220,53 +220,96 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            // Obtener todas las conversaciones via API
+            $allConversations = [];
+            $currentPage = 1;
+            $maxPages = 10;
+
+            while ($currentPage <= $maxPages) {
+                $response = $this->chatwootHttp()->get(
+                    $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations',
+                    [
+                        'inbox_id' => $this->inboxId,
+                        'page' => $currentPage,
+                        'per_page' => 100
+                    ]
+                );
+
+                if (!$response->successful()) break;
+
+                $data = $response->json();
+                $payload = $data['data']['payload'] ?? [];
+
+                if (empty($payload)) break;
+
+                $allConversations = array_merge($allConversations, $payload);
+                $currentPage++;
+
+                if (count($payload) < 100) break;
+            }
+
+            $totalConversations = count($allConversations);
+            $activeConversations = count(array_filter($allConversations, fn($c) => ($c['status'] ?? '') === 'open'));
             
-            // Obtener conversaciones del inbox
-            $conversations = $chatwootDb->table('conversations')
-                ->where('account_id', $this->accountId)
-                ->where('inbox_id', $this->inboxId)
-                ->get();
+            // Para obtener conteo real de mensajes, necesitamos obtener mensajes de cada conversación
+            $totalMessages = 0;
+            $agentMessages = 0;
+            $clientMessages = 0;
+            $contactMessageCounts = [];
+
+            // Limitar a las primeras 20 conversaciones para no sobrecargar
+            $conversationsToCheck = array_slice($allConversations, 0, 20);
             
-            $conversationIds = $conversations->pluck('id')->toArray();
-            
-            $totalConversations = count($conversationIds);
-            $activeConversations = $conversations->where('status', 0)->count(); // 0 = open
-            
-            // Obtener estadísticas de mensajes reales
-            $messageStats = $chatwootDb->table('messages')
-                ->whereIn('conversation_id', $conversationIds)
-                ->where('message_type', '!=', 2) // Excluir activity messages
-                ->selectRaw('
-                    COUNT(*) as total,
-                    SUM(CASE WHEN message_type = 1 THEN 1 ELSE 0 END) as agent_messages,
-                    SUM(CASE WHEN message_type = 0 THEN 1 ELSE 0 END) as client_messages
-                ')
-                ->first();
-            
-            $totalMessages = $messageStats->total ?? 0;
-            $agentMessages = $messageStats->agent_messages ?? 0;
-            $clientMessages = $messageStats->client_messages ?? 0;
-            
-            // Top 5 contactos más activos (por cantidad de mensajes)
-            $topContacts = $chatwootDb->table('messages as m')
-                ->join('conversations as c', 'm.conversation_id', '=', 'c.id')
-                ->join('contacts as ct', 'c.contact_id', '=', 'ct.id')
-                ->whereIn('m.conversation_id', $conversationIds)
-                ->where('m.message_type', '!=', 2)
-                ->groupBy('ct.id', 'ct.name', 'ct.phone_number')
-                ->selectRaw('ct.id, ct.name, ct.phone_number, COUNT(m.id) as message_count')
-                ->orderByDesc('message_count')
-                ->limit(5)
-                ->get()
-                ->map(function ($contact) {
-                    return [
-                        'name' => $contact->name ?: 'Sin nombre',
-                        'phone' => $contact->phone_number ?: '',
-                        'count' => $contact->message_count
-                    ];
-                })
-                ->toArray();
+            foreach ($conversationsToCheck as $conversation) {
+                $convId = $conversation['id'] ?? null;
+                if (!$convId) continue;
+
+                // Obtener mensajes de esta conversación
+                $messagesResponse = $this->chatwootHttp()->get(
+                    $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $convId . '/messages'
+                );
+
+                if ($messagesResponse->successful()) {
+                    $messagesData = $messagesResponse->json();
+                    $messages = $messagesData['payload'] ?? [];
+
+                    foreach ($messages as $msg) {
+                        // Ignorar mensajes de tipo activity (2)
+                        $messageType = $msg['message_type'] ?? null;
+                        if ($messageType === 2 || $messageType === 'activity') continue;
+
+                        $totalMessages++;
+                        
+                        // message_type: 0 = incoming (cliente), 1 = outgoing (agente)
+                        if ($messageType === 1 || $messageType === 'outgoing') {
+                            $agentMessages++;
+                        } else if ($messageType === 0 || $messageType === 'incoming') {
+                            $clientMessages++;
+                        }
+                    }
+
+                    // Guardar conteo por contacto
+                    $contact = $conversation['meta']['sender'] ?? null;
+                    if ($contact) {
+                        $contactId = $contact['id'] ?? 0;
+                        $contactName = $contact['name'] ?? 'Sin nombre';
+                        $contactPhone = $contact['phone_number'] ?? '';
+                        
+                        if (!isset($contactMessageCounts[$contactId])) {
+                            $contactMessageCounts[$contactId] = [
+                                'name' => $contactName,
+                                'phone' => $contactPhone,
+                                'count' => 0
+                            ];
+                        }
+                        $contactMessageCounts[$contactId]['count'] += count($messages);
+                    }
+                }
+            }
+
+            // Ordenar contactos por cantidad de mensajes
+            usort($contactMessageCounts, fn($a, $b) => $b['count'] - $a['count']);
+            $topContacts = array_slice(array_values($contactMessageCounts), 0, 5);
 
             return response()->json([
                 'success' => true,
@@ -277,7 +320,7 @@ class ChatwootController extends Controller
                     'agentMessages' => $agentMessages,
                     'clientMessages' => $clientMessages,
                     'topContacts' => $topContacts,
-                    'avgResponseTime' => '2.5 min', // TODO: Calcular real
+                    'avgResponseTime' => '2.5 min',
                     'satisfactionRate' => 85,
                 ]
             ]);
@@ -291,7 +334,7 @@ class ChatwootController extends Controller
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno del servidor'
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
