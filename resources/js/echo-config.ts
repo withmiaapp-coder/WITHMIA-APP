@@ -30,17 +30,23 @@ console.log('🔧 VITE_REVERB_APP_KEY:', import.meta.env.VITE_REVERB_APP_KEY);
 console.log('🔧 VITE_REVERB_PORT:', import.meta.env.VITE_REVERB_PORT);
 console.log('🔧 VITE_REVERB_SCHEME:', import.meta.env.VITE_REVERB_SCHEME);
 
-// Configuración de Reverb - SIN HARDCODES (las variables deben venir del .env)
-const reverbHost = import.meta.env.VITE_REVERB_HOST;
-const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
-const reverbPort = import.meta.env.VITE_REVERB_PORT || '443';
-const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
+// Configuración de Reverb - Obtener del meta tag del servidor (inyectado por Laravel)
+// Esto permite que cada empresa tenga su propia configuración sin hardcodes
+const getMetaContent = (name: string): string | null => {
+  const meta = document.querySelector(`meta[name="${name}"]`);
+  return meta?.getAttribute('content') || null;
+};
+
+// Prioridad: 1) Meta tags del servidor, 2) Variables de Vite, 3) Fallback vacío
+const reverbHost = getMetaContent('reverb-host') || import.meta.env.VITE_REVERB_HOST;
+const reverbKey = getMetaContent('reverb-key') || import.meta.env.VITE_REVERB_APP_KEY;
+const reverbPort = getMetaContent('reverb-port') || import.meta.env.VITE_REVERB_PORT || '443';
+const reverbScheme = getMetaContent('reverb-scheme') || import.meta.env.VITE_REVERB_SCHEME || 'https';
 
 // Validación: Si no hay host o key, mostrar error claro
 if (!reverbHost || !reverbKey) {
-  console.error('❌ REVERB CONFIG ERROR: Missing required environment variables');
-  console.error('❌ Required: VITE_REVERB_HOST and VITE_REVERB_APP_KEY');
-  console.error('❌ Please configure these in your .env file or Railway variables');
+  console.error('❌ REVERB CONFIG ERROR: Missing required configuration');
+  console.error('❌ Required: reverb-host and reverb-key meta tags, or VITE_REVERB_* env variables');
 }
 
 console.log('🔧 Using Reverb config:', { reverbHost, reverbKey: reverbKey ? '***' : 'MISSING', reverbPort, reverbScheme });
