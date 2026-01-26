@@ -773,14 +773,22 @@ const ConversationsInterface: React.FC = () => {
   }, []);
   
   // 🔔 Escuchar evento selectConversation desde NotificationBell y query params
+  const pendingConversationRef = useRef<number | null>(null);
+  
   useEffect(() => {
     // Función para seleccionar conversación por ID
     const selectConversationById = (conversationId: number) => {
-      if (!conversations || conversations.length === 0) return;
+      if (!conversations || conversations.length === 0) {
+        // Guardar para intentar después cuando se carguen las conversaciones
+        pendingConversationRef.current = conversationId;
+        console.log('⏳ Conversaciones no cargadas, guardando pendiente:', conversationId);
+        return false;
+      }
       
       const conversation = conversations.find((c: any) => c.id === conversationId);
       if (conversation) {
         console.log('🔔 Seleccionando conversación desde notificación:', conversationId);
+        pendingConversationRef.current = null; // Limpiar pendiente
         _setActiveConversation({
           ...conversation,
           messages: [],
@@ -791,8 +799,15 @@ const ConversationsInterface: React.FC = () => {
         if (markConversationAsRead) {
           markConversationAsRead(conversationId);
         }
+        return true;
       }
+      return false;
     };
+
+    // Si hay una conversación pendiente y ahora tenemos conversaciones, seleccionarla
+    if (pendingConversationRef.current && conversations && conversations.length > 0) {
+      selectConversationById(pendingConversationRef.current);
+    }
 
     // Revisar query param al cargar
     const urlParams = new URLSearchParams(window.location.search);
@@ -800,9 +815,11 @@ const ConversationsInterface: React.FC = () => {
     if (conversationParam) {
       const conversationId = parseInt(conversationParam, 10);
       if (!isNaN(conversationId)) {
-        selectConversationById(conversationId);
-        // Limpiar query param del URL sin recargar
-        window.history.replaceState({}, '', window.location.pathname);
+        const selected = selectConversationById(conversationId);
+        // Solo limpiar query param si se seleccionó exitosamente
+        if (selected) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
       }
     }
 
