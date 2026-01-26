@@ -103,8 +103,8 @@ export const useEnhancedNotifications = () => {
     if ('Notification' in window && Notification.permission === 'granted') {
       const desktopNotif = new window.Notification(notification.title, {
         body: notification.message,
-        icon: notification.icon || '/logo-withmia.png',
-        badge: '/logo-withmia.png',
+        icon: notification.icon || '/logo-withmia.webp',
+        badge: '/logo-withmia.webp',
         tag: notification.id,
         requireInteraction: false,
         silent: false
@@ -201,7 +201,7 @@ export const useEnhancedNotifications = () => {
       type: 'message',
       title: 'Notificación de Prueba',
       message: 'Esta es una notificación de prueba. ¡Funciona correctamente! ✅',
-      icon: '/logo-withmia.png'
+      icon: '/logo-withmia.webp'
     });
   }, [addNotification]);
 

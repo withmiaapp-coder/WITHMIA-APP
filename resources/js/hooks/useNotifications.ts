@@ -219,7 +219,7 @@ export const useNotifications = () => {
     try {
       const notification = new Notification(title, {
         body,
-        icon: (avatar && avatar.startsWith('http')) ? avatar : '/logo-withmia.png',
+        icon: (avatar && avatar.startsWith('http')) ? avatar : '/logo-withmia.webp',
         tag: `conversation-${conversationId}`, // Reemplaza notificaciones anteriores
         requireInteraction: priority === 'urgent',
         silent: false,
