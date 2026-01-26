@@ -3,14 +3,19 @@ set -e
 
 echo "=== REVERB STARTUP SCRIPT ==="
 echo "Current date: $(date)"
-echo "Checking PORT variable..."
 
 # Railway provides PORT as an environment variable
-# Default to 8080 if not set
-REVERB_PORT="${PORT:-8080}"
-
-echo "PORT from environment = '${PORT}'"
-echo "Using REVERB_PORT = '${REVERB_PORT}'"
+# Use REVERB_SERVER_PORT if set, otherwise PORT, otherwise default to 8080
+if [ -n "$REVERB_SERVER_PORT" ]; then
+    REVERB_PORT="$REVERB_SERVER_PORT"
+    echo "Using REVERB_SERVER_PORT: $REVERB_PORT"
+elif [ -n "$PORT" ]; then
+    REVERB_PORT="$PORT"
+    echo "Using PORT: $REVERB_PORT"
+else
+    REVERB_PORT="8080"
+    echo "Using default port: $REVERB_PORT"
+fi
 
 # Validate that PORT is a valid number
 if ! [[ "$REVERB_PORT" =~ ^[0-9]+$ ]]; then
