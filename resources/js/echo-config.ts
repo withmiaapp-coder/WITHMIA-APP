@@ -24,16 +24,24 @@ window.Pusher = Pusher;
 // Obtener CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-// Configuración de Reverb
-const reverbHost = import.meta.env.VITE_REVERB_HOST;
-const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
+// Configuración de Reverb - DEBUG
+console.log('🔧 VITE_REVERB_HOST:', import.meta.env.VITE_REVERB_HOST);
+console.log('🔧 VITE_REVERB_APP_KEY:', import.meta.env.VITE_REVERB_APP_KEY);
+console.log('🔧 VITE_REVERB_PORT:', import.meta.env.VITE_REVERB_PORT);
+console.log('🔧 VITE_REVERB_SCHEME:', import.meta.env.VITE_REVERB_SCHEME);
+
+// Configuración de Reverb con fallbacks robustos
+const reverbHost = import.meta.env.VITE_REVERB_HOST || 'reverb-production-4b5c.up.railway.app';
+const reverbKey = import.meta.env.VITE_REVERB_APP_KEY || 'e14571c517c74fa41d385702598de8f9';
 const reverbPort = import.meta.env.VITE_REVERB_PORT || '443';
 const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
+
+console.log('🔧 Using Reverb config:', { reverbHost, reverbKey, reverbPort, reverbScheme });
 
 // Configurar Laravel Echo con Reverb
 const echoConfig: any = {
   broadcaster: 'reverb',
-  key: reverbKey || 'local-app-key',
+  key: reverbKey,
   wsHost: reverbHost,
   wsPort: parseInt(reverbPort),
   wssPort: parseInt(reverbPort),
