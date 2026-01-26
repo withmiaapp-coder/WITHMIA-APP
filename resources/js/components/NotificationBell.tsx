@@ -48,22 +48,22 @@ export const NotificationBell: React.FC = () => {
     }
     setIsOpen(false);
     
-    // Verificar la ruta actual
+    // Verificar la ruta actual - solo estamos en conversaciones si la ruta es exactamente /dashboard
     const currentPath = window.location.pathname;
-    const isInConversations = currentPath === '/dashboard' || 
-                              currentPath.match(/^\/dashboard\/?$/) ||
-                              currentPath.includes('/dashboard?');
+    const currentSearch = window.location.search;
+    const isExactlyInConversations = currentPath === '/dashboard' && 
+                                      !currentPath.includes('/dashboard/');
     
     // Emitir evento para que ConversationsInterface seleccione la conversación
     window.dispatchEvent(new CustomEvent('selectConversation', {
       detail: { conversationId }
     }));
     
-    // Si estamos exactamente en /dashboard (conversaciones), solo actualizar URL
-    if (isInConversations) {
+    // Si estamos exactamente en /dashboard (página de conversaciones), solo actualizar URL y emitir evento
+    if (isExactlyInConversations) {
       window.history.pushState({}, '', `/dashboard?conversation=${conversationId}`);
     } else {
-      // Si estamos en otra sección del dashboard o fuera, navegar a conversaciones
+      // Desde CUALQUIER otra página (Conocimientos, Equipo, Calendario, etc.), navegar a conversaciones
       router.visit(`/dashboard?conversation=${conversationId}`, {
         preserveState: false,
         preserveScroll: false,
