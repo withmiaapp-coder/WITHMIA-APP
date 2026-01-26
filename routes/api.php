@@ -1685,6 +1685,22 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     
     // Configuraci�n
     Route::get('/config', [ChatwootController::class, 'getConfig']);
+    
+    // ============================================================================
+    // INVITACIONES DE EQUIPO (autenticado)
+    // ============================================================================
+    Route::get('/invitations', [\App\Http\Controllers\Api\TeamInvitationController::class, 'index']);
+    Route::post('/invitations', [\App\Http\Controllers\Api\TeamInvitationController::class, 'store']);
+    Route::post('/invitations/{id}/resend', [\App\Http\Controllers\Api\TeamInvitationController::class, 'resend']);
+    Route::delete('/invitations/{id}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'cancel']);
+});
+
+// ============================================================================
+// INVITACIONES PÚBLICAS (sin autenticación)
+// ============================================================================
+Route::prefix('invitation')->group(function () {
+    Route::get('/validate/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'validate']);
+    Route::post('/accept/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'accept']);
 });
 
 // Proxy para archivos/im�genes de Chatwoot - SIN autenticaci�n (las im�genes se cargan v�a <img src>)

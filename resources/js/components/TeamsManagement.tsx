@@ -13,9 +13,13 @@ import {
   X,
   Check,
   AlertCircle,
-  UserMinus
+  UserMinus,
+  Mail,
+  Send,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
-import { useTeams, useAgents, Team, TeamMember } from '../hooks/useChatwoot';
+import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
 
 // Modal para crear/editar equipo
 const TeamModal: React.FC<{
@@ -148,7 +152,8 @@ const AddMembersModal: React.FC<{
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const filteredAgents = availableAgents.filter(agent => !currentMemberIds.includes(agent.id));
+  const agentsArray = Array.isArray(availableAgents) ? availableAgents : [];
+  const filteredAgents = agentsArray.filter(agent => !currentMemberIds.includes(agent.id));
 
   const toggleAgent = (agentId: number) => {
     setSelectedIds(prev => 
@@ -261,11 +266,191 @@ const AddMembersModal: React.FC<{
   );
 };
 
+// Modal para invitar nuevo miembro por correo
+const InviteMemberModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onInvite: (data: { email: string; name?: string; role: 'agent' | 'administrator'; team_id?: number }) => Promise<void>;
+  teams: Team[];
+  selectedTeamId?: number;
+}> = ({ isOpen, onClose, onInvite, teams, selectedTeamId }) => {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<'agent' | 'administrator'>('agent');
+  const [teamId, setTeamId] = useState<number | undefined>(selectedTeamId);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setEmail('');
+      setName('');
+      setRole('agent');
+      setTeamId(selectedTeamId);
+      setSuccess(false);
+      setError(null);
+    }
+  }, [isOpen, selectedTeamId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      await onInvite({ 
+        email: email.trim(), 
+        name: name.trim() || undefined, 
+        role,
+        team_id: teamId 
+      });
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.message || 'Error al enviar invitación');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
+                <Mail className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">Invitar por Correo</h2>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+        
+        {success ? (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">¡Invitación Enviada!</h3>
+            <p className="text-gray-600">Se ha enviado un correo a {email} con las instrucciones para unirse.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="correo@ejemplo.com"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre (opcional)
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nombre del invitado"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rol
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="agent">Agente</option>
+                <option value="administrator">Administrador</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Agregar a equipo (opcional)
+              </label>
+              <select
+                value={teamId || ''}
+                onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="">Sin equipo asignado</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-700">
+                <strong>📧 El invitado recibirá un correo</strong> con un enlace para crear su cuenta y unirse a tu empresa.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !email.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>Enviar Invitación</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Componente principal
 const TeamsManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showAddMembersModal, setShowAddMembersModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInvitationsPanel, setShowInvitationsPanel] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   
@@ -283,6 +468,7 @@ const TeamsManagement: React.FC = () => {
   } = useTeams();
   
   const { agents, loading: agentsLoading, fetchAgents } = useAgents();
+  const { invitations, sendInvitation, resendInvitation, cancelInvitation, loading: invitationsLoading } = useTeamInvitations();
 
   useEffect(() => {
     if (showAddMembersModal) {
@@ -322,6 +508,12 @@ const TeamsManagement: React.FC = () => {
     }
   };
 
+  const handleInviteMember = async (data: { email: string; name?: string; role: 'agent' | 'administrator'; team_id?: number }) => {
+    await sendInvitation(data);
+  };
+
+  const pendingInvitations = invitations.filter(inv => inv.status === 'pending');
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'administrator': return Crown;
@@ -347,7 +539,8 @@ const TeamsManagement: React.FC = () => {
     }
   };
 
-  const filteredTeams = teams.filter(team => 
+  const teamsArray = Array.isArray(teams) ? teams : [];
+  const filteredTeams = teamsArray.filter(team => 
     team.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     team.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -368,17 +561,86 @@ const TeamsManagement: React.FC = () => {
             </div>
           </div>
           
-          <button 
-            onClick={() => {
-              setEditingTeam(null);
-              setShowTeamModal(true);
-            }}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Crear Equipo</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* Botón de invitaciones pendientes */}
+            {pendingInvitations.length > 0 && (
+              <button 
+                onClick={() => setShowInvitationsPanel(!showInvitationsPanel)}
+                className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-all flex items-center space-x-2"
+              >
+                <Clock className="w-4 h-4" />
+                <span>{pendingInvitations.length} pendiente{pendingInvitations.length > 1 ? 's' : ''}</span>
+              </button>
+            )}
+            
+            {/* Botón invitar */}
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+            >
+              <Mail className="w-4 h-4" />
+              <span>Invitar</span>
+            </button>
+            
+            {/* Botón crear equipo */}
+            <button 
+              onClick={() => {
+                setEditingTeam(null);
+                setShowTeamModal(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Crear Equipo</span>
+            </button>
+          </div>
         </div>
+
+        {/* Panel de invitaciones pendientes */}
+        {showInvitationsPanel && pendingInvitations.length > 0 && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-amber-800 flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>Invitaciones Pendientes</span>
+              </h3>
+              <button 
+                onClick={() => setShowInvitationsPanel(false)}
+                className="text-amber-600 hover:text-amber-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {pendingInvitations.map(inv => (
+                <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
+                  <div>
+                    <p className="font-medium text-gray-800">{inv.email}</p>
+                    <p className="text-xs text-gray-500">
+                      {inv.role === 'administrator' ? 'Admin' : 'Agente'} • Expira: {new Date(inv.expires_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={() => resendInvitation(inv.id)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Reenviar"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => cancelInvitation(inv.id)}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Cancelar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative max-w-md">
@@ -651,6 +913,15 @@ const TeamsManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de invitación */}
+      <InviteMemberModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onInvite={handleInviteMember}
+        teams={teamsArray}
+        selectedTeamId={selectedTeam?.id}
+      />
     </div>
   );
 };

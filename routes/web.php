@@ -427,6 +427,15 @@ Route::get('/login', function () {
     return response()->file(public_path('login.html'));
 })->name('login');
 
+// ============================================================================
+// Invitación de equipo - Página de aceptación
+// ============================================================================
+Route::get('/invitation/accept/{token}', function ($token) {
+    return Inertia::render('AcceptInvitation', [
+        'token' => $token
+    ]);
+})->name('invitation.accept');
+
 // Transition route for unauthenticated redirects
 Route::get('/transition-login', function () {
     return view('transition', ['redirect' => '/login']);

@@ -1271,3 +1271,144 @@ export const useUserStats = () => {
 
   return { stats, loading, error, fetchUserStats };
 };
+
+// ============================================================================
+// HOOK: useTeamInvitations - Gestión de invitaciones de equipo
+// ============================================================================
+
+export interface TeamInvitation {
+  id: number;
+  email: string;
+  name: string | null;
+  role: 'agent' | 'administrator';
+  team_id: number | null;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expires_at: string;
+  created_at: string;
+  invited_by?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
+export const useTeamInvitations = () => {
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInvitations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/chatwoot-proxy/invitations', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+      });
+      const result = await response.json();
+      setInvitations(Array.isArray(result?.data) ? result.data : []);
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+      setError('Error al cargar invitaciones');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const sendInvitation = useCallback(async (data: {
+    email: string;
+    name?: string;
+    role: 'agent' | 'administrator';
+    team_id?: number;
+  }) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/chatwoot-proxy/invitations', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Error al enviar invitación');
+      }
+      
+      await fetchInvitations();
+      return result;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchInvitations]);
+
+  const resendInvitation = useCallback(async (invitationId: number) => {
+    try {
+      const response = await fetch(`/api/chatwoot-proxy/invitations/${invitationId}/resend`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Error al reenviar');
+      }
+      
+      await fetchInvitations();
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  }, [fetchInvitations]);
+
+  const cancelInvitation = useCallback(async (invitationId: number) => {
+    try {
+      const response = await fetch(`/api/chatwoot-proxy/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Error al cancelar');
+      }
+      
+      await fetchInvitations();
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  }, [fetchInvitations]);
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
+
+  return {
+    invitations,
+    loading,
+    error,
+    fetchInvitations,
+    sendInvitation,
+    resendInvitation,
+    cancelInvitation,
+  };
+};
