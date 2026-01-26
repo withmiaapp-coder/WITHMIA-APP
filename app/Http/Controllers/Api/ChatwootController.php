@@ -1389,6 +1389,15 @@ class ChatwootController extends Controller
         }
     }
 
+    /**
+     * ============================================================================
+     * TEAMS MANAGEMENT - CRUD Completo
+     * ============================================================================
+     */
+
+    /**
+     * Obtener todos los equipos de la cuenta
+     */
     public function getTeams()
     {
         try {
@@ -1397,9 +1406,22 @@ class ChatwootController extends Controller
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
 
             if ($response->successful()) {
+                $teams = $response->json();
+                
+                // Para cada equipo, obtener sus miembros
+                $teamsWithMembers = [];
+                foreach ($teams as $team) {
+                    $membersResponse = Http::withHeaders([
+                        'api_access_token' => $this->chatwootToken,
+                    ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $team['id'] . '/team_members');
+                    
+                    $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
+                    $teamsWithMembers[] = $team;
+                }
+                
                 return response()->json([
                     'success' => true,
-                    'data' => $response->json()
+                    'data' => $teamsWithMembers
                 ]);
             }
 
@@ -1414,6 +1436,347 @@ class ChatwootController extends Controller
                 'success' => true,
                 'data' => []
             ]);
+        }
+    }
+
+    /**
+     * Obtener un equipo específico con sus miembros
+     */
+    public function getTeam($teamId)
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId);
+
+            if ($response->successful()) {
+                $team = $response->json();
+                
+                // Obtener miembros del equipo
+                $membersResponse = Http::withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members');
+                
+                $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $team
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Equipo no encontrado'
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Get Team Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener equipo'
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear un nuevo equipo
+     */
+    public function createTeam(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:500',
+                'allow_auto_assign' => 'nullable|boolean',
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json',
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams', [
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? '',
+                'allow_auto_assign' => $validated['allow_auto_assign'] ?? true,
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Equipo creado en Chatwoot', [
+                    'user_id' => $this->userId,
+                    'team_name' => $validated['name']
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json(),
+                    'message' => 'Equipo creado exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear equipo: ' . ($response->json()['message'] ?? 'Error desconocido')
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Create Team Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear equipo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar un equipo existente
+     */
+    public function updateTeam(Request $request, $teamId)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'description' => 'nullable|string|max:500',
+                'allow_auto_assign' => 'nullable|boolean',
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json',
+            ])->patch($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId, $validated);
+
+            if ($response->successful()) {
+                Log::info('Equipo actualizado en Chatwoot', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json(),
+                    'message' => 'Equipo actualizado exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar equipo'
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Update Team Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar equipo'
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un equipo
+     */
+    public function deleteTeam($teamId)
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->delete($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId);
+
+            if ($response->successful() || $response->status() === 204) {
+                Log::info('Equipo eliminado de Chatwoot', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Equipo eliminado exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar equipo'
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Delete Team Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar equipo'
+            ], 500);
+        }
+    }
+
+    /**
+     * ============================================================================
+     * TEAM MEMBERS MANAGEMENT
+     * ============================================================================
+     */
+
+    /**
+     * Obtener miembros de un equipo
+     */
+    public function getTeamMembers($teamId)
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members');
+
+            if ($response->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json()
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Get Team Members Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+        }
+    }
+
+    /**
+     * Agregar miembros a un equipo
+     */
+    public function addTeamMembers(Request $request, $teamId)
+    {
+        try {
+            $validated = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'integer',
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json',
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
+                'user_ids' => $validated['user_ids']
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Miembros agregados al equipo', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId,
+                    'added_users' => $validated['user_ids']
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json(),
+                    'message' => 'Miembros agregados exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar miembros'
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Add Team Members Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar miembros: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar miembros de un equipo (reemplazar todos)
+     */
+    public function updateTeamMembers(Request $request, $teamId)
+    {
+        try {
+            $validated = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'integer',
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json',
+            ])->patch($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
+                'user_ids' => $validated['user_ids']
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Miembros del equipo actualizados', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json(),
+                    'message' => 'Miembros actualizados exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar miembros'
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Update Team Members Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar miembros'
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un miembro de un equipo
+     */
+    public function removeTeamMember(Request $request, $teamId)
+    {
+        try {
+            $validated = $request->validate([
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'integer',
+            ]);
+
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json',
+            ])->delete($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
+                'user_ids' => $validated['user_ids']
+            ]);
+
+            if ($response->successful() || $response->status() === 204) {
+                Log::info('Miembro removido del equipo', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId,
+                    'removed_users' => $validated['user_ids']
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Miembro removido exitosamente'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al remover miembro'
+            ], 400);
+
+        } catch (\Exception $e) {
+            Log::error('Chatwoot Remove Team Member Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al remover miembro'
+            ], 500);
         }
     }
 

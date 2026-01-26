@@ -987,40 +987,171 @@ export const useConversations = () => {
 };
 
 // ============================================================================
-// HOOK: useTeams - Gestión de equipos
+// HOOK: useTeams - Gestión de equipos (CRUD Completo)
 // ============================================================================
 
+export interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  avatar_url?: string;
+  availability_status?: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description: string;
+  allow_auto_assign: boolean;
+  account_id: number;
+  members: TeamMember[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const useTeams = () => {
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const { apiCall, loading, error } = useChatwootAPI();
 
+  // Obtener todos los equipos
   const fetchTeams = useCallback(async () => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/teams');
-      setTeams(result);
+      const teamsData = Array.isArray(result) ? result : (result?.data || []);
+      setTeams(teamsData);
+      return teamsData;
     } catch (err: any) {
-      // Ignorar errores de abort (componente desmontado)
-      if (err?.name === 'AbortError') return;
+      if (err?.name === 'AbortError') return [];
       console.error('Error fetching teams:', err);
+      return [];
     }
   }, [apiCall]);
 
-  const createTeam = useCallback(async (teamData: any) => {
+  // Obtener un equipo específico con sus miembros
+  const fetchTeam = useCallback(async (teamId: number) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}`);
+      const teamData = result?.data || result;
+      setSelectedTeam(teamData);
+      return teamData;
+    } catch (err) {
+      console.error('Error fetching team:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // Crear nuevo equipo
+  const createTeam = useCallback(async (teamData: { name: string; description?: string; allow_auto_assign?: boolean }) => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/teams', 'POST', teamData);
       await fetchTeams();
-      return result;
+      return result?.data || result;
     } catch (err) {
       console.error('Error creating team:', err);
       throw err;
     }
   }, [apiCall, fetchTeams]);
 
+  // Actualizar equipo
+  const updateTeam = useCallback(async (teamId: number, teamData: Partial<Team>) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}`, 'PATCH', teamData);
+      await fetchTeams();
+      return result?.data || result;
+    } catch (err) {
+      console.error('Error updating team:', err);
+      throw err;
+    }
+  }, [apiCall, fetchTeams]);
+
+  // Eliminar equipo
+  const deleteTeam = useCallback(async (teamId: number) => {
+    try {
+      await apiCall(`/api/chatwoot-proxy/teams/${teamId}`, 'DELETE');
+      setTeams(prev => prev.filter(t => t.id !== teamId));
+      if (selectedTeam?.id === teamId) {
+        setSelectedTeam(null);
+      }
+      return true;
+    } catch (err) {
+      console.error('Error deleting team:', err);
+      throw err;
+    }
+  }, [apiCall, selectedTeam]);
+
+  // Obtener miembros de un equipo
+  const fetchTeamMembers = useCallback(async (teamId: number) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`);
+      return result?.data || result || [];
+    } catch (err) {
+      console.error('Error fetching team members:', err);
+      return [];
+    }
+  }, [apiCall]);
+
+  // Agregar miembros a un equipo
+  const addTeamMembers = useCallback(async (teamId: number, userIds: number[]) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'POST', { user_ids: userIds });
+      await fetchTeam(teamId);
+      await fetchTeams();
+      return result?.data || result;
+    } catch (err) {
+      console.error('Error adding team members:', err);
+      throw err;
+    }
+  }, [apiCall, fetchTeam, fetchTeams]);
+
+  // Actualizar miembros (reemplazar todos)
+  const updateTeamMembers = useCallback(async (teamId: number, userIds: number[]) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'PATCH', { user_ids: userIds });
+      await fetchTeam(teamId);
+      await fetchTeams();
+      return result?.data || result;
+    } catch (err) {
+      console.error('Error updating team members:', err);
+      throw err;
+    }
+  }, [apiCall, fetchTeam, fetchTeams]);
+
+  // Remover miembro de un equipo
+  const removeTeamMember = useCallback(async (teamId: number, userId: number) => {
+    try {
+      await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'DELETE', { user_ids: [userId] });
+      await fetchTeam(teamId);
+      await fetchTeams();
+      return true;
+    } catch (err) {
+      console.error('Error removing team member:', err);
+      throw err;
+    }
+  }, [apiCall, fetchTeam, fetchTeams]);
+
+  // Cargar equipos al montar
   useEffect(() => {
     fetchTeams();
   }, [fetchTeams]);
 
-  return { teams, loading, error, fetchTeams, createTeam };
+  return { 
+    teams, 
+    selectedTeam,
+    setSelectedTeam,
+    loading, 
+    error, 
+    fetchTeams,
+    fetchTeam,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    fetchTeamMembers,
+    addTeamMembers,
+    updateTeamMembers,
+    removeTeamMember
+  };
 };
 
 // ============================================================================

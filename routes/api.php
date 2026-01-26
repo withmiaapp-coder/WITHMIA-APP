@@ -1651,9 +1651,20 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     Route::post('/conversations/{id}/messages', [ChatwootController::class, 'sendMessage']);
     Route::post('/conversations/{id}/update_last_seen', [ChatwootController::class, 'markAsRead']);
 
-    // Equipos
+    // ============================================================================
+    // EQUIPOS - CRUD Completo
+    // ============================================================================
     Route::get('/teams', [ChatwootController::class, 'getTeams']);
+    Route::get('/teams/{teamId}', [ChatwootController::class, 'getTeam']);
     Route::post('/teams', [ChatwootController::class, 'createTeam']);
+    Route::patch('/teams/{teamId}', [ChatwootController::class, 'updateTeam']);
+    Route::delete('/teams/{teamId}', [ChatwootController::class, 'deleteTeam']);
+    
+    // Miembros de equipos
+    Route::get('/teams/{teamId}/members', [ChatwootController::class, 'getTeamMembers']);
+    Route::post('/teams/{teamId}/members', [ChatwootController::class, 'addTeamMembers']);
+    Route::patch('/teams/{teamId}/members', [ChatwootController::class, 'updateTeamMembers']);
+    Route::delete('/teams/{teamId}/members', [ChatwootController::class, 'removeTeamMember']);
 
     // Etiquetas
     Route::get('/labels', [ChatwootController::class, 'getLabels']);

@@ -1,62 +1,326 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   UserPlus,
-  Settings,
   Crown,
   Shield,
   User,
-  MoreHorizontal,
   Edit3,
   Trash2,
   Search,
   Plus,
-  
   Loader2,
-  Star,
-  Activity,
-  Clock,
-  MessageSquare
+  X,
+  Check,
+  AlertCircle,
+  UserMinus
 } from 'lucide-react';
-import { useTeams } from '../hooks/useChatwoot';
+import { useTeams, useAgents, Team, TeamMember } from '../hooks/useChatwoot';
 
-interface TeamMember {
-  id: number;
-  name: string;
-  email: string;
-  role: 'administrator' | 'agent' | 'supervisor';
-  status: 'online' | 'offline' | 'busy' | 'away';
-  avatar?: string;
-  phone?: string;
-  joined_date: string;
-  last_activity: string;
-  conversations_count: number;
-  response_time: number;
-  satisfaction_score: number;
-  permissions: string[];
-}
+// Modal para crear/editar equipo
+const TeamModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: { name: string; description: string; allow_auto_assign: boolean }) => Promise<void>;
+  team?: Team | null;
+}> = ({ isOpen, onClose, onSave, team }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [allowAutoAssign, setAllowAutoAssign] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-interface Team {
-  id: number;
-  name: string;
-  description: string;
-  members: TeamMember[];
-  created_at: string;
-  updated_at: string;
-  color: string;
-}
+  useEffect(() => {
+    if (team) {
+      setName(team.name || '');
+      setDescription(team.description || '');
+      setAllowAutoAssign(team.allow_auto_assign ?? true);
+    } else {
+      setName('');
+      setDescription('');
+      setAllowAutoAssign(true);
+    }
+  }, [team, isOpen]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    
+    setSaving(true);
+    try {
+      await onSave({ name: name.trim(), description: description.trim(), allow_auto_assign: allowAutoAssign });
+      onClose();
+    } catch (err) {
+      console.error('Error saving team:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {team ? 'Editar Equipo' : 'Crear Nuevo Equipo'}
+            </h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre del Equipo *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej: Ventas, Soporte, Marketing..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Descripción
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe el propósito de este equipo..."
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="autoAssign"
+              checked={allowAutoAssign}
+              onChange={(e) => setAllowAutoAssign(e.target.checked)}
+              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+            />
+            <label htmlFor="autoAssign" className="text-sm text-gray-700">
+              Permitir asignación automática de conversaciones
+            </label>
+          </div>
+          
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !name.trim()}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{team ? 'Guardar Cambios' : 'Crear Equipo'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal para agregar miembros
+const AddMembersModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (userIds: number[]) => Promise<void>;
+  availableAgents: any[];
+  currentMemberIds: number[];
+  loading?: boolean;
+}> = ({ isOpen, onClose, onAdd, availableAgents, currentMemberIds, loading }) => {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const filteredAgents = availableAgents.filter(agent => !currentMemberIds.includes(agent.id));
+
+  const toggleAgent = (agentId: number) => {
+    setSelectedIds(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (selectedIds.length === 0) return;
+    
+    setSaving(true);
+    try {
+      await onAdd(selectedIds);
+      setSelectedIds([]);
+      onClose();
+    } catch (err) {
+      console.error('Error adding members:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) setSelectedIds([]);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in max-h-[80vh] flex flex-col">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-800">Agregar Miembros</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            </div>
+          ) : filteredAgents.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No hay agentes disponibles para agregar</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredAgents.map(agent => (
+                <div
+                  key={agent.id}
+                  onClick={() => toggleAgent(agent.id)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    selectedIds.includes(agent.id)
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
+                      selectedIds.includes(agent.id) ? 'bg-emerald-500' : 'bg-gray-400'
+                    }`}>
+                      {agent.name?.charAt(0)?.toUpperCase() || 'A'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800">{agent.name || 'Sin nombre'}</p>
+                      <p className="text-sm text-gray-500">{agent.email}</p>
+                    </div>
+                    {selectedIds.includes(agent.id) && (
+                      <Check className="w-5 h-5 text-emerald-500" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="p-6 border-t border-gray-200">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600">
+              {selectedIds.length} seleccionado(s)
+            </span>
+            <div className="flex space-x-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={saving || selectedIds.length === 0}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>Agregar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente principal
 const TeamsManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showAddMembersModal, setShowAddMembersModal] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   
-  // Usar el hook real de Chatwoot
-  const { teams, loading, _error, _fetchTeams, _createTeam } = useTeams();
+  const { 
+    teams, 
+    selectedTeam, 
+    setSelectedTeam,
+    loading, 
+    fetchTeam,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    addTeamMembers,
+    removeTeamMember
+  } = useTeams();
+  
+  const { agents, loading: agentsLoading, fetchAgents } = useAgents();
 
-  // Usar equipos reales de Chatwoot (o array vacío si no hay)
-  const actualTeams: Team[] = Array.isArray(teams) ? teams : [];
+  useEffect(() => {
+    if (showAddMembersModal) {
+      fetchAgents();
+    }
+  }, [showAddMembersModal, fetchAgents]);
+
+  const handleCreateTeam = async (data: { name: string; description: string; allow_auto_assign: boolean }) => {
+    await createTeam(data);
+  };
+
+  const handleUpdateTeam = async (data: { name: string; description: string; allow_auto_assign: boolean }) => {
+    if (editingTeam) {
+      await updateTeam(editingTeam.id, data);
+      setEditingTeam(null);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: number) => {
+    try {
+      await deleteTeam(teamId);
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Error deleting team:', err);
+    }
+  };
+
+  const handleAddMembers = async (userIds: number[]) => {
+    if (selectedTeam) {
+      await addTeamMembers(selectedTeam.id, userIds);
+    }
+  };
+
+  const handleRemoveMember = async (userId: number) => {
+    if (selectedTeam && confirm('¿Estás seguro de remover este miembro del equipo?')) {
+      await removeTeamMember(selectedTeam.id, userId);
+    }
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -83,24 +347,16 @@ const TeamsManagement: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const filteredTeams = actualTeams.filter(team => {
-    return team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           team.description.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const filteredTeams = teams.filter(team => 
+    team.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    team.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white backdrop-blur-xl border border-gray-200/50 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white">
       
       {/* Header */}
-      <div className="p-6 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl">
+      <div className="p-6 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
@@ -108,12 +364,15 @@ const TeamsManagement: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Gestión de Equipos</h1>
-              <p className="text-gray-600">Administra equipos y miembros de WITHMIA</p>
+              <p className="text-gray-600">Administra equipos y miembros de tu empresa</p>
             </div>
           </div>
           
           <button 
-            onClick={() => setShowCreateTeamModal(true)}
+            onClick={() => {
+              setEditingTeam(null);
+              setShowTeamModal(true);
+            }}
             className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
           >
             <Plus className="w-4 h-4" />
@@ -127,29 +386,33 @@ const TeamsManagement: React.FC = () => {
           <input
             type="text"
             placeholder="Buscar equipos..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-gray-400/50 focus:border-gray-400/50 backdrop-blur-xl transition-all duration-300"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50 transition-all duration-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
+      {/* Content */}
       <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         
         {/* Lista de Equipos */}
         <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200/60 bg-white/60 backdrop-blur-xl overflow-y-auto">
           {loading ? (
-            <div className="p-8 text-center">
-              <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+            <div className="p-8 flex flex-col items-center justify-center h-full">
+              <Loader2 className="w-12 h-12 text-emerald-500 mb-4 animate-spin" />
               <p className="text-gray-600">Cargando equipos...</p>
             </div>
           ) : filteredTeams.length === 0 ? (
-            <div className="p-8 text-center">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <div className="p-8 flex flex-col items-center justify-center h-full">
+              <Users className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay equipos creados</h3>
-              <p className="text-gray-500 mb-4">Aún no se han configurado equipos en Chatwoot</p>
+              <p className="text-gray-500 mb-4 text-center">Crea tu primer equipo para comenzar a organizar a tu personal</p>
               <button
-                onClick={() => setShowCreateTeamModal(true)}
+                onClick={() => {
+                  setEditingTeam(null);
+                  setShowTeamModal(true);
+                }}
                 className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-200 shadow-lg"
               >
                 Crear primer equipo
@@ -160,51 +423,71 @@ const TeamsManagement: React.FC = () => {
               {filteredTeams.map((team) => (
                 <div
                   key={team.id}
-                  onClick={() => setSelectedTeam(team)}
-                  className={`p-4 rounded-lg cursor-pointer transition-all duration-300 hover:bg-gray-50 border ${
+                  onClick={() => {
+                    setSelectedTeam(team);
+                    fetchTeam(team.id);
+                  }}
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-md ${
                     selectedTeam?.id === team.id 
-                      ? 'bg-white border-gray-300 shadow-xl' 
-                      : 'bg-white/80 border-gray-200 hover:border-gray-300'
+                      ? 'bg-white border-2 border-emerald-400 shadow-lg' 
+                      : 'bg-white/80 border border-gray-200 hover:border-emerald-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
-                      <div className={`w-12 h-12 bg-gradient-to-r ${team.color} rounded-md flex items-center justify-center shadow-lg`}>
-                        <Users className="w-6 h-6 text-white" />
+                      <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg flex items-center justify-center shadow">
+                        <Users className="w-5 h-5 text-white" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-800">{team.name}</h3>
-                        <p className="text-sm text-gray-600">{team.members.length} miembros</p>
+                        <p className="text-sm text-gray-500">{team.members?.length || 0} miembros</p>
                       </div>
                     </div>
-                    <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                      <MoreHorizontal className="w-4 h-4 text-gray-600" />
-                    </button>
+                    <div className="flex items-center space-x-1">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTeam(team);
+                          setShowTeamModal(true);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(team.id);
+                        }}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
                   </div>
                   
-                  <p className="text-sm text-gray-600 mb-3">{team.description}</p>
+                  {team.description && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{team.description}</p>
+                  )}
                   
-                  <div className="flex items-center justify-between">
+                  {team.members && team.members.length > 0 && (
                     <div className="flex -space-x-2">
-                      {team.members.slice(0, 3).map((member, index) => (
-                        <div key={index} className="relative">
-                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold border-2 border-white">
-                            {member.avatar}
-                          </div>
-                          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 ${getStatusColor(member.status)} rounded-full border border-white`} />
+                      {team.members.slice(0, 4).map((member: TeamMember, index: number) => (
+                        <div 
+                          key={member.id || index} 
+                          className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white"
+                          title={member.name}
+                        >
+                          {member.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                       ))}
-                      {team.members.length > 3 && (
-                        <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white">
-                          +{team.members.length - 3}
+                      {team.members.length > 4 && (
+                        <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white">
+                          +{team.members.length - 4}
                         </div>
                       )}
                     </div>
-                    
-                    <span className="text-xs text-gray-500">
-                      {formatDate(team.updated_at)}
-                    </span>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -217,63 +500,31 @@ const TeamsManagement: React.FC = () => {
             <div className="h-full flex flex-col">
               
               {/* Header del Equipo */}
-              <div className="p-6 border-b border-gray-200/60 bg-white/90 backdrop-blur-xl">
+              <div className="p-6 border-b border-gray-200/60 bg-white/90 flex-shrink-0">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-4">
-                    <div className={`w-16 h-16 bg-gradient-to-r ${selectedTeam.color} rounded-md flex items-center justify-center shadow-xl`}>
-                      <Users className="w-8 h-8 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <Users className="w-7 h-7 text-white" />
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-800">{selectedTeam.name}</h2>
-                      <p className="text-gray-600">{selectedTeam.description}</p>
-                      <p className="text-sm text-gray-500 mt-1">{selectedTeam.members.length} miembros activos</p>
+                      {selectedTeam.description && (
+                        <p className="text-gray-600">{selectedTeam.description}</p>
+                      )}
+                      <p className="text-sm text-gray-500 mt-1">
+                        {selectedTeam.members?.length || 0} miembros • 
+                        {selectedTeam.allow_auto_assign ? ' Auto-asignación activa' : ' Sin auto-asignación'}
+                      </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => setShowInviteModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-md hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      <span>Invitar</span>
-                    </button>
-                    <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
-                      <Settings className="w-5 h-5 text-gray-600" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Métricas del Equipo */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white/90 border border-gray-200 rounded-md p-4 text-center">
-                    <MessageSquare className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-gray-800">
-                      {selectedTeam.members.reduce((acc, m) => acc + m.conversations_count, 0)}
-                    </p>
-                    <p className="text-xs text-gray-600">Conversaciones</p>
-                  </div>
-                  <div className="bg-white/90 border border-gray-200 rounded-md p-4 text-center">
-                    <Clock className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-gray-800">
-                      {(selectedTeam.members.reduce((acc, m) => acc + m.response_time, 0) / selectedTeam.members.length).toFixed(1)}min
-                    </p>
-                    <p className="text-xs text-gray-600">Tiempo Respuesta</p>
-                  </div>
-                  <div className="bg-white/90 border border-gray-200 rounded-md p-4 text-center">
-                    <Star className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-gray-800">
-                      {(selectedTeam.members.reduce((acc, m) => acc + m.satisfaction_score, 0) / selectedTeam.members.length).toFixed(1)}/5
-                    </p>
-                    <p className="text-xs text-gray-600">Satisfacción</p>
-                  </div>
-                  <div className="bg-white/90 border border-gray-200 rounded-md p-4 text-center">
-                    <Activity className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
-                    <p className="text-lg font-bold text-gray-800">
-                      {selectedTeam.members.filter(m => m.status === 'online').length}
-                    </p>
-                    <p className="text-xs text-gray-600">Online</p>
-                  </div>
+                  <button 
+                    onClick={() => setShowAddMembersModal(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Agregar Miembro</span>
+                  </button>
                 </div>
               </div>
 
@@ -281,73 +532,125 @@ const TeamsManagement: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Miembros del Equipo</h3>
                 
-                <div className="space-y-3">
-                  {selectedTeam.members.map((member) => {
-                    const RoleIcon = getRoleIcon(member.role);
-                    
-                    return (
-                      <div key={member.id} className="bg-white/90 border border-gray-200 rounded-md p-4 hover:bg-gray-50 transition-all duration-300">
-                        <div className="flex items-center space-x-4">
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-md flex items-center justify-center text-white font-semibold">
-                              {member.avatar}
-                            </div>
-                            <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 ${getStatusColor(member.status)} rounded-full border-2 border-white`} />
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h4 className="font-semibold text-gray-800">{member.name}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full flex items-center space-x-1 ${getRoleColor(member.role)}`}>
-                                <RoleIcon className="w-3 h-3" />
-                                <span>{member.role}</span>
-                              </span>
+                {!selectedTeam.members || selectedTeam.members.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-gray-700 mb-2">Sin miembros</h4>
+                    <p className="text-gray-500 mb-4">Este equipo aún no tiene miembros asignados</p>
+                    <button 
+                      onClick={() => setShowAddMembersModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all"
+                    >
+                      Agregar primer miembro
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedTeam.members.map((member: TeamMember) => {
+                      const RoleIcon = getRoleIcon(member.role);
+                      
+                      return (
+                        <div key={member.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
+                          <div className="flex items-center space-x-4">
+                            <div className="relative">
+                              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold shadow">
+                                {member.avatar_url ? (
+                                  <img src={member.avatar_url} alt={member.name} className="w-full h-full rounded-xl object-cover" />
+                                ) : (
+                                  member.name?.charAt(0)?.toUpperCase() || 'U'
+                                )}
+                              </div>
+                              <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(member.availability_status || 'offline')} rounded-full border-2 border-white`} />
                             </div>
                             
-                            <p className="text-sm text-gray-600 mb-2">{member.email}</p>
-                            
-                            <div className="grid grid-cols-3 gap-4 text-xs">
-                              <div>
-                                <p className="text-gray-500">Conversaciones</p>
-                                <p className="font-semibold text-gray-800">{member.conversations_count}</p>
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <h4 className="font-semibold text-gray-800">{member.name || 'Sin nombre'}</h4>
+                                <span className={`px-2 py-1 text-xs rounded-full flex items-center space-x-1 ${getRoleColor(member.role)}`}>
+                                  <RoleIcon className="w-3 h-3" />
+                                  <span className="capitalize">{member.role}</span>
+                                </span>
                               </div>
-                              <div>
-                                <p className="text-gray-500">Tiempo Respuesta</p>
-                                <p className="font-semibold text-gray-800">{member.response_time}min</p>
-                              </div>
-                              <div>
-                                <p className="text-gray-500">Satisfacción</p>
-                                <p className="font-semibold text-gray-800">{member.satisfaction_score}/5</p>
-                              </div>
+                              <p className="text-sm text-gray-600">{member.email}</p>
                             </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                              <Edit3 className="w-4 h-4 text-gray-600" />
-                            </button>
-                            <button className="p-2 bg-gray-100 hover:bg-red-100 rounded-lg transition-colors">
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                            
+                            <button 
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                              title="Remover del equipo"
+                            >
+                              <UserMinus className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" />
                             </button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">Selecciona un Equipo</h3>
-                <p className="text-gray-500">Elige un equipo para ver sus detalles</p>
+                <Users className="w-20 h-20 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">Selecciona un Equipo</h3>
+                <p className="text-gray-500">Elige un equipo de la lista para ver sus detalles y miembros</p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modales */}
+      <TeamModal
+        isOpen={showTeamModal}
+        onClose={() => {
+          setShowTeamModal(false);
+          setEditingTeam(null);
+        }}
+        onSave={editingTeam ? handleUpdateTeam : handleCreateTeam}
+        team={editingTeam}
+      />
+
+      <AddMembersModal
+        isOpen={showAddMembersModal}
+        onClose={() => setShowAddMembersModal(false)}
+        onAdd={handleAddMembers}
+        availableAgents={agents}
+        currentMemberIds={selectedTeam?.members?.map((m: TeamMember) => m.id) || []}
+        loading={agentsLoading}
+      />
+
+      {/* Confirmación de eliminación */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-red-100 rounded-full">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800">Eliminar Equipo</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              ¿Estás seguro de eliminar este equipo? Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteTeam(deleteConfirm)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
