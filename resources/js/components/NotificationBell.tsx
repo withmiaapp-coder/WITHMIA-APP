@@ -48,24 +48,26 @@ export const NotificationBell: React.FC = () => {
     }
     setIsOpen(false);
     
-    // Verificar si ya estamos en el dashboard
+    // Verificar la ruta actual
     const currentPath = window.location.pathname;
-    const isDashboard = currentPath.includes('/dashboard');
+    const isInConversations = currentPath === '/dashboard' || 
+                              currentPath.match(/^\/dashboard\/?$/) ||
+                              currentPath.includes('/dashboard?');
     
     // Emitir evento para que ConversationsInterface seleccione la conversación
     window.dispatchEvent(new CustomEvent('selectConversation', {
       detail: { conversationId }
     }));
     
-    // Solo navegar si NO estamos en el dashboard, usar preserveState para no recargar
-    if (!isDashboard) {
-      router.visit(`/dashboard?conversation=${conversationId}`, {
-        preserveState: true,
-        preserveScroll: true,
-      });
-    } else {
-      // Si ya estamos en dashboard, solo actualizar la URL sin recargar
+    // Si estamos exactamente en /dashboard (conversaciones), solo actualizar URL
+    if (isInConversations) {
       window.history.pushState({}, '', `/dashboard?conversation=${conversationId}`);
+    } else {
+      // Si estamos en otra sección del dashboard o fuera, navegar a conversaciones
+      router.visit(`/dashboard?conversation=${conversationId}`, {
+        preserveState: false,
+        preserveScroll: false,
+      });
     }
   };
 
