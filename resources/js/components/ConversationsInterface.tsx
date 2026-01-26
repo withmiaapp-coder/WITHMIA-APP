@@ -68,7 +68,7 @@ import NotificationToast from './NotificationToast.tsx';
 // FASE 3: Nuevos componentes y hooks (Filtros)
 import AdvancedFilters from './AdvancedFilters';
 import { useMessagePagination } from '../hooks/useMessagePagination';
-import { useEnhancedNotifications } from '../hooks/useEnhancedNotifications';
+// NOTA: useEnhancedNotifications eliminado - usamos GlobalNotificationContext centralizado
 import NotificationCenter from './NotificationCenter.tsx';
 import NotificationSettings from './NotificationSettings.tsx';
 // ?? OPTIMIZACIONES: Utilidades extraídas para mejor performance
@@ -1562,6 +1562,12 @@ const ConversationsInterface: React.FC = () => {
         conv.id === conversation.id ? { ...conv, unread_count: 0 } : conv
       )
     );
+    
+    // 🔔 LIMPIAR NOTIFICACIONES: Disparar evento para limpiar notificaciones de esta conversación
+    // Esto actualiza: campanita, título del navegador, y cualquier otro lugar centralizado
+    window.dispatchEvent(new CustomEvent('clearNotifications', {
+      detail: { conversationId: conversation.id }
+    }));
     
     // Cargar mensajes en background (no bloqueante)
     loadConversationMessages(conversation.id);
