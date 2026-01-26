@@ -173,7 +173,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: FileText,
-      label: 'Documentaci�n',
+      label: 'Documentación',
       onClick: null,
       className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
       isDisabled: true
@@ -211,7 +211,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: Settings,
-      label: 'Configuraci�n',
+      label: 'Configuración',
       onClick: null,
       className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
       isDisabled: true
@@ -228,7 +228,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     },
     {
       icon: ChevronRight,
-      label: 'Cerrar sesi�n',
+      label: 'Cerrar sesión',
       onClick: () => {
         window.location.href = '/logout';
       },
@@ -842,7 +842,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     },
     { 
       id: 'insights', 
-      label: 'Integraci�n', 
+      label: 'Integración', 
       icon: Lightbulb, 
       count: integrationsCount,
       gradient: 'from-gray-500 to-slate-600'
@@ -893,16 +893,16 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
-    if (hour < 12) return '�Buenos d�as';
-    if (hour < 18) return '�Buenas tardes';
-    return '�Buenas noches';
+    if (hour < 12) return '¡Buenos días';
+    if (hour < 18) return '¡Buenas tardes';
+    return '¡Buenas noches';
   };
 
   const getTimeIcon = () => {
     const hour = currentTime.getHours();
     if (hour < 6) return '🌙';
     if (hour < 12) return '🌅';
-    if (hour < 18) return '☀��';
+    if (hour < 18) return '☀️';
     if (hour < 21) return '🌆';
     return '🌙';
   };
@@ -927,7 +927,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 <div className="flex-1">
                   <h1 className="font-bold text-neutral-800 tracking-tight leading-tight" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
                   <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>Administrador</p>
-                  <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> �</p>
+                  <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
                 </div>
               )}
             </div>
@@ -964,7 +964,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                         {item.label}
                       </span>
                       {activeSection === item.id && (
-                        <div className="text-xs text-neutral-400 font-medium">Secci�n activa</div>
+                        <div className="text-xs text-neutral-400 font-medium">Sección activa</div>
                       )}
                     </div>
                   )}
@@ -1014,7 +1014,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           {!sidebarCollapsed && (
             <div className="absolute bottom-22 inset-x-3">
               <div className="flex items-center justify-between px-2 py-1.5">
-                <p className="text-xs font-medium text-neutral-400">Versi�n 1.0.0</p>
+                <p className="text-xs font-medium text-neutral-400">Versión 1.0.0</p>
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   className="p-1 hover:bg-slate-100 rounded transition-all duration-200 text-neutral-400 hover:text-neutral-600"
@@ -1144,12 +1144,12 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       </div>
                       <h2 className="text-2xl font-bold text-neutral-800 mb-4">Sistema de Calendario</h2>
                       <p className="text-neutral-500 mb-6">
-                        Aquo� podro�s gestionar tus citas, reuniones y eventos. 
-                        Integra con Google Calendar y sincroniza autom�ticamente tus reservas.
+                        Aquí podrás gestionar tus citas, reuniones y eventos. 
+                        Integra con Google Calendar y sincroniza automáticamente tus reservas.
                       </p>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-lg">
                         <Sparkles className="w-5 h-5" />
-                        <span className="font-medium">🔜 Pro�ximamente disponible</span>
+                        <span className="font-medium">🔜 Próximamente disponible</span>
                       </div>
                     </div>
                   </div>
@@ -1157,7 +1157,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               </div>
             ) : activeSection === 'reports' ? (
               <div className="min-h-[700px] p-8">
-                {/* Seccio�n Productos */}
+                {/* Sección Productos */}
                 <div className="max-w-7xl mx-auto">
                   <div className="mb-8">
                     <div className="flex items-center space-x-4 mb-2">
@@ -1166,7 +1166,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       </div>
                       <div>
                         <h1 className="text-4xl font-bold text-neutral-800">Productos</h1>
-                        <p className="text-lg text-neutral-500">Cat�logo de productos y servicios</p>
+                        <p className="text-lg text-neutral-500">Catálogo de productos y servicios</p>
                       </div>
                     </div>
                   </div>
@@ -1176,14 +1176,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                       <div className="mb-6">
                         <Package className="w-20 h-20 mx-auto text-orange-500" />
                       </div>
-                      <h2 className="text-2xl font-bold text-neutral-800 mb-4">Cat�logo de Productos</h2>
+                      <h2 className="text-2xl font-bold text-neutral-800 mb-4">Catálogo de Productos</h2>
                       <p className="text-neutral-500 mb-6">
-                        Gestiona tu cato�logo de productos y servicios. 
-                        MIA podr� responder preguntas sobre precios, disponibilidad y caractero�sticas de tus productos.
+                        Gestiona tu catálogo de productos y servicios. 
+                        MIA podrá responder preguntas sobre precios, disponibilidad y características de tus productos.
                       </p>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg">
                         <Sparkles className="w-5 h-5" />
-                        <span className="font-medium">🔜 Pro�ximamente disponible</span>
+                        <span className="font-medium">🔜 Próximamente disponible</span>
                       </div>
                     </div>
                   </div>
