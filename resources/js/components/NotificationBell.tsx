@@ -48,26 +48,26 @@ export const NotificationBell: React.FC = () => {
     }
     setIsOpen(false);
     
-    // Verificar la ruta actual - solo estamos en conversaciones si la ruta es exactamente /dashboard
+    // Verificar la ruta actual
     const currentPath = window.location.pathname;
-    const isExactlyInConversations = currentPath === '/dashboard';
+    // Extraer el companySlug de la URL actual (ej: /dashboard/withmia-nfudrg -> withmia-nfudrg)
+    const pathParts = currentPath.split('/').filter(Boolean);
+    const companySlug = pathParts.length > 1 ? pathParts[1] : pathParts[0];
     
-    console.log('🔔 NotificationBell click:', { conversationId, currentPath, isExactlyInConversations });
+    // Estamos en conversaciones si el path incluye /dashboard/ y estamos en la sección de chats
+    const isInDashboard = currentPath.startsWith('/dashboard');
+    
+    console.log('🔔 NotificationBell click:', { conversationId, currentPath, companySlug, isInDashboard });
     
     // Emitir evento para que ConversationsInterface seleccione la conversación
     window.dispatchEvent(new CustomEvent('selectConversation', {
       detail: { conversationId }
     }));
     
-    // Si estamos exactamente en /dashboard (página de conversaciones), solo actualizar URL y emitir evento
-    if (isExactlyInConversations) {
-      console.log('🔔 Ya en /dashboard, solo actualizando URL');
-      window.history.pushState({}, '', `/dashboard?conversation=${conversationId}`);
-    } else {
-      // Desde CUALQUIER otra página, navegar usando window.location para forzar recarga completa
-      console.log('🔔 Navegando a /dashboard desde:', currentPath);
-      window.location.href = `/dashboard?conversation=${conversationId}`;
-    }
+    // Navegar directamente a /dashboard/{companySlug}?conversation=X para evitar el redirect 302
+    const targetUrl = `/dashboard/${companySlug}?conversation=${conversationId}`;
+    console.log('🔔 Navegando a:', targetUrl);
+    window.location.href = targetUrl;
   };
 
   return (

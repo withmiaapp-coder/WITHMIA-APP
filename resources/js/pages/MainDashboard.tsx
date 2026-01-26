@@ -1232,17 +1232,17 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       )}
       
       {/* Global Notification Toast - Navegación a conversaciones */}
-      <GlobalNotificationToast activeSection={activeSection} />
+      <GlobalNotificationToast activeSection={activeSection} companySlug={companySlug} />
     </GlobalNotificationProvider>
   );
 }
 
 // Componente separado para manejar toasts globales con navegación
-function GlobalNotificationToast({ activeSection }: { activeSection: string }) {
+function GlobalNotificationToast({ activeSection, companySlug }: { activeSection: string; companySlug: string }) {
   const globalNotifications = useGlobalNotifications();
   
   const handleToastClick = (conversationId: number) => {
-    console.log('🔔 Toast click - conversationId:', conversationId, 'activeSection:', activeSection);
+    console.log('🔔 Toast click - conversationId:', conversationId, 'activeSection:', activeSection, 'companySlug:', companySlug);
     
     // Dismiss the toast
     globalNotifications?.dismissToast(conversationId);
@@ -1253,9 +1253,11 @@ function GlobalNotificationToast({ activeSection }: { activeSection: string }) {
         detail: { conversationId }
       }));
     } else {
-      // Si estamos en otra sección, navegar a conversaciones
-      console.log('🔔 Navegando desde toast a /dashboard?conversation=' + conversationId);
-      window.location.href = `/dashboard?conversation=${conversationId}`;
+      // Si estamos en otra sección, navegar directamente a /dashboard/{companySlug}?conversation=X
+      // Esto evita el redirect 302 que pierde el query param
+      const targetUrl = `/dashboard/${companySlug}?conversation=${conversationId}`;
+      console.log('🔔 Navegando desde toast a:', targetUrl);
+      window.location.href = targetUrl;
     }
   };
   
