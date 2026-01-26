@@ -77,7 +77,8 @@ COPY package.json package-lock.json ./
 # Install Node dependencies and build
 RUN npm ci --prefer-offline --no-audit
 
-# Copy the rest of the application
+# Copy the rest of the application (bust cache with timestamp)
+ARG CACHEBUST=1
 COPY . .
 
 # Run composer scripts now that all files are present
