@@ -909,6 +909,17 @@ const ConversationsInterface: React.FC = () => {
   
   // 🔌 SUSCRIPCIÓN AL WEBSOCKET UNIFICADO
   // Este efecto conecta al sistema de WebSocket central y maneja los eventos
+  // Usamos refs para evitar re-suscripciones innecesarias cuando cambian las dependencias
+  const debouncedFetchConversationsRef = useRef(debouncedFetchConversations);
+  const updateMessagesCacheRef = useRef(updateMessagesCache);
+  const addMessageToCacheRef = useRef(addMessageToCache);
+  
+  useEffect(() => {
+    debouncedFetchConversationsRef.current = debouncedFetchConversations;
+    updateMessagesCacheRef.current = updateMessagesCache;
+    addMessageToCacheRef.current = addMessageToCache;
+  });
+  
   useEffect(() => {
     if (!globalNotifications || !realtimeEnabled || !userInboxId) {
       return;
@@ -919,7 +930,7 @@ const ConversationsInterface: React.FC = () => {
       
       if (wsEvent.type === 'conversation_updated') {
         // 🔄 Actualizar lista de conversaciones
-        debouncedFetchConversations();
+        debouncedFetchConversationsRef.current();
         return;
       }
       
@@ -1084,15 +1095,15 @@ const ConversationsInterface: React.FC = () => {
                 }
                 return m;
               });
-              if (updateMessagesCache) updateMessagesCache(prev.id, updatedMessages);
+              if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, updatedMessages);
               return { ...prev, messages: updatedMessages };
             }
             
             const newMessages = [...existingMessages, newMessage];
-            if (updateMessagesCache) updateMessagesCache(prev.id, newMessages);
+            if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, newMessages);
             return { ...prev, messages: newMessages };
           });
-        } else if (addMessageToCache && conversationId) {
+        } else if (addMessageToCacheRef.current && conversationId) {
           // Agregar al caché para conversación inactiva
           const rawMsgType = wsEvent.message?.message_type;
           const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
@@ -1104,13 +1115,13 @@ const ConversationsInterface: React.FC = () => {
             sender: normalizedMsgType === 1 ? 'agent' : 'contact',
             attachments: wsEvent.message?.attachments || [],
           };
-          addMessageToCache(conversationId, newMessage);
+          addMessageToCacheRef.current(conversationId, newMessage);
         }
       }
     });
     
     return unsubscribe;
-  }, [globalNotifications, realtimeEnabled, userInboxId, activeConversation?.id, debouncedFetchConversations, _setActiveConversation, setConversations, updateMessagesCache, addMessageToCache]);
+  }, [globalNotifications, realtimeEnabled, userInboxId]);
 
   //  HOOK DE NOTIFICACIONES
   // ELIMINADO: Declaraci??n duplicada de notifications
