@@ -3,6 +3,8 @@
  *
  * Este archivo configura Laravel Echo con Reverb para recibir
  * eventos en tiempo real del servidor.
+ * 
+ * Updated: 2026-01-26 - Force rebuild with correct VITE_REVERB_* variables
  */
 
 import Echo from 'laravel-echo';
