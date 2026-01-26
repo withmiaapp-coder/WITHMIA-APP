@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== REVERB STARTUP SCRIPT ==="
+echo "=== REVERB STARTUP SCRIPT v2 ==="
 echo "Current date: $(date)"
 
 # Railway provides PORT as an environment variable
