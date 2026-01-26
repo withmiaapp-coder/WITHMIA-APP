@@ -1221,7 +1221,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           </div>
         </div>
       )}
-      </div>
+    </div>
     </GlobalNotificationProvider>
   );
 }
