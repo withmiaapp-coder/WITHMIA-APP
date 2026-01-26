@@ -97,14 +97,14 @@ const TeamsManagement: React.FC = () => {
   });
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-gray-50 to-white backdrop-blur-xl border border-gray-200/50 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white backdrop-blur-xl border border-gray-200/50 overflow-hidden">
       
       {/* Header */}
       <div className="p-6 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-gradient-to-r from-gray-600 to-gray-700 rounded-md">
-              <Users className="w-6 h-6 text-white" />
+            <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+              <Users className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Gestión de Equipos</h1>
@@ -114,7 +114,7 @@ const TeamsManagement: React.FC = () => {
           
           <button 
             onClick={() => setShowCreateTeamModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-md hover:from-gray-700 hover:to-gray-800 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
           >
             <Plus className="w-4 h-4" />
             <span>Crear Equipo</span>
@@ -134,10 +134,10 @@ const TeamsManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         
         {/* Lista de Equipos */}
-        <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200/60 bg-white/60 backdrop-blur-xl overflow-y-auto h-full">
+        <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200/60 bg-white/60 backdrop-blur-xl overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center">
               <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
@@ -150,7 +150,7 @@ const TeamsManagement: React.FC = () => {
               <p className="text-gray-500 mb-4">Aún no se han configurado equipos en Chatwoot</p>
               <button
                 onClick={() => setShowCreateTeamModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-md hover:from-gray-700 hover:to-gray-800 transition-all duration-200 opacity-97"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-200 shadow-lg"
               >
                 Crear primer equipo
               </button>
@@ -212,7 +212,7 @@ const TeamsManagement: React.FC = () => {
         </div>
 
         {/* Detalles del Equipo */}
-        <div className="flex-1 bg-white/70 backdrop-blur-xl h-full">
+        <div className="flex-1 bg-white/70 backdrop-blur-xl overflow-y-auto">
           {selectedTeam ? (
             <div className="h-full flex flex-col">
               
