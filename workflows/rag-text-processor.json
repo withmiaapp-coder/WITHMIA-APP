@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract data from body - Laravel sends text already extracted\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst text = body.text || '';\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';\n\n// Validate text\nif (!text || text.length < 50) {\n  throw new Error('No text provided or text too short');\n}\n\n// Create collection name\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: text,\n    text_length: text.length,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost\n  }\n};"
+        "jsCode": "// Extract data from body - Laravel sends text already extracted\nconst body = $input.first().json.body || $input.first().json;\n\nconst companySlug = body.company_slug || 'default';\nconst filename = body.filename || 'document.pdf';\nconst category = body.category || 'general';\nconst text = body.text || '';\nconst openaiApiKey = body.openai_api_key || '';\nconst qdrantHost = body.qdrant_host || '{{QDRANT_URL}}';\n\n// Validate text\nif (!text || text.length < 50) {\n  throw new Error('No text provided or text too short');\n}\n\n// Create collection name\nconst collectionName = 'company_' + companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() + '_knowledge';\n\nreturn {\n  json: {\n    company_slug: companySlug,\n    filename: filename,\n    category: category,\n    collection_name: collectionName,\n    text: text,\n    text_length: text.length,\n    openai_api_key: openaiApiKey,\n    qdrant_host: qdrantHost\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -111,7 +111,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://app.withmia.com/api/knowledge/chunk-stored",
+        "url": "{{APP_URL}}/api/knowledge/chunk-stored",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

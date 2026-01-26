@@ -1,10 +1,10 @@
-{
-    "name": "WITHMIA Bot - {{COMPANY_SLUG}}",
+﻿{
+    "name": "WITHMIA Bot - withmia-nfudrg",
     "nodes": [
         {
             "parameters": {
                 "httpMethod": "POST",
-                "path": "{{COMPANY_SLUG}}",
+                "path": "withmia-nfudrg",
                 "options": {}
             },
             "type": "n8n-nodes-base.webhook",
@@ -12,7 +12,7 @@
             "position": [-480, 300],
             "id": "webhook-withmia",
             "name": "WITHMIA Webhook",
-            "webhookId": "{{COMPANY_SLUG}}"
+            "webhookId": "withmia-nfudrg"
         },
         {
             "parameters": {
@@ -65,7 +65,7 @@
         {
             "parameters": {
                 "method": "GET",
-                "url": "={{$json.body.inbox?.name ? '{{APP_URL}}/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.body.inbox.name) : '{{APP_URL}}/api/n8n/company-config/{{COMPANY_SLUG}}'}}",
+                "url": "={{$json.body.inbox?.name ? 'https://app.withmia.com/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.body.inbox.name) : 'https://app.withmia.com/api/n8n/company-config/withmia-nfudrg'}}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
@@ -81,19 +81,19 @@
                         {
                             "id": "instance-server-url",
                             "name": "instance.server_url",
-                            "value": "={{ $json.evolution_server_url || '{{EVOLUTION_API_URL}}' }}",
+                            "value": "={{ $json.evolution_server_url || 'https://evolution-api-production-a7b5.up.railway.app' }}",
                             "type": "string"
                         },
                         {
                             "id": "instance-name",
                             "name": "instance.name",
-                            "value": "={{ $json.evolution_instance_name || '{{COMPANY_SLUG}}' }}",
+                            "value": "={{ $json.evolution_instance_name || 'withmia-nfudrg' }}",
                             "type": "string"
                         },
                         {
                             "id": "instance-apikey",
                             "name": "instance.apikey",
-                            "value": "={{ $json.evolution_api_key || '{{EVOLUTION_API_KEY}}' }}",
+                            "value": "={{ $json.evolution_api_key || 'withmia_evo_2026_xK9mP2vL8nQr4tYw' }}",
                             "type": "string"
                         },
                         {
@@ -153,7 +153,7 @@
                         {
                             "id": "config-collection-name",
                             "name": "config.collection_name",
-                            "value": "={{ $json.collection_name || 'company_{{COMPANY_SLUG}}_knowledge' }}",
+                            "value": "={{ $json.collection_name || 'company_withmia-nfudrg_knowledge' }}",
                             "type": "string"
                         },
                         {
@@ -211,9 +211,9 @@
         {
             "parameters": {
                 "promptType": "define",
-                "text": "=Fecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNúmero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n{{ $('Normalize Data').item.json.message.content }}",
+                "text": "=Fecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNÃºmero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n{{ $('Normalize Data').item.json.message.content }}",
                 "options": {
-                    "systemMessage": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nINSTRUCCIONES:\n- Siempre respondes en base a QDRANT (tu base de conocimientos) y tus Herramientas\n- Si no tienes herramientas, solo respondes en base a la colección de QDRANT\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Máximo 2-3 oraciones por respuesta\n- Amigable y profesional\n- Si no sabes algo, ofrece conectar con un humano\n\nPROHIBICIONES:\n- NO te presentes dos veces en la conversación\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas"
+                    "systemMessage": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nINSTRUCCIONES:\n- Siempre respondes en base a QDRANT (tu base de conocimientos) y tus Herramientas\n- Si no tienes herramientas, solo respondes en base a la colecciÃ³n de QDRANT\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- MÃ¡ximo 2-3 oraciones por respuesta\n- Amigable y profesional\n- Si no sabes algo, ofrece conectar con un humano\n\nPROHIBICIONES:\n- NO te presentes dos veces en la conversaciÃ³n\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas"
                 }
             },
             "type": "@n8n/n8n-nodes-langchain.agent",
@@ -239,7 +239,7 @@
             "name": "OpenAI Chat Model",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "id": "okqulnwOmmPYIcOr",
                     "name": "OpenAI Account"
                 }
             }
@@ -247,7 +247,7 @@
         {
             "parameters": {
                 "sessionIdType": "customKey",
-                "sessionKey": "=company_{{COMPANY_SLUG}}_{{ $('Normalize Data').item.json.message.chat_id }}",
+                "sessionKey": "=company_withmia-nfudrg_{{ $('Normalize Data').item.json.message.chat_id }}",
                 "contextWindowLength": 100
             },
             "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
@@ -259,7 +259,7 @@
         {
             "parameters": {
                 "mode": "retrieve-as-tool",
-                "toolDescription": "=Herramienta para buscar información en la base de conocimientos de {{ $('Normalize Data').item.json.config.company_name }}. Usa esta herramienta para responder preguntas sobre productos, servicios, horarios, precios y cualquier información de la empresa.",
+                "toolDescription": "=Herramienta para buscar informaciÃ³n en la base de conocimientos de {{ $('Normalize Data').item.json.config.company_name }}. Usa esta herramienta para responder preguntas sobre productos, servicios, horarios, precios y cualquier informaciÃ³n de la empresa.",
                 "qdrantCollection": {
                     "__rl": true,
                     "value": "={{ $('Normalize Data').item.json.config.collection_name }}",
@@ -275,7 +275,7 @@
             "name": "Buscar en Base de Conocimientos",
             "credentials": {
                 "qdrantApi": {
-                    "id": "{{QDRANT_CREDENTIAL_ID}}",
+                    "id": "irLYcaNHzHrWcZ3Z",
                     "name": "Qdrant"
                 }
             }
@@ -297,14 +297,14 @@
             "name": "OpenAI Embeddings",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "id": "okqulnwOmmPYIcOr",
                     "name": "OpenAI Account"
                 }
             }
         },
         {
             "parameters": {
-                "jsCode": "// Extract response and clean for WhatsApp\nconst input = $input.first().json;\nconst normalizeData = $('Normalize Data').item.json;\n\nlet responseText = input.output || 'Lo siento, no pude procesar tu mensaje. ¿Podrías intentarlo de nuevo?';\n\n// Clean response for WhatsApp (remove markdown)\nresponseText = responseText\n  .replace(/\\*\\*/g, '')\n  .replace(/\\*/g, '')\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/`/g, '')\n  .replace(/\\.\\.\\.$/g, '')\n  .replace(/\\.\\.\\./g, '')\n  .trim();\n\nreturn {\n  json: {\n    response_text: responseText,\n    instance: normalizeData.instance,\n    message: normalizeData.message,\n    conversation: normalizeData.conversation,\n    chatwoot: normalizeData.chatwoot\n  }\n};"
+                "jsCode": "// Extract response and clean for WhatsApp\nconst input = $input.first().json;\nconst normalizeData = $('Normalize Data').item.json;\n\nlet responseText = input.output || 'Lo siento, no pude procesar tu mensaje. Â¿PodrÃ­as intentarlo de nuevo?';\n\n// Clean response for WhatsApp (remove markdown)\nresponseText = responseText\n  .replace(/\\*\\*/g, '')\n  .replace(/\\*/g, '')\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/`/g, '')\n  .replace(/\\.\\.\\.$/g, '')\n  .replace(/\\.\\.\\./g, '')\n  .trim();\n\nreturn {\n  json: {\n    response_text: responseText,\n    instance: normalizeData.instance,\n    message: normalizeData.message,\n    conversation: normalizeData.conversation,\n    chatwoot: normalizeData.chatwoot\n  }\n};"
             },
             "type": "n8n-nodes-base.code",
             "typeVersion": 2,
@@ -339,10 +339,10 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "{{APP_URL}}/api/n8n/notify-response",
+                "url": "https://app.withmia.com/api/n8n/notify-response",
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={\n  \"company_slug\": \"{{COMPANY_SLUG}}\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
+                "jsonBody": "={\n  \"company_slug\": \"withmia-nfudrg\",\n  \"conversation_id\": {{ $json.conversation.id }},\n  \"message\": {{ JSON.stringify($json.response_text) }},\n  \"phone\": {{ JSON.stringify($json.message.chat_id) }}\n}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
@@ -491,3 +491,4 @@
     },
     "tags": []
 }
+

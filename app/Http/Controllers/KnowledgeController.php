@@ -2047,7 +2047,7 @@ const filename = body.filename || 'document.pdf';
 const category = body.category || 'general';
 const text = body.text || '';
 const openaiApiKey = body.openai_api_key || '';
-const qdrantHost = body.qdrant_host || 'https://qdrant-production-f4e7.up.railway.app';
+const qdrantHost = body.qdrant_host || process.env.QDRANT_URL || '';
 
 // Validate text
 if (!text || text.length < 50) {

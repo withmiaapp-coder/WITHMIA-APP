@@ -252,12 +252,13 @@ class N8nService
 
     /**
      * Obtener URL del webhook de un workflow
-     * UNIFICADO: usar withmia-{instance} para todos los canales
+     * UNIFICADO: El instanceName ya tiene el formato correcto (withmia-{slug})
      */
     public function getWebhookUrl(string $instanceName): string
     {
         $publicUrl = config('services.n8n.base_url');
-        return "{$publicUrl}/webhook/withmia-{$instanceName}";
+        // instanceName ya tiene el formato "withmia-{slug}", usarlo directamente
+        return "{$publicUrl}/webhook/{$instanceName}";
     }
 
     /**

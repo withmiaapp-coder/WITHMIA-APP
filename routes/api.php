@@ -823,7 +823,8 @@ Route::get('/update-all-rag-workflows', function () {
 // Helper para workflow minimalista
 if (!function_exists('getMinimalWorkflow')) {
     function getMinimalWorkflow(string $instanceName): array {
-        $webhookPath = "withmia-{$instanceName}";
+        // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
+        $webhookPath = $instanceName;
         return [
             'name' => "WITHMIA Bot - {$instanceName}",
             'nodes' => [
@@ -1266,7 +1267,8 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $cleanNode['webhookId'] = $newWebhookId;
                 if (isset($cleanNode['parameters']['path'])) {
-                    $cleanNode['parameters']['path'] = "withmia-{$instanceName}";
+                    // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
+                    $cleanNode['parameters']['path'] = $instanceName;
                 }
             }
             

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
+use App\Models\WhatsAppInstance;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -16,11 +17,12 @@ class N8nWorkflowService
 
     public function __construct()
     {
-        $this->n8nUrl = config('services.n8n.url');
+        $this->n8nUrl = config('services.n8n.base_url') ?? config('services.n8n.url');
         $this->n8nApiKey = config('services.n8n.api_key');
         $this->appUrl = config('app.url');
-        $this->openaiCredentialId = config('services.n8n.openai_credential_id');
-        $this->qdrantCredentialId = config('services.n8n.qdrant_credential_id');
+        // IDs de credenciales del Super Admin (configuradas una vez en n8n)
+        $this->openaiCredentialId = config('services.n8n.openai_credential_id', '');
+        $this->qdrantCredentialId = config('services.n8n.qdrant_credential_id', '');
     }
 
     /**
@@ -50,6 +52,7 @@ class N8nWorkflowService
             '{{CHATWOOT_API_TOKEN}}' => $company->settings['chatwoot_api_token'] ?? config('chatwoot.token'),
             '{{OPENAI_CREDENTIAL_ID}}' => $this->openaiCredentialId,
             '{{QDRANT_CREDENTIAL_ID}}' => $this->qdrantCredentialId,
+            '{{QDRANT_URL}}' => config('services.qdrant.url'),
         ];
 
         foreach ($replacements as $placeholder => $value) {
@@ -197,5 +200,111 @@ class N8nWorkflowService
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * Configurar webhook de Chatwoot para enviar mensajes al workflow de n8n
+     * Se llama después de crear la instancia de Evolution API
+     */
+    public function configureChatwootWebhook(Company $company, int $inboxId): bool
+    {
+        $chatwootUrl = config('services.chatwoot.base_url');
+        $platformToken = config('services.chatwoot.api_token');
+        $accountId = $company->settings['chatwoot_account_id'] ?? 1;
+        
+        if (!$chatwootUrl || !$platformToken) {
+            Log::warning('Chatwoot not configured for webhook setup', ['company' => $company->slug]);
+            return false;
+        }
+
+        $webhookUrl = $this->getWebhookUrl($company);
+        
+        try {
+            // Crear webhook en Chatwoot para el inbox
+            $response = Http::withHeaders([
+                'api_access_token' => $platformToken,
+                'Content-Type' => 'application/json',
+            ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks", [
+                'url' => $webhookUrl,
+                'subscriptions' => ['message_created', 'message_updated', 'conversation_created'],
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Chatwoot webhook configured', [
+                    'company' => $company->slug,
+                    'inbox_id' => $inboxId,
+                    'webhook_url' => $webhookUrl,
+                ]);
+                return true;
+            }
+
+            Log::error('Failed to configure Chatwoot webhook', [
+                'company' => $company->slug,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return false;
+
+        } catch (\Exception $e) {
+            Log::error('Exception configuring Chatwoot webhook', [
+                'company' => $company->slug,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Proceso completo: Crear workflow + Configurar Chatwoot webhook
+     * Se llama cuando se conecta una nueva instancia de Evolution API
+     */
+    public function setupCompanyIntegration(Company $company, ?int $chatwootInboxId = null): array
+    {
+        $result = [
+            'success' => false,
+            'workflow_id' => null,
+            'webhook_url' => null,
+            'chatwoot_configured' => false,
+            'errors' => [],
+        ];
+
+        // 1. Crear workflow en n8n
+        $workflow = $this->createChatwootBotWorkflow($company);
+        
+        if (!$workflow) {
+            $result['errors'][] = 'Failed to create n8n workflow';
+            return $result;
+        }
+
+        $result['workflow_id'] = $workflow['id'] ?? null;
+        $result['webhook_url'] = $this->getWebhookUrl($company);
+
+        // 2. Configurar Chatwoot webhook (si se proporciona inbox ID)
+        if ($chatwootInboxId) {
+            $result['chatwoot_configured'] = $this->configureChatwootWebhook($company, $chatwootInboxId);
+            if (!$result['chatwoot_configured']) {
+                $result['errors'][] = 'Failed to configure Chatwoot webhook (workflow still created)';
+            }
+        }
+
+        $result['success'] = !empty($result['workflow_id']);
+
+        Log::info('Company integration setup completed', [
+            'company' => $company->slug,
+            'result' => $result,
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * Actualizar instancia de WhatsApp con el workflow creado
+     */
+    public function updateWhatsAppInstanceWorkflow(WhatsAppInstance $instance, string $workflowId): void
+    {
+        $instance->update([
+            'n8n_workflow_id' => $workflowId,
+            'n8n_webhook_url' => $this->getWebhookUrl($instance->company),
+        ]);
     }
 }

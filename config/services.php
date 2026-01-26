@@ -40,12 +40,17 @@ return [
 
     "n8n" => [
         "base_url" => env("N8N_PUBLIC_URL", env("N8N_URL")),
+        "url" => env("N8N_PUBLIC_URL", env("N8N_URL")), // Alias para compatibilidad
         "api_key" => env("N8N_API_KEY"),
         "internal_url" => env("N8N_INTERNAL_URL", env("N8N_URL")),
+        // IDs de credenciales del Super Admin en n8n (configuradas una vez)
+        "openai_credential_id" => env("N8N_OPENAI_CREDENTIAL_ID"),
+        "qdrant_credential_id" => env("N8N_QDRANT_CREDENTIAL_ID"),
     ],
 
     "qdrant" => [
         "host" => env("QDRANT_HOST", env("QDRANT_URL")),
+        "url" => env("QDRANT_URL", env("QDRANT_HOST")),
         "api_key" => env("QDRANT_API_KEY"),
     ],
 ];

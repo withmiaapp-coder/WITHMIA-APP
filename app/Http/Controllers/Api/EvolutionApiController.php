@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\EvolutionApiService;
 use App\Services\N8nService;
+use App\Services\ChatwootService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -19,11 +20,13 @@ class EvolutionApiController extends Controller
 {
     private EvolutionApiService $evolutionApi;
     private N8nService $n8nService;
+    private ChatwootService $chatwootService;
 
-    public function __construct(EvolutionApiService $evolutionApi, N8nService $n8nService)
+    public function __construct(EvolutionApiService $evolutionApi, N8nService $n8nService, ChatwootService $chatwootService)
     {
         $this->evolutionApi = $evolutionApi;
         $this->n8nService = $n8nService;
+        $this->chatwootService = $chatwootService;
     }
 
     /**
@@ -1372,7 +1375,10 @@ class EvolutionApiController extends Controller
             $companyName = $company ? ($company->name ?? $workflowName) : $workflowName;
             $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
             $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
-            $appUrl = env('APP_URL', 'https://app.withmia.com');
+            $appUrl = config('app.url');
+            $evolutionApiUrl = config('evolution.api_url');
+            $evolutionApiKey = config('evolution.api_key');
+            $qdrantUrl = config('services.qdrant.url');
             
             // Get n8n credential IDs
             $credentialIds = $this->n8nService->getCredentialIds();
@@ -1395,10 +1401,15 @@ class EvolutionApiController extends Controller
                 '{{OPENAI_API_KEY}}' => $openaiApiKey,
                 '{{INSTANCE_NAME}}' => $instance->instance_name,
                 '{{APP_URL}}' => $appUrl,
+                '{{EVOLUTION_API_URL}}' => $evolutionApiUrl,
+                '{{EVOLUTION_API_KEY}}' => $evolutionApiKey,
+                '{{QDRANT_URL}}' => $qdrantUrl,
                 '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
                 '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
                 '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
                 '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
+                '{{OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
+                '{{QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
             ];
             foreach ($replacements as $placeholder => $value) {
                 $templateJson = str_replace($placeholder, $value, $templateJson);
@@ -1435,7 +1446,8 @@ class EvolutionApiController extends Controller
                 if ($node['type'] === 'n8n-nodes-base.webhook') {
                     $cleanNode['webhookId'] = $newWebhookId;
                     if (isset($cleanNode['parameters']['path'])) {
-                        $cleanNode['parameters']['path'] = "withmia-{$instance->instance_name}";
+                        // El instance_name ya tiene formato "withmia-{slug}", usarlo directamente
+                        $cleanNode['parameters']['path'] = $instance->instance_name;
                     }
                 }
                 
@@ -1508,6 +1520,9 @@ class EvolutionApiController extends Controller
                     'webhook_url' => $webhookUrl,
                     'instance' => $instance->instance_name
                 ]);
+                
+                // 🎯 Configurar webhook de Chatwoot automáticamente
+                $this->configureChatwootWebhook($instance, $webhookUrl);
             } else {
                 Log::warning('No se pudo crear workflow en n8n', [
                     'error' => $result['error'] ?? 'Unknown',
@@ -1582,11 +1597,88 @@ class EvolutionApiController extends Controller
     }
 
     /**
+     * 🎯 Configurar webhook de Chatwoot para apuntar al workflow de n8n
+     * Esto se llama automáticamente después de crear el workflow
+     */
+    private function configureChatwootWebhook($instance, string $webhookUrl): void
+    {
+        try {
+            // Obtener información de la empresa
+            $company = \App\Models\Company::find($instance->company_id);
+            
+            if (!$company) {
+                Log::warning('No se encontró empresa para configurar webhook Chatwoot', [
+                    'instance' => $instance->instance_name,
+                    'company_id' => $instance->company_id
+                ]);
+                return;
+            }
+
+            // Obtener inbox_id de la instancia
+            $inboxId = $instance->chatwoot_inbox_id ?? null;
+            
+            if (!$inboxId) {
+                Log::info('📞 Buscando inbox de Chatwoot por nombre de instancia', [
+                    'instance' => $instance->instance_name
+                ]);
+                
+                // Buscar inbox por nombre
+                $inbox = $this->chatwootService->findInboxByName($instance->instance_name);
+                
+                if ($inbox) {
+                    $inboxId = $inbox['id'];
+                    
+                    // Guardar inbox_id en la instancia para futuras referencias
+                    DB::table('whatsapp_instances')
+                        ->where('id', $instance->id)
+                        ->update([
+                            'chatwoot_inbox_id' => $inboxId,
+                            'updated_at' => now()
+                        ]);
+                }
+            }
+
+            if (!$inboxId) {
+                Log::warning('No se encontró inbox de Chatwoot para la instancia', [
+                    'instance' => $instance->instance_name,
+                    'company' => $company->slug
+                ]);
+                return;
+            }
+
+            // Configurar webhook en Chatwoot
+            $result = $this->chatwootService->configureInboxWebhook($inboxId, $webhookUrl);
+
+            if ($result['success']) {
+                Log::info('✅ Webhook de Chatwoot configurado exitosamente', [
+                    'instance' => $instance->instance_name,
+                    'inbox_id' => $inboxId,
+                    'webhook_url' => $webhookUrl,
+                    'webhook_id' => $result['webhook']['id'] ?? null
+                ]);
+            } else {
+                Log::warning('⚠️ No se pudo configurar webhook de Chatwoot', [
+                    'instance' => $instance->instance_name,
+                    'inbox_id' => $inboxId,
+                    'error' => $result['error'] ?? 'Unknown'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error configurando webhook de Chatwoot', [
+                'instance' => $instance->instance_name,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Genera un workflow minimalista embebido cuando el template JSON falla
      */
     private function getMinimalWorkflowTemplate(string $workflowName, string $instanceName): array
     {
-        $webhookPath = "withmia-{$instanceName}";
+        // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
+        $webhookPath = $instanceName;
         
         return [
             'name' => "WITHMIA Bot - {$workflowName}",

@@ -177,7 +177,8 @@ class N8nWorkflowController extends Controller
             if ($node['type'] === 'n8n-nodes-base.webhook') {
                 $node['webhookId'] = $newWebhookId;
                 if (isset($node['parameters']['path'])) {
-                    $node['parameters']['path'] = "withmia-{$instanceName}";
+                    // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
+                    $node['parameters']['path'] = $instanceName;
                 }
             }
         }
