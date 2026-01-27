@@ -682,7 +682,19 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Integración real con Chatwoot
   const { conversations } = useConversations();
   const { agents } = useAgents();
-  const { teams } = useTeams();
+  const { teams, fetchTeams } = useTeams();
+  
+  // Refrescar teams cuando se monta el componente y cuando cambia la sección a 'people'
+  useEffect(() => {
+    fetchTeams();
+  }, []);
+  
+  // También refrescar cuando se cambia a la sección de equipos
+  useEffect(() => {
+    if (activeSection === 'people') {
+      fetchTeams();
+    }
+  }, [activeSection]);
 
   // Función para contar Integraciones realmente conectadas
   const getConnectedIntegrationsCount = () => {
@@ -881,7 +893,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       id: 'people', 
       label: 'Equipo', 
       icon: Users, 
-      count: (teams || []).length || null,
+      count: teams && teams.length > 0 ? teams.length : null,
       gradient: 'from-emerald-500 to-green-500'
     },
     // Integraciones - todos
