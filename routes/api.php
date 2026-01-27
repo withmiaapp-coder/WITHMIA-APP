@@ -1718,8 +1718,11 @@ Route::post('/admin/sync-chatwoot-agents', [\App\Http\Controllers\Api\TeamInvita
 // Endpoint de diagnóstico para verificar estado de usuarios y agentes
 Route::get('/admin/diagnostic-agents', [\App\Http\Controllers\Api\TeamInvitationController::class, 'diagnosticAgents']);
 
-// Proxy para archivos/im�genes de Chatwoot - SIN autenticaci�n (las im�genes se cargan v�a <img src>)
-// Usa controlador separado sin dependencias de autenticaci�n
+// Endpoint para arreglar empresa con API key de Chatwoot
+Route::post('/admin/fix-company-chatwoot', [\App\Http\Controllers\Api\TeamInvitationController::class, 'fixCompanyChatwoot']);
+
+// Proxy para archivos/imágenes de Chatwoot - SIN autenticación (las imágenes se cargan vía <img src>)
+// Usa controlador separado sin dependencias de autenticación
 Route::get('/chatwoot-proxy/attachment-proxy', [\App\Http\Controllers\AttachmentProxyController::class, 'proxy']);
 
 // ============= BAILEYS WHATSAPP API ROUTES =============

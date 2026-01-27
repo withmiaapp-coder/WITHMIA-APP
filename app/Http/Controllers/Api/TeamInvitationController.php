@@ -644,4 +644,155 @@ class TeamInvitationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Arreglar empresa con API key de Chatwoot desde config/env
+     * Y sincronizar usuarios existentes como agentes
+     */
+    public function fixCompanyChatwoot(Request $request)
+    {
+        try {
+            $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
+            
+            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+            
+            $companySlug = $request->input('company_slug', 'withmia-nfudrg');
+            
+            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Empresa no encontrada: ' . $companySlug
+                ]);
+            }
+            
+            // Obtener API key desde config/env
+            $apiKey = config('chatwoot.api_key') 
+                ?? config('chatwoot.platform_token') 
+                ?? config('services.chatwoot.api_token')
+                ?? $request->input('api_key');
+            
+            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+            $accountId = $company->chatwoot_account_id ?? config('chatwoot.account_id', 1);
+            
+            if (!$apiKey) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró API key de Chatwoot en la configuración. Proporciona api_key en el request.'
+                ]);
+            }
+            
+            // Actualizar empresa con el API key
+            $company->update([
+                'chatwoot_api_key' => $apiKey,
+                'chatwoot_account_id' => $accountId,
+            ]);
+            
+            // Ahora sincronizar todos los usuarios de la empresa
+            $users = User::where('company_slug', $company->slug)
+                ->whereNull('chatwoot_agent_id')
+                ->get();
+            
+            $synced = [];
+            $failed = [];
+            
+            foreach ($users as $user) {
+                try {
+                    // Verificar si ya existe un agente con ese email en Chatwoot
+                    $checkResponse = Http::withHeaders([
+                        'api_access_token' => $apiKey,
+                    ])->get("{$baseUrl}/api/v1/accounts/{$accountId}/agents");
+                    
+                    $existingAgent = null;
+                    if ($checkResponse->successful()) {
+                        $agents = $checkResponse->json();
+                        foreach ($agents as $agent) {
+                            if (strtolower($agent['email']) === strtolower($user->email)) {
+                                $existingAgent = $agent;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ($existingAgent) {
+                        // Ya existe, solo actualizar el ID local
+                        $user->update([
+                            'chatwoot_agent_id' => $existingAgent['id'],
+                        ]);
+                        $synced[] = [
+                            'user_id' => $user->id,
+                            'email' => $user->email,
+                            'chatwoot_agent_id' => $existingAgent['id'],
+                            'action' => 'linked_existing'
+                        ];
+                    } else {
+                        // Crear nuevo agente en Chatwoot
+                        $response = Http::withHeaders([
+                            'api_access_token' => $apiKey,
+                            'Content-Type' => 'application/json',
+                        ])->post("{$baseUrl}/api/v1/accounts/{$accountId}/agents", [
+                            'name' => $user->name ?: $user->full_name ?: 'Usuario',
+                            'email' => $user->email,
+                            'role' => $user->role === 'admin' ? 'administrator' : 'agent',
+                            'auto_offline' => true,
+                        ]);
+                        
+                        if ($response->successful()) {
+                            $agentData = $response->json();
+                            $user->update([
+                                'chatwoot_agent_id' => $agentData['id'] ?? null,
+                            ]);
+                            $synced[] = [
+                                'user_id' => $user->id,
+                                'email' => $user->email,
+                                'chatwoot_agent_id' => $agentData['id'] ?? null,
+                                'action' => 'created'
+                            ];
+                        } else {
+                            $failed[] = [
+                                'user_id' => $user->id,
+                                'email' => $user->email,
+                                'error' => $response->body(),
+                            ];
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $failed[] = [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Empresa actualizada y usuarios sincronizados',
+                'company' => [
+                    'id' => $company->id,
+                    'name' => $company->name,
+                    'slug' => $company->slug,
+                    'chatwoot_account_id' => $company->chatwoot_account_id,
+                    'has_api_key' => !empty($company->chatwoot_api_key),
+                ],
+                'synced' => $synced,
+                'failed' => $failed,
+                'total_synced' => count($synced),
+                'total_failed' => count($failed),
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error fixing company chatwoot', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
