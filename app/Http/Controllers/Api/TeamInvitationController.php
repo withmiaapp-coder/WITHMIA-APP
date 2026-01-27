@@ -85,9 +85,9 @@ class TeamInvitationController extends Controller
 
         $email = strtolower($request->email);
 
-        // Verificar si ya existe un usuario con ese email en esta empresa
+        // Verificar si ya existe un usuario con ese email en esta empresa (usando company_slug)
         $existingUser = User::where('email', $email)
-            ->where('company_id', $company->id)
+            ->where('company_slug', $company->slug)
             ->first();
 
         if ($existingUser) {
