@@ -1707,7 +1707,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 // INVITACIONES PÚBLICAS (sin autenticación)
 // ============================================================================
 Route::prefix('invitation')->group(function () {
-    Route::get('/validate/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'validate']);
+    Route::get('/validate/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'validateToken']);
     Route::post('/accept/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'accept']);
 });
 

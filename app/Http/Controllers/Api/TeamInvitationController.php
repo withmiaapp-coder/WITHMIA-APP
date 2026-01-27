@@ -216,7 +216,7 @@ class TeamInvitationController extends Controller
     /**
      * Validar token de invitación (público)
      */
-    public function validate(Request $request, $token)
+    public function validateToken(Request $request, $token)
     {
         $invitation = TeamInvitation::where('token', $token)
             ->with(['company:id,name,slug'])
