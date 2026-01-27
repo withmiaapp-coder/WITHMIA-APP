@@ -1262,9 +1262,11 @@ export const useLabels = () => {
   const fetchLabels = useCallback(async () => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/labels');
-      setLabels(result);
+      // Asegurar que siempre sea un array
+      setLabels(Array.isArray(result) ? result : (result?.data || result?.payload || []));
     } catch (err) {
       console.error('Error fetching labels:', err);
+      setLabels([]); // Reset to empty array on error
     }
   }, [apiCall]);
 
@@ -1297,9 +1299,11 @@ export const useAgents = () => {
   const fetchAgents = useCallback(async () => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/agents');
-      setAgents(result);
+      // Asegurar que siempre sea un array
+      setAgents(Array.isArray(result) ? result : (result?.data || result?.agents || []));
     } catch (err) {
       console.error('Error fetching agents:', err);
+      setAgents([]); // Reset to empty array on error
     }
   }, [apiCall]);
 
