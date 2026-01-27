@@ -874,4 +874,104 @@ class TeamInvitationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Provisionar Chatwoot para una empresa que no lo tiene
+     */
+    public function provisionCompanyChatwoot(Request $request)
+    {
+        try {
+            $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');
+            
+            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+            
+            $companySlug = $request->input('company_slug');
+            
+            if (!$companySlug) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'company_slug requerido'
+                ], 400);
+            }
+            
+            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Empresa no encontrada: ' . $companySlug
+                ], 404);
+            }
+            
+            if ($company->chatwoot_account_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta empresa ya tiene Chatwoot configurado',
+                    'chatwoot_account_id' => $company->chatwoot_account_id
+                ]);
+            }
+            
+            // Obtener el owner de la empresa
+            $owner = User::where('company_slug', $companySlug)
+                ->where('role', 'admin')
+                ->first();
+            
+            if (!$owner) {
+                $owner = User::where('company_slug', $companySlug)->first();
+            }
+            
+            if (!$owner) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró un usuario para esta empresa'
+                ], 404);
+            }
+            
+            // Provisionar Chatwoot
+            $chatwootService = app(\App\Services\ChatwootProvisioningService::class);
+            $result = $chatwootService->provisionCompany($company, $owner);
+            
+            if ($result['success'] ?? false) {
+                // Refrescar datos
+                $company->refresh();
+                $owner->refresh();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Chatwoot provisionado exitosamente',
+                    'company' => [
+                        'id' => $company->id,
+                        'name' => $company->name,
+                        'slug' => $company->slug,
+                        'chatwoot_account_id' => $company->chatwoot_account_id,
+                        'chatwoot_inbox_id' => $company->chatwoot_inbox_id,
+                    ],
+                    'owner' => [
+                        'id' => $owner->id,
+                        'email' => $owner->email,
+                        'chatwoot_agent_id' => $owner->chatwoot_agent_id,
+                    ],
+                    'chatwoot' => $result
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al provisionar Chatwoot',
+                    'error' => $result['error'] ?? 'Unknown'
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error provisioning company chatwoot', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

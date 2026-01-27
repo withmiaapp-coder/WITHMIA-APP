@@ -1731,6 +1731,9 @@ Route::post('/admin/fix-company-chatwoot', [\App\Http\Controllers\Api\TeamInvita
 // Endpoint para corregir rol de usuario
 Route::post('/admin/fix-user-role', [\App\Http\Controllers\Api\TeamInvitationController::class, 'fixUserRole']);
 
+// Endpoint para provisionar Chatwoot a una empresa que no lo tiene
+Route::post('/admin/provision-company-chatwoot', [\App\Http\Controllers\Api\TeamInvitationController::class, 'provisionCompanyChatwoot']);
+
 // Proxy para archivos/imágenes de Chatwoot - SIN autenticación (las imágenes se cargan vía <img src>)
 // Usa controlador separado sin dependencias de autenticación
 Route::get('/chatwoot-proxy/attachment-proxy', [\App\Http\Controllers\AttachmentProxyController::class, 'proxy']);

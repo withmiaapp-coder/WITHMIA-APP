@@ -35,7 +35,7 @@ class PostOnboardingSetupJob implements ShouldQueue
         $this->userIP = $userIP;
     }
 
-    public function handle(N8nService $n8nService, QdrantService $qdrantService)
+    public function handle(N8nService $n8nService, QdrantService $qdrantService, ChatwootProvisioningService $chatwootService)
     {
         $user = User::find($this->userId);
         $company = Company::find($this->companyId);
@@ -48,13 +48,32 @@ class PostOnboardingSetupJob implements ShouldQueue
             return;
         }
 
-        Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug} (solo correos)");
+        Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
 
-        // NOTA: Qdrant y n8n workflows se crean en Jobs separados (CreateQdrantCollectionJob, CreateN8nWorkflowsJob)
-        // Este job ahora SOLO envía correos
-        // Chatwoot se provisiona DESPUÉS cuando el usuario lo necesite (no bloquea onboarding)
+        // 1. Provisionar Chatwoot para la nueva empresa
+        try {
+            if (!$company->chatwoot_account_id) {
+                Log::info("Provisionando Chatwoot para: {$this->companySlug}");
+                $chatwootResult = $chatwootService->provisionCompany($company, $user);
+                
+                if ($chatwootResult['success'] ?? false) {
+                    Log::info("Chatwoot provisionado exitosamente para: {$this->companySlug}", [
+                        'account_id' => $chatwootResult['account']['id'] ?? null
+                    ]);
+                } else {
+                    Log::warning("Chatwoot provisioning falló para: {$this->companySlug}", [
+                        'error' => $chatwootResult['error'] ?? 'Unknown'
+                    ]);
+                }
+            } else {
+                Log::info("Empresa ya tiene Chatwoot configurado: {$this->companySlug}");
+            }
+        } catch (\Exception $e) {
+            Log::error("Error provisionando Chatwoot: " . $e->getMessage());
+            // Continuar aunque falle - no bloquea el resto
+        }
 
-        // Enviar correos (NO BLOQUEA - si falla, no importa)
+        // 2. Enviar correos (NO BLOQUEA - si falla, no importa)
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
                 Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));
