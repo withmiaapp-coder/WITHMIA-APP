@@ -882,15 +882,45 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   ];
 
+  // Obtener permisos del usuario
+  const userPermissions = user?.permissions || {};
+  const isAdmin = user?.role === 'admin';
 
-  const sidebarItems = [
+  // Función para verificar si tiene permiso para una sección
+  const hasPermission = (permissionKey: string): boolean => {
+    // Admins siempre tienen acceso
+    if (isAdmin) return true;
+    // Verificar permiso custom del usuario
+    if (userPermissions[permissionKey] !== undefined) {
+      return userPermissions[permissionKey];
+    }
+    // Permisos por defecto para agentes
+    const defaultAgentPermissions: Record<string, boolean> = {
+      'sidebar.dashboard': true,
+      'sidebar.chats': true,
+      'sidebar.teams': true,
+      'sidebar.integrations': false,
+      'sidebar.knowledge': false,
+      'sidebar.training': false,
+      'sidebar.calendar': false,
+      'sidebar.products': false,
+      'teams.manage': false,
+      'teams.create': false,
+      'teams.delete': false,
+      'members.invite': false,
+    };
+    return defaultAgentPermissions[permissionKey] ?? false;
+  };
+
+  const allSidebarItems = [
     // Dashboard - visible para todos
     { 
       id: 'dashboard', 
       label: 'Inicio', 
       icon: Sparkles, 
       count: null,
-      gradient: 'from-amber-500 to-yellow-500'
+      gradient: 'from-amber-500 to-yellow-500',
+      permission: 'sidebar.dashboard'
     },
     // Conversaciones - todos
     { 
@@ -898,7 +928,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       label: 'Conversaciones', 
       icon: MessageCircle, 
       count: (conversations || []).filter(c => c.status === "open").length,
-      gradient: 'from-blue-500 to-indigo-500'
+      gradient: 'from-blue-500 to-indigo-500',
+      permission: 'sidebar.chats'
     },
     // Equipo - todos
     { 
@@ -906,58 +937,71 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       label: 'Equipo', 
       icon: Users, 
       count: teams && teams.length > 0 ? teams.length : null,
-      gradient: 'from-emerald-500 to-green-500'
+      gradient: 'from-emerald-500 to-green-500',
+      permission: 'sidebar.teams'
     },
-    // Integraciones - todos
+    // Integraciones - solo admin por defecto
     { 
       id: 'insights', 
       label: 'Integración', 
       icon: Lightbulb, 
       count: integrationsCount,
-      gradient: 'from-gray-500 to-slate-600'
+      gradient: 'from-gray-500 to-slate-600',
+      permission: 'sidebar.integrations'
     },
-    // Conocimientos - todos
+    // Conocimientos - solo admin por defecto
     { 
       id: 'knowledge', 
       label: 'Conocimientos', 
       icon: BookOpen, 
       count: null,
-      gradient: 'from-cyan-500 to-blue-500'
+      gradient: 'from-cyan-500 to-blue-500',
+      permission: 'sidebar.knowledge'
     },
-    // Entrenamiento - todos
+    // Entrenamiento - solo admin por defecto
     { 
       id: 'training', 
       label: 'Entrenamiento', 
       icon: GraduationCap, 
       count: null,
-      gradient: 'from-violet-500 to-purple-500'
+      gradient: 'from-violet-500 to-purple-500',
+      permission: 'sidebar.training'
     },
-    // Calendario - todos
+    // Calendario - solo admin por defecto
     { 
       id: 'calendar', 
       label: 'Calendario', 
       icon: Calendar, 
       count: null,
-      gradient: 'from-rose-500 to-pink-500'
+      gradient: 'from-rose-500 to-pink-500',
+      permission: 'sidebar.calendar'
     },
-    // Productos - todos
+    // Productos - solo admin por defecto
     { 
       id: 'reports', 
       label: 'Productos', 
       icon: Package, 
       count: null,
-      gradient: 'from-orange-500 to-red-500'
+      gradient: 'from-orange-500 to-red-500',
+      permission: 'sidebar.products'
     },
     // Admin Panel - solo si es admin
-    ...(user?.role === 'admin' ? [{
+    ...(isAdmin ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,
       count: null,
       gradient: 'from-purple-600 to-indigo-600',
       isExternal: true,
-      href: '/admin/dashboard'
+      href: '/admin/dashboard',
+      permission: 'admin'
     }] : [])
+  ];
+
+  // Filtrar items según permisos
+  const sidebarItems = allSidebarItems.filter(item => 
+    item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
+  );
   ];
 
   if (!mounted) {

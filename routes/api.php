@@ -1691,8 +1691,15 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     // Contactos
     Route::put('/contacts/{contactId}', [ChatwootController::class, 'updateContact']);
     
-    // Configuraci�n
+    // Configuración
     Route::get('/config', [ChatwootController::class, 'getConfig']);
+    
+    // ============================================================================
+    // GESTIÓN DE MIEMBROS DE LA EMPRESA (solo admin)
+    // ============================================================================
+    Route::get('/members', [\App\Http\Controllers\Api\MembersController::class, 'index']);
+    Route::patch('/members/{id}', [\App\Http\Controllers\Api\MembersController::class, 'update']);
+    Route::delete('/members/{id}', [\App\Http\Controllers\Api\MembersController::class, 'destroy']);
     
     // ============================================================================
     // INVITACIONES DE EQUIPO (autenticado)

@@ -13,38 +13,68 @@ class User extends Authenticatable
     // Permisos por defecto según rol
     const DEFAULT_PERMISSIONS = [
         'admin' => [
-            'dashboard.view' => true,
+            // Vistas del sidebar
+            'sidebar.dashboard' => true,
+            'sidebar.chats' => true,
+            'sidebar.teams' => true,
+            'sidebar.integrations' => true,
+            'sidebar.knowledge' => true,
+            'sidebar.training' => true,
+            'sidebar.calendar' => true,
+            'sidebar.products' => true,
+            // Acciones en chats
             'chats.view_all' => true,
             'chats.view_assigned' => true,
             'chats.respond' => true,
             'chats.assign' => true,
             'chats.transfer' => true,
+            // Equipos
             'teams.manage' => true,
             'teams.view' => true,
+            'teams.create' => true,
+            'teams.delete' => true,
+            // Configuración
             'settings.view' => true,
             'settings.edit' => true,
+            // Otras funciones
             'training.manage' => true,
             'integrations.manage' => true,
             'reports.view' => true,
             'members.invite' => true,
             'members.manage' => true,
+            'members.delete' => true,
         ],
         'agent' => [
-            'dashboard.view' => false,
+            // Vistas del sidebar - Solo Inicio, Conversaciones y Equipos
+            'sidebar.dashboard' => true,
+            'sidebar.chats' => true,
+            'sidebar.teams' => true,
+            'sidebar.integrations' => false,
+            'sidebar.knowledge' => false,
+            'sidebar.training' => false,
+            'sidebar.calendar' => false,
+            'sidebar.products' => false,
+            // Acciones en chats
             'chats.view_all' => false,
             'chats.view_assigned' => true,
             'chats.respond' => true,
             'chats.assign' => false,
             'chats.transfer' => false,
+            // Equipos - solo visualizar
             'teams.manage' => false,
             'teams.view' => true,
+            'teams.create' => false,
+            'teams.delete' => false,
+            // Configuración
             'settings.view' => false,
             'settings.edit' => false,
+            // Otras funciones
             'training.manage' => false,
             'integrations.manage' => false,
             'reports.view' => false,
             'members.invite' => false,
             'members.manage' => false,
+            'members.delete' => false,
         ],
     ];
 

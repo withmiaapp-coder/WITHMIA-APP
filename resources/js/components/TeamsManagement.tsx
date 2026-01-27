@@ -17,9 +17,12 @@ import {
   Mail,
   Send,
   Clock,
-  RefreshCw
+  RefreshCw,
+  UserCog
 } from 'lucide-react';
 import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
+import { usePermissions } from '../hooks/usePermissions';
+import MembersManagement from './MembersManagement';
 
 // Modal para crear/editar equipo
 const TeamModal: React.FC<{
@@ -451,8 +454,11 @@ const TeamsManagement: React.FC = () => {
   const [showAddMembersModal, setShowAddMembersModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsPanel, setShowInvitationsPanel] = useState(false);
+  const [showMembersManagement, setShowMembersManagement] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  
+  const { isAdmin, hasPermission } = usePermissions();
   
   const { 
     teams, 
@@ -577,26 +583,41 @@ const TeamsManagement: React.FC = () => {
               </button>
             )}
             
-            {/* Botón invitar */}
-            <button 
-              onClick={() => setShowInviteModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
-            >
-              <Mail className="w-4 h-4" />
-              <span>Invitar</span>
-            </button>
+            {/* Botón administrar miembros - solo admin */}
+            {isAdmin && (
+              <button 
+                onClick={() => setShowMembersManagement(true)}
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+              >
+                <UserCog className="w-4 h-4" />
+                <span>Administrar</span>
+              </button>
+            )}
             
-            {/* Botón crear equipo */}
-            <button 
-              onClick={() => {
-                setEditingTeam(null);
-                setShowTeamModal(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Crear Equipo</span>
-            </button>
+            {/* Botón invitar - solo si tiene permiso */}
+            {(isAdmin || hasPermission('members.invite')) && (
+              <button 
+                onClick={() => setShowInviteModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Invitar</span>
+              </button>
+            )}
+            
+            {/* Botón crear equipo - solo si tiene permiso */}
+            {(isAdmin || hasPermission('teams.create')) && (
+              <button 
+                onClick={() => {
+                  setEditingTeam(null);
+                  setShowTeamModal(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Crear Equipo</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -925,6 +946,12 @@ const TeamsManagement: React.FC = () => {
         onInvite={handleInviteMember}
         teams={teamsArray}
         selectedTeamId={selectedTeam?.id}
+      />
+
+      {/* Modal de administración de miembros */}
+      <MembersManagement
+        isOpen={showMembersManagement}
+        onClose={() => setShowMembersManagement(false)}
       />
     </div>
   );
