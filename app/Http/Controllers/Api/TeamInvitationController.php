@@ -795,4 +795,83 @@ class TeamInvitationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Corregir rol de un usuario específico
+     */
+    public function fixUserRole(Request $request)
+    {
+        try {
+            $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');
+            
+            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+            
+            $email = $request->input('email');
+            $newRole = $request->input('role', 'admin');
+            
+            if (!$email) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email requerido'
+                ], 400);
+            }
+            
+            $user = User::where('email', $email)->first();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no encontrado: ' . $email
+                ], 404);
+            }
+            
+            $oldRole = $user->role;
+            
+            // Actualizar rol
+            $user->update([
+                'role' => $newRole,
+            ]);
+            
+            // Si tiene chatwoot_agent_id, actualizar también en Chatwoot
+            if ($user->chatwoot_agent_id) {
+                $company = $user->company;
+                if ($company && $company->chatwoot_api_key) {
+                    $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+                    $accountId = $company->chatwoot_account_id ?? 1;
+                    
+                    Http::withHeaders([
+                        'api_access_token' => $company->chatwoot_api_key,
+                        'Content-Type' => 'application/json',
+                    ])->patch("{$baseUrl}/api/v1/accounts/{$accountId}/agents/{$user->chatwoot_agent_id}", [
+                        'role' => $newRole === 'admin' ? 'administrator' : 'agent',
+                    ]);
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Rol actualizado correctamente',
+                'user' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'name' => $user->name,
+                    'old_role' => $oldRole,
+                    'new_role' => $newRole,
+                    'chatwoot_agent_id' => $user->chatwoot_agent_id,
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error fixing user role', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

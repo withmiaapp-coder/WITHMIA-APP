@@ -8,27 +8,35 @@ export interface UserPermissions {
   permissions: Record<string, boolean>;
 }
 
-// Permisos default mientras carga
+// Permisos default mientras carga - RESTRICTIVOS para evitar flash de contenido admin
 const DEFAULT_PERMISSIONS: UserPermissions = {
-  role: 'admin',
-  is_admin: true,
-  is_agent: false,
+  role: 'agent',
+  is_admin: false,
+  is_agent: true,
   permissions: {
     'dashboard.view': true,
-    'chats.view_all': true,
+    'chats.view_all': false,
     'chats.view_assigned': true,
     'chats.respond': true,
-    'chats.assign': true,
-    'chats.transfer': true,
-    'teams.manage': true,
+    'chats.assign': false,
+    'chats.transfer': false,
+    'teams.manage': false,
     'teams.view': true,
-    'settings.view': true,
-    'settings.edit': true,
-    'training.manage': true,
-    'integrations.manage': true,
-    'reports.view': true,
-    'members.invite': true,
-    'members.manage': true,
+    'settings.view': false,
+    'settings.edit': false,
+    'training.manage': false,
+    'integrations.manage': false,
+    'reports.view': false,
+    'members.invite': false,
+    'members.manage': false,
+    'sidebar.dashboard': true,
+    'sidebar.chats': true,
+    'sidebar.teams': true,
+    'sidebar.integrations': false,
+    'sidebar.knowledge': false,
+    'sidebar.training': false,
+    'sidebar.calendar': false,
+    'sidebar.products': false,
   }
 };
 

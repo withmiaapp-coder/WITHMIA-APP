@@ -437,7 +437,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const { subscribe, leave } = useReverb();
   
   // ====== PERMISOS DEL USUARIO ======
-  const { isAdmin, isAgent, hasPermission } = usePermissions();
+  const { isAdmin, isAgent, hasPermission, loading: permissionsLoading } = usePermissions();
   
   // ====== INBOX ID ======
   const inboxId = chatwoot?.inbox_id || user.chatwoot_inbox_id || null;
@@ -974,7 +974,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
   );
 
-  if (!mounted) {
+  // Mostrar loading mientras se cargan permisos para evitar flash de contenido admin
+  if (!mounted || permissionsLoading) {
     return <div className="min-h-screen bg-gradient-to-br from-white via-white to-white/95"></div>;
   }
 
