@@ -879,15 +879,15 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
 
   const sidebarItems = [
-    // Dashboard - solo admins
-    ...(hasPermission('dashboard.view') ? [{ 
+    // Dashboard - visible para todos
+    { 
       id: 'dashboard', 
       label: 'Inicio', 
       icon: Sparkles, 
       count: null,
       gradient: 'from-amber-500 to-yellow-500'
-    }] : []),
-    // Conversaciones - todos (pero agentes solo ven las asignadas)
+    },
+    // Conversaciones - todos
     { 
       id: 'chats', 
       label: 'Conversaciones', 
@@ -895,39 +895,39 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       count: (conversations || []).filter(c => c.status === "open").length,
       gradient: 'from-blue-500 to-indigo-500'
     },
-    // Equipo - solo si puede ver equipos
-    ...(hasPermission('teams.view') ? [{ 
+    // Equipo - todos
+    { 
       id: 'people', 
       label: 'Equipo', 
       icon: Users, 
       count: (agents || []).length,
       gradient: 'from-emerald-500 to-green-500'
-    }] : []),
-    // Integraciones - solo admins
-    ...(hasPermission('integrations.manage') ? [{ 
+    },
+    // Integraciones - todos
+    { 
       id: 'insights', 
       label: 'Integración', 
       icon: Lightbulb, 
       count: integrationsCount,
       gradient: 'from-gray-500 to-slate-600'
-    }] : []),
-    // Conocimientos - solo admins
-    ...(hasPermission('training.manage') ? [{ 
+    },
+    // Conocimientos - todos
+    { 
       id: 'knowledge', 
       label: 'Conocimientos', 
       icon: BookOpen, 
       count: null,
       gradient: 'from-cyan-500 to-blue-500'
-    }] : []),
-    // Entrenamiento - solo admins
-    ...(hasPermission('training.manage') ? [{ 
+    },
+    // Entrenamiento - todos
+    { 
       id: 'training', 
       label: 'Entrenamiento', 
       icon: GraduationCap, 
       count: null,
       gradient: 'from-violet-500 to-purple-500'
-    }] : []),
-    // Calendario - todos (próximamente)
+    },
+    // Calendario - todos
     { 
       id: 'calendar', 
       label: 'Calendario', 
@@ -935,16 +935,16 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       count: null,
       gradient: 'from-rose-500 to-pink-500'
     },
-    // Productos - solo admins
-    ...(hasPermission('settings.view') ? [{ 
+    // Productos - todos
+    { 
       id: 'reports', 
       label: 'Productos', 
       icon: Package, 
       count: null,
       gradient: 'from-orange-500 to-red-500'
-    }] : []),
-    // Admin Panel - solo superadmins
-    ...(isAdmin && user?.role === 'admin' ? [{
+    },
+    // Admin Panel - solo si es admin
+    ...(user?.role === 'admin' ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,
