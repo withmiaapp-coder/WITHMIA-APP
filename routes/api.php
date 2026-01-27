@@ -4825,3 +4825,48 @@ Route::get('/create-n8n-webhook', function () {
         ], 500);
     }
 });
+
+/**
+ * 🔧 ACTUALIZAR WEBHOOK DE N8N CON TODAS LAS SUBSCRIPCIONES
+ * GET /api/fix-n8n-webhook
+ */
+Route::get('/fix-n8n-webhook', function () {
+    try {
+        // Conexión directa a Chatwoot DB
+        $chatwootPdo = new \PDO(
+            "pgsql:host=" . env('CHATWOOT_DB_HOST', 'postgres-mvz7.railway.internal') . 
+            ";port=" . env('CHATWOOT_DB_PORT', '5432') . 
+            ";dbname=" . env('CHATWOOT_DB_DATABASE', 'chatwoot'),
+            env('CHATWOOT_DB_USERNAME', 'postgres'),
+            env('CHATWOOT_DB_PASSWORD')
+        );
+        
+        // Actualizar webhook de n8n con todas las subscripciones necesarias
+        $stmt = $chatwootPdo->prepare("
+            UPDATE webhooks 
+            SET subscriptions = :subscriptions, updated_at = NOW()
+            WHERE url LIKE '%n8n%' AND account_id = 1
+            RETURNING id, url, subscriptions
+        ");
+        $stmt->execute([
+            'subscriptions' => '{message_created,message_updated,conversation_created,conversation_updated}'
+        ]);
+        $updated = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Listar todos los webhooks
+        $stmt = $chatwootPdo->query("SELECT id, url, subscriptions FROM webhooks WHERE account_id = 1");
+        $allWebhooks = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        return response()->json([
+            'success' => true,
+            'updated' => $updated,
+            'all_webhooks' => $allWebhooks
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});

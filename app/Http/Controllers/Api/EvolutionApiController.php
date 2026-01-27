@@ -807,44 +807,20 @@ class EvolutionApiController extends Controller
                 $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
             }
             
-            // 📨 SOLO reenviar a n8n mensajes NUEVOS del cliente
-            // NO reenviar: messages.update (estados), send.message (mensajes propios), etc.
+            // 📨 NO reenviar a n8n directamente desde aquí
+            // El flujo correcto es: Evolution → Chatwoot (integración nativa) → n8n (webhook de Chatwoot)
+            // Esto evita duplicados y asegura que n8n reciba el formato correcto de Chatwoot
             $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT'];
             
             if (in_array($event, $eventsToForward)) {
-                // 🔄 DEDUPLICACIÓN: NO reenviar si ya procesamos este mensaje
-                if ($this->isMessageAlreadyProcessed($data)) {
-                    Log::info('⏭️ Duplicado: NO reenviando a n8n', ['message_id' => $data['key']['id'] ?? 'unknown']);
-                } elseif ($instance && !empty($instance->n8n_webhook_url)) {
-                    $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
-                    
-                    // Añadir collection_name al payload para Qdrant (usa instance_name que es el slug)
-                    $webhookData = $request->all();
-                    $webhookData['collection_name'] = "company_{$instance->instance_name}_knowledge";
-                    
-                    $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
-                    Log::info('📨 Reenviando mensaje a n8n', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);
-                } elseif ($instance && empty($instance->n8n_workflow_id)) {
-                    // Si no hay workflow, intentar crearlo ahora
-                    Log::info('⚠️ No hay workflow n8n, intentando crear...', ['instance' => $instanceName]);
-                    $this->createN8nWorkflowForInstance($instance);
-                    $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
-                    
-                    if (!empty($instance->n8n_webhook_url)) {
-                        $webhookPath = basename(parse_url($instance->n8n_webhook_url, PHP_URL_PATH));
-                        
-                        // Añadir collection_name al payload para Qdrant (usa instance_name que es el slug)
-                        $webhookData = $request->all();
-                        $webhookData['collection_name'] = "company_{$instance->instance_name}_knowledge";
-                        
-                        $result = $this->n8nService->sendToWebhook($webhookPath, $webhookData);
-                        Log::info('📨 Reenviando mensaje a n8n (workflow recién creado)', ['webhook' => $webhookPath, 'success' => $result['success'], 'collection' => $webhookData['collection_name']]);
-                    }
-                } else {
-                    Log::warning('⚠️ Workflow existe pero sin webhook_url', ['instance' => $instanceName, 'workflow_id' => $instance->n8n_workflow_id ?? null]);
-                }
+                // Solo log para debug, NO reenviamos a n8n
+                Log::info('📨 Mensaje recibido de Evolution (Chatwoot lo reenviará a n8n)', [
+                    'instance' => $instanceName,
+                    'event' => $event,
+                    'fromMe' => $data['key']['fromMe'] ?? false
+                ]);
             } else {
-                Log::debug('🔇 Evento ignorado para n8n', ['event' => $event]);
+                Log::debug('🔇 Evento ignorado', ['event' => $event]);
             }
         } catch (\Exception $e) { 
             Log::warning('Error n8n (non-blocking)', ['e' => $e->getMessage()]); 
