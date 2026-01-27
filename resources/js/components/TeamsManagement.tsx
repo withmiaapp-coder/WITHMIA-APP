@@ -478,6 +478,8 @@ const TeamsManagement: React.FC = () => {
 
   const handleCreateTeam = async (data: { name: string; description: string; allow_auto_assign: boolean }) => {
     await createTeam(data);
+    // Notificar a MainDashboard para actualizar el contador
+    window.dispatchEvent(new CustomEvent('teams-changed'));
   };
 
   const handleUpdateTeam = async (data: { name: string; description: string; allow_auto_assign: boolean }) => {
@@ -491,6 +493,8 @@ const TeamsManagement: React.FC = () => {
     try {
       await deleteTeam(teamId);
       setDeleteConfirm(null);
+      // Notificar a MainDashboard para actualizar el contador
+      window.dispatchEvent(new CustomEvent('teams-changed'));
     } catch (err) {
       console.error('Error deleting team:', err);
     }

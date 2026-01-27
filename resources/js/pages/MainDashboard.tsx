@@ -684,10 +684,22 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const { agents } = useAgents();
   const { teams, fetchTeams } = useTeams();
   
-  // Refrescar teams cuando se monta el componente y cuando cambia la sección a 'people'
+  // Refrescar teams cuando se monta el componente
   useEffect(() => {
     fetchTeams();
   }, []);
+  
+  // Escuchar eventos de cambios en teams (crear/eliminar desde TeamsManagement)
+  useEffect(() => {
+    const handleTeamsChanged = () => {
+      fetchTeams();
+    };
+    
+    window.addEventListener('teams-changed', handleTeamsChanged);
+    return () => {
+      window.removeEventListener('teams-changed', handleTeamsChanged);
+    };
+  }, [fetchTeams]);
   
   // También refrescar cuando se cambia a la sección de equipos
   useEffect(() => {
