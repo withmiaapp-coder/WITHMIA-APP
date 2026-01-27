@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import {
   Users,
   UserCog,
@@ -93,12 +94,9 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/chatwoot-proxy/members', {
-        credentials: 'include',
-      });
-      const data = await response.json();
-      if (data.success) {
-        setMembers(data.data || []);
+      const response = await axios.get('/api/chatwoot-proxy/members');
+      if (response.data.success) {
+        setMembers(response.data.data || []);
       }
     } catch (err) {
       console.error('Error fetching members:', err);
@@ -167,17 +165,12 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
       const newRole = editedRoles[memberId] || member.role;
       const newPermissions = editedPermissions[memberId] || member.permissions;
 
-      const response = await fetch(`/api/chatwoot-proxy/members/${memberId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          role: newRole,
-          permissions: newPermissions,
-        }),
+      const response = await axios.patch(`/api/chatwoot-proxy/members/${memberId}`, {
+        role: newRole,
+        permissions: newPermissions,
       });
 
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         setSuccess('Cambios guardados correctamente');
@@ -208,12 +201,9 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
       setDeleting(memberId);
       setError(null);
 
-      const response = await fetch(`/api/chatwoot-proxy/members/${memberId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      const response = await axios.delete(`/api/chatwoot-proxy/members/${memberId}`);
 
-      const data = await response.json();
+      const data = response.data;
       
       if (data.success) {
         setSuccess('Miembro eliminado correctamente');
