@@ -17,7 +17,7 @@
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td align="center">
-                                        <img src="{{ asset('logos/logo-white.png') }}" alt="MIA" style="height: 50px; margin-bottom: 20px;" onerror="this.style.display='none'">
+                                        <img src="{{ config('app.url') }}/logos/logo-withmia-white.png" alt="WITHMIA" style="height: 50px; margin-bottom: 20px;" onerror="this.outerHTML='<span style=color:#fff;font-size:24px;font-weight:bold>WITHMIA</span>'">
                                         <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">
                                             ¡Estás invitado!
                                         </h1>
@@ -35,11 +35,11 @@
                             </p>
                             
                             <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">
-                                <strong>{{ $inviterName }}</strong> te ha invitado a unirte a <strong>{{ $companyName }}</strong> en MIA como <strong>{{ $roleName }}</strong>.
+                                <strong>{{ $inviterName }}</strong> te ha invitado a unirte a <strong>{{ $companyName }}</strong> en WITHMIA como <strong>{{ $roleName }}</strong>.
                             </p>
                             
                             <p style="margin: 0 0 30px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                                MIA es una plataforma de atención al cliente que te permite gestionar todas tus conversaciones de WhatsApp, Instagram y más en un solo lugar con ayuda de inteligencia artificial.
+                                WITHMIA es una plataforma de atención al cliente que te permite gestionar todas tus conversaciones de WhatsApp, Instagram y más en un solo lugar con ayuda de inteligencia artificial.
                             </p>
                             
                             <!-- Botón de acción -->
@@ -79,7 +79,7 @@
                                 <tr>
                                     <td align="center">
                                         <p style="margin: 0 0 5px; color: #9ca3af; font-size: 12px;">
-                                            © {{ date('Y') }} MIA by WITHMIA. Todos los derechos reservados.
+                                            © {{ date('Y') }} WITHMIA. Todos los derechos reservados.
                                         </p>
                                         <p style="margin: 0; color: #9ca3af; font-size: 11px;">
                                             Si el botón no funciona, copia y pega este enlace en tu navegador:<br>

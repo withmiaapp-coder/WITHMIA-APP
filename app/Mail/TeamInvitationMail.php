@@ -25,7 +25,7 @@ class TeamInvitationMail extends Mailable
         $companyName = $this->invitation->company->name ?? 'WITHMIA';
         
         return new Envelope(
-            subject: "Has sido invitado a unirte a {$companyName} en MIA",
+            subject: "Has sido invitado a unirte a {$companyName} en WITHMIA",
         );
     }
 
