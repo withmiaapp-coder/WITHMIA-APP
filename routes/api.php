@@ -1640,7 +1640,7 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
 });
 
 // Chatwoot Enterprise API routes - authenticated
-Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('chatwoot-proxy')->group(function () {
     // Conversaciones
     Route::get('/conversations', [ChatwootController::class, 'getConversations']);
     Route::get('/conversations/export-all', [ChatwootController::class, 'exportAllConversationsWithMessages']);

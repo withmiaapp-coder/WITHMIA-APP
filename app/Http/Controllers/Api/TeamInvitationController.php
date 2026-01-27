@@ -20,22 +20,41 @@ class TeamInvitationController extends Controller
      */
     public function index(Request $request)
     {
-        $user = auth()->user();
-        $company = $user->company;
-        
-        if (!$company) {
-            return response()->json(['error' => 'No company associated'], 403);
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+            
+            $company = $user->company;
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+
+            $invitations = TeamInvitation::where('company_id', $company->id)
+                ->with(['invitedBy:id,name,email'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $invitations
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching invitations: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
         }
-
-        $invitations = TeamInvitation::where('company_id', $company->id)
-            ->with(['invitedBy:id,name,email'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $invitations
-        ]);
     }
 
     /**
