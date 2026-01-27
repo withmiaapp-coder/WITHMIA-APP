@@ -18,6 +18,16 @@ Route::get('/test-route', function () {
     return response()->json(['status' => 'ok', 'time' => now()->toISOString()]);
 });
 
+// TEMP: Flush Redis (para limpiar rate limits)
+Route::get('/flush-redis', function () {
+    $secret = request()->input('secret');
+    if ($secret !== 'withmia2026flush') {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    \Illuminate\Support\Facades\Redis::flushall();
+    return response()->json(['success' => true, 'message' => 'Redis flushed']);
+});
+
 // TEMP: Reset user for testing onboarding (ELIMINAR EN PRODUCCIÓN)
 Route::get('/reset-onboarding-test', function () {
     $email = request()->input('email', 'withmia.app@gmail.com');

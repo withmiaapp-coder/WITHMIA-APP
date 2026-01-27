@@ -66,13 +66,18 @@ class ChatwootProvisioningService
             $accessToken = $this->createAccessToken($chatwootUserId);
 
             // 8. Actualizar Company en Laravel
-            // chatwoot_api_key = token del channel (para Evolution API)
+            // chatwoot_api_key = ACCESS TOKEN del usuario (para API de Chatwoot)
+            // channel_token se guarda en chatwoot_data para Evolution API
             $company->update([
                 'chatwoot_account_id' => $accountId,
-                'chatwoot_api_key' => $channelToken, // Token del channel para Evolution API
+                'chatwoot_api_key' => $accessToken, // ACCESS TOKEN para API de Chatwoot
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_provisioned' => true,
-                'chatwoot_provisioned_at' => now()
+                'chatwoot_provisioned_at' => now(),
+                'chatwoot_data' => array_merge($company->chatwoot_data ?? [], [
+                    'channel_token' => $channelToken, // Token del channel para Evolution API
+                    'channel_id' => $channelId,
+                ])
             ]);
 
             // 9. Actualizar User en Laravel
