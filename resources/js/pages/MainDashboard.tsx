@@ -882,36 +882,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   ];
 
-  // Obtener permisos del usuario
-  const userPermissions = user?.permissions || {};
-  const isAdmin = user?.role === 'admin';
-
-  // Función para verificar si tiene permiso para una sección
-  const hasPermission = (permissionKey: string): boolean => {
-    // Admins siempre tienen acceso
-    if (isAdmin) return true;
-    // Verificar permiso custom del usuario
-    if (userPermissions[permissionKey] !== undefined) {
-      return userPermissions[permissionKey];
-    }
-    // Permisos por defecto para agentes
-    const defaultAgentPermissions: Record<string, boolean> = {
-      'sidebar.dashboard': true,
-      'sidebar.chats': true,
-      'sidebar.teams': true,
-      'sidebar.integrations': false,
-      'sidebar.knowledge': false,
-      'sidebar.training': false,
-      'sidebar.calendar': false,
-      'sidebar.products': false,
-      'teams.manage': false,
-      'teams.create': false,
-      'teams.delete': false,
-      'members.invite': false,
-    };
-    return defaultAgentPermissions[permissionKey] ?? false;
-  };
-
+  // Sidebar items con permisos - usa isAdmin y hasPermission del hook usePermissions()
   const allSidebarItems = [
     // Dashboard - visible para todos
     { 
@@ -1002,7 +973,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const sidebarItems = allSidebarItems.filter(item => 
     item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
   );
-  ];
 
   if (!mounted) {
     return <div className="min-h-screen bg-gradient-to-br from-white via-white to-white/95"></div>;
