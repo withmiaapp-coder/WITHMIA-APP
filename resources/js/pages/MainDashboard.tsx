@@ -500,28 +500,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     return 'dashboard';
   });
   
-  // ====== REDIRIGIR AGENTES A CHATS SI INTENTAN ACCEDER A SECCIONES SIN PERMISO ======
-  useEffect(() => {
-    // Si es agente y está en una sección que no puede ver, redirigir a chats
-    if (isAgent && activeSection === 'dashboard' && !hasPermission('dashboard.view')) {
-      console.log('🔀 Agente sin permiso de dashboard, redirigiendo a chats');
-      setActiveSection('chats');
-      localStorage.setItem('dashboardActiveSection', 'chats');
-    }
-    // Si está en una sección de configuración sin permiso
-    const sectionsRequiringPermission: Record<string, string> = {
-      'insights': 'integrations.manage',
-      'knowledge': 'training.manage',
-      'training': 'training.manage',
-      'reports': 'settings.view',
-    };
-    const requiredPermission = sectionsRequiringPermission[activeSection];
-    if (requiredPermission && !hasPermission(requiredPermission)) {
-      console.log(`🔀 Sin permiso para ${activeSection}, redirigiendo a chats`);
-      setActiveSection('chats');
-      localStorage.setItem('dashboardActiveSection', 'chats');
-    }
-  }, [isAgent, activeSection, hasPermission]);
+  // ====== NAVEGACIÓN LIBRE - TODOS LOS USUARIOS PUEDEN ACCEDER A TODAS LAS SECCIONES ======
+  // La lógica de permisos se manejará dentro de cada sección individual si es necesario
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   // Restaurar estado de WhatsApp desde secureStorage (encriptado)
