@@ -12,7 +12,7 @@ import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
-import { useConversations, useAgents } from "../hooks/useChatwoot";
+import { useConversations, useAgents, useTeams } from "../hooks/useChatwoot";
 import { useReverb } from "../hooks/useReverb";
 import {
   MessageCircle,
@@ -699,11 +699,12 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   };
 
-  // Integracio�n real con Chatwoot
+  // Integración real con Chatwoot
   const { conversations } = useConversations();
   const { agents } = useAgents();
+  const { teams } = useTeams();
 
-  // Funcio�n para contar Integracio�nes realmente conectadas
+  // Función para contar Integraciones realmente conectadas
   const getConnectedIntegrationsCount = () => {
     let connected = 0;
     
@@ -900,7 +901,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       id: 'people', 
       label: 'Equipo', 
       icon: Users, 
-      count: null,
+      count: (teams || []).length || null,
       gradient: 'from-emerald-500 to-green-500'
     },
     // Integraciones - todos
