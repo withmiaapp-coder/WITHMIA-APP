@@ -2275,7 +2275,7 @@ Route::get('/debug-evolution-chatwoot/{instanceName}', function ($instanceName) 
     }
 });
 
-// ?? FIX: Configurar/Reconfigurar Chatwoot en Evolution API
+// 🔧 FIX: Configurar/Reconfigurar Chatwoot en Evolution API
 Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) {
     try {
         $evolutionUrl = config('evolution.api_url');
@@ -2287,17 +2287,6 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         $company = $user->company;
         $accountId = $company->chatwoot_account_id ?? '1';
         
-        // IMPORTANTE: Usar el token del usuario (chatwoot_agent_token) 
-        // Este es el token registrado en access_tokens de Chatwoot
-        $chatwootToken = $user->chatwoot_agent_token;
-        
-        if (!$chatwootToken) {
-            return response()->json([
-                'success' => false,
-                'error' => 'El usuario no tiene chatwoot_agent_token. Ejecuta primero /api/regenerate-all-chatwoot-tokens'
-            ], 400);
-        }
-        
         // Obtener el nombre del inbox existente de Chatwoot
         $chatwootDb = DB::connection('chatwoot');
         $existingInbox = $chatwootDb->table('inboxes')
@@ -2307,6 +2296,21 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         // Usar el nombre del inbox existente o crear uno nuevo
         $inboxName = $existingInbox ? $existingInbox->name : "WhatsApp {$company->name}";
         
+        // IMPORTANTE: Obtener el Channel Token del channel_api (NO el access_token del usuario)
+        // Evolution API necesita el identifier del channel para autenticarse con Chatwoot
+        $channelApi = $chatwootDb->table('channel_api')
+            ->where('id', $existingInbox->channel_id ?? 1)
+            ->first();
+        
+        $channelToken = $channelApi->identifier ?? null;
+        
+        if (!$channelToken) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No se encontró el channel token en Chatwoot. Verifica que exista el inbox y channel_api.'
+            ], 400);
+        }
+        
         // Configurar Chatwoot en Evolution API
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey,
@@ -2314,7 +2318,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
             'enabled' => true,
             'accountId' => (string) $accountId,
-            'token' => $chatwootToken,
+            'token' => $channelToken, // Channel Token (identifier del channel_api)
             'url' => $chatwootUrl,
             'signMsg' => false,
             'reopenConversation' => true,
@@ -2324,14 +2328,14 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'importContacts' => false,
             'importMessages' => false,
             'daysLimitImportMessages' => 0,
-            'autoCreate' => false // No crear inbox autom�ticamente, ya existe
+            'autoCreate' => false // No crear inbox automáticamente, ya existe
         ]);
         
-        Log::info('?? Chatwoot configured in Evolution API', [
+        Log::info('🔧 Chatwoot configured in Evolution API', [
             'instance' => $instanceName,
             'account_id' => $accountId,
             'inbox_name' => $inboxName,
-            'token_prefix' => substr($chatwootToken, 0, 8) . '...',
+            'channel_token_prefix' => substr($channelToken, 0, 8) . '...',
             'response_status' => $response->status(),
             'response_body' => $response->json()
         ]);
@@ -2342,7 +2346,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'account_id' => $accountId,
             'chatwoot_url' => $chatwootUrl,
             'inbox_name' => $inboxName,
-            'token_used' => substr($chatwootToken, 0, 8) . '...',
+            'channel_token_used' => substr($channelToken, 0, 8) . '...',
             'evolution_response' => $response->json()
         ]);
         
@@ -2872,32 +2876,24 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
     }
 });
 
-// ?? FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
-// ?? FIX: Actualizar Evolution con el token correcto de Chatwoot
+// 🔧 FIX: Renombrar inbox en Chatwoot para que coincida con el slug de la instancia
+// 🔧 FIX: Actualizar Evolution con el token correcto de Chatwoot
 Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
     try {
         $chatwootDb = DB::connection('chatwoot');
         
-        // 1. Obtener el access_token del usuario (para API REST)
-        $accessToken = $chatwootDb->table('access_tokens')
-            ->where('owner_type', 'User')
-            ->where('owner_id', 1)
-            ->first();
-        
-        // 2. Obtener el channel token (para webhook)
+        // 1. Obtener el channel token (identifier) - esto es lo que Evolution necesita
         $channel = $chatwootDb->table('channel_api')
             ->where('account_id', 1)
             ->first();
         
-        if (!$accessToken || !$channel) {
+        if (!$channel) {
             return response()->json([
-                'error' => 'No se encontr� token o channel',
-                'access_token' => $accessToken,
-                'channel' => $channel
+                'error' => 'No se encontró channel_api en Chatwoot',
             ], 400);
         }
         
-        // 3. Obtener configuraci�n actual de Evolution
+        // 2. Obtener configuración actual de Evolution
         $evolutionUrl = config('evolution.api_url');
         $evolutionKey = config('evolution.api_key');
         
@@ -2907,15 +2903,15 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
         
         $currentConfig = $currentSettings->json();
         
-        // 4. Actualizar Evolution con el ACCESS TOKEN (no el channel token)
-        // Evolution necesita el access_token para hacer requests a la API de Chatwoot
+        // 3. Actualizar Evolution con el CHANNEL TOKEN (identifier)
+        // Evolution necesita el channel identifier para autenticarse con el webhook de Chatwoot
         $updateResponse = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey,
             'Content-Type' => 'application/json'
         ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
             'enabled' => true,
             'accountId' => '1',
-            'token' => $accessToken->token, // ACCESS TOKEN del usuario
+            'token' => $channel->identifier, // CHANNEL TOKEN (identifier del channel_api)
             'url' => config('chatwoot.url'),
             'signMsg' => false,
             'reopenConversation' => true,
@@ -2928,7 +2924,7 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
             'autoCreate' => true // Permitir crear contactos/conversaciones
         ]);
         
-        // 5. Verificar configuraci�n despu�s del update
+        // 4. Verificar configuración después del update
         $newSettings = \Illuminate\Support\Facades\Http::withHeaders([
             'apikey' => $evolutionKey
         ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
@@ -2936,13 +2932,12 @@ Route::get('/fix-evolution-token/{instanceName}', function ($instanceName) {
         return response()->json([
             'success' => $updateResponse->successful(),
             'tokens' => [
-                'channel_token' => $channel->identifier,
-                'access_token_used' => $accessToken->token,
-                'note' => 'Evolution ahora usa el access_token del usuario para API de Chatwoot'
+                'channel_token_used' => $channel->identifier,
+                'note' => 'Evolution usa el channel identifier para autenticarse con Chatwoot'
             ],
             'previous_config' => $currentConfig,
             'new_config' => $newSettings->json(),
-            'next_step' => 'Env�a un mensaje de WhatsApp para probar'
+            'next_step' => 'Envía un mensaje de WhatsApp para probar'
         ]);
         
     } catch (\Exception $e) {
