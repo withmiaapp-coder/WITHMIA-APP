@@ -1364,6 +1364,23 @@ class ChatwootController extends Controller
     public function getAgents()
     {
         try {
+            // SEGURIDAD: Verificar que la empresa tenga su propia cuenta de Chatwoot
+            $user = auth()->user();
+            $company = $user ? $user->company : null;
+            
+            // Si la empresa no tiene chatwoot_account_id propio, no mostrar agentes de otra cuenta
+            if (!$company || !$company->chatwoot_account_id) {
+                Log::info('getAgents: Empresa sin cuenta Chatwoot propia', [
+                    'user_id' => $user ? $user->id : null,
+                    'company_slug' => $company ? $company->slug : null
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'Tu empresa aún no tiene Chatwoot configurado'
+                ]);
+            }
+            
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/agents');
@@ -1606,6 +1623,23 @@ class ChatwootController extends Controller
     public function getTeams()
     {
         try {
+            // SEGURIDAD: Verificar que la empresa tenga su propia cuenta de Chatwoot
+            $user = auth()->user();
+            $company = $user ? $user->company : null;
+            
+            // Si la empresa no tiene chatwoot_account_id propio, no mostrar equipos de otra cuenta
+            if (!$company || !$company->chatwoot_account_id) {
+                Log::info('getTeams: Empresa sin cuenta Chatwoot propia', [
+                    'user_id' => $user ? $user->id : null,
+                    'company_slug' => $company ? $company->slug : null
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'Tu empresa aún no tiene Chatwoot configurado'
+                ]);
+            }
+            
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
