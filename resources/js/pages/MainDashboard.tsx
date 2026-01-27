@@ -900,7 +900,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       id: 'people', 
       label: 'Equipo', 
       icon: Users, 
-      count: (agents || []).length,
+      count: null,
       gradient: 'from-emerald-500 to-green-500'
     },
     // Integraciones - todos
