@@ -999,7 +999,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               {!sidebarCollapsed && (
                 <div className="flex-1">
                   <h1 className="font-bold text-neutral-800 tracking-tight leading-tight" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
-                  <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>Administrador</p>
+                  <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>{user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
                   <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
                 </div>
               )}
