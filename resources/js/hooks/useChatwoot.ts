@@ -955,6 +955,99 @@ export const useConversations = () => {
   }, [persistMessagesCache]);
 
   // ========================================
+  // ✅ NUEVO: Asignar conversación a un agente
+  // ========================================
+  const assignConversation = useCallback(async (conversationId: number, agentId: number | null) => {
+    try {
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/assignments`,
+        'POST',
+        { assignee_id: agentId }
+      );
+      
+      // Actualizar localmente
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, assignee_id: agentId, assignee: result?.assignee || null }
+            : conv
+        )
+      );
+      
+      debugLog.log(`✅ Conversación ${conversationId} asignada a agente ${agentId}`);
+      return result;
+    } catch (err) {
+      debugLog.error('Error asignando conversación:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Cambiar estado de conversación (open, resolved, pending, snoozed)
+  // ========================================
+  const changeConversationStatus = useCallback(async (
+    conversationId: number, 
+    status: 'open' | 'resolved' | 'pending' | 'snoozed',
+    snoozedUntil?: number // Timestamp para snoozed
+  ) => {
+    try {
+      const body: any = { status };
+      if (status === 'snoozed' && snoozedUntil) {
+        body.snoozed_until = snoozedUntil;
+      }
+      
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/status`,
+        'POST',
+        body
+      );
+      
+      // Actualizar localmente
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, status }
+            : conv
+        )
+      );
+      
+      debugLog.log(`✅ Estado de conversación ${conversationId} cambiado a ${status}`);
+      return result;
+    } catch (err) {
+      debugLog.error('Error cambiando estado de conversación:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Añadir/Quitar etiquetas de una conversación
+  // ========================================
+  const updateConversationLabels = useCallback(async (conversationId: number, labels: string[]) => {
+    try {
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/labels`,
+        'POST',
+        { labels }
+      );
+      
+      // Actualizar localmente
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, labels }
+            : conv
+        )
+      );
+      
+      debugLog.log(`✅ Etiquetas actualizadas para conversación ${conversationId}:`, labels);
+      return result;
+    } catch (err) {
+      debugLog.error('Error actualizando etiquetas:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
   // ✅ NUEVO: Cargar TODAS las conversaciones inicialmente
   // ========================================
   useEffect(() => {
@@ -977,6 +1070,10 @@ export const useConversations = () => {
     setActiveConversation: setActiveConversationState,
     updateMessagesCache, // ✅ NUEVO: Función para actualizar caché de mensajes
     addMessageToCache, // ✅ NUEVO: Función para agregar mensaje a caché
+    // ✅ NUEVO: Funciones de asignación y estado
+    assignConversation,
+    changeConversationStatus,
+    updateConversationLabels,
     // ✅ NUEVO: Metadatos de paginación
     currentPage,
     hasMorePages,

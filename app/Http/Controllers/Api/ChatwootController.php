@@ -1391,6 +1391,211 @@ class ChatwootController extends Controller
 
     /**
      * ============================================================================
+     * ASIGNACIÓN Y ESTADO DE CONVERSACIONES
+     * ============================================================================
+     */
+
+    /**
+     * Asignar conversación a un agente
+     */
+    public function assignConversation(Request $request, $conversationId)
+    {
+        try {
+            $assigneeId = $request->input('assignee_id');
+            
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/assignments', [
+                'assignee_id' => $assigneeId
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Conversación asignada', [
+                    'conversation_id' => $conversationId,
+                    'assignee_id' => $assigneeId,
+                    'user_id' => $this->userId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'assignee' => $response->json()
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error asignando conversación'
+            ], $response->status());
+
+        } catch (\Exception $e) {
+            Log::error('Error asignando conversación: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Cambiar estado de conversación (open, resolved, pending, snoozed)
+     */
+    public function changeConversationStatus(Request $request, $conversationId)
+    {
+        try {
+            $status = $request->input('status');
+            $snoozedUntil = $request->input('snoozed_until');
+            
+            $body = ['status' => $status];
+            if ($status === 'snoozed' && $snoozedUntil) {
+                $body['snoozed_until'] = $snoozedUntil;
+            }
+            
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/toggle_status', $body);
+
+            if ($response->successful()) {
+                Log::info('Estado de conversación cambiado', [
+                    'conversation_id' => $conversationId,
+                    'status' => $status,
+                    'user_id' => $this->userId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json()
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error cambiando estado'
+            ], $response->status());
+
+        } catch (\Exception $e) {
+            Log::error('Error cambiando estado de conversación: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar etiquetas de una conversación
+     */
+    public function updateConversationLabels(Request $request, $conversationId)
+    {
+        try {
+            $labels = $request->input('labels', []);
+            
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/labels', [
+                'labels' => $labels
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Etiquetas de conversación actualizadas', [
+                    'conversation_id' => $conversationId,
+                    'labels' => $labels,
+                    'user_id' => $this->userId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'labels' => $response->json()
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error actualizando etiquetas'
+            ], $response->status());
+
+        } catch (\Exception $e) {
+            Log::error('Error actualizando etiquetas: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener etiquetas de una conversación
+     */
+    public function getConversationLabels($conversationId)
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/labels');
+
+            if ($response->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'labels' => $response->json()['payload'] ?? []
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'labels' => []
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo etiquetas: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'labels' => []
+            ]);
+        }
+    }
+
+    /**
+     * Crear nueva etiqueta
+     */
+    public function createLabel(Request $request)
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/labels', [
+                'title' => $request->input('title'),
+                'description' => $request->input('description', ''),
+                'color' => $request->input('color', '#1f93ff'),
+                'show_on_sidebar' => $request->input('show_on_sidebar', true)
+            ]);
+
+            if ($response->successful()) {
+                Log::info('Etiqueta creada', [
+                    'title' => $request->input('title'),
+                    'user_id' => $this->userId
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $response->json()
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error creando etiqueta'
+            ], $response->status());
+
+        } catch (\Exception $e) {
+            Log::error('Error creando etiqueta: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ============================================================================
      * TEAMS MANAGEMENT - CRUD Completo
      * ============================================================================
      */

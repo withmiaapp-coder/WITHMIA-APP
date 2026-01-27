@@ -1650,6 +1650,14 @@ Route::middleware(['web', 'auth'])->prefix('chatwoot-proxy')->group(function () 
     Route::post('/conversations/deduplicate-auto', [ChatwootController::class, 'deduplicateConversationsAuto']);
     Route::post('/conversations/{id}/messages', [ChatwootController::class, 'sendMessage']);
     Route::post('/conversations/{id}/update_last_seen', [ChatwootController::class, 'markAsRead']);
+    
+    // ============================================================================
+    // ASIGNACIÓN Y ESTADO DE CONVERSACIONES
+    // ============================================================================
+    Route::post('/conversations/{id}/assignments', [ChatwootController::class, 'assignConversation']);
+    Route::post('/conversations/{id}/status', [ChatwootController::class, 'changeConversationStatus']);
+    Route::post('/conversations/{id}/labels', [ChatwootController::class, 'updateConversationLabels']);
+    Route::get('/conversations/{id}/labels', [ChatwootController::class, 'getConversationLabels']);
 
     // ============================================================================
     // EQUIPOS - CRUD Completo

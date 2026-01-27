@@ -86,6 +86,7 @@ interface User {
   company_name?: string;
   company_slug?: string;
   chatwoot_inbox_id?: number;
+  chatwoot_agent_id?: number;
   role?: string;
 }
 
@@ -1127,9 +1128,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             {/* Contenido Condicional */}
             {activeSection === 'chats' ? (
               <div className="h-full w-full">
-                {/* Chat completamente integrado sin m������+��rgenes */}
+                {/* Chat completamente integrado sin márgenes */}
                 <div className="w-full h-full">
-                  <ConversationsInterface />
+                  <ConversationsInterface currentAgentId={user.chatwoot_agent_id} />
                 </div>
               </div>
             ) : activeSection === 'people' ? (

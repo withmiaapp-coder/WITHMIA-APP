@@ -75,6 +75,10 @@ import NotificationSettings from './NotificationSettings.tsx';
 import { formatTimestamp } from '../utils/dateFormatter';
 import { getPriorityColor, getStatusColor } from '../utils/conversationColors';
 import debugLog from '../utils/debugLogger';
+// 🏷️ NUEVOS: Componentes de gestión de conversaciones
+import ConversationActionsDropdown from './ConversationActionsDropdown';
+import AssignAgentDropdown from './AssignAgentDropdown';
+import LabelsManager from './LabelsManager';
 
 interface Conversation {
   id: number;
@@ -276,7 +280,12 @@ const MessageStatus = ({ status, isHighlighted }: { status?: string | number | n
     return avatarUrl;
   };
 
-const ConversationsInterface: React.FC = () => {
+// Props del componente
+interface ConversationsInterfaceProps {
+  currentAgentId?: number;
+}
+
+const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ currentAgentId }) => {
   // 🔔 SISTEMA UNIFICADO: Usamos el contexto global para notificaciones
   // (ya no usamos useNotifications() - todo está en GlobalNotificationContext)
   const [searchTerm, setSearchTerm] = useState('');
@@ -353,7 +362,11 @@ const ConversationsInterface: React.FC = () => {
     setConversations,
     currentPage,
     updateMessagesCache, // ✅ NUEVO: Para actualizar caché de mensajes
-    addMessageToCache // ✅ NUEVO: Para agregar mensaje a caché
+    addMessageToCache, // ✅ NUEVO: Para agregar mensaje a caché
+    // 🏷️ NUEVOS: Funciones de asignación y estado
+    assignConversation,
+    changeConversationStatus,
+    updateConversationLabels
   } = useConversations();
   
   // Estados locales
@@ -1365,15 +1378,15 @@ const ConversationsInterface: React.FC = () => {
     if (searchResults !== null) {
       debugLog.log('??? Usando resultados de búsqueda backend:', searchResults.length);
       
-      // Aplicar filtro de pesta??a sobre los resultados de búsqueda
+      // Aplicar filtro de pestaña sobre los resultados de búsqueda
       const result = searchResults.filter((conversation: any) => {
         if (selectedFilter === 'all') return true;
-        if (selectedFilter === 'mine') return conversation.assignee_id === 1;
-        if (selectedFilter === 'assigned') return conversation.assignee_id && conversation.assignee_id !== 1;
+        if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
+        if (selectedFilter === 'unassigned') return !conversation.assignee_id;
         return true;
       });
       
-      debugLog.log(' Resultados despu??s de filtro de pesta??a:', result.length);
+      debugLog.log(' Resultados después de filtro de pestaña:', result.length);
       return result;
     }
     
@@ -1381,8 +1394,8 @@ const ConversationsInterface: React.FC = () => {
       // Sin busqueda, aplicar solo filtro de pestana
       const result = (conversations || []).filter(conversation => {
         if (selectedFilter === 'all') return true;
-        if (selectedFilter === 'mine') return conversation.assignee_id === 1;
-        if (selectedFilter === 'assigned') return conversation.assignee_id && conversation.assignee_id !== 1;
+        if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
+        if (selectedFilter === 'unassigned') return !conversation.assignee_id;
         return true;
       });
       debugLog.log('??? Sin búsqueda, resultados:', result.length);
@@ -1429,8 +1442,8 @@ const ConversationsInterface: React.FC = () => {
       
       // Aplicar filtro de pestana
       if (selectedFilter === 'all') return matchesSearch;
-      if (selectedFilter === 'mine') return matchesSearch && conversation.assignee_id === 1;
-      if (selectedFilter === 'assigned') return matchesSearch && conversation.assignee_id && conversation.assignee_id !== 1;
+      if (selectedFilter === 'mine') return matchesSearch && (currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id);
+      if (selectedFilter === 'unassigned') return matchesSearch && !conversation.assignee_id;
       return matchesSearch;
     });
     
@@ -1462,11 +1475,11 @@ const ConversationsInterface: React.FC = () => {
 
       if (appliedFilters.assignedTo) {
         if (appliedFilters.assignedTo === 'me') {
-          result = result.filter(conv => conv.assignee_id === 1);
+          result = result.filter(conv => currentAgentId ? conv.assignee_id === currentAgentId : conv.assignee_id);
         } else if (appliedFilters.assignedTo === 'unassigned') {
           result = result.filter(conv => !conv.assignee_id);
         } else if (appliedFilters.assignedTo === 'others') {
-          result = result.filter(conv => conv.assignee_id && conv.assignee_id !== 1);
+          result = result.filter(conv => conv.assignee_id && (currentAgentId ? conv.assignee_id !== currentAgentId : true));
         }
       }
 
@@ -1530,7 +1543,7 @@ const ConversationsInterface: React.FC = () => {
     }
 
     return result;
-  }, [conversations, searchTerm, selectedFilter, searchResults?.length ?? 0, appliedFilters]);
+  }, [conversations, searchTerm, selectedFilter, searchResults?.length ?? 0, appliedFilters, currentAgentId]);
 
   //  VIRTUALIZACI?N: Solo renderiza items visibles (mejora 80% el performance)
   const rowVirtualizer = useVirtualizer({
@@ -1815,6 +1828,65 @@ const ConversationsInterface: React.FC = () => {
       (window as any).__mutedConversations = newSet;
       return newSet;
     });
+  };
+
+  // 🏷️ HANDLERS PARA GESTIÓN DE CONVERSACIONES
+  
+  // Asignar conversación a un agente
+  const handleAssignConversation = async (agentId: number | null) => {
+    if (!activeConversation) return;
+    try {
+      await assignConversation(activeConversation.id, agentId);
+      // Actualizar la conversación localmente
+      setConversations((prev: Conversation[]) => 
+        prev.map((conv: Conversation) => 
+          conv.id === activeConversation.id 
+            ? { ...conv, assignee_id: agentId } 
+            : conv
+        )
+      );
+      debugLog.log(`✅ Conversación ${activeConversation.id} asignada a agente ${agentId}`);
+    } catch (error) {
+      console.error('Error asignando conversación:', error);
+    }
+  };
+
+  // Cambiar estado de la conversación
+  const handleChangeStatus = async (status: string, snoozedUntil?: number) => {
+    if (!activeConversation) return;
+    try {
+      await changeConversationStatus(activeConversation.id, status, snoozedUntil);
+      // Actualizar la conversación localmente
+      setConversations((prev: Conversation[]) => 
+        prev.map((conv: Conversation) => 
+          conv.id === activeConversation.id 
+            ? { ...conv, status: status as 'open' | 'resolved' | 'pending' } 
+            : conv
+        )
+      );
+      debugLog.log(`✅ Estado de conversación ${activeConversation.id} cambiado a ${status}`);
+    } catch (error) {
+      console.error('Error cambiando estado:', error);
+    }
+  };
+
+  // Actualizar etiquetas de la conversación
+  const handleUpdateLabels = async (labels: string[]) => {
+    if (!activeConversation) return;
+    try {
+      await updateConversationLabels(activeConversation.id, labels);
+      // Actualizar la conversación localmente
+      setConversations((prev: Conversation[]) => 
+        prev.map((conv: Conversation) => 
+          conv.id === activeConversation.id 
+            ? { ...conv, labels } 
+            : conv
+        )
+      );
+      debugLog.log(`✅ Etiquetas actualizadas para conversación ${activeConversation.id}:`, labels);
+    } catch (error) {
+      console.error('Error actualizando etiquetas:', error);
+    }
   };
   
   // Exponer mutedConversations globalmente al montar
@@ -3158,23 +3230,48 @@ const ConversationsInterface: React.FC = () => {
             </div>
           )}
           
-          {/* Filtros */}
-          <div className="flex space-x-2">
+          {/* Filtros de conversaciones */}
+          <div className="flex space-x-2 flex-wrap gap-y-1">
             {[
-              { id: 'all', label: 'Todo', count: (conversations || []).length },
-              { id: 'mine', label: 'Mio', count: (conversations || []).filter(c => c.assignee_id === 1).length },
-              { id: 'assigned', label: 'Asignadas', count: (conversations || []).filter(c => c.assignee_id && c.assignee_id !== 1).length }
+              { 
+                id: 'all', 
+                label: 'Todas', 
+                count: (conversations || []).length,
+                icon: '📋'
+              },
+              { 
+                id: 'mine', 
+                label: 'Mías', 
+                count: (conversations || []).filter(c => 
+                  currentAgentId ? c.assignee_id === currentAgentId : c.assignee_id
+                ).length,
+                icon: '👤'
+              },
+              { 
+                id: 'unassigned', 
+                label: 'Sin asignar', 
+                count: (conversations || []).filter(c => !c.assignee_id).length,
+                icon: '📭'
+              }
             ].map((filter) => (
               <button
                 key={filter.id}
                 onClick={() => setSelectedFilter(filter.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-300 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 flex items-center space-x-1 ${
                   selectedFilter === filter.id
-                    ? 'bg-blue-500/20 text-blue-700 border border-blue-400/30'
-                    : 'bg-white/10 text-gray-600 hover:bg-white/20'
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white/30 text-gray-700 hover:bg-white/50 border border-gray-200/50'
                 }`}
               >
-                {filter.label} ({filter.count})
+                <span>{filter.icon}</span>
+                <span>{filter.label}</span>
+                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  selectedFilter === filter.id 
+                    ? 'bg-white/30 text-white' 
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {filter.count}
+                </span>
               </button>
             ))}
           </div>
@@ -3527,6 +3624,49 @@ const ConversationsInterface: React.FC = () => {
                     <MoreHorizontal className="w-4 h-4 text-gray-600" />
                   </button>
                 </div>
+              </div>
+
+              {/* 🏷️ BARRA DE HERRAMIENTAS DE CONVERSACIÓN */}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {/* Estado de la conversación */}
+                <ConversationActionsDropdown
+                  conversationId={activeConversation.id}
+                  currentStatus={activeConversation.status || 'open'}
+                  onChangeStatus={handleChangeStatus}
+                />
+
+                {/* Asignar agente */}
+                <AssignAgentDropdown
+                  conversationId={activeConversation.id}
+                  currentAssignee={activeConversation.assignee}
+                  onAssign={handleAssignConversation}
+                />
+
+                {/* Gestionar etiquetas */}
+                <LabelsManager
+                  conversationId={activeConversation.id}
+                  currentLabels={activeConversation.labels || []}
+                  onUpdateLabels={handleUpdateLabels}
+                />
+
+                {/* Etiquetas actuales (badges) */}
+                {activeConversation.labels && activeConversation.labels.length > 0 && (
+                  <div className="flex flex-wrap gap-1 ml-2">
+                    {activeConversation.labels.slice(0, 3).map((label: string) => (
+                      <span 
+                        key={label}
+                        className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                    {activeConversation.labels.length > 3 && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        +{activeConversation.labels.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
