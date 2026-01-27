@@ -4,6 +4,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
+import axios from 'axios';
 
 // Inicializar Laravel Echo para WebSocket en tiempo real
 // DESHABILITADO: No hay servidor WebSocket en Railway por ahora
@@ -28,6 +29,24 @@ function saveRailwayToken(token: string | null) {
 function getRailwayToken(): string | null {
     return localStorage.getItem(RAILWAY_TOKEN_KEY);
 }
+
+// Configurar axios para enviar credenciales y token de Railway
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+// Interceptor de axios para agregar el token de Railway
+axios.interceptors.request.use((config) => {
+    const token = getRailwayToken();
+    if (token) {
+        config.headers['X-Railway-Auth-Token'] = token;
+    }
+    // Agregar CSRF token si existe
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        config.headers['X-CSRF-TOKEN'] = csrfToken;
+    }
+    return config;
+});
 
 // Verificar si la URL es del mismo origen (para no agregar token a APIs externas)
 function isSameOrigin(input: RequestInfo | URL): boolean {

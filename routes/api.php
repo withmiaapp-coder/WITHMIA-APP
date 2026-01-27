@@ -3176,7 +3176,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // =============================================================================
 // 🔐 PERMISOS Y ROL DEL USUARIO
 // =============================================================================
-Route::middleware('auth:web')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
     // Obtener permisos del usuario actual
     Route::get('/user/permissions', function (Request $request) {
         try {

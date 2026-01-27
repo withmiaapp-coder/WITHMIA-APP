@@ -13,13 +13,19 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Role: 'admin' (dueño de empresa), 'agent' (miembro de equipo)
-            $table->string('role')->default('admin')->after('email');
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->string('role')->default('admin')->after('email');
+            }
             
             // Permisos JSON para granularidad
-            $table->json('permissions')->nullable()->after('role');
+            if (!Schema::hasColumn('users', 'permissions')) {
+                $table->json('permissions')->nullable()->after('role');
+            }
             
             // ID del agente en Chatwoot (para agentes)
-            $table->unsignedBigInteger('chatwoot_agent_id')->nullable()->after('permissions');
+            if (!Schema::hasColumn('users', 'chatwoot_agent_id')) {
+                $table->unsignedBigInteger('chatwoot_agent_id')->nullable()->after('permissions');
+            }
         });
     }
 

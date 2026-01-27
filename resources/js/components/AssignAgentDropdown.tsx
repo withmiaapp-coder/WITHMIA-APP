@@ -73,9 +73,11 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
     }
   };
 
-  const filteredAgents = agents.filter((agent: Agent) => 
-    agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+  // Asegurar que agents siempre sea un array
+  const safeAgents = Array.isArray(agents) ? agents : [];
+  const filteredAgents = safeAgents.filter((agent: Agent) => 
+    (agent?.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false) ||
+    (agent?.email?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false)
   );
 
   const getAvailabilityColor = (status?: string) => {

@@ -129,8 +129,10 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
     }
   };
 
-  const filteredLabels = labels.filter((label: Label) => 
-    label.title.toLowerCase().includes(searchTerm.toLowerCase())
+  // Asegurar que labels siempre sea un array
+  const safeLabels = Array.isArray(labels) ? labels : [];
+  const filteredLabels = safeLabels.filter((label: Label) => 
+    label?.title?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false
   );
 
   return (
