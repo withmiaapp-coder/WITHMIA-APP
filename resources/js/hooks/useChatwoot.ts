@@ -1398,6 +1398,9 @@ export const useTeamInvitations = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper para obtener CSRF token
+  const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
   const fetchInvitations = useCallback(async () => {
     setLoading(true);
     try {
@@ -1405,6 +1408,7 @@ export const useTeamInvitations = () => {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'include',
       });
@@ -1432,6 +1436,7 @@ export const useTeamInvitations = () => {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'include',
         body: JSON.stringify(data),
@@ -1460,6 +1465,7 @@ export const useTeamInvitations = () => {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'include',
       });
@@ -1483,6 +1489,7 @@ export const useTeamInvitations = () => {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'include',
       });
