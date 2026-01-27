@@ -530,20 +530,41 @@ class TeamInvitationController extends Controller
                 ], 403);
             }
             
+            // Listar todas las empresas para diagnóstico
+            $allCompanies = \App\Models\Company::select('id', 'name', 'slug', 'chatwoot_account_id')
+                ->get()
+                ->map(function($c) {
+                    return [
+                        'id' => $c->id,
+                        'name' => $c->name,
+                        'slug' => $c->slug,
+                        'chatwoot_account_id' => $c->chatwoot_account_id,
+                        'has_api_key' => !empty($c->chatwoot_api_key),
+                    ];
+                });
+            
             // Si hay usuario autenticado, usar su empresa
             if ($user) {
                 $company = $user->company;
             } else {
-                // Si es con clave secreta, obtener primera empresa con Chatwoot configurado
-                $company = \App\Models\Company::whereNotNull('chatwoot_account_id')
-                    ->whereNotNull('chatwoot_api_key')
-                    ->first();
+                // Buscar empresa por slug si se proporciona
+                $companySlug = $request->input('company_slug');
+                if ($companySlug) {
+                    $company = \App\Models\Company::where('slug', $companySlug)->first();
+                } else {
+                    // Si es con clave secreta, obtener primera empresa con Chatwoot configurado
+                    $company = \App\Models\Company::whereNotNull('chatwoot_account_id')
+                        ->whereNotNull('chatwoot_api_key')
+                        ->first();
+                }
             }
             
             if (!$company) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No hay empresa configurada con Chatwoot'
+                    'message' => 'No hay empresa configurada con Chatwoot',
+                    'all_companies' => $allCompanies,
+                    'all_users' => User::select('id', 'name', 'email', 'company_slug', 'chatwoot_agent_id')->get(),
                 ]);
             }
             
