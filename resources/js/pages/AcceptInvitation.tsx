@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
-import { CheckCircle, XCircle, Loader2, Mail, User, Lock, AlertCircle, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Mail, AlertCircle, Sparkles, Users } from 'lucide-react';
+
+// Declare google globally for TypeScript
+declare global {
+  interface Window {
+    google: any;
+    handleInvitationCredentialResponse: (response: any) => void;
+  }
+}
 
 interface AcceptInvitationProps {
   token: string;
@@ -14,7 +22,7 @@ interface InvitationData {
   expires_at: string;
 }
 
-// Estilos CSS para el fondo animado (igual que login.html)
+// Estilos CSS para el fondo (igual que login.html - blanco con gradientes suaves)
 const backgroundStyles = `
   @keyframes gasMovement {
     0% { transform: translateX(0px) translateY(0px) rotate(0deg); }
@@ -26,9 +34,15 @@ const backgroundStyles = `
   }
   
   @keyframes borderShimmer {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% { filter: hue-rotate(0deg) brightness(1); }
+    25% { filter: hue-rotate(90deg) brightness(1.05); }
+    50% { filter: hue-rotate(180deg) brightness(1.02); }
+    75% { filter: hue-rotate(270deg) brightness(1.05); }
+    100% { filter: hue-rotate(360deg) brightness(1); }
+  }
+
+  html, body {
+    background-color: #fff;
   }
 
   .invitation-background {
@@ -73,23 +87,145 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
-  // Form data
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+
+  // Parse JWT for getting user info
+  const parseJwt = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map((c) => 
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      console.error('Error parsing JWT:', e);
+      return null;
+    }
+  };
+
+  // Handle Google Sign-In response
+  const handleCredentialResponse = useCallback(async (response: any) => {
+    console.log('Google credential received');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const payload = parseJwt(response.credential);
+      
+      // Verify email matches invitation
+      if (payload.email.toLowerCase() !== invitation?.email.toLowerCase()) {
+        setError(`Debes iniciar sesión con ${invitation?.email}. Has usado ${payload.email}.`);
+        setLoading(false);
+        return;
+      }
+
+      // Send to backend with invitation token
+      const formData = new FormData();
+      formData.append('credential', response.credential);
+      formData.append('google_id', payload.sub);
+      formData.append('email', payload.email);
+      formData.append('name', payload.name);
+      formData.append('picture', payload.picture || '');
+      formData.append('invitation_token', token);
+
+      const res = await fetch('/auth/google/invitation', {
+        method: 'POST',
+        body: formData,
+      });
+
+      // Check if it's a redirect (HTML response)
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        // Success - backend returned auth-loading view
+        setSuccess(true);
+        document.open();
+        document.write(await res.text());
+        document.close();
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(true);
+        if (data.redirect) {
+          window.location.href = data.redirect;
+        }
+      } else {
+        setError(data.error || 'Error al procesar la invitación');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Error de conexión. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [invitation, token]);
+
+  // Load Google Sign-In script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      setGoogleLoaded(true);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  // Initialize Google Sign-In when loaded and invitation is available
+  useEffect(() => {
+    if (googleLoaded && invitation && window.google) {
+      // Set up global callback
+      window.handleInvitationCredentialResponse = handleCredentialResponse;
+
+      window.google.accounts.id.initialize({
+        client_id: '115805834215-jf49c72lhuhuvb09sbo58qo0stq55dft.apps.googleusercontent.com',
+        callback: handleCredentialResponse,
+        auto_select: false,
+        context: 'signin',
+      });
+
+      // Render button
+      const buttonContainer = document.getElementById('google-signin-button');
+      if (buttonContainer) {
+        window.google.accounts.id.renderButton(buttonContainer, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+          text: 'continue_with',
+          shape: 'rectangular',
+          width: 300,
+        });
+      }
+    }
+  }, [googleLoaded, invitation, handleCredentialResponse]);
 
   // Validar token al cargar
   useEffect(() => {
     const validateToken = async () => {
       try {
-        const response = await fetch(`/api/invitation/validate/${token}`);
+        // Get CSRF token
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        
+        const response = await fetch(`/api/invitation/validate/${token}`, {
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken || '',
+          }
+        });
         const data = await response.json();
 
         if (data.valid) {
           setInvitation(data.invitation);
-          setName(data.invitation.name || '');
         } else {
           setError(data.message || 'Invitación inválida');
         }
@@ -103,60 +239,6 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
 
     validateToken();
   }, [token]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormErrors({});
-
-    // Validaciones locales
-    if (!name.trim()) {
-      setFormErrors(prev => ({ ...prev, name: 'El nombre es requerido' }));
-      return;
-    }
-    if (password.length < 8) {
-      setFormErrors(prev => ({ ...prev, password: 'La contraseña debe tener al menos 8 caracteres' }));
-      return;
-    }
-    if (password !== passwordConfirmation) {
-      setFormErrors(prev => ({ ...prev, password_confirmation: 'Las contraseñas no coinciden' }));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/invitation/accept/${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          password,
-          password_confirmation: passwordConfirmation,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess(true);
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 3000);
-      } else {
-        if (data.errors) {
-          setFormErrors(data.errors);
-        } else {
-          setError(data.message || 'Error al crear la cuenta');
-        }
-      }
-    } catch (err) {
-      setError('Error de conexión. Intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Loading state
   if (validating) {
@@ -174,7 +256,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
     );
   }
 
-  // Error state
+  // Error state (no invitation)
   if (error && !invitation) {
     return (
       <>
@@ -222,14 +304,14 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
     );
   }
 
-  // Registration form
+  // Main content - Google Sign-In
   return (
     <>
       <style>{backgroundStyles}</style>
       <div className="min-h-screen invitation-background flex items-center justify-center p-4">
         <Head title="Únete a WITHMIA" />
         
-        <div className="invitation-container max-w-lg w-full">
+        <div className="invitation-container max-w-md w-full">
           {/* Header con logo */}
           <div className="p-6 text-center border-b border-gray-100">
             <img src="/logo-withmia.webp" alt="WITHMIA" className="w-20 h-20 mx-auto mb-3" />
@@ -243,8 +325,8 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Content */}
+          <div className="p-6 space-y-5">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2 text-red-700">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -258,96 +340,59 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
                 <Mail className="w-4 h-4 text-amber-600" />
                 <span className="text-sm font-medium text-gray-900">{invitation?.email}</span>
               </div>
-              <div className="text-sm text-gray-600">
-                Rol: <span className="font-medium text-gray-900">
-                  {invitation?.role === 'administrator' ? 'Administrador' : 'Agente'}
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-amber-600" />
+                <span className="text-sm text-gray-600">
+                  Rol: <span className="font-medium text-gray-900">
+                    {invitation?.role === 'administrator' ? 'Administrador' : 'Agente'}
+                  </span>
                 </span>
               </div>
             </div>
 
-            {/* Nombre */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Tu Nombre
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="¿Cómo te llamas?"
-                  className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all text-gray-900 placeholder-gray-400 bg-white ${
-                    formErrors.name ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                />
-              </div>
-              {formErrors.name && <p className="text-sm text-red-600 mt-1">{formErrors.name}</p>}
+            {/* Instructions */}
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                Para continuar, inicia sesión con tu cuenta de Google:
+              </p>
+              <p className="text-xs text-gray-500 mb-4">
+                Usa el mismo email: <strong className="text-gray-700">{invitation?.email}</strong>
+              </p>
             </div>
 
-            {/* Contraseña */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all text-gray-900 placeholder-gray-400 bg-white ${
-                    formErrors.password ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                />
-              </div>
-              {formErrors.password && <p className="text-sm text-red-600 mt-1">{formErrors.password}</p>}
-            </div>
-
-            {/* Confirmar Contraseña */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
-                Confirmar Contraseña
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  value={passwordConfirmation}
-                  onChange={(e) => setPasswordConfirmation(e.target.value)}
-                  placeholder="Repite tu contraseña"
-                  className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all text-gray-900 placeholder-gray-400 bg-white ${
-                    formErrors.password_confirmation ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                />
-              </div>
-              {formErrors.password_confirmation && <p className="text-sm text-red-600 mt-1">{formErrors.password_confirmation}</p>}
-            </div>
-
-            {/* Submit button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 rounded-xl hover:from-amber-500 hover:to-yellow-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-bold text-lg shadow-lg hover:shadow-xl"
-            >
+            {/* Google Sign-In Button */}
+            <div className="flex justify-center">
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Procesando...</span>
+                </div>
               ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  <span>Crear mi Cuenta</span>
-                </>
+                <div 
+                  id="google-signin-button"
+                  className="flex justify-center"
+                  style={{ minHeight: '44px' }}
+                />
               )}
-            </button>
+            </div>
 
-            <p className="text-center text-sm text-gray-600 mt-4">
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">o</span>
+              </div>
+            </div>
+
+            <p className="text-center text-sm text-gray-600">
               ¿Ya tienes cuenta?{' '}
               <a href="/login" className="text-amber-600 font-semibold hover:underline">
                 Inicia sesión
               </a>
             </p>
-          </form>
+          </div>
         </div>
       </div>
     </>

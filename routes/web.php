@@ -456,6 +456,10 @@ Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('auth.google');
 
+Route::post('/auth/google/invitation', [GoogleAuthController::class, 'authenticateWithInvitation'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('auth.google.invitation');
+
 Route::get('/check-session', [GoogleAuthController::class, 'checkSession'])->name('auth.check');
 
 Route::get('/logout', function () {
