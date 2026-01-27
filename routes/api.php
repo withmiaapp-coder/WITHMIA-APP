@@ -4133,3 +4133,695 @@ Route::get('/update/company-chatwoot/{companyId}', function ($companyId, \Illumi
         ], 500);
     }
 });
+
+// ============================================================
+// 🔧 DIAGNÓSTICO Y REPARACIÓN DE WEBHOOKS (POST-RESET DB)
+// ============================================================
+
+/**
+ * 🔍 Diagnosticar estado completo de una instancia de WhatsApp
+ * GET /api/diagnose-instance/{instanceName}
+ */
+Route::get('/diagnose-instance/{instanceName}', function (string $instanceName) {
+    try {
+        $evolutionApi = app(\App\Services\EvolutionApiService::class);
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        $diagnosis = [
+            'instance_name' => $instanceName,
+            'timestamp' => now()->toIso8601String(),
+            'checks' => []
+        ];
+        
+        // 1. Verificar instancia en BD local
+        $instance = DB::table('whatsapp_instances')
+            ->where('instance_name', $instanceName)
+            ->first();
+        
+        $diagnosis['checks']['local_db'] = [
+            'exists' => $instance !== null,
+            'data' => $instance ? [
+                'id' => $instance->id,
+                'company_id' => $instance->company_id,
+                'is_active' => $instance->is_active,
+                'n8n_workflow_id' => $instance->n8n_workflow_id ?? null,
+                'n8n_webhook_url' => $instance->n8n_webhook_url ?? null,
+                'chatwoot_inbox_id' => $instance->chatwoot_inbox_id ?? null,
+            ] : null
+        ];
+        
+        // 2. Verificar instancia en Evolution API
+        try {
+            $evolutionStatus = $evolutionApi->getStatus($instanceName);
+            $diagnosis['checks']['evolution_api'] = [
+                'exists' => $evolutionStatus['success'] ?? false,
+                'connected' => $evolutionStatus['connected'] ?? false,
+                'state' => $evolutionStatus['state'] ?? 'unknown'
+            ];
+        } catch (\Exception $e) {
+            $diagnosis['checks']['evolution_api'] = [
+                'exists' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // 3. Verificar webhook configurado en Evolution
+        try {
+            $webhookUrl = config('evolution.api_url') . "/webhook/find/{$instanceName}";
+            $webhookResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'apikey' => config('evolution.api_key')
+            ])->get(config('evolution.api_url') . "/webhook/find/{$instanceName}");
+            
+            $diagnosis['checks']['evolution_webhook'] = [
+                'configured' => $webhookResponse->successful(),
+                'data' => $webhookResponse->successful() ? $webhookResponse->json() : null
+            ];
+        } catch (\Exception $e) {
+            $diagnosis['checks']['evolution_webhook'] = [
+                'configured' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // 4. Verificar Chatwoot integration en Evolution
+        try {
+            $chatwootResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'apikey' => config('evolution.api_key')
+            ])->get(config('evolution.api_url') . "/chatwoot/find/{$instanceName}");
+            
+            $diagnosis['checks']['evolution_chatwoot_integration'] = [
+                'configured' => $chatwootResponse->successful(),
+                'data' => $chatwootResponse->successful() ? $chatwootResponse->json() : null
+            ];
+        } catch (\Exception $e) {
+            $diagnosis['checks']['evolution_chatwoot_integration'] = [
+                'configured' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // 5. Verificar inbox en Chatwoot
+        try {
+            $inbox = $chatwootService->findInboxByName($instanceName);
+            $diagnosis['checks']['chatwoot_inbox'] = [
+                'exists' => $inbox !== null,
+                'data' => $inbox
+            ];
+        } catch (\Exception $e) {
+            $diagnosis['checks']['chatwoot_inbox'] = [
+                'exists' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // 6. Verificar webhooks en Chatwoot
+        try {
+            $webhooks = $chatwootService->listWebhooks();
+            $n8nWebhookUrl = $instance->n8n_webhook_url ?? null;
+            
+            $relevantWebhooks = [];
+            if (isset($webhooks['payload'])) {
+                foreach ($webhooks['payload'] as $wh) {
+                    // Buscar webhooks que apunten a n8n con el path de esta instancia
+                    if (str_contains($wh['url'] ?? '', $instanceName) || 
+                        str_contains($wh['url'] ?? '', 'withmia')) {
+                        $relevantWebhooks[] = $wh;
+                    }
+                }
+            }
+            
+            $diagnosis['checks']['chatwoot_webhooks'] = [
+                'total_count' => count($webhooks['payload'] ?? []),
+                'relevant_webhooks' => $relevantWebhooks,
+                'expected_webhook_url' => $n8nWebhookUrl
+            ];
+        } catch (\Exception $e) {
+            $diagnosis['checks']['chatwoot_webhooks'] = [
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // 7. Verificar workflow en n8n
+        try {
+            $workflowId = $instance->n8n_workflow_id ?? null;
+            if ($workflowId) {
+                $workflows = $n8nService->getWorkflows();
+                $found = false;
+                $workflowData = null;
+                
+                foreach ($workflows['data'] ?? [] as $wf) {
+                    if ($wf['id'] == $workflowId) {
+                        $found = true;
+                        $workflowData = [
+                            'id' => $wf['id'],
+                            'name' => $wf['name'],
+                            'active' => $wf['active'] ?? false
+                        ];
+                        break;
+                    }
+                }
+                
+                $diagnosis['checks']['n8n_workflow'] = [
+                    'exists' => $found,
+                    'workflow_id' => $workflowId,
+                    'data' => $workflowData
+                ];
+            } else {
+                $diagnosis['checks']['n8n_workflow'] = [
+                    'exists' => false,
+                    'reason' => 'No workflow_id in local database'
+                ];
+            }
+        } catch (\Exception $e) {
+            $diagnosis['checks']['n8n_workflow'] = [
+                'error' => $e->getMessage()
+            ];
+        }
+        
+        // Resumen
+        $issues = [];
+        if (!$diagnosis['checks']['local_db']['exists']) {
+            $issues[] = 'Instance not found in local database';
+        }
+        if (!($diagnosis['checks']['evolution_api']['connected'] ?? false)) {
+            $issues[] = 'WhatsApp not connected in Evolution API';
+        }
+        if (empty($diagnosis['checks']['local_db']['data']['n8n_workflow_id'] ?? null)) {
+            $issues[] = 'No n8n workflow assigned';
+        }
+        if (empty($diagnosis['checks']['local_db']['data']['n8n_webhook_url'] ?? null)) {
+            $issues[] = 'No n8n webhook URL configured';
+        }
+        if (empty($diagnosis['checks']['chatwoot_webhooks']['relevant_webhooks'] ?? [])) {
+            $issues[] = 'No Chatwoot webhook pointing to n8n for this instance';
+        }
+        
+        $diagnosis['issues'] = $issues;
+        $diagnosis['healthy'] = empty($issues);
+        
+        return response()->json($diagnosis);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+/**
+ * 🔧 Reparar webhooks de una instancia
+ * POST /api/repair-instance/{instanceName}
+ */
+Route::post('/repair-instance/{instanceName}', function (Request $request, string $instanceName) {
+    try {
+        $evolutionApi = app(\App\Services\EvolutionApiService::class);
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        $repairs = [];
+        $appUrl = config('app.url');
+        
+        // 1. Buscar o crear instancia en BD
+        $instance = DB::table('whatsapp_instances')
+            ->where('instance_name', $instanceName)
+            ->first();
+        
+        if (!$instance) {
+            // Intentar crear registro
+            $companyId = $request->input('company_id', 1);
+            DB::table('whatsapp_instances')->insert([
+                'instance_name' => $instanceName,
+                'company_id' => $companyId,
+                'instance_url' => config('evolution.api_url'),
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->first();
+            $repairs[] = "Created instance record in local database";
+        }
+        
+        // 2. Verificar/crear workflow en n8n si no existe
+        if (empty($instance->n8n_workflow_id)) {
+            Log::info("🔧 Repair: Creating n8n workflow for {$instanceName}");
+            
+            // Obtener company
+            $company = \App\Models\Company::find($instance->company_id);
+            $companySlug = $company ? $company->slug : $instanceName;
+            
+            // Cargar template y crear workflow
+            $templatePath = base_path('workflows/withmia-bot-template.json');
+            if (file_exists($templatePath)) {
+                $content = file_get_contents($templatePath);
+                $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+                $templateWorkflow = json_decode($content, true);
+                
+                if ($templateWorkflow) {
+                    // Reemplazar placeholders
+                    $templateJson = json_encode($templateWorkflow);
+                    $replacements = [
+                        '{{COMPANY_SLUG}}' => $companySlug,
+                        '{{COMPANY_NAME}}' => $company->name ?? $instanceName,
+                        '{{ASSISTANT_NAME}}' => $company->assistant_name ?? 'MIA',
+                        '{{INSTANCE_NAME}}' => $instanceName,
+                        '{{APP_URL}}' => $appUrl,
+                        '{{EVOLUTION_API_URL}}' => config('evolution.api_url'),
+                        '{{EVOLUTION_API_KEY}}' => config('evolution.api_key'),
+                        '{{QDRANT_URL}}' => config('services.qdrant.url'),
+                    ];
+                    foreach ($replacements as $placeholder => $value) {
+                        $templateJson = str_replace($placeholder, $value, $templateJson);
+                    }
+                    $templateWorkflow = json_decode($templateJson, true);
+                    
+                    // Configurar webhook path
+                    foreach ($templateWorkflow['nodes'] as &$node) {
+                        if ($node['type'] === 'n8n-nodes-base.webhook') {
+                            $node['parameters']['path'] = $instanceName;
+                            $node['webhookId'] = \Illuminate\Support\Str::uuid()->toString();
+                        }
+                    }
+                    
+                    $templateWorkflow['name'] = "WITHMIA Bot - {$instanceName}";
+                    unset($templateWorkflow['id'], $templateWorkflow['versionId']);
+                    
+                    $result = $n8nService->createWorkflow($templateWorkflow);
+                    
+                    if ($result['success']) {
+                        $workflowId = $result['data']['id'];
+                        $webhookUrl = $n8nService->getWebhookUrl($instanceName);
+                        
+                        // Activar workflow
+                        $n8nService->activateWorkflow($workflowId);
+                        
+                        // Actualizar BD
+                        DB::table('whatsapp_instances')
+                            ->where('id', $instance->id)
+                            ->update([
+                                'n8n_workflow_id' => $workflowId,
+                                'n8n_webhook_url' => $webhookUrl,
+                                'updated_at' => now()
+                            ]);
+                        
+                        $repairs[] = "Created n8n workflow (ID: {$workflowId})";
+                        $repairs[] = "Webhook URL: {$webhookUrl}";
+                        
+                        // Recargar instancia
+                        $instance = DB::table('whatsapp_instances')
+                            ->where('instance_name', $instanceName)
+                            ->first();
+                    } else {
+                        $repairs[] = "ERROR creating workflow: " . ($result['error'] ?? 'Unknown');
+                    }
+                }
+            }
+        } else {
+            $repairs[] = "Workflow already exists (ID: {$instance->n8n_workflow_id})";
+        }
+        
+        // 3. Configurar webhook de Evolution hacia nuestra app
+        $evolutionWebhookUrl = "{$appUrl}/api/evolution-whatsapp/webhook";
+        $webhookResult = $evolutionApi->setWebhook($instanceName, $evolutionWebhookUrl);
+        if ($webhookResult['success']) {
+            $repairs[] = "Configured Evolution webhook to: {$evolutionWebhookUrl}";
+        } else {
+            $repairs[] = "ERROR configuring Evolution webhook: " . ($webhookResult['error'] ?? 'Unknown');
+        }
+        
+        // 4. Buscar inbox en Chatwoot y configurar webhook
+        $inbox = $chatwootService->findInboxByName($instanceName);
+        if ($inbox) {
+            $inboxId = $inbox['id'];
+            
+            // Actualizar inbox_id en BD si no estaba
+            if (empty($instance->chatwoot_inbox_id)) {
+                DB::table('whatsapp_instances')
+                    ->where('id', $instance->id)
+                    ->update([
+                        'chatwoot_inbox_id' => $inboxId,
+                        'updated_at' => now()
+                    ]);
+                $repairs[] = "Updated chatwoot_inbox_id in local DB: {$inboxId}";
+            }
+            
+            // Configurar webhook en Chatwoot apuntando a n8n
+            $n8nWebhookUrl = $instance->n8n_webhook_url ?? $n8nService->getWebhookUrl($instanceName);
+            $chatwootWebhookResult = $chatwootService->configureInboxWebhook($inboxId, $n8nWebhookUrl);
+            
+            if ($chatwootWebhookResult['success']) {
+                $repairs[] = "Configured Chatwoot webhook for inbox {$inboxId} to: {$n8nWebhookUrl}";
+            } else {
+                $repairs[] = "ERROR configuring Chatwoot webhook: " . ($chatwootWebhookResult['error'] ?? 'Unknown');
+            }
+        } else {
+            $repairs[] = "WARNING: Inbox not found in Chatwoot for instance {$instanceName}";
+        }
+        
+        return response()->json([
+            'success' => true,
+            'instance_name' => $instanceName,
+            'repairs_made' => $repairs,
+            'message' => 'Repair process completed. Check repairs_made for details.'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+/**
+ * � DIAGNÓSTICO Y REPARACIÓN COMPLETA DEL FLUJO DE WEBHOOKS
+ * GET /api/diagnose-webhook-flow/{instanceName}
+ * 
+ * Este endpoint diagnostica y repara todo el flujo:
+ * 1. Verifica instancia en BD
+ * 2. Verifica workflow en n8n
+ * 3. Verifica webhook de Chatwoot configurado para enviar a n8n
+ * 4. Repara lo que falte automáticamente
+ */
+Route::get('/diagnose-webhook-flow/{instanceName?}', function ($instanceName = null) {
+    try {
+        $results = [
+            'instance' => null,
+            'n8n_workflow' => null,
+            'chatwoot_webhooks' => null,
+            'repairs_made' => [],
+            'errors' => []
+        ];
+        
+        // 1. OBTENER INSTANCIA DE BD
+        if (!$instanceName) {
+            // Buscar primera instancia activa
+            $instance = DB::table('whatsapp_instances')->where('is_active', 1)->orderByDesc('id')->first();
+            if (!$instance) {
+                return response()->json(['error' => 'No hay instancias activas. Crea una instancia primero.'], 404);
+            }
+            $instanceName = $instance->instance_name;
+        } else {
+            $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->first();
+        }
+        
+        $results['instance'] = $instance ? [
+            'id' => $instance->id,
+            'name' => $instance->instance_name,
+            'company_id' => $instance->company_id,
+            'is_active' => $instance->is_active,
+            'n8n_workflow_id' => $instance->n8n_workflow_id ?? null,
+            'n8n_webhook_url' => $instance->n8n_webhook_url ?? null,
+            'chatwoot_inbox_id' => $instance->chatwoot_inbox_id ?? null
+        ] : null;
+        
+        if (!$instance) {
+            return response()->json([
+                'error' => "Instancia '{$instanceName}' no encontrada en BD",
+                'suggestion' => 'Crea la instancia desde tu app primero'
+            ], 404);
+        }
+        
+        // 2. VERIFICAR/CREAR WORKFLOW EN N8N
+        $n8nService = app(\App\Services\N8nService::class);
+        $n8nBaseUrl = config('services.n8n.base_url');
+        
+        if (!empty($instance->n8n_workflow_id)) {
+            // Verificar que existe
+            $workflowResult = $n8nService->getWorkflow($instance->n8n_workflow_id);
+            if ($workflowResult['success']) {
+                $workflow = $workflowResult['data'];
+                $results['n8n_workflow'] = [
+                    'id' => $workflow['id'],
+                    'name' => $workflow['name'],
+                    'active' => $workflow['active'] ?? false,
+                    'webhook_path' => null
+                ];
+                
+                // Extraer webhook path
+                foreach ($workflow['nodes'] ?? [] as $node) {
+                    if ($node['type'] === 'n8n-nodes-base.webhook') {
+                        $webhookPath = $node['parameters']['path'] ?? $instanceName;
+                        $results['n8n_workflow']['webhook_path'] = $webhookPath;
+                        $results['n8n_workflow']['webhook_url'] = "{$n8nBaseUrl}/webhook/{$webhookPath}";
+                        break;
+                    }
+                }
+                
+                // Activar si está inactivo
+                if (!($workflow['active'] ?? false)) {
+                    $activateResult = $n8nService->activateWorkflow($instance->n8n_workflow_id);
+                    if ($activateResult['success']) {
+                        $results['repairs_made'][] = 'Workflow n8n activado';
+                        $results['n8n_workflow']['active'] = true;
+                    }
+                }
+            } else {
+                $results['errors'][] = "Workflow {$instance->n8n_workflow_id} no encontrado en n8n";
+                // Limpiar referencia inválida
+                DB::table('whatsapp_instances')
+                    ->where('id', $instance->id)
+                    ->update(['n8n_workflow_id' => null, 'n8n_webhook_url' => null]);
+                $instance->n8n_workflow_id = null;
+            }
+        }
+        
+        // Si no hay workflow, crearlo
+        if (empty($instance->n8n_workflow_id)) {
+            $results['errors'][] = 'No hay workflow n8n configurado';
+            // TODO: Podría crear uno automáticamente aquí
+        }
+        
+        // 3. VERIFICAR WEBHOOKS DE CHATWOOT
+        $chatwootUrl = config('services.chatwoot.base_url') ?? config('chatwoot.url');
+        $chatwootToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+        $accountId = 1; // Account ID por defecto
+        
+        // Obtener company para account_id correcto
+        if ($instance->company_id) {
+            $company = DB::table('companies')->find($instance->company_id);
+            if ($company && $company->chatwoot_account_id) {
+                $accountId = $company->chatwoot_account_id;
+            }
+        }
+        
+        // Listar webhooks de Chatwoot
+        $webhooksResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'api_access_token' => $chatwootToken
+        ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
+        
+        $existingWebhooks = $webhooksResponse->json()['payload'] ?? $webhooksResponse->json() ?? [];
+        $results['chatwoot_webhooks'] = [
+            'account_id' => $accountId,
+            'total' => count($existingWebhooks),
+            'list' => array_map(fn($w) => ['id' => $w['id'], 'url' => $w['url']], $existingWebhooks)
+        ];
+        
+        // 4. VERIFICAR SI HAY WEBHOOK APUNTANDO A N8N
+        $n8nWebhookUrl = $results['n8n_workflow']['webhook_url'] ?? null;
+        $hasN8nWebhook = false;
+        $correctN8nWebhook = null;
+        
+        foreach ($existingWebhooks as $webhook) {
+            if (str_contains($webhook['url'], 'n8n') || str_contains($webhook['url'], '/webhook/')) {
+                $hasN8nWebhook = true;
+                $correctN8nWebhook = $webhook;
+                break;
+            }
+        }
+        
+        $results['n8n_webhook_configured'] = $hasN8nWebhook;
+        
+        // 5. SI NO HAY WEBHOOK A N8N, CREARLO
+        if (!$hasN8nWebhook && $n8nWebhookUrl) {
+            Log::info('🔧 Creando webhook de Chatwoot a n8n', [
+                'account_id' => $accountId,
+                'webhook_url' => $n8nWebhookUrl
+            ]);
+            
+            $createResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks", [
+                'webhook' => [
+                    'url' => $n8nWebhookUrl,
+                    'subscriptions' => ['message_created', 'message_updated', 'conversation_created', 'conversation_updated', 'conversation_status_changed']
+                ]
+            ]);
+            
+            if ($createResponse->successful()) {
+                $newWebhook = $createResponse->json();
+                $results['repairs_made'][] = "Webhook de Chatwoot a n8n creado: {$n8nWebhookUrl}";
+                $results['new_webhook'] = $newWebhook;
+                $results['n8n_webhook_configured'] = true;
+            } else {
+                $results['errors'][] = 'Error creando webhook: ' . $createResponse->body();
+            }
+        }
+        
+        // 6. RESUMEN
+        $results['status'] = empty($results['errors']) ? 'OK' : 'NEEDS_ATTENTION';
+        $results['flow_summary'] = [
+            '1_whatsapp_to_evolution' => 'Configure in Evolution API dashboard',
+            '2_evolution_to_chatwoot' => $instance->chatwoot_inbox_id ? '✅ Configurado' : '⚠️ Verificar en Evolution',
+            '3_chatwoot_to_n8n' => $results['n8n_webhook_configured'] ? '✅ Webhook existe' : '❌ FALTA WEBHOOK',
+            '4_n8n_workflow' => $results['n8n_workflow'] ? '✅ Workflow existe' : '❌ FALTA WORKFLOW'
+        ];
+        
+        return response()->json($results);
+        
+    } catch (\Exception $e) {
+        Log::error('Error en diagnóstico de webhook flow', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
+/**
+ * �🔄 Listar todos los webhooks de Chatwoot
+ * GET /api/list-chatwoot-webhooks
+ */
+Route::get('/list-chatwoot-webhooks', function () {
+    try {
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $webhooks = $chatwootService->listWebhooks();
+        
+        return response()->json([
+            'success' => true,
+            'webhooks' => $webhooks
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * 🗑️ Limpiar webhooks duplicados/viejos de Chatwoot
+ * POST /api/cleanup-chatwoot-webhooks
+ */
+Route::post('/cleanup-chatwoot-webhooks', function (Request $request) {
+    try {
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $keepPattern = $request->input('keep_pattern', 'n8n'); // Mantener solo los que contienen este patrón
+        
+        $webhooks = $chatwootService->listWebhooks();
+        $deleted = [];
+        $kept = [];
+        
+        foreach ($webhooks['payload'] ?? [] as $webhook) {
+            $url = $webhook['url'] ?? '';
+            $id = $webhook['id'] ?? null;
+            
+            if (!$id) continue;
+            
+            // Verificar si debe mantenerse
+            if (str_contains($url, $keepPattern)) {
+                $kept[] = ['id' => $id, 'url' => $url];
+            } else {
+                // Eliminar webhook viejo
+                try {
+                    $deleteUrl = config('chatwoot.url') . "/api/v1/accounts/" . config('chatwoot.account_id') . "/webhooks/{$id}";
+                    $response = \Illuminate\Support\Facades\Http::withHeaders([
+                        'api_access_token' => config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token')
+                    ])->delete($deleteUrl);
+                    
+                    if ($response->successful()) {
+                        $deleted[] = ['id' => $id, 'url' => $url];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Error deleting webhook {$id}", ['error' => $e->getMessage()]);
+                }
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'deleted' => $deleted,
+            'kept' => $kept,
+            'message' => 'Cleanup completed'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * 🔥 CREAR WEBHOOK DE CHATWOOT A N8N - DIRECTO EN BD
+ * GET /api/create-n8n-webhook
+ */
+Route::get('/create-n8n-webhook', function () {
+    try {
+        // Conexión directa a Chatwoot DB
+        $chatwootPdo = new \PDO(
+            "pgsql:host=" . env('CHATWOOT_DB_HOST', 'postgres-mvz7.railway.internal') . 
+            ";port=" . env('CHATWOOT_DB_PORT', '5432') . 
+            ";dbname=" . env('CHATWOOT_DB_DATABASE', 'chatwoot'),
+            env('CHATWOOT_DB_USERNAME', 'postgres'),
+            env('CHATWOOT_DB_PASSWORD')
+        );
+        
+        // Verificar webhooks existentes
+        $stmt = $chatwootPdo->query("SELECT id, url, subscriptions FROM webhooks WHERE account_id = 1");
+        $existing = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // URL del webhook de n8n
+        $n8nWebhookUrl = 'https://n8n-production-00dd.up.railway.app/webhook/withmia-evp7rj';
+        
+        // Verificar si ya existe
+        $alreadyExists = false;
+        foreach ($existing as $wh) {
+            if (str_contains($wh['url'], 'n8n')) {
+                $alreadyExists = true;
+                break;
+            }
+        }
+        
+        $created = null;
+        if (!$alreadyExists) {
+            // Crear webhook
+            $stmt = $chatwootPdo->prepare("
+                INSERT INTO webhooks (account_id, url, subscriptions, created_at, updated_at) 
+                VALUES (1, :url, :subscriptions, NOW(), NOW()) 
+                RETURNING id, url
+            ");
+            $stmt->execute([
+                'url' => $n8nWebhookUrl,
+                'subscriptions' => '{message_created,message_updated,conversation_created,conversation_updated}'
+            ]);
+            $created = $stmt->fetch(\PDO::FETCH_ASSOC);
+        }
+        
+        // Listar todos los webhooks
+        $stmt = $chatwootPdo->query("SELECT id, url, subscriptions FROM webhooks WHERE account_id = 1");
+        $allWebhooks = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        return response()->json([
+            'success' => true,
+            'already_existed' => $alreadyExists,
+            'created' => $created,
+            'all_webhooks' => $allWebhooks,
+            'n8n_webhook_url' => $n8nWebhookUrl
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
