@@ -81,6 +81,7 @@ class ChatwootProvisioningService
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_agent_token' => $accessToken,
                 'chatwoot_agent_role' => 'administrator',
+                'role' => 'admin', // El creador de la empresa siempre es admin
                 'onboarding_completed' => true
             ]);
 
