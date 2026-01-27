@@ -1107,24 +1107,75 @@ export interface Team {
   updated_at?: string;
 }
 
+// Cache en memoria para evitar llamadas duplicadas
+let teamsCache: { data: Team[] | null; timestamp: number; promise: Promise<Team[]> | null } = {
+  data: null,
+  timestamp: 0,
+  promise: null
+};
+const CACHE_TTL = 30000; // 30 segundos de cache en frontend
+
+// Inicializar con datos prefetch del servidor si están disponibles
+const initTeamsCacheFromPrefetch = () => {
+  if ((window as any).__prefetchedTeams && (window as any).__prefetchedTeams.length > 0 && !teamsCache.data) {
+    teamsCache.data = (window as any).__prefetchedTeams;
+    teamsCache.timestamp = Date.now();
+    console.log('🚀 Teams cache inicializado con prefetch');
+  }
+};
+
 export const useTeams = () => {
-  const [teams, setTeams] = useState<Team[]>([]);
+  // Intentar inicializar desde prefetch
+  if (typeof window !== 'undefined') {
+    initTeamsCacheFromPrefetch();
+  }
+  
+  const [teams, setTeams] = useState<Team[]>(teamsCache.data || []);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const { apiCall, loading, error } = useChatwootAPI();
 
-  // Obtener todos los equipos
-  const fetchTeams = useCallback(async () => {
+  // Obtener todos los equipos - CON DEDUPLICACIÓN
+  const fetchTeams = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Si hay cache válido y no es forzado, retornar cache
+    if (!forceRefresh && teamsCache.data && (now - teamsCache.timestamp) < CACHE_TTL) {
+      setTeams(teamsCache.data);
+      return teamsCache.data;
+    }
+    
+    // Si ya hay una llamada en progreso, esperar esa
+    if (teamsCache.promise) {
+      const result = await teamsCache.promise;
+      setTeams(result);
+      return result;
+    }
+    
     try {
-      const result = await apiCall('/api/chatwoot-proxy/teams');
-      const teamsData = Array.isArray(result) ? result : (result?.data || []);
+      // Crear promesa y guardarla para deduplicar
+      teamsCache.promise = apiCall('/api/chatwoot-proxy/teams').then(result => {
+        const teamsData = Array.isArray(result) ? result : (result?.data || []);
+        teamsCache.data = teamsData;
+        teamsCache.timestamp = Date.now();
+        teamsCache.promise = null;
+        return teamsData;
+      });
+      
+      const teamsData = await teamsCache.promise;
       setTeams(teamsData);
       return teamsData;
     } catch (err: any) {
-      if (err?.name === 'AbortError') return [];
+      teamsCache.promise = null;
+      if (err?.name === 'AbortError') return teamsCache.data || [];
       console.error('Error fetching teams:', err);
-      return [];
+      return teamsCache.data || [];
     }
   }, [apiCall]);
+
+  // Invalidar cache (llamar después de crear/actualizar/eliminar)
+  const invalidateCache = useCallback(() => {
+    teamsCache = { data: null, timestamp: 0, promise: null };
+  }, []);
 
   // Obtener un equipo específico con sus miembros
   const fetchTeam = useCallback(async (teamId: number) => {
@@ -1143,30 +1194,33 @@ export const useTeams = () => {
   const createTeam = useCallback(async (teamData: { name: string; description?: string; allow_auto_assign?: boolean }) => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/teams', 'POST', teamData);
-      await fetchTeams();
+      invalidateCache();
+      await fetchTeams(true);
       return result?.data || result;
     } catch (err) {
       console.error('Error creating team:', err);
       throw err;
     }
-  }, [apiCall, fetchTeams]);
+  }, [apiCall, fetchTeams, invalidateCache]);
 
   // Actualizar equipo
   const updateTeam = useCallback(async (teamId: number, teamData: Partial<Team>) => {
     try {
       const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}`, 'PATCH', teamData);
-      await fetchTeams();
+      invalidateCache();
+      await fetchTeams(true);
       return result?.data || result;
     } catch (err) {
       console.error('Error updating team:', err);
       throw err;
     }
-  }, [apiCall, fetchTeams]);
+  }, [apiCall, fetchTeams, invalidateCache]);
 
   // Eliminar equipo
   const deleteTeam = useCallback(async (teamId: number) => {
     try {
       await apiCall(`/api/chatwoot-proxy/teams/${teamId}`, 'DELETE');
+      invalidateCache();
       setTeams(prev => prev.filter(t => t.id !== teamId));
       if (selectedTeam?.id === teamId) {
         setSelectedTeam(null);
@@ -1292,31 +1346,83 @@ export const useLabels = () => {
 // HOOK: useAgents - Gestión de agentes
 // ============================================================================
 
+// Cache en memoria para agentes
+let agentsCache: { data: any[] | null; timestamp: number; promise: Promise<any[]> | null } = {
+  data: null,
+  timestamp: 0,
+  promise: null
+};
+const AGENTS_CACHE_TTL = 30000; // 30 segundos
+
+// Inicializar con datos prefetch del servidor si están disponibles
+const initAgentsCacheFromPrefetch = () => {
+  if ((window as any).__prefetchedAgents && (window as any).__prefetchedAgents.length > 0 && !agentsCache.data) {
+    agentsCache.data = (window as any).__prefetchedAgents;
+    agentsCache.timestamp = Date.now();
+    console.log('🚀 Agents cache inicializado con prefetch');
+  }
+};
+
 export const useAgents = () => {
-  const [agents, setAgents] = useState<any[]>([]);
+  // Intentar inicializar desde prefetch
+  if (typeof window !== 'undefined') {
+    initAgentsCacheFromPrefetch();
+  }
+  
+  const [agents, setAgents] = useState<any[]>(agentsCache.data || []);
   const { apiCall, loading, error } = useChatwootAPI();
 
-  const fetchAgents = useCallback(async () => {
+  const fetchAgents = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Si hay cache válido y no es forzado, retornar cache
+    if (!forceRefresh && agentsCache.data && (now - agentsCache.timestamp) < AGENTS_CACHE_TTL) {
+      setAgents(agentsCache.data);
+      return agentsCache.data;
+    }
+    
+    // Si ya hay una llamada en progreso, esperar esa
+    if (agentsCache.promise) {
+      const result = await agentsCache.promise;
+      setAgents(result);
+      return result;
+    }
+    
     try {
-      const result = await apiCall('/api/chatwoot-proxy/agents');
-      // Asegurar que siempre sea un array
-      setAgents(Array.isArray(result) ? result : (result?.data || result?.agents || []));
+      agentsCache.promise = apiCall('/api/chatwoot-proxy/agents').then(result => {
+        const agentsData = Array.isArray(result) ? result : (result?.data || result?.agents || []);
+        agentsCache.data = agentsData;
+        agentsCache.timestamp = Date.now();
+        agentsCache.promise = null;
+        return agentsData;
+      });
+      
+      const agentsData = await agentsCache.promise;
+      setAgents(agentsData);
+      return agentsData;
     } catch (err) {
+      agentsCache.promise = null;
       console.error('Error fetching agents:', err);
-      setAgents([]); // Reset to empty array on error
+      setAgents(agentsCache.data || []);
+      return agentsCache.data || [];
     }
   }, [apiCall]);
+
+  const invalidateAgentsCache = useCallback(() => {
+    agentsCache = { data: null, timestamp: 0, promise: null };
+  }, []);
 
   const createAgent = useCallback(async (agentData: any) => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/agents', 'POST', agentData);
-      await fetchAgents();
+      invalidateAgentsCache();
+      await fetchAgents(true);
       return result;
     } catch (err) {
       console.error('Error creating agent:', err);
       throw err;
     }
-  }, [apiCall, fetchAgents]);
+  }, [apiCall, fetchAgents, invalidateAgentsCache]);
 
   useEffect(() => {
     fetchAgents();

@@ -722,7 +722,7 @@ const TeamsManagement: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-green-500 rounded-lg flex items-center justify-center shadow">
+                      <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
                         <Users className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -790,8 +790,8 @@ const TeamsManagement: React.FC = () => {
               <div className="p-6 border-b border-gray-200/60 bg-white/90 flex-shrink-0">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-4">
-                    <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center shadow-lg">
-                      <Users className="w-7 h-7 text-white" />
+                    <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+                      <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-800">{selectedTeam.name}</h2>
@@ -839,15 +839,12 @@ const TeamsManagement: React.FC = () => {
                       return (
                         <div key={member.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
                           <div className="flex items-center space-x-4">
-                            <div className="relative">
-                              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold shadow">
-                                {member.avatar_url ? (
-                                  <img src={member.avatar_url} alt={member.name} className="w-full h-full rounded-xl object-cover" />
-                                ) : (
-                                  member.name?.charAt(0)?.toUpperCase() || 'U'
-                                )}
-                              </div>
-                              <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(member.availability_status || 'offline')} rounded-full border-2 border-white`} />
+                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold shadow">
+                              {member.avatar_url ? (
+                                <img src={member.avatar_url} alt={member.name} className="w-full h-full rounded-xl object-cover" />
+                              ) : (
+                                member.name?.charAt(0)?.toUpperCase() || 'U'
+                              )}
                             </div>
                             
                             <div className="flex-1">

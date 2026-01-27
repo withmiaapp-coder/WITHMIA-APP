@@ -54,7 +54,7 @@ class PostOnboardingSetupJob implements ShouldQueue
         try {
             if (!$company->chatwoot_account_id) {
                 Log::info("Provisionando Chatwoot para: {$this->companySlug}");
-                $chatwootResult = $chatwootService->provisionCompany($company, $user);
+                $chatwootResult = $chatwootService->provisionCompanyAccount($company, $user);
                 
                 if ($chatwootResult['success'] ?? false) {
                     Log::info("Chatwoot provisionado exitosamente para: {$this->companySlug}", [

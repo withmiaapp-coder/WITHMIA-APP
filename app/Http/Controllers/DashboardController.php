@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Support\Str;
@@ -95,13 +97,65 @@ class DashboardController extends Controller
             'chatwoot_status' => $chatwootStatus
         ]);
 
+        // 🚀 PREFETCH: Cargar teams y agents en el servidor para evitar llamadas adicionales
+        $prefetchedTeams = [];
+        $prefetchedAgents = [];
+        
+        if ($company->chatwoot_account_id ?? false) {
+            $chatwootBaseUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+            $chatwootToken = $company->chatwoot_api_key ?? config('services.chatwoot.api_token');
+            $accountId = $company->chatwoot_account_id;
+            
+            // Prefetch teams (con cache de 60 segundos)
+            $prefetchedTeams = Cache::remember("chatwoot_teams_{$accountId}", 60, function () use ($chatwootBaseUrl, $chatwootToken, $accountId) {
+                try {
+                    $response = Http::withHeaders(['api_access_token' => $chatwootToken])
+                        ->timeout(5)
+                        ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/teams");
+                    
+                    if (!$response->successful()) return [];
+                    
+                    $teams = $response->json();
+                    $teamsWithMembers = [];
+                    
+                    foreach ($teams as $team) {
+                        $membersResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
+                            ->timeout(3)
+                            ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/teams/{$team['id']}/team_members");
+                        
+                        $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
+                        $teamsWithMembers[] = $team;
+                    }
+                    
+                    return $teamsWithMembers;
+                } catch (\Exception $e) {
+                    return [];
+                }
+            });
+            
+            // Prefetch agents (con cache de 60 segundos)
+            $prefetchedAgents = Cache::remember("chatwoot_agents_{$accountId}", 60, function () use ($chatwootBaseUrl, $chatwootToken, $accountId) {
+                try {
+                    $response = Http::withHeaders(['api_access_token' => $chatwootToken])
+                        ->timeout(5)
+                        ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/agents");
+                    
+                    return $response->successful() ? $response->json() : [];
+                } catch (\Exception $e) {
+                    return [];
+                }
+            });
+        }
+
         return Inertia::render('MainDashboard', [
             'user' => $user->toArray(),
             'company' => is_object($company) ? (array)$company : $company,
             'companySlug' => $companySlug,
             'onboardingData' => $onboardingData,
             'stats' => $stats,
-            'chatwoot' => $chatwootStatus
+            'chatwoot' => $chatwootStatus,
+            'prefetchedTeams' => $prefetchedTeams,
+            'prefetchedAgents' => $prefetchedAgents
         ]);
     }
 

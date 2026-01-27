@@ -563,103 +563,71 @@ class ChatwootController extends Controller
 
             // 🚀 OPTIMIZACIÓN: Cache key para mensajes (usa ID real)
             $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$realConversationId}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
-            $cacheTTL = 120; // ✅ 2 minutos (los mensajes nuevos llegan por WebSocket)
+            $cacheTTL = 60; // 1 minuto (los mensajes nuevos llegan por WebSocket)
+            
+            // Intentar obtener desde cache
+            $cached = Cache::get($cacheKey);
+            if ($cached) {
+                Log::info("⚡ Mensajes desde cache", [
+                    'conversation_id' => $realConversationId,
+                    'count' => count($cached['payload']['payload'] ?? [])
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'payload' => $cached['payload'],
+                    'meta' => $cached['meta'],
+                    'from_cache' => true
+                ]);
+            }
             
             // URL para obtener mensajes (usa ID REAL, no display_id)
             $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $realConversationId . '/messages';
             
-            // 🚀 LOOP: Obtener todos los mensajes iterando
+            // 🚀 PAGINACIÓN EFICIENTE: Solo obtener los mensajes necesarios (máximo 50)
+            $messagesPerBatch = 50; // Cambiado de 20 a 50 para ser más eficiente
             $allMessages = [];
-            $beforeId = null;
-            $iteration = 0;
-            $maxIterations = 50; // Máximo 1000 mensajes (50 * 20)
-            $seenIds = []; // Para evitar loops infinitos
-            $apiError = false;
+            $hasMore = false;
             
-            Log::info("🔄 Iniciando fetch de TODOS los mensajes para conversación {$realConversationId} (requested: {$id})");
+            Log::info("📥 Obteniendo mensajes para conversación {$realConversationId}", [
+                'limit' => $limit,
+                'before' => $before
+            ]);
             
-            while ($iteration < $maxIterations) {
-                $queryParams = $beforeId ? ['before' => $beforeId] : [];
-                
-                $response = Http::timeout(10)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($chatwootUrl, $queryParams);
-                
-                if (!$response->successful()) {
-                    Log::error("❌ Error en iteración {$iteration}: " . $response->status() . " - " . $response->body());
-                    $apiError = true;
-                    break;
-                }
-                
-                $batch = $response->json()['payload'] ?? [];
-                $batchCount = count($batch);
-                
-                if (empty($batch)) {
-                    Log::info("📭 No hay más mensajes en iteración {$iteration}");
-                    break;
-                }
-                
-                // IDs del batch
-                $batchIds = array_column($batch, 'id');
-                $minId = min($batchIds);
-                $maxId = max($batchIds);
-                
-                // 🔒 Verificar si estamos en un loop infinito (Chatwoot devuelve los mismos mensajes)
-                $batchKey = implode(',', $batchIds);
-                if (isset($seenIds[$batchKey])) {
-                    Log::warning("⚠️ Detectado loop infinito - Chatwoot devuelve mismos mensajes. Terminando.");
-                    break;
-                }
-                $seenIds[$batchKey] = true;
-                
-                // Agregar mensajes (evitando duplicados por ID)
-                $existingIds = array_column($allMessages, 'id');
-                $newCount = 0;
-                foreach ($batch as $msg) {
-                    if (!in_array($msg['id'], $existingIds)) {
-                        $allMessages[] = $msg;
-                        $newCount++;
-                    }
-                }
-                
-                Log::info("📦 Iteración {$iteration}: {$newCount} nuevos mensajes. Total: " . count($allMessages));
-                
-                // Si no se agregaron mensajes nuevos, terminamos
-                if ($newCount === 0) {
-                    Log::info("📭 No hay mensajes nuevos, terminando loop");
-                    break;
-                }
-                
-                // Preparar siguiente iteración con el ID más bajo
-                $beforeId = $minId;
-                $iteration++;
-                
-                // Si recibimos menos de 20, no hay más
-                if ($batchCount < 20) {
-                    Log::info("📭 Batch incompleto ({$batchCount} < 20), fin de paginación");
-                    break;
-                }
+            // 🚀 UNA SOLA LLAMADA: Obtener solo los mensajes necesarios
+            $queryParams = ['before' => $before]; // Chatwoot usa 'before' para paginación
+            if (!$before) {
+                $queryParams = []; // Primera carga - sin before
             }
             
-            // 🔄 FALLBACK: Si la API falló, obtener mensajes directamente de la DB
-            if ($apiError && empty($allMessages)) {
-                Log::info("🔄 FALLBACK: Obteniendo mensajes desde DB de Chatwoot");
+            $response = Http::timeout(5)->withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->get($chatwootUrl, $queryParams);
+            
+            if (!$response->successful()) {
+                Log::error("❌ Error obteniendo mensajes: " . $response->status() . " - " . $response->body());
                 
-                $messagesFromDb = $chatwootDb->table('messages')
+                // FALLBACK: Obtener desde DB directamente
+                $query = $chatwootDb->table('messages')
                     ->where('conversation_id', $realConversationId)
-                    ->orderBy('created_at', 'asc')
-                    ->limit(100)
-                    ->get();
+                    ->orderBy('id', 'desc')
+                    ->limit($messagesPerBatch + 1); // +1 para saber si hay más
+                
+                if ($before) {
+                    $query->where('id', '<', $before);
+                }
+                
+                $messagesFromDb = $query->get();
+                
+                // Si obtuvimos más de $messagesPerBatch, hay más mensajes
+                $hasMore = count($messagesFromDb) > $messagesPerBatch;
+                if ($hasMore) {
+                    $messagesFromDb = $messagesFromDb->take($messagesPerBatch);
+                }
                 
                 // Obtener info del contacto
                 $contact = $chatwootDb->table('contacts')
                     ->where('id', $conversationFromDb->contact_id)
-                    ->first();
-                
-                // Obtener info del usuario (sender para mensajes salientes)
-                $chatwootUser = $chatwootDb->table('users')
-                    ->where('id', $this->userId)
                     ->first();
                 
                 foreach ($messagesFromDb as $msg) {
@@ -669,12 +637,12 @@ class ChatwootController extends Controller
                             'id' => $contact->id,
                             'name' => $contact->name ?? 'Contacto',
                             'type' => 'contact',
-                            'phone_number' => $contact->phone_number
+                            'phone_number' => $contact->phone_number ?? null
                         ];
-                    } elseif ($msg->sender_type === 'User' && $chatwootUser) {
+                    } else {
                         $sender = [
-                            'id' => $chatwootUser->id,
-                            'name' => $chatwootUser->name ?? 'Agente',
+                            'id' => 0,
+                            'name' => 'Agente',
                             'type' => 'user'
                         ];
                     }
@@ -685,14 +653,26 @@ class ChatwootController extends Controller
                         'message_type' => $msg->message_type,
                         'created_at' => strtotime($msg->created_at),
                         'sender' => $sender,
+                        'attachments' => [],
                         'from_db_fallback' => true
                     ];
                 }
                 
-                Log::info("✅ FALLBACK exitoso: " . count($allMessages) . " mensajes obtenidos de DB");
+                Log::info("✅ FALLBACK DB: " . count($allMessages) . " mensajes, hasMore: " . ($hasMore ? 'true' : 'false'));
+            } else {
+                // Respuesta exitosa de la API
+                $batch = $response->json()['payload'] ?? [];
+                $batchCount = count($batch);
+                
+                // 🔍 Determinar si hay más mensajes
+                // Chatwoot devuelve máximo 20 mensajes por llamada
+                // Si devuelve 20, probablemente hay más
+                $hasMore = $batchCount >= 20;
+                
+                $allMessages = $batch;
+                
+                Log::info("📦 API respondió con {$batchCount} mensajes, hasMore: " . ($hasMore ? 'true' : 'false'));
             }
-            
-            Log::info("🏁 Total mensajes obtenidos: " . count($allMessages) . " en {$iteration} iteraciones");
             
             // Ordenar por ID ascendente (más antiguos primero)
             usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
@@ -722,16 +702,22 @@ class ChatwootController extends Controller
             $meta = [
                 'total' => count($filteredMessages),
                 'returned' => count($filteredMessages),
-                'has_more' => false, // Ya devolvemos TODOS
+                'has_more' => $hasMore, // 🚀 Ahora es dinámico - permite cargar más
                 'oldest_id' => $oldestMessageId,
-                'newest_id' => $newestMessageId
+                'newest_id' => $newestMessageId,
+                '_debug' => [
+                    'before_param' => $before,
+                    'raw_count' => count($allMessages)
+                ]
             ];
             
-            // Cache TODOS los mensajes
-            \Illuminate\Support\Facades\Cache::put($cacheKey, [
-                'payload' => $messagesData,
-                'meta' => $meta
-            ], $cacheTTL);
+            // Cache los mensajes (solo si no es paginación - la primera carga)
+            if (!$before) {
+                Cache::put($cacheKey, [
+                    'payload' => $messagesData,
+                    'meta' => $meta
+                ], $cacheTTL);
+            }
                 
             return response()->json([
                 'success' => true,
@@ -1332,24 +1318,27 @@ class ChatwootController extends Controller
         }
     }
 
+    /**
+     * Obtener etiquetas de la cuenta
+     * OPTIMIZADO: Cache de 60 segundos
+     */
     public function getLabels()
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/labels');
+            // CACHE: 60 segundos por cuenta
+            $cacheKey = "chatwoot_labels_{$this->accountId}";
+            
+            $labels = Cache::remember($cacheKey, 60, function () {
+                $response = Http::withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                ])->timeout(5)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/labels');
 
-            if ($response->successful()) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $response->json()
-                ]);
-            }
+                return $response->successful() ? $response->json() : [];
+            });
 
-            // Si falla, devolver array vacío para no romper el frontend
             return response()->json([
                 'success' => true,
-                'data' => []
+                'data' => $labels
             ]);
 
         } catch (\Exception $e) {
@@ -1361,6 +1350,10 @@ class ChatwootController extends Controller
         }
     }
 
+    /**
+     * Obtener agentes de la cuenta
+     * OPTIMIZADO: Cache de 60 segundos
+     */
     public function getAgents()
     {
         try {
@@ -1381,20 +1374,20 @@ class ChatwootController extends Controller
                 ]);
             }
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/agents');
+            // CACHE: 60 segundos por cuenta
+            $cacheKey = "chatwoot_agents_{$this->accountId}";
+            
+            $agents = Cache::remember($cacheKey, 60, function () {
+                $response = Http::withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                ])->timeout(10)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/agents');
 
-            if ($response->successful()) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $response->json()
-                ]);
-            }
+                return $response->successful() ? $response->json() : [];
+            });
 
             return response()->json([
                 'success' => true,
-                'data' => []
+                'data' => $agents
             ]);
 
         } catch (\Exception $e) {
@@ -1619,6 +1612,7 @@ class ChatwootController extends Controller
 
     /**
      * Obtener todos los equipos de la cuenta
+     * OPTIMIZADO: Cache de 60 segundos para evitar llamadas repetidas
      */
     public function getTeams()
     {
@@ -1640,33 +1634,48 @@ class ChatwootController extends Controller
                 ]);
             }
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
+            // CACHE: 60 segundos por cuenta
+            $cacheKey = "chatwoot_teams_{$this->accountId}";
+            
+            $teamsWithMembers = Cache::remember($cacheKey, 60, function () {
+                $response = Http::withHeaders([
+                    'api_access_token' => $this->chatwootToken,
+                ])->timeout(5)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
 
-            if ($response->successful()) {
+                if (!$response->successful()) {
+                    return [];
+                }
+                
                 $teams = $response->json();
                 
-                // Para cada equipo, obtener sus miembros
+                // OPTIMIZACIÓN: Obtener miembros de todos los equipos en paralelo usando Http::pool
+                if (empty($teams)) {
+                    return [];
+                }
+                
+                $responses = Http::pool(fn ($pool) => 
+                    collect($teams)->map(fn ($team) => 
+                        $pool->as("team_{$team['id']}")
+                            ->withHeaders(['api_access_token' => $this->chatwootToken])
+                            ->timeout(5)
+                            ->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $team['id'] . '/team_members')
+                    )->all()
+                );
+                
+                // Combinar equipos con sus miembros
                 $teamsWithMembers = [];
                 foreach ($teams as $team) {
-                    $membersResponse = Http::withHeaders([
-                        'api_access_token' => $this->chatwootToken,
-                    ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $team['id'] . '/team_members');
-                    
-                    $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
+                    $memberResponse = $responses["team_{$team['id']}"] ?? null;
+                    $team['members'] = ($memberResponse && $memberResponse->successful()) ? $memberResponse->json() : [];
                     $teamsWithMembers[] = $team;
                 }
                 
-                return response()->json([
-                    'success' => true,
-                    'data' => $teamsWithMembers
-                ]);
-            }
-
+                return $teamsWithMembers;
+            });
+            
             return response()->json([
                 'success' => true,
-                'data' => []
+                'data' => $teamsWithMembers
             ]);
 
         } catch (\Exception $e) {
@@ -1676,6 +1685,14 @@ class ChatwootController extends Controller
                 'data' => []
             ]);
         }
+    }
+    
+    /**
+     * Invalidar cache de teams (llamar después de crear/actualizar/eliminar)
+     */
+    private function invalidateTeamsCache()
+    {
+        Cache::forget("chatwoot_teams_{$this->accountId}");
     }
 
     /**
@@ -1745,6 +1762,9 @@ class ChatwootController extends Controller
                     'team_name' => $validated['name']
                 ]);
                 
+                // Invalidar cache de teams
+                $this->invalidateTeamsCache();
+                
                 return response()->json([
                     'success' => true,
                     'data' => $response->json(),
@@ -1789,6 +1809,9 @@ class ChatwootController extends Controller
                     'team_id' => $teamId
                 ]);
                 
+                // Invalidar cache de teams
+                $this->invalidateTeamsCache();
+                
                 return response()->json([
                     'success' => true,
                     'data' => $response->json(),
@@ -1825,6 +1848,9 @@ class ChatwootController extends Controller
                     'user_id' => $this->userId,
                     'team_id' => $teamId
                 ]);
+                
+                // Invalidar cache de teams
+                $this->invalidateTeamsCache();
                 
                 return response()->json([
                     'success' => true,

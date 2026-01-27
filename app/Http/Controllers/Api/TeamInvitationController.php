@@ -934,7 +934,7 @@ class TeamInvitationController extends Controller
             
             // Provisionar Chatwoot
             $chatwootService = app(\App\Services\ChatwootProvisioningService::class);
-            $result = $chatwootService->provisionCompany($company, $owner);
+            $result = $chatwootService->provisionCompanyAccount($company, $owner);
             
             if ($result['success'] ?? false) {
                 // Refrescar datos

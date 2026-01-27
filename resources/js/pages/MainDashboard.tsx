@@ -116,6 +116,8 @@ interface Props {
   stats?: Stats;
   onboardingData?: any;
   companySlug: string;
+  prefetchedTeams?: any[];
+  prefetchedAgents?: any[];
 }
 
 // ====== COMPONENTE: MENo� DESPLEGABLE DE USUARIO ======
@@ -431,7 +433,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
   );
 }
 
-export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug }: Props) {
+export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents }: Props) {
   
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
@@ -442,11 +444,25 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // ====== INBOX ID ======
   const inboxId = chatwoot?.inbox_id || user.chatwoot_inbox_id || null;
   
+  // 🚀 PREFETCH: Inicializar cache con datos del servidor
+  useEffect(() => {
+    if (prefetchedTeams && prefetchedTeams.length > 0) {
+      // Inyectar datos prefetch al cache global de teams
+      (window as any).__prefetchedTeams = prefetchedTeams;
+      console.log('✅ Teams prefetch cargados:', prefetchedTeams.length);
+    }
+    if (prefetchedAgents && prefetchedAgents.length > 0) {
+      // Inyectar datos prefetch al cache global de agents
+      (window as any).__prefetchedAgents = prefetchedAgents;
+      console.log('✅ Agents prefetch cargados:', prefetchedAgents.length);
+    }
+  }, [prefetchedTeams, prefetchedAgents]);
+  
   useEffect(() => {
     if (inboxId) {
       console.log('✅ Inbox ID disponible:', inboxId);
     } else {
-      console.warn('!��� No se encontro� inbox_id. El WebSocket de conversaciones no estaro� disponible.');
+      console.warn('!⚠️ No se encontró inbox_id. El WebSocket de conversaciones no estará disponible.');
     }
   }, [inboxId]);
   
@@ -684,10 +700,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const { agents } = useAgents();
   const { teams, fetchTeams } = useTeams();
   
-  // Refrescar teams cuando se monta el componente
-  useEffect(() => {
-    fetchTeams();
-  }, []);
+  // NOTA: useTeams ya tiene un useEffect interno que carga los teams al montar
+  // No es necesario llamar fetchTeams() manualmente aquí
   
   // Escuchar eventos de cambios en teams (crear/eliminar desde TeamsManagement)
   useEffect(() => {
@@ -700,13 +714,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       window.removeEventListener('teams-changed', handleTeamsChanged);
     };
   }, [fetchTeams]);
-  
-  // También refrescar cuando se cambia a la sección de equipos
-  useEffect(() => {
-    if (activeSection === 'people') {
-      fetchTeams();
-    }
-  }, [activeSection]);
 
   // Función para contar Integraciones realmente conectadas
   const getConnectedIntegrationsCount = () => {

@@ -1763,10 +1763,14 @@ Route::prefix('evolution-whatsapp')->group(function () {
     });
 });
 
-// Webhook para Evolution API ? Chatwoot (formato legacy)
+// Webhook para Evolution API → Chatwoot (formato legacy)
 Route::post('/chatwoot/webhook/{instance}', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
 
 Route::post('/chatwoot/webhook', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
+
+// ============= EVOLUTION WEBHOOK ALIAS (para compatibilidad) =============
+// Evolution API está enviando webhooks a /api/evolution/webhook en lugar de /api/evolution-whatsapp/webhook
+Route::post('/evolution/webhook', [\App\Http\Controllers\Api\EvolutionApiController::class, 'webhook']);
 
 use App\Http\Controllers\ChatwootWebhookController;
 
