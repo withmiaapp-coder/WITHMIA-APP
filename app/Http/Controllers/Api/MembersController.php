@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class MembersController extends Controller
 {
@@ -174,18 +177,54 @@ class MembersController extends Controller
                 ], 400);
             }
             
+            $memberEmail = $member->email;
+            $memberId = $member->id;
+            
             // Si tiene chatwoot_agent_id, eliminar de Chatwoot
             if ($member->chatwoot_agent_id) {
                 $this->deleteChatwootAgent($member);
             }
             
-            $memberEmail = $member->email;
-            $memberId = $member->id;
+            // ========================================
+            // LIMPIEZA COMPLETA DE DATOS RELACIONADOS
+            // ========================================
             
-            // Eliminar usuario
-            $member->delete();
+            // 1. Eliminar sesiones del usuario
+            DB::table('sessions')->where('user_id', $memberId)->delete();
             
-            Log::info('Member deleted', [
+            // 2. Eliminar invitaciones donde este usuario fue invitado (por email)
+            \App\Models\TeamInvitation::where('email', $memberEmail)->delete();
+            
+            // 3. Eliminar invitaciones de agente relacionadas
+            if (Schema::hasTable('agent_invitations')) {
+                DB::table('agent_invitations')->where('email', $memberEmail)->delete();
+            }
+            
+            // 4. Desasignar pipeline items (no eliminar, solo desasignar)
+            if (Schema::hasTable('pipeline_items')) {
+                DB::table('pipeline_items')->where('assigned_to', $memberId)->update(['assigned_to' => null]);
+            }
+            
+            // 5. Eliminar tokens de acceso personal si existen
+            if (Schema::hasTable('personal_access_tokens')) {
+                DB::table('personal_access_tokens')->where('tokenable_id', $memberId)
+                    ->where('tokenable_type', 'App\\Models\\User')
+                    ->delete();
+            }
+            
+            // 6. Eliminar password reset tokens
+            if (Schema::hasTable('password_reset_tokens')) {
+                DB::table('password_reset_tokens')->where('email', $memberEmail)->delete();
+            }
+            
+            // 7. Eliminar remember tokens / cache relacionado
+            Cache::forget("user_{$memberId}_permissions");
+            Cache::forget("user_{$memberId}_company");
+            
+            // Finalmente, eliminar el usuario
+            $member->forceDelete(); // Usar forceDelete para asegurar eliminación permanente
+            
+            Log::info('Member completely deleted with all related data', [
                 'member_id' => $memberId,
                 'member_email' => $memberEmail,
                 'deleted_by' => $user->id
@@ -193,14 +232,16 @@ class MembersController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Miembro eliminado correctamente'
+                'message' => 'Miembro eliminado completamente del sistema'
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Error deleting member: ' . $e->getMessage());
+            Log::error('Error deleting member: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar miembro'
+                'message' => 'Error al eliminar miembro: ' . $e->getMessage()
             ], 500);
         }
     }
