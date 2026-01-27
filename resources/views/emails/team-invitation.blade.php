@@ -17,7 +17,7 @@
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                 <tr>
                                     <td align="center">
-                                        <img src="{{ config('app.url') }}/logos/logo-withmia-white.png" alt="WITHMIA" style="height: 50px; margin-bottom: 20px;" onerror="this.outerHTML='<span style=color:#fff;font-size:24px;font-weight:bold>WITHMIA</span>'">
+                                        <img src="{{ config('app.url') }}/logo-withmia.webp" alt="WITHMIA" style="height: 50px; margin-bottom: 20px; border-radius: 8px;" onerror="this.outerHTML='<span style=color:#fff;font-size:24px;font-weight:bold>WITHMIA</span>'">
                                         <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">
                                             ¡Estás invitado!
                                         </h1>
