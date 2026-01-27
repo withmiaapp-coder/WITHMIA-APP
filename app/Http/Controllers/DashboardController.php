@@ -21,8 +21,18 @@ class DashboardController extends Controller
             return redirect("/dashboard/{$companySlug}");
         }
 
-        // Buscar la empresa del usuario actual o crear datos basicos
-        $company = Company::where('user_id', $user->id)->first();
+        // Buscar la empresa: primero por company_slug del usuario, luego por user_id
+        $company = null;
+        
+        // Prioridad 1: Buscar por company_slug del usuario (para usuarios invitados)
+        if ($user->company_slug) {
+            $company = Company::where('slug', $user->company_slug)->first();
+        }
+        
+        // Prioridad 2: Buscar por user_id (para el dueño de la empresa)
+        if (!$company) {
+            $company = Company::where('user_id', $user->id)->first();
+        }
 
         if (!$company) {
             // Si no existe Company, usar datos del User

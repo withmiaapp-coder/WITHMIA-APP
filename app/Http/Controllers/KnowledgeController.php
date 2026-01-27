@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Services\QdrantService;
 use App\Helpers\Utf8Helper;
+use App\Models\Company;
 
 class KnowledgeController extends Controller
 {
@@ -67,14 +68,27 @@ class KnowledgeController extends Controller
             $user = Auth::user();
             Log::info('getOnboardingData - User ID: ' . $user->id . ', Company Slug: ' . $user->company_slug);
             
+            // Buscar empresa: primero por relación, luego por slug directo
             $company = $user->company;
+            
+            if (!$company && $user->company_slug) {
+                $company = Company::where('slug', $user->company_slug)->first();
+            }
             
             if (!$company) {
                 Log::error('getOnboardingData - No company found for user ' . $user->id);
                 return response()->json([
-                    'success' => false,
-                    'error' => 'No se encontró información de la empresa'
-                ], 404);
+                    'success' => true,
+                    'data' => [
+                        'company_name' => 'Mi Empresa',
+                        'company_description' => '',
+                        'has_website' => false,
+                        'website' => '',
+                        'client_type' => null,
+                        'logo_url' => null,
+                        'assistant_name' => 'WITHMIA'
+                    ]
+                ]);
             }
 
             $responseData = [
