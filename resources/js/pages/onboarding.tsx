@@ -38,8 +38,18 @@ export default function Onboarding({
   company,
 }: OnboardingProps) {
   const [step, setStep] = useState(() => {
+    // Si el servidor indica paso 1 y no hay company, es usuario nuevo - limpiar localStorage
+    if (currentStep === 1 && !company) {
+      localStorage.removeItem("withmia_onboarding_step");
+      return 1;
+    }
+    // Si hay un paso guardado en localStorage y el servidor indica un paso mayor a 1
     const savedStep = localStorage.getItem("withmia_onboarding_step");
-    return savedStep ? parseInt(savedStep) : currentStep || 1;
+    if (savedStep && currentStep > 1) {
+      return parseInt(savedStep);
+    }
+    // Usar el paso del servidor
+    return currentStep || 1;
   });
 
   // Save step to localStorage whenever step changes
