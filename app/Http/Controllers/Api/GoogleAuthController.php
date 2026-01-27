@@ -269,10 +269,12 @@ class GoogleAuthController extends Controller
             $company = $invitation->company;
             
             if (!$company->chatwoot_account_id || !$company->chatwoot_api_key) {
+                error_log('Cannot create Chatwoot agent: missing chatwoot credentials for company ' . $company->id);
                 return null;
             }
 
             $chatwootUrl = config('chatwoot.base_url');
+            error_log("Creating Chatwoot agent for user {$user->email} in account {$company->chatwoot_account_id}");
             
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'api_access_token' => $company->chatwoot_api_key,
@@ -284,23 +286,29 @@ class GoogleAuthController extends Controller
                 'auto_offline' => true,
             ]);
 
+            error_log("Chatwoot agent creation response: " . $response->status() . " - " . $response->body());
+
             if ($response->successful()) {
                 $agentData = $response->json();
                 $user->update([
-                    'chatwoot_user_id' => $agentData['id'] ?? null,
+                    'chatwoot_agent_id' => $agentData['id'] ?? null,
                 ]);
+                error_log("Chatwoot agent created successfully with ID: " . ($agentData['id'] ?? 'unknown'));
                 
                 // Add to team if specified
                 if ($invitation->team_id && isset($agentData['id'])) {
-                    \Illuminate\Support\Facades\Http::withHeaders([
+                    $teamResponse = \Illuminate\Support\Facades\Http::withHeaders([
                         'api_access_token' => $company->chatwoot_api_key,
                         'Content-Type' => 'application/json',
                     ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams/{$invitation->team_id}/team_members", [
                         'user_ids' => [$agentData['id']]
                     ]);
+                    error_log("Added agent to team {$invitation->team_id}: " . $teamResponse->status());
                 }
                 
                 return $agentData;
+            } else {
+                error_log("Failed to create Chatwoot agent: " . $response->status() . " - " . $response->body());
             }
         } catch (\Exception $e) {
             error_log('Failed to create Chatwoot agent: ' . $e->getMessage());

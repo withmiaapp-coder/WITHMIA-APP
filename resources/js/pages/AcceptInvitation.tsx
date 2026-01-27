@@ -58,8 +58,7 @@ const backgroundStyles = `
 
   .invitation-container {
     position: relative;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
     border-radius: 30px;
@@ -187,7 +186,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
       window.handleInvitationCredentialResponse = handleCredentialResponse;
 
       window.google.accounts.id.initialize({
-        client_id: '115805834215-jf49c72lhuhuvb09sbo58qo0stq55dft.apps.googleusercontent.com',
+        client_id: '870525180915-5reas32antlqnj9ie3gadpr7n28prk0e.apps.googleusercontent.com',
         callback: handleCredentialResponse,
         auto_select: false,
         context: 'signin',
@@ -247,7 +246,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
         <style>{backgroundStyles}</style>
         <div className="min-h-screen invitation-background flex items-center justify-center p-4">
           <div className="invitation-container p-8 text-center">
-            <img src="/logo-withmia.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
+            <img src="/logo-mia-original.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
             <Loader2 className="w-10 h-10 text-amber-500 animate-spin mx-auto mb-4" />
             <p className="text-gray-700 font-medium">Validando invitación...</p>
           </div>
@@ -264,7 +263,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
         <div className="min-h-screen invitation-background flex items-center justify-center p-4">
           <Head title="Invitación Inválida - WITHMIA" />
           <div className="invitation-container p-8 max-w-md w-full text-center">
-            <img src="/logo-withmia.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
+            <img src="/logo-mia-original.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="w-8 h-8 text-red-600" />
             </div>
@@ -290,7 +289,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
         <div className="min-h-screen invitation-background flex items-center justify-center p-4">
           <Head title="¡Cuenta Creada! - WITHMIA" />
           <div className="invitation-container p-8 max-w-md w-full text-center">
-            <img src="/logo-withmia.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
+            <img src="/logo-mia-original.webp" alt="WITHMIA" className="w-24 h-24 mx-auto mb-4" />
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
@@ -314,7 +313,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
         <div className="invitation-container max-w-md w-full">
           {/* Header con logo */}
           <div className="p-6 text-center border-b border-gray-100">
-            <img src="/logo-withmia.webp" alt="WITHMIA" className="w-20 h-20 mx-auto mb-3" />
+            <img src="/logo-mia-original.webp" alt="WITHMIA" className="w-20 h-20 mx-auto mb-3" />
             <div className="flex items-center justify-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
               <h1 className="text-2xl font-bold text-gray-900">¡Te han invitado!</h1>
@@ -361,18 +360,17 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
             </div>
 
             {/* Google Sign-In Button */}
-            <div className="flex justify-center">
-              {loading ? (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Procesando...</span>
+            <div className="flex flex-col items-center gap-3">
+              <div 
+                id="google-signin-button"
+                className="flex justify-center"
+                style={{ minHeight: '44px', opacity: loading && !validating ? 0.5 : 1, pointerEvents: loading && !validating ? 'none' : 'auto' }}
+              />
+              {loading && !validating && (
+                <div className="flex items-center gap-2 text-amber-600">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Procesando tu cuenta...</span>
                 </div>
-              ) : (
-                <div 
-                  id="google-signin-button"
-                  className="flex justify-center"
-                  style={{ minHeight: '44px' }}
-                />
               )}
             </div>
 

@@ -87,9 +87,8 @@ RUN composer dump-autoload --optimize
 # Build frontend assets
 RUN npm run build
 
-# Create storage link and cache views
+# Create storage link (no view:cache - views are compiled at runtime)
 RUN php artisan storage:link || true
-RUN php artisan view:cache || true
 
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache

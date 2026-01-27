@@ -1701,6 +1701,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::post('/invitations', [\App\Http\Controllers\Api\TeamInvitationController::class, 'store']);
     Route::post('/invitations/{id}/resend', [\App\Http\Controllers\Api\TeamInvitationController::class, 'resend']);
     Route::delete('/invitations/{id}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'cancel']);
+    Route::post('/invitations/sync-chatwoot', [\App\Http\Controllers\Api\TeamInvitationController::class, 'syncUsersWithChatwoot']);
 });
 
 // ============================================================================
@@ -1710,6 +1711,12 @@ Route::prefix('invitation')->group(function () {
     Route::get('/validate/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'validateToken']);
     Route::post('/accept/{token}', [\App\Http\Controllers\Api\TeamInvitationController::class, 'accept']);
 });
+
+// Endpoint para sincronizar usuarios con Chatwoot (requiere clave secreta)
+Route::post('/admin/sync-chatwoot-agents', [\App\Http\Controllers\Api\TeamInvitationController::class, 'syncUsersWithChatwoot']);
+
+// Endpoint de diagnóstico para verificar estado de usuarios y agentes
+Route::get('/admin/diagnostic-agents', [\App\Http\Controllers\Api\TeamInvitationController::class, 'diagnosticAgents']);
 
 // Proxy para archivos/im�genes de Chatwoot - SIN autenticaci�n (las im�genes se cargan v�a <img src>)
 // Usa controlador separado sin dependencias de autenticaci�n

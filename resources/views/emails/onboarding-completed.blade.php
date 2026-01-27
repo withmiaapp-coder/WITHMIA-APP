@@ -14,7 +14,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://app.withmia.com/logo-withmia.webp" alt="WITHMIA Logo" class="logo" style="border-radius: 8px;">
+            <img src="https://app.withmia.com/logo-mia-original.png" alt="WITHMIA Logo" class="logo" style="border-radius: 8px;">
             <h1 style="color: #333;">¡Bienvenido a WITHMIA!</h1>
         </div>
         <div class="content">

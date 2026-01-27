@@ -303,7 +303,7 @@ class TeamInvitationController extends Controller
 
             if ($chatwootAgent) {
                 $user->update([
-                    'chatwoot_user_id' => $chatwootAgent['id'] ?? null,
+                    'chatwoot_agent_id' => $chatwootAgent['id'] ?? null,
                 ]);
 
                 // Si hay team_id, agregar al equipo en Chatwoot
@@ -399,6 +399,228 @@ class TeamInvitationController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error adding agent to team', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Sincronizar usuarios de la empresa con Chatwoot
+     * Crea agentes en Chatwoot para usuarios que no tienen chatwoot_agent_id
+     * Puede ser llamado con autenticación o con clave secreta
+     */
+    public function syncUsersWithChatwoot(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
+            
+            // Verificar autenticación: usuario admin o clave secreta
+            if (!$user && $secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+            
+            if ($user && $user->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+
+            // Si hay usuario, usar su empresa; si no, sincronizar todas las empresas
+            if ($user) {
+                $companies = [$user->company];
+            } else {
+                // Sincronizar todas las empresas con configuración de Chatwoot
+                $companies = \App\Models\Company::whereNotNull('chatwoot_account_id')
+                    ->whereNotNull('chatwoot_api_key')
+                    ->get();
+            }
+
+            $allSynced = [];
+            $allFailed = [];
+
+            foreach ($companies as $company) {
+                if (!$company || !$company->chatwoot_account_id || !$company->chatwoot_api_key) {
+                    continue;
+                }
+
+                // Obtener usuarios de la empresa sin chatwoot_agent_id
+                $usersToSync = User::where('company_slug', $company->slug)
+                    ->whereNull('chatwoot_agent_id')
+                    ->get();
+
+                $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+                
+                foreach ($usersToSync as $syncUser) {
+                    try {
+                        $response = Http::withHeaders([
+                            'api_access_token' => $company->chatwoot_api_key,
+                            'Content-Type' => 'application/json',
+                        ])->post("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents", [
+                            'name' => $syncUser->name ?: $syncUser->full_name ?: 'Usuario',
+                            'email' => $syncUser->email,
+                            'role' => $syncUser->role === 'admin' ? 'administrator' : 'agent',
+                            'auto_offline' => true,
+                        ]);
+
+                        if ($response->successful()) {
+                            $agentData = $response->json();
+                            $syncUser->update([
+                                'chatwoot_agent_id' => $agentData['id'] ?? null,
+                            ]);
+                            $allSynced[] = [
+                                'company' => $company->name,
+                                'user_id' => $syncUser->id,
+                                'email' => $syncUser->email,
+                                'chatwoot_agent_id' => $agentData['id'] ?? null,
+                            ];
+                        } else {
+                            $allFailed[] = [
+                                'company' => $company->name,
+                                'user_id' => $syncUser->id,
+                                'email' => $syncUser->email,
+                                'error' => $response->body(),
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        $allFailed[] = [
+                            'company' => $company->name,
+                            'user_id' => $syncUser->id,
+                            'email' => $syncUser->email,
+                            'error' => $e->getMessage(),
+                        ];
+                    }
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sincronización completada',
+                'synced' => $allSynced,
+                'failed' => $allFailed,
+                'total_synced' => count($allSynced),
+                'total_failed' => count($allFailed),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error syncing users with Chatwoot', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al sincronizar: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Endpoint de diagnóstico para verificar estado de usuarios y agentes de Chatwoot
+     */
+    public function diagnosticAgents(Request $request)
+    {
+        try {
+            $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
+            $user = auth()->user();
+            
+            // Verificar autenticación
+            if (!$user && $secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado'
+                ], 403);
+            }
+            
+            // Si hay usuario autenticado, usar su empresa
+            if ($user) {
+                $company = $user->company;
+            } else {
+                // Si es con clave secreta, obtener primera empresa con Chatwoot configurado
+                $company = \App\Models\Company::whereNotNull('chatwoot_account_id')
+                    ->whereNotNull('chatwoot_api_key')
+                    ->first();
+            }
+            
+            if (!$company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay empresa configurada con Chatwoot'
+                ]);
+            }
+            
+            // Obtener usuarios de la empresa en nuestra BD
+            $localUsers = User::where('company_slug', $company->slug)
+                ->select('id', 'name', 'email', 'role', 'chatwoot_agent_id', 'chatwoot_inbox_id', 'created_at')
+                ->get();
+            
+            // Obtener agentes de Chatwoot
+            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+            $chatwootAgents = [];
+            
+            try {
+                $response = Http::withHeaders([
+                    'api_access_token' => $company->chatwoot_api_key,
+                ])->get("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents");
+                
+                if ($response->successful()) {
+                    $chatwootAgents = $response->json();
+                }
+            } catch (\Exception $e) {
+                Log::error('Error fetching Chatwoot agents for diagnostic', ['error' => $e->getMessage()]);
+            }
+            
+            // Obtener equipos de Chatwoot
+            $chatwootTeams = [];
+            try {
+                $response = Http::withHeaders([
+                    'api_access_token' => $company->chatwoot_api_key,
+                ])->get("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams");
+                
+                if ($response->successful()) {
+                    $chatwootTeams = $response->json();
+                }
+            } catch (\Exception $e) {
+                Log::error('Error fetching Chatwoot teams for diagnostic', ['error' => $e->getMessage()]);
+            }
+            
+            // Obtener invitaciones pendientes
+            $pendingInvitations = TeamInvitation::where('company_id', $company->id)
+                ->where('status', 'pending')
+                ->select('id', 'email', 'name', 'role', 'status', 'created_at', 'expires_at')
+                ->get();
+            
+            // Obtener invitaciones aceptadas
+            $acceptedInvitations = TeamInvitation::where('company_id', $company->id)
+                ->where('status', 'accepted')
+                ->select('id', 'email', 'name', 'role', 'status', 'created_at')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'company' => [
+                    'id' => $company->id,
+                    'name' => $company->name,
+                    'slug' => $company->slug,
+                    'chatwoot_account_id' => $company->chatwoot_account_id,
+                    'has_api_key' => !empty($company->chatwoot_api_key),
+                ],
+                'local_users' => $localUsers,
+                'local_users_count' => $localUsers->count(),
+                'users_with_chatwoot_id' => $localUsers->whereNotNull('chatwoot_agent_id')->count(),
+                'users_without_chatwoot_id' => $localUsers->whereNull('chatwoot_agent_id')->count(),
+                'chatwoot_agents' => $chatwootAgents,
+                'chatwoot_agents_count' => count($chatwootAgents),
+                'chatwoot_teams' => $chatwootTeams,
+                'chatwoot_teams_count' => count($chatwootTeams),
+                'pending_invitations' => $pendingInvitations,
+                'accepted_invitations' => $acceptedInvitations,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error in diagnostic', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
