@@ -956,8 +956,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       gradient: 'from-orange-500 to-red-500',
       permission: 'sidebar.products'
     },
-    // Admin Panel - solo si es admin
-    ...(isAdmin ? [{
+    // Admin Panel - SOLO para super-admin (withmia.app@gmail.com)
+    ...(user?.email === 'withmia.app@gmail.com' ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,
@@ -965,12 +965,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       gradient: 'from-purple-600 to-indigo-600',
       isExternal: true,
       href: '/admin/dashboard',
-      permission: 'admin'
+      permission: 'superadmin'
     }] : [])
   ];
 
   // Filtrar items según permisos
   const sidebarItems = allSidebarItems.filter(item => 
+    item.permission === 'superadmin' ? user?.email === 'withmia.app@gmail.com' : 
     item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
   );
 
