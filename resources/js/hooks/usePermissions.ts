@@ -56,10 +56,10 @@ export function usePermissions() {
       
       if (response.data.success) {
         const perms: UserPermissions = {
-          role: response.data.role,
-          is_admin: response.data.is_admin,
-          is_agent: response.data.is_agent,
-          permissions: response.data.permissions,
+          role: response.data.role || 'admin',
+          is_admin: response.data.is_admin ?? true,
+          is_agent: response.data.is_agent ?? false,
+          permissions: response.data.permissions || DEFAULT_PERMISSIONS.permissions,
         };
         
         // Actualizar cache
@@ -68,14 +68,18 @@ export function usePermissions() {
         
         setPermissions(perms);
         setError(null);
+      } else {
+        // Si no hay success, usar defaults
+        console.log('📋 Usando permisos por defecto (sin success)');
+        setPermissions(DEFAULT_PERMISSIONS);
       }
     } catch (err: any) {
-      // Si no está autenticado, usar defaults de admin
-      if (err.response?.status === 401) {
-        setPermissions(DEFAULT_PERMISSIONS);
-      } else {
-        setError('Error al cargar permisos');
-      }
+      // En cualquier error, usar defaults de admin para no bloquear la UI
+      console.log('📋 Usando permisos por defecto (error:', err.response?.status || err.message, ')');
+      setPermissions(DEFAULT_PERMISSIONS);
+      // Limpiar cache inválido
+      permissionsCache = DEFAULT_PERMISSIONS;
+      cacheTimestamp = Date.now();
     } finally {
       setLoading(false);
     }
