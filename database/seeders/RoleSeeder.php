@@ -11,99 +11,68 @@ class RoleSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * 
+     * Solo 2 roles: admin (dueño/administrador) y agent (agentes invitados)
      */
     public function run(): void
     {
         // Clear cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
+        // Permisos simplificados para app de chat
         $permissions = [
-            // User Management
-            'view users',
-            'create users',
-            'edit users',
-            'delete users',
+            // Gestión de equipos
+            'manage teams',
+            'view teams',
             
-            // Company Management
-            'view companies',
-            'create companies',
-            'edit companies',
-            'delete companies',
+            // Gestión de agentes/miembros
+            'invite members',
+            'remove members',
+            'view members',
             
-            // Agent Management
-            'view agents',
-            'create agents',
-            'edit agents',
-            'delete agents',
+            // Configuración de empresa
+            'manage company',
+            'view company settings',
             
-            // System Administration
-            'manage system settings',
-            'view admin dashboard',
-            'manage roles',
-            'manage permissions',
+            // Conversaciones
+            'view all conversations',
+            'manage conversations',
             
-            // Sales Management
-            'view sales',
-            'create sales',
-            'edit sales',
-            'delete sales',
-            'manage leads',
-            
-            // Onboarding Process
-            'view onboarding',
-            'manage onboarding',
+            // Admin del sistema
+            'access admin panel',
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Create roles and assign permissions
+        // Solo 2 roles: admin y agent
         
-        // 1. ADMIN ROLE - Full access
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
-        
-        // 2. AGENT ROLE - AI Agent with specific permissions
-        $agentRole = Role::create(['name' => 'agent']);
-        $agentRole->givePermissionTo([
-            'view users',
-            'view companies',
-            'view agents',
-            'view onboarding',
+        // 1. ADMIN ROLE - Dueño de la cuenta, acceso total
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->syncPermissions([
+            'manage teams', 'view teams',
+            'invite members', 'remove members', 'view members',
+            'manage company', 'view company settings',
+            'view all conversations', 'manage conversations',
+            'access admin panel',
         ]);
         
-        // 3. ASSISTANT ROLE - Support and assistance
-        $assistantRole = Role::create(['name' => 'assistant']);
-        $assistantRole->givePermissionTo([
-            'view users',
-            'view companies',
-            'view agents',
-            'view onboarding',
-            'manage onboarding',
-            'create users',
-            'edit users',
-        ]);
-        
-        // 4. SELLER ROLE - Sales focused
-        $sellerRole = Role::create(['name' => 'seller']);
-        $sellerRole->givePermissionTo([
-            'view users',
-            'view companies',
-            'view sales',
-            'create sales',
-            'edit sales',
-            'manage leads',
-            'view onboarding',
-            'manage onboarding',
+        // 2. AGENT ROLE - Agente invitado, acceso limitado
+        $agentRole = Role::firstOrCreate(['name' => 'agent']);
+        $agentRole->syncPermissions([
+            'view teams',
+            'view members',
+            'view company settings',
+            'manage conversations',
         ]);
 
+        // Limpiar roles obsoletos si existen
+        Role::whereIn('name', ['assistant', 'seller'])->delete();
+
         echo "✅ Roles y permisos creados exitosamente:\n";
-        echo "   - admin (Administrador completo)\n";
-        echo "   - agent (Agente de IA)\n";
-        echo "   - assistant (Asistente)\n";
-        echo "   - seller (Vendedor)\n";
-        echo "\n📊 Total de permisos creados: " . count($permissions) . "\n";
+        echo "   - admin (Administrador/Dueño)\n";
+        echo "   - agent (Agente invitado)\n";
+        echo "\n📊 Total de permisos: " . count($permissions) . "\n";
     }
 }

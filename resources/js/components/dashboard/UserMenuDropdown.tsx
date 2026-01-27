@@ -3,14 +3,9 @@ import {
   Mail,
   Coffee,
   Settings,
-  Heart,
   ChevronRight,
-  BookOpen,
-  MessageCircle,
-  FileText,
-  MessageSquare,
-  Users
 } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 // ============================================================================
 // INTERFACES
@@ -21,6 +16,8 @@ export interface UserMenuDropdownProps {
     firstName: string;
     email: string;
     plan?: string;
+    logo_url?: string;
+    company?: string;
   };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
@@ -52,15 +49,14 @@ const UserMenuDropdown = React.memo<UserMenuDropdownProps>(({
   onNavigateToProfile
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { role, isAdmin } = usePermissions();
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setShowHelpSubmenu(false);
       }
     };
 
@@ -72,6 +68,13 @@ const UserMenuDropdown = React.memo<UserMenuDropdownProps>(({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Obtener label del rol
+  const getRoleLabel = () => {
+    if (isAdmin || role === 'admin') return 'Administrador';
+    if (role === 'agent') return 'Agente';
+    return 'Usuario';
+  };
 
   // Items del menú
   const menuItems: MenuItem[] = [
@@ -123,83 +126,81 @@ const UserMenuDropdown = React.memo<UserMenuDropdownProps>(({
   ];
 
   return (
-    <div className=" relative\ ref={dropdownRef}>
- {/* Dropdown Menu */}
- {isOpen && (
- <div 
- className=\absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-neutral-200 z-[100]\
- style={{
- minWidth: isCollapsed ? '320px' : 'auto',
- animation: 'slideUpMenu 0.2s ease-out'
- }}
- >
- <div className=\py-2\>
- {menuItems.map((item, index) => {
- if (item.type === 'divider') {
- return <div key={\divider-\\} className=\h-px bg-neutral-200 my-2 mx-3\ />;
- }
+    <div className="relative" ref={dropdownRef}>
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div 
+          className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-neutral-200 z-[100]"
+          style={{
+            minWidth: isCollapsed ? '320px' : 'auto',
+            animation: 'slideUpMenu 0.2s ease-out'
+          }}
+        >
+          <div className="py-2">
+            {menuItems.map((item, index) => {
+              if (item.type === 'divider') {
+                return <div key={`divider-${index}`} className="h-px bg-neutral-200 my-2 mx-3" />;
+              }
 
- const Icon = item.icon;
- const isDisabled = item.isDisabled || item.onClick === null;
+              const Icon = item.icon;
+              const isDisabled = item.isDisabled || item.onClick === null;
 
- return (
- <button
- key={index}
- onClick={item.onClick || undefined}
- disabled={isDisabled}
- className={\
- w-full px-4 py-3 flex items-center gap-3 transition-all duration-200 text-left
- \
- \
- \
- \
- \}
- >
- <Icon className=\w-5 h-5 flex-shrink-0\ />
- <span className=\flex-1\>{item.label}</span>
- </button>
- );
- })}
- </div>
- </div>
- )}
+              return (
+                <button
+                  key={index}
+                  onClick={item.onClick || undefined}
+                  disabled={isDisabled}
+                  className={`
+                    w-full px-4 py-3 flex items-center gap-3 transition-all duration-200 text-left
+                    ${item.className}
+                    ${isDisabled ? 'cursor-default' : 'cursor-pointer'}
+                  `}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
- {/* Trigger Button */}
- <button
- onClick={() => setIsOpen(!isOpen)}
- className={\
- w-full flex items-center gap-3 px-4 py-3 rounded-xl
- hover:bg-neutral-100 transition-all duration-200
- border border-transparent hover:border-neutral-200
- \
- \}
- >
- {/* Avatar */}
- <div className=\w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0\>
- {user.firstName?.[0]?.toUpperCase() || 'U'}
- </div>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          w-full flex items-center gap-3 px-4 py-3 rounded-xl
+          hover:bg-neutral-100 transition-all duration-200
+          border border-transparent hover:border-neutral-200
+          ${isCollapsed ? 'justify-center' : ''}
+        `}
+      >
+        {/* Avatar */}
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+          {user.firstName?.[0]?.toUpperCase() || 'U'}
+        </div>
 
- {/* User Info */}
- {!isCollapsed && (
- <div className=\flex-1 text-left overflow-hidden\>
- <p className=\text-sm font-semibold text-neutral-800 truncate\>
- {user.firstName || 'Usuario'}
- </p>
- <p className=\text-xs text-neutral-500 truncate\>
- {user.plan || 'Plan Free'}
- </p>
- </div>
- )}
+        {/* User Info */}
+        {!isCollapsed && (
+          <div className="flex-1 text-left overflow-hidden">
+            <p className="text-sm font-semibold text-neutral-800 truncate">
+              {user.firstName || 'Usuario'}
+            </p>
+            <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>
+              {getRoleLabel()}
+            </p>
+          </div>
+        )}
 
- {/* Chevron */}
- {!isCollapsed && (
- <ChevronRight 
- className={\w-5 h-5 text-neutral-400 transition-transform duration-200 \\}
- />
- )}
- </button>
- </div>
- );
+        {/* Chevron */}
+        {!isCollapsed && (
+          <ChevronRight 
+            className={`w-5 h-5 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+          />
+        )}
+      </button>
+    </div>
+  );
 });
 
 UserMenuDropdown.displayName = 'UserMenuDropdown';
