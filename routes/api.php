@@ -3824,10 +3824,10 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
             // Evolution API
             'evolution_instance_name' => $evolutionInstanceName,
             'evolution_server_url' => $evolutionApiUrl,
-            'evolution_api_key' => $evolutionApiKey,
-            // Chatwoot
-            'chatwoot_api_token' => $company->settings['chatwoot_api_token'] ?? null,
-            'chatwoot_account_id' => $company->settings['chatwoot_account_id'] ?? null
+            'evolution_api_key' => $evolutionApiKey ?? config('services.evolution.api_key'),
+            // Chatwoot - usar columnas directas, no settings
+            'chatwoot_api_token' => $company->chatwoot_api_key ?? $company->settings['chatwoot_api_token'] ?? config('chatwoot.api_key'),
+            'chatwoot_account_id' => $company->chatwoot_account_id ?? $company->settings['chatwoot_account_id'] ?? 1
         ]);
     } catch (\Exception $e) {
         \Log::error('Error getting company config by inbox: ' . $e->getMessage(), [
