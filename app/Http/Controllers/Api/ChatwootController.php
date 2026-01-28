@@ -776,7 +776,12 @@ class ChatwootController extends Controller
                 $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
                 \Illuminate\Support\Facades\Cache::forget($cacheKey);
                 
-                Log::info('Conversación marcada como leída (caché invalidado)', [
+                // ✅ TAMBIÉN invalidar el caché de la LISTA de conversaciones
+                $listCacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
+                \Illuminate\Support\Facades\Cache::forget($listCacheKey);
+                \Illuminate\Support\Facades\Cache::forget($listCacheKey . '_timestamp');
+                
+                Log::info('Conversación marcada como leída (cachés invalidados)', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id
                 ]);
