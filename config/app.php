@@ -1,5 +1,7 @@
 <?php
 
+// Deploy trigger: 2026-01-28 CSRF fix for bot-config
+
 return [
 
     /*
