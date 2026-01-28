@@ -4841,15 +4841,18 @@ Route::get('/fix-n8n-webhook', function () {
             env('CHATWOOT_DB_PASSWORD')
         );
         
+        // Las subscriptions son JSON array, no PostgreSQL array
+        $subscriptions = json_encode(['message_created', 'message_updated', 'conversation_created', 'conversation_updated']);
+        
         // Actualizar webhook de n8n con todas las subscripciones necesarias
         $stmt = $chatwootPdo->prepare("
             UPDATE webhooks 
-            SET subscriptions = :subscriptions, updated_at = NOW()
+            SET subscriptions = :subscriptions::jsonb, updated_at = NOW()
             WHERE url LIKE '%n8n%' AND account_id = 1
             RETURNING id, url, subscriptions
         ");
         $stmt->execute([
-            'subscriptions' => '{message_created,message_updated,conversation_created,conversation_updated}'
+            'subscriptions' => $subscriptions
         ]);
         $updated = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         
