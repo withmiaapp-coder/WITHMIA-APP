@@ -1,0 +1,540 @@
+﻿{
+    "name": "WITHMIA Bot - withmia",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "withmia",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [-480, 300],
+            "id": "webhook-withmia",
+            "name": "WITHMIA Webhook",
+            "webhookId": "withmia"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-event",
+                            "leftValue": "={{ $json.event || $json.body?.event || '' }}",
+                            "rightValue": "message_created",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "check-incoming",
+                            "leftValue": "={{ $json.message_type || $json.body?.message_type || '' }}",
+                            "rightValue": "incoming",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "check-not-private",
+                            "leftValue": "={{ $json.private === true || $json.body?.private === true }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "check-not-system-message",
+                            "leftValue": "={{ ($json.content || $json.body?.content || '').toLowerCase() }}",
+                            "rightValue": "connection",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notContains"
+                            }
+                        },
+                        {
+                            "id": "check-not-qrcode",
+                            "leftValue": "={{ ($json.content || $json.body?.content || '').toLowerCase() }}",
+                            "rightValue": "qrcode",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notContains"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [-280, 300],
+            "id": "filter-incoming",
+            "name": "Is Incoming Message?"
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{($json.inbox?.name || $json.body?.inbox?.name) ? 'https://app.withmia.com/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.inbox?.name || $json.body?.inbox?.name) : 'https://app.withmia.com/api/n8n/company-config/withmia'}}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [-80, 300],
+            "id": "get-company-config",
+            "name": "Get Company Config"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "instance-server-url",
+                            "name": "instance.server_url",
+                            "value": "={{ $json.evolution_server_url || '{{EVOLUTION_API_URL}}' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "instance-name",
+                            "name": "instance.name",
+                            "value": "={{ $json.evolution_instance_name || 'withmia' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "instance-apikey",
+                            "name": "instance.apikey",
+                            "value": "={{ $json.evolution_api_key || '{{EVOLUTION_API_KEY}}' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-chat-id",
+                            "name": "message.chat_id",
+                            "value": "={{ $('WITHMIA Webhook').item.json.sender?.phone_number || $('WITHMIA Webhook').item.json.conversation?.meta?.sender?.phone_number || $('WITHMIA Webhook').item.json.body?.sender?.phone_number || '' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-content",
+                            "name": "message.content",
+                            "value": "={{ $('WITHMIA Webhook').item.json.content || $('WITHMIA Webhook').item.json.body?.content || '' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "message-content-type",
+                            "name": "message.content_type",
+                            "value": "={{ $('WITHMIA Webhook').item.json.content_type || $('WITHMIA Webhook').item.json.body?.content_type || 'text' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "user-name",
+                            "name": "user.name",
+                            "value": "={{ $('WITHMIA Webhook').item.json.sender?.name || $('WITHMIA Webhook').item.json.body?.sender?.name || 'Usuario' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "conversation-id",
+                            "name": "conversation.id",
+                            "value": "={{ $('WITHMIA Webhook').item.json.conversation?.id || $('WITHMIA Webhook').item.json.body?.conversation?.id || '' }}",
+                            "type": "number"
+                        },
+                        {
+                            "id": "inbox-id",
+                            "name": "inbox.id",
+                            "value": "={{ $('WITHMIA Webhook').item.json.inbox?.id || $('WITHMIA Webhook').item.json.body?.inbox?.id || '' }}",
+                            "type": "number"
+                        },
+                        {
+                            "id": "inbox-name",
+                            "name": "inbox.name",
+                            "value": "={{ $('WITHMIA Webhook').item.json.inbox?.name || $('WITHMIA Webhook').item.json.body?.inbox?.name || '' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "config-assistant-name",
+                            "name": "config.assistant_name",
+                            "value": "={{ $json.assistant_name || 'MIA' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "config-company-name",
+                            "name": "config.company_name",
+                            "value": "={{ $json.company_name || '{{COMPANY_NAME}}' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "config-collection-name",
+                            "name": "config.collection_name",
+                            "value": "={{ $json.collection_name || 'company_withmia_knowledge' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "chatwoot-account-id",
+                            "name": "chatwoot.account_id",
+                            "value": "={{ $('WITHMIA Webhook').item.json.account?.id || $('WITHMIA Webhook').item.json.body?.account?.id || 1 }}",
+                            "type": "number"
+                        },
+                        {
+                            "id": "chatwoot-api-token",
+                            "name": "chatwoot.api_token",
+                            "value": "={{ $json.chatwoot_api_token || '{{CHATWOOT_API_TOKEN}}' }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [140, 300],
+            "id": "normalize-data",
+            "name": "Normalize Data"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "loose",
+                        "version": 2
+                    },
+                    "conditions": [
+                        {
+                            "id": "check-content",
+                            "leftValue": "={{ $json.message.content }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.2,
+            "position": [360, 300],
+            "id": "check-content",
+            "name": "Has Content?"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=Fecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNÃºmero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n{{ $('Normalize Data').item.json.message.content }}",
+                "options": {
+                    "systemMessage": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nINSTRUCCIONES:\n- Siempre respondes en base a QDRANT (tu base de conocimientos) y tus Herramientas\n- Si no tienes herramientas, solo respondes en base a la colecciÃ³n de QDRANT\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- MÃ¡ximo 2-3 oraciones por respuesta\n- Amigable y profesional\n- Si no sabes algo, ofrece conectar con un humano\n\nPROHIBICIONES:\n- NO te presentes dos veces en la conversaciÃ³n\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas"
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 2,
+            "position": [580, 300],
+            "id": "ai-agent",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "gpt-4o-mini",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4o-mini"
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1.2,
+            "position": [560, 520],
+            "id": "openai-chat-model",
+            "name": "OpenAI Chat Model",
+            "credentials": {
+                "openAiApi": {
+                    "id": "okqulnwOmmPYIcOr",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sessionIdType": "customKey",
+                "sessionKey": "=company_withmia_{{ $('Normalize Data').item.json.message.chat_id }}",
+                "contextWindowLength": 100
+            },
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
+            "position": [700, 520],
+            "id": "memory-buffer",
+            "name": "Window Memory"
+        },
+        {
+            "parameters": {
+                "mode": "retrieve-as-tool",
+                "toolDescription": "=Herramienta para buscar informaciÃ³n en la base de conocimientos de {{ $('Normalize Data').item.json.config.company_name }}. Usa esta herramienta para responder preguntas sobre productos, servicios, horarios, precios y cualquier informaciÃ³n de la empresa.",
+                "qdrantCollection": {
+                    "__rl": true,
+                    "value": "={{ $('Normalize Data').item.json.config.collection_name }}",
+                    "mode": "id"
+                },
+                "topK": 5,
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+            "typeVersion": 1.3,
+            "position": [840, 520],
+            "id": "qdrant-tool",
+            "name": "Buscar en Base de Conocimientos",
+            "credentials": {
+                "qdrantApi": {
+                    "id": "XNTIcgEaICXUYYBs",
+                    "name": "Qdrant"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "text-embedding-3-small",
+                    "mode": "list",
+                    "cachedResultName": "text-embedding-3-small"
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+            "typeVersion": 1.1,
+            "position": [840, 680],
+            "id": "openai-embeddings",
+            "name": "OpenAI Embeddings",
+            "credentials": {
+                "openAiApi": {
+                    "id": "okqulnwOmmPYIcOr",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract response and clean for WhatsApp\nconst input = $input.first().json;\nconst normalizeData = $('Normalize Data').item.json;\n\nlet responseText = input.output || 'Lo siento, no pude procesar tu mensaje. Â¿PodrÃ­as intentarlo de nuevo?';\n\n// Clean response for WhatsApp (remove markdown)\nresponseText = responseText\n  .replace(/\\*\\*/g, '')\n  .replace(/\\*/g, '')\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/`/g, '')\n  .replace(/\\.\\.\\.$/g, '')\n  .replace(/\\.\\.\\./g, '')\n  .trim();\n\nreturn {\n  json: {\n    response_text: responseText,\n    instance: normalizeData.instance,\n    message: normalizeData.message,\n    conversation: normalizeData.conversation,\n    chatwoot: normalizeData.chatwoot\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [800, 300],
+            "id": "process-response",
+            "name": "Process Response"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.instance.server_url }}/message/sendText/{{ $json.instance.name }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $json.instance.apikey }}"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.message.chat_id) }},\n  \"text\": {{ JSON.stringify($json.response_text) }}\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1020, 300],
+            "id": "send-response",
+            "name": "Send WhatsApp Response"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://app.withmia.com/api/n8n/notify-response",
+                "sendBody": true,
+                "specifyBody": "keypair",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "company_slug",
+                            "value": "withmia"
+                        },
+                        {
+                            "name": "conversation_id",
+                            "value": "={{ $json.conversation.id }}"
+                        },
+                        {
+                            "name": "inbox_id",
+                            "value": "={{ $json.inbox.id || 1 }}"
+                        },
+                        {
+                            "name": "account_id",
+                            "value": "={{ $json.chatwoot.account_id || 1 }}"
+                        },
+                        {
+                            "name": "message",
+                            "value": "={{ $json.response_text }}"
+                        },
+                        {
+                            "name": "phone",
+                            "value": "={{ $json.message.chat_id }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1020, 500],
+            "id": "notify-laravel",
+            "name": "Notify Laravel (Reverb)"
+        }
+    ],
+    "connections": {
+        "WITHMIA Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Is Incoming Message?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Incoming Message?": {
+            "main": [
+                [
+                    {
+                        "node": "Get Company Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Company Config": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize Data": {
+            "main": [
+                [
+                    {
+                        "node": "Has Content?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Content?": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Window Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar en Base de Conocimientos": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Embeddings": {
+            "ai_embedding": [
+                [
+                    {
+                        "node": "Buscar en Base de Conocimientos",
+                        "type": "ai_embedding",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Process Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Response": {
+            "main": [
+                [
+                    {
+                        "node": "Send WhatsApp Response",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Notify Laravel (Reverb)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "timezone": "America/Santiago",
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "tags": []
+}
+
+

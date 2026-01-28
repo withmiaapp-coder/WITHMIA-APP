@@ -536,13 +536,17 @@ class ChatwootController extends Controller
                 ], 404);
             }
             
-            // Usar el ID real de la conversación
-            $realConversationId = $conversationFromDb->id;
+            // IMPORTANTE: Chatwoot API usa display_id, la DB usa id
+            $dbConversationId = $conversationFromDb->id;  // Para queries a la DB de Chatwoot
+            $apiConversationId = $conversationFromDb->display_id ?? $conversationFromDb->id;  // Para API HTTP
+            
+            // Compatibilidad: usar apiConversationId donde antes se usaba realConversationId
+            $realConversationId = $apiConversationId;
             
             Log::info('Conversación encontrada en DB', [
                 'requested_id' => $id,
-                'real_id' => $realConversationId,
-                'display_id' => $conversationFromDb->display_id,
+                'db_id' => $dbConversationId,
+                'api_id (display_id)' => $apiConversationId,
                 'inbox_id' => $conversationFromDb->inbox_id
             ]);
 
@@ -580,8 +584,8 @@ class ChatwootController extends Controller
                 ]);
             }
             
-            // URL para obtener mensajes (usa ID REAL, no display_id)
-            $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $realConversationId . '/messages';
+            // URL para obtener mensajes (usa display_id para API de Chatwoot)
+            $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $apiConversationId . '/messages';
             
             // 🚀 PAGINACIÓN EFICIENTE: Solo obtener los mensajes necesarios (máximo 50)
             $messagesPerBatch = 50; // Cambiado de 20 a 50 para ser más eficiente
@@ -607,9 +611,9 @@ class ChatwootController extends Controller
             if (!$response->successful()) {
                 Log::error("❌ Error obteniendo mensajes: " . $response->status() . " - " . $response->body());
                 
-                // FALLBACK: Obtener desde DB directamente
+                // FALLBACK: Obtener desde DB directamente (usa db_id, no display_id)
                 $query = $chatwootDb->table('messages')
-                    ->where('conversation_id', $realConversationId)
+                    ->where('conversation_id', $dbConversationId)
                     ->orderBy('id', 'desc')
                     ->limit($messagesPerBatch + 1); // +1 para saber si hay más
                 
