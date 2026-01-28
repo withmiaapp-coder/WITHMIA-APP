@@ -964,6 +964,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const incrementBadge = globalNotifications?.incrementBadge;
   const clearBadge = globalNotifications?.clearBadge;
   const conversationBadges = globalNotifications?.conversationBadges;
+  const initializeBadges = globalNotifications?.initializeBadges;
+  
+  // ✅ Inicializar badges cuando se cargan las conversaciones
+  const hasInitializedBadges = useRef(false);
+  useEffect(() => {
+    if (conversations && conversations.length > 0 && initializeBadges && !hasInitializedBadges.current) {
+      initializeBadges(conversations);
+      hasInitializedBadges.current = true;
+    }
+  }, [conversations, initializeBadges]);
   
   // 🔌 SUSCRIPCIÓN AL WEBSOCKET UNIFICADO
   const debouncedFetchConversationsRef = useRef(debouncedFetchConversations);
@@ -1492,7 +1502,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       }
 
       if (appliedFilters.unreadOnly) {
-        result = result.filter(conv => conv.unread_count > 0);
+        result = result.filter(conv => {
+          const globalBadge = conversationBadges?.get(conv.id) ?? 0;
+          return globalBadge > 0 || conv.unread_count > 0;
+        });
       }
 
       if (appliedFilters.assignedTo) {
@@ -3402,11 +3415,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             </span>
                           </div>
                           
-                          {conversation.unread_count > 0 && (
-                            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                              {conversation.unread_count}
-                            </span>
-                          )}
+                          {(() => {
+                            const badgeCount = conversationBadges?.get(conversation.id) ?? conversation.unread_count ?? 0;
+                            return badgeCount > 0 ? (
+                              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                                {badgeCount}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                         
                         {(conversation?.labels || []).length > 0 && (

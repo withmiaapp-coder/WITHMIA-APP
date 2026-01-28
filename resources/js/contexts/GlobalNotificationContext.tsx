@@ -73,6 +73,7 @@ interface GlobalNotificationContextType {
   updateBadge: (conversationId: number, count: number) => void;
   incrementBadge: (conversationId: number) => void;
   clearBadge: (conversationId: number) => void;
+  initializeBadges: (conversations: Array<{ id: number; unread_count?: number }>) => void;
   
   // Toasts (notificaciones efímeras)
   toasts: Toast[];
@@ -346,6 +347,19 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       setTotalUnreadMessages(total => Math.max(0, total - current));
       return newMap;
     });
+  }, []);
+
+  // Inicializar badges desde conversaciones (llamado al cargar)
+  const initializeBadges = useCallback((conversations: Array<{ id: number; unread_count?: number }>) => {
+    const newMap = new Map<number, number>();
+    let total = 0;
+    conversations.forEach(conv => {
+      const count = conv.unread_count || 0;
+      newMap.set(conv.id, count);
+      total += count;
+    });
+    setConversationBadges(newMap);
+    setTotalUnreadMessages(total);
   }, []);
 
   // ============================================================================
@@ -804,6 +818,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     updateBadge,
     incrementBadge,
     clearBadge,
+    initializeBadges,
     // Toasts
     toasts,
     dismissToast,
@@ -827,6 +842,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     updateBadge,
     incrementBadge,
     clearBadge,
+    initializeBadges,
     toasts,
     dismissToast,
     addNotification,
