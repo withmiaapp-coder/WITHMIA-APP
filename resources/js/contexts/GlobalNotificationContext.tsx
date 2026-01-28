@@ -340,10 +340,13 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   }, []);
 
   const clearBadge = useCallback((conversationId: number) => {
+    console.log('🧹 clearBadge llamado para conversación:', conversationId);
+    
     // ✅ Limpiar badge del Map
     setConversationBadges(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(conversationId) || 0;
+      console.log('🧹 Badge actual en Map:', current);
       newMap.set(conversationId, 0);
       setTotalUnreadMessages(total => Math.max(0, total - current));
       return newMap;
@@ -351,11 +354,14 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     
     // ✅ TAMBIÉN limpiar notificaciones de la campana para esta conversación
     setNotifications(prev => {
+      console.log('🧹 Notificaciones antes:', prev.length, 'para conv', conversationId, ':', prev.filter(n => n.conversationId === conversationId).length);
       const removedUnread = prev.filter(n => n.conversationId === conversationId && !n.read).length;
       if (removedUnread > 0) {
         setUnreadCount(count => Math.max(0, count - removedUnread));
       }
-      return prev.filter(n => n.conversationId !== conversationId);
+      const filtered = prev.filter(n => n.conversationId !== conversationId);
+      console.log('🧹 Notificaciones después:', filtered.length);
+      return filtered;
     });
   }, []);
 
