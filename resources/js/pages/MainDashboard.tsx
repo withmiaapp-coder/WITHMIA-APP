@@ -830,8 +830,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   }, [activeSection]);
 
   const safeUser = {
-    name: getSafeText(user?.name || 'Usuario'),
-    firstName: getSafeText((user?.name || 'Usuario').split(' ')[0]),
+    name: getSafeText(user?.full_name || user?.name || 'Usuario'),
+    firstName: getSafeText((user?.full_name || user?.name || 'Usuario').split(' ')[0]),
     email: getSafeText(user?.email || 'usuario@ejemplo.com'),
     company: getSafeText(onboardingData?.company_name || 'Mi Empresa'),
   };
@@ -1084,7 +1084,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             ))}
           </nav>
 
-          {/* User Profile Premium con Meno� Desplegable */}
+          {/* User Profile Premium con Menú Desplegable */}
           <div className="absolute bottom-3 inset-x-3">
             <UserMenuDropdown 
               user={{
@@ -1096,6 +1096,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               }}
               isCollapsed={sidebarCollapsed}
               onToggleCollapse={() => setSidebarCollapsed(false)}
+              onNavigateToProfile={() => handleSectionChange('profile')}
+              onNavigateToSettings={() => handleSectionChange('settings')}
             />
           </div>
 
@@ -1277,6 +1279,74 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               </div>
             ) : activeSection === 'admin' ? (
               <AdminPanel />
+            ) : activeSection === 'profile' ? (
+              <div className="h-full overflow-y-auto">
+                <div className="p-6 max-w-4xl mx-auto">
+                  <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-500 to-green-500 px-6 py-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                          <span className="text-3xl font-bold text-white">
+                            {safeUser.firstName?.charAt(0)?.toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <h1 className="text-2xl font-bold text-white">{safeUser.name}</h1>
+                          <p className="text-white/80">{safeUser.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Información Personal</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-neutral-600">Nombre completo</label>
+                            <input
+                              type="text"
+                              defaultValue={user?.full_name || user?.name || ''}
+                              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="Tu nombre"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-neutral-600">Correo electrónico</label>
+                            <input
+                              type="email"
+                              defaultValue={user?.email || ''}
+                              disabled
+                              className="w-full px-4 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-500 cursor-not-allowed"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-neutral-600">Teléfono</label>
+                            <input
+                              type="tel"
+                              defaultValue={user?.phone || ''}
+                              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="+56 9 1234 5678"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-neutral-600">Empresa</label>
+                            <input
+                              type="text"
+                              defaultValue={safeUser.company || ''}
+                              disabled
+                              className="w-full px-4 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-500 cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end pt-4 border-t border-neutral-200">
+                        <button className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-medium rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all shadow-lg">
+                          Guardar cambios
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="h-full overflow-y-auto">
                 {/* Dashboard Principal con Metricas Completas - FASE 3 */}
