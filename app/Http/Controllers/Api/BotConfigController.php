@@ -1,4 +1,5 @@
 <?php
+// Fix: parameters must be object - v2
 
 namespace App\Http\Controllers\Api;
 
