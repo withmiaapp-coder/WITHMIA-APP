@@ -117,7 +117,7 @@
                         {
                             "id": "message-chat-id",
                             "name": "message.chat_id",
-                            "value": "={{ $('WITHMIA Webhook').item.json.sender?.phone_number || $('WITHMIA Webhook').item.json.conversation?.meta?.sender?.phone_number || $('WITHMIA Webhook').item.json.body?.sender?.phone_number || '' }}",
+                            "value": "={{ $('WITHMIA Webhook').item.json.body?.sender?.identifier || $('WITHMIA Webhook').item.json.sender?.identifier || $('WITHMIA Webhook').item.json.body?.conversation?.meta?.sender?.identifier || $('WITHMIA Webhook').item.json.conversation?.meta?.sender?.identifier || '' }}",
                             "type": "string"
                         },
                         {
@@ -229,9 +229,9 @@
         {
             "parameters": {
                 "promptType": "define",
-                "text": "=Fecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNúmero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n{{ $('Normalize Data').item.json.message.content }}",
+                "text": "=Fecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNumero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n{{ $('Normalize Data').item.json.message.content }}",
                 "options": {
-                    "systemMessage": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nINSTRUCCIONES:\n- Siempre respondes en base a QDRANT (tu base de conocimientos) y tus Herramientas\n- Si no tienes herramientas, solo respondes en base a la colección de QDRANT\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Máximo 2-3 oraciones por respuesta\n- Amigable y profesional\n- Si no sabes algo, ofrece conectar con un humano\n\nPROHIBICIONES:\n- NO te presentes dos veces en la conversación\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas"
+                    "systemMessage": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nINSTRUCCIONES:\n- Siempre respondes en base a QDRANT (tu base de conocimientos) y tus Herramientas\n- Si no tienes herramientas, solo respondes en base a la coleccion de QDRANT\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Maximo 2-3 oraciones por respuesta\n- Amigable y profesional\n- Si no sabes algo, ofrece conectar con un humano\n\nPROHIBICIONES:\n- NO te presentes dos veces en la conversacion\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas"
                 }
             },
             "type": "@n8n/n8n-nodes-langchain.agent",
@@ -277,7 +277,7 @@
         {
             "parameters": {
                 "mode": "retrieve-as-tool",
-                "toolDescription": "=Herramienta para buscar información en la base de conocimientos de {{ $('Normalize Data').item.json.config.company_name }}. Usa esta herramienta para responder preguntas sobre productos, servicios, horarios, precios y cualquier información de la empresa.",
+                "toolDescription": "=Herramienta para buscar informacion en la base de conocimientos de {{ $('Normalize Data').item.json.config.company_name }}. Usa esta herramienta para responder preguntas sobre productos, servicios, horarios, precios y cualquier informacion de la empresa.",
                 "qdrantCollection": {
                     "__rl": true,
                     "value": "={{ $('Normalize Data').item.json.config.collection_name }}",
@@ -329,30 +329,6 @@
             "position": [800, 300],
             "id": "process-response",
             "name": "Process Response"
-        },
-        {
-            "parameters": {
-                "method": "POST",
-                "url": "={{ $json.instance.server_url }}/message/sendText/{{ $json.instance.name }}",
-                "sendHeaders": true,
-                "headerParameters": {
-                    "parameters": [
-                        {
-                            "name": "apikey",
-                            "value": "={{ $json.instance.apikey }}"
-                        }
-                    ]
-                },
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={\n  \"number\": {{ JSON.stringify($json.message.chat_id) }},\n  \"text\": {{ JSON.stringify($json.response_text) }}\n}",
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.2,
-            "position": [1020, 300],
-            "id": "send-response",
-            "name": "Send WhatsApp Response"
         },
         {
             "parameters": {
@@ -511,11 +487,6 @@
         "Process Response": {
             "main": [
                 [
-                    {
-                        "node": "Send WhatsApp Response",
-                        "type": "main",
-                        "index": 0
-                    },
                     {
                         "node": "Notify Laravel (Reverb)",
                         "type": "main",
