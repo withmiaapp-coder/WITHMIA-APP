@@ -29,15 +29,20 @@ class BotConfigController extends Controller
         // Intentar obtener usuario de múltiples formas
         $user = Auth::user() ?? request()->user() ?? auth('web')->user();
         
+        // El usuario puede tener company_slug (no company_id)
+        $companySlug = $user?->company_slug;
+        $companyId = $user?->company_id;
+        
         Log::info('BotConfig - Getting workflow ID', [
             'user_id' => $user?->id,
-            'company_id' => $user?->company_id,
+            'company_id' => $companyId,
+            'company_slug' => $companySlug,
             'has_user' => $user !== null,
             'auth_check' => Auth::check(),
         ]);
         
-        if (!$user || !$user->company_id) {
-            Log::warning('BotConfig - No user or company_id - BLOCKED', [
+        if (!$user || (!$companyId && !$companySlug)) {
+            Log::warning('BotConfig - No user or company - BLOCKED', [
                 'request_user' => request()->user()?->id,
                 'auth_user' => Auth::user()?->id,
             ]);
@@ -46,15 +51,23 @@ class BotConfigController extends Controller
         }
 
         // Buscar la instancia de WhatsApp de la empresa del usuario
-        $instance = WhatsAppInstance::where('company_id', $user->company_id)
-            ->whereNotNull('n8n_workflow_id')
-            ->first();
+        // Usar company_slug si no hay company_id
+        $query = WhatsAppInstance::whereNotNull('n8n_workflow_id');
+        
+        if ($companyId) {
+            $query->where('company_id', $companyId);
+        } elseif ($companySlug) {
+            $query->where('company_slug', $companySlug);
+        }
+        
+        $instance = $query->first();
         
         Log::info('BotConfig - Instance found', [
             'instance_id' => $instance?->id,
             'instance_name' => $instance?->name,
             'workflow_id' => $instance?->n8n_workflow_id,
-            'company_id' => $user->company_id,
+            'company_id' => $companyId,
+            'company_slug' => $companySlug,
         ]);
 
         return $instance?->n8n_workflow_id;

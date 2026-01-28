@@ -53,6 +53,7 @@ interface EntrenamientoProps {
     name: string;
     email: string;
     company_id?: number;
+    company_slug?: string;
     company_name?: string;
     company_description?: string;
     has_website?: boolean;
@@ -929,7 +930,14 @@ export default function Entrenamiento({
                   <button
                     onClick={() => {
                       setShowBotConfig(false);
-                      router.visit('/dashboard/integracion');
+                      // Usar el slug de la empresa para navegar correctamente
+                      const slug = company?.slug || user?.company_slug;
+                      if (slug) {
+                        router.visit(`/dashboard/${slug}?section=integracion`);
+                      } else {
+                        // Fallback: recargar en la sección de integración del sidebar
+                        window.location.href = window.location.pathname + '?section=integracion';
+                      }
                     }}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
                   >
