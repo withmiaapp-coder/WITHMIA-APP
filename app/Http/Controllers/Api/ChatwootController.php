@@ -1780,13 +1780,27 @@ class ChatwootController extends Controller
                 'allow_auto_assign' => 'nullable|boolean',
             ]);
 
+            $url = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams';
+            
+            Log::info('🔧 Creando equipo en Chatwoot', [
+                'url' => $url,
+                'name' => $validated['name'],
+                'token_preview' => substr($this->chatwootToken ?? 'NULL', 0, 10) . '...',
+            ]);
+
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json',
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams', [
+            ])->post($url, [
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? '',
                 'allow_auto_assign' => $validated['allow_auto_assign'] ?? true,
+            ]);
+
+            Log::info('🔧 Respuesta createTeam', [
+                'status' => $response->status(),
+                'successful' => $response->successful(),
+                'body' => $response->json()
             ]);
 
             if ($response->successful()) {
