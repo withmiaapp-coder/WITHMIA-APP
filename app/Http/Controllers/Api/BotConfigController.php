@@ -241,10 +241,19 @@ class BotConfigController extends Controller
      */
     private function updateWorkflow(array $workflow, string $workflowId): bool
     {
+        // Limpiar nodos - asegurar que parameters sea siempre un objeto
+        $cleanNodes = array_map(function ($node) {
+            // Si parameters es null o no es array, convertirlo a objeto vacío
+            if (!isset($node['parameters']) || !is_array($node['parameters'])) {
+                $node['parameters'] = new \stdClass();
+            }
+            return $node;
+        }, $workflow['nodes']);
+        
         // Solo enviar los campos permitidos
         $cleanWorkflow = [
             'name' => $workflow['name'],
-            'nodes' => $workflow['nodes'],
+            'nodes' => $cleanNodes,
             'connections' => $workflow['connections'],
             'settings' => $workflow['settings'] ?? new \stdClass(),
         ];
@@ -254,6 +263,7 @@ class BotConfigController extends Controller
             'url' => "{$this->n8nUrl}/api/v1/workflows/{$workflowId}",
             'api_key_present' => !empty($this->n8nApiKey),
             'api_key_length' => strlen($this->n8nApiKey),
+            'nodes_count' => count($cleanNodes),
         ]);
 
         $response = Http::withHeaders([
