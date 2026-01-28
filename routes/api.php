@@ -4873,3 +4873,91 @@ Route::get('/fix-n8n-webhook', function () {
         ], 500);
     }
 });
+
+/**
+ * 🔄 ACTUALIZAR WORKFLOW N8N EXISTENTE PARA ACEPTAR FORMATO CHATWOOT
+ * GET /api/fix-n8n-workflow/{instanceName?}
+ */
+Route::get('/fix-n8n-workflow/{instanceName?}', function ($instanceName = null) {
+    try {
+        $n8nService = app(\App\Services\N8nService::class);
+        
+        // Obtener instancia
+        if (!$instanceName) {
+            $instance = DB::table('whatsapp_instances')->where('is_active', 1)->orderByDesc('id')->first();
+            $instanceName = $instance->instance_name ?? null;
+        } else {
+            $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->first();
+        }
+        
+        if (!$instance || !$instance->n8n_workflow_id) {
+            return response()->json(['error' => 'No workflow found for instance', 'instance' => $instanceName], 404);
+        }
+        
+        // Obtener workflow actual
+        $workflowResult = $n8nService->getWorkflow($instance->n8n_workflow_id);
+        if (!$workflowResult['success']) {
+            return response()->json(['error' => 'Could not get workflow from n8n'], 500);
+        }
+        
+        $workflow = $workflowResult['data'];
+        $updated = false;
+        
+        // Actualizar el nodo "Is Incoming Message?" para aceptar ambos formatos
+        foreach ($workflow['nodes'] as &$node) {
+            if ($node['name'] === 'Is Incoming Message?' && isset($node['parameters']['conditions']['conditions'])) {
+                foreach ($node['parameters']['conditions']['conditions'] as &$condition) {
+                    // Actualizar leftValue para usar fallback
+                    if (isset($condition['leftValue'])) {
+                        $original = $condition['leftValue'];
+                        
+                        // Arreglar event
+                        if (str_contains($original, '$json.body.event') && !str_contains($original, '??')) {
+                            $condition['leftValue'] = str_replace('$json.body.event', '$json.body.event ?? $json.event', $original);
+                            $updated = true;
+                        }
+                        // Arreglar message_type
+                        if (str_contains($original, '$json.body.message_type') && !str_contains($original, '??')) {
+                            $condition['leftValue'] = str_replace('$json.body.message_type', '$json.body.message_type ?? $json.message_type', $original);
+                            $updated = true;
+                        }
+                        // Arreglar private
+                        if (str_contains($original, '$json.body.private') && !str_contains($original, '??')) {
+                            $condition['leftValue'] = str_replace('$json.body.private', '$json.body.private ?? $json.private', $original);
+                            $updated = true;
+                        }
+                        // Arreglar content
+                        if (str_contains($original, '$json.body.content') && !str_contains($original, '??')) {
+                            $condition['leftValue'] = str_replace('$json.body.content', '$json.body.content ?? $json.content', $original);
+                            $updated = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if ($updated) {
+            // Actualizar workflow en n8n
+            $updateResult = $n8nService->updateWorkflow($instance->n8n_workflow_id, $workflow);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Workflow updated to accept Chatwoot format',
+                'workflow_id' => $instance->n8n_workflow_id,
+                'update_result' => $updateResult
+            ]);
+        } else {
+            return response()->json([
+                'success' => true,
+                'message' => 'Workflow already has correct format',
+                'workflow_id' => $instance->n8n_workflow_id
+            ]);
+        }
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
