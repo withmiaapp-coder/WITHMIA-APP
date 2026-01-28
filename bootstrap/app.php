@@ -30,6 +30,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // Railway auth token middleware (before auth)
         $middleware->append(\App\Http\Middleware\RailwayAuthToken::class);
         
+        // Excluir rutas de verificación CSRF
+        $middleware->validateCsrfTokens(except: [
+            'api/bot-config',
+            'api/bot-config/*',
+            'whatsapp/*',
+            'auth/google',
+            'auth/google/invitation',
+        ]);
+        
         // Registrar middleware personalizado
         $middleware->alias([
             'auth.clean' => \App\Http\Middleware\AuthWithoutRedirectText::class,
