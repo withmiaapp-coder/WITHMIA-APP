@@ -32,11 +32,16 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // Excluir rutas de verificación CSRF
         $middleware->validateCsrfTokens(except: [
+            'api/*',
             'api/bot-config',
             'api/bot-config/*',
+            'api/chatwoot-proxy/*',
+            'api/evolution/*',
+            'api/evolution-whatsapp/*',
             'whatsapp/*',
             'auth/google',
             'auth/google/invitation',
+            'broadcasting/auth',
         ]);
         
         // Registrar middleware personalizado
