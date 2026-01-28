@@ -1503,8 +1503,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
       if (appliedFilters.unreadOnly) {
         result = result.filter(conv => {
+          // ✅ SOLO usar el Map global
           const globalBadge = conversationBadges?.get(conv.id) ?? 0;
-          return globalBadge > 0 || conv.unread_count > 0;
+          return globalBadge > 0;
         });
       }
 
@@ -3416,7 +3417,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           </div>
                           
                           {(() => {
-                            const badgeCount = conversationBadges?.get(conversation.id) ?? conversation.unread_count ?? 0;
+                            // ✅ SOLO usar el Map global - sin fallback al servidor
+                            const badgeCount = conversationBadges?.get(conversation.id) ?? 0;
                             return badgeCount > 0 ? (
                               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                                 {badgeCount}
