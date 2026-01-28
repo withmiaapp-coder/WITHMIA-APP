@@ -4778,8 +4778,19 @@ Route::get('/create-n8n-webhook', function () {
         $stmt = $chatwootPdo->query("SELECT id, url, subscriptions FROM webhooks WHERE account_id = 1");
         $existing = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         
-        // URL del webhook de n8n
-        $n8nWebhookUrl = 'https://n8n-production-00dd.up.railway.app/webhook/withmia-evp7rj';
+        // URL del webhook de n8n (dinámico basado en configuración)
+        // Para futuros usuarios, cada instancia tendrá su propio webhook
+        $n8nBaseUrl = config('services.n8n.url', env('N8N_PUBLIC_URL', env('N8N_URL')));
+        
+        // Obtener el instanceName de la primera instancia activa del account
+        $miaDb = \DB::connection('mysql');
+        $instance = $miaDb->table('whatsapp_instances')
+            ->where('is_active', 1)
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        $instanceName = $instance->instance_name ?? 'default';
+        $n8nWebhookUrl = "{$n8nBaseUrl}/webhook/{$instanceName}";
         
         // Verificar si ya existe
         $alreadyExists = false;

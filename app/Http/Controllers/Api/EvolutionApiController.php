@@ -1270,6 +1270,13 @@ class EvolutionApiController extends Controller
                     $this->createN8nWorkflowForInstance($instance);
                 }
                 
+                // 🔧 FIX: Actualizar Evolution con el Channel Token correcto
+                // La instancia se crea con Platform Token (para crear inbox), pero Evolution
+                // necesita el Channel Token (identifier) para enviar mensajes a Chatwoot
+                if ($state === 'open' || $state === 'connected') {
+                    $this->ensureCorrectChatwootToken($instanceName);
+                }
+                
                 // Disparar evento de WhatsApp con el company_slug correcto
                 broadcast(new WhatsAppStatusChanged(
                     $companySlug,
@@ -1728,5 +1735,108 @@ class EvolutionApiController extends Controller
                 'callerPolicy' => 'workflowsFromSameOwner'
             ]
         ];
+    }
+    
+    /**
+     * Asegurar que Evolution tenga el Channel Token correcto de Chatwoot
+     * 
+     * Cuando se crea la instancia, se usa Platform Token (admin) para crear el inbox.
+     * Pero para enviar mensajes, Evolution necesita el Channel Token (identifier del inbox).
+     * Esta función verifica y corrige el token si es necesario.
+     */
+    private function ensureCorrectChatwootToken(string $instanceName): void
+    {
+        try {
+            Log::info('🔧 Verificando token de Chatwoot para Evolution', ['instance' => $instanceName]);
+            
+            // 1. Obtener la configuración actual de Evolution
+            $evolutionUrl = config('evolution.api_url');
+            $evolutionKey = config('evolution.api_key');
+            
+            $currentConfig = Http::withHeaders([
+                'apikey' => $evolutionKey
+            ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
+            
+            if (!$currentConfig->successful()) {
+                Log::warning('No se pudo obtener config de Chatwoot de Evolution', [
+                    'instance' => $instanceName,
+                    'status' => $currentConfig->status()
+                ]);
+                return;
+            }
+            
+            $config = $currentConfig->json();
+            $currentToken = $config['token'] ?? null;
+            $accountId = $config['accountId'] ?? '1';
+            
+            // 2. Obtener el Channel Token desde Chatwoot DB
+            $chatwootDb = DB::connection('chatwoot');
+            $channelApi = $chatwootDb->table('channel_api')
+                ->where('account_id', $accountId)
+                ->first();
+            
+            if (!$channelApi) {
+                Log::warning('No se encontró channel_api en Chatwoot para actualizar token', [
+                    'instance' => $instanceName,
+                    'account_id' => $accountId
+                ]);
+                return;
+            }
+            
+            $channelToken = $channelApi->identifier;
+            
+            // 3. Verificar si necesita actualización
+            if ($currentToken === $channelToken) {
+                Log::info('✅ Evolution ya tiene el Channel Token correcto', [
+                    'instance' => $instanceName,
+                    'token' => substr($channelToken, 0, 10) . '...'
+                ]);
+                return;
+            }
+            
+            // 4. Actualizar Evolution con el Channel Token correcto
+            Log::info('🔄 Actualizando Evolution con Channel Token correcto', [
+                'instance' => $instanceName,
+                'old_token' => substr($currentToken ?? '', 0, 10) . '...',
+                'new_token' => substr($channelToken, 0, 10) . '...'
+            ]);
+            
+            $updateResponse = Http::withHeaders([
+                'apikey' => $evolutionKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
+                'enabled' => true,
+                'accountId' => $accountId,
+                'token' => $channelToken,
+                'url' => config('chatwoot.url'),
+                'signMsg' => false,
+                'reopenConversation' => true,
+                'conversationPending' => false,
+                'nameInbox' => "WhatsApp {$instanceName}",
+                'mergeBrazilContacts' => false,
+                'importContacts' => false,
+                'importMessages' => false,
+                'daysLimitImportMessages' => 0,
+                'autoCreate' => true
+            ]);
+            
+            if ($updateResponse->successful()) {
+                Log::info('✅ Evolution actualizado con Channel Token correcto', [
+                    'instance' => $instanceName
+                ]);
+            } else {
+                Log::error('❌ Error actualizando token de Evolution', [
+                    'instance' => $instanceName,
+                    'status' => $updateResponse->status(),
+                    'body' => $updateResponse->body()
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error en ensureCorrectChatwootToken', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
