@@ -4827,7 +4827,45 @@ Route::get('/create-n8n-webhook', function () {
 });
 
 /**
- * 🔧 ACTUALIZAR WEBHOOK DE N8N CON TODAS LAS SUBSCRIPCIONES
+ * � VER INBOXES Y CONVERSACIONES DE CHATWOOT
+ * GET /api/chatwoot-debug
+ */
+Route::get('/chatwoot-debug', function () {
+    try {
+        $chatwootPdo = new \PDO(
+            "pgsql:host=" . env('CHATWOOT_DB_HOST', 'postgres-mvz7.railway.internal') . 
+            ";port=" . env('CHATWOOT_DB_PORT', '5432') . 
+            ";dbname=" . env('CHATWOOT_DB_DATABASE', 'chatwoot'),
+            env('CHATWOOT_DB_USERNAME', 'postgres'),
+            env('CHATWOOT_DB_PASSWORD')
+        );
+        
+        // Inboxes
+        $stmt = $chatwootPdo->query("SELECT id, name, channel_type, account_id FROM inboxes WHERE account_id = 1");
+        $inboxes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Conversaciones recientes
+        $stmt = $chatwootPdo->query("SELECT id, inbox_id, status, created_at FROM conversations WHERE account_id = 1 ORDER BY created_at DESC LIMIT 5");
+        $conversations = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Mensajes recientes
+        $stmt = $chatwootPdo->query("SELECT m.id, m.content, m.message_type, m.created_at, m.conversation_id FROM messages m JOIN conversations c ON m.conversation_id = c.id WHERE c.account_id = 1 ORDER BY m.created_at DESC LIMIT 10");
+        $messages = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        return response()->json([
+            'success' => true,
+            'inboxes' => $inboxes,
+            'recent_conversations' => $conversations,
+            'recent_messages' => $messages
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
+/**
+ * �🔧 ACTUALIZAR WEBHOOK DE N8N CON TODAS LAS SUBSCRIPCIONES
  * GET /api/fix-n8n-webhook
  */
 Route::get('/fix-n8n-webhook', function () {
