@@ -26,7 +26,15 @@ class BotConfigController extends Controller
     private function getCompanyWorkflowId(): ?string
     {
         $user = Auth::user();
+        
+        Log::info('BotConfig - Getting workflow ID', [
+            'user_id' => $user?->id,
+            'company_id' => $user?->company_id,
+            'has_user' => $user !== null,
+        ]);
+        
         if (!$user || !$user->company_id) {
+            Log::warning('BotConfig - No user or company_id');
             return null;
         }
 
@@ -34,6 +42,12 @@ class BotConfigController extends Controller
         $instance = WhatsAppInstance::where('company_id', $user->company_id)
             ->whereNotNull('n8n_workflow_id')
             ->first();
+        
+        Log::info('BotConfig - Instance found', [
+            'instance_id' => $instance?->id,
+            'instance_name' => $instance?->name,
+            'workflow_id' => $instance?->n8n_workflow_id,
+        ]);
 
         return $instance?->n8n_workflow_id;
     }
