@@ -50,6 +50,18 @@ class BotConfigController extends Controller
             }
         }
         
+        // Si tenemos company_slug pero no company_id, buscar el company_id en la tabla companies
+        if ($companySlug && !$companyId) {
+            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            if ($company) {
+                $companyId = $company->id;
+                Log::info('BotConfig - Got company_id from companies table', [
+                    'slug' => $companySlug,
+                    'company_id' => $companyId
+                ]);
+            }
+        }
+        
         if (!$companySlug && !$companyId) {
             Log::warning('BotConfig - No company identifier found - BLOCKED');
             return null;
@@ -59,10 +71,16 @@ class BotConfigController extends Controller
         // Intentar múltiples estrategias de búsqueda
         $instance = null;
         
+        // PRIMERO: Buscar por company_id (más confiable)
         if ($companyId) {
             $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
                 ->where('company_id', $companyId)
                 ->first();
+            
+            Log::info('BotConfig - Search by company_id', [
+                'company_id' => $companyId,
+                'found' => $instance !== null
+            ]);
         }
         
         // Si no encontró por company_id, buscar por company_slug o name
