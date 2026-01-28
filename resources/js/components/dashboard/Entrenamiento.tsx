@@ -140,6 +140,8 @@ export default function Entrenamiento({
     try {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
+      console.log("Saving bot config:", botConfig);
+      
       const response = await fetch("/api/bot-config", {
         method: "PUT",
         headers: {
@@ -151,15 +153,18 @@ export default function Entrenamiento({
         body: JSON.stringify(botConfig),
       });
 
+      console.log("Response status:", response.status);
       const data = await response.json();
+      console.log("Response data:", data);
+      
       if (data.success) {
         setShowBotConfig(false);
       } else {
-        alert("Error al guardar: " + (data.error || "Intente nuevamente"));
+        alert("Error al guardar: " + (data.error || JSON.stringify(data)));
       }
     } catch (error) {
       console.error("Error saving bot config:", error);
-      alert("Error al guardar la configuración");
+      alert("Error al guardar la configuración: " + (error as Error).message);
     } finally {
       setSavingBotConfig(false);
     }
