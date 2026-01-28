@@ -19,6 +19,8 @@ import {
   Clock,
   Key,
   Shield,
+  Link2,
+  AlertCircle,
 } from "lucide-react";
 
 interface OnboardingData {
@@ -97,6 +99,7 @@ export default function Entrenamiento({
   });
   const [savingBotConfig, setSavingBotConfig] = useState(false);
   const [loadingBotConfig, setLoadingBotConfig] = useState(false);
+  const [noWorkflowConfigured, setNoWorkflowConfigured] = useState(false);
   
   // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
@@ -122,10 +125,13 @@ export default function Entrenamiento({
   // Fetch bot config when modal opens
   const fetchBotConfig = async () => {
     setLoadingBotConfig(true);
+    setNoWorkflowConfigured(false);
     try {
       const response = await fetch("/api/bot-config");
       const data = await response.json();
-      if (data.success && data.data) {
+      if (response.status === 404 || (data.success === false && data.error?.includes('workflow'))) {
+        setNoWorkflowConfigured(true);
+      } else if (data.success && data.data) {
         setBotConfig(data.data);
       }
     } catch (error) {
@@ -908,6 +914,29 @@ export default function Entrenamiento({
                 <div className="flex items-center justify-center py-8">
                   <Loader className="w-8 h-8 animate-spin text-violet-600" />
                 </div>
+              ) : noWorkflowConfigured ? (
+                /* No workflow configured - show integration message */
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    Conecta tu WhatsApp primero
+                  </h4>
+                  <p className="text-gray-600 mb-6">
+                    Para configurar el bot, primero necesitas conectar tu WhatsApp en la sección de Integración.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowBotConfig(false);
+                      router.visit('/dashboard/integracion');
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
+                  >
+                    <Link2 className="w-5 h-5" />
+                    Ir a Integración
+                  </button>
+                </div>
               ) : (
                 <>
                   {/* Unlock Keyword */}
@@ -988,27 +1017,29 @@ export default function Entrenamiento({
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => setShowBotConfig(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveBotConfig}
-                disabled={savingBotConfig || loadingBotConfig}
-                className="flex items-center gap-2 px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
-              >
-                {savingBotConfig ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Guardar
-              </button>
-            </div>
+            {/* Footer - only show when workflow is configured */}
+            {!noWorkflowConfigured && !loadingBotConfig && (
+              <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowBotConfig(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveBotConfig}
+                  disabled={savingBotConfig || loadingBotConfig}
+                  className="flex items-center gap-2 px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+                >
+                  {savingBotConfig ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  Guardar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
