@@ -756,11 +756,20 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // Llamar a la API de Chatwoot para actualizar last_seen
+            // Llamar a update_last_seen
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json'
             ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/update_last_seen');
+
+            // ✅ TAMBIÉN llamar a la API para resetear unread_count
+            // Chatwoot usa "agent_last_seen_at" para calcular unread_count
+            // Cuando update_last_seen se llama, Chatwoot debería resetear el contador
+            // Pero por seguridad, también forzamos con una petición GET que actualiza el estado
+            Http::withHeaders([
+                'api_access_token' => $this->chatwootToken,
+                'Content-Type' => 'application/json'
+            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
 
             if ($response->successful()) {
                 // 🚀 INVALIDAR CACHÉ: La conversación cambió (unread_count = 0)
