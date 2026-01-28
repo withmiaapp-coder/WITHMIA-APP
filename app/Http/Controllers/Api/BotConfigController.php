@@ -34,32 +34,18 @@ class BotConfigController extends Controller
             'company_id' => $user?->company_id,
             'has_user' => $user !== null,
             'auth_check' => Auth::check(),
-            'session_id' => session()->getId(),
         ]);
         
         if (!$user || !$user->company_id) {
-            Log::warning('BotConfig - No user or company_id', [
+            Log::warning('BotConfig - No user or company_id - BLOCKED', [
                 'request_user' => request()->user()?->id,
                 'auth_user' => Auth::user()?->id,
             ]);
-            
-            // Fallback: si no hay usuario, usar la primera instancia activa (temporal para debug)
-            $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
-                ->where('is_active', true)
-                ->first();
-            
-            if ($instance) {
-                Log::info('BotConfig - Using fallback instance', [
-                    'instance_id' => $instance->id,
-                    'workflow_id' => $instance->n8n_workflow_id,
-                ]);
-                return $instance->n8n_workflow_id;
-            }
-            
+            // NO usar fallback - cada empresa debe usar su propio workflow
             return null;
         }
 
-        // Buscar la instancia de WhatsApp de la empresa
+        // Buscar la instancia de WhatsApp de la empresa del usuario
         $instance = WhatsAppInstance::where('company_id', $user->company_id)
             ->whereNotNull('n8n_workflow_id')
             ->first();
@@ -68,6 +54,7 @@ class BotConfigController extends Controller
             'instance_id' => $instance?->id,
             'instance_name' => $instance?->name,
             'workflow_id' => $instance?->n8n_workflow_id,
+            'company_id' => $user->company_id,
         ]);
 
         return $instance?->n8n_workflow_id;
