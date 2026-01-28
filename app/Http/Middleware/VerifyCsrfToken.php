@@ -20,5 +20,8 @@ class VerifyCsrfToken extends Middleware
         'auth/google/invitation',
         'api/bot-config',
         'api/bot-config/*',
+        'api/chatwoot-proxy/*',
+        'api/evolution/*',
+        'api/evolution-whatsapp/*',
     ];
 }
