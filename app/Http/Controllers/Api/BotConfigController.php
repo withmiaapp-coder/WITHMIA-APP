@@ -56,19 +56,44 @@ class BotConfigController extends Controller
         }
 
         // Buscar la instancia de WhatsApp de la empresa del usuario
-        $query = WhatsAppInstance::whereNotNull('n8n_workflow_id');
+        // Intentar múltiples estrategias de búsqueda
+        $instance = null;
         
         if ($companyId) {
-            $query->where('company_id', $companyId);
-        } elseif ($companySlug) {
-            // Buscar por company_slug O por name que contenga el slug
-            $query->where(function($q) use ($companySlug) {
-                $q->where('company_slug', $companySlug)
-                  ->orWhere('name', 'like', "%{$companySlug}%");
-            });
+            $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
+                ->where('company_id', $companyId)
+                ->first();
         }
         
-        $instance = $query->first();
+        // Si no encontró por company_id, buscar por company_slug o name
+        if (!$instance && $companySlug) {
+            // Primero por company_slug exacto
+            $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
+                ->where('company_slug', $companySlug)
+                ->first();
+            
+            // Luego por name exacto
+            if (!$instance) {
+                $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
+                    ->where('name', $companySlug)
+                    ->first();
+            }
+            
+            // Luego por name LIKE
+            if (!$instance) {
+                $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
+                    ->where('name', 'like', "%{$companySlug}%")
+                    ->first();
+            }
+        }
+        
+        // Si aún no encontró, buscar cualquier instancia activa (fallback temporal para debug)
+        if (!$instance) {
+            Log::warning('BotConfig - No instance found with any strategy, trying fallback');
+            $instance = WhatsAppInstance::whereNotNull('n8n_workflow_id')
+                ->where('is_active', true)
+                ->first();
+        }
         
         Log::info('BotConfig - Instance search result', [
             'instance_id' => $instance?->id,
