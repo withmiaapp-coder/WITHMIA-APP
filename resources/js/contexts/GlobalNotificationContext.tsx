@@ -349,6 +349,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       console.log('🧹 Badge actual en Map:', current);
       newMap.set(conversationId, 0);
       setTotalUnreadMessages(total => Math.max(0, total - current));
+      
+      // ✅ Persistir en sessionStorage inmediatamente
+      sessionStorage.setItem('conversationBadges', JSON.stringify(Array.from(newMap.entries())));
+      
       return newMap;
     });
     
@@ -377,12 +381,31 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // Solo inicializa la PRIMERA vez - después las actualizaciones vienen del WebSocket
   const hasInitializedBadges = useRef(false);
   const initializeBadges = useCallback((conversations: Array<{ id: number; unread_count?: number }>) => {
-    // Solo inicializar UNA VEZ por sesión
+    // Primero, intentar cargar desde sessionStorage (persistencia de sesión)
+    const savedBadges = sessionStorage.getItem('conversationBadges');
+    if (savedBadges && !hasInitializedBadges.current) {
+      try {
+        const parsed = JSON.parse(savedBadges);
+        const restoredMap = new Map<number, number>(parsed);
+        console.log('🔄 Badges restaurados desde sessionStorage:', restoredMap.size);
+        setConversationBadges(restoredMap);
+        let total = 0;
+        restoredMap.forEach(v => total += v);
+        setTotalUnreadMessages(total);
+        hasInitializedBadges.current = true;
+        return;
+      } catch (e) {
+        console.error('Error restaurando badges:', e);
+      }
+    }
+    
+    // Solo inicializar desde servidor UNA VEZ por sesión
     if (hasInitializedBadges.current) {
       return;
     }
     hasInitializedBadges.current = true;
     
+    console.log('🔄 Inicializando badges desde servidor:', conversations.length, 'conversaciones');
     const newMap = new Map<number, number>();
     let total = 0;
     conversations.forEach(conv => {
@@ -392,7 +415,19 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     });
     setConversationBadges(newMap);
     setTotalUnreadMessages(total);
+    
+    // Persistir en sessionStorage
+    sessionStorage.setItem('conversationBadges', JSON.stringify(Array.from(newMap.entries())));
   }, []);
+
+  // ============================================================================
+  // PERSISTIR BADGES EN SESSIONSTORAGE
+  // ============================================================================
+  useEffect(() => {
+    if (conversationBadges.size > 0) {
+      sessionStorage.setItem('conversationBadges', JSON.stringify(Array.from(conversationBadges.entries())));
+    }
+  }, [conversationBadges]);
 
   // ============================================================================
   // INICIALIZACIÓN
