@@ -954,16 +954,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     return () => container.removeEventListener('scroll', handleScroll);
   }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
   
-  // 🎯 SISTEMA UNIFICADO: Obtener contexto global de notificaciones
+  // 🎯 SISTEMA UNIFICADO DE NOTIFICACIONES
   const globalNotifications = useGlobalNotifications();
   const isConnected = globalNotifications?.isWebSocketConnected ?? false;
   const wsConnected = isConnected;
   const [lastEventTime, setLastEventTime] = useState<Date | null>(null);
-  const usingFallback = false; // Ya no usamos fallback, solo WebSocket
+  
+  // ✅ Funciones de badges del contexto global
+  const incrementBadge = globalNotifications?.incrementBadge;
+  const clearBadge = globalNotifications?.clearBadge;
+  const conversationBadges = globalNotifications?.conversationBadges;
   
   // 🔌 SUSCRIPCIÓN AL WEBSOCKET UNIFICADO
-  // Este efecto conecta al sistema de WebSocket central y maneja los eventos
-  // Usamos refs para evitar re-suscripciones innecesarias cuando cambian las dependencias
   const debouncedFetchConversationsRef = useRef(debouncedFetchConversations);
   const updateMessagesCacheRef = useRef(updateMessagesCache);
   const addMessageToCacheRef = useRef(addMessageToCache);
@@ -1061,7 +1063,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
         debugLog.log('📩 [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);
 
-        // 🔄 ACTUALIZACIÓN OPTIMISTA de la lista de conversaciones
+        // ✅ Determinar si es mensaje entrante
+        const messageType = event?.message?.message_type;
+        const isOutgoing = messageType === 1 || messageType === 'outgoing';
+        const isActiveConversation = activeConversationRef.current?.id === conversationId;
+        
+        // ✅ Incrementar badge en contexto global si es mensaje entrante y no está activa
+        if (!isOutgoing && !isActiveConversation && globalNotificationsRef.current?.incrementBadge) {
+          globalNotificationsRef.current.incrementBadge(conversationId);
+        }
+
+        // 🔄 ACTUALIZACIÓN de la lista de conversaciones
         setConversations((prevConversations: any[]) => {
           const newTimestamp = event?.timestamp || event?.message?.created_at || new Date().toISOString();
           const existingIndex = prevConversations.findIndex((conv: any) => conv.id === conversationId);
@@ -1070,10 +1082,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           if (existingIndex !== -1) {
             updated = prevConversations.map((conv: any) => {
               if (conv.id === conversationId) {
-                const messageType = event?.message?.message_type;
-                const isOutgoing = messageType === 1 || messageType === 'outgoing';
-                const isActiveConversation = activeConversation?.id === conversationId;
-                const shouldIncrementUnread = !isOutgoing && !isActiveConversation;
+                // ✅ Obtener badge del contexto global
+                const globalBadge = globalNotificationsRef.current?.conversationBadges?.get(conversationId) || 0;
                 
                 return {
                   ...conv,
@@ -1084,7 +1094,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     message_type: event?.message?.message_type || 0,
                     sender: event?.sender || event?.message?.sender
                   },
-                  unread_count: isActiveConversation ? 0 : (shouldIncrementUnread ? (conv.unread_count || 0) + 1 : (conv.unread_count || 0)),
+                  unread_count: globalBadge,
                   updated_at: newTimestamp,
                   timestamp: new Date(newTimestamp).getTime() / 1000,
                   last_activity_at: new Date(newTimestamp).getTime() / 1000
@@ -1572,35 +1582,38 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       updateMessagesCache(activeConversation.id, activeConversation.messages);
     }
     
-    // 🚀 OPTIMIZACIÓN: Mostrar conversación INMEDIATAMENTE con loading state
-    // Esto elimina el delay de 3 segundos percibido por el usuario
+    // 🚀 Mostrar conversación inmediatamente
     _setActiveConversation({
       ...conversation,
-      messages: [], // Array vacío mientras carga
-      unread_count: 0, // ✅ Resetear contador inmediatamente al abrir
-      _isLoading: true // Flag para mostrar skeleton
+      messages: [],
+      unread_count: 0,
+      _isLoading: true
     });
     
-    // ✅ NUEVO: Actualizar lista de conversaciones para quitar el badge inmediatamente
+    // ✅ Limpiar badge en el SISTEMA UNIFICADO
+    if (clearBadge) {
+      clearBadge(conversation.id);
+    }
+    
+    // Actualizar lista de conversaciones
     setConversations((prev: Conversation[]) => 
       prev.map((conv: Conversation) => 
         conv.id === conversation.id ? { ...conv, unread_count: 0 } : conv
       )
     );
     
-    // 🔔 LIMPIAR NOTIFICACIONES: Disparar evento para limpiar notificaciones de esta conversación
-    // Esto actualiza: campanita, título del navegador, y cualquier otro lugar centralizado
+    // Limpiar notificaciones de esta conversación
     window.dispatchEvent(new CustomEvent('clearNotifications', {
       detail: { conversationId: conversation.id }
     }));
     
-    // Cargar mensajes en background (no bloqueante)
+    // Cargar mensajes en background
     loadConversationMessages(conversation.id);
     
-    // Marcar como leída en backend (no bloqueante)
+    // Marcar como leída en backend
     if (markConversationAsRead) {
       markConversationAsRead(conversation.id).then(() => {
-        debugLog.log('✅ Conversación marcada como leída en servidor');
+        debugLog.log('✅ Conversación marcada como leída');
       });
     }
   };

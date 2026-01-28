@@ -67,6 +67,13 @@ interface GlobalNotificationContextType {
   unreadCount: number;
   settings: NotificationSettings;
   
+  // ✅ Badges por conversación (FUENTE ÚNICA DE VERDAD)
+  conversationBadges: Map<number, number>;
+  totalUnreadMessages: number;
+  updateBadge: (conversationId: number, count: number) => void;
+  incrementBadge: (conversationId: number) => void;
+  clearBadge: (conversationId: number) => void;
+  
   // Toasts (notificaciones efímeras)
   toasts: Toast[];
   dismissToast: (id: number) => void;
@@ -88,7 +95,6 @@ interface GlobalNotificationContextType {
   isWebSocketConnected: boolean;
   
   // Para componentes que necesitan saber de mensajes nuevos en tiempo real
-  // (como ConversationsInterface para actualizar la UI)
   subscribeToMessages: (callback: (event: WebSocketMessageEvent) => void) => () => void;
 }
 
@@ -120,6 +126,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  
+  // ✅ Badges por conversación - FUENTE ÚNICA DE VERDAD
+  const [conversationBadges, setConversationBadges] = useState<Map<number, number>>(new Map());
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+  
   const [settings, setSettings] = useState<NotificationSettings>({
     enabled: true,
     soundEnabled: true,
@@ -302,6 +313,39 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   const dismissToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // ============================================================================
+  // BADGES POR CONVERSACIÓN - FUENTE ÚNICA DE VERDAD
+  // ============================================================================
+  const updateBadge = useCallback((conversationId: number, count: number) => {
+    setConversationBadges(prev => {
+      const newMap = new Map(prev);
+      const oldCount = newMap.get(conversationId) || 0;
+      newMap.set(conversationId, count);
+      setTotalUnreadMessages(total => total - oldCount + count);
+      return newMap;
+    });
+  }, []);
+
+  const incrementBadge = useCallback((conversationId: number) => {
+    setConversationBadges(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(conversationId) || 0;
+      newMap.set(conversationId, current + 1);
+      setTotalUnreadMessages(total => total + 1);
+      return newMap;
+    });
+  }, []);
+
+  const clearBadge = useCallback((conversationId: number) => {
+    setConversationBadges(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(conversationId) || 0;
+      newMap.set(conversationId, 0);
+      setTotalUnreadMessages(total => Math.max(0, total - current));
+      return newMap;
+    });
   }, []);
 
   // ============================================================================
@@ -751,9 +795,16 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   const value = useMemo<GlobalNotificationContextType>(() => ({
     notifications,
-    notificationHistory: notifications, // Alias para compatibilidad con NotificationCenter
+    notificationHistory: notifications,
     unreadCount,
     settings,
+    // Badges por conversación
+    conversationBadges,
+    totalUnreadMessages,
+    updateBadge,
+    incrementBadge,
+    clearBadge,
+    // Toasts
     toasts,
     dismissToast,
     addNotification,
@@ -771,6 +822,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     notifications,
     unreadCount,
     settings,
+    conversationBadges,
+    totalUnreadMessages,
+    updateBadge,
+    incrementBadge,
+    clearBadge,
     toasts,
     dismissToast,
     addNotification,

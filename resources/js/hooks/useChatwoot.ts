@@ -449,40 +449,20 @@ export const useConversations = () => {
           meta: conv.meta
         }));
         
-        // Merge inteligente: actualizar existentes o agregar nuevas
+        // Merge: actualizar existentes o agregar nuevas
         setConversations(prev => {
           const conversationMap = new Map(prev.map(c => [c.id, c]));
 
           updatedConversations.forEach(updated => {
             const existing = conversationMap.get(updated.id);
-            // ✅ FIX MEJORADO: Preservar unread_count local para evitar parpadeo
-            // El servidor puede tener datos desactualizados momentáneamente
-            let finalUnreadCount = updated.unread_count || 0;
-            if (existing) {
-              const existingCount = existing.unread_count || 0;
-              const serverCount = updated.unread_count || 0;
-              
-              // Si la diferencia es pequeña (1-2), confiar en el local que es más reciente
-              // Esto evita el parpadeo cuando el servidor aún no sincronizó
-              if (existingCount > serverCount && (existingCount - serverCount) <= 2) {
-                finalUnreadCount = existingCount;
-              } else if (serverCount > existingCount) {
-                // Servidor tiene más, usar el del servidor
-                finalUnreadCount = serverCount;
-              } else if (serverCount === 0 && existingCount > 0) {
-                // Solo resetear a 0 si el servidor explícitamente dice 0
-                // Esto ocurre cuando el usuario marca como leído
-                finalUnreadCount = 0;
-              } else {
-                finalUnreadCount = existingCount;
-              }
-            }
+            // Mantener unread_count existente (manejado por GlobalNotificationContext)
+            const finalUnreadCount = existing?.unread_count ?? updated.unread_count ?? 0;
             const merged = existing ? { ...updated, unread_count: finalUnreadCount } : updated;
             conversationMap.set(updated.id, merged);
             conversationsCache.current.set(updated.id, merged);
           });
 
-          // Helper function para obtener timestamp
+          // Ordenar por timestamp
           const getTimestamp = (conv: any) => {
             if (conv.updated_at) {
               return conv.updated_at > 10000000000 ? conv.updated_at : conv.updated_at * 1000;
@@ -495,14 +475,11 @@ export const useConversations = () => {
             return 0;
           };
 
-          // Ordenar por timestamp más reciente
           const sorted = Array.from(conversationMap.values()).sort((a, b) => {
             const timeA = getTimestamp(a);
             const timeB = getTimestamp(b);
             return timeB - timeA;
           });
-
-          debugLog.log(`🔄 Conversaciones reordenadas. Primera: ${sorted[0]?.contact.name} (ID: ${sorted[0]?.id}) - Timestamp: ${new Date(getTimestamp(sorted[0])).toISOString()}`);
           
           return sorted;
         });
