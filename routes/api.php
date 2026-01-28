@@ -3879,6 +3879,39 @@ Route::post('/n8n/notify-response', function (Request $request) {
             $accountId = (int) ($company->chatwoot_account_id ?? 0);
         }
         
+        // Obtener API key de Chatwoot
+        $chatwootApiKey = $company->chatwoot_api_key ?? config('chatwoot.api_key');
+        $chatwootUrl = config('chatwoot.url');
+        
+        $chatwootMessageSent = false;
+        
+        // Guardar mensaje en Chatwoot
+        if ($conversationId > 0 && $accountId > 0 && $chatwootApiKey && $message) {
+            try {
+                $client = new \GuzzleHttp\Client(['timeout' => 10]);
+                $response = $client->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
+                    'headers' => [
+                        'api_access_token' => $chatwootApiKey,
+                        'Content-Type' => 'application/json',
+                    ],
+                    'json' => [
+                        'content' => $message,
+                        'message_type' => 'outgoing',
+                        'private' => false,
+                    ],
+                ]);
+                
+                $chatwootMessageSent = $response->getStatusCode() === 200;
+                
+                \Log::info('Mensaje guardado en Chatwoot', [
+                    'conversation_id' => $conversationId,
+                    'status' => $response->getStatusCode(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error guardando mensaje en Chatwoot: ' . $e->getMessage());
+            }
+        }
+        
         // Solo broadcast si hay datos válidos
         if ($conversationId > 0 && $inboxId > 0 && $accountId > 0) {
             // Enviar al canal inbox.{id} para actualizar UI de conversaciones
@@ -3894,7 +3927,7 @@ Route::post('/n8n/notify-response', function (Request $request) {
                 $accountId
             ));
             
-            \Log::info('Notificación WebSocket enviada', [
+            \Log::info('Notificacion WebSocket enviada', [
                 'company_slug' => $companySlug,
                 'conversation_id' => $conversationId,
                 'inbox_id' => $inboxId,
@@ -3902,7 +3935,7 @@ Route::post('/n8n/notify-response', function (Request $request) {
                 'message_preview' => substr($message, 0, 50)
             ]);
         } else {
-            \Log::warning('No se pudo enviar notificación WebSocket - datos incompletos', [
+            \Log::warning('No se pudo enviar notificacion WebSocket - datos incompletos', [
                 'company_slug' => $companySlug,
                 'conversation_id' => $conversationId,
                 'inbox_id' => $inboxId,
@@ -3912,6 +3945,7 @@ Route::post('/n8n/notify-response', function (Request $request) {
         
         return response()->json([
             'success' => true,
+            'chatwoot_message_sent' => $chatwootMessageSent,
             'broadcast_sent' => ($conversationId > 0 && $inboxId > 0 && $accountId > 0),
             'channel' => "inbox.{$inboxId}",
             'account_id' => $accountId
