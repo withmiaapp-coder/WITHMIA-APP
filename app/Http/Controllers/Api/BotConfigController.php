@@ -215,10 +215,23 @@ class BotConfigController extends Controller
             'settings' => $workflow['settings'] ?? new \stdClass(),
         ];
 
+        Log::info('Updating n8n workflow', [
+            'workflow_id' => $workflowId,
+            'url' => "{$this->n8nUrl}/api/v1/workflows/{$workflowId}",
+            'api_key_present' => !empty($this->n8nApiKey),
+            'api_key_length' => strlen($this->n8nApiKey),
+        ]);
+
         $response = Http::withHeaders([
             'X-N8N-API-KEY' => $this->n8nApiKey,
             'Content-Type' => 'application/json',
         ])->put("{$this->n8nUrl}/api/v1/workflows/{$workflowId}", $cleanWorkflow);
+
+        Log::info('n8n response', [
+            'status' => $response->status(),
+            'successful' => $response->successful(),
+            'body' => substr($response->body(), 0, 500),
+        ]);
 
         if ($response->successful()) {
             return true;
