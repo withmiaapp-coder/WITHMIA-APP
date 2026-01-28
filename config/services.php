@@ -46,6 +46,8 @@ return [
         // IDs de credenciales del Super Admin en n8n (configuradas una vez)
         "openai_credential_id" => env("N8N_OPENAI_CREDENTIAL_ID"),
         "qdrant_credential_id" => env("N8N_QDRANT_CREDENTIAL_ID"),
+        // ID del workflow principal del bot
+        "workflow_id" => env("N8N_WORKFLOW_ID", "C1mhxAWt67pfg3BC"),
     ],
 
     "qdrant" => [

@@ -15,6 +15,10 @@ import {
   MessageCircle,
   Upload,
   Image,
+  Settings,
+  Clock,
+  Key,
+  Shield,
 } from "lucide-react";
 
 interface OnboardingData {
@@ -25,6 +29,13 @@ interface OnboardingData {
   client_type: "interno" | "externo" | null;
   logo_url?: string;
   assistant_name?: string;
+}
+
+interface BotConfig {
+  unlock_keyword: string;
+  block_duration: number;
+  buffer_wait_time: number;
+  humanize_wait_time: number;
 }
 
 interface Message {
@@ -76,6 +87,17 @@ export default function Entrenamiento({
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   
+  // Bot config state
+  const [showBotConfig, setShowBotConfig] = useState(false);
+  const [botConfig, setBotConfig] = useState<BotConfig>({
+    unlock_keyword: 'BOT',
+    block_duration: 600,
+    buffer_wait_time: 7,
+    humanize_wait_time: 2,
+  });
+  const [savingBotConfig, setSavingBotConfig] = useState(false);
+  const [loadingBotConfig, setLoadingBotConfig] = useState(false);
+  
   // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -96,6 +118,57 @@ export default function Entrenamiento({
   useEffect(() => {
     fetchOnboardingData();
   }, []);
+
+  // Fetch bot config when modal opens
+  const fetchBotConfig = async () => {
+    setLoadingBotConfig(true);
+    try {
+      const response = await fetch("/api/bot-config");
+      const data = await response.json();
+      if (data.success && data.data) {
+        setBotConfig(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching bot config:", error);
+    } finally {
+      setLoadingBotConfig(false);
+    }
+  };
+
+  const handleSaveBotConfig = async () => {
+    setSavingBotConfig(true);
+    try {
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
+      const response = await fetch("/api/bot-config", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": token,
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(botConfig),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setShowBotConfig(false);
+      } else {
+        alert("Error al guardar: " + (data.error || "Intente nuevamente"));
+      }
+    } catch (error) {
+      console.error("Error saving bot config:", error);
+      alert("Error al guardar la configuración");
+    } finally {
+      setSavingBotConfig(false);
+    }
+  };
+
+  const handleOpenBotConfig = () => {
+    setShowBotConfig(true);
+    fetchBotConfig();
+  };
 
   const fetchOnboardingData = async () => {
     try {
@@ -490,13 +563,22 @@ export default function Entrenamiento({
               </h2>
             </div>
             {!editingOnboarding ? (
-              <button
-                onClick={() => setEditingOnboarding(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                Editar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenBotConfig}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  title="Configuración del Bot"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setEditingOnboarding(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Editar
+                </button>
+              </div>
             ) : (
               <div className="flex gap-2">
                 <button
@@ -794,6 +876,137 @@ export default function Entrenamiento({
           </div>
         </div>
       </div>
+
+      {/* Bot Configuration Modal */}
+      {showBotConfig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-6 h-6 text-white" />
+                  <h3 className="text-xl font-bold text-white">Configuración del Bot</h3>
+                </div>
+                <button
+                  onClick={() => setShowBotConfig(false)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {loadingBotConfig ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-8 h-8 animate-spin text-violet-600" />
+                </div>
+              ) : (
+                <>
+                  {/* Unlock Keyword */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Key className="w-4 h-4 text-violet-600" />
+                      Palabra clave para desbloquear
+                    </label>
+                    <input
+                      type="text"
+                      value={botConfig.unlock_keyword}
+                      onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase() })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      placeholder="BOT"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Si el cliente escribe esta palabra, el bot se reactiva automáticamente.
+                    </p>
+                  </div>
+
+                  {/* Block Duration */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Shield className="w-4 h-4 text-violet-600" />
+                      Tiempo de bloqueo (segundos)
+                    </label>
+                    <input
+                      type="number"
+                      value={botConfig.block_duration}
+                      onChange={(e) => setBotConfig({ ...botConfig, block_duration: parseInt(e.target.value) || 600 })}
+                      min={60}
+                      max={86400}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Cuando tú escribes en el chat, el bot se bloquea por este tiempo. (60-86400 seg)
+                    </p>
+                  </div>
+
+                  {/* Buffer Wait Time */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Clock className="w-4 h-4 text-violet-600" />
+                      Tiempo de espera buffer (segundos)
+                    </label>
+                    <input
+                      type="number"
+                      value={botConfig.buffer_wait_time}
+                      onChange={(e) => setBotConfig({ ...botConfig, buffer_wait_time: parseInt(e.target.value) || 7 })}
+                      min={1}
+                      max={60}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Espera que el cliente termine de escribir antes de responder. (1-60 seg)
+                    </p>
+                  </div>
+
+                  {/* Humanize Wait Time */}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <Clock className="w-4 h-4 text-violet-600" />
+                      Demora de humanización (segundos)
+                    </label>
+                    <input
+                      type="number"
+                      value={botConfig.humanize_wait_time}
+                      onChange={(e) => setBotConfig({ ...botConfig, humanize_wait_time: parseInt(e.target.value) || 2 })}
+                      min={1}
+                      max={30}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Pausa entre mensajes para parecer más humano. (1-30 seg)
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowBotConfig(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveBotConfig}
+                disabled={savingBotConfig || loadingBotConfig}
+                className="flex items-center gap-2 px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+              >
+                {savingBotConfig ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

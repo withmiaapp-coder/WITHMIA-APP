@@ -1786,6 +1786,10 @@ Route::middleware(['web', 'railway.auth:true'])->group(function () {
     Route::post('/company/logo', [\App\Http\Controllers\KnowledgeController::class, 'uploadCompanyLogo']);
     Route::post('/knowledge/upload-document', [\App\Http\Controllers\KnowledgeController::class, 'uploadDocument']);
     
+    // Bot Configuration - configuración del bot n8n
+    Route::get('/bot-config', [\App\Http\Controllers\Api\BotConfigController::class, 'index']);
+    Route::put('/bot-config', [\App\Http\Controllers\Api\BotConfigController::class, 'update']);
+    
     // Training Chat - conversación para entrenar al bot
     Route::post('/training/chat', [\App\Http\Controllers\KnowledgeController::class, 'trainingChat']);
     
