@@ -103,7 +103,7 @@ export default function Entrenamiento({
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(false); // Solo scroll despuÃ©s de enviar mensaje
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false); // Solo scroll después de enviar mensaje
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +111,7 @@ export default function Entrenamiento({
   const welcomeContent = useMemo(() => {
     const assistantName = onboardingData.assistant_name || 'tu asistente';
     const companyName = onboardingData.company_name || 'tu empresa';
-    return `Â¡Hola! ðŸ‘‹ Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquÃ­ para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cÃ³mo respondo.\n\nÂ¿QuÃ© te gustarÃ­a enseÃ±arme hoy?`;
+    return `¡Hola! 👋 Soy ${assistantName}, tu asistente de inteligencia artificial de ${companyName}.\n\nEstoy aquí para aprender. Puedes enviarme ejemplos de conversaciones, corregir mis respuestas o simplemente chatear conmigo para probar cómo respondo.\n\n¿Qué te gustaría enseñarme hoy?`;
   }, [onboardingData.assistant_name, onboardingData.company_name]);
 
   // Fetch onboarding data on mount
@@ -159,7 +159,7 @@ export default function Entrenamiento({
       }
     } catch (error) {
       console.error("Error saving bot config:", error);
-      alert("Error al guardar la configuraciÃ³n");
+      alert("Error al guardar la configuración");
     } finally {
       setSavingBotConfig(false);
     }
@@ -188,7 +188,7 @@ export default function Entrenamiento({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Solo hacer scroll cuando shouldAutoScroll es true (despuÃ©s de enviar mensaje)
+  // Solo hacer scroll cuando shouldAutoScroll es true (después de enviar mensaje)
   useEffect(() => {
     if (shouldAutoScroll && messages.length > 0) {
       scrollToBottom();
@@ -233,11 +233,11 @@ export default function Entrenamiento({
 
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona una imagen vÃ¡lida');
+      alert('Por favor selecciona una imagen válida');
       return;
     }
 
-    // Validar tamaÃ±o (max 2MB)
+    // Validar tamaño (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       alert('La imagen no debe superar 2MB');
       return;
@@ -289,12 +289,12 @@ export default function Entrenamiento({
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage.trim();
     
-    // ðŸ”§ DEBUG: Log encoding info
-    console.log('ðŸ“ Training message debug:', {
+    // 🔧 DEBUG: Log encoding info
+    console.log('📍 Training message debug:', {
       originalMessage: messageToSend,
       messageLength: messageToSend.length,
       // Check for problematic characters
-      hasAccents: /[Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘]/.test(messageToSend),
+      hasAccents: /[áéíóúñÁÉÍÓÚÑ]/.test(messageToSend),
       charCodes: messageToSend.slice(0, 50).split('').map(c => c.charCodeAt(0)),
     });
     
@@ -337,25 +337,25 @@ export default function Entrenamiento({
         setShouldAutoScroll(true); // Scroll cuando llega respuesta
         setMessages((prev) => [...prev, assistantMessage]);
         
-        // ðŸ”„ Si se cambiÃ³ el nombre del asistente, actualizar el estado local
+        // 📍„ Si se cambió el nombre del asistente, actualizar el estado local
         if (data.name_changed && data.new_name) {
           setOnboardingData((prev) => ({
             ...prev,
             assistant_name: data.new_name,
           }));
-          console.log('âœ… Nombre del asistente actualizado a:', data.new_name);
+          console.log('✅ Nombre del asistente actualizado a:', data.new_name);
         }
         
-        // Mostrar indicador si se guardÃ³ en Qdrant
+        // Mostrar indicador si se guardó en Qdrant
         if (data.saved_to_knowledge) {
-          console.log('âœ… InformaciÃ³n guardada en la base de conocimiento');
+          console.log('✅ Información guardada en la base de conocimiento');
         }
       } else {
         // Fallback response on error
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Lo siento, tuve un problema procesando tu mensaje. Â¿PodrÃ­as intentarlo de nuevo?",
+          content: "Lo siento, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?",
           timestamp: new Date(),
         };
         setShouldAutoScroll(true);
@@ -367,7 +367,7 @@ export default function Entrenamiento({
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "No pude conectarme al servidor. Por favor, verifica tu conexiÃ³n e intÃ©ntalo de nuevo.",
+        content: "No pude conectarme al servidor. Por favor, verifica tu conexión e inténtalo de nuevo.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -393,7 +393,7 @@ export default function Entrenamiento({
         <div>
           <h1 className="text-2xl font-bold text-neutral-800">Entrenamiento de IA</h1>
           <p className="text-sm text-neutral-500">
-            Entrena a WITHMIA con informaciÃ³n de tu empresa y ejemplos de conversaciÃ³n
+            Entrena a WITHMIA con información de tu empresa y ejemplos de conversación
           </p>
         </div>
       </div>
@@ -457,7 +457,7 @@ export default function Entrenamiento({
                   </div>
                   <div className="ml-auto flex items-center gap-1.5">
                     <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-white/80 text-xs font-medium">En lÃ­nea</span>
+                    <span className="text-white/80 text-xs font-medium">En línea</span>
                   </div>
                 </div>
 
@@ -559,7 +559,7 @@ export default function Entrenamiento({
             <div className="flex items-center gap-3">
               <Building2 className="w-6 h-6 text-violet-600" />
               <h2 className="text-2xl font-bold text-neutral-800">
-                InformaciÃ³n de tu Empresa
+                Información de tu Empresa
               </h2>
             </div>
             {!editingOnboarding ? (
@@ -567,7 +567,7 @@ export default function Entrenamiento({
                 <button
                   onClick={handleOpenBotConfig}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                  title="ConfiguraciÃ³n del Bot"
+                  title="Configuración del Bot"
                 >
                   <Settings className="w-4 h-4" />
                 </button>
@@ -643,7 +643,7 @@ export default function Entrenamiento({
                     )}
                     {onboardingData.logo_url ? 'Cambiar logo' : 'Subir logo'}
                   </button>
-                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP. MÃ¡x 2MB</p>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP. Máx 2MB</p>
                 </div>
               </div>
             </div>
@@ -672,7 +672,7 @@ export default function Entrenamiento({
                   {onboardingData.assistant_name || "WITHMIA"}
                 </p>
               )}
-              <p className="text-xs text-gray-500 mt-1">Este es el nombre con el que tu IA se presentarÃ¡ a tus clientes</p>
+              <p className="text-xs text-gray-500 mt-1">Este es el nombre con el que tu IA se presentará a tus clientes</p>
             </div>
 
             {/* Company Name */}
@@ -720,7 +720,7 @@ export default function Entrenamiento({
                         }
                         className="mr-2 w-4 h-4 text-violet-600 border-gray-300 focus:ring-violet-500"
                       />
-                      SÃ­
+                      Sí
                     </label>
                     <label className="flex items-center cursor-pointer text-gray-900 font-medium">
                       <input
@@ -774,7 +774,7 @@ export default function Entrenamiento({
             {/* Company Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                DescripciÃ³n de la Empresa
+                Descripción de la Empresa
               </label>
               {editingOnboarding ? (
                 <textarea
@@ -817,7 +817,7 @@ export default function Entrenamiento({
                     }`}
                   >
                     <div className="text-center">
-                      <div className="text-xl mb-1">ðŸ¢</div>
+                      <div className="text-xl mb-1"></div>
                       <div className="font-semibold text-sm">Interno</div>
                     </div>
                   </button>
@@ -835,7 +835,7 @@ export default function Entrenamiento({
                     }`}
                   >
                     <div className="text-center">
-                      <div className="text-xl mb-1">ðŸ‘¥</div>
+                      <div className="text-xl mb-1"></div>
                       <div className="font-semibold text-sm">Externo</div>
                     </div>
                   </button>
@@ -851,9 +851,9 @@ export default function Entrenamiento({
                   }`}
                 >
                   {onboardingData.client_type === "interno"
-                    ? "ðŸ¢ Cliente Interno - Para equipos de tu empresa"
+                    ? " Cliente Interno - Para equipos de tu empresa"
                     : onboardingData.client_type === "externo"
-                    ? "ðŸ‘¥ Cliente Externo - Para tus clientes finales"
+                    ? " Cliente Externo - Para tus clientes finales"
                     : "No especificado"}
                 </div>
               )}
@@ -867,9 +867,9 @@ export default function Entrenamiento({
               <div>
                 <h4 className="font-semibold text-violet-800 text-sm">Consejos de entrenamiento</h4>
                 <ul className="mt-2 text-sm text-violet-700 space-y-1">
-                  <li>â€¢ Proporciona ejemplos de conversaciones tÃ­picas</li>
-                  <li>â€¢ Corrige las respuestas que no sean correctas</li>
-                  <li>â€¢ Describe cÃ³mo debe responder WITHMIA a tus clientes</li>
+                  <li>• Proporciona ejemplos de conversaciones típicas</li>
+                  <li>• Corrige las respuestas que no sean correctas</li>
+                  <li>• Describe cómo debe responder WITHMIA a tus clientes</li>
                 </ul>
               </div>
             </div>
@@ -886,7 +886,7 @@ export default function Entrenamiento({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Settings className="w-6 h-6 text-white" />
-                  <h3 className="text-xl font-bold text-white">ConfiguraciÃ³n del Bot</h3>
+                  <h3 className="text-xl font-bold text-white">Configuración del Bot</h3>
                 </div>
                 <button
                   onClick={() => setShowBotConfig(false)}
@@ -919,7 +919,7 @@ export default function Entrenamiento({
                       placeholder="BOT"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Si el cliente escribe esta palabra, el bot se reactiva automÃ¡ticamente.
+                      Si el cliente escribe esta palabra, el bot se reactiva automáticamente.
                     </p>
                   </div>
 
@@ -938,7 +938,7 @@ export default function Entrenamiento({
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Cuando tÃº escribes en el chat, el bot se bloquea por este tiempo. (60-86400 seg)
+                      Cuando tú escribes en el chat, el bot se bloquea por este tiempo. (60-86400 seg)
                     </p>
                   </div>
 
@@ -965,7 +965,7 @@ export default function Entrenamiento({
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                       <Clock className="w-4 h-4 text-violet-600" />
-                      Demora de humanizaciÃ³n (segundos)
+                      Demora de humanización (segundos)
                     </label>
                     <input
                       type="number"
@@ -976,7 +976,7 @@ export default function Entrenamiento({
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Pausa entre mensajes para parecer mÃ¡s humano. (1-30 seg)
+                      Pausa entre mensajes para parecer más humano. (1-30 seg)
                     </p>
                   </div>
                 </>
