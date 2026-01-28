@@ -1,21 +1,26 @@
 ﻿<?php
 
+/**
+ * Chatwoot Configuration
+ * Updated: 2026-01-27
+ */
+
 return [
-    // Super Admin credentials (para gestionar todas las empresas)
+    // Super Admin credentials
     'account_id' => env('CHATWOOT_ACCOUNT_ID', '1'),
-    'super_admin_token' => env('CHATWOOT_SUPER_ADMIN_TOKEN'), // Token del Super Admin
-    
-    // API tokens (legacy - mantener por compatibilidad)
+    'super_admin_token' => env('CHATWOOT_SUPER_ADMIN_TOKEN'),
+
+    // API tokens
     'api_key' => env('CHATWOOT_API_KEY'),
     'api_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
     'platform_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
-    'token' => env('CHATWOOT_PLATFORM_API_TOKEN'), // Token para Evolution API
-    
+    'token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
+
     // URLs
     'url' => env('CHATWOOT_URL', 'http://localhost:3000'),
     'base_url' => env('CHATWOOT_API_BASE_URL', 'http://localhost:3000'),
-    
-    // Configuracion para evitar duplicados
+
+    // Configuration
     'reopen_conversation' => env('CHATWOOT_REOPEN_CONVERSATION', true),
     'merge_brazil_contacts' => env('CHATWOOT_MERGE_BRAZIL_CONTACTS', true),
     'conversation_pending' => env('CHATWOOT_CONVERSATION_PENDING', false),
