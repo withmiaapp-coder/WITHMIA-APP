@@ -19,4 +19,4 @@
 [start]
   cmd = 'php artisan migrate --force && php artisan config:clear && php artisan route:clear && php artisan view:clear && PHP_INI_SCAN_DIR=/app php -c /app/php.ini artisan serve --host=0.0.0.0 --port=${PORT:-8080}'
 
-# Build trigger: 2026-01-20-v2
+# Build trigger: 2026-01-28-bot-config
