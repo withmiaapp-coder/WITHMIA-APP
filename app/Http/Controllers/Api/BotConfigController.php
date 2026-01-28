@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\WhatsAppInstance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,13 +13,29 @@ class BotConfigController extends Controller
 {
     private string $n8nUrl;
     private string $n8nApiKey;
-    private string $workflowId;
 
     public function __construct()
     {
         $this->n8nUrl = config('services.n8n.url', 'https://n8n-production-00dd.up.railway.app');
         $this->n8nApiKey = config('services.n8n.api_key', '');
-        $this->workflowId = config('services.n8n.workflow_id', 'C1mhxAWt67pfg3BC');
+    }
+
+    /**
+     * Obtener el workflow_id de la empresa del usuario autenticado
+     */
+    private function getCompanyWorkflowId(): ?string
+    {
+        $user = Auth::user();
+        if (!$user || !$user->company_id) {
+            return null;
+        }
+
+        // Buscar la instancia de WhatsApp de la empresa
+        $instance = WhatsAppInstance::where('company_id', $user->company_id)
+            ->whereNotNull('n8n_workflow_id')
+            ->first();
+
+        return $instance?->n8n_workflow_id;
     }
 
     /**
@@ -27,7 +44,16 @@ class BotConfigController extends Controller
     public function index()
     {
         try {
-            $workflow = $this->getWorkflow();
+            $workflowId = $this->getCompanyWorkflowId();
+            
+            if (!$workflowId) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No tienes un workflow configurado. Conecta tu WhatsApp primero.'
+                ], 404);
+            }
+
+            $workflow = $this->getWorkflow($workflowId);
             
             if (!$workflow) {
                 return response()->json([
@@ -64,7 +90,16 @@ class BotConfigController extends Controller
         ]);
 
         try {
-            $workflow = $this->getWorkflow();
+            $workflowId = $this->getCompanyWorkflowId();
+            
+            if (!$workflowId) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No tienes un workflow configurado. Conecta tu WhatsApp primero.'
+                ], 404);
+            }
+
+            $workflow = $this->getWorkflow($workflowId);
             
             if (!$workflow) {
                 return response()->json([
@@ -110,7 +145,7 @@ class BotConfigController extends Controller
             }
 
             // Subir workflow actualizado
-            $result = $this->updateWorkflow($workflow);
+            $result = $this->updateWorkflow($workflow, $workflowId);
 
             if (!$result) {
                 return response()->json([
@@ -139,11 +174,11 @@ class BotConfigController extends Controller
     /**
      * Obtener el workflow de n8n
      */
-    private function getWorkflow(): ?array
+    private function getWorkflow(string $workflowId): ?array
     {
         $response = Http::withHeaders([
             'X-N8N-API-KEY' => $this->n8nApiKey,
-        ])->get("{$this->n8nUrl}/api/v1/workflows/{$this->workflowId}");
+        ])->get("{$this->n8nUrl}/api/v1/workflows/{$workflowId}");
 
         if ($response->successful()) {
             return $response->json();
@@ -156,7 +191,7 @@ class BotConfigController extends Controller
     /**
      * Actualizar el workflow en n8n
      */
-    private function updateWorkflow(array $workflow): bool
+    private function updateWorkflow(array $workflow, string $workflowId): bool
     {
         // Solo enviar los campos permitidos
         $cleanWorkflow = [
@@ -169,7 +204,7 @@ class BotConfigController extends Controller
         $response = Http::withHeaders([
             'X-N8N-API-KEY' => $this->n8nApiKey,
             'Content-Type' => 'application/json',
-        ])->put("{$this->n8nUrl}/api/v1/workflows/{$this->workflowId}", $cleanWorkflow);
+        ])->put("{$this->n8nUrl}/api/v1/workflows/{$workflowId}", $cleanWorkflow);
 
         if ($response->successful()) {
             return true;
