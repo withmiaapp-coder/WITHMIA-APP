@@ -966,12 +966,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const conversationBadges = globalNotifications?.conversationBadges;
   const initializeBadges = globalNotifications?.initializeBadges;
   
-  // ✅ Inicializar badges cuando se cargan las conversaciones
-  const hasInitializedBadges = useRef(false);
+  // ✅ Inicializar badges cuando se cargan las conversaciones (solo la primera vez - controlado en el contexto)
   useEffect(() => {
-    if (conversations && conversations.length > 0 && initializeBadges && !hasInitializedBadges.current) {
+    if (conversations && conversations.length > 0 && initializeBadges) {
       initializeBadges(conversations);
-      hasInitializedBadges.current = true;
     }
   }, [conversations, initializeBadges]);
   

@@ -350,7 +350,15 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   }, []);
 
   // Inicializar badges desde conversaciones (llamado al cargar)
+  // Solo inicializa la PRIMERA vez - después las actualizaciones vienen del WebSocket
+  const hasInitializedBadges = useRef(false);
   const initializeBadges = useCallback((conversations: Array<{ id: number; unread_count?: number }>) => {
+    // Solo inicializar UNA VEZ por sesión
+    if (hasInitializedBadges.current) {
+      return;
+    }
+    hasInitializedBadges.current = true;
+    
     const newMap = new Map<number, number>();
     let total = 0;
     conversations.forEach(conv => {
