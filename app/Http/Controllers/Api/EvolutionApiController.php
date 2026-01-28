@@ -94,6 +94,8 @@ class EvolutionApiController extends Controller
     /**
      * Obtener configuración de Chatwoot específica para el usuario/empresa
      * Multi-tenant: cada empresa tiene su propio account_id y token
+     * 
+     * 🔧 FIX: Ahora creamos el inbox PRIMERO y obtenemos el Channel Token correcto
      */
     private function getChatwootConfigForUser($user): array|bool
     {
@@ -105,42 +107,135 @@ class EvolutionApiController extends Controller
         $company = $user->company;
         
         if ($company && $company->chatwoot_account_id) {
-            // 🔧 FIX CRÍTICO: Para CREAR inboxes necesitamos el Platform Token (admin)
-            // El chatwoot_agent_token del usuario es solo para agentes, NO puede crear inboxes
-            // Usamos el CHATWOOT_PLATFORM_API_TOKEN que tiene permisos de admin
             $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+            $chatwootUrl = config('chatwoot.url');
+            $accountId = $company->chatwoot_account_id;
             
             // IMPORTANTE: Usar company_slug para el nombre del inbox
-            // Esto asegura consistencia con el sync automático que busca "WhatsApp {instanceName}"
-            // donde instanceName = company_slug
             $inboxName = $user->company_slug 
                 ? "WhatsApp {$user->company_slug}" 
                 : "WhatsApp {$company->name}";
             
-            // 🔧 FIX: Siempre usar auto_create=true para asegurar que el inbox exista
-            // Evolution API NO crea duplicados si el inbox ya existe con el mismo nombre
-            // Esto soluciona el problema cuando el inbox fue eliminado pero chatwoot_inbox_id aún existe
-            $autoCreate = true;
+            // 🔧 NUEVO FLUJO: Buscar el Channel Token existente o crearlo
+            $channelToken = $this->getOrCreateChannelToken($accountId, $inboxName, $platformToken, $chatwootUrl);
             
-            Log::info('🔧 Chatwoot config for user', [
+            if ($channelToken) {
+                Log::info('✅ Usando Channel Token para Evolution', [
+                    'user_id' => $user->id,
+                    'account_id' => $accountId,
+                    'inbox_name' => $inboxName,
+                    'token_type' => 'channel_token'
+                ]);
+                
+                return [
+                    'account_id' => $accountId,
+                    'token' => $channelToken, // ✅ CHANNEL TOKEN (correcto para enviar mensajes)
+                    'url' => $chatwootUrl,
+                    'inbox_name' => $inboxName,
+                    'auto_create' => false // No necesitamos que Evolution cree, ya existe
+                ];
+            }
+            
+            // Fallback: usar Platform Token y auto_create (Evolution creará el inbox)
+            // Esto se corregirá automáticamente después con ensureCorrectChatwootToken()
+            Log::warning('⚠️ No se encontró Channel Token, usando Platform Token (se corregirá después)', [
                 'user_id' => $user->id,
-                'account_id' => $company->chatwoot_account_id,
-                'inbox_name' => $inboxName,
-                'auto_create' => $autoCreate,
-                'has_platform_token' => !empty($platformToken)
+                'account_id' => $accountId
             ]);
             
             return [
-                'account_id' => $company->chatwoot_account_id,
-                'token' => $platformToken, // PLATFORM TOKEN para crear inboxes
-                'url' => config('chatwoot.url'),
+                'account_id' => $accountId,
+                'token' => $platformToken,
+                'url' => $chatwootUrl,
                 'inbox_name' => $inboxName,
-                'auto_create' => $autoCreate
+                'auto_create' => true
             ];
         }
 
         // Fallback: usar config global
         return true;
+    }
+    
+    /**
+     * Obtener Channel Token existente o crear inbox y obtenerlo
+     */
+    private function getOrCreateChannelToken(string $accountId, string $inboxName, string $platformToken, string $chatwootUrl): ?string
+    {
+        try {
+            // 1. Buscar en la base de datos de Chatwoot si ya existe el inbox
+            $chatwootDb = DB::connection('chatwoot');
+            
+            // Buscar inbox por nombre
+            $inbox = $chatwootDb->table('inboxes')
+                ->where('account_id', $accountId)
+                ->where('name', $inboxName)
+                ->first();
+            
+            if ($inbox) {
+                // Obtener el Channel Token del channel_api
+                $channelApi = $chatwootDb->table('channel_api')
+                    ->where('id', $inbox->channel_id)
+                    ->first();
+                
+                if ($channelApi && $channelApi->identifier) {
+                    Log::info('✅ Channel Token encontrado en DB', [
+                        'inbox_id' => $inbox->id,
+                        'inbox_name' => $inboxName
+                    ]);
+                    return $channelApi->identifier;
+                }
+            }
+            
+            // 2. No existe inbox, crear uno via API de Chatwoot
+            Log::info('📦 Creando inbox en Chatwoot...', ['inbox_name' => $inboxName]);
+            
+            $response = Http::withHeaders([
+                'api_access_token' => $platformToken,
+                'Content-Type' => 'application/json'
+            ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/inboxes", [
+                'name' => $inboxName,
+                'channel' => [
+                    'type' => 'api',
+                    'webhook_url' => config('evolution.api_url') . '/chatwoot/webhook/' . str_replace('WhatsApp ', 'withmia-', strtolower($inboxName))
+                ]
+            ]);
+            
+            if ($response->successful()) {
+                $inboxData = $response->json();
+                $newInboxId = $inboxData['id'] ?? null;
+                
+                if ($newInboxId) {
+                    // Obtener Channel Token del inbox recién creado
+                    $channelApi = $chatwootDb->table('channel_api')
+                        ->join('inboxes', 'channel_api.id', '=', 'inboxes.channel_id')
+                        ->where('inboxes.id', $newInboxId)
+                        ->select('channel_api.identifier')
+                        ->first();
+                    
+                    if ($channelApi && $channelApi->identifier) {
+                        Log::info('✅ Inbox creado y Channel Token obtenido', [
+                            'inbox_id' => $newInboxId,
+                            'inbox_name' => $inboxName
+                        ]);
+                        return $channelApi->identifier;
+                    }
+                }
+            } else {
+                Log::warning('No se pudo crear inbox en Chatwoot', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo Channel Token', [
+                'error' => $e->getMessage(),
+                'inbox_name' => $inboxName
+            ]);
+            return null;
+        }
     }
 
     /**
