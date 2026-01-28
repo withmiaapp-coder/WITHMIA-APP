@@ -969,6 +969,17 @@ export default function Entrenamiento({
                       <Shield className="w-4 h-4 text-violet-600" />
                       Tiempo de bloqueo (segundos)
                     </label>
+                    {/* Convertidor visual a horas/minutos */}
+                    <div className="mb-2 px-3 py-2 bg-violet-50 rounded-lg border border-violet-100">
+                      <span className="text-sm font-medium text-violet-700">
+                        ⏱️ {botConfig.block_duration >= 3600 
+                          ? `${Math.floor(botConfig.block_duration / 3600)}h ${Math.floor((botConfig.block_duration % 3600) / 60)}min`
+                          : botConfig.block_duration >= 60
+                            ? `${Math.floor(botConfig.block_duration / 60)} minutos`
+                            : `${botConfig.block_duration} segundos`
+                        }
+                      </span>
+                    </div>
                     <input
                       type="number"
                       value={botConfig.block_duration}
@@ -978,7 +989,7 @@ export default function Entrenamiento({
                       className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      Cuando tú escribes en el chat, el bot se bloquea por este tiempo. (60-86400 seg)
+                      Cuando tú escribes en el chat, el bot se bloquea por este tiempo. (1 min - 24 hrs)
                     </p>
                   </div>
 
