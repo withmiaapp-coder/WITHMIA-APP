@@ -455,12 +455,27 @@ export const useConversations = () => {
 
           updatedConversations.forEach(updated => {
             const existing = conversationMap.get(updated.id);
-            // ✅ FIX: Si el servidor dice unread_count 0, respetarlo (fue marcada como leída)
-            // Solo usar Math.max si el servidor reporta mensajes no leídos
+            // ✅ FIX MEJORADO: Preservar unread_count local para evitar parpadeo
+            // El servidor puede tener datos desactualizados momentáneamente
             let finalUnreadCount = updated.unread_count || 0;
-            if (existing && updated.unread_count > 0) {
-              // Solo mantener el máximo cuando HAY mensajes no leídos según el servidor
-              finalUnreadCount = Math.max(updated.unread_count, existing.unread_count || 0);
+            if (existing) {
+              const existingCount = existing.unread_count || 0;
+              const serverCount = updated.unread_count || 0;
+              
+              // Si la diferencia es pequeña (1-2), confiar en el local que es más reciente
+              // Esto evita el parpadeo cuando el servidor aún no sincronizó
+              if (existingCount > serverCount && (existingCount - serverCount) <= 2) {
+                finalUnreadCount = existingCount;
+              } else if (serverCount > existingCount) {
+                // Servidor tiene más, usar el del servidor
+                finalUnreadCount = serverCount;
+              } else if (serverCount === 0 && existingCount > 0) {
+                // Solo resetear a 0 si el servidor explícitamente dice 0
+                // Esto ocurre cuando el usuario marca como leído
+                finalUnreadCount = 0;
+              } else {
+                finalUnreadCount = existingCount;
+              }
             }
             const merged = existing ? { ...updated, unread_count: finalUnreadCount } : updated;
             conversationMap.set(updated.id, merged);

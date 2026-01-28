@@ -1000,8 +1000,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setLastEventTime(new Date());
       
       if (wsEvent.type === 'conversation_updated') {
-        // 🔄 Actualizar lista de conversaciones
-        debouncedFetchConversationsRef.current();
+        // ✅ FIX: No recargar del servidor inmediatamente para evitar parpadeo de badges
+        // Solo actualizar si es un cambio de estado (open/resolved/pending)
+        const newStatus = wsEvent.event?.status;
+        if (newStatus) {
+          setConversations((prev: any[]) => 
+            prev.map(conv => 
+              conv.id === wsEvent.conversationId 
+                ? { ...conv, status: newStatus }
+                : conv
+            )
+          );
+        }
+        // Ya no llamamos a debouncedFetchConversationsRef.current() aquí
+        // porque causa parpadeo de los badges al sobrescribir con datos del servidor
         return;
       }
       
