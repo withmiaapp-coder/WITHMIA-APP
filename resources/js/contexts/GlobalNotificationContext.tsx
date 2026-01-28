@@ -340,12 +340,22 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   }, []);
 
   const clearBadge = useCallback((conversationId: number) => {
+    // ✅ Limpiar badge del Map
     setConversationBadges(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(conversationId) || 0;
       newMap.set(conversationId, 0);
       setTotalUnreadMessages(total => Math.max(0, total - current));
       return newMap;
+    });
+    
+    // ✅ TAMBIÉN limpiar notificaciones de la campana para esta conversación
+    setNotifications(prev => {
+      const removedUnread = prev.filter(n => n.conversationId === conversationId && !n.read).length;
+      if (removedUnread > 0) {
+        setUnreadCount(count => Math.max(0, count - removedUnread));
+      }
+      return prev.filter(n => n.conversationId !== conversationId);
     });
   }, []);
 
