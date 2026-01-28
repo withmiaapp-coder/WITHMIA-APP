@@ -1670,12 +1670,31 @@ class ChatwootController extends Controller
             // CACHE: 60 segundos por cuenta
             $cacheKey = "chatwoot_teams_{$this->accountId}";
             
+            // DEBUG: Log para verificar el accountId y token
+            Log::debug('🔧 getTeams iniciando', [
+                'account_id' => $this->accountId,
+                'cache_key' => $cacheKey,
+                'has_token' => !empty($this->chatwootToken),
+                'user_id' => $user->id
+            ]);
+            
             $teamsWithMembers = Cache::remember($cacheKey, 60, function () {
+                Log::debug('🔧 getTeams: Cache MISS, consultando Chatwoot');
+                
                 $response = Http::withHeaders([
                     'api_access_token' => $this->chatwootToken,
                 ])->timeout(5)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
 
+                Log::debug('🔧 getTeams respuesta Chatwoot', [
+                    'status' => $response->status(),
+                    'count' => count($response->json() ?? [])
+                ]);
+
                 if (!$response->successful()) {
+                    Log::error('getTeams: Error en respuesta de Chatwoot', [
+                        'status' => $response->status(),
+                        'body' => $response->body()
+                    ]);
                     return [];
                 }
                 
@@ -1782,31 +1801,49 @@ class ChatwootController extends Controller
 
             $url = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams';
             
+            // Verificar que tenemos token válido
+            if (empty($this->chatwootToken)) {
+                Log::error('🔧 createTeam: No hay token de Chatwoot configurado', [
+                    'account_id' => $this->accountId,
+                    'user_id' => $this->userId
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay token de Chatwoot configurado. Contacta al administrador.',
+                    'debug' => ['account_id' => $this->accountId, 'has_token' => false]
+                ], 400);
+            }
+
             Log::info('🔧 Creando equipo en Chatwoot', [
                 'url' => $url,
                 'name' => $validated['name'],
-                'token_preview' => substr($this->chatwootToken ?? 'NULL', 0, 10) . '...',
+                'account_id' => $this->accountId,
+                'token_preview' => substr($this->chatwootToken, 0, 10) . '...',
             ]);
 
             $response = Http::withHeaders([
                 'api_access_token' => $this->chatwootToken,
                 'Content-Type' => 'application/json',
-            ])->post($url, [
+            ])->timeout(15)->post($url, [
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? '',
                 'allow_auto_assign' => $validated['allow_auto_assign'] ?? true,
             ]);
 
+            $responseBody = $response->json();
+            $responseStatus = $response->status();
+            
             Log::info('🔧 Respuesta createTeam', [
-                'status' => $response->status(),
+                'status' => $responseStatus,
                 'successful' => $response->successful(),
-                'body' => $response->json()
+                'body' => $responseBody
             ]);
 
             if ($response->successful()) {
-                Log::info('Equipo creado en Chatwoot', [
+                Log::info('✅ Equipo creado exitosamente en Chatwoot', [
                     'user_id' => $this->userId,
-                    'team_name' => $validated['name']
+                    'team_name' => $validated['name'],
+                    'team_id' => $responseBody['id'] ?? 'unknown'
                 ]);
                 
                 // Invalidar cache de teams
@@ -1814,14 +1851,23 @@ class ChatwootController extends Controller
                 
                 return response()->json([
                     'success' => true,
-                    'data' => $response->json(),
+                    'data' => $responseBody,
                     'message' => 'Equipo creado exitosamente'
                 ]);
             }
 
+            // Error de Chatwoot
+            Log::error('❌ Error al crear equipo en Chatwoot', [
+                'status' => $responseStatus,
+                'response' => $responseBody,
+                'url' => $url
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear equipo: ' . ($response->json()['message'] ?? 'Error desconocido')
+                'message' => 'Error al crear equipo: ' . ($responseBody['message'] ?? $responseBody['error'] ?? 'Error desconocido'),
+                'chatwoot_status' => $responseStatus,
+                'chatwoot_response' => $responseBody
             ], 400);
 
         } catch (\Exception $e) {
