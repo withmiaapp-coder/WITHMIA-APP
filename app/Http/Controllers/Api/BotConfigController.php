@@ -242,14 +242,21 @@ class BotConfigController extends Controller
      */
     private function updateWorkflow(array $workflow, string $workflowId): bool
     {
-        // Limpiar nodos - asegurar que parameters sea siempre un objeto
-        $cleanNodes = array_map(function ($node) {
-            // Si parameters es null o no es array, convertirlo a objeto vacío
-            if (!isset($node['parameters']) || !is_array($node['parameters'])) {
+        // Limpiar nodos - asegurar que parameters sea siempre un objeto JSON (no array vacío)
+        $cleanNodes = [];
+        foreach ($workflow['nodes'] as $index => $node) {
+            // Si parameters es null, no existe, es array vacío, o no es array asociativo
+            // convertirlo a objeto vacío para que JSON lo serialice como {}
+            if (!isset($node['parameters']) || 
+                $node['parameters'] === null || 
+                (is_array($node['parameters']) && empty($node['parameters']))) {
+                $node['parameters'] = new \stdClass();
+            } elseif (is_array($node['parameters']) && array_keys($node['parameters']) === range(0, count($node['parameters']) - 1)) {
+                // Es un array indexado (como []), convertir a objeto vacío
                 $node['parameters'] = new \stdClass();
             }
-            return $node;
-        }, $workflow['nodes']);
+            $cleanNodes[] = $node;
+        }
         
         // Solo enviar los campos permitidos
         $cleanWorkflow = [
