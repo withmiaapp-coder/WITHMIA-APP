@@ -1718,7 +1718,18 @@ class ChatwootController extends Controller
                 $teamsWithMembers = [];
                 foreach ($teams as $team) {
                     $memberResponse = $responses["team_{$team['id']}"] ?? null;
-                    $team['members'] = ($memberResponse && $memberResponse->successful()) ? $memberResponse->json() : [];
+                    $members = ($memberResponse && $memberResponse->successful()) ? $memberResponse->json() : [];
+                    
+                    // Enriquecer miembros con full_name de nuestra DB
+                    $enrichedMembers = collect($members)->map(function ($member) {
+                        $localUser = \App\Models\User::where('email', $member['email'] ?? '')->first();
+                        if ($localUser && $localUser->full_name) {
+                            $member['name'] = $localUser->full_name;
+                        }
+                        return $member;
+                    })->toArray();
+                    
+                    $team['members'] = $enrichedMembers;
                     $teamsWithMembers[] = $team;
                 }
                 
@@ -1982,9 +1993,23 @@ class ChatwootController extends Controller
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members');
 
             if ($response->successful()) {
+                $members = $response->json();
+                
+                // Enriquecer con full_name de nuestra base de datos
+                $enrichedMembers = collect($members)->map(function ($member) {
+                    // Buscar usuario en nuestra DB por email
+                    $localUser = \App\Models\User::where('email', $member['email'] ?? '')->first();
+                    
+                    if ($localUser && $localUser->full_name) {
+                        $member['name'] = $localUser->full_name;
+                    }
+                    
+                    return $member;
+                })->toArray();
+                
                 return response()->json([
                     'success' => true,
-                    'data' => $response->json()
+                    'data' => $enrichedMembers
                 ]);
             }
 
