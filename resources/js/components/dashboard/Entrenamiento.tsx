@@ -915,7 +915,7 @@ export default function Entrenamiento({
                       type="text"
                       value={botConfig.unlock_keyword}
                       onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase() })}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                       placeholder="BOT"
                     />
                     <p className="mt-1 text-xs text-gray-500">
@@ -935,7 +935,7 @@ export default function Entrenamiento({
                       onChange={(e) => setBotConfig({ ...botConfig, block_duration: parseInt(e.target.value) || 600 })}
                       min={60}
                       max={86400}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                     />
                     <p className="mt-1 text-xs text-gray-500">
                       Cuando tú escribes en el chat, el bot se bloquea por este tiempo. (60-86400 seg)
@@ -954,7 +954,7 @@ export default function Entrenamiento({
                       onChange={(e) => setBotConfig({ ...botConfig, buffer_wait_time: parseInt(e.target.value) || 7 })}
                       min={1}
                       max={60}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                     />
                     <p className="mt-1 text-xs text-gray-500">
                       Espera que el cliente termine de escribir antes de responder. (1-60 seg)
@@ -973,7 +973,7 @@ export default function Entrenamiento({
                       onChange={(e) => setBotConfig({ ...botConfig, humanize_wait_time: parseInt(e.target.value) || 2 })}
                       min={1}
                       max={30}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                     />
                     <p className="mt-1 text-xs text-gray-500">
                       Pausa entre mensajes para parecer más humano. (1-30 seg)
