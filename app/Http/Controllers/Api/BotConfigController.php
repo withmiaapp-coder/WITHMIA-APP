@@ -41,33 +41,41 @@ class BotConfigController extends Controller
             'auth_check' => Auth::check(),
         ]);
         
-        if (!$user || (!$companyId && !$companySlug)) {
-            Log::warning('BotConfig - No user or company - BLOCKED', [
-                'request_user' => request()->user()?->id,
-                'auth_user' => Auth::user()?->id,
-            ]);
-            // NO usar fallback - cada empresa debe usar su propio workflow
+        // Si no hay usuario, intentar obtener el company_slug desde la referer URL
+        if (!$companySlug && !$companyId) {
+            $referer = request()->header('Referer', '');
+            if (preg_match('/\/dashboard\/([a-z0-9\-]+)/', $referer, $matches)) {
+                $companySlug = $matches[1];
+                Log::info('BotConfig - Got company_slug from referer', ['slug' => $companySlug]);
+            }
+        }
+        
+        if (!$companySlug && !$companyId) {
+            Log::warning('BotConfig - No company identifier found - BLOCKED');
             return null;
         }
 
         // Buscar la instancia de WhatsApp de la empresa del usuario
-        // Usar company_slug si no hay company_id
         $query = WhatsAppInstance::whereNotNull('n8n_workflow_id');
         
         if ($companyId) {
             $query->where('company_id', $companyId);
         } elseif ($companySlug) {
-            $query->where('company_slug', $companySlug);
+            // Buscar por company_slug O por name que contenga el slug
+            $query->where(function($q) use ($companySlug) {
+                $q->where('company_slug', $companySlug)
+                  ->orWhere('name', 'like', "%{$companySlug}%");
+            });
         }
         
         $instance = $query->first();
         
-        Log::info('BotConfig - Instance found', [
+        Log::info('BotConfig - Instance search result', [
             'instance_id' => $instance?->id,
             'instance_name' => $instance?->name,
             'workflow_id' => $instance?->n8n_workflow_id,
-            'company_id' => $companyId,
-            'company_slug' => $companySlug,
+            'searched_by' => $companyId ? 'company_id' : 'company_slug',
+            'search_value' => $companyId ?: $companySlug,
         ]);
 
         return $instance?->n8n_workflow_id;

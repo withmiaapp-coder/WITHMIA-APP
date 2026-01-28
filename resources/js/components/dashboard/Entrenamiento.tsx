@@ -930,14 +930,12 @@ export default function Entrenamiento({
                   <button
                     onClick={() => {
                       setShowBotConfig(false);
-                      // Usar el slug de la empresa para navegar correctamente
+                      // Cerrar modal y usar navegación directa del navegador
                       const slug = company?.slug || user?.company_slug;
-                      if (slug) {
-                        router.visit(`/dashboard/${slug}?section=integracion`);
-                      } else {
-                        // Fallback: recargar en la sección de integración del sidebar
-                        window.location.href = window.location.pathname + '?section=integracion';
-                      }
+                      const currentPath = window.location.pathname;
+                      // Extraer el slug actual de la URL si no lo tenemos
+                      const urlSlug = currentPath.match(/\/dashboard\/([^/?]+)/)?.[1] || slug;
+                      window.location.href = `/dashboard/${urlSlug}?section=integracion`;
                     }}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
                   >
