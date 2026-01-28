@@ -110,32 +110,46 @@ class BotConfigController extends Controller
 
             // Actualizar nodos según los parámetros
             $updated = false;
+            $updatedNodes = [];
 
-            foreach ($workflow['nodes'] as &$node) {
+            for ($i = 0; $i < count($workflow['nodes']); $i++) {
+                $node = &$workflow['nodes'][$i];
+                
                 // Actualizar palabra clave de desbloqueo
                 if ($node['name'] === 'Verifica Palabra Clave' && $request->has('unlock_keyword')) {
-                    $node['parameters']['conditions']['conditions'][0]['rightValue'] = strtoupper($request->unlock_keyword);
+                    $workflow['nodes'][$i]['parameters']['conditions']['conditions'][0]['rightValue'] = strtoupper($request->unlock_keyword);
                     $updated = true;
+                    $updatedNodes[] = 'Verifica Palabra Clave';
                 }
 
                 // Actualizar tiempo de bloqueo
                 if ($node['name'] === 'Bloquea al Agente' && $request->has('block_duration')) {
-                    $node['parameters']['ttl'] = (int) $request->block_duration;
+                    $workflow['nodes'][$i]['parameters']['ttl'] = (int) $request->block_duration;
                     $updated = true;
+                    $updatedNodes[] = 'Bloquea al Agente';
                 }
 
                 // Actualizar tiempo de buffer (Wait principal)
                 if ($node['name'] === 'Wait' && $request->has('buffer_wait_time')) {
-                    $node['parameters']['amount'] = (int) $request->buffer_wait_time;
+                    $workflow['nodes'][$i]['parameters']['amount'] = (int) $request->buffer_wait_time;
                     $updated = true;
+                    $updatedNodes[] = 'Wait';
                 }
 
                 // Actualizar tiempo de humanización (Wait1 y Wait2)
                 if (in_array($node['name'], ['Wait1', 'Wait2']) && $request->has('humanize_wait_time')) {
-                    $node['parameters']['amount'] = (int) $request->humanize_wait_time;
+                    $workflow['nodes'][$i]['parameters']['amount'] = (int) $request->humanize_wait_time;
                     $updated = true;
+                    $updatedNodes[] = $node['name'];
                 }
             }
+            
+            Log::info('Bot config update attempt', [
+                'workflow_id' => $workflowId,
+                'updated' => $updated,
+                'updated_nodes' => $updatedNodes,
+                'request_data' => $request->all()
+            ]);
 
             if (!$updated) {
                 return response()->json([
