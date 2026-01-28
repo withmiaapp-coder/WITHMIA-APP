@@ -1010,3 +1010,5 @@ export default function Entrenamiento({
     </div>
   );
 }
+/ /   B o t   c o n f i g   r e b u i l d   0 1 / 2 8 / 2 0 2 6   0 0 : 4 1 : 1 6  
+ 
