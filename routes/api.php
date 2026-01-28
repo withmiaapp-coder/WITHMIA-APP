@@ -3919,7 +3919,6 @@ Route::post('/n8n/notify-response', function (Request $request) {
         
         return response()->json([
             'success' => true,
-            'chatwoot_message_sent' => $chatwootMessageSent,
             'broadcast_sent' => ($conversationId > 0 && $inboxId > 0 && $accountId > 0),
             'channel' => "inbox.{$inboxId}",
             'account_id' => $accountId
