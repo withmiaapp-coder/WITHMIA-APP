@@ -257,7 +257,7 @@
             "name": "OpenAI Chat Model",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "id": "okqulnwOmmPYIcOr",
                     "name": "OpenAI Account"
                 }
             }
@@ -293,7 +293,7 @@
             "name": "Buscar en Base de Conocimientos",
             "credentials": {
                 "qdrantApi": {
-                    "id": "{{QDRANT_CREDENTIAL_ID}}",
+                    "id": "XNTIcgEaICXUYYBs",
                     "name": "Qdrant"
                 }
             }
@@ -315,7 +315,7 @@
             "name": "OpenAI Embeddings",
             "credentials": {
                 "openAiApi": {
-                    "id": "{{OPENAI_CREDENTIAL_ID}}",
+                    "id": "okqulnwOmmPYIcOr",
                     "name": "OpenAI Account"
                 }
             }
