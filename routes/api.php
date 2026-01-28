@@ -3883,38 +3883,8 @@ Route::post('/n8n/notify-response', function (Request $request) {
             $accountId = (int) ($company->chatwoot_account_id ?? 0);
         }
         
-        // Obtener API key de Chatwoot
-        $chatwootApiKey = $company->chatwoot_api_key ?? config('chatwoot.api_key');
-        $chatwootUrl = config('chatwoot.url');
-        
-        $chatwootMessageSent = false;
-        
-        // Guardar mensaje en Chatwoot
-        if ($conversationId > 0 && $accountId > 0 && $chatwootApiKey && $message) {
-            try {
-                $client = new \GuzzleHttp\Client(['timeout' => 10]);
-                $response = $client->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
-                    'headers' => [
-                        'api_access_token' => $chatwootApiKey,
-                        'Content-Type' => 'application/json',
-                    ],
-                    'json' => [
-                        'content' => $message,
-                        'message_type' => 'outgoing',
-                        'private' => false,
-                    ],
-                ]);
-                
-                $chatwootMessageSent = $response->getStatusCode() === 200;
-                
-                \Log::info('Mensaje guardado en Chatwoot', [
-                    'conversation_id' => $conversationId,
-                    'status' => $response->getStatusCode(),
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Error guardando mensaje en Chatwoot: ' . $e->getMessage());
-            }
-        }
+        // NOTA: Ya no enviamos a Chatwoot aquí porque n8n lo hace directamente
+        // via HTTP Request nodes. Este endpoint ahora solo hace broadcast WebSocket.
         
         // Solo broadcast si hay datos válidos
         if ($conversationId > 0 && $inboxId > 0 && $accountId > 0) {
