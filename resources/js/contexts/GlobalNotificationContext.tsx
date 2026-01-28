@@ -361,6 +361,14 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       }
       const filtered = prev.filter(n => n.conversationId !== conversationId);
       console.log('🧹 Notificaciones después:', filtered.length);
+      
+      // ✅ PERSISTIR en localStorage inmediatamente
+      if (filtered.length > 0) {
+        localStorage.setItem('globalNotifications', JSON.stringify(filtered.slice(0, 50)));
+      } else {
+        localStorage.removeItem('globalNotifications');
+      }
+      
       return filtered;
     });
   }, []);
