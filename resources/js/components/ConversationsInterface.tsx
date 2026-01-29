@@ -1918,7 +1918,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     try {
       await updateConversationLabels(activeConversation.id, labels);
       // Actualizar la conversación activa
-      setActiveConversation((prev: Conversation | null) => 
+      _setActiveConversation((prev: Conversation | null) => 
         prev ? { ...prev, labels } : null
       );
       // Actualizar la lista de conversaciones
