@@ -3673,13 +3673,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
 
               {/* 🏷️ BARRA DE HERRAMIENTAS DE CONVERSACIÓN */}
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
                 {/* Estado de la conversación */}
                 <ConversationActionsDropdown
                   conversationId={activeConversation.id}
                   currentStatus={activeConversation.status || 'open'}
                   onChangeStatus={handleChangeStatus}
-                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Asignar agente */}
@@ -3687,7 +3686,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   conversationId={activeConversation.id}
                   currentAssignee={activeConversation.assignee}
                   onAssign={handleAssignConversation}
-                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Gestionar etiquetas */}
@@ -3695,7 +3693,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   conversationId={activeConversation.id}
                   currentLabels={activeConversation.labels || []}
                   onUpdateLabels={handleUpdateLabels}
-                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Etiquetas actuales (badges) */}
