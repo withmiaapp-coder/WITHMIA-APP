@@ -2061,6 +2061,9 @@ class ChatwootController extends Controller
                     'added_users' => $validated['user_ids']
                 ]);
                 
+                // Invalidar cache de teams para que se actualice el conteo
+                $this->invalidateTeamsCache();
+                
                 return response()->json([
                     'success' => true,
                     'data' => $response->json(),
@@ -2105,6 +2108,9 @@ class ChatwootController extends Controller
                     'user_id' => $this->userId,
                     'team_id' => $teamId
                 ]);
+                
+                // Invalidar cache de teams
+                $this->invalidateTeamsCache();
                 
                 return response()->json([
                     'success' => true,
@@ -2151,6 +2157,9 @@ class ChatwootController extends Controller
                     'team_id' => $teamId,
                     'removed_users' => $validated['user_ids']
                 ]);
+                
+                // Invalidar cache de teams
+                $this->invalidateTeamsCache();
                 
                 return response()->json([
                     'success' => true,
