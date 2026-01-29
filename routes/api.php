@@ -10,7 +10,29 @@ use App\Http\Controllers\OnboardingApiController;
 use App\Http\Controllers\Api\ChatwootController;
 use App\Events\NewMessageReceived;
 
-// ?? SETUP TRAINING WORKFLOW - DINÁMICO por company_slug
+// 🔧 DEBUG: Ver configuración de Chatwoot por empresa (temporal)
+Route::get('/debug-chatwoot-config', function () {
+    $companies = \App\Models\Company::select('id', 'name', 'slug', 'chatwoot_account_id')
+        ->get()
+        ->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'chatwoot_account_id' => $c->chatwoot_account_id,
+                'has_own_account' => !empty($c->chatwoot_account_id),
+            ];
+        });
+    
+    return response()->json([
+        'total_companies' => $companies->count(),
+        'with_own_chatwoot' => $companies->where('has_own_account', true)->count(),
+        'sharing_default' => $companies->where('has_own_account', false)->count(),
+        'companies' => $companies
+    ]);
+});
+
+// 🛠 SETUP TRAINING WORKFLOW - DINÁMICO por company_slug
 Route::get('/setup-training-workflow/{companySlug}', function ($companySlug) {
     try {
         $company = \App\Models\Company::where('slug', $companySlug)->first();
