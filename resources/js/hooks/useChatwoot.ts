@@ -799,6 +799,26 @@ export const useConversations = () => {
           if (!loadMore) {
             prefetchNextConversations(conversationId);
           }
+        } else {
+          // ✅ FIX: Si la conversación no está en la lista, igual actualizar activeConversation
+          console.log('⚠️ Conversación no en lista, actualizando activeConversation directamente');
+          setActiveConversationState(prev => {
+            if (prev && prev.id === conversationId) {
+              return {
+                ...prev,
+                messages: uniqueMessages,
+                _isLoading: false,
+                _hasMoreMessages: meta.has_more ?? false
+              };
+            }
+            // Si no hay activeConversation previa, crear una mínima
+            return {
+              id: conversationId,
+              messages: uniqueMessages,
+              _isLoading: false,
+              _hasMoreMessages: meta.has_more ?? false
+            } as any;
+          });
         }
       }
     } catch (err) {
