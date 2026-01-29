@@ -50,7 +50,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
   const [newLabelColor, setNewLabelColor] = useState('#1f93ff');
   const [selectedLabels, setSelectedLabels] = useState<string[]>(currentLabels || []);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, openLeft: false });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   
@@ -60,9 +60,16 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 288; // w-72 = 18rem = 288px
+      const viewportWidth = window.innerWidth;
+      
+      // Si el dropdown se saldría por la derecha, abrirlo hacia la izquierda
+      const openLeft = rect.left + dropdownWidth > viewportWidth - 20;
+      
       setDropdownPosition({
         top: rect.bottom + 4,
-        left: rect.left
+        left: openLeft ? rect.right - dropdownWidth : rect.left,
+        openLeft
       });
     }
   }, [isOpen]);
