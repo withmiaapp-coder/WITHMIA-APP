@@ -1300,6 +1300,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const toggleRightPanel = () => {
     setIsRightPanelVisible(!isRightPanelVisible);
   };
+
+  // Función para abrir el panel derecho (sin toggle)
+  const openRightPanel = () => {
+    setIsRightPanelVisible(true);
+  };
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -3674,6 +3679,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   conversationId={activeConversation.id}
                   currentStatus={activeConversation.status || 'open'}
                   onChangeStatus={handleChangeStatus}
+                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Asignar agente */}
@@ -3681,6 +3687,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   conversationId={activeConversation.id}
                   currentAssignee={activeConversation.assignee}
                   onAssign={handleAssignConversation}
+                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Gestionar etiquetas */}
@@ -3688,6 +3695,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   conversationId={activeConversation.id}
                   currentLabels={activeConversation.labels || []}
                   onUpdateLabels={handleUpdateLabels}
+                  onOpenPanel={openRightPanel}
                 />
 
                 {/* Etiquetas actuales (badges) */}

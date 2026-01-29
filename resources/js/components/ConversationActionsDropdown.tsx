@@ -12,6 +12,7 @@ interface ConversationActionsDropdownProps {
   conversationId: number;
   currentStatus: 'open' | 'resolved' | 'pending' | 'snoozed';
   onChangeStatus: (status: string, snoozedUntil?: number) => Promise<void>;
+  onOpenPanel?: () => void;
   className?: string;
 }
 
@@ -33,6 +34,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   conversationId,
   currentStatus,
   onChangeStatus,
+  onOpenPanel,
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -71,7 +73,13 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Botón principal */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const willOpen = !isOpen;
+          setIsOpen(willOpen);
+          if (willOpen && onOpenPanel) {
+            onOpenPanel();
+          }
+        }}
         disabled={loading}
         className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${statusConfig[currentStatus]?.color || 'bg-gray-100 text-gray-700'} hover:opacity-80`}
       >

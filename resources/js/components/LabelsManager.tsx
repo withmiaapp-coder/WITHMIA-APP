@@ -20,6 +20,7 @@ interface LabelsManagerProps {
   conversationId: number;
   currentLabels: string[];
   onUpdateLabels: (labels: string[]) => Promise<void>;
+  onOpenPanel?: () => void;
   className?: string;
 }
 
@@ -38,6 +39,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
   conversationId,
   currentLabels,
   onUpdateLabels,
+  onOpenPanel,
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -139,7 +141,13 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Botón principal */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const willOpen = !isOpen;
+          setIsOpen(willOpen);
+          if (willOpen && onOpenPanel) {
+            onOpenPanel();
+          }
+        }}
         disabled={loading}
         className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 
           ${selectedLabels.length > 0 

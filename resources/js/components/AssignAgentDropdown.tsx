@@ -25,6 +25,7 @@ interface AssignAgentDropdownProps {
     email?: string;
   } | null;
   onAssign: (agentId: number | null) => Promise<void>;
+  onOpenPanel?: () => void;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
   conversationId,
   currentAssignee,
   onAssign,
+  onOpenPanel,
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,7 +94,13 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Botón principal */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const willOpen = !isOpen;
+          setIsOpen(willOpen);
+          if (willOpen && onOpenPanel) {
+            onOpenPanel();
+          }
+        }}
         disabled={loading}
         className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 
           ${currentAssignee 
