@@ -4837,10 +4837,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       #{label}
                     </span>
                   ))}
-                  <button className="px-2 py-1 bg-white/20 hover:bg-white/30 text-gray-600 text-xs rounded-full transition-colors flex items-center">
-                    <Plus className="w-3 h-3 mr-1" />
-                    Agregar
-                  </button>
+                  <LabelsManager
+                    conversationId={activeConversation.id}
+                    currentLabels={activeConversation.labels || []}
+                    onUpdateLabels={handleUpdateLabels}
+                    className="inline-flex"
+                  />
                 </div>
               </div>
 
