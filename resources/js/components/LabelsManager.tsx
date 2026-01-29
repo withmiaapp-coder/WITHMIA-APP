@@ -304,7 +304,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
             <div className="px-3 pt-2 border-t border-gray-100">
               <div className="flex flex-wrap gap-1">
                 {selectedLabels.map(labelTitle => {
-                  const label = labels.find((l: Label) => l.title === labelTitle);
+                  const label = safeLabels.find((l: Label) => l.title === labelTitle);
                   return (
                     <span 
                       key={labelTitle}
