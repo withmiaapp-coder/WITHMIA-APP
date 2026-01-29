@@ -1418,9 +1418,18 @@ class ChatwootController extends Controller
                 return $response->successful() ? $response->json() : [];
             });
 
+            // Enriquecer con full_name de nuestra base de datos
+            $enrichedAgents = collect($agents)->map(function ($agent) {
+                $localUser = \App\Models\User::where('email', $agent['email'] ?? '')->first();
+                if ($localUser && $localUser->full_name) {
+                    $agent['name'] = $localUser->full_name;
+                }
+                return $agent;
+            })->toArray();
+
             return response()->json([
                 'success' => true,
-                'data' => $agents
+                'data' => $enrichedAgents
             ]);
 
         } catch (\Exception $e) {
