@@ -8,6 +8,7 @@ import {
   X 
 } from 'lucide-react';
 import { useAgents } from '../hooks/useChatwoot';
+import Portal from './Portal';
 
 interface Agent {
   id: number;
@@ -39,9 +40,22 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   
   const { agents, loading: agentsLoading, fetchAgents } = useAgents();
+
+  // Calcular posición del dropdown cuando se abre
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left
+      });
+    }
+  }, [isOpen]);
 
   // Cargar agentes al abrir
   useEffect(() => {
@@ -91,9 +105,10 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
   };
 
   return (
-    <div ref={dropdownRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       {/* Botón principal */}
       <button
+        ref={buttonRef}
         onClick={() => {
           const willOpen = !isOpen;
           setIsOpen(willOpen);
@@ -123,7 +138,12 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[9999] animate-fade-in">
+        <Portal>
+          <div 
+            ref={dropdownRef}
+            className="fixed w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 animate-fade-in"
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
+          >
           {/* Barra de búsqueda */}
           <div className="px-3 pb-2">
             <input
@@ -200,7 +220,8 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
               ))
             )}
           </div>
-        </div>
+          </div>
+        </Portal>
       )}
     </div>
   );
