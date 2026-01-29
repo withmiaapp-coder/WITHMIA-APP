@@ -39,20 +39,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Calcular posición del dropdown
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 4,
-        left: rect.left
-      });
-    }
-  }, [isOpen]);
   
   const { agents, loading: agentsLoading, fetchAgents } = useAgents();
 
@@ -107,7 +94,6 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Botón principal */}
       <button
-        ref={buttonRef}
         onClick={() => {
           const willOpen = !isOpen;
           setIsOpen(willOpen);
@@ -137,10 +123,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div 
-          className="fixed w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[9999] animate-fade-in"
-          style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
-        >
+        <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-fade-in">
           {/* Barra de búsqueda */}
           <div className="px-3 pb-2">
             <input
