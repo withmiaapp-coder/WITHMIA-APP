@@ -40,7 +40,20 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const [isOpen, setIsOpen] = useState(false);
   const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Calcular posición del dropdown
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left
+      });
+    }
+  }, [isOpen]);
 
   // Cerrar al hacer clic fuera
   useEffect(() => {
@@ -73,6 +86,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Botón principal */}
       <button
+        ref={buttonRef}
         onClick={() => {
           const willOpen = !isOpen;
           setIsOpen(willOpen);
@@ -94,7 +108,10 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-fade-in">
+        <div 
+          className="fixed w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[9999] animate-fade-in"
+          style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+        >
           {/* Resolver */}
           <button
             onClick={() => handleStatusChange('resolved')}
