@@ -635,7 +635,9 @@ export const useConversations = () => {
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
+        // 🚫 Filtrar mensajes de actividad (message_type === 2) como asignaciones, etiquetas, etc.
         const chatwootMessages = messagesArray
+          .filter((msg: any) => msg.message_type !== 2) // Excluir activity messages
           .map((msg: any) => ({
           id: msg.id,
           content: msg.content,
