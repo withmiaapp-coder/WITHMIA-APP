@@ -1239,40 +1239,43 @@ export const useTeams = () => {
   const addTeamMembers = useCallback(async (teamId: number, userIds: number[]) => {
     try {
       const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'POST', { user_ids: userIds });
+      invalidateCache(); // Forzar recarga sin cache
       await fetchTeam(teamId);
-      await fetchTeams();
+      await fetchTeams(true); // true = forzar recarga
       return result?.data || result;
     } catch (err) {
       console.error('Error adding team members:', err);
       throw err;
     }
-  }, [apiCall, fetchTeam, fetchTeams]);
+  }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
 
   // Actualizar miembros (reemplazar todos)
   const updateTeamMembers = useCallback(async (teamId: number, userIds: number[]) => {
     try {
       const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'PATCH', { user_ids: userIds });
+      invalidateCache(); // Forzar recarga sin cache
       await fetchTeam(teamId);
-      await fetchTeams();
+      await fetchTeams(true); // true = forzar recarga
       return result?.data || result;
     } catch (err) {
       console.error('Error updating team members:', err);
       throw err;
     }
-  }, [apiCall, fetchTeam, fetchTeams]);
+  }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
 
   // Remover miembro de un equipo
   const removeTeamMember = useCallback(async (teamId: number, userId: number) => {
     try {
       await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`, 'DELETE', { user_ids: [userId] });
+      invalidateCache(); // Forzar recarga sin cache
       await fetchTeam(teamId);
-      await fetchTeams();
+      await fetchTeams(true); // true = forzar recarga
       return true;
     } catch (err) {
       console.error('Error removing team member:', err);
       throw err;
     }
-  }, [apiCall, fetchTeam, fetchTeams]);
+  }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
 
   // Cargar equipos al montar
   useEffect(() => {
