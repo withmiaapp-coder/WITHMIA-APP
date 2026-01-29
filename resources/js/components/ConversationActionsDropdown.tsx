@@ -94,7 +94,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-fade-in">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[9999] animate-fade-in">
           {/* Resolver */}
           <button
             onClick={() => handleStatusChange('resolved')}

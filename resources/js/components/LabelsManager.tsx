@@ -170,7 +170,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-fade-in">
+        <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[9999] animate-fade-in">
           {/* Header */}
           <div className="px-3 pb-2 flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-700">Etiquetas</span>
