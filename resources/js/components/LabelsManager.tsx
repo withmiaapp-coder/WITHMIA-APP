@@ -269,7 +269,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                 <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
               </div>
             ) : filteredLabels.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              <div className="px-4 py-3 text-sm text-gray-600 text-center">
                 {searchTerm ? 'No se encontraron etiquetas' : 'No hay etiquetas. Crea una nueva.'}
               </div>
             ) : (

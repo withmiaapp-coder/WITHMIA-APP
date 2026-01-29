@@ -353,12 +353,14 @@ const ConversationItem: React.FC<ConversationItemProps> = React.memo(({
           {/* Badges y contador */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(conversation.priority)}`}>
-                {conversation.priority}
-              </span>
-              <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(conversation.status)}`}>
-                {conversation.status}
-              </span>
+              {/* Mostrar etiquetas reales si existen */}
+              {conversation.labels && conversation.labels.length > 0 && (
+                conversation.labels.slice(0, 2).map((label: string) => (
+                  <span key={label} className="px-2 py-1 text-xs rounded-full bg-violet-100 text-violet-700">
+                    {label}
+                  </span>
+                ))
+              )}
             </div>
             
             {conversation.unread_count > 0 && (
