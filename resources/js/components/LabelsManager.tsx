@@ -114,12 +114,21 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
     setSearchTerm('');
   };
 
-  const toggleLabel = (labelTitle: string) => {
-    setSelectedLabels(prev => 
-      prev.includes(labelTitle) 
-        ? prev.filter(l => l !== labelTitle)
-        : [...prev, labelTitle]
-    );
+  const toggleLabel = async (labelTitle: string) => {
+    const newLabels = selectedLabels.includes(labelTitle) 
+      ? selectedLabels.filter(l => l !== labelTitle)
+      : [...selectedLabels, labelTitle];
+    
+    setSelectedLabels(newLabels);
+    
+    // Actualizar inmediatamente en el servidor
+    try {
+      await onUpdateLabels(newLabels);
+    } catch (error) {
+      console.error('Error al actualizar etiquetas:', error);
+      // Revertir en caso de error
+      setSelectedLabels(selectedLabels);
+    }
   };
 
   const handleCreateLabel = async () => {
@@ -132,8 +141,10 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
         color: newLabelColor,
         description: ''
       });
-      // Agregar automáticamente a seleccionados
-      setSelectedLabels(prev => [...prev, newLabelTitle.trim()]);
+      // Agregar automáticamente a seleccionados y actualizar en el servidor
+      const newLabels = [...selectedLabels, newLabelTitle.trim()];
+      setSelectedLabels(newLabels);
+      await onUpdateLabels(newLabels);
       setNewLabelTitle('');
       setNewLabelColor('#1f93ff');
       setShowCreateForm(false);
