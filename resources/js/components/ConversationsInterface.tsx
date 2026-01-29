@@ -3359,7 +3359,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 
                 return (
                   <div
-                    key={conversation.id}
+                    key={`${conversation.id}-${(conversation.labels || []).join(',')}`}
                     data-index={virtualRow.index}
                     ref={rowVirtualizer.measureElement}
                     style={{
