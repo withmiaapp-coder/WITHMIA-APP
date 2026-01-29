@@ -632,6 +632,13 @@ export const useConversations = () => {
       });
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
+      
+      console.log('🔍 DEBUG messagesArray:', {
+        isArray: Array.isArray(messagesArray),
+        length: messagesArray?.length,
+        firstMsg: messagesArray?.[0],
+        rawPayload: result?.payload
+      });
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
@@ -652,6 +659,11 @@ export const useConversations = () => {
           isOptimistic: false,
           _isOptimistic: false
         }));
+        
+        console.log('🔍 DEBUG chatwootMessages después de filtro:', {
+          count: chatwootMessages.length,
+          firstMsg: chatwootMessages[0]
+        });
 
         // Deduplicación Evolution
         const duplicateIds = new Set<number>();
@@ -754,6 +766,13 @@ export const useConversations = () => {
         persistMessagesCache(); // ✅ Persistir en sessionStorage
 
         const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
+        console.log('🔍 DEBUG conversation encontrada:', {
+          found: !!conversation,
+          conversationId,
+          conversationsCount: conversationsRef.current.length,
+          uniqueMessagesCount: uniqueMessages.length
+        });
+        
         if (conversation) {
           setActiveConversationState({
             ...conversation,
