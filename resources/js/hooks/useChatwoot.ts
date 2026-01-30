@@ -554,15 +554,19 @@ export const useConversations = () => {
     // Para loadMore, usamos una key diferente para permitir cargar más mientras hay mensajes en cache
     const loadingKey = loadMore ? `${conversationId}-loadMore` : `${conversationId}`;
     
+    console.log(`🔄 loadConversationMessages llamado: convId=${conversationId}, loadingKey=${loadingKey}, alreadyLoading=${isLoadingMessagesRef.current.has(loadingKey)}`);
+    
     if (isLoadingMessagesRef.current.has(loadingKey)) {
+      console.log(`⏭️ BLOQUEADO - Ya cargando: ${loadingKey}`);
       debugLog.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore}), omitiendo...`);
       return;
     }
     
+    console.log(`📥 loadConversationMessages INICIO: convId=${conversationId}, loadMore=${loadMore}`);
     debugLog.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
     isLoadingMessagesRef.current.add(loadingKey);
     
-    // � Marcar como loading INMEDIATAMENTE para mostrar el spinner
+    // 🔍 Marcar como loading INMEDIATAMENTE para mostrar el spinner
     if (loadMore) {
       setActiveConversationState(prev => prev ? { ...prev, _isLoading: true } : prev);
     }
@@ -571,11 +575,17 @@ export const useConversations = () => {
     const cached = messagesLocalCache.current.get(conversationId);
     const now = Date.now();
     
+    console.log(`🗃️ Cache check: exists=${!!cached}, msgs=${cached?.messages?.length || 0}, age=${cached ? now - cached.timestamp : 'N/A'}ms, TTL=${LOCAL_CACHE_TTL}ms`);
+    
     // 🔧 FIX: Si el caché tiene hasMore=false pero pocos mensajes (< 25), 
     // asumir que puede haber más (el backend anterior tenía un bug)
     const cachedHasMore = cached?.hasMore ?? (cached?.messages?.length >= 20);
     
-    if (cached && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
+    // 🔧 FIX: No usar cache si tiene 0 mensajes (cache corrupto)
+    const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
+    
+    if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
+      console.log(`⚡ Usando cache local: ${cached.messages.length} mensajes`);
       debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
       if (conversation) {
