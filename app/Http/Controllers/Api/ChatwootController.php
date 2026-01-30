@@ -368,102 +368,78 @@ class ChatwootController extends Controller
     public function getConversation($id)
     {
         try {
-            // SEGURIDAD: Validar que el usuario tenga inbox asignado
             if (!$this->inboxId) {
-                Log::warning('Usuario sin inbox_id intentó acceder a conversación', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes un inbox asignado'
-                ], 403);
+                return response()->json(['success' => false, 'message' => 'No tienes un inbox asignado'], 403);
             }
 
-            // 🚀 CACHÉ: Intentar obtener desde Redis (TTL 30 segundos)
+            // Cache de 30 segundos
             $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
-            $cacheTTL = 30; // 30 segundos - balance entre velocidad y frescura
-            
-            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            
+            $cached = Cache::get($cacheKey);
             if ($cached) {
-                Log::info('⚡ Conversación desde CACHÉ Redis', [
-                    'conversation_id' => $id,
-                    'cache_key' => $cacheKey
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'payload' => $cached,
-                    'cached' => true
-                ]);
+                return response()->json(['success' => true, 'payload' => $cached, 'cached' => true]);
             }
 
-            // Obtener la conversación desde Chatwoot
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
-
-            if (!$response->successful()) {
-                Log::warning('Conversación no encontrada', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'status' => $response->status()
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Conversación no encontrada'
-                ], 404);
+            // 🚀 BD DIRECTA: Obtener conversación desde Chatwoot DB
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            $conv = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where(function ($q) use ($id) {
+                    $q->where('id', $id)->orWhere('display_id', $id);
+                })
+                ->first();
+            
+            if (!$conv) {
+                return response()->json(['success' => false, 'message' => 'Conversación no encontrada'], 404);
             }
-
-            $conversation = $response->json();
-
-            // SEGURIDAD: Validar que la conversación pertenece al inbox del usuario
-            if (isset($conversation['inbox_id']) && $conversation['inbox_id'] != $this->inboxId) {
-                Log::warning('Usuario intentó acceder a conversación de otro inbox', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'conversation_inbox_id' => $conversation['inbox_id'],
-                    'user_inbox_id' => $this->inboxId
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permisos para acceder a esta conversación'
-                ], 403);
+            
+            // SEGURIDAD: Verificar inbox
+            if ($conv->inbox_id != $this->inboxId) {
+                return response()->json(['success' => false, 'message' => 'No tienes permisos'], 403);
             }
-
-            // 🚀 CACHÉ: Guardar en Redis
-            \Illuminate\Support\Facades\Cache::put($cacheKey, $conversation, $cacheTTL);
-
-            Log::info('Conversación obtenida desde Chatwoot y cacheada', [
-                'user_id' => $this->userId,
-                'conversation_id' => $id,
-                'unread_count' => $conversation['unread_count'] ?? 0,
-                'cache_ttl' => $cacheTTL
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'payload' => $conversation,
-                'cached' => false
-            ]);
+            
+            // Obtener contacto
+            $contact = $chatwootDb->table('contacts')->where('id', $conv->contact_id)->first();
+            
+            // Obtener asignado
+            $assignee = $conv->assignee_id 
+                ? $chatwootDb->table('users')->where('id', $conv->assignee_id)->first() 
+                : null;
+            
+            // Mapear status
+            $statusMap = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
+            
+            $conversation = [
+                'id' => $conv->display_id,
+                'account_id' => $conv->account_id,
+                'inbox_id' => $conv->inbox_id,
+                'status' => $statusMap[$conv->status] ?? 'open',
+                'assignee' => $assignee ? [
+                    'id' => $assignee->id,
+                    'name' => $assignee->name ?? $assignee->display_name ?? 'Agente',
+                    'email' => $assignee->email ?? null
+                ] : null,
+                'meta' => [
+                    'sender' => [
+                        'id' => $contact->id ?? null,
+                        'name' => $contact->name ?? 'Contacto',
+                        'phone_number' => $contact->phone_number ?? null,
+                        'identifier' => $contact->identifier ?? null,
+                        'thumbnail' => $contact->avatar_url ?? ''
+                    ]
+                ],
+                'unread_count' => $conv->unread_count ?? 0,
+                'created_at' => strtotime($conv->created_at),
+                'last_activity_at' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : null
+            ];
+            
+            Cache::put($cacheKey, $conversation, 30);
+            
+            return response()->json(['success' => true, 'payload' => $conversation, 'cached' => false]);
 
         } catch (\Exception $e) {
-            Log::error('Error al obtener conversación', [
-                'user_id' => $this->userId,
-                'conversation_id' => $id,
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener la conversación',
-                'error' => $e->getMessage()
-            ], 500);
+            Log::error('Error getConversation: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al obtener conversación'], 500);
         }
     }
 
@@ -1345,28 +1321,25 @@ class ChatwootController extends Controller
     public function getLabels()
     {
         try {
-            // CACHE: 60 segundos por cuenta
             $cacheKey = "chatwoot_labels_{$this->accountId}";
             
-            $labels = Cache::remember($cacheKey, 60, function () {
-                $response = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                ])->timeout(5)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/labels');
-
-                return $response->successful() ? $response->json() : [];
+            $labels = Cache::remember($cacheKey, 120, function () {
+                // 🚀 BD DIRECTA
+                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+                
+                return $chatwootDb->table('labels')
+                    ->where('account_id', $this->accountId)
+                    ->select('id', 'title', 'description', 'color', 'show_on_sidebar')
+                    ->orderBy('title')
+                    ->get()
+                    ->toArray();
             });
 
-            return response()->json([
-                'success' => true,
-                'data' => $labels
-            ]);
+            return response()->json(['success' => true, 'data' => $labels]);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Get Labels Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            Log::error('getLabels Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => []]);
         }
     }
 
@@ -1377,54 +1350,53 @@ class ChatwootController extends Controller
     public function getAgents()
     {
         try {
-            // SEGURIDAD: Verificar que la empresa tenga su propia cuenta de Chatwoot
             $user = auth()->user();
             $company = $user ? $user->company : null;
             
-            // Si la empresa no tiene chatwoot_account_id propio, no mostrar agentes de otra cuenta
             if (!$company || !$company->chatwoot_account_id) {
-                Log::info('getAgents: Empresa sin cuenta Chatwoot propia', [
-                    'user_id' => $user ? $user->id : null,
-                    'company_slug' => $company ? $company->slug : null
-                ]);
-                return response()->json([
-                    'success' => true,
-                    'data' => [],
-                    'message' => 'Tu empresa aún no tiene Chatwoot configurado'
-                ]);
+                return response()->json(['success' => true, 'data' => [], 'message' => 'Sin Chatwoot configurado']);
             }
             
-            // CACHE: 60 segundos por cuenta
             $cacheKey = "chatwoot_agents_{$this->accountId}";
             
-            $agents = Cache::remember($cacheKey, 60, function () {
-                $response = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                ])->timeout(10)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/agents');
-
-                return $response->successful() ? $response->json() : [];
+            $agents = Cache::remember($cacheKey, 120, function () {
+                // 🚀 BD DIRECTA: Obtener agentes de la cuenta
+                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+                
+                // Obtener usuarios que son agentes de esta cuenta
+                return $chatwootDb->table('account_users')
+                    ->join('users', 'account_users.user_id', '=', 'users.id')
+                    ->where('account_users.account_id', $this->accountId)
+                    ->select(
+                        'users.id',
+                        'users.name',
+                        'users.display_name',
+                        'users.email',
+                        'users.avatar_url as thumbnail',
+                        'account_users.role',
+                        'users.availability'
+                    )
+                    ->get()
+                    ->map(function ($agent) {
+                        // Enriquecer con nombre de nuestra BD si existe
+                        $localUser = \App\Models\User::where('email', $agent->email)->first();
+                        return [
+                            'id' => $agent->id,
+                            'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                            'email' => $agent->email,
+                            'role' => $agent->role,
+                            'thumbnail' => $agent->thumbnail ?? '',
+                            'availability_status' => $agent->availability ?? 'offline'
+                        ];
+                    })
+                    ->toArray();
             });
 
-            // Enriquecer con full_name de nuestra base de datos
-            $enrichedAgents = collect($agents)->map(function ($agent) {
-                $localUser = \App\Models\User::where('email', $agent['email'] ?? '')->first();
-                if ($localUser && $localUser->full_name) {
-                    $agent['name'] = $localUser->full_name;
-                }
-                return $agent;
-            })->toArray();
-
-            return response()->json([
-                'success' => true,
-                'data' => $enrichedAgents
-            ]);
+            return response()->json(['success' => true, 'data' => $agents]);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Get Agents Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            Log::error('getAgents Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => []]);
         }
     }
 
@@ -1567,28 +1539,34 @@ class ChatwootController extends Controller
     public function getConversationLabels($conversationId)
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/labels');
-
-            if ($response->successful()) {
-                return response()->json([
-                    'success' => true,
-                    'labels' => $response->json()['payload'] ?? []
-                ]);
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Buscar conversación por display_id o id
+            $conv = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where(function ($q) use ($conversationId) {
+                    $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
+                })
+                ->first();
+            
+            if (!$conv) {
+                return response()->json(['success' => true, 'labels' => []]);
             }
+            
+            // Obtener labels de la conversación
+            $labels = $chatwootDb->table('conversations_labels')
+                ->join('labels', 'conversations_labels.label_id', '=', 'labels.id')
+                ->where('conversations_labels.conversation_id', $conv->id)
+                ->select('labels.id', 'labels.title', 'labels.color')
+                ->get()
+                ->toArray();
 
-            return response()->json([
-                'success' => true,
-                'labels' => []
-            ]);
+            return response()->json(['success' => true, 'labels' => $labels]);
 
         } catch (\Exception $e) {
-            Log::error('Error obteniendo etiquetas: ' . $e->getMessage());
-            return response()->json([
-                'success' => true,
-                'labels' => []
-            ]);
+            Log::error('getConversationLabels Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'labels' => []]);
         }
     }
 
