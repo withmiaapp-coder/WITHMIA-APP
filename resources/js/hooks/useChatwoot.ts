@@ -647,26 +647,50 @@ export const useConversations = () => {
         typeOf: typeof m.message_type,
         content: m.content?.substring(0, 30)
       })));
+      
+      // 🔍 DEBUG: Contar tipos de mensaje
+      const typesCounts: Record<string, number> = {};
+      messagesArray?.forEach((m: any) => {
+        const key = `${m.message_type}(${typeof m.message_type})`;
+        typesCounts[key] = (typesCounts[key] || 0) + 1;
+      });
+      console.log('🔍 DEBUG message_types COUNTS:', typesCounts);
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
         // 🚫 Filtrar mensajes de actividad (message_type === 2) como asignaciones, etiquetas, etc.
+        // NOTA: Comparar tanto con número como con string por si acaso
         const chatwootMessages = messagesArray
-          .filter((msg: any) => msg.message_type !== 2) // Excluir activity messages
-          .map((msg: any) => ({
-          id: msg.id,
-          content: msg.content,
-          timestamp: msg.created_at,
-          created_at: msg.created_at,
-          sender: msg.message_type === 0 ? 'contact' : 'agent',
-          message_type: msg.message_type === 0 ? 'incoming' : 'outgoing',
-          status: msg.status || 'sent',
-          attachments: msg.attachments || [],
-          sender_name: msg.sender?.name || 'Usuario',
-          source_id: msg.source_id || null,
-          isOptimistic: false,
-          _isOptimistic: false
-        }));
+          .filter((msg: any) => {
+            const msgType = msg.message_type;
+            // Excluir solo activity messages (type 2)
+            // Aceptar 0 (incoming), 1 (outgoing), y cualquier otro valor
+            const isActivity = msgType === 2 || msgType === '2';
+            // 🔍 DEBUG: Log si se filtra
+            if (isActivity) {
+              console.log('🚫 Filtrando activity message:', msg.id, msgType);
+            }
+            return !isActivity;
+          })
+          .map((msg: any) => {
+            // Determinar sender basado en message_type
+            // Chatwoot: 0 = incoming (contact), 1 = outgoing (agent)
+            const isIncoming = msg.message_type === 0 || msg.message_type === '0';
+            return {
+              id: msg.id,
+              content: msg.content,
+              timestamp: msg.created_at,
+              created_at: msg.created_at,
+              sender: isIncoming ? 'contact' : 'agent',
+              message_type: isIncoming ? 'incoming' : 'outgoing',
+              status: msg.status || 'sent',
+              attachments: msg.attachments || [],
+              sender_name: msg.sender?.name || 'Usuario',
+              source_id: msg.source_id || null,
+              isOptimistic: false,
+              _isOptimistic: false
+            };
+          });
         
         console.log('🔍 DEBUG chatwootMessages después de filtro:', {
           count: chatwootMessages.length,
