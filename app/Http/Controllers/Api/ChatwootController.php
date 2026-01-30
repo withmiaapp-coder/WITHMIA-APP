@@ -678,18 +678,35 @@ class ChatwootController extends Controller
                 Log::info("📦 API respondió con {$batchCount} mensajes, hasMore: " . ($hasMore ? 'true' : 'false'));
             }
             
+            // 🔍 DEBUG: Contar tipos de mensaje antes de filtrar
+            $typeCounts = [];
+            foreach ($allMessages as $msg) {
+                $type = $msg['message_type'] ?? 'null';
+                $typeCounts[$type] = ($typeCounts[$type] ?? 0) + 1;
+            }
+            Log::info("📊 DEBUG message_types COUNTS en backend", $typeCounts);
+            
             // Ordenar por ID ascendente (más antiguos primero)
             usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
             
-            // 🔒 FILTRAR mensajes de EvolutionAPI (solo entrantes)
+            // 🔒 FILTRAR mensajes de actividad (type 2) y EvolutionAPI
             $filteredMessages = array_values(array_filter($allMessages, function($message) {
                 $senderName = $message['sender']['name'] ?? '';
                 $messageType = $message['message_type'] ?? null;
+                
+                // 🚫 Excluir mensajes de actividad (type 2)
+                if ($messageType === 2) return false;
+                
                 // Siempre mostrar mensajes salientes
                 if ($messageType === 1 || $messageType === 'outgoing') return true;
                 // Para entrantes, filtrar EvolutionAPI
                 return stripos($senderName, 'EvolutionAPI') === false;
             }));
+            
+            Log::info("📊 Mensajes después de filtrar actividad", [
+                'antes' => count($allMessages),
+                'después' => count($filteredMessages)
+            ]);
             
             $oldestMessageId = !empty($filteredMessages) ? $filteredMessages[0]['id'] : null;
             $newestMessageId = !empty($filteredMessages) ? $filteredMessages[count($filteredMessages) - 1]['id'] : null;
