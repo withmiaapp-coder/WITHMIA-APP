@@ -392,9 +392,15 @@ class OnboardingController extends Controller
             Log::info("Slug de empresa actualizado a: {$uniqueSlug}");
         }
 
+        // 🌍 Asignar timezone automáticamente según el país del teléfono
+        $phoneCountry = $request->phone_country ?? '+56';
+        $timezone = $this->getTimezoneFromPhoneCountry($phoneCountry);
+        $company->update(['timezone' => $timezone]);
+        Log::info("Timezone asignado: {$timezone} (país: {$phoneCountry})");
+
         Log::info("Empresa obtenida/creada: ID {$company->id}");
 
-        // � Crear colección Qdrant
+        // 📦 Crear colección Qdrant
         try {
             Log::info("📦 Creating Qdrant collection for: {$uniqueSlug}");
             CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
@@ -495,6 +501,45 @@ class OnboardingController extends Controller
                 'settings' => []
             ]
         );
+    }
+
+    /**
+     * Mapea el código de país del teléfono a la zona horaria correspondiente
+     */
+    private function getTimezoneFromPhoneCountry(string $phoneCountry): string
+    {
+        $timezoneMap = [
+            '+56' => 'America/Santiago',           // Chile
+            '+57' => 'America/Bogota',             // Colombia
+            '+52' => 'America/Mexico_City',        // México
+            '+51' => 'America/Lima',               // Perú
+            '+54' => 'America/Argentina/Buenos_Aires', // Argentina
+            '+55' => 'America/Sao_Paulo',          // Brasil
+            '+58' => 'America/Caracas',            // Venezuela
+            '+593' => 'America/Guayaquil',         // Ecuador
+            '+591' => 'America/La_Paz',            // Bolivia
+            '+598' => 'America/Montevideo',        // Uruguay
+            '+595' => 'America/Asuncion',          // Paraguay
+            '+506' => 'America/Costa_Rica',        // Costa Rica
+            '+502' => 'America/Guatemala',         // Guatemala
+            '+504' => 'America/Tegucigalpa',       // Honduras
+            '+503' => 'America/El_Salvador',       // El Salvador
+            '+505' => 'America/Managua',           // Nicaragua
+            '+507' => 'America/Panama',            // Panamá
+            '+1809' => 'America/Santo_Domingo',    // República Dominicana
+            '+53' => 'America/Havana',             // Cuba
+            '+1787' => 'America/Puerto_Rico',      // Puerto Rico
+            '+34' => 'Europe/Madrid',              // España
+            '+351' => 'Europe/Lisbon',             // Portugal
+            '+33' => 'Europe/Paris',               // Francia
+            '+49' => 'Europe/Berlin',              // Alemania
+            '+39' => 'Europe/Rome',                // Italia
+            '+44' => 'Europe/London',              // Reino Unido
+            '+31' => 'Europe/Amsterdam',           // Países Bajos
+            '+1' => 'America/New_York',            // Estados Unidos/Canadá (default EST)
+        ];
+
+        return $timezoneMap[$phoneCountry] ?? 'UTC';
     }
 
     // NOTA: El método createRagWorkflow fue eliminado porque era código muerto.
