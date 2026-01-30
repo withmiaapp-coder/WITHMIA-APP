@@ -1345,7 +1345,7 @@ class ChatwootController extends Controller
 
     /**
      * Obtener agentes de la cuenta
-     * OPTIMIZADO: Cache de 60 segundos
+     * OPTIMIZADO: Cache de 60 segundos + BD directa sin N+1
      */
     public function getAgents()
     {
@@ -1364,7 +1364,7 @@ class ChatwootController extends Controller
                 $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
                 
                 // Obtener usuarios que son agentes de esta cuenta
-                return $chatwootDb->table('account_users')
+                $chatwootAgents = $chatwootDb->table('account_users')
                     ->join('users', 'account_users.user_id', '=', 'users.id')
                     ->where('account_users.account_id', $this->accountId)
                     ->select(
@@ -1375,20 +1375,25 @@ class ChatwootController extends Controller
                         'account_users.role',
                         'users.availability'
                     )
-                    ->get()
-                    ->map(function ($agent) {
-                        // Enriquecer con nombre de nuestra BD si existe
-                        $localUser = \App\Models\User::where('email', $agent->email)->first();
-                        return [
-                            'id' => $agent->id,
-                            'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
-                            'email' => $agent->email,
-                            'role' => $agent->role,
-                            'thumbnail' => '',
-                            'availability_status' => $agent->availability ?? 'offline'
-                        ];
-                    })
-                    ->toArray();
+                    ->get();
+                
+                // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
+                $emails = $chatwootAgents->pluck('email')->filter()->toArray();
+                $localUsers = !empty($emails) 
+                    ? \App\Models\User::whereIn('email', $emails)->get()->keyBy('email')
+                    : collect();
+                
+                return $chatwootAgents->map(function ($agent) use ($localUsers) {
+                    $localUser = $localUsers->get($agent->email);
+                    return [
+                        'id' => $agent->id,
+                        'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                        'email' => $agent->email,
+                        'role' => $agent->role,
+                        'thumbnail' => '',
+                        'availability_status' => $agent->availability ?? 'offline'
+                    ];
+                })->toArray();
             });
 
             return response()->json(['success' => true, 'data' => $agents]);
@@ -1618,7 +1623,7 @@ class ChatwootController extends Controller
 
     /**
      * Obtener todos los equipos de la cuenta
-     * OPTIMIZADO: BD directa + Cache de 2 minutos
+     * OPTIMIZADO: BD directa + Cache de 2 minutos + Sin N+1
      */
     public function getTeams()
     {
@@ -1659,16 +1664,24 @@ class ChatwootController extends Controller
                         'users.display_name',
                         'users.email'
                     )
-                    ->get()
-                    ->groupBy('team_id');
+                    ->get();
+                
+                // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
+                $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
+                $localUsers = !empty($allEmails)
+                    ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
+                    : collect();
+                
+                // Agrupar miembros por team_id
+                $membersByTeam = $allMembers->groupBy('team_id');
                 
                 // Construir respuesta
-                return $teams->map(function ($team) use ($allMembers) {
-                    $members = $allMembers->get($team->id, collect());
+                return $teams->map(function ($team) use ($membersByTeam, $localUsers) {
+                    $members = $membersByTeam->get($team->id, collect());
                     
-                    // Enriquecer con nombres de nuestra BD
-                    $enrichedMembers = $members->map(function ($member) {
-                        $localUser = \App\Models\User::where('email', $member->email)->first();
+                    // Enriquecer con nombres de nuestra BD (ya pre-cargados)
+                    $enrichedMembers = $members->map(function ($member) use ($localUsers) {
+                        $localUser = $localUsers->get($member->email);
                         return [
                             'id' => $member->id,
                             'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
@@ -1706,7 +1719,7 @@ class ChatwootController extends Controller
 
     /**
      * Obtener un equipo específico con sus miembros
-     * OPTIMIZADO: BD directa
+     * OPTIMIZADO: BD directa + Sin N+1
      */
     public function getTeam($teamId)
     {
@@ -1724,21 +1737,27 @@ class ChatwootController extends Controller
             }
             
             // Obtener miembros
-            $members = $chatwootDb->table('team_members')
+            $chatwootMembers = $chatwootDb->table('team_members')
                 ->join('users', 'team_members.user_id', '=', 'users.id')
                 ->where('team_members.team_id', $teamId)
                 ->select('users.id', 'users.name', 'users.display_name', 'users.email')
-                ->get()
-                ->map(function ($member) {
-                    $localUser = \App\Models\User::where('email', $member->email)->first();
-                    return [
-                        'id' => $member->id,
-                        'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
-                        'email' => $member->email,
-                        'thumbnail' => ''
-                    ];
-                })
-                ->toArray();
+                ->get();
+            
+            // ⚡ Pre-cargar usuarios locales en UNA sola query (evita N+1)
+            $emails = $chatwootMembers->pluck('email')->filter()->toArray();
+            $localUsers = !empty($emails)
+                ? \App\Models\User::whereIn('email', $emails)->get()->keyBy('email')
+                : collect();
+            
+            $members = $chatwootMembers->map(function ($member) use ($localUsers) {
+                $localUser = $localUsers->get($member->email);
+                return [
+                    'id' => $member->id,
+                    'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
+                    'email' => $member->email,
+                    'thumbnail' => ''
+                ];
+            })->toArray();
             
             return response()->json([
                 'success' => true,
