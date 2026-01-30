@@ -3567,7 +3567,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             }
                           }}
                           placeholder="Buscar..."
-                          className="outline-none text-sm bg-transparent w-32 md:w-48 animate-fadeIn"
+                          className="outline-none text-sm text-gray-900 bg-transparent w-32 md:w-48 animate-fadeIn placeholder:text-gray-500"
                           autoFocus
                         />
                         
