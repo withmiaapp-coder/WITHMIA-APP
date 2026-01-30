@@ -565,15 +565,15 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (usa ID real)
-            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$realConversationId}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
+            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (usa ID real de DB)
+            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$dbConversationId}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
             $cacheTTL = 60; // 1 minuto (los mensajes nuevos llegan por WebSocket)
             
             // Intentar obtener desde cache
             $cached = Cache::get($cacheKey);
             if ($cached) {
                 Log::info("⚡ Mensajes desde cache", [
-                    'conversation_id' => $realConversationId,
+                    'conversation_id' => $dbConversationId,
                     'count' => count($cached['payload']['payload'] ?? [])
                 ]);
                 return response()->json([
@@ -584,118 +584,108 @@ class ChatwootController extends Controller
                 ]);
             }
             
-            // URL para obtener mensajes (usa display_id para API de Chatwoot)
-            $chatwootUrl = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $apiConversationId . '/messages';
+            // 🎯 SOLUCIÓN: Obtener mensajes DIRECTAMENTE desde la BD
+            // La API de Chatwoot tiene problemas de paginación que hacen que solo 
+            // devuelva mensajes ACTIVITY cuando hay muchos, así que usamos la BD
+            // que es más confiable y permite filtrar directamente en SQL
             
-            // 🚀 PAGINACIÓN EFICIENTE: Solo obtener los mensajes necesarios (máximo 50)
-            $messagesPerBatch = 50; // Cambiado de 20 a 50 para ser más eficiente
+            $messagesPerBatch = 50;
             $allMessages = [];
             $hasMore = false;
             
-            Log::info("📥 Obteniendo mensajes para conversación {$realConversationId}", [
+            Log::info("📥 Obteniendo mensajes desde DB para conversación", [
+                'db_conversation_id' => $dbConversationId,
+                'display_id' => $apiConversationId,
                 'limit' => $limit,
                 'before' => $before
             ]);
             
-            // 🚀 UNA SOLA LLAMADA: Obtener solo los mensajes necesarios
-            $queryParams = ['before' => $before]; // Chatwoot usa 'before' para paginación
-            if (!$before) {
-                $queryParams = []; // Primera carga - sin before
+            // 🎯 Query directa a la BD - Filtrar message_type != 2 directamente en SQL
+            $query = $chatwootDb->table('messages')
+                ->where('conversation_id', $dbConversationId)
+                ->whereIn('message_type', [0, 1]) // Solo INCOMING (0) y OUTGOING (1), excluir ACTIVITY (2)
+                ->orderBy('id', 'desc')
+                ->limit($messagesPerBatch + 1); // +1 para saber si hay más
+            
+            if ($before) {
+                $query->where('id', '<', $before);
             }
             
-            $response = Http::timeout(5)->withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($chatwootUrl, $queryParams);
+            $messagesFromDb = $query->get();
             
-            if (!$response->successful()) {
-                Log::error("❌ Error obteniendo mensajes: " . $response->status() . " - " . $response->body());
-                
-                // FALLBACK: Obtener desde DB directamente (usa db_id, no display_id)
-                $query = $chatwootDb->table('messages')
-                    ->where('conversation_id', $dbConversationId)
-                    ->orderBy('id', 'desc')
-                    ->limit($messagesPerBatch + 1); // +1 para saber si hay más
-                
-                if ($before) {
-                    $query->where('id', '<', $before);
-                }
-                
-                $messagesFromDb = $query->get();
-                
-                // Si obtuvimos más de $messagesPerBatch, hay más mensajes
-                $hasMore = count($messagesFromDb) > $messagesPerBatch;
-                if ($hasMore) {
-                    $messagesFromDb = $messagesFromDb->take($messagesPerBatch);
-                }
-                
-                // Obtener info del contacto
-                $contact = $chatwootDb->table('contacts')
-                    ->where('id', $conversationFromDb->contact_id)
-                    ->first();
-                
-                foreach ($messagesFromDb as $msg) {
-                    $sender = null;
-                    if ($msg->sender_type === 'Contact' && $contact) {
-                        $sender = [
-                            'id' => $contact->id,
-                            'name' => $contact->name ?? 'Contacto',
-                            'type' => 'contact',
-                            'phone_number' => $contact->phone_number ?? null
-                        ];
-                    } else {
-                        $sender = [
-                            'id' => 0,
-                            'name' => 'Agente',
-                            'type' => 'user'
-                        ];
-                    }
-                    
-                    $allMessages[] = [
-                        'id' => $msg->id,
-                        'content' => $msg->content,
-                        'message_type' => $msg->message_type,
-                        'created_at' => strtotime($msg->created_at),
-                        'sender' => $sender,
-                        'attachments' => [],
-                        'from_db_fallback' => true
+            // Si obtuvimos más de $messagesPerBatch, hay más mensajes
+            $hasMore = count($messagesFromDb) > $messagesPerBatch;
+            if ($hasMore) {
+                $messagesFromDb = $messagesFromDb->take($messagesPerBatch);
+            }
+            
+            // Obtener info del contacto
+            $contact = $chatwootDb->table('contacts')
+                ->where('id', $conversationFromDb->contact_id)
+                ->first();
+            
+            // Obtener info de los usuarios (agentes) para mensajes salientes
+            $userIds = $messagesFromDb->where('sender_type', 'User')->pluck('sender_id')->unique()->filter();
+            $users = [];
+            if ($userIds->isNotEmpty()) {
+                $users = $chatwootDb->table('users')
+                    ->whereIn('id', $userIds)
+                    ->get()
+                    ->keyBy('id');
+            }
+            
+            foreach ($messagesFromDb as $msg) {
+                $sender = null;
+                if ($msg->sender_type === 'Contact' && $contact) {
+                    $sender = [
+                        'id' => $contact->id,
+                        'name' => $contact->name ?? 'Contacto',
+                        'type' => 'contact',
+                        'phone_number' => $contact->phone_number ?? null
+                    ];
+                } elseif ($msg->sender_type === 'User' && isset($users[$msg->sender_id])) {
+                    $user = $users[$msg->sender_id];
+                    $sender = [
+                        'id' => $user->id,
+                        'name' => $user->name ?? 'Agente',
+                        'type' => 'user'
+                    ];
+                } else {
+                    $sender = [
+                        'id' => $msg->sender_id ?? 0,
+                        'name' => 'Agente',
+                        'type' => 'user'
                     ];
                 }
                 
-                Log::info("✅ FALLBACK DB: " . count($allMessages) . " mensajes, hasMore: " . ($hasMore ? 'true' : 'false'));
-            } else {
-                // Respuesta exitosa de la API
-                $batch = $response->json()['payload'] ?? [];
-                $batchCount = count($batch);
+                // Procesar attachments si existen
+                $attachments = [];
+                if ($msg->content_attributes) {
+                    $contentAttrs = json_decode($msg->content_attributes, true);
+                    // TODO: procesar attachments si es necesario
+                }
                 
-                // 🔍 Determinar si hay más mensajes
-                // Chatwoot devuelve máximo 20 mensajes por llamada
-                // Si devuelve 20, probablemente hay más
-                $hasMore = $batchCount >= 20;
-                
-                $allMessages = $batch;
-                
-                Log::info("📦 API respondió con {$batchCount} mensajes, hasMore: " . ($hasMore ? 'true' : 'false'));
+                $allMessages[] = [
+                    'id' => $msg->id,
+                    'content' => $msg->content,
+                    'message_type' => $msg->message_type,
+                    'created_at' => strtotime($msg->created_at),
+                    'sender' => $sender,
+                    'attachments' => $attachments,
+                    'private' => $msg->private ?? false,
+                    'from_db' => true
+                ];
             }
             
-            // 🔍 DEBUG: Contar tipos de mensaje antes de filtrar
-            $typeCounts = [];
-            foreach ($allMessages as $msg) {
-                $type = $msg['message_type'] ?? 'null';
-                $typeCounts[$type] = ($typeCounts[$type] ?? 0) + 1;
-            }
-            Log::info("📊 DEBUG message_types COUNTS en backend", $typeCounts);
+            Log::info("✅ Mensajes desde DB: " . count($allMessages) . ", hasMore: " . ($hasMore ? 'true' : 'false'));
             
             // Ordenar por ID ascendente (más antiguos primero)
             usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
             
-            // 🔒 FILTRAR mensajes de actividad (type 2) y EvolutionAPI
+            // 🔒 Filtrar mensajes de EvolutionAPI (ya se filtraron los de actividad en SQL)
             $filteredMessages = array_values(array_filter($allMessages, function($message) {
                 $senderName = $message['sender']['name'] ?? '';
                 $messageType = $message['message_type'] ?? null;
-                
-                // 🚫 Excluir mensajes de actividad (type 2)
-                if ($messageType === 2) return false;
                 
                 // Siempre mostrar mensajes salientes
                 if ($messageType === 1 || $messageType === 'outgoing') return true;
@@ -703,7 +693,7 @@ class ChatwootController extends Controller
                 return stripos($senderName, 'EvolutionAPI') === false;
             }));
             
-            Log::info("📊 Mensajes después de filtrar actividad", [
+            Log::info("📊 Mensajes después de filtrar EvolutionAPI", [
                 'antes' => count($allMessages),
                 'después' => count($filteredMessages)
             ]);
