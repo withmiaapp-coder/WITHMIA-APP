@@ -639,6 +639,14 @@ export const useConversations = () => {
         firstMsg: messagesArray?.[0],
         rawPayload: result?.payload
       });
+      
+      // Debug: ver todos los message_type
+      console.log('🔍 DEBUG message_types RAW:', messagesArray?.slice(0, 5).map((m: any) => ({
+        id: m.id,
+        message_type: m.message_type,
+        typeOf: typeof m.message_type,
+        content: m.content?.substring(0, 30)
+      })));
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
