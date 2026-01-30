@@ -1756,6 +1756,36 @@ Route::post('/admin/fix-user-role', [\App\Http\Controllers\Api\TeamInvitationCon
 // Endpoint para provisionar Chatwoot a una empresa que no lo tiene
 Route::post('/admin/provision-company-chatwoot', [\App\Http\Controllers\Api\TeamInvitationController::class, 'provisionCompanyChatwoot']);
 
+// Endpoint para recrear colección de Qdrant (temporal - usar con cuidado)
+Route::get('/admin/recreate-qdrant/{companySlug}', function ($companySlug) {
+    $company = \App\Models\Company::where('slug', $companySlug)->first();
+    
+    if (!$company) {
+        $user = \App\Models\User::where('company_slug', $companySlug)->where('role', 'admin')->first();
+        if ($user) $company = $user->company;
+    }
+    
+    if (!$company) {
+        return response()->json(['error' => 'Empresa no encontrada', 'slug' => $companySlug], 404);
+    }
+    
+    // Limpiar setting para forzar recreación
+    $settings = $company->settings ?? [];
+    unset($settings['qdrant_collection']);
+    $company->update(['settings' => $settings]);
+    
+    // Ejecutar el mismo Job del onboarding
+    \App\Jobs\CreateQdrantCollectionJob::dispatchSync($company->id, $company->slug);
+    
+    $company->refresh();
+    
+    return response()->json([
+        'success' => true,
+        'company' => $company->name,
+        'collection' => $company->settings['qdrant_collection'] ?? 'No se creó',
+    ]);
+});
+
 // Proxy para archivos/imágenes de Chatwoot - SIN autenticación (las imágenes se cargan vía <img src>)
 // Usa controlador separado sin dependencias de autenticación
 Route::get('/chatwoot-proxy/attachment-proxy', [\App\Http\Controllers\AttachmentProxyController::class, 'proxy']);
