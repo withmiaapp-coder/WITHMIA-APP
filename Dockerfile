@@ -1,9 +1,9 @@
 # Dockerfile for WITHMIA-APP
-# Updated: 2026-01-23 - Added poppler-utils for PDF extraction
-FROM php:8.4-cli
+# Updated: 2026-01-30 - Migrated to FrankenPHP for production performance
+# FrankenPHP handles concurrent requests (unlike php artisan serve)
+FROM dunglas/frankenphp:1-php8.4
 
 # Install system dependencies (including poppler-utils for pdftotext)
-# REBUILD FORCED: poppler-utils added at start of list
 RUN apt-get update && apt-get install -y \
     poppler-utils \
     git \
@@ -27,8 +27,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) \
+RUN install-php-extensions \
     pdo \
     pdo_pgsql \
     pgsql \
@@ -42,19 +41,21 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     fileinfo \
     exif \
     pcntl \
-    opcache
+    opcache \
+    iconv \
+    redis
 
-# Install iconv extension (critical for Laravel)
-RUN docker-php-ext-install iconv
-
-# Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
-
-# Configure PHP for UTF-8 (PHP 8.4+ uses UTF-8 by default, removed deprecated mbstring.* settings)
-RUN echo "default_charset = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "iconv.input_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "iconv.internal_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "iconv.output_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini
+# Configure PHP for production
+RUN echo "default_charset = UTF-8" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.interned_strings_buffer=64" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.jit=1255" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "opcache.jit_buffer_size=256M" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "realpath_cache_size=4096K" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "realpath_cache_ttl=600" >> /usr/local/etc/php/conf.d/app.ini
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -84,15 +85,20 @@ RUN composer dump-autoload --optimize
 # Build frontend assets
 RUN npm run build
 
-# Create storage link (no view:cache - views are compiled at runtime)
+# Create storage link
 RUN php artisan storage:link || true
 
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
-# Create start script
+# Create start script for Laravel Octane with FrankenPHP
 RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Run migrations\n\
 php artisan migrate --force\n\
+\n\
+# Clear caches\n\
 php artisan config:clear\n\
 php artisan route:clear\n\
 php artisan view:clear\n\
@@ -100,8 +106,8 @@ php artisan view:clear\n\
 # Start queue worker in background\n\
 php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &\n\
 \n\
-# Start web server\n\
-php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n\
+# Start Laravel Octane with FrankenPHP (handles concurrent requests!)\n\
+exec php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=${PORT:-8080} --workers=auto --max-requests=1000\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Expose port
