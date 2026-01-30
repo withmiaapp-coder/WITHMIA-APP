@@ -658,19 +658,15 @@ export const useConversations = () => {
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
-        // 🚫 Filtrar mensajes de actividad (message_type === 2) como asignaciones, etiquetas, etc.
+        // 🚫 TEMPORALMENTE DESACTIVADO: Filtrar mensajes de actividad para debug
         // NOTA: Comparar tanto con número como con string por si acaso
         const chatwootMessages = messagesArray
           .filter((msg: any) => {
             const msgType = msg.message_type;
-            // Excluir solo activity messages (type 2)
-            // Aceptar 0 (incoming), 1 (outgoing), y cualquier otro valor
-            const isActivity = msgType === 2 || msgType === '2';
-            // 🔍 DEBUG: Log si se filtra
-            if (isActivity) {
-              console.log('🚫 Filtrando activity message:', msg.id, msgType);
-            }
-            return !isActivity;
+            // 🔍 DEBUG TEMPORAL: No filtrar nada, solo loguear
+            console.log('🔍 MSG:', msg.id, 'type:', msgType, 'typeof:', typeof msgType, 'content:', msg.content?.substring(0, 30));
+            // BYPASS TEMPORAL: Aceptar TODO excepto undefined
+            return msgType !== undefined;
           })
           .map((msg: any) => {
             // Determinar sender basado en message_type
