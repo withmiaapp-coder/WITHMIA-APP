@@ -1619,108 +1619,82 @@ class ChatwootController extends Controller
 
     /**
      * Obtener todos los equipos de la cuenta
-     * OPTIMIZADO: Cache de 60 segundos para evitar llamadas repetidas
+     * OPTIMIZADO: BD directa + Cache de 2 minutos
      */
     public function getTeams()
     {
         try {
-            // SEGURIDAD: Verificar que la empresa tenga su propia cuenta de Chatwoot
             $user = auth()->user();
             $company = $user ? $user->company : null;
             
-            // Si la empresa no tiene chatwoot_account_id propio, no mostrar equipos de otra cuenta
             if (!$company || !$company->chatwoot_account_id) {
-                Log::info('getTeams: Empresa sin cuenta Chatwoot propia', [
-                    'user_id' => $user ? $user->id : null,
-                    'company_slug' => $company ? $company->slug : null
-                ]);
-                return response()->json([
-                    'success' => true,
-                    'data' => [],
-                    'message' => 'Tu empresa aún no tiene Chatwoot configurado'
-                ]);
+                return response()->json(['success' => true, 'data' => [], 'message' => 'Sin Chatwoot configurado']);
             }
             
-            // CACHE: 60 segundos por cuenta
             $cacheKey = "chatwoot_teams_{$this->accountId}";
             
-            // DEBUG: Log para verificar el accountId y token
-            Log::debug('🔧 getTeams iniciando', [
-                'account_id' => $this->accountId,
-                'cache_key' => $cacheKey,
-                'has_token' => !empty($this->chatwootToken),
-                'user_id' => $user->id
-            ]);
-            
-            $teamsWithMembers = Cache::remember($cacheKey, 60, function () {
-                Log::debug('🔧 getTeams: Cache MISS, consultando Chatwoot');
+            $teamsWithMembers = Cache::remember($cacheKey, 120, function () {
+                // 🚀 BD DIRECTA
+                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
                 
-                $response = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                ])->timeout(5)->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams');
-
-                Log::debug('🔧 getTeams respuesta Chatwoot', [
-                    'status' => $response->status(),
-                    'count' => count($response->json() ?? [])
-                ]);
-
-                if (!$response->successful()) {
-                    Log::error('getTeams: Error en respuesta de Chatwoot', [
-                        'status' => $response->status(),
-                        'body' => $response->body()
-                    ]);
+                // Obtener equipos de la cuenta
+                $teams = $chatwootDb->table('teams')
+                    ->where('account_id', $this->accountId)
+                    ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
+                    ->orderBy('name')
+                    ->get();
+                
+                if ($teams->isEmpty()) {
                     return [];
                 }
                 
-                $teams = $response->json();
+                // Obtener miembros de todos los equipos en una sola query
+                $teamIds = $teams->pluck('id')->toArray();
+                $allMembers = $chatwootDb->table('team_members')
+                    ->join('users', 'team_members.user_id', '=', 'users.id')
+                    ->whereIn('team_members.team_id', $teamIds)
+                    ->select(
+                        'team_members.team_id',
+                        'users.id',
+                        'users.name',
+                        'users.display_name',
+                        'users.email',
+                        'users.avatar_url as thumbnail'
+                    )
+                    ->get()
+                    ->groupBy('team_id');
                 
-                // OPTIMIZACIÓN: Obtener miembros de todos los equipos en paralelo usando Http::pool
-                if (empty($teams)) {
-                    return [];
-                }
-                
-                $responses = Http::pool(fn ($pool) => 
-                    collect($teams)->map(fn ($team) => 
-                        $pool->as("team_{$team['id']}")
-                            ->withHeaders(['api_access_token' => $this->chatwootToken])
-                            ->timeout(5)
-                            ->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $team['id'] . '/team_members')
-                    )->all()
-                );
-                
-                // Combinar equipos con sus miembros
-                $teamsWithMembers = [];
-                foreach ($teams as $team) {
-                    $memberResponse = $responses["team_{$team['id']}"] ?? null;
-                    $members = ($memberResponse && $memberResponse->successful()) ? $memberResponse->json() : [];
+                // Construir respuesta
+                return $teams->map(function ($team) use ($allMembers) {
+                    $members = $allMembers->get($team->id, collect());
                     
-                    // Enriquecer miembros con full_name de nuestra DB
-                    $enrichedMembers = collect($members)->map(function ($member) {
-                        $localUser = \App\Models\User::where('email', $member['email'] ?? '')->first();
-                        if ($localUser && $localUser->full_name) {
-                            $member['name'] = $localUser->full_name;
-                        }
-                        return $member;
+                    // Enriquecer con nombres de nuestra BD
+                    $enrichedMembers = $members->map(function ($member) {
+                        $localUser = \App\Models\User::where('email', $member->email)->first();
+                        return [
+                            'id' => $member->id,
+                            'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
+                            'email' => $member->email,
+                            'thumbnail' => $member->thumbnail ?? ''
+                        ];
                     })->toArray();
                     
-                    $team['members'] = $enrichedMembers;
-                    $teamsWithMembers[] = $team;
-                }
-                
-                return $teamsWithMembers;
+                    return [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'description' => $team->description,
+                        'allow_auto_assign' => $team->allow_auto_assign,
+                        'account_id' => $team->account_id,
+                        'members' => $enrichedMembers
+                    ];
+                })->toArray();
             });
             
-            return response()->json([
-                'success' => true,
-                'data' => $teamsWithMembers
-            ]);
+            return response()->json(['success' => true, 'data' => $teamsWithMembers]);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Get Teams Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            Log::error('getTeams Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => []]);
         }
     }
     
@@ -1734,41 +1708,55 @@ class ChatwootController extends Controller
 
     /**
      * Obtener un equipo específico con sus miembros
+     * OPTIMIZADO: BD directa
      */
     public function getTeam($teamId)
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId);
-
-            if ($response->successful()) {
-                $team = $response->json();
-                
-                // Obtener miembros del equipo
-                $membersResponse = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members');
-                
-                $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
-                
-                return response()->json([
-                    'success' => true,
-                    'data' => $team
-                ]);
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            $team = $chatwootDb->table('teams')
+                ->where('id', $teamId)
+                ->where('account_id', $this->accountId)
+                ->first();
+            
+            if (!$team) {
+                return response()->json(['success' => false, 'message' => 'Equipo no encontrado'], 404);
             }
-
+            
+            // Obtener miembros
+            $members = $chatwootDb->table('team_members')
+                ->join('users', 'team_members.user_id', '=', 'users.id')
+                ->where('team_members.team_id', $teamId)
+                ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'users.avatar_url as thumbnail')
+                ->get()
+                ->map(function ($member) {
+                    $localUser = \App\Models\User::where('email', $member->email)->first();
+                    return [
+                        'id' => $member->id,
+                        'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
+                        'email' => $member->email,
+                        'thumbnail' => $member->thumbnail ?? ''
+                    ];
+                })
+                ->toArray();
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Equipo no encontrado'
-            ], 404);
+                'success' => true,
+                'data' => [
+                    'id' => $team->id,
+                    'name' => $team->name,
+                    'description' => $team->description,
+                    'allow_auto_assign' => $team->allow_auto_assign,
+                    'account_id' => $team->account_id,
+                    'members' => $members
+                ]
+            ]);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Get Team Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener equipo'
-            ], 500);
+            Log::error('getTeam Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al obtener equipo'], 500);
         }
     }
 
@@ -1962,42 +1950,30 @@ class ChatwootController extends Controller
     public function getTeamMembers($teamId)
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members');
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            $members = $chatwootDb->table('team_members')
+                ->join('users', 'team_members.user_id', '=', 'users.id')
+                ->where('team_members.team_id', $teamId)
+                ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'users.avatar_url as thumbnail')
+                ->get()
+                ->map(function ($member) {
+                    $localUser = \App\Models\User::where('email', $member->email)->first();
+                    return [
+                        'id' => $member->id,
+                        'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
+                        'email' => $member->email,
+                        'thumbnail' => $member->thumbnail ?? ''
+                    ];
+                })
+                ->toArray();
 
-            if ($response->successful()) {
-                $members = $response->json();
-                
-                // Enriquecer con full_name de nuestra base de datos
-                $enrichedMembers = collect($members)->map(function ($member) {
-                    // Buscar usuario en nuestra DB por email
-                    $localUser = \App\Models\User::where('email', $member['email'] ?? '')->first();
-                    
-                    if ($localUser && $localUser->full_name) {
-                        $member['name'] = $localUser->full_name;
-                    }
-                    
-                    return $member;
-                })->toArray();
-                
-                return response()->json([
-                    'success' => true,
-                    'data' => $enrichedMembers
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            return response()->json(['success' => true, 'data' => $members]);
 
         } catch (\Exception $e) {
-            Log::error('Chatwoot Get Team Members Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ]);
+            Log::error('getTeamMembers Error: ' . $e->getMessage());
+            return response()->json(['success' => true, 'data' => []]);
         }
     }
 
