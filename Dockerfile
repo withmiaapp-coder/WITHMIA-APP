@@ -50,11 +50,8 @@ RUN docker-php-ext-install iconv
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
-# Configure PHP for UTF-8
+# Configure PHP for UTF-8 (PHP 8.4+ uses UTF-8 by default, removed deprecated mbstring.* settings)
 RUN echo "default_charset = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "mbstring.internal_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "mbstring.http_input = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
-    echo "mbstring.http_output = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
     echo "iconv.input_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
     echo "iconv.internal_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini && \
     echo "iconv.output_encoding = UTF-8" >> /usr/local/etc/php/conf.d/utf8.ini
