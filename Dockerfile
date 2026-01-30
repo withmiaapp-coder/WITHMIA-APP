@@ -1,5 +1,5 @@
 # Dockerfile for WITHMIA-APP
-# Updated: 2026-01-30 - Production build with OPcache JIT
+# Updated: 2026-01-30 - Octane + Roadrunner for concurrent requests
 FROM php:8.4-cli
 
 # Install system dependencies (including poppler-utils for pdftotext)
