@@ -1,5 +1,5 @@
 # Dockerfile for WITHMIA-APP
-# Updated: 2026-01-30 - Production build with concurrent request handling
+# Updated: 2026-01-30 - Production build with OPcache JIT
 FROM php:8.4-cli
 
 # Install system dependencies (including poppler-utils for pdftotext)
@@ -64,12 +64,6 @@ RUN echo "default_charset = UTF-8" >> /usr/local/etc/php/conf.d/app.ini && \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Roadrunner binary for Laravel Octane
-RUN curl -L https://github.com/roadrunner-server/roadrunner/releases/download/v2024.3.5/roadrunner-2024.3.5-linux-amd64.tar.gz | tar -xz \
-    && mv roadrunner-2024.3.5-linux-amd64/rr /usr/local/bin/rr \
-    && rm -rf roadrunner-2024.3.5-linux-amd64 \
-    && chmod +x /usr/local/bin/rr
-
 # Set working directory
 WORKDIR /app
 
@@ -101,7 +95,7 @@ RUN php artisan storage:link || true
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
-# Create start script for Laravel Octane with Roadrunner
+# Create start script
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
@@ -116,8 +110,8 @@ php artisan view:clear\n\
 # Start queue worker in background\n\
 php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &\n\
 \n\
-# Start Laravel Octane with Roadrunner (handles concurrent requests!)\n\
-exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=4 --max-requests=1000\n\
+# Start web server\n\
+exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Expose port

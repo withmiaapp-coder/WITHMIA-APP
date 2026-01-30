@@ -1,4 +1,4 @@
-# nixpacks.toml - Updated 2026-01-30 for Laravel Octane + Roadrunner
+# nixpacks.toml - Updated 2026-01-30
 # Note: Railway will use Dockerfile if present, this is backup config
 
 [phases.setup]
@@ -20,6 +20,6 @@
   ]
 
 [start]
-  cmd = 'php artisan migrate --force && php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=4'
+  cmd = 'php artisan migrate --force && php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}'
 
-# Build trigger: 2026-01-30-roadrunner
+# Build trigger: 2026-01-30-revert
