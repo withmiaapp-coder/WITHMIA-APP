@@ -68,3 +68,6 @@ instance_create.json
 
 # Scripts de deployment duplicados
 commit-railway.sh
+rr
+# .rr.yaml - NEEDED for Octane/Roadrunner deployment
+composer.phar

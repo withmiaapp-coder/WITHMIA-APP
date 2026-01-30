@@ -49,6 +49,13 @@ RUN docker-php-ext-install iconv
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
 
+# Install Roadrunner binary for Octane
+RUN curl -sSL https://github.com/roadrunner-server/roadrunner/releases/download/v2024.3.5/roadrunner-2024.3.5-linux-amd64.tar.gz | \
+    tar -xz && \
+    mv roadrunner-2024.3.5-linux-amd64/rr /usr/local/bin/rr && \
+    chmod +x /usr/local/bin/rr && \
+    rm -rf roadrunner-2024.3.5-linux-amd64
+
 # Configure PHP for production with OPcache JIT
 RUN echo "default_charset = UTF-8" >> /usr/local/etc/php/conf.d/app.ini && \
     echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/app.ini && \
@@ -95,7 +102,7 @@ RUN php artisan storage:link || true
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
-# Create start script
+# Create start script with Octane (4 parallel workers)
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
@@ -107,11 +114,15 @@ php artisan config:clear\n\
 php artisan route:clear\n\
 php artisan view:clear\n\
 \n\
+# Cache config for Octane performance\n\
+php artisan config:cache\n\
+php artisan route:cache\n\
+\n\
 # Start queue worker in background\n\
 php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &\n\
 \n\
-# Start web server\n\
-exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}\n\
+# Start Octane with Roadrunner (4 workers for concurrent requests)\n\
+exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=4 --max-requests=500\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Expose port
