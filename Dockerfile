@@ -125,6 +125,3 @@ EXPOSE 8080
 
 # Start command
 CMD ["/bin/bash", "/app/start.sh"]
-
-# Start command
-CMD ["/bin/bash", "/app/start.sh"]
