@@ -1658,8 +1658,7 @@ class ChatwootController extends Controller
                         'users.id',
                         'users.name',
                         'users.display_name',
-                        'users.email',
-                        'users.avatar_url as thumbnail'
+                        'users.email'
                     )
                     ->get()
                     ->groupBy('team_id');
@@ -1675,7 +1674,7 @@ class ChatwootController extends Controller
                             'id' => $member->id,
                             'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
                             'email' => $member->email,
-                            'thumbnail' => $member->thumbnail ?? ''
+                            'thumbnail' => ''
                         ];
                     })->toArray();
                     
@@ -1729,7 +1728,7 @@ class ChatwootController extends Controller
             $members = $chatwootDb->table('team_members')
                 ->join('users', 'team_members.user_id', '=', 'users.id')
                 ->where('team_members.team_id', $teamId)
-                ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'users.avatar_url as thumbnail')
+                ->select('users.id', 'users.name', 'users.display_name', 'users.email')
                 ->get()
                 ->map(function ($member) {
                     $localUser = \App\Models\User::where('email', $member->email)->first();
@@ -1737,7 +1736,7 @@ class ChatwootController extends Controller
                         'id' => $member->id,
                         'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
                         'email' => $member->email,
-                        'thumbnail' => $member->thumbnail ?? ''
+                        'thumbnail' => ''
                     ];
                 })
                 ->toArray();
@@ -1956,7 +1955,7 @@ class ChatwootController extends Controller
             $members = $chatwootDb->table('team_members')
                 ->join('users', 'team_members.user_id', '=', 'users.id')
                 ->where('team_members.team_id', $teamId)
-                ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'users.avatar_url as thumbnail')
+                ->select('users.id', 'users.name', 'users.display_name', 'users.email')
                 ->get()
                 ->map(function ($member) {
                     $localUser = \App\Models\User::where('email', $member->email)->first();
@@ -1964,7 +1963,7 @@ class ChatwootController extends Controller
                         'id' => $member->id,
                         'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
                         'email' => $member->email,
-                        'thumbnail' => $member->thumbnail ?? ''
+                        'thumbnail' => ''
                     ];
                 })
                 ->toArray();
