@@ -1977,6 +1977,7 @@ class ChatwootController extends Controller
 
     /**
      * Agregar miembros a un equipo
+     * OPTIMIZADO: BD directa
      */
     public function addTeamMembers(Request $request, $teamId)
     {
@@ -1986,34 +1987,61 @@ class ChatwootController extends Controller
                 'user_ids.*' => 'integer',
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json',
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
-                'user_ids' => $validated['user_ids']
-            ]);
-
-            if ($response->successful()) {
-                Log::info('Miembros agregados al equipo', [
-                    'user_id' => $this->userId,
-                    'team_id' => $teamId,
-                    'added_users' => $validated['user_ids']
-                ]);
-                
-                // Invalidar cache de teams para que se actualice el conteo
-                $this->invalidateTeamsCache();
-                
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Verificar que el team existe y pertenece a la cuenta
+            $team = $chatwootDb->table('teams')
+                ->where('id', $teamId)
+                ->where('account_id', $this->accountId)
+                ->first();
+            
+            if (!$team) {
                 return response()->json([
-                    'success' => true,
-                    'data' => $response->json(),
-                    'message' => 'Miembros agregados exitosamente'
-                ]);
+                    'success' => false,
+                    'message' => 'Equipo no encontrado'
+                ], 404);
             }
-
+            
+            $addedCount = 0;
+            $now = now();
+            
+            foreach ($validated['user_ids'] as $userId) {
+                // Verificar que el usuario existe
+                $userExists = $chatwootDb->table('users')->where('id', $userId)->exists();
+                if (!$userExists) continue;
+                
+                // Verificar si ya es miembro (evitar duplicados)
+                $alreadyMember = $chatwootDb->table('team_members')
+                    ->where('team_id', $teamId)
+                    ->where('user_id', $userId)
+                    ->exists();
+                
+                if (!$alreadyMember) {
+                    $chatwootDb->table('team_members')->insert([
+                        'team_id' => $teamId,
+                        'user_id' => $userId,
+                        'created_at' => $now,
+                        'updated_at' => $now
+                    ]);
+                    $addedCount++;
+                }
+            }
+            
+            Log::info('🚀 BD directa: Miembros agregados al equipo', [
+                'user_id' => $this->userId,
+                'team_id' => $teamId,
+                'added_users' => $validated['user_ids'],
+                'added_count' => $addedCount
+            ]);
+            
+            // Invalidar cache de teams para que se actualice el conteo
+            $this->invalidateTeamsCache();
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Error al agregar miembros'
-            ], 400);
+                'success' => true,
+                'message' => "Se agregaron $addedCount miembros exitosamente"
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Add Team Members Error: ' . $e->getMessage());
@@ -2026,6 +2054,7 @@ class ChatwootController extends Controller
 
     /**
      * Actualizar miembros de un equipo (reemplazar todos)
+     * OPTIMIZADO: BD directa
      */
     public function updateTeamMembers(Request $request, $teamId)
     {
@@ -2035,33 +2064,69 @@ class ChatwootController extends Controller
                 'user_ids.*' => 'integer',
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json',
-            ])->patch($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
-                'user_ids' => $validated['user_ids']
-            ]);
-
-            if ($response->successful()) {
-                Log::info('Miembros del equipo actualizados', [
-                    'user_id' => $this->userId,
-                    'team_id' => $teamId
-                ]);
-                
-                // Invalidar cache de teams
-                $this->invalidateTeamsCache();
-                
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Verificar que el team existe y pertenece a la cuenta
+            $team = $chatwootDb->table('teams')
+                ->where('id', $teamId)
+                ->where('account_id', $this->accountId)
+                ->first();
+            
+            if (!$team) {
                 return response()->json([
-                    'success' => true,
-                    'data' => $response->json(),
-                    'message' => 'Miembros actualizados exitosamente'
-                ]);
+                    'success' => false,
+                    'message' => 'Equipo no encontrado'
+                ], 404);
             }
-
+            
+            // Usar transacción para asegurar consistencia
+            $chatwootDb->beginTransaction();
+            
+            try {
+                // Eliminar todos los miembros actuales
+                $chatwootDb->table('team_members')
+                    ->where('team_id', $teamId)
+                    ->delete();
+                
+                // Insertar los nuevos miembros
+                $now = now();
+                $insertedCount = 0;
+                
+                foreach ($validated['user_ids'] as $userId) {
+                    // Verificar que el usuario existe
+                    $userExists = $chatwootDb->table('users')->where('id', $userId)->exists();
+                    if (!$userExists) continue;
+                    
+                    $chatwootDb->table('team_members')->insert([
+                        'team_id' => $teamId,
+                        'user_id' => $userId,
+                        'created_at' => $now,
+                        'updated_at' => $now
+                    ]);
+                    $insertedCount++;
+                }
+                
+                $chatwootDb->commit();
+                
+                Log::info('🚀 BD directa: Miembros del equipo actualizados', [
+                    'user_id' => $this->userId,
+                    'team_id' => $teamId,
+                    'new_member_count' => $insertedCount
+                ]);
+                
+            } catch (\Exception $e) {
+                $chatwootDb->rollBack();
+                throw $e;
+            }
+            
+            // Invalidar cache de teams
+            $this->invalidateTeamsCache();
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Error al actualizar miembros'
-            ], 400);
+                'success' => true,
+                'message' => 'Miembros actualizados exitosamente'
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Update Team Members Error: ' . $e->getMessage());
@@ -2074,6 +2139,7 @@ class ChatwootController extends Controller
 
     /**
      * Eliminar un miembro de un equipo
+     * OPTIMIZADO: BD directa
      */
     public function removeTeamMember(Request $request, $teamId)
     {
@@ -2083,33 +2149,42 @@ class ChatwootController extends Controller
                 'user_ids.*' => 'integer',
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json',
-            ])->delete($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId . '/team_members', [
-                'user_ids' => $validated['user_ids']
-            ]);
-
-            if ($response->successful() || $response->status() === 204) {
-                Log::info('Miembro removido del equipo', [
-                    'user_id' => $this->userId,
-                    'team_id' => $teamId,
-                    'removed_users' => $validated['user_ids']
-                ]);
-                
-                // Invalidar cache de teams
-                $this->invalidateTeamsCache();
-                
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Verificar que el team existe y pertenece a la cuenta
+            $team = $chatwootDb->table('teams')
+                ->where('id', $teamId)
+                ->where('account_id', $this->accountId)
+                ->first();
+            
+            if (!$team) {
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Miembro removido exitosamente'
-                ]);
+                    'success' => false,
+                    'message' => 'Equipo no encontrado'
+                ], 404);
             }
-
+            
+            // Eliminar los miembros especificados
+            $deletedCount = $chatwootDb->table('team_members')
+                ->where('team_id', $teamId)
+                ->whereIn('user_id', $validated['user_ids'])
+                ->delete();
+            
+            Log::info('🚀 BD directa: Miembros removidos del equipo', [
+                'user_id' => $this->userId,
+                'team_id' => $teamId,
+                'removed_users' => $validated['user_ids'],
+                'deleted_count' => $deletedCount
+            ]);
+            
+            // Invalidar cache de teams
+            $this->invalidateTeamsCache();
+            
             return response()->json([
-                'success' => false,
-                'message' => 'Error al remover miembro'
-            ], 400);
+                'success' => true,
+                'message' => "Se removieron $deletedCount miembros exitosamente"
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Chatwoot Remove Team Member Error: ' . $e->getMessage());

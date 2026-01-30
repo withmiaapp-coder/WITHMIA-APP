@@ -1254,6 +1254,15 @@ export const useTeams = () => {
       const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}`);
       const teamData = result?.data || result;
       setSelectedTeam(teamData);
+      
+      // También actualizar este equipo en la lista de teams para sincronizar
+      setTeams(prev => prev.map(t => t.id === teamId ? teamData : t));
+      
+      // Actualizar también en el cache si existe
+      if (teamsCache.data) {
+        teamsCache.data = teamsCache.data.map((t: Team) => t.id === teamId ? teamData : t);
+      }
+      
       return teamData;
     } catch (err) {
       console.error('Error fetching team:', err);
