@@ -41,7 +41,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     fileinfo \
     exif \
     pcntl \
-    opcache
+    opcache \
+    sockets
 
 # Install iconv extension (critical for Laravel)
 RUN docker-php-ext-install iconv
