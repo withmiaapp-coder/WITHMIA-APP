@@ -150,162 +150,153 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            // 🔄 PAGINACIÓN INFINITA: Cargar TODAS las conversaciones desde API
+            // � OPTIMIZACIÓN: Obtener conversaciones DIRECTAMENTE desde la BD
+            // Esto es mucho más rápido que hacer múltiples llamadas HTTP paginadas
             $allConversations = [];
-            $currentPage = 1;
-            $perPage = 100;
-            $hasMorePages = true;
-
-            // Parámetros base con FILTRO DE SEGURIDAD
-            $baseParams = [
-                'per_page' => $perPage,
-                'inbox_id' => $this->inboxId // ✅ FILTRO CRÍTICO
-            ];
-
-            // Agregar filtros adicionales del request si existen
-            if ($request->has('status')) {
-                $baseParams['status'] = $request->input('status');
-            }
-            if ($request->has('assignee_type')) {
-                $baseParams['assignee_type'] = $request->input('assignee_type');
-            }
-
-            Log::info('Starting infinite pagination for conversations', [
+            
+            Log::info('📥 Obteniendo conversaciones desde BD directa', [
                 'user_id' => $this->userId,
                 'account_id' => $this->accountId,
-                'inbox_id' => $this->inboxId,
-                'base_params' => $baseParams
+                'inbox_id' => $this->inboxId
             ]);
-
-            // Bucle para cargar todas las páginas
-            $errorOccurred = false;
-            while ($hasMorePages) {
-                $params = array_merge($baseParams, ['page' => $currentPage]);
-
-                $response = Http::withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations', $params);
-
-                if ($response->successful()) {
-                    $data = $response->json();
-                    $conversations = $data['data']['payload'] ?? [];
-
-                    // Si no hay conversaciones en esta página, terminamos
-                    if (empty($conversations)) {
-                        $hasMorePages = false;
-                        break;
-                    }
-
-                    // DOBLE FILTRO DE SEGURIDAD: Por si la API no respeta el parámetro
-                    $filteredConversations = array_filter($conversations, function($conv) {
-                        // Filtro 1: Verificar inbox_id
-                        if (!isset($conv['inbox_id']) || $conv['inbox_id'] != $this->inboxId) {
-                            return false;
-                        }
-                        
-                        // 🔒 Filtro 2: EXCLUIR conversaciones de EvolutionAPI
-                        $senderName = $conv['meta']['sender']['name'] ?? '';
-                        if (stripos($senderName, 'EvolutionAPI') !== false) {
-                            return false; // Excluir esta conversación
-                        }
-                        
-                        return true; // Incluir la conversación
-                    });
-
-                    // Agregar a la lista total
-                    $allConversations = array_merge($allConversations, array_values($filteredConversations));
-
-                    Log::info('Page fetched and filtered', [
-                        'page' => $currentPage,
-                        'conversations_in_page' => count($conversations),
-                        'after_inbox_filter' => count($filteredConversations),
-                        'total_so_far' => count($allConversations),
-                        'evolutionapi_filtered' => true
-                    ]);
-
-                    // Continuar a la siguiente página
-                        $currentPage++;
-
-                    // Límite de seguridad: máximo 20 páginas (2000 conversaciones)
-                    if ($currentPage > 20) {
-                        Log::warning('Reached safety limit of 20 pages');
-                        $hasMorePages = false;
-                    }
-                } else {
-                    Log::error('Error fetching page', [
-                        'page' => $currentPage,
-                        'status' => $response->status(),
-                        'response' => $response->body()
-                    ]);
-                    $errorOccurred = true;
-                    $hasMorePages = false;
+            
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Query base con filtros de seguridad
+            $query = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId);
+            
+            // Aplicar filtro de status si existe
+            if ($request->has('status')) {
+                $statusMap = ['open' => 0, 'resolved' => 1, 'pending' => 2, 'snoozed' => 3];
+                $statusValue = $statusMap[$request->input('status')] ?? null;
+                if ($statusValue !== null) {
+                    $query->where('status', $statusValue);
                 }
             }
-
-            Log::info('All conversations fetched successfully', [
-                'user_id' => $this->userId,
-                'total_pages' => $currentPage,
-                'total_conversations' => count($allConversations),
-                'error_occurred' => $errorOccurred
+            
+            // Aplicar filtro de assignee_type si existe
+            if ($request->has('assignee_type')) {
+                $assigneeType = $request->input('assignee_type');
+                if ($assigneeType === 'me') {
+                    // Buscar el agente de Chatwoot asociado al usuario
+                    $chatwootAgent = $chatwootDb->table('users')
+                        ->where('email', Auth::user()->email)
+                        ->first();
+                    if ($chatwootAgent) {
+                        $query->where('assignee_id', $chatwootAgent->id);
+                    }
+                } elseif ($assigneeType === 'unassigned') {
+                    $query->whereNull('assignee_id');
+                }
+            }
+            
+            // Ordenar y limitar
+            $conversationsFromDb = $query
+                ->orderBy('last_activity_at', 'desc')
+                ->limit(200) // Aumentado para mejor cobertura
+                ->get();
+            
+            Log::info('📊 Conversaciones obtenidas de BD', [
+                'count' => count($conversationsFromDb)
             ]);
-
-            // � FALLBACK: Si la API falló, obtener conversaciones directamente de la DB
-            if ($errorOccurred && empty($allConversations)) {
-                Log::info("🔄 FALLBACK: Obteniendo conversaciones desde DB de Chatwoot");
-                
-                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
-                
-                $conversationsFromDb = $chatwootDb->table('conversations')
-                    ->where('account_id', $this->accountId)
-                    ->where('inbox_id', $this->inboxId)
-                    ->orderBy('last_activity_at', 'desc')
-                    ->limit(50)
-                    ->get();
-                
-                // Obtener contactos
-                $contactIds = $conversationsFromDb->pluck('contact_id')->unique()->toArray();
+            
+            // Obtener contactos en una sola query
+            $contactIds = $conversationsFromDb->pluck('contact_id')->unique()->filter()->toArray();
+            $contacts = [];
+            if (!empty($contactIds)) {
                 $contacts = $chatwootDb->table('contacts')
                     ->whereIn('id', $contactIds)
                     ->get()
                     ->keyBy('id');
+            }
+            
+            // Obtener asignados (agentes) en una sola query
+            $assigneeIds = $conversationsFromDb->pluck('assignee_id')->unique()->filter()->toArray();
+            $assignees = [];
+            if (!empty($assigneeIds)) {
+                $assignees = $chatwootDb->table('users')
+                    ->whereIn('id', $assigneeIds)
+                    ->get()
+                    ->keyBy('id');
+            }
+            
+            // Obtener último mensaje de cada conversación (optimizado con subquery)
+            $conversationIds = $conversationsFromDb->pluck('id')->toArray();
+            $lastMessages = [];
+            if (!empty($conversationIds)) {
+                // Obtener el último mensaje NO-ACTIVITY de cada conversación
+                $lastMessagesRaw = $chatwootDb->table('messages')
+                    ->select('messages.*')
+                    ->whereIn('conversation_id', $conversationIds)
+                    ->whereIn('message_type', [0, 1]) // Solo INCOMING y OUTGOING
+                    ->whereRaw('messages.id = (
+                        SELECT MAX(m2.id) FROM messages m2 
+                        WHERE m2.conversation_id = messages.conversation_id 
+                        AND m2.message_type IN (0, 1)
+                    )')
+                    ->get();
                 
-                foreach ($conversationsFromDb as $conv) {
-                    $contact = $contacts[$conv->contact_id] ?? null;
-                    
-                    // Obtener último mensaje
-                    $lastMessage = $chatwootDb->table('messages')
-                        ->where('conversation_id', $conv->id)
-                        ->orderBy('created_at', 'desc')
-                        ->first();
-                    
-                    $allConversations[] = [
-                        'id' => $conv->display_id, // El frontend espera display_id
-                        'account_id' => $conv->account_id,
-                        'inbox_id' => $conv->inbox_id,
-                        'status' => $conv->status == 0 ? 'open' : ($conv->status == 1 ? 'resolved' : 'pending'),
-                        'meta' => [
-                            'sender' => [
-                                'id' => $contact->id ?? null,
-                                'name' => $contact->name ?? 'Contacto',
-                                'phone_number' => $contact->phone_number ?? null,
-                                'identifier' => $contact->identifier ?? null
-                            ]
-                        ],
-                        'messages' => $lastMessage ? [[
-                            'id' => $lastMessage->id,
-                            'content' => $lastMessage->content,
-                            'message_type' => $lastMessage->message_type,
-                            'created_at' => strtotime($lastMessage->created_at)
-                        ]] : [],
-                        'created_at' => strtotime($conv->created_at),
-                        'last_activity_at' => strtotime($conv->last_activity_at),
-                        'from_db_fallback' => true
-                    ];
+                foreach ($lastMessagesRaw as $msg) {
+                    $lastMessages[$msg->conversation_id] = $msg;
+                }
+            }
+            
+            // Construir array de conversaciones
+            foreach ($conversationsFromDb as $conv) {
+                $contact = $contacts[$conv->contact_id] ?? null;
+                $assignee = isset($conv->assignee_id) ? ($assignees[$conv->assignee_id] ?? null) : null;
+                $lastMessage = $lastMessages[$conv->id] ?? null;
+                
+                // 🔒 Filtro: EXCLUIR conversaciones de EvolutionAPI
+                $senderName = $contact->name ?? '';
+                if (stripos($senderName, 'EvolutionAPI') !== false) {
+                    continue; // Saltar esta conversación
                 }
                 
-                Log::info("✅ FALLBACK exitoso: " . count($allConversations) . " conversaciones obtenidas de DB");
+                // Mapear status numérico a string
+                $statusMap = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
+                $statusString = $statusMap[$conv->status] ?? 'open';
+                
+                $allConversations[] = [
+                    'id' => $conv->display_id, // El frontend espera display_id
+                    'account_id' => $conv->account_id,
+                    'inbox_id' => $conv->inbox_id,
+                    'status' => $statusString,
+                    'assignee' => $assignee ? [
+                        'id' => $assignee->id,
+                        'name' => $assignee->name ?? $assignee->display_name ?? 'Agente',
+                        'email' => $assignee->email ?? null,
+                        'available_name' => $assignee->display_name ?? $assignee->name ?? 'Agente'
+                    ] : null,
+                    'meta' => [
+                        'sender' => [
+                            'id' => $contact->id ?? null,
+                            'name' => $contact->name ?? 'Contacto',
+                            'phone_number' => $contact->phone_number ?? null,
+                            'identifier' => $contact->identifier ?? null,
+                            'thumbnail' => $contact->avatar_url ?? ''
+                        ]
+                    ],
+                    'messages' => $lastMessage ? [[
+                        'id' => $lastMessage->id,
+                        'content' => $lastMessage->content,
+                        'message_type' => $lastMessage->message_type,
+                        'created_at' => strtotime($lastMessage->created_at)
+                    ]] : [],
+                    'unread_count' => $conv->unread_count ?? 0,
+                    'created_at' => strtotime($conv->created_at),
+                    'last_activity_at' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : strtotime($conv->created_at),
+                    'timestamp' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : strtotime($conv->created_at),
+                    'from_db' => true
+                ];
             }
+            
+            Log::info('✅ Conversaciones procesadas desde BD', [
+                'total' => count($allConversations),
+                'filtered_evolutionapi' => count($conversationsFromDb) - count($allConversations)
+            ]);
 
             // �🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
             try {
@@ -323,26 +314,15 @@ class ChatwootController extends Controller
             // 🔗 DEDUPLICACIÓN: Unificar conversaciones duplicadas por identifiers de Evolution
             $allConversations = $this->deduplicateConversationsByEvolutionIdentifiers($allConversations);
 
-            // 💾 Guardar en caché SOLO si no hubo error y hay conversaciones
-            // Si hubo error (401, etc) y tenemos 0 conversaciones, NO cachear para reintentar
-            if (!$errorOccurred || count($allConversations) > 0) {
-                Cache::put($cacheKey, $allConversations, $cacheTTL);
-                Cache::put($cacheKey . '_timestamp', now()->timestamp, $cacheTTL);
-                Log::info('💾 Conversations saved to CACHE', [
-                    'cache_key' => $cacheKey,
-                    'ttl_seconds' => $cacheTTL,
-                    'timestamp' => now()->timestamp,
-                    'total' => count($allConversations)
-                ]);
-            } else {
-                // Limpiar caché existente si hubo error
-                Cache::forget($cacheKey);
-                Cache::forget($cacheKey . '_timestamp');
-                Log::warning('⚠️ NOT caching due to error with 0 conversations', [
-                    'cache_key' => $cacheKey,
-                    'error_occurred' => $errorOccurred
-                ]);
-            }
+            // 💾 Guardar en caché
+            Cache::put($cacheKey, $allConversations, $cacheTTL);
+            Cache::put($cacheKey . '_timestamp', now()->timestamp, $cacheTTL);
+            Log::info('💾 Conversations saved to CACHE', [
+                'cache_key' => $cacheKey,
+                'ttl_seconds' => $cacheTTL,
+                'timestamp' => now()->timestamp,
+                'total' => count($allConversations)
+            ]);
 
             // Devolver estructura esperada por el frontend
             return response()->json([
@@ -351,7 +331,7 @@ class ChatwootController extends Controller
                     'payload' => $allConversations,
                     'meta' => [
                         'total' => count($allConversations),
-                        'pages_loaded' => $currentPage,
+                        'from_db' => true,
                         'from_cache' => false
                     ]
                 ]
