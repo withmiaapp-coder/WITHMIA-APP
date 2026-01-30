@@ -85,41 +85,56 @@ class UserObserver
             }
 
             // 🔴 ELIMINAR COLECCIÓN QDRANT DEL USUARIO
-            if (!empty($user->company_slug)) {
+            // SOLO si es el admin/owner principal de la empresa (no miembros del equipo)
+            if (!empty($user->company_slug) && $user->role === 'admin') {
                 $companySlug = $user->company_slug;
-                file_put_contents('/tmp/observer_debug.log', "🗑️ Intentando eliminar colección Qdrant para company_slug: {$companySlug}\n", FILE_APPEND);
                 
-                try {
-                    $qdrantService = new QdrantService();
-                    $collectionName = $qdrantService->getCollectionName($companySlug);
-                    file_put_contents('/tmp/observer_debug.log', "📦 Nombre de colección Qdrant: {$collectionName}\n", FILE_APPEND);
+                // Verificar que no haya otros admins en la misma empresa
+                $otherAdmins = \App\Models\User::where('company_slug', $companySlug)
+                    ->where('role', 'admin')
+                    ->where('id', '!=', $user->id)
+                    ->count();
+                
+                // Solo eliminar colección si es el último admin de la empresa
+                if ($otherAdmins === 0) {
+                    file_put_contents('/tmp/observer_debug.log', "🗑️ Intentando eliminar colección Qdrant para company_slug: {$companySlug} (último admin)\n", FILE_APPEND);
                     
-                    $result = $qdrantService->deleteCollection($collectionName);
-                    
-                    if ($result['success']) {
-                        file_put_contents('/tmp/observer_debug.log', "✅ Colección Qdrant eliminada: {$collectionName}\n", FILE_APPEND);
-                        Log::info("UserObserver: Colección Qdrant eliminada", [
+                    try {
+                        $qdrantService = new QdrantService();
+                        $collectionName = $qdrantService->getCollectionName($companySlug);
+                        file_put_contents('/tmp/observer_debug.log', "📦 Nombre de colección Qdrant: {$collectionName}\n", FILE_APPEND);
+                        
+                        $result = $qdrantService->deleteCollection($collectionName);
+                        
+                        if ($result['success']) {
+                            file_put_contents('/tmp/observer_debug.log', "✅ Colección Qdrant eliminada: {$collectionName}\n", FILE_APPEND);
+                            Log::info("UserObserver: Colección Qdrant eliminada", [
+                                'user_id' => $user->id,
+                                'company_slug' => $companySlug,
+                                'collection' => $collectionName
+                            ]);
+                        } else {
+                            file_put_contents('/tmp/observer_debug.log', "❌ Error eliminando colección Qdrant: " . ($result['error'] ?? 'Unknown') . "\n", FILE_APPEND);
+                            Log::warning("UserObserver: Error eliminando colección Qdrant", [
+                                'user_id' => $user->id,
+                                'company_slug' => $companySlug,
+                                'collection' => $collectionName,
+                                'error' => $result['error'] ?? 'Unknown'
+                            ]);
+                        }
+                    } catch (\Exception $qdrantException) {
+                        file_put_contents('/tmp/observer_debug.log', "💥 Excepción Qdrant: " . $qdrantException->getMessage() . "\n", FILE_APPEND);
+                        Log::error("UserObserver: Excepción al eliminar colección Qdrant", [
                             'user_id' => $user->id,
                             'company_slug' => $companySlug,
-                            'collection' => $collectionName
-                        ]);
-                    } else {
-                        file_put_contents('/tmp/observer_debug.log', "❌ Error eliminando colección Qdrant: " . ($result['error'] ?? 'Unknown') . "\n", FILE_APPEND);
-                        Log::warning("UserObserver: Error eliminando colección Qdrant", [
-                            'user_id' => $user->id,
-                            'company_slug' => $companySlug,
-                            'collection' => $collectionName,
-                            'error' => $result['error'] ?? 'Unknown'
+                            'error' => $qdrantException->getMessage()
                         ]);
                     }
-                } catch (\Exception $qdrantException) {
-                    file_put_contents('/tmp/observer_debug.log', "💥 Excepción Qdrant: " . $qdrantException->getMessage() . "\n", FILE_APPEND);
-                    Log::error("UserObserver: Excepción al eliminar colección Qdrant", [
-                        'user_id' => $user->id,
-                        'company_slug' => $companySlug,
-                        'error' => $qdrantException->getMessage()
-                    ]);
+                } else {
+                    file_put_contents('/tmp/observer_debug.log', "ℹ️ No se elimina colección Qdrant: hay {$otherAdmins} admins restantes en {$companySlug}\n", FILE_APPEND);
                 }
+            } else if (!empty($user->company_slug) && $user->role !== 'admin') {
+                file_put_contents('/tmp/observer_debug.log', "ℹ️ Usuario es miembro del equipo (role: {$user->role}), NO se elimina colección Qdrant de {$user->company_slug}\n", FILE_APPEND);
             } else {
                 file_put_contents('/tmp/observer_debug.log', "⚠️ Usuario sin company_slug, no se puede eliminar colección Qdrant\n", FILE_APPEND);
             }
