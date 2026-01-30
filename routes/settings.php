@@ -6,7 +6,12 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware('auth')->group(function () {
-    Route::redirect('settings', '/settings/profile');
+    Route::redirect('settings', '/settings/general');
+
+    // Configuración general (timezone, empresa)
+    Route::get('settings/general', function () {
+        return Inertia::render('settings/general');
+    })->name('settings.general');
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');

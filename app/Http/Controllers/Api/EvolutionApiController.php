@@ -1268,10 +1268,7 @@ class EvolutionApiController extends Controller
                 'action' => 'new_message'
             ]);
 
-            // 🗑️ INVALIDAR CACHÉ de conversaciones para forzar refresh
-            $cacheKey = 'conversations_user_1_inbox_' . $inboxId;
-            Cache::forget($cacheKey);
-            Log::info('🗑️ Caché de conversaciones invalidado', ['cache_key' => $cacheKey]);
+            // ✅ Los datos de conversaciones se obtienen en tiempo real desde BD (sin cache)
 
         } catch (\Exception $e) {
             Log::error('Error broadcasting message signal', [

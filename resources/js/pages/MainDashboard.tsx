@@ -218,9 +218,11 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     {
       icon: Settings,
       label: 'Configuración',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      onClick: () => {
+        window.location.href = '/settings/general';
+      },
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     },
     {
       icon: Heart,

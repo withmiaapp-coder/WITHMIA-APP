@@ -55,7 +55,8 @@ class AdminController extends Controller
     }
 
     /**
-     * API: Get all users (cached)
+     * API: Get all users
+     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function apiUsers()
     {
@@ -64,14 +65,12 @@ class AdminController extends Controller
         }
 
         try {
-            $users = Cache::remember('admin_users', 30, function () {
-                return DB::select("
-                    SELECT id, name, email, role, company_slug, onboarding_completed, created_at, updated_at
-                    FROM users
-                    ORDER BY created_at DESC
-                    LIMIT 100
-                ");
-            });
+            $users = DB::select("
+                SELECT id, name, email, role, company_slug, onboarding_completed, created_at, updated_at
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT 100
+            ");
 
             return response()->json(['users' => $users]);
         } catch (\Exception $e) {
@@ -80,7 +79,8 @@ class AdminController extends Controller
     }
 
     /**
-     * API: Get all companies (cached)
+     * API: Get all companies
+     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function apiCompanies()
     {
@@ -89,14 +89,12 @@ class AdminController extends Controller
         }
 
         try {
-            $companies = Cache::remember('admin_companies', 30, function () {
-                return DB::select("
-                    SELECT id, name, slug, email, phone, is_active, chatwoot_inbox_id, created_at, updated_at
-                    FROM companies
-                    ORDER BY created_at DESC
-                    LIMIT 100
-                ");
-            });
+            $companies = DB::select("
+                SELECT id, name, slug, email, phone, is_active, chatwoot_inbox_id, created_at, updated_at
+                FROM companies
+                ORDER BY created_at DESC
+                LIMIT 100
+            ");
 
             return response()->json(['companies' => $companies]);
         } catch (\Exception $e) {
@@ -128,10 +126,6 @@ class AdminController extends Controller
             if ($affected === 0) {
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
-
-            // Invalidar caché
-            Cache::forget('admin_users');
-            Cache::forget('admin_stats');
 
             return response()->json(['success' => true, 'message' => 'Rol actualizado correctamente']);
         } catch (\Exception $e) {
@@ -168,10 +162,6 @@ class AdminController extends Controller
             // - Archivos Excel
             $user->delete();
 
-            // Invalidar caché
-            Cache::forget('admin_users');
-            Cache::forget('admin_stats');
-
             return response()->json(['success' => true, 'message' => 'Usuario eliminado correctamente']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -179,7 +169,8 @@ class AdminController extends Controller
     }
 
     /**
-     * API: Get admin stats (cached 30s)
+     * API: Get admin stats
+     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function stats()
     {
@@ -188,20 +179,18 @@ class AdminController extends Controller
         }
 
         try {
-            $data = Cache::remember('admin_stats', 30, function () {
-                $users = DB::select("SELECT id, name, email, role, company_slug, onboarding_completed, created_at FROM users ORDER BY created_at DESC LIMIT 20");
-                $companies = DB::select("SELECT id, name, slug, is_active, chatwoot_inbox_id, created_at FROM companies ORDER BY created_at DESC LIMIT 20");
-                
-                $totalUsers = DB::selectOne("SELECT COUNT(*) as count FROM users")->count;
-                $totalCompanies = DB::selectOne("SELECT COUNT(*) as count FROM companies")->count;
+            $users = DB::select("SELECT id, name, email, role, company_slug, onboarding_completed, created_at FROM users ORDER BY created_at DESC LIMIT 20");
+            $companies = DB::select("SELECT id, name, slug, is_active, chatwoot_inbox_id, created_at FROM companies ORDER BY created_at DESC LIMIT 20");
+            
+            $totalUsers = DB::selectOne("SELECT COUNT(*) as count FROM users")->count;
+            $totalCompanies = DB::selectOne("SELECT COUNT(*) as count FROM companies")->count;
 
-                return [
-                    'total_users' => $totalUsers,
-                    'total_companies' => $totalCompanies,
-                    'users' => $users,
-                    'companies' => $companies
-                ];
-            });
+            $data = [
+                'total_users' => $totalUsers,
+                'total_companies' => $totalCompanies,
+                'users' => $users,
+                'companies' => $companies
+            ];
 
             return response()->json($data);
         } catch (\Exception $e) {

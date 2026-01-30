@@ -20,6 +20,17 @@ class ChatwootController extends Controller
     private EvolutionApiService $evolutionApi;
     private ConversationDeduplicationService $deduplicationService;
 
+    /**
+     * Convertir timestamp UTC de la BD a Unix timestamp
+     * La BD de Chatwoot guarda en UTC, PHP está en America/Santiago
+     */
+    private function utcToTimestamp($utcDatetime): ?int
+    {
+        if (!$utcDatetime) return null;
+        // Agregar 'UTC' para que strtotime interprete correctamente
+        return strtotime($utcDatetime . ' UTC');
+    }
+
     public function __construct(EvolutionApiService $evolutionApi, ConversationDeduplicationService $deduplicationService)
     {
         $this->evolutionApi = $evolutionApi;
@@ -79,6 +90,7 @@ class ChatwootController extends Controller
 
     /**
      * Obtener conversaciones (REAL API) - CON FILTRO DE SEGURIDAD
+     * ✅ SIN CACHE - Consultas directas a BD para datos en tiempo real
      */
     public function getConversations(Request $request)
     {
@@ -99,58 +111,7 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            // ⚡ CACHE: Intentar cargar desde caché primero (60 segundos)
-            $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-            $cacheTTL = 60; // segundos
-            
-            // Si hay filtros en el request, agregar al cache key y reducir TTL
-            $filters = $request->only(['status', 'assignee_type']);
-            if (!empty($filters)) {
-                $cacheKey .= '_' . md5(json_encode($filters));
-                $cacheTTL = 30; // Reducir tiempo si hay filtros
-            }
-
-            // 🔍 VALIDAR: Verificar si hay mensajes nuevos desde que se cacheó
-            $lastMessageCacheKey = "last_message_inbox_{$this->inboxId}";
-            $lastMessageTimestamp = Cache::get($lastMessageCacheKey);
-            $cachedData = Cache::get($cacheKey);
-            $cacheTimestamp = Cache::get($cacheKey . '_timestamp');
-
-            // Si hay mensaje nuevo después del caché, invalidar
-            if ($cachedData !== null && $lastMessageTimestamp && $cacheTimestamp) {
-                if ($lastMessageTimestamp > $cacheTimestamp) {
-                    Log::info('🗑️ Caché invalidado por mensaje nuevo', [
-                        'user_id' => $this->userId,
-                        'cache_timestamp' => $cacheTimestamp,
-                        'last_message_timestamp' => $lastMessageTimestamp
-                    ]);
-                    Cache::forget($cacheKey);
-                    Cache::forget($cacheKey . '_timestamp');
-                    $cachedData = null;
-                }
-            }
-            
-            // Intentar obtener desde caché
-            if ($cachedData !== null) {
-                Log::info('⚡ Conversations loaded from CACHE', [
-                    'user_id' => $this->userId,
-                    'total' => count($cachedData),
-                    'cache_key' => $cacheKey
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'payload' => $cachedData,
-                        'meta' => [
-                            'total' => count($cachedData),
-                            'from_cache' => true
-                        ]
-                    ]
-                ]);
-            }
-
-            // � OPTIMIZACIÓN: Obtener conversaciones DIRECTAMENTE desde la BD
+            // ✅ OPTIMIZACIÓN: Obtener conversaciones DIRECTAMENTE desde la BD
             // Esto es mucho más rápido que hacer múltiples llamadas HTTP paginadas
             $allConversations = [];
             
@@ -283,12 +244,12 @@ class ChatwootController extends Controller
                         'id' => $lastMessage->id,
                         'content' => $lastMessage->content,
                         'message_type' => $lastMessage->message_type,
-                        'created_at' => strtotime($lastMessage->created_at)
+                        'created_at' => $this->utcToTimestamp($lastMessage->created_at)
                     ]] : [],
                     'unread_count' => $conv->unread_count ?? 0,
-                    'created_at' => strtotime($conv->created_at),
-                    'last_activity_at' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : strtotime($conv->created_at),
-                    'timestamp' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : strtotime($conv->created_at),
+                    'created_at' => $this->utcToTimestamp($conv->created_at),
+                    'last_activity_at' => $this->utcToTimestamp($conv->last_activity_at) ?? $this->utcToTimestamp($conv->created_at),
+                    'timestamp' => $this->utcToTimestamp($conv->last_activity_at) ?? $this->utcToTimestamp($conv->created_at),
                     'from_db' => true
                 ];
             }
@@ -298,14 +259,11 @@ class ChatwootController extends Controller
                 'filtered_evolutionapi' => count($conversationsFromDb) - count($allConversations)
             ]);
 
-            // �🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
+            // 🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
             try {
                 $mergeResult = $this->deduplicationService->autoMergeDuplicates($this->inboxId);
                 if ($mergeResult['success'] && isset($mergeResult['merged']) && $mergeResult['merged'] > 0) {
                     Log::info('✅ AUTO-FUSIÓN: Conversaciones fusionadas', $mergeResult);
-                    // Invalidar caché para recargar datos actualizados
-                    Cache::forget($cacheKey);
-                    Cache::forget($cacheKey . '_timestamp');
                 }
             } catch (\Exception $e) {
                 Log::error('❌ Error en auto-fusión', ['error' => $e->getMessage()]);
@@ -314,25 +272,14 @@ class ChatwootController extends Controller
             // 🔗 DEDUPLICACIÓN: Unificar conversaciones duplicadas por identifiers de Evolution
             $allConversations = $this->deduplicateConversationsByEvolutionIdentifiers($allConversations);
 
-            // 💾 Guardar en caché
-            Cache::put($cacheKey, $allConversations, $cacheTTL);
-            Cache::put($cacheKey . '_timestamp', now()->timestamp, $cacheTTL);
-            Log::info('💾 Conversations saved to CACHE', [
-                'cache_key' => $cacheKey,
-                'ttl_seconds' => $cacheTTL,
-                'timestamp' => now()->timestamp,
-                'total' => count($allConversations)
-            ]);
-
-            // Devolver estructura esperada por el frontend
+            // ✅ Devolver estructura esperada por el frontend (SIN CACHE)
             return response()->json([
                 'success' => true,
                 'data' => [
                     'payload' => $allConversations,
                     'meta' => [
                         'total' => count($allConversations),
-                        'from_db' => true,
-                        'from_cache' => false
+                        'from_db' => true
                     ]
                 ]
             ]);
@@ -363,20 +310,14 @@ class ChatwootController extends Controller
     }
 
     /**
-     * Obtener una conversación específica por ID - CON VALIDACIÓN DE SEGURIDAD Y CACHÉ REDIS
+     * Obtener una conversación específica por ID - CON VALIDACIÓN DE SEGURIDAD
+     * ✅ SIN CACHE - Consultas directas a BD para datos en tiempo real
      */
     public function getConversation($id)
     {
         try {
             if (!$this->inboxId) {
                 return response()->json(['success' => false, 'message' => 'No tienes un inbox asignado'], 403);
-            }
-
-            // Cache de 30 segundos
-            $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
-            $cached = Cache::get($cacheKey);
-            if ($cached) {
-                return response()->json(['success' => true, 'payload' => $cached, 'cached' => true]);
             }
 
             // 🚀 BD DIRECTA: Obtener conversación desde Chatwoot DB
@@ -429,13 +370,11 @@ class ChatwootController extends Controller
                     ]
                 ],
                 'unread_count' => $conv->unread_count ?? 0,
-                'created_at' => strtotime($conv->created_at),
-                'last_activity_at' => $conv->last_activity_at ? strtotime($conv->last_activity_at) : null
+                'created_at' => $this->utcToTimestamp($conv->created_at),
+                'last_activity_at' => $this->utcToTimestamp($conv->last_activity_at)
             ];
             
-            Cache::put($cacheKey, $conversation, 30);
-            
-            return response()->json(['success' => true, 'payload' => $conversation, 'cached' => false]);
+            return response()->json(['success' => true, 'payload' => $conversation]);
 
         } catch (\Exception $e) {
             Log::error('Error getConversation: ' . $e->getMessage());
@@ -521,26 +460,7 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // 🚀 OPTIMIZACIÓN: Cache key para mensajes (usa ID real de DB)
-            $cacheKey = "messages:inbox:{$this->inboxId}:conv:{$dbConversationId}:limit:{$limit}" . ($before ? ":before:{$before}" : "");
-            $cacheTTL = 60; // 1 minuto (los mensajes nuevos llegan por WebSocket)
-            
-            // Intentar obtener desde cache
-            $cached = Cache::get($cacheKey);
-            if ($cached) {
-                Log::info("⚡ Mensajes desde cache", [
-                    'conversation_id' => $dbConversationId,
-                    'count' => count($cached['payload']['payload'] ?? [])
-                ]);
-                return response()->json([
-                    'success' => true,
-                    'payload' => $cached['payload'],
-                    'meta' => $cached['meta'],
-                    'from_cache' => true
-                ]);
-            }
-            
-            // 🎯 SOLUCIÓN: Obtener mensajes DIRECTAMENTE desde la BD
+            // 🎯 SOLUCIÓN: Obtener mensajes DIRECTAMENTE desde la BD (SIN CACHE)
             // La API de Chatwoot tiene problemas de paginación que hacen que solo 
             // devuelva mensajes ACTIVITY cuando hay muchos, así que usamos la BD
             // que es más confiable y permite filtrar directamente en SQL
@@ -625,7 +545,7 @@ class ChatwootController extends Controller
                     'id' => $msg->id,
                     'content' => $msg->content,
                     'message_type' => $msg->message_type,
-                    'created_at' => strtotime($msg->created_at),
+                    'created_at' => $this->utcToTimestamp($msg->created_at),
                     'sender' => $sender,
                     'attachments' => $attachments,
                     'private' => $msg->private ?? false,
@@ -677,20 +597,11 @@ class ChatwootController extends Controller
                     'raw_count' => count($allMessages)
                 ]
             ];
-            
-            // Cache los mensajes (solo si no es paginación - la primera carga)
-            if (!$before) {
-                Cache::put($cacheKey, [
-                    'payload' => $messagesData,
-                    'meta' => $meta
-                ], $cacheTTL);
-            }
                 
             return response()->json([
                 'success' => true,
                 'payload' => $messagesData,
-                'meta' => $meta,
-                'from_cache' => false
+                'meta' => $meta
             ]);
 
         } catch (\Exception $e) {
@@ -750,16 +661,7 @@ class ChatwootController extends Controller
             ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
 
             if ($response->successful()) {
-                // 🚀 INVALIDAR CACHÉ: La conversación cambió (unread_count = 0)
-                $cacheKey = "conversation:{$id}:inbox:{$this->inboxId}";
-                \Illuminate\Support\Facades\Cache::forget($cacheKey);
-                
-                // ✅ TAMBIÉN invalidar el caché de la LISTA de conversaciones
-                $listCacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-                \Illuminate\Support\Facades\Cache::forget($listCacheKey);
-                \Illuminate\Support\Facades\Cache::forget($listCacheKey . '_timestamp');
-                
-                Log::info('Conversación marcada como leída (cachés invalidados)', [
+                Log::info('Conversación marcada como leída', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id
                 ]);
@@ -952,10 +854,6 @@ class ChatwootController extends Controller
                     'phone' => $contactPhone
                 ]);
 
-                // 🗑️ INVALIDAR CACHÉ
-                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-                Cache::forget($cacheKey);
-
                 // Devolver respuesta optimista - Evolution guardará el mensaje real en Chatwoot
                 return response()->json([
                     'success' => true,
@@ -1057,10 +955,6 @@ class ChatwootController extends Controller
                     'phone' => $cleanPhone,
                     'mediaType' => $mediaType
                 ]);
-
-                // Invalidar caché
-                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-                Cache::forget($cacheKey);
 
                 return response()->json([
                     'success' => true,
@@ -1196,10 +1090,6 @@ class ChatwootController extends Controller
                     'mediaType' => $mediaType
                 ]);
 
-                // 🗑️ INVALIDAR CACHÉ
-                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-                Cache::forget($cacheKey);
-
                 return response()->json([
                     'success' => true,
                     'payload' => [
@@ -1316,24 +1206,20 @@ class ChatwootController extends Controller
 
     /**
      * Obtener etiquetas de la cuenta
-     * OPTIMIZADO: Cache de 60 segundos
+     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function getLabels()
     {
         try {
-            $cacheKey = "chatwoot_labels_{$this->accountId}";
+            // 🚀 BD DIRECTA
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
-            $labels = Cache::remember($cacheKey, 120, function () {
-                // 🚀 BD DIRECTA
-                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
-                
-                return $chatwootDb->table('labels')
-                    ->where('account_id', $this->accountId)
-                    ->select('id', 'title', 'description', 'color', 'show_on_sidebar')
-                    ->orderBy('title')
-                    ->get()
-                    ->toArray();
-            });
+            $labels = $chatwootDb->table('labels')
+                ->where('account_id', $this->accountId)
+                ->select('id', 'title', 'description', 'color', 'show_on_sidebar')
+                ->orderBy('title')
+                ->get()
+                ->toArray();
 
             return response()->json(['success' => true, 'data' => $labels]);
 
@@ -1357,44 +1243,40 @@ class ChatwootController extends Controller
                 return response()->json(['success' => true, 'data' => [], 'message' => 'Sin Chatwoot configurado']);
             }
             
-            $cacheKey = "chatwoot_agents_{$this->accountId}";
+            // 🚀 BD DIRECTA: Obtener agentes de la cuenta (sin cache para datos en tiempo real)
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
-            $agents = Cache::remember($cacheKey, 120, function () {
-                // 🚀 BD DIRECTA: Obtener agentes de la cuenta
-                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
-                
-                // Obtener usuarios que son agentes de esta cuenta
-                $chatwootAgents = $chatwootDb->table('account_users')
-                    ->join('users', 'account_users.user_id', '=', 'users.id')
-                    ->where('account_users.account_id', $this->accountId)
-                    ->select(
-                        'users.id',
-                        'users.name',
-                        'users.display_name',
-                        'users.email',
-                        'account_users.role',
-                        'users.availability'
-                    )
-                    ->get();
-                
-                // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
-                $emails = $chatwootAgents->pluck('email')->filter()->toArray();
-                $localUsers = !empty($emails) 
-                    ? \App\Models\User::whereIn('email', $emails)->get()->keyBy('email')
-                    : collect();
-                
-                return $chatwootAgents->map(function ($agent) use ($localUsers) {
-                    $localUser = $localUsers->get($agent->email);
-                    return [
-                        'id' => $agent->id,
-                        'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
-                        'email' => $agent->email,
-                        'role' => $agent->role,
-                        'thumbnail' => '',
-                        'availability_status' => $agent->availability ?? 'offline'
-                    ];
-                })->toArray();
-            });
+            // Obtener usuarios que son agentes de esta cuenta
+            $chatwootAgents = $chatwootDb->table('account_users')
+                ->join('users', 'account_users.user_id', '=', 'users.id')
+                ->where('account_users.account_id', $this->accountId)
+                ->select(
+                    'users.id',
+                    'users.name',
+                    'users.display_name',
+                    'users.email',
+                    'account_users.role',
+                    'users.availability'
+                )
+                ->get();
+            
+            // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
+            $emails = $chatwootAgents->pluck('email')->filter()->toArray();
+            $localUsers = !empty($emails) 
+                ? \App\Models\User::whereIn('email', $emails)->get()->keyBy('email')
+                : collect();
+            
+            $agents = $chatwootAgents->map(function ($agent) use ($localUsers) {
+                $localUser = $localUsers->get($agent->email);
+                return [
+                    'id' => $agent->id,
+                    'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                    'email' => $agent->email,
+                    'role' => $agent->role,
+                    'thumbnail' => '',
+                    'availability_status' => $agent->availability ?? 'offline'
+                ];
+            })->toArray();
 
             return response()->json(['success' => true, 'data' => $agents]);
 
@@ -1635,71 +1517,67 @@ class ChatwootController extends Controller
                 return response()->json(['success' => true, 'data' => [], 'message' => 'Sin Chatwoot configurado']);
             }
             
-            $cacheKey = "chatwoot_teams_{$this->accountId}";
+            // 🚀 BD DIRECTA (sin cache para datos en tiempo real)
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
-            $teamsWithMembers = Cache::remember($cacheKey, 120, function () {
-                // 🚀 BD DIRECTA
-                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            // Obtener equipos de la cuenta
+            $teams = $chatwootDb->table('teams')
+                ->where('account_id', $this->accountId)
+                ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
+                ->orderBy('name')
+                ->get();
+            
+            if ($teams->isEmpty()) {
+                return response()->json(['success' => true, 'data' => []]);
+            }
+            
+            // Obtener miembros de todos los equipos en una sola query
+            $teamIds = $teams->pluck('id')->toArray();
+            $allMembers = $chatwootDb->table('team_members')
+                ->join('users', 'team_members.user_id', '=', 'users.id')
+                ->whereIn('team_members.team_id', $teamIds)
+                ->select(
+                    'team_members.team_id',
+                    'users.id',
+                    'users.name',
+                    'users.display_name',
+                    'users.email'
+                )
+                ->get();
+            
+            // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
+            $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
+            $localUsers = !empty($allEmails)
+                ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
+                : collect();
+            
+            // Agrupar miembros por team_id
+            $membersByTeam = $allMembers->groupBy('team_id');
+            
+            // Construir respuesta
+            $teamsWithMembers = $teams->map(function ($team) use ($membersByTeam, $localUsers) {
+                $members = $membersByTeam->get($team->id, collect());
                 
-                // Obtener equipos de la cuenta
-                $teams = $chatwootDb->table('teams')
-                    ->where('account_id', $this->accountId)
-                    ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
-                    ->orderBy('name')
-                    ->get();
-                
-                if ($teams->isEmpty()) {
-                    return [];
-                }
-                
-                // Obtener miembros de todos los equipos en una sola query
-                $teamIds = $teams->pluck('id')->toArray();
-                $allMembers = $chatwootDb->table('team_members')
-                    ->join('users', 'team_members.user_id', '=', 'users.id')
-                    ->whereIn('team_members.team_id', $teamIds)
-                    ->select(
-                        'team_members.team_id',
-                        'users.id',
-                        'users.name',
-                        'users.display_name',
-                        'users.email'
-                    )
-                    ->get();
-                
-                // ⚡ Pre-cargar TODOS los usuarios locales en UNA sola query (evita N+1)
-                $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
-                $localUsers = !empty($allEmails)
-                    ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
-                    : collect();
-                
-                // Agrupar miembros por team_id
-                $membersByTeam = $allMembers->groupBy('team_id');
-                
-                // Construir respuesta
-                return $teams->map(function ($team) use ($membersByTeam, $localUsers) {
-                    $members = $membersByTeam->get($team->id, collect());
-                    
-                    // Enriquecer con nombres de nuestra BD (ya pre-cargados)
-                    $enrichedMembers = $members->map(function ($member) use ($localUsers) {
-                        $localUser = $localUsers->get($member->email);
-                        return [
-                            'id' => $member->id,
-                            'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
-                            'email' => $member->email,
-                            'thumbnail' => ''
-                        ];
-                    })->toArray();
-                    
+                // Enriquecer con nombres de nuestra BD (ya pre-cargados)
+                $enrichedMembers = $members->map(function ($member) use ($localUsers) {
+                    $localUser = $localUsers->get($member->email);
                     return [
-                        'id' => $team->id,
-                        'name' => $team->name,
-                        'description' => $team->description,
-                        'allow_auto_assign' => $team->allow_auto_assign,
-                        'account_id' => $team->account_id,
-                        'members' => $enrichedMembers
+                        'id' => $member->id,
+                        'name' => $localUser->full_name ?? $member->display_name ?? $member->name,
+                        'email' => $member->email,
+                        'thumbnail' => ''
                     ];
                 })->toArray();
-            });
+                
+                return [
+                    'id' => $team->id,
+                    'name' => $team->name,
+                    'description' => $team->description,
+                    'allow_auto_assign' => $team->allow_auto_assign,
+                    'account_id' => $team->account_id,
+                    'members' => $enrichedMembers
+                ];
+            })->toArray();
             
             return response()->json(['success' => true, 'data' => $teamsWithMembers]);
 
@@ -1707,14 +1585,6 @@ class ChatwootController extends Controller
             Log::error('getTeams Error: ' . $e->getMessage());
             return response()->json(['success' => true, 'data' => []]);
         }
-    }
-    
-    /**
-     * Invalidar cache de teams (llamar después de crear/actualizar/eliminar)
-     */
-    private function invalidateTeamsCache()
-    {
-        Cache::forget("chatwoot_teams_{$this->accountId}");
     }
 
     /**
@@ -1836,9 +1706,6 @@ class ChatwootController extends Controller
                     'team_id' => $responseBody['id'] ?? 'unknown'
                 ]);
                 
-                // Invalidar cache de teams
-                $this->invalidateTeamsCache();
-                
                 return response()->json([
                     'success' => true,
                     'data' => $responseBody,
@@ -1892,9 +1759,6 @@ class ChatwootController extends Controller
                     'team_id' => $teamId
                 ]);
                 
-                // Invalidar cache de teams
-                $this->invalidateTeamsCache();
-                
                 return response()->json([
                     'success' => true,
                     'data' => $response->json(),
@@ -1931,9 +1795,6 @@ class ChatwootController extends Controller
                     'user_id' => $this->userId,
                     'team_id' => $teamId
                 ]);
-                
-                // Invalidar cache de teams
-                $this->invalidateTeamsCache();
                 
                 return response()->json([
                     'success' => true,
@@ -2054,9 +1915,6 @@ class ChatwootController extends Controller
                 'added_count' => $addedCount
             ]);
             
-            // Invalidar cache de teams para que se actualice el conteo
-            $this->invalidateTeamsCache();
-            
             return response()->json([
                 'success' => true,
                 'message' => "Se agregaron $addedCount miembros exitosamente"
@@ -2139,9 +1997,6 @@ class ChatwootController extends Controller
                 throw $e;
             }
             
-            // Invalidar cache de teams
-            $this->invalidateTeamsCache();
-            
             return response()->json([
                 'success' => true,
                 'message' => 'Miembros actualizados exitosamente'
@@ -2196,9 +2051,6 @@ class ChatwootController extends Controller
                 'removed_users' => $validated['user_ids'],
                 'deleted_count' => $deletedCount
             ]);
-            
-            // Invalidar cache de teams
-            $this->invalidateTeamsCache();
             
             return response()->json([
                 'success' => true,
@@ -2633,10 +2485,6 @@ class ChatwootController extends Controller
                     'conversation_id' => $conversationId,
                     'contact_phone' => $conversation['meta']['sender']['phone_number'] ?? 'N/A'
                 ]);
-
-                // Limpiar cache relacionado
-                $cacheKey = "conversations_user_{$this->userId}_inbox_{$this->inboxId}";
-                Cache::forget($cacheKey);
 
                 return response()->json([
                     'success' => true,

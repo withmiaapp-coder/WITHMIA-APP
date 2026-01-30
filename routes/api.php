@@ -2531,7 +2531,7 @@ Route::get('/debug-conversation-messages/{conversationId}', function ($conversat
     }
 });
 
-// ?? Limpiar cach� de conversaciones y regenerar token
+// ✅ Verificar y regenerar token de Chatwoot si es necesario
 Route::get('/clear-conversations-cache', function () {
     try {
         $user = \App\Models\User::where('email', 'withmia.app@gmail.com')->first() 
@@ -2539,14 +2539,9 @@ Route::get('/clear-conversations-cache', function () {
         $company = $user->company;
         $chatwootDb = DB::connection('chatwoot');
         
-        // 1. Limpiar cach� de conversaciones
-        $cacheKey = "conversations_user_{$user->id}_inbox_{$user->chatwoot_inbox_id}";
-        $cacheKey2 = "conversations:inbox:{$user->chatwoot_inbox_id}:user:{$user->id}";
+        // ✅ NOTA: Ya no hay cache de conversaciones (consultas directas a BD)
         
-        $deleted1 = \Illuminate\Support\Facades\Cache::forget($cacheKey);
-        $deleted2 = \Illuminate\Support\Facades\Cache::forget($cacheKey2);
-        
-        // 2. Verificar token actual en Chatwoot DB
+        // Verificar token actual en Chatwoot DB
         $tokenInChatwoot = $chatwootDb->table('access_tokens')
             ->where('owner_type', 'User')
             ->where('owner_id', $user->chatwoot_agent_id)
@@ -2554,7 +2549,7 @@ Route::get('/clear-conversations-cache', function () {
         
         $tokenMatch = $tokenInChatwoot && $tokenInChatwoot->token === $user->chatwoot_agent_token;
         
-        // 3. Si no coincide, regenerar
+        // Si no coincide, regenerar
         $regenerated = false;
         if (!$tokenMatch) {
             // Generar nuevo token
@@ -2582,7 +2577,7 @@ Route::get('/clear-conversations-cache', function () {
             $regenerated = true;
         }
         
-        // 4. Probar el token
+        // Probar el token
         $chatwootUrl = config('chatwoot.url');
         $accountId = $company->chatwoot_account_id ?? 1;
         $testResponse = \Illuminate\Support\Facades\Http::withHeaders([
@@ -2595,12 +2590,7 @@ Route::get('/clear-conversations-cache', function () {
         
         return response()->json([
             'success' => true,
-            'cache_cleared' => [
-                'key1' => $cacheKey,
-                'deleted1' => $deleted1,
-                'key2' => $cacheKey2,
-                'deleted2' => $deleted2
-            ],
+            'note' => 'Ya no hay cache de conversaciones (consultas directas a BD)',
             'token_status' => [
                 'token_existed_in_chatwoot' => $tokenInChatwoot ? true : false,
                 'token_matched' => $tokenMatch,
@@ -2614,8 +2604,7 @@ Route::get('/clear-conversations-cache', function () {
                     ? count($testResponse->json()['data']['payload'] ?? []) 
                     : 0,
                 'error' => !$testResponse->successful() ? $testResponse->body() : null
-            ],
-            'next_step' => 'Recarga la p�gina de la app'
+            ]
         ]);
         
     } catch (\Exception $e) {
@@ -3249,6 +3238,100 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'getCompanyWorkflow']);
     Route::delete('/workflows/company/{companyId}', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'deleteCompanyWorkflow']);
     Route::post('/workflows/company/{companyId}/toggle', [\App\Http\Controllers\Api\N8nWorkflowController::class, 'toggleWorkflow']);
+});
+
+// =============================================================================
+// ⚙️ COMPANY SETTINGS (timezone, configuración general)
+// =============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
+    // Obtener configuración de la company
+    Route::get('/company/settings', function (Request $request) {
+        try {
+            $user = $request->user();
+            if (!$user || !$user->company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autenticado o sin empresa'
+                ], 401);
+            }
+
+            $company = $user->company;
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $company->id,
+                    'name' => $company->name,
+                    'slug' => $company->slug,
+                    'timezone' => $company->timezone ?? 'UTC',
+                    'logo_url' => $company->logo_url,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting company settings: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener configuración'
+            ], 500);
+        }
+    });
+
+    // Actualizar configuración de la company
+    Route::put('/company/settings', function (Request $request) {
+        try {
+            $user = $request->user();
+            if (!$user || !$user->company) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autenticado o sin empresa'
+                ], 401);
+            }
+
+            // Solo admins pueden cambiar la configuración
+            if (!$user->isAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para cambiar la configuración'
+                ], 403);
+            }
+
+            $company = $user->company;
+            
+            // Validar timezone
+            $timezone = $request->input('timezone');
+            if ($timezone) {
+                $validTimezones = timezone_identifiers_list();
+                if (!in_array($timezone, $validTimezones)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Zona horaria inválida'
+                    ], 400);
+                }
+                $company->timezone = $timezone;
+            }
+
+            $company->save();
+
+            Log::info('Company settings updated', [
+                'company_id' => $company->id,
+                'user_id' => $user->id,
+                'timezone' => $company->timezone
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Configuración actualizada',
+                'data' => [
+                    'timezone' => $company->timezone
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating company settings: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar configuración'
+            ], 500);
+        }
+    });
 });
 
 // =============================================================================

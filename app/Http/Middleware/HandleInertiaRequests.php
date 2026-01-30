@@ -45,6 +45,12 @@ class HandleInertiaRequests extends Middleware
             $railwayAuthToken = $request->user()->auth_token;
         }
 
+        // Get company timezone
+        $companyTimezone = 'UTC';
+        if ($request->user() && $request->user()->company) {
+            $companyTimezone = $request->user()->company->timezone ?? 'UTC';
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -52,6 +58,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'companyTimezone' => $companyTimezone,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

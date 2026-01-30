@@ -73,11 +73,21 @@ class ChatwootController extends Controller
     }
 
     /**
+     * Helper: Convierte datetime UTC de Chatwoot a timestamp Unix correctamente
+     * La BD de Chatwoot está en UTC (Etc/UTC) pero PHP interpreta como America/Santiago
+     */
+    private function utcToTimestamp($utcDatetime): ?int
+    {
+        if (!$utcDatetime) return null;
+        return strtotime($utcDatetime . ' UTC');
+    }
+
+    /**
      * Obtener estadísticas del dashboard (REAL API)
      */
     /**
      * Obtener conversaciones con caché en Redis
-     * TTL: 2 minutos (actualizado por Reverb en tiempo real)
+     * ✅ SIN CACHE - Consultas directas a BD para datos en tiempo real
      */
     public function getConversations(Request $request)
     {
@@ -92,89 +102,58 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            // Cache key único por usuario/inbox
-            $cacheKey = "conversations:inbox:{$this->inboxId}:user:{$this->userId}";
-            $cacheTTL = 60; // 1 minuto (reducido para mayor reactividad)
-
-            // Permitir forzar refresh con header o query param
-            $forceRefresh = $request->header('X-Force-Refresh') === 'true' || 
-                           $request->query('force_refresh') === 'true';
-
-            // Intentar obtener desde Redis (solo si no se fuerza refresh)
-            if (!$forceRefresh) {
-                $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-                
-                if ($cached) {
-                    Log::info('✅ Conversaciones servidas desde Redis cache', [
-                        'user_id' => $this->userId,
-                        'inbox_id' => $this->inboxId,
-                        'cache_key' => $cacheKey,
-                        'conversations_count' => count($cached)
-                    ]);
-
-                    return response()->json([
-                        'success' => true,
-                        'data' => ['payload' => $cached],
-                        'meta' => [
-                            'current_page' => 1,
-                            'total_pages' => 1,
-                            'total_count' => count($cached),
-                            'from_cache' => true
-                        ]
-                    ]);
-                }
+            // ✅ Obtener conversaciones directamente desde la BD de Chatwoot
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            $conversationsFromDb = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->orderBy('last_activity_at', 'desc')
+                ->limit(200)
+                ->get();
+            
+            // Obtener contactos en una sola query
+            $contactIds = $conversationsFromDb->pluck('contact_id')->unique()->filter()->toArray();
+            $contacts = [];
+            if (!empty($contactIds)) {
+                $contacts = $chatwootDb->table('contacts')
+                    ->whereIn('id', $contactIds)
+                    ->get()
+                    ->keyBy('id');
             }
-
-            // No hay cache, obtener desde Chatwoot API
-            Log::info('⚠️ Cache miss - Obteniendo desde Chatwoot API', [
-                'user_id' => $this->userId,
-                'inbox_id' => $this->inboxId
-            ]);
-
+            
+            // Construir array de conversaciones
             $allConversations = [];
-            $currentPage = 1;
-            $maxPages = 20;
-
-            while ($currentPage <= $maxPages) {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations', [
-                    'inbox_id' => $this->inboxId,
-                    'page' => $currentPage,
-                    'per_page' => 100
-                ]);
-
-                if (!$response->successful()) break;
-
-                $data = $response->json();
-                $conversations = $data['data']['payload'] ?? [];
+            $statusMap = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
+            
+            foreach ($conversationsFromDb as $conv) {
+                $contact = $contacts[$conv->contact_id] ?? null;
                 
-                if (empty($conversations)) break;
-
-                // Filtro de seguridad
-                $filtered = array_filter($conversations, fn($conv) => 
-                    isset($conv['inbox_id']) && $conv['inbox_id'] == $this->inboxId
-                );
-
-                $allConversations = array_merge($allConversations, array_values($filtered));
+                // Filtrar conversaciones de EvolutionAPI
+                $senderName = $contact->name ?? '';
+                if (stripos($senderName, 'EvolutionAPI') !== false) {
+                    continue;
+                }
                 
-                $meta = $data['meta'] ?? [];
-                if ($currentPage >= (($meta['all_count'] ?? 0) / 100)) break;
-                
-                $currentPage++;
+                $allConversations[] = [
+                    'id' => $conv->display_id,
+                    'account_id' => $conv->account_id,
+                    'inbox_id' => $conv->inbox_id,
+                    'status' => $statusMap[$conv->status] ?? 'open',
+                    'meta' => [
+                        'sender' => [
+                            'id' => $contact->id ?? null,
+                            'name' => $contact->name ?? 'Contacto',
+                            'phone_number' => $contact->phone_number ?? null,
+                            'thumbnail' => $contact->avatar_url ?? ''
+                        ]
+                    ],
+                    'unread_count' => $conv->unread_count ?? 0,
+                    'created_at' => $this->utcToTimestamp($conv->created_at),
+                    'last_activity_at' => $this->utcToTimestamp($conv->last_activity_at) ?? $this->utcToTimestamp($conv->created_at),
+                    'from_db' => true
+                ];
             }
-
-            // Guardar en Redis cache
-            \Illuminate\Support\Facades\Cache::put($cacheKey, $allConversations, $cacheTTL);
-
-            Log::info('💾 Conversaciones guardadas en Redis cache', [
-                'user_id' => $this->userId,
-                'inbox_id' => $this->inboxId,
-                'cache_key' => $cacheKey,
-                'conversations_count' => count($allConversations),
-                'ttl' => $cacheTTL
-            ]);
 
             return response()->json([
                 'success' => true,
@@ -183,7 +162,7 @@ class ChatwootController extends Controller
                     'current_page' => 1,
                     'total_pages' => 1,
                     'total_count' => count($allConversations),
-                    'from_cache' => false
+                    'from_db' => true
                 ]
             ]);
 

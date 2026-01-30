@@ -141,35 +141,7 @@ class ChatwootWebhookController extends Controller
             ]);
         }
 
-        // 🗑️ Invalidar caché de conversaciones cuando llega mensaje nuevo o cambio
-        if (in_array($event, ['message_created', 'conversation_created', 'conversation_updated', 'conversation_status_changed']) && $inboxId) {
-            // Invalidar TODOS los cachés de conversaciones para este inbox
-            // Buscamos todos los usuarios que tengan caché para este inbox
-            $pattern = "conversations:inbox:{$inboxId}:*";
-            
-            // Como Redis no permite pattern delete fácilmente, invalidamos por usuario
-            // Obtener usuarios del inbox desde la base de datos
-            try {
-                $users = \App\Models\User::where('chatwoot_inbox_id', $inboxId)->get();
-                foreach ($users as $user) {
-                    $cacheKey = "conversations:inbox:{$inboxId}:user:{$user->id}";
-                    Cache::forget($cacheKey);
-                    Log::debug("🗑️ Cache de conversaciones invalidado para user {$user->id}");
-                }
-            } catch (\Exception $e) {
-                Log::warning('Error invalidando caché por usuario: ' . $e->getMessage());
-            }
-            
-            // También invalidar el timestamp de último mensaje
-            $lastMessageCacheKey = "last_message_inbox_{$inboxId}";
-            Cache::put($lastMessageCacheKey, now()->timestamp, now()->addMinutes(60));
-
-            Log::info('🗑️ Cache de conversaciones invalidado', [
-                'inbox_id' => $inboxId,
-                'event' => $event,
-                'timestamp' => now()->timestamp
-            ]);
-        }
+        // ✅ Los datos de conversaciones se obtienen en tiempo real desde BD (sin cache)
 
         // Guardar evento en cache para polling (fallback)
         $cacheKey = 'chatwoot_events_' . $accountId;

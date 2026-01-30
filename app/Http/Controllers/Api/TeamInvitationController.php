@@ -748,6 +748,7 @@ class TeamInvitationController extends Controller
                             $user->update([
                                 'chatwoot_agent_id' => $agentData['id'] ?? null,
                             ]);
+                            
                             $synced[] = [
                                 'user_id' => $user->id,
                                 'email' => $user->email,

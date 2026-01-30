@@ -97,54 +97,86 @@ class DashboardController extends Controller
             'chatwoot_status' => $chatwootStatus
         ]);
 
-        // 🚀 PREFETCH: Cargar teams y agents en el servidor para evitar llamadas adicionales
+        // 🚀 PREFETCH: Cargar teams y agents directamente de BD (sin cache)
         $prefetchedTeams = [];
         $prefetchedAgents = [];
         
         if ($company->chatwoot_account_id ?? false) {
-            $chatwootBaseUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
-            $chatwootToken = $company->chatwoot_api_key ?? config('services.chatwoot.api_token');
             $accountId = $company->chatwoot_account_id;
             
-            // Prefetch teams (con cache de 60 segundos)
-            $prefetchedTeams = Cache::remember("chatwoot_teams_{$accountId}", 60, function () use ($chatwootBaseUrl, $chatwootToken, $accountId) {
-                try {
-                    $response = Http::withHeaders(['api_access_token' => $chatwootToken])
-                        ->timeout(5)
-                        ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/teams");
+            try {
+                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+                
+                // 🚀 BD DIRECTA: Obtener equipos
+                $teams = $chatwootDb->table('teams')
+                    ->where('account_id', $accountId)
+                    ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
+                    ->orderBy('name')
+                    ->get();
+                
+                if ($teams->isNotEmpty()) {
+                    // Obtener miembros de todos los equipos en una sola query
+                    $teamIds = $teams->pluck('id')->toArray();
+                    $allMembers = $chatwootDb->table('team_members')
+                        ->join('users', 'team_members.user_id', '=', 'users.id')
+                        ->whereIn('team_members.team_id', $teamIds)
+                        ->select('team_members.team_id', 'users.id', 'users.name', 'users.display_name', 'users.email')
+                        ->get();
                     
-                    if (!$response->successful()) return [];
+                    // Pre-cargar usuarios locales
+                    $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
+                    $localUsers = !empty($allEmails)
+                        ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
+                        : collect();
                     
-                    $teams = $response->json();
-                    $teamsWithMembers = [];
+                    $membersByTeam = $allMembers->groupBy('team_id');
                     
-                    foreach ($teams as $team) {
-                        $membersResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
-                            ->timeout(3)
-                            ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/teams/{$team['id']}/team_members");
-                        
-                        $team['members'] = $membersResponse->successful() ? $membersResponse->json() : [];
-                        $teamsWithMembers[] = $team;
-                    }
-                    
-                    return $teamsWithMembers;
-                } catch (\Exception $e) {
-                    return [];
+                    $prefetchedTeams = $teams->map(function ($team) use ($membersByTeam, $localUsers) {
+                        $members = $membersByTeam->get($team->id, collect());
+                        return [
+                            'id' => $team->id,
+                            'name' => $team->name,
+                            'description' => $team->description,
+                            'allow_auto_assign' => $team->allow_auto_assign,
+                            'account_id' => $team->account_id,
+                            'members' => $members->map(function ($m) use ($localUsers) {
+                                $localUser = $localUsers->get($m->email);
+                                return [
+                                    'id' => $m->id,
+                                    'name' => $localUser->full_name ?? $m->display_name ?? $m->name,
+                                    'email' => $m->email
+                                ];
+                            })->toArray()
+                        ];
+                    })->toArray();
                 }
-            });
-            
-            // Prefetch agents (con cache de 60 segundos)
-            $prefetchedAgents = Cache::remember("chatwoot_agents_{$accountId}", 60, function () use ($chatwootBaseUrl, $chatwootToken, $accountId) {
-                try {
-                    $response = Http::withHeaders(['api_access_token' => $chatwootToken])
-                        ->timeout(5)
-                        ->get("{$chatwootBaseUrl}/api/v1/accounts/{$accountId}/agents");
-                    
-                    return $response->successful() ? $response->json() : [];
-                } catch (\Exception $e) {
-                    return [];
-                }
-            });
+                
+                // 🚀 BD DIRECTA: Obtener agentes
+                $chatwootAgents = $chatwootDb->table('account_users')
+                    ->join('users', 'account_users.user_id', '=', 'users.id')
+                    ->where('account_users.account_id', $accountId)
+                    ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'account_users.role', 'users.availability')
+                    ->get();
+                
+                $agentEmails = $chatwootAgents->pluck('email')->filter()->toArray();
+                $agentLocalUsers = !empty($agentEmails)
+                    ? \App\Models\User::whereIn('email', $agentEmails)->get()->keyBy('email')
+                    : collect();
+                
+                $prefetchedAgents = $chatwootAgents->map(function ($agent) use ($agentLocalUsers) {
+                    $localUser = $agentLocalUsers->get($agent->email);
+                    return [
+                        'id' => $agent->id,
+                        'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                        'email' => $agent->email,
+                        'role' => $agent->role,
+                        'availability_status' => $agent->availability ?? 'offline'
+                    ];
+                })->toArray();
+                
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Error prefetching teams/agents: ' . $e->getMessage());
+            }
         }
 
         return Inertia::render('MainDashboard', [
