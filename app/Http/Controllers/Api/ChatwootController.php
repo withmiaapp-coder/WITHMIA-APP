@@ -1372,7 +1372,6 @@ class ChatwootController extends Controller
                         'users.name',
                         'users.display_name',
                         'users.email',
-                        'users.avatar_url as thumbnail',
                         'account_users.role',
                         'users.availability'
                     )
@@ -1385,7 +1384,7 @@ class ChatwootController extends Controller
                             'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
                             'email' => $agent->email,
                             'role' => $agent->role,
-                            'thumbnail' => $agent->thumbnail ?? '',
+                            'thumbnail' => '',
                             'availability_status' => $agent->availability ?? 'offline'
                         ];
                     })
