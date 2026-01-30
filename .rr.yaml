@@ -1,0 +1,39 @@
+# Roadrunner Configuration for Laravel Octane
+# This enables concurrent request handling
+
+version: '3'
+
+server:
+  command: "php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080}"
+  relay: "pipes"
+
+http:
+  address: "0.0.0.0:${PORT:-8080}"
+  middleware:
+    - "static"
+    - "headers"
+    - "gzip"
+  static:
+    dir: "public"
+    forbid:
+      - ".php"
+      - ".htaccess"
+    request:
+      input: "assets"
+    response:
+      output: "assets"
+  headers:
+    response:
+      X-Powered-By: "Roadrunner"
+  pool:
+    num_workers: 4
+    max_jobs: 1000
+    supervisor:
+      max_worker_memory: 128
+      ttl: 3600
+
+logs:
+  mode: production
+  level: warn
+  output: stdout
+  err_output: stderr

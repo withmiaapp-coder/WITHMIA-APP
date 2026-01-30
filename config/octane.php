@@ -30,12 +30,12 @@ return [
     | Octane Server
     |--------------------------------------------------------------------------
     |
-    | FrankenPHP is the recommended server for Laravel Octane in 2026.
-    | It provides excellent performance and native PHP integration.
+    | Roadrunner is a high-performance PHP application server written in Go.
+    | It handles concurrent requests efficiently unlike php artisan serve.
     |
     */
 
-    'server' => env('OCTANE_SERVER', 'frankenphp'),
+    'server' => env('OCTANE_SERVER', 'roadrunner'),
 
     /*
     |--------------------------------------------------------------------------

@@ -24,6 +24,8 @@
         "sentry/sentry-laravel": "^4.10",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^6.21",
+        "spiral/roadrunner-cli": "^2.6",
+        "spiral/roadrunner-http": "^3.5",
         "tightenco/ziggy": "^2.4",
         "fakerphp/faker": "^1.23"
     },
