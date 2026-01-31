@@ -681,22 +681,51 @@ class ChatwootController extends Controller
                 ], 400);
             }
 
-            // PASO 4: Enviar DIRECTAMENTE a Evolution API (Evolution guardará en Chatwoot)
+            // PASO 4: Enviar a Evolution API
             $messageContent = $request->input('content');
             $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
 
             if ($evolutionResult) {
-                Log::info('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
+                Log::info('✅ Mensaje enviado via Evolution', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id,
                     'phone' => $contactPhone
                 ]);
 
-                // Devolver respuesta optimista - Evolution guardará el mensaje real en Chatwoot
+                // PASO 5: Guardar mensaje en Chatwoot para que aparezca en la UI
+                $chatwootMessageId = null;
+                try {
+                    $chatwootResponse = Http::withHeaders([
+                        'api_access_token' => $this->chatwootToken,
+                        'Content-Type' => 'application/json'
+                    ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $realConversationId . '/messages', [
+                        'content' => $messageContent,
+                        'message_type' => 'outgoing',
+                        'private' => false
+                    ]);
+
+                    if ($chatwootResponse->successful()) {
+                        $chatwootMessageId = $chatwootResponse->json()['id'] ?? null;
+                        Log::info('✅ Mensaje guardado en Chatwoot', [
+                            'conversation_id' => $id,
+                            'message_id' => $chatwootMessageId
+                        ]);
+                    } else {
+                        Log::warning('⚠️ No se pudo guardar mensaje en Chatwoot', [
+                            'conversation_id' => $id,
+                            'status' => $chatwootResponse->status(),
+                            'error' => $chatwootResponse->body()
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('⚠️ Error guardando mensaje en Chatwoot: ' . $e->getMessage());
+                }
+
+                // Devolver respuesta con ID real de Chatwoot si está disponible
                 return response()->json([
                     'success' => true,
                     'payload' => [
-                        'id' => 'pending-' . time(), // ID temporal
+                        'id' => $chatwootMessageId ?? ('pending-' . time()),
                         'content' => $messageContent,
                         'created_at' => now()->toISOString(),
                         'message_type' => 1, // outgoing
