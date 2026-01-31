@@ -71,19 +71,35 @@ class EvolutionApiController extends Controller
         // Si la instancia se creó exitosamente, registrarla en whatsapp_instances
         if ($result['success']) {
             $user = $request->user();
-            if ($user && $user->company_id) {
+            // FIX: Obtener company_id desde la relación company() usando company_slug
+            $company = $user ? $user->company : null;
+            $companyId = $company ? $company->id : null;
+            
+            // Si no hay company por relación, buscar por el instanceName (que es el slug)
+            if (!$companyId) {
+                $companyBySlug = \App\Models\Company::where('slug', $instanceName)->first();
+                $companyId = $companyBySlug ? $companyBySlug->id : null;
+            }
+            
+            if ($companyId) {
                 DB::table('whatsapp_instances')->updateOrInsert(
                     ['instance_name' => $instanceName],
                     [
-                        'company_id' => $user->company_id,
-                        'instance_url' => 'http://evolution_api:8080',
+                        'company_id' => $companyId,
+                        'instance_url' => config('evolution.api_url', 'http://evolution_api:8080'),
                         'is_active' => 1,
                         'updated_at' => now()
                     ]
                 );
                 Log::info("WhatsApp instance registered", [
                     'instance_name' => $instanceName,
-                    'company_id' => $user->company_id
+                    'company_id' => $companyId
+                ]);
+            } else {
+                Log::warning("No se pudo determinar company_id para instancia", [
+                    'instance_name' => $instanceName,
+                    'user_id' => $user ? $user->id : null,
+                    'user_company_slug' => $user ? $user->company_slug : null
                 ]);
             }
         }
@@ -863,9 +879,19 @@ class EvolutionApiController extends Controller
                     'event' => $event
                 ]);
                 
-                // Intentar obtener company_id del nombre de instancia (formato: with-mia-XXXX)
-                // Por defecto usamos company_id = 1 si no podemos determinarlo
-                $companyId = 1;
+                // 🔧 FIX: Buscar company_id por el slug del instanceName
+                // El instanceName ES el slug de la empresa (ej: salud-y-belleza-ehppbu)
+                $company = \App\Models\Company::where('slug', $instanceName)->first();
+                $companyId = $company ? $company->id : null;
+                
+                if (!$companyId) {
+                    Log::error('❌ No se encontró empresa para instancia - NO SE CREARÁ', [
+                        'instance' => $instanceName,
+                        'searched_slug' => $instanceName
+                    ]);
+                    // NO crear instancia sin company_id válido para evitar problemas de enrutamiento
+                    return response()->json(['status' => 'error', 'message' => 'Company not found for instance']);
+                }
                 
                 DB::table('whatsapp_instances')->insert([
                     'instance_name' => $instanceName,
@@ -876,7 +902,11 @@ class EvolutionApiController extends Controller
                     'updated_at' => now()
                 ]);
                 
-                Log::info('✅ Instancia creada en BD', ['instance' => $instanceName, 'company_id' => $companyId]);
+                Log::info('✅ Instancia creada en BD con company correcta', [
+                    'instance' => $instanceName, 
+                    'company_id' => $companyId,
+                    'company_name' => $company->name
+                ]);
                 
                 // Recargar instancia
                 $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();

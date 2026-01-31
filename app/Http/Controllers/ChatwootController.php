@@ -643,6 +643,9 @@ class ChatwootController extends Controller
             }
 
             $conversation = $convResponse->json();
+            
+            // Extraer el ID real de la conversación
+            $realConversationId = $conversation['id'] ?? $id;
 
             // PASO 2: VALIDACIÓN DE SEGURIDAD
             if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {

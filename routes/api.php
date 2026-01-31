@@ -4492,8 +4492,17 @@ Route::post('/repair-instance/{instanceName}', function (Request $request, strin
             ->first();
         
         if (!$instance) {
-            // Intentar crear registro
-            $companyId = $request->input('company_id', 1);
+            // 🔧 FIX: Buscar company por slug del instanceName, no usar default 1
+            $company = \App\Models\Company::where('slug', $instanceName)->first();
+            $companyId = $company ? $company->id : $request->input('company_id');
+            
+            if (!$companyId) {
+                return response()->json([
+                    'success' => false,
+                    'error' => "No se encontró empresa para el slug: {$instanceName}. Verifica que la empresa exista."
+                ], 400);
+            }
+            
             DB::table('whatsapp_instances')->insert([
                 'instance_name' => $instanceName,
                 'company_id' => $companyId,
@@ -4505,7 +4514,7 @@ Route::post('/repair-instance/{instanceName}', function (Request $request, strin
             $instance = DB::table('whatsapp_instances')
                 ->where('instance_name', $instanceName)
                 ->first();
-            $repairs[] = "Created instance record in local database";
+            $repairs[] = "Created instance record with company_id: {$companyId}";
         }
         
         // 2. Verificar/crear workflow en n8n si no existe
@@ -5149,6 +5158,145 @@ Route::get('/fix-n8n-workflow/{instanceName?}', function ($instanceName = null) 
         return response()->json([
             'success' => false,
             'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ============== 🔍 DIAGNÓSTICO DE SESIONES Y ENRUTAMIENTO ==============
+// Usar cuando hay problemas de mensajes yendo al usuario incorrecto
+Route::get('/debug/session-routing-diagnostic', function () {
+    try {
+        $evolutionUrl = config('evolution.api_url');
+        $evolutionKey = config('evolution.api_key');
+        $chatwootDb = DB::connection('chatwoot');
+        
+        // 1. Obtener TODAS las instancias activas de Evolution API
+        $instancesResponse = \Illuminate\Support\Facades\Http::withHeaders([
+            'apikey' => $evolutionKey
+        ])->timeout(15)->get("{$evolutionUrl}/instance/fetchInstances");
+        
+        $evolutionInstances = $instancesResponse->json() ?? [];
+        
+        // 2. Obtener todos los usuarios con sus company_slug e inbox
+        $users = \App\Models\User::with('company')
+            ->whereNotNull('company_slug')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'name' => $user->name,
+                    'company_slug' => $user->company_slug,
+                    'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+                    'company_name' => $user->company ? $user->company->name : null,
+                    'last_login' => $user->last_login_at ?? 'N/A'
+                ];
+            });
+        
+        // 3. Obtener todos los inboxes de Chatwoot
+        $inboxes = $chatwootDb->table('inboxes')
+            ->select('id', 'name', 'channel_type', 'channel_id', 'account_id')
+            ->get();
+        
+        // 4. Mapear cada instancia de Evolution con su configuración
+        $instanceDiagnostics = [];
+        foreach ($evolutionInstances as $instance) {
+            $instName = $instance['instance']['instanceName'] ?? $instance['name'] ?? 'unknown';
+            $state = $instance['instance']['status'] ?? $instance['state'] ?? 'unknown';
+            
+            // Obtener config de Chatwoot para esta instancia
+            try {
+                $chatwootConfig = \Illuminate\Support\Facades\Http::withHeaders([
+                    'apikey' => $evolutionKey
+                ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instName}");
+                $cwConfig = $chatwootConfig->json();
+            } catch (\Exception $e) {
+                $cwConfig = ['error' => $e->getMessage()];
+            }
+            
+            // Buscar usuarios asociados a esta instancia
+            $associatedUsers = $users->filter(function ($u) use ($instName) {
+                return $u['company_slug'] === $instName;
+            })->values();
+            
+            // Buscar inbox de Chatwoot
+            $relatedInbox = $inboxes->first(function ($inbox) use ($instName) {
+                return stripos($inbox->name, $instName) !== false;
+            });
+            
+            $instanceDiagnostics[] = [
+                'instance_name' => $instName,
+                'status' => $state,
+                'chatwoot_enabled' => $cwConfig['enabled'] ?? false,
+                'chatwoot_inbox_name' => $cwConfig['nameInbox'] ?? null,
+                'chatwoot_account_id' => $cwConfig['accountId'] ?? null,
+                'related_inbox_id' => $relatedInbox ? $relatedInbox->id : null,
+                'associated_users' => $associatedUsers->count(),
+                'users' => $associatedUsers->toArray()
+            ];
+        }
+        
+        // 5. Detectar problemas potenciales
+        $issues = [];
+        
+        // Múltiples usuarios con el mismo company_slug
+        $slugCounts = $users->groupBy('company_slug')->map->count();
+        foreach ($slugCounts as $slug => $count) {
+            if ($count > 1) {
+                $issues[] = [
+                    'type' => 'duplicate_company_slug',
+                    'severity' => 'high',
+                    'message' => "El company_slug '{$slug}' está asignado a {$count} usuarios. Esto puede causar conflictos de enrutamiento.",
+                    'users' => $users->where('company_slug', $slug)->pluck('email')->toArray()
+                ];
+            }
+        }
+        
+        // Usuarios sin inbox asignado
+        $usersWithoutInbox = $users->where('chatwoot_inbox_id', null);
+        if ($usersWithoutInbox->count() > 0) {
+            $issues[] = [
+                'type' => 'missing_inbox',
+                'severity' => 'medium',
+                'message' => "{$usersWithoutInbox->count()} usuarios no tienen inbox_id asignado",
+                'users' => $usersWithoutInbox->pluck('email')->toArray()
+            ];
+        }
+        
+        // Instancias conectadas sin usuarios asociados
+        foreach ($instanceDiagnostics as $diag) {
+            if ($diag['status'] === 'open' && $diag['associated_users'] === 0) {
+                $issues[] = [
+                    'type' => 'orphan_instance',
+                    'severity' => 'low',
+                    'message' => "La instancia '{$diag['instance_name']}' está conectada pero no tiene usuarios asociados"
+                ];
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'timestamp' => now()->toIso8601String(),
+            'summary' => [
+                'total_evolution_instances' => count($evolutionInstances),
+                'total_users_with_slug' => $users->count(),
+                'total_inboxes' => $inboxes->count(),
+                'issues_found' => count($issues)
+            ],
+            'issues' => $issues,
+            'instances' => $instanceDiagnostics,
+            'all_users' => $users,
+            'all_inboxes' => $inboxes,
+            'recommendation' => count($issues) > 0 
+                ? 'Hay problemas de configuración que pueden causar enrutamiento incorrecto de mensajes' 
+                : 'La configuración parece correcta'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });
