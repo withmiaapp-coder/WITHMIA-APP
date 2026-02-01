@@ -1,0 +1,427 @@
+﻿{
+    "version":  1,
+    "startData":  {
+
+                  },
+    "resultData":  {
+                       "runData":  {
+                                       "WITHMIA Webhook":  [
+                                                               {
+                                                                   "startTime":  1769908218471,
+                                                                   "executionIndex":  0,
+                                                                   "source":  [
+
+                                                                              ],
+                                                                   "hints":  [
+
+                                                                             ],
+                                                                   "executionTime":  1,
+                                                                   "executionStatus":  "success",
+                                                                   "data":  {
+                                                                                "main":  [
+                                                                                             [
+                                                                                                 {
+                                                                                                     "json":  {
+                                                                                                                  "headers":  {
+                                                                                                                                  "host":  "n8n-production-00dd.up.railway.app",
+                                                                                                                                  "user-agent":  "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+                                                                                                                                  "content-length":  "2412",
+                                                                                                                                  "accept":  "application/json",
+                                                                                                                                  "accept-encoding":  "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+                                                                                                                                  "content-type":  "application/json",
+                                                                                                                                  "x-forwarded-for":  "162.220.232.197",
+                                                                                                                                  "x-forwarded-host":  "n8n-production-00dd.up.railway.app",
+                                                                                                                                  "x-forwarded-proto":  "https",
+                                                                                                                                  "x-railway-edge":  "railway/us-west2",
+                                                                                                                                  "x-railway-request-id":  "nQiNs2SAQvGTZbhSxtoGcA",
+                                                                                                                                  "x-real-ip":  "162.220.232.197",
+                                                                                                                                  "x-request-start":  "1769908218409"
+                                                                                                                              },
+                                                                                                                  "params":  {
+
+                                                                                                                             },
+                                                                                                                  "query":  {
+
+                                                                                                                            },
+                                                                                                                  "body":  {
+                                                                                                                               "account":  "@{id=1; name=WITHMIA}",
+                                                                                                                               "additional_attributes":  "",
+                                                                                                                               "content_attributes":  "",
+                                                                                                                               "content_type":  "text",
+                                                                                                                               "content":  "Hola!",
+                                                                                                                               "conversation":  "@{additional_attributes=; can_reply=True; channel=Channel::Api; contact_inbox=; id=7; inbox_id=1; messages=System.Object[]; labels=System.Object[]; meta=; status=open; custom_attributes=; snoozed_until=; unread_count=1; first_reply_created_at=2026-01-28T02:33:50.673Z; priority=; waiting_since=1769907183; agent_last_seen_at=1769907221; contact_last_seen_at=0; last_activity_at=1769908217; timestamp=1769908217; created_at=1769563123; updated_at=1769908217.983636}",
+                                                                                                                               "created_at":  "2026-02-01T01:10:17.979Z",
+                                                                                                                               "id":  167,
+                                                                                                                               "inbox":  "@{id=1; name=WhatsApp withmia-evp7rj}",
+                                                                                                                               "message_type":  "incoming",
+                                                                                                                               "private":  false,
+                                                                                                                               "sender":  "@{account=; additional_attributes=; avatar=; custom_attributes=; email=; id=4; identifier=; name=56956333446; phone_number=+56956333446; thumbnail=; blocked=False}",
+                                                                                                                               "source_id":  null,
+                                                                                                                               "event":  "message_created"
+                                                                                                                           },
+                                                                                                                  "webhookUrl":  "https://n8n-production-00dd.up.railway.app/webhook/withmia-evp7rj",
+                                                                                                                  "executionMode":  "production"
+                                                                                                              },
+                                                                                                     "pairedItem":  {
+                                                                                                                        "item":  0
+                                                                                                                    }
+                                                                                                 }
+                                                                                             ]
+                                                                                         ]
+                                                                            }
+                                                               }
+                                                           ],
+                                       "Is Incoming Message?":  [
+                                                                    {
+                                                                        "startTime":  1769908218472,
+                                                                        "executionIndex":  1,
+                                                                        "source":  [
+                                                                                       {
+                                                                                           "previousNode":  "WITHMIA Webhook"
+                                                                                       }
+                                                                                   ],
+                                                                        "hints":  [
+
+                                                                                  ],
+                                                                        "executionTime":  1,
+                                                                        "executionStatus":  "success",
+                                                                        "data":  {
+                                                                                     "main":  [
+                                                                                                  [
+                                                                                                      {
+                                                                                                          "json":  {
+                                                                                                                       "headers":  {
+                                                                                                                                       "host":  "n8n-production-00dd.up.railway.app",
+                                                                                                                                       "user-agent":  "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+                                                                                                                                       "content-length":  "2412",
+                                                                                                                                       "accept":  "application/json",
+                                                                                                                                       "accept-encoding":  "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+                                                                                                                                       "content-type":  "application/json",
+                                                                                                                                       "x-forwarded-for":  "162.220.232.197",
+                                                                                                                                       "x-forwarded-host":  "n8n-production-00dd.up.railway.app",
+                                                                                                                                       "x-forwarded-proto":  "https",
+                                                                                                                                       "x-railway-edge":  "railway/us-west2",
+                                                                                                                                       "x-railway-request-id":  "nQiNs2SAQvGTZbhSxtoGcA",
+                                                                                                                                       "x-real-ip":  "162.220.232.197",
+                                                                                                                                       "x-request-start":  "1769908218409"
+                                                                                                                                   },
+                                                                                                                       "params":  {
+
+                                                                                                                                  },
+                                                                                                                       "query":  {
+
+                                                                                                                                 },
+                                                                                                                       "body":  {
+                                                                                                                                    "account":  "@{id=1; name=WITHMIA}",
+                                                                                                                                    "additional_attributes":  "",
+                                                                                                                                    "content_attributes":  "",
+                                                                                                                                    "content_type":  "text",
+                                                                                                                                    "content":  "Hola!",
+                                                                                                                                    "conversation":  "@{additional_attributes=; can_reply=True; channel=Channel::Api; contact_inbox=; id=7; inbox_id=1; messages=System.Object[]; labels=System.Object[]; meta=; status=open; custom_attributes=; snoozed_until=; unread_count=1; first_reply_created_at=2026-01-28T02:33:50.673Z; priority=; waiting_since=1769907183; agent_last_seen_at=1769907221; contact_last_seen_at=0; last_activity_at=1769908217; timestamp=1769908217; created_at=1769563123; updated_at=1769908217.983636}",
+                                                                                                                                    "created_at":  "2026-02-01T01:10:17.979Z",
+                                                                                                                                    "id":  167,
+                                                                                                                                    "inbox":  "@{id=1; name=WhatsApp withmia-evp7rj}",
+                                                                                                                                    "message_type":  "incoming",
+                                                                                                                                    "private":  false,
+                                                                                                                                    "sender":  "@{account=; additional_attributes=; avatar=; custom_attributes=; email=; id=4; identifier=; name=56956333446; phone_number=+56956333446; thumbnail=; blocked=False}",
+                                                                                                                                    "source_id":  null,
+                                                                                                                                    "event":  "message_created"
+                                                                                                                                },
+                                                                                                                       "webhookUrl":  "https://n8n-production-00dd.up.railway.app/webhook/withmia-evp7rj",
+                                                                                                                       "executionMode":  "production"
+                                                                                                                   },
+                                                                                                          "pairedItem":  {
+                                                                                                                             "item":  0
+                                                                                                                         }
+                                                                                                      }
+                                                                                                  ],
+                                                                                                  [
+
+                                                                                                  ]
+                                                                                              ]
+                                                                                 }
+                                                                    }
+                                                                ],
+                                       "Get Company Config":  [
+                                                                  {
+                                                                      "startTime":  1769908218473,
+                                                                      "executionIndex":  2,
+                                                                      "source":  [
+                                                                                     {
+                                                                                         "previousNode":  "Is Incoming Message?"
+                                                                                     }
+                                                                                 ],
+                                                                      "hints":  [
+
+                                                                                ],
+                                                                      "executionTime":  36,
+                                                                      "executionStatus":  "success",
+                                                                      "data":  {
+                                                                                   "main":  [
+                                                                                                [
+                                                                                                    {
+                                                                                                        "json":  {
+                                                                                                                     "success":  true,
+                                                                                                                     "company_slug":  "withmia-evp7rj",
+                                                                                                                     "company_name":  "WITHMIA",
+                                                                                                                     "assistant_name":  "Angel",
+                                                                                                                     "ai_prompt":  null,
+                                                                                                                     "collection_name":  "company_withmia-evp7rj_knowledge",
+                                                                                                                     "evolution_instance_name":  "withmia-evp7rj",
+                                                                                                                     "evolution_server_url":  "https://evolution-api-production-a7b5.up.railway.app",
+                                                                                                                     "evolution_api_key":  null,
+                                                                                                                     "chatwoot_api_token":  "LsgCRFINz50YWZ9PrNDQj2Be",
+                                                                                                                     "chatwoot_account_id":  1
+                                                                                                                 },
+                                                                                                        "pairedItem":  {
+                                                                                                                           "item":  0
+                                                                                                                       }
+                                                                                                    }
+                                                                                                ]
+                                                                                            ]
+                                                                               }
+                                                                  }
+                                                              ],
+                                       "Normalize Data":  [
+                                                              {
+                                                                  "startTime":  1769908218510,
+                                                                  "executionIndex":  3,
+                                                                  "source":  [
+                                                                                 {
+                                                                                     "previousNode":  "Get Company Config"
+                                                                                 }
+                                                                             ],
+                                                                  "hints":  [
+
+                                                                            ],
+                                                                  "executionTime":  5,
+                                                                  "executionStatus":  "success",
+                                                                  "data":  {
+                                                                               "main":  [
+                                                                                            [
+                                                                                                {
+                                                                                                    "json":  {
+                                                                                                                 "instance":  {
+                                                                                                                                  "server_url":  "https://evolution-api-production-a7b5.up.railway.app",
+                                                                                                                                  "name":  "withmia-evp7rj",
+                                                                                                                                  "apikey":  "withmia_evo_2026_xK9mP2vL8nQr4tYw"
+                                                                                                                              },
+                                                                                                                 "message":  {
+                                                                                                                                 "chat_id":  "56956333446",
+                                                                                                                                 "content":  "Hola!",
+                                                                                                                                 "content_type":  "text"
+                                                                                                                             },
+                                                                                                                 "user":  {
+                                                                                                                              "name":  "56956333446"
+                                                                                                                          },
+                                                                                                                 "conversation":  {
+                                                                                                                                      "id":  7
+                                                                                                                                  },
+                                                                                                                 "inbox":  {
+                                                                                                                               "id":  1,
+                                                                                                                               "name":  "WhatsApp withmia-evp7rj"
+                                                                                                                           },
+                                                                                                                 "config":  {
+                                                                                                                                "assistant_name":  "Angel",
+                                                                                                                                "company_name":  "WITHMIA",
+                                                                                                                                "collection_name":  "company_withmia-evp7rj_knowledge"
+                                                                                                                            },
+                                                                                                                 "chatwoot":  {
+                                                                                                                                  "account_id":  1,
+                                                                                                                                  "api_token":  "LsgCRFINz50YWZ9PrNDQj2Be"
+                                                                                                                              }
+                                                                                                             },
+                                                                                                    "pairedItem":  {
+                                                                                                                       "item":  0
+                                                                                                                   }
+                                                                                                }
+                                                                                            ]
+                                                                                        ]
+                                                                           }
+                                                              }
+                                                          ],
+                                       "?Qui?n Escribe?":  [
+                                                               {
+                                                                   "startTime":  1769908218515,
+                                                                   "executionIndex":  4,
+                                                                   "source":  [
+                                                                                  {
+                                                                                      "previousNode":  "Normalize Data"
+                                                                                  }
+                                                                              ],
+                                                                   "hints":  [
+
+                                                                             ],
+                                                                   "executionTime":  1,
+                                                                   "executionStatus":  "success",
+                                                                   "data":  {
+                                                                                "main":  [
+                                                                                             [
+
+                                                                                             ],
+                                                                                             [
+                                                                                                 {
+                                                                                                     "json":  {
+                                                                                                                  "instance":  {
+                                                                                                                                   "server_url":  "https://evolution-api-production-a7b5.up.railway.app",
+                                                                                                                                   "name":  "withmia-evp7rj",
+                                                                                                                                   "apikey":  "withmia_evo_2026_xK9mP2vL8nQr4tYw"
+                                                                                                                               },
+                                                                                                                  "message":  {
+                                                                                                                                  "chat_id":  "56956333446",
+                                                                                                                                  "content":  "Hola!",
+                                                                                                                                  "content_type":  "text"
+                                                                                                                              },
+                                                                                                                  "user":  {
+                                                                                                                               "name":  "56956333446"
+                                                                                                                           },
+                                                                                                                  "conversation":  {
+                                                                                                                                       "id":  7
+                                                                                                                                   },
+                                                                                                                  "inbox":  {
+                                                                                                                                "id":  1,
+                                                                                                                                "name":  "WhatsApp withmia-evp7rj"
+                                                                                                                            },
+                                                                                                                  "config":  {
+                                                                                                                                 "assistant_name":  "Angel",
+                                                                                                                                 "company_name":  "WITHMIA",
+                                                                                                                                 "collection_name":  "company_withmia-evp7rj_knowledge"
+                                                                                                                             },
+                                                                                                                  "chatwoot":  {
+                                                                                                                                   "account_id":  1,
+                                                                                                                                   "api_token":  "LsgCRFINz50YWZ9PrNDQj2Be"
+                                                                                                                               }
+                                                                                                              },
+                                                                                                     "pairedItem":  {
+                                                                                                                        "item":  0
+                                                                                                                    }
+                                                                                                 }
+                                                                                             ]
+                                                                                         ]
+                                                                            }
+                                                               }
+                                                           ],
+                                       "Verifica Bloqueo":  [
+                                                                {
+                                                                    "startTime":  1769908218516,
+                                                                    "executionIndex":  5,
+                                                                    "source":  [
+                                                                                   {
+                                                                                       "previousNode":  "?Qui?n Escribe?",
+                                                                                       "previousNodeOutput":  1
+                                                                                   }
+                                                                               ],
+                                                                    "hints":  [
+
+                                                                              ],
+                                                                    "executionTime":  34,
+                                                                    "executionStatus":  "success",
+                                                                    "data":  {
+                                                                                 "main":  [
+                                                                                              [
+                                                                                                  {
+                                                                                                      "json":  {
+                                                                                                                   "bot-state":  "blocked-bot"
+                                                                                                               },
+                                                                                                      "pairedItem":  {
+                                                                                                                         "item":  0
+                                                                                                                     }
+                                                                                                  }
+                                                                                              ]
+                                                                                          ]
+                                                                             }
+                                                                }
+                                                            ],
+                                       "Verifica estado de la sesi?n":  [
+                                                                            {
+                                                                                "startTime":  1769908218550,
+                                                                                "executionIndex":  6,
+                                                                                "source":  [
+                                                                                               {
+                                                                                                   "previousNode":  "Verifica Bloqueo"
+                                                                                               }
+                                                                                           ],
+                                                                                "hints":  [
+
+                                                                                          ],
+                                                                                "executionTime":  1,
+                                                                                "executionStatus":  "success",
+                                                                                "data":  {
+                                                                                             "main":  [
+                                                                                                          [
+                                                                                                              {
+                                                                                                                  "json":  {
+                                                                                                                               "bot-state":  "blocked-bot"
+                                                                                                                           },
+                                                                                                                  "pairedItem":  {
+                                                                                                                                     "item":  0
+                                                                                                                                 }
+                                                                                                              }
+                                                                                                          ],
+                                                                                                          [
+
+                                                                                                          ]
+                                                                                                      ]
+                                                                                         }
+                                                                            }
+                                                                        ],
+                                       "No Operation, do nothing2":  [
+                                                                         {
+                                                                             "startTime":  1769908218551,
+                                                                             "executionIndex":  7,
+                                                                             "source":  [
+                                                                                            {
+                                                                                                "previousNode":  "Verifica estado de la sesi?n"
+                                                                                            }
+                                                                                        ],
+                                                                             "hints":  [
+
+                                                                                       ],
+                                                                             "executionTime":  0,
+                                                                             "executionStatus":  "success",
+                                                                             "data":  {
+                                                                                          "main":  [
+                                                                                                       [
+                                                                                                           {
+                                                                                                               "json":  {
+                                                                                                                            "bot-state":  "blocked-bot"
+                                                                                                                        },
+                                                                                                               "pairedItem":  {
+                                                                                                                                  "item":  0
+                                                                                                                              }
+                                                                                                           }
+                                                                                                       ]
+                                                                                                   ]
+                                                                                      }
+                                                                         }
+                                                                     ]
+                                   },
+                       "lastNodeExecuted":  "No Operation, do nothing2"
+                   },
+    "executionData":  {
+                          "contextData":  {
+
+                                          },
+                          "nodeExecutionStack":  [
+
+                                                 ],
+                          "metadata":  {
+
+                                       },
+                          "waitingExecution":  {
+
+                                               },
+                          "waitingExecutionSource":  {
+
+                                                     },
+                          "runtimeData":  {
+                                              "version":  1,
+                                              "establishedAt":  1769908218471,
+                                              "source":  "webhook",
+                                              "triggerNode":  {
+                                                                  "name":  "WITHMIA Webhook",
+                                                                  "type":  "n8n-nodes-base.webhook"
+                                                              }
+                                          }
+                      }
+}

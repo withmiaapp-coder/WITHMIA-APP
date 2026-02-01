@@ -1398,7 +1398,7 @@
         {
             "parameters": {
                 "descriptionType": "manual",
-                "toolDescription": "Cuando el cliente escriba la palabra \"Humano\" o \"Persona\" ejecuta esta tool",
+                "toolDescription": "Cuando el cliente escriba la palabra \"HUMANO\" ejecuta esta tool",
                 "operation": "set",
                 "key": "={{ $json.message.chat_id }}",
                 "value": "blocked-bot",
@@ -1822,7 +1822,7 @@
                 "key": "={{ ($json.conversation?.meta?.sender?.phone_number || $json.body?.conversation?.meta?.sender?.phone_number || ($json.conversation?.meta?.sender?.identifier || $json.body?.conversation?.meta?.sender?.identifier || \"\").split(\"@\")[0] || \"\").replace(\"+\", \"\") }}",
                 "value": "blocked-bot",
                 "expire": true,
-                "ttl": 6000
+                "ttl": 600
             },
             "type": "n8n-nodes-base.redis",
             "typeVersion": 1,

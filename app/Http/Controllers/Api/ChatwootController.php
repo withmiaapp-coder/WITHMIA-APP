@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\EvolutionApiService;
 use App\Services\ConversationDeduplicationService;
+use App\Services\ConversationDeduplicationServiceV2;
 
 class ChatwootController extends Controller
 {
@@ -19,6 +20,7 @@ class ChatwootController extends Controller
     private $userId;
     private EvolutionApiService $evolutionApi;
     private ConversationDeduplicationService $deduplicationService;
+    private ConversationDeduplicationServiceV2 $deduplicationServiceV2;
 
     /**
      * Convertir timestamp UTC de la BD a Unix timestamp
@@ -31,10 +33,15 @@ class ChatwootController extends Controller
         return strtotime($utcDatetime . ' UTC');
     }
 
-    public function __construct(EvolutionApiService $evolutionApi, ConversationDeduplicationService $deduplicationService)
+    public function __construct(
+        EvolutionApiService $evolutionApi, 
+        ConversationDeduplicationService $deduplicationService,
+        ConversationDeduplicationServiceV2 $deduplicationServiceV2
+    )
     {
         $this->evolutionApi = $evolutionApi;
         $this->deduplicationService = $deduplicationService;
+        $this->deduplicationServiceV2 = $deduplicationServiceV2;
         
         // CRÍTICO: Asegurar que el middleware 'auth' se ejecute ANTES del constructor
         $this->middleware(function ($request, $next) {
@@ -259,18 +266,23 @@ class ChatwootController extends Controller
                 'filtered_evolutionapi' => count($conversationsFromDb) - count($allConversations)
             ]);
 
-            // 🔗 AUTO-FUSIÓN: Fusionar duplicados automáticamente en la base de datos
+            // 🔗 AUTO-FUSIÓN V2: Fusionar duplicados usando el servicio mejorado
+            // Usa phone_number normalizado en lugar de identifier/LID
             try {
-                $mergeResult = $this->deduplicationService->autoMergeDuplicates($this->inboxId);
+                $mergeResult = $this->deduplicationServiceV2->autoMergeDuplicates($this->inboxId, $this->accountId);
                 if ($mergeResult['success'] && isset($mergeResult['merged']) && $mergeResult['merged'] > 0) {
-                    Log::info('✅ AUTO-FUSIÓN: Conversaciones fusionadas', $mergeResult);
+                    Log::info('✅ AUTO-FUSIÓN V2: Conversaciones fusionadas', $mergeResult);
+                    
+                    // Si hubo fusiones, volver a cargar las conversaciones
+                    // para reflejar los cambios (evitar mostrar datos obsoletos)
+                    return $this->getConversations($request);
                 }
             } catch (\Exception $e) {
-                Log::error('❌ Error en auto-fusión', ['error' => $e->getMessage()]);
+                Log::error('❌ Error en auto-fusión V2', ['error' => $e->getMessage()]);
             }
 
-            // 🔗 DEDUPLICACIÓN: Unificar conversaciones duplicadas por identifiers de Evolution
-            $allConversations = $this->deduplicateConversationsByEvolutionIdentifiers($allConversations);
+            // 🔗 DEDUPLICACIÓN EN MEMORIA: Filtrar duplicados adicionales por phone_number
+            $allConversations = $this->deduplicateByNormalizedPhone($allConversations);
 
             // ✅ Devolver estructura esperada por el frontend (SIN CACHE)
             return response()->json([
@@ -2415,6 +2427,154 @@ class ChatwootController extends Controller
         }
 
         return $result;
+    }
+
+    /**
+     * 🆕 DEDUPLICACIÓN V2: Por phone_number normalizado
+     * Esta es la forma correcta de deduplicar, no por identifier/LID
+     */
+    private function deduplicateByNormalizedPhone(array $conversations): array
+    {
+        if (empty($conversations)) {
+            return $conversations;
+        }
+
+        $phoneMap = [];
+        $noPhoneConversations = [];
+
+        // Función para normalizar teléfono (solo dígitos)
+        $normalizePhone = function(?string $phone): ?string {
+            if (!$phone) return null;
+            $normalized = preg_replace('/[^0-9]/', '', $phone);
+            // Si el número es muy corto, retornar null
+            if (strlen($normalized) < 8) return null;
+            // Usar últimos 10 dígitos para manejar diferencias en código de país
+            return substr($normalized, -10);
+        };
+
+        foreach ($conversations as $conv) {
+            // Obtener phone_number del contacto
+            $phoneNumber = $conv['meta']['sender']['phone_number'] ?? null;
+            
+            // Si no hay phone_number, intentar extraerlo del identifier
+            if (!$phoneNumber) {
+                $identifier = $conv['meta']['sender']['identifier'] ?? '';
+                if (strpos($identifier, '@s.whatsapp.net') !== false) {
+                    $phoneNumber = str_replace('@s.whatsapp.net', '', $identifier);
+                } elseif (strpos($identifier, '@g.us') !== false) {
+                    // Es un grupo, no deduplicar por teléfono
+                    $noPhoneConversations[] = $conv;
+                    continue;
+                }
+            }
+
+            $normalizedPhone = $normalizePhone($phoneNumber);
+
+            if (!$normalizedPhone) {
+                // Sin teléfono válido, agregar sin deduplicar
+                $noPhoneConversations[] = $conv;
+                continue;
+            }
+
+            // Si ya existe una conversación con este teléfono, quedarse con la más reciente
+            if (isset($phoneMap[$normalizedPhone])) {
+                $existing = $phoneMap[$normalizedPhone];
+                $existingTime = $existing['timestamp'] ?? $existing['last_activity_at'] ?? 0;
+                $currentTime = $conv['timestamp'] ?? $conv['last_activity_at'] ?? 0;
+
+                if ($currentTime > $existingTime) {
+                    // La nueva es más reciente, reemplazar
+                    Log::debug('🔗 Deduplicación por phone: reemplazando conversación más antigua', [
+                        'phone' => $normalizedPhone,
+                        'old_id' => $existing['id'],
+                        'new_id' => $conv['id']
+                    ]);
+                    $phoneMap[$normalizedPhone] = $conv;
+                }
+            } else {
+                $phoneMap[$normalizedPhone] = $conv;
+            }
+        }
+
+        // Combinar y ordenar por timestamp
+        $result = array_merge(array_values($phoneMap), $noPhoneConversations);
+        
+        usort($result, function($a, $b) {
+            $timeA = $a['timestamp'] ?? $a['last_activity_at'] ?? 0;
+            $timeB = $b['timestamp'] ?? $b['last_activity_at'] ?? 0;
+            return $timeB - $timeA; // Más reciente primero
+        });
+
+        $deduplicatedCount = count($conversations) - count($result);
+        if ($deduplicatedCount > 0) {
+            Log::info('✅ Deduplicación por phone_number completada', [
+                'original' => count($conversations),
+                'result' => count($result),
+                'removed' => $deduplicatedCount
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 🔍 Endpoint de diagnóstico de duplicados
+     * GET /api/chatwoot/duplicates/diagnosis
+     */
+    public function getDuplicatesDiagnosis(Request $request)
+    {
+        try {
+            if (!$this->inboxId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes un inbox asignado'
+                ], 403);
+            }
+
+            $diagnosis = $this->deduplicationServiceV2->getDuplicatesDiagnosis(
+                $this->inboxId, 
+                $this->accountId
+            );
+
+            return response()->json($diagnosis);
+
+        } catch (\Exception $e) {
+            Log::error('Error en diagnóstico de duplicados', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 🔀 Endpoint para forzar fusión de duplicados
+     * POST /api/chatwoot/duplicates/merge
+     */
+    public function forceMergeDuplicates(Request $request)
+    {
+        try {
+            if (!$this->inboxId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes un inbox asignado'
+                ], 403);
+            }
+
+            $result = $this->deduplicationServiceV2->autoMergeDuplicates(
+                $this->inboxId,
+                $this->accountId
+            );
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            Log::error('Error en fusión forzada de duplicados', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

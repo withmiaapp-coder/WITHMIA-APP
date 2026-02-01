@@ -165,12 +165,19 @@ class BotConfigController extends Controller
 
     /**
      * Actualizar la configuración del bot
+     * 
+     * Escenarios de bloqueo/desbloqueo:
+     * #1: Cliente Empresa escribe palabra clave (unlock_keyword) → DESBLOQUEA bot inmediatamente
+     * #2: Cliente Final pide humano (human_keyword) → BLOQUEA bot por human_block_duration
+     * #3: Cliente Empresa responde (cualquier canal) → BLOQUEA bot por block_duration
      */
     public function update(Request $request)
     {
         $request->validate([
-            'unlock_keyword' => 'nullable|string|max:50',
-            'block_duration' => 'nullable|integer|min:60|max:86400',
+            'unlock_keyword' => 'nullable|string|max:50',           // #1: Palabra para desbloquear (empresa)
+            'human_keyword' => 'nullable|string|max:50',            // #2: Palabra para pedir humano (cliente final)
+            'human_block_duration' => 'nullable|integer|min:60|max:86400', // #2: Tiempo bloqueo humano
+            'block_duration' => 'nullable|integer|min:60|max:86400', // #3: Tiempo bloqueo cuando empresa responde
             'buffer_wait_time' => 'nullable|integer|min:1|max:60',
             'humanize_wait_time' => 'nullable|integer|min:1|max:30',
         ]);
@@ -201,18 +208,34 @@ class BotConfigController extends Controller
             for ($i = 0; $i < count($workflow['nodes']); $i++) {
                 $node = &$workflow['nodes'][$i];
                 
-                // Actualizar palabra clave de desbloqueo
+                // #1: Actualizar palabra clave de desbloqueo (empresa escribe para reactivar bot)
                 if ($node['name'] === 'Verifica Palabra Clave' && $request->has('unlock_keyword')) {
                     $workflow['nodes'][$i]['parameters']['conditions']['conditions'][0]['rightValue'] = strtoupper($request->unlock_keyword);
                     $updated = true;
                     $updatedNodes[] = 'Verifica Palabra Clave';
                 }
 
-                // Actualizar tiempo de bloqueo
-                if ($node['name'] === 'Bloquea al Agente' && $request->has('block_duration')) {
+                // #2: Actualizar palabra clave para pedir humano (cliente final)
+                if ($node['name'] === 'Bloqueo a Humano' && $request->has('human_keyword')) {
+                    $keyword = strtoupper($request->human_keyword);
+                    $workflow['nodes'][$i]['parameters']['toolDescription'] = 
+                        "Cuando el cliente escriba la palabra \"{$keyword}\" ejecuta esta tool";
+                    $updated = true;
+                    $updatedNodes[] = 'Bloqueo a Humano (keyword)';
+                }
+
+                // #2: Actualizar tiempo de bloqueo cuando cliente pide humano
+                if ($node['name'] === 'Bloqueo a Humano' && $request->has('human_block_duration')) {
+                    $workflow['nodes'][$i]['parameters']['ttl'] = (int) $request->human_block_duration;
+                    $updated = true;
+                    $updatedNodes[] = 'Bloqueo a Humano (ttl)';
+                }
+
+                // #3: Actualizar tiempo de bloqueo cuando empresa responde (Block Agent on Outgoing)
+                if ($node['name'] === 'Block Agent on Outgoing' && $request->has('block_duration')) {
                     $workflow['nodes'][$i]['parameters']['ttl'] = (int) $request->block_duration;
                     $updated = true;
-                    $updatedNodes[] = 'Bloquea al Agente';
+                    $updatedNodes[] = 'Block Agent on Outgoing';
                 }
 
                 // Actualizar tiempo de buffer (Wait principal)
@@ -346,24 +369,41 @@ class BotConfigController extends Controller
 
     /**
      * Extraer configuración del workflow
+     * 
+     * #1: unlock_keyword - palabra para desbloquear (empresa)
+     * #2: human_keyword + human_block_duration - cliente pide humano
+     * #3: block_duration - tiempo bloqueo cuando empresa responde
      */
     private function extractConfig(array $workflow): array
     {
         $config = [
             'unlock_keyword' => 'BOT',
+            'human_keyword' => 'HUMANO',
+            'human_block_duration' => 600,
             'block_duration' => 600,
             'buffer_wait_time' => 7,
             'humanize_wait_time' => 2,
         ];
 
         foreach ($workflow['nodes'] as $node) {
-            // Palabra clave de desbloqueo
+            // #1: Palabra clave de desbloqueo (empresa)
             if ($node['name'] === 'Verifica Palabra Clave') {
                 $config['unlock_keyword'] = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT';
             }
 
-            // Tiempo de bloqueo
-            if ($node['name'] === 'Bloquea al Agente') {
+            // #2: Palabra clave para pedir humano (cliente final)
+            if ($node['name'] === 'Bloqueo a Humano') {
+                // Extraer palabra del toolDescription: "Cuando el cliente escriba la palabra \"HUMANO\" ejecuta esta tool"
+                $toolDesc = $node['parameters']['toolDescription'] ?? '';
+                if (preg_match('/palabra\s+"([^"]+)"/', $toolDesc, $matches)) {
+                    $config['human_keyword'] = $matches[1];
+                }
+                // Tiempo de bloqueo humano
+                $config['human_block_duration'] = $node['parameters']['ttl'] ?? 600;
+            }
+
+            // #3: Tiempo de bloqueo cuando empresa responde
+            if ($node['name'] === 'Block Agent on Outgoing') {
                 $config['block_duration'] = $node['parameters']['ttl'] ?? 600;
             }
 

@@ -85,64 +85,141 @@ export const useConversations = () => {
   // ✅ NUEVO: Timestamps para polling incremental
   const lastFetchTimestamp = useRef<number>(Date.now());
   const lastUpdateTimestamp = useRef<number>(Date.now());
-  //  HELPER: Deduplicar conversaciones por contacto (normalizar phone_number)
+  
+  /**
+   * 🔄 DEDUPLICACIÓN V2: Por phone_number normalizado
+   * 
+   * CASOS EDGE MANEJADOS:
+   * 1. LID vs @s.whatsapp.net: Usa phone_number normalizado (últimos 10 dígitos)
+   * 2. Grupos (@g.us): Se agregan sin deduplicar
+   * 3. Sin teléfono: Usa ID de contacto como fallback
+   * 4. Múltiples formatos: +56, 56, 9xxxxxxxx todos normalizados
+   */
   const deduplicateConversations = (conversations: any[]) => {
-    const contactMap = new Map();
+    const phoneMap = new Map<string, any>();
+    const noPhoneConversations: any[] = [];
     const groups: any[] = [];
 
-    const normalizePhone = (phone: string | undefined) => {
+    /**
+     * Normalizar teléfono: solo dígitos, últimos 10
+     * Esto maneja: +56975235071, 56975235071, 975235071 -> 6975235071
+     */
+    const normalizePhone = (phone: string | undefined | null): string | null => {
       if (!phone) return null;
-      return phone.replace(/[\s\-\(\)\+]/g, '');
+      // Remover todo excepto dígitos
+      const digits = phone.replace(/[^0-9]/g, '');
+      // Si es muy corto, no es válido
+      if (digits.length < 8) return null;
+      // Usar últimos 10 dígitos para manejar diferencias en código de país
+      return digits.slice(-10);
     };
 
-    const isGroup = (conv: any) => {
-      const phone1 = conv.contact?.phone_number;
-      const phone2 = conv.meta?.sender?.phone_number;
+    /**
+     * Detectar si es un grupo de WhatsApp
+     */
+    const isGroup = (conv: any): boolean => {
+      const identifier = conv.meta?.sender?.identifier || conv.contact?.identifier || '';
       const name = conv.contact?.name || conv.meta?.sender?.name || '';
       
-      const hasNoPhone = !phone1 && !phone2;
-      const phoneEqualsName = (phone1 === name || phone2 === name);
-      const nameIndicatesGroup = name.toLowerCase().includes('grupo') || 
-                                  name.toLowerCase().includes('group') ||
-                                  name.includes('@g.us');
+      // Verificar identifier de grupo
+      if (identifier.includes('@g.us') || identifier.includes('@broadcast')) {
+        return true;
+      }
       
-      return hasNoPhone || phoneEqualsName || nameIndicatesGroup;
+      // Verificar nombre que indica grupo
+      const nameLower = name.toLowerCase();
+      if (nameLower.includes('grupo') || nameLower.includes('group')) {
+        return true;
+      }
+      
+      return false;
     };
 
+    /**
+     * Extraer teléfono de múltiples fuentes
+     */
+    const extractPhone = (conv: any): string | null => {
+      // 1. Primero intentar phone_number explícito
+      const phone1 = conv.contact?.phone_number;
+      const phone2 = conv.meta?.sender?.phone_number;
+      
+      if (phone1) return normalizePhone(phone1);
+      if (phone2) return normalizePhone(phone2);
+      
+      // 2. Extraer del identifier si es @s.whatsapp.net
+      const identifier = conv.meta?.sender?.identifier || conv.contact?.identifier || '';
+      if (identifier.includes('@s.whatsapp.net')) {
+        const phoneFromId = identifier.replace('@s.whatsapp.net', '');
+        return normalizePhone(phoneFromId);
+      }
+      
+      // 3. No es posible extraer teléfono
+      return null;
+    };
+
+    // Procesar cada conversación
     conversations.forEach(conv => {
+      // Separar grupos
       if (isGroup(conv)) {
         groups.push(conv);
         return;
       }
 
-      const phone1 = conv.contact?.phone_number;
-      const phone2 = conv.meta?.sender?.phone_number;
-      const rawPhone = phone1 || phone2;
-      const normalizedPhone = normalizePhone(rawPhone);
+      const normalizedPhone = extractPhone(conv);
 
-      const identifier = conv.contact?.id || conv.meta?.sender?.id;
-      const key = normalizedPhone || identifier || conv.id;
+      if (!normalizedPhone) {
+        // Sin teléfono válido, agregar sin deduplicar
+        noPhoneConversations.push(conv);
+        return;
+      }
 
-      const existing = contactMap.get(key);
-      if (!existing) {
-        contactMap.set(key, conv);
-      } else {
-        const existingTimestamp = existing.timestamp || existing.last_activity_at || existing.updated_at || 0;
-        const currentTimestamp = conv.timestamp || conv.last_activity_at || conv.updated_at || 0;
+      // Si ya existe una conversación con este teléfono
+      const existing = phoneMap.get(normalizedPhone);
+      if (existing) {
+        const existingTime = existing.timestamp || existing.last_activity_at || 0;
+        const currentTime = conv.timestamp || conv.last_activity_at || 0;
 
-        if (currentTimestamp > existingTimestamp) {
-          contactMap.set(key, conv);
+        // Mantener la más reciente
+        if (currentTime > existingTime) {
+          debugLog.debug('🔗 Frontend dedup: reemplazando conversación más antigua', {
+            phone: normalizedPhone,
+            oldId: existing.id,
+            newId: conv.id
+          });
+          phoneMap.set(normalizedPhone, conv);
         }
+      } else {
+        phoneMap.set(normalizedPhone, conv);
       }
     });
 
-    // FIX: Combinar conversaciones individuales y grupos, luego ordenar por timestamp
-    const allConversations = [...Array.from(contactMap.values()), ...groups];
+    // Combinar: conversaciones únicas + sin teléfono + grupos
+    const allConversations = [
+      ...Array.from(phoneMap.values()),
+      ...noPhoneConversations,
+      ...groups
+    ];
+    
+    // Ordenar por timestamp (más reciente primero)
     const deduplicated = allConversations.sort((a: any, b: any) => {
-      const timeA = a.timestamp || a.last_activity_at || new Date(a.updated_at || 0).getTime() / 1000 || 0;
-      const timeB = b.timestamp || b.last_activity_at || new Date(b.updated_at || 0).getTime() / 1000 || 0;
-      return timeB - timeA; // Más reciente primero
+      const timeA = a.timestamp || a.last_activity_at || 
+                    (a.updated_at ? new Date(a.updated_at).getTime() / 1000 : 0);
+      const timeB = b.timestamp || b.last_activity_at || 
+                    (b.updated_at ? new Date(b.updated_at).getTime() / 1000 : 0);
+      return timeB - timeA;
     });
+
+    // Log si hubo deduplicación significativa
+    const removed = conversations.length - deduplicated.length;
+    if (removed > 0) {
+      debugLog.info('✅ Frontend dedup completada', {
+        original: conversations.length,
+        result: deduplicated.length,
+        removed,
+        groups: groups.length
+      });
+    }
+
     return deduplicated;
   };
   

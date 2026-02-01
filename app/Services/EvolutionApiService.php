@@ -1093,8 +1093,9 @@ class EvolutionApiService
             }
 
             // Obtener configuración de Chatwoot
+            // CRÍTICO: Usar el API Access Token del usuario de la empresa, NO el channel token
             $chatwootUrl = config('chatwoot.url');
-            $chatwootToken = config('chatwoot.token');
+            $chatwootToken = $company->chatwoot_api_key ?? config('chatwoot.token');
             $accountId = $company->chatwoot_account_id ?: config('chatwoot.account_id', '1');
 
             // Reconfigurar la integración

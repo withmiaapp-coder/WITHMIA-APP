@@ -1,0 +1,105 @@
+﻿{
+    "version":  1,
+    "startData":  {
+
+                  },
+    "resultData":  {
+                       "runData":  {
+                                       "WITHMIA Webhook":  [
+                                                               {
+                                                                   "startTime":  1769907173880,
+                                                                   "executionIndex":  0,
+                                                                   "source":  [
+
+                                                                              ],
+                                                                   "hints":  [
+
+                                                                             ],
+                                                                   "executionTime":  0,
+                                                                   "executionStatus":  "success",
+                                                                   "data":  {
+                                                                                "main":  "System.Object[]"
+                                                                            }
+                                                               }
+                                                           ],
+                                       "Is Incoming Message?":  [
+                                                                    {
+                                                                        "startTime":  1769907173880,
+                                                                        "executionIndex":  1,
+                                                                        "source":  [
+                                                                                       "@{previousNode=WITHMIA Webhook}"
+                                                                                   ],
+                                                                        "hints":  [
+
+                                                                                  ],
+                                                                        "executionTime":  1,
+                                                                        "executionStatus":  "success",
+                                                                        "data":  {
+                                                                                     "main":  "System.Object[] System.Object[]"
+                                                                                 }
+                                                                    }
+                                                                ],
+                                       "Is Human Outgoing?":  [
+                                                                  {
+                                                                      "startTime":  1769907173881,
+                                                                      "executionIndex":  2,
+                                                                      "source":  [
+                                                                                     "@{previousNode=Is Incoming Message?; previousNodeOutput=1}"
+                                                                                 ],
+                                                                      "hints":  [
+
+                                                                                ],
+                                                                      "executionTime":  1,
+                                                                      "executionStatus":  "success",
+                                                                      "data":  {
+                                                                                   "main":  "System.Object[] System.Object[]"
+                                                                               }
+                                                                  }
+                                                              ],
+                                       "Block Agent on Outgoing":  [
+                                                                       {
+                                                                           "startTime":  1769907173882,
+                                                                           "executionIndex":  3,
+                                                                           "source":  [
+                                                                                          "@{previousNode=Is Human Outgoing?}"
+                                                                                      ],
+                                                                           "hints":  [
+
+                                                                                     ],
+                                                                           "executionTime":  43,
+                                                                           "executionStatus":  "success",
+                                                                           "data":  {
+                                                                                        "main":  "System.Object[]"
+                                                                                    }
+                                                                       }
+                                                                   ]
+                                   },
+                       "lastNodeExecuted":  "Block Agent on Outgoing"
+                   },
+    "executionData":  {
+                          "contextData":  {
+
+                                          },
+                          "nodeExecutionStack":  [
+
+                                                 ],
+                          "metadata":  {
+
+                                       },
+                          "waitingExecution":  {
+
+                                               },
+                          "waitingExecutionSource":  {
+
+                                                     },
+                          "runtimeData":  {
+                                              "version":  1,
+                                              "establishedAt":  1769907173879,
+                                              "source":  "webhook",
+                                              "triggerNode":  {
+                                                                  "name":  "WITHMIA Webhook",
+                                                                  "type":  "n8n-nodes-base.webhook"
+                                                              }
+                                          }
+                      }
+}

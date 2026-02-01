@@ -123,7 +123,6 @@ class EvolutionApiController extends Controller
         $company = $user->company;
         
         if ($company && $company->chatwoot_account_id) {
-            $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
             $chatwootUrl = config('chatwoot.url');
             $accountId = $company->chatwoot_account_id;
             
@@ -132,29 +131,37 @@ class EvolutionApiController extends Controller
                 ? "WhatsApp {$user->company_slug}" 
                 : "WhatsApp {$company->name}";
             
-            // 🔧 NUEVO FLUJO: Buscar el Channel Token existente o crearlo
-            $channelToken = $this->getOrCreateChannelToken($accountId, $inboxName, $platformToken, $chatwootUrl);
+            // 🔧 CRÍTICO: Evolution API necesita un API Access Token (NO Channel Token)
+            // El API Access Token permite:
+            // - Buscar contactos
+            // - Listar y crear conversaciones
+            // - Enviar mensajes
+            // El Channel Token SOLO sirve para recibir mensajes entrantes
             
-            if ($channelToken) {
-                Log::info('✅ Usando Channel Token para Evolution', [
+            // Prioridad 1: API Access Token de la empresa (chatwoot_api_key)
+            $apiToken = $company->chatwoot_api_key;
+            
+            if ($apiToken) {
+                Log::info('✅ Usando API Access Token de la empresa para Evolution', [
                     'user_id' => $user->id,
+                    'company_id' => $company->id,
                     'account_id' => $accountId,
                     'inbox_name' => $inboxName,
-                    'token_type' => 'channel_token'
+                    'token_type' => 'api_access_token'
                 ]);
                 
                 return [
                     'account_id' => $accountId,
-                    'token' => $channelToken, // ✅ CHANNEL TOKEN (correcto para enviar mensajes)
+                    'token' => $apiToken, // ✅ API ACCESS TOKEN (correcto para todas las operaciones)
                     'url' => $chatwootUrl,
                     'inbox_name' => $inboxName,
-                    'auto_create' => false // No necesitamos que Evolution cree, ya existe
+                    'auto_create' => true
                 ];
             }
             
-            // Fallback: usar Platform Token y auto_create (Evolution creará el inbox)
-            // Esto se corregirá automáticamente después con ensureCorrectChatwootToken()
-            Log::warning('⚠️ No se encontró Channel Token, usando Platform Token (se corregirá después)', [
+            // Fallback: usar Platform Token
+            $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+            Log::warning('⚠️ No se encontró API Token de empresa, usando Platform Token', [
                 'user_id' => $user->id,
                 'account_id' => $accountId
             ]);

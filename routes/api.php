@@ -1674,6 +1674,12 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('chatw
     Route::post('/conversations/{id}/update_last_seen', [ChatwootController::class, 'markAsRead']);
     
     // ============================================================================
+    // DEDUPLICACIÓN V2 - Diagnóstico y fusión manual
+    // ============================================================================
+    Route::get('/duplicates/diagnosis', [ChatwootController::class, 'getDuplicatesDiagnosis']);
+    Route::post('/duplicates/merge', [ChatwootController::class, 'forceMergeDuplicates']);
+    
+    // ============================================================================
     // ASIGNACIÓN Y ESTADO DE CONVERSACIONES
     // ============================================================================
     Route::post('/conversations/{id}/assignments', [ChatwootController::class, 'assignConversation']);
@@ -2352,18 +2358,31 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         // Usar el nombre del inbox existente o crear uno nuevo
         $inboxName = $existingInbox ? $existingInbox->name : "WhatsApp {$company->name}";
         
-        // IMPORTANTE: Obtener el Channel Token del channel_api (NO el access_token del usuario)
-        // Evolution API necesita el identifier del channel para autenticarse con Chatwoot
-        $channelApi = $chatwootDb->table('channel_api')
-            ->where('id', $existingInbox->channel_id ?? 1)
-            ->first();
+        // CRÍTICO: Evolution API necesita el API Access Token del usuario (NO el Channel Token)
+        // El API Access Token permite:
+        // - Buscar contactos
+        // - Listar y crear conversaciones
+        // - Enviar mensajes
+        // El Channel Token SOLO sirve para recibir mensajes entrantes
         
-        $channelToken = $channelApi->identifier ?? null;
+        // Obtener el API Access Token de la empresa
+        $apiToken = $company->chatwoot_api_key ?? null;
         
-        if (!$channelToken) {
+        if (!$apiToken) {
+            // Fallback: buscar el access_token de cualquier admin de la cuenta
+            $adminUser = $chatwootDb->table('account_users')
+                ->join('access_tokens', 'account_users.user_id', '=', 'access_tokens.owner_id')
+                ->where('account_users.account_id', $accountId)
+                ->where('account_users.role', 1) // 1 = administrator
+                ->first();
+            
+            $apiToken = $adminUser->token ?? null;
+        }
+        
+        if (!$apiToken) {
             return response()->json([
                 'success' => false,
-                'error' => 'No se encontró el channel token en Chatwoot. Verifica que exista el inbox y channel_api.'
+                'error' => 'No se encontró un API Access Token para la cuenta. Asegúrate de que la empresa tenga chatwoot_api_key configurado.'
             ], 400);
         }
         
@@ -2374,7 +2393,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
         ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
             'enabled' => true,
             'accountId' => (string) $accountId,
-            'token' => $channelToken, // Channel Token (identifier del channel_api)
+            'token' => $apiToken, // API Access Token del usuario admin
             'url' => $chatwootUrl,
             'signMsg' => false,
             'reopenConversation' => true,
@@ -2384,14 +2403,14 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'importContacts' => false,
             'importMessages' => false,
             'daysLimitImportMessages' => 0,
-            'autoCreate' => false // No crear inbox automáticamente, ya existe
+            'autoCreate' => true // Permitir crear inbox si no existe
         ]);
         
         Log::info('🔧 Chatwoot configured in Evolution API', [
             'instance' => $instanceName,
             'account_id' => $accountId,
             'inbox_name' => $inboxName,
-            'channel_token_prefix' => substr($channelToken, 0, 8) . '...',
+            'api_token_prefix' => substr($apiToken, 0, 8) . '...',
             'response_status' => $response->status(),
             'response_body' => $response->json()
         ]);
@@ -2402,7 +2421,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'account_id' => $accountId,
             'chatwoot_url' => $chatwootUrl,
             'inbox_name' => $inboxName,
-            'channel_token_used' => substr($channelToken, 0, 8) . '...',
+            'api_token_used' => substr($apiToken, 0, 8) . '...',
             'evolution_response' => $response->json()
         ]);
         
@@ -2839,12 +2858,26 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
         $inboxName = $existingInbox->name;
         $inboxId = $existingInbox->id;
         
-        // 2. Obtener el channel_api para obtener el token correcto
-        $channelApi = $chatwootDb->table('channel_api')
-            ->where('id', $existingInbox->channel_id)
-            ->first();
+        // 2. CRÍTICO: Usar API Access Token (NO Channel Token)
+        // El API Access Token permite buscar contactos, listar conversaciones, etc.
+        $apiToken = $company->chatwoot_api_key;
         
-        $channelToken = $channelApi->identifier ?? $company->chatwoot_api_key;
+        if (!$apiToken) {
+            // Fallback: buscar el access_token del admin de la cuenta
+            $adminUser = $chatwootDb->table('account_users')
+                ->join('access_tokens', 'account_users.user_id', '=', 'access_tokens.owner_id')
+                ->where('account_users.account_id', $accountId)
+                ->where('account_users.role', 1)
+                ->first();
+            $apiToken = $adminUser->token ?? null;
+        }
+        
+        if (!$apiToken) {
+            return response()->json([
+                'success' => false,
+                'error' => 'No se encontró API Access Token para la cuenta.'
+            ], 400);
+        }
         
         // 3. Configurar Evolution API con los datos CORRECTOS
         $evolutionUrl = config('evolution.api_url');
@@ -2857,7 +2890,7 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
         ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
             'enabled' => true,
             'accountId' => (string) $accountId,
-            'token' => $channelToken, // Token del channel_api (para webhook)
+            'token' => $apiToken, // API Access Token del usuario admin
             'url' => $chatwootUrl,
             'signMsg' => false,
             'reopenConversation' => true,
@@ -2867,7 +2900,7 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
             'importContacts' => false,
             'importMessages' => false,
             'daysLimitImportMessages' => 0,
-            'autoCreate' => false // NO crear inbox nuevo, usar el existente
+            'autoCreate' => true // Crear inbox si no existe
         ]);
         
         // 4. Actualizar el usuario con el inbox_id correcto
@@ -2880,15 +2913,15 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
             $company->save();
         }
         
-        // 6. Limpiar cach�
+        // 6. Limpiar caché
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('?? SYNC Evolution-Chatwoot completado', [
+        Log::info('✅ SYNC Evolution-Chatwoot completado', [
             'instance' => $instanceName,
             'inbox_name' => $inboxName,
             'inbox_id' => $inboxId,
             'account_id' => $accountId,
-            'channel_token' => substr($channelToken, 0, 8) . '...'
+            'api_token' => substr($apiToken, 0, 8) . '...'
         ]);
         
         return response()->json([
@@ -2898,7 +2931,7 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId,
                 'inbox_name' => $inboxName,
-                'channel_token' => substr($channelToken, 0, 8) . '...'
+                'api_token' => substr($apiToken, 0, 8) . '...'
             ],
             'user_updated' => [
                 'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
@@ -3170,11 +3203,18 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
         // 4. Si Evolution tiene otro nombre, actualizarlo
         $evolutionUpdated = false;
         if ($currentEvolutionInbox !== $correctInboxName) {
-            $channelApi = $chatwootDb->table('channel_api')
-                ->where('id', $existingInbox->channel_id)
-                ->first();
+            // CRÍTICO: Usar API Access Token (NO Channel Token)
+            $apiToken = $company->chatwoot_api_key;
             
-            $channelToken = $channelApi->identifier ?? $company->chatwoot_api_key;
+            if (!$apiToken) {
+                $adminUser = $chatwootDb->table('account_users')
+                    ->join('access_tokens', 'account_users.user_id', '=', 'access_tokens.owner_id')
+                    ->where('account_users.account_id', $accountId)
+                    ->where('account_users.role', 1)
+                    ->first();
+                $apiToken = $adminUser->token ?? null;
+            }
+            
             $chatwootUrl = config('chatwoot.url');
             
             $updateResponse = \Illuminate\Support\Facades\Http::withHeaders([
@@ -3183,7 +3223,7 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
             ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
                 'enabled' => true,
                 'accountId' => (string) $accountId,
-                'token' => $channelToken,
+                'token' => $apiToken,
                 'url' => $chatwootUrl,
                 'signMsg' => false,
                 'reopenConversation' => true,
@@ -3193,16 +3233,16 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
                 'importContacts' => false,
                 'importMessages' => false,
                 'daysLimitImportMessages' => 0,
-                'autoCreate' => false
+                'autoCreate' => true
             ]);
             
             $evolutionUpdated = $updateResponse->successful();
         }
         
-        // 5. Limpiar cach�
+        // 5. Limpiar caché
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('?? Inbox renombrado', [
+        Log::info('✅ Inbox renombrado', [
             'old_name' => $oldName,
             'new_name' => $correctInboxName,
             'inbox_id' => $existingInbox->id
