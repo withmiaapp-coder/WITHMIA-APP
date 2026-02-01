@@ -949,158 +949,114 @@ export default function Entrenamiento({
                 </div>
               ) : (
                 <>
-                  {/* Sección 1: Desbloqueo del Bot */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      🔓 Desbloquear Bot (Tú escribes)
-                    </h4>
-                    <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <Key className="w-4 h-4 text-violet-600" />
-                        Palabra clave para reactivar
-                      </label>
+                  {/* Grid 2 columnas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Col 1: Desbloquear Bot */}
+                    <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
+                      <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
+                        🔓 Desbloquear Bot
+                      </h4>
                       <input
                         type="text"
                         value={botConfig.unlock_keyword}
                         onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase() })}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         placeholder="BOT"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Cuando <strong>tú</strong> escribes esta palabra, el bot se reactiva inmediatamente.
-                      </p>
+                      <p className="mt-1 text-[10px] text-gray-500">Tú escribes → bot se reactiva</p>
                     </div>
-                  </div>
 
-                  {/* Sección 2: Cliente Pide Humano */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      🙋 Cliente Pide Humano
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <Key className="w-4 h-4 text-orange-600" />
-                          Palabra para pedir humano
-                        </label>
-                        <input
-                          type="text"
-                          value={botConfig.human_keyword}
-                          onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase() })}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
-                          placeholder="HUMANO"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                          Cuando el <strong>cliente</strong> escribe esta palabra, el bot se pausa.
-                        </p>
-                      </div>
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <Clock className="w-4 h-4 text-orange-600" />
-                          Tiempo de pausa
-                        </label>
-                        <div className="mb-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-100">
-                          <span className="text-sm font-medium text-orange-700">
-                            ⏱️ {botConfig.human_block_duration >= 3600 
-                              ? `${Math.floor(botConfig.human_block_duration / 3600)}h ${Math.floor((botConfig.human_block_duration % 3600) / 60)}min`
-                              : botConfig.human_block_duration >= 60
-                                ? `${Math.floor(botConfig.human_block_duration / 60)} minutos`
-                                : `${botConfig.human_block_duration} segundos`
-                            }
-                          </span>
-                        </div>
+                    {/* Col 2: Cliente Pide Humano - Palabra */}
+                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                      <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
+                        🙋 Pedir Humano
+                      </h4>
+                      <input
+                        type="text"
+                        value={botConfig.human_keyword}
+                        onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
+                        placeholder="HUMANO"
+                      />
+                      <p className="mt-1 text-[10px] text-gray-500">Cliente escribe → bot se pausa</p>
+                    </div>
+
+                    {/* Col 1: Tiempo bloqueo humano */}
+                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                      <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
+                        ⏱️ Pausa por Humano
+                      </h4>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
                           value={botConfig.human_block_duration}
                           onChange={(e) => setBotConfig({ ...botConfig, human_block_duration: parseInt(e.target.value) || 600 })}
                           min={60}
                           max={86400}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
                         />
-                        <p className="mt-1 text-xs text-gray-500">
-                          Tiempo que el bot permanece en pausa. (1 min - 24 hrs)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sección 3: Empresa Responde */}
-                  <div className="border-b border-gray-200 pb-4">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      💬 Cuando Tú Respondes
-                    </h4>
-                    <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <Shield className="w-4 h-4 text-violet-600" />
-                        Tiempo de bloqueo
-                      </label>
-                      <div className="mb-2 px-3 py-2 bg-violet-50 rounded-lg border border-violet-100">
-                        <span className="text-sm font-medium text-violet-700">
-                          ⏱️ {botConfig.block_duration >= 3600 
-                            ? `${Math.floor(botConfig.block_duration / 3600)}h ${Math.floor((botConfig.block_duration % 3600) / 60)}min`
-                            : botConfig.block_duration >= 60
-                              ? `${Math.floor(botConfig.block_duration / 60)} minutos`
-                              : `${botConfig.block_duration} segundos`
-                          }
+                        <span className="text-xs text-orange-700 whitespace-nowrap">
+                          {botConfig.human_block_duration >= 60 ? `${Math.floor(botConfig.human_block_duration / 60)}m` : `${botConfig.human_block_duration}s`}
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        value={botConfig.block_duration}
-                        onChange={(e) => setBotConfig({ ...botConfig, block_duration: parseInt(e.target.value) || 600 })}
-                        min={60}
-                        max={86400}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Cuando <strong>tú respondes</strong> (teléfono, Chatwoot o app), el bot se pausa por este tiempo. (1 min - 24 hrs)
-                      </p>
                     </div>
-                  </div>
 
-                  {/* Sección 4: Tiempos del Bot */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      ⚡ Comportamiento del Bot
-                    </h4>
-                    <div className="space-y-4">
-                      {/* Buffer Wait Time */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <Clock className="w-4 h-4 text-violet-600" />
-                          Tiempo de espera buffer (segundos)
-                        </label>
+                    {/* Col 2: Tiempo bloqueo empresa */}
+                    <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
+                      <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
+                        💬 Tú Respondes
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={botConfig.block_duration}
+                          onChange={(e) => setBotConfig({ ...botConfig, block_duration: parseInt(e.target.value) || 600 })}
+                          min={60}
+                          max={86400}
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
+                        />
+                        <span className="text-xs text-violet-700 whitespace-nowrap">
+                          {botConfig.block_duration >= 60 ? `${Math.floor(botConfig.block_duration / 60)}m` : `${botConfig.block_duration}s`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Col 1: Buffer */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                        ⏳ Buffer Espera
+                      </h4>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
                           value={botConfig.buffer_wait_time}
                           onChange={(e) => setBotConfig({ ...botConfig, buffer_wait_time: parseInt(e.target.value) || 7 })}
                           min={1}
                           max={60}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         />
-                        <p className="mt-1 text-xs text-gray-500">
-                          Espera que el cliente termine de escribir antes de responder. (1-60 seg)
-                        </p>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.buffer_wait_time}s</span>
                       </div>
+                      <p className="mt-1 text-[10px] text-gray-500">Espera antes de responder</p>
+                    </div>
 
-                      {/* Humanize Wait Time */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <Clock className="w-4 h-4 text-violet-600" />
-                          Demora de humanización (segundos)
-                        </label>
+                    {/* Col 2: Humanización */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                        🤖 Humanización
+                      </h4>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
                           value={botConfig.humanize_wait_time}
                           onChange={(e) => setBotConfig({ ...botConfig, humanize_wait_time: parseInt(e.target.value) || 2 })}
                           min={1}
                           max={30}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         />
-                        <p className="mt-1 text-xs text-gray-500">
-                          Pausa entre mensajes para parecer más humano. (1-30 seg)
-                        </p>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.humanize_wait_time}s</span>
                       </div>
+                      <p className="mt-1 text-[10px] text-gray-500">Pausa entre mensajes</p>
                     </div>
                   </div>
                 </>
