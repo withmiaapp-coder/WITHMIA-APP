@@ -1052,6 +1052,14 @@ class EvolutionApiController extends Controller
     /**
      * Manejar evento de nuevo mensaje
      */
+    /**
+     * Manejar mensaje entrante de Evolution API
+     * 
+     * ARQUITECTURA SIMPLIFICADA (v2):
+     * - Evolution API crea contactos/conversaciones en Chatwoot (integración nativa)
+     * - Este webhook SOLO notifica al frontend vía Reverb
+     * - NO duplicamos la creación de contactos/conversaciones
+     */
     private function handleMessageUpsert(array $data, string $instanceName): void
     {
         $phoneNumber = $data['key']['remoteJid'] ?? null;
@@ -1080,7 +1088,6 @@ class EvolutionApiController extends Controller
         }
         
         // 🚫 FILTRO DE MENSAJES DE SISTEMA
-        // Ignorar mensajes de conexión, protocolo, etc.
         if ($this->isSystemMessage($messageText, $data)) {
             Log::info('🔇 Mensaje de sistema ignorado', [
                 'message' => substr($messageText, 0, 50),
@@ -1099,7 +1106,6 @@ class EvolutionApiController extends Controller
         ]);
 
         // 🛑 NO notificar si el mensaje es de nosotros (fromMe: true)
-        // Esto evita la notificación falsa de "nuevo mensaje" cuando TÚ envías
         if ($fromMe) {
             Log::info('⏭️ Mensaje enviado por nosotros, no se notifica', [
                 'phone' => $cleanPhone,
@@ -1108,157 +1114,51 @@ class EvolutionApiController extends Controller
             return;
         }
 
-        // 🔄 CREAR CONVERSACIÓN EN CHATWOOT
-        $conversation = null; // Inicializar para que esté disponible en el broadcast
-        $inboxId = 1; // Fallback por defecto
-        try {
-            $chatwootBaseUrl = env('CHATWOOT_URL', 'http://chatwoot-rails-1:3000');
-            $chatwootToken = env('CHATWOOT_TOKEN', 'UV3DeqL7tSiQzRMQcAgHNGVR');
-            // $instanceName ya está disponible como parámetro de la función
-            
-            // Buscar inbox en Chatwoot basado en el nombre de la instancia
-            $foundInbox = false;
-            if ($instanceName) {
-                try {
-                    $inboxesResponse = Http::withHeaders([
-                        'api_access_token' => $chatwootToken
-                    ])->get("$chatwootBaseUrl/api/v1/accounts/1/inboxes");
-                    
-                    if ($inboxesResponse->successful()) {
-                        $inboxes = $inboxesResponse->json()['payload'] ?? [];
-                        Log::info("📦 Inboxes disponibles", ['count' => count($inboxes), 'inboxes' => array_map(fn($i) => ['id' => $i['id'], 'name' => $i['name']], $inboxes)]);
-                        
-                        foreach ($inboxes as $inbox) {
-                            if (str_contains($inbox['name'] ?? '', $instanceName)) {
-                                $inboxId = $inbox['id'];
-                                $foundInbox = true;
-                                Log::info("✅ Inbox encontrado para $instanceName", ['inbox_id' => $inboxId]);
-                                break;
-                            }
-                        }
-                        
-                        // Si no se encontró por nombre, usar el primer inbox disponible
-                        if (!$foundInbox && count($inboxes) > 0) {
-                            $inboxId = $inboxes[0]['id'];
-                            $foundInbox = true;
-                            Log::warning("⚠️ Inbox no encontrado por nombre, usando primer inbox disponible", ['inbox_id' => $inboxId, 'inbox_name' => $inboxes[0]['name']]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::error("Error buscando inbox: " . $e->getMessage());
-                }
-                
-                // Si aún no hay inbox, intentar obtener del usuario
-                if (!$foundInbox) {
-                    try {
-                        $user = \App\Models\User::where('company_slug', $instanceName)->first();
-                        if ($user && $user->chatwoot_inbox_id) {
-                            $inboxId = $user->chatwoot_inbox_id;
-                            $foundInbox = true;
-                            Log::info("✅ Inbox obtenido del usuario", ['inbox_id' => $inboxId]);
-                        }
-                    } catch (\Exception $e) {
-                        Log::error("Error obteniendo inbox del usuario: " . $e->getMessage());
-                    }
-                }
-            }
-
-            // Log del inbox_id final
-            if (!$foundInbox) {
-                Log::warning("⚠️ No se encontró inbox_id, usando valor por defecto: 1");
-            }
-            
-            // 1. Buscar o crear contacto
-            $contactResponse = Http::withHeaders([
-                'api_access_token' => $chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->post("$chatwootBaseUrl/api/v1/accounts/1/contacts", [
-                'inbox_id' => $inboxId,
-                'name' => $cleanPhone,
-                'phone_number' => '+' . $cleanPhone
-            ]);
-            
-            $contact = null;
-            if ($contactResponse->successful()) {
-                $contact = $contactResponse->json()['payload'] ?? $contactResponse->json();
-                Log::info('??? Contacto creado en Chatwoot', ['contact_id' => $contact['id'] ?? null]);
-            } else {
-                // Intentar buscar el contacto
-                $searchResponse = Http::withHeaders([
-                    'api_access_token' => $chatwootToken
-                ])->get("$chatwootBaseUrl/api/v1/accounts/1/contacts/search", [
-                    'q' => $cleanPhone
-                ]);
-                
-                if ($searchResponse->successful()) {
-                    $contacts = $searchResponse->json()['payload'] ?? [];
-                    $contact = $contacts[0] ?? null;
-                    Log::info('??? Contacto encontrado', ['contact_id' => $contact['id'] ?? null]);
-                }
-            }
-            
-              if ($contact && isset($contact['id'])) {
-                  $contactId = $contact['id'];
-                  
-                  // 2. ???? BUSCAR POR CONTACT_ID (FIX - mismo n??mero = mismo ID conversaci??n)
-                  $conversation = null;
-                  
-                  $existingConvResponse = Http::withHeaders([
-                      'api_access_token' => $chatwootToken
-                  ])->get("$chatwootBaseUrl/api/v1/accounts/1/contacts/$contactId/conversations");
-
-                  if ($existingConvResponse->successful()) {
-                      $contactConversations = $existingConvResponse->json()['payload'] ?? [];
-                      
-                      foreach ($contactConversations as $conv) {
-                          if (isset($conv['inbox_id']) && $conv['inbox_id'] == $inboxId && 
-                              isset($conv['status']) && $conv['status'] === 'open') {
-                              $conversation = $conv;
-                              Log::info('??? MISMA CONVERSACI??N (mismo ID)', [
-                                  'conv_id' => $conversation['id'],
-                                  'contact_id' => $contactId
-                              ]);
-                              break;
-                          }
-                      }
-                  }
-
-                  if (!$conversation) {
-                      $convResponse = Http::withHeaders([
-                          'api_access_token' => $chatwootToken
-                      ])->post("$chatwootBaseUrl/api/v1/accounts/1/conversations", [
-                          'inbox_id' => $inboxId,
-                          'contact_id' => $contactId,
-                          'status' => 'open'
-                      ]);
-
-                      if ($convResponse->successful()) {
-                          $conversation = $convResponse->json();
-                          Log::info('??? Conversaci??n NUEVA creada', ['conv_id' => $conversation['id'] ?? null]);
-                      }
-                  }
-
-                  if ($conversation && isset($conversation['id'])) {
-                      Http::withHeaders([
-                          'api_access_token' => $chatwootToken
-                      ])->post("$chatwootBaseUrl/api/v1/accounts/1/conversations/{$conversation['id']}/messages", [
-                          'content' => $messageText,
-                          'message_type' => 'incoming'
-                      ]);
-
-                      Log::info('??? Mensaje creado en Chatwoot');
-                  }
-              }
-        } catch (\Exception $e) {
-            Log::error('??? Error con Chatwoot', ['error' => $e->getMessage()]);
-        }
+        // 🏢 OBTENER COMPANY Y CHATWOOT ACCOUNT_ID DESDE LA INSTANCIA
+        // Esto asegura que cada empresa reciba sus propios mensajes
+        $accountId = 1; // Fallback
+        $inboxId = null;
+        $companyId = null;
         
-        // Broadcast: notificar nuevo mensaje entrante
         try {
-            // Obtener el ID de conversación de Chatwoot si lo tenemos
-            $conversationId = $conversation['id'] ?? null;
+            // Buscar la instancia en nuestra BD
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->where('is_active', 1)
+                ->first();
             
-            // 🔊 Broadcast NewMessageReceived para que el frontend reciba el mensaje
+            if ($instance) {
+                $companyId = $instance->company_id;
+                $inboxId = $instance->chatwoot_inbox_id ?? null;
+                
+                // Obtener el chatwoot_account_id de la empresa
+                $company = DB::table('companies')
+                    ->where('id', $companyId)
+                    ->first();
+                
+                if ($company && $company->chatwoot_account_id) {
+                    $accountId = $company->chatwoot_account_id;
+                    Log::info('🏢 Account ID obtenido de company', [
+                        'instance' => $instanceName,
+                        'company_id' => $companyId,
+                        'company_name' => $company->name,
+                        'chatwoot_account_id' => $accountId
+                    ]);
+                }
+            } else {
+                Log::warning('⚠️ Instancia no encontrada en BD, usando account_id por defecto', [
+                    'instance' => $instanceName
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo company/account_id', ['error' => $e->getMessage()]);
+        }
+
+        // 📡 BROADCAST: Notificar al frontend vía Reverb
+        // Evolution API ya creó la conversación en Chatwoot (integración nativa)
+        // Solo necesitamos notificar al frontend para que refresque
+        try {
+            // 🔊 Broadcast NewMessageReceived
             broadcast(new \App\Events\NewMessageReceived(
                 [
                     'content' => $messageText,
@@ -1266,15 +1166,16 @@ class EvolutionApiController extends Controller
                     'from_me' => $fromMe,
                     'instance' => $instanceName,
                     'timestamp' => now()->toIso8601String(),
+                    'company_id' => $companyId,
                 ],
-                $conversationId,
+                null, // conversation_id - Chatwoot lo maneja
                 $inboxId,
-                1   // accountId
-            )); // Sin ->toOthers() - webhook no tiene socket asociado
+                $accountId
+            ));
 
             Log::info('📡 NewMessageReceived BROADCAST enviado', [
+                'account_id' => $accountId,
                 'inbox_id' => $inboxId,
-                'conversation_id' => $conversationId,
                 'phone' => $cleanPhone,
                 'message_preview' => substr($messageText, 0, 50)
             ]);
@@ -1287,13 +1188,15 @@ class EvolutionApiController extends Controller
                     'message' => $messageText,
                     'from_me' => $fromMe,
                     'instance' => $instanceName,
-                    'should_refresh' => true
+                    'should_refresh' => true,
+                    'company_id' => $companyId,
                 ],
                 $inboxId,
-                1
-            )); // Sin ->toOthers()
+                $accountId
+            ));
 
             Log::info('📡 ConversationUpdated BROADCAST enviado', [
+                'account_id' => $accountId,
                 'inbox_id' => $inboxId,
                 'action' => 'new_message'
             ]);
@@ -1310,34 +1213,62 @@ class EvolutionApiController extends Controller
     }
 
     /**
-     * Manejar actualizaci??n de mensaje (le??do, entregado, etc)
+     * Manejar actualización de mensaje (leído, entregado, etc)
      */
     private function handleMessageUpdate(array $data, string $instanceName): void
     {
         $fromMe = $data['fromMe'] ?? false;
 
-        Log::info('???? Actualizaci??n de mensaje', [
+        Log::info('📝 Actualización de mensaje', [
             'data' => $data,
             'instance' => $instanceName,
             'from_me' => $fromMe
         ]);
 
-        // ???? NO notificar si el mensaje es de nosotros (fromMe: true)
+        // 🛑 NO notificar si el mensaje es de nosotros (fromMe: true)
         if ($fromMe) {
-            Log::info('?????? Actualizaci??n de mensaje propio, no se notifica', [
+            Log::info('⏭️ Actualización de mensaje propio, no se notifica', [
                 'from_me' => true
             ]);
             return;
         }
 
+        // 🏢 OBTENER ACCOUNT_ID CORRECTO DESDE LA INSTANCIA
+        $accountId = 1;
+        $inboxId = null;
+        
+        try {
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->where('is_active', 1)
+                ->first();
+            
+            if ($instance) {
+                $inboxId = $instance->chatwoot_inbox_id ?? null;
+                
+                $company = DB::table('companies')
+                    ->where('id', $instance->company_id)
+                    ->first();
+                
+                if ($company && $company->chatwoot_account_id) {
+                    $accountId = $company->chatwoot_account_id;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo account_id para update', ['error' => $e->getMessage()]);
+        }
+
         try {
             broadcast(new ConversationUpdated(
-                $data,  // conversation data
-                5,      // inboxId
-                1       // accountId
+                $data,
+                $inboxId,
+                $accountId
             ))->toOthers();
 
-            Log::info('??? Evento ConversationUpdated broadcasted');
+            Log::info('✅ Evento ConversationUpdated broadcasted', [
+                'account_id' => $accountId,
+                'inbox_id' => $inboxId
+            ]);
         } catch (\Exception $e) {
             Log::error('Error broadcasting update event', [
                 'error' => $e->getMessage(),
