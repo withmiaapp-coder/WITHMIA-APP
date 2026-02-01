@@ -3990,18 +3990,6 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
             ], 400);
         }
         
-        // Obtener el dueño de la empresa para notificaciones
-        $owner = $company->user;
-        $ownerPhone = null;
-        if ($owner && $owner->phone) {
-            // Formatear teléfono: quitar + y espacios
-            $ownerPhone = preg_replace('/[^0-9]/', '', $owner->phone);
-            // Si tiene country code, agregar
-            if ($owner->phone_country && !str_starts_with($ownerPhone, $owner->phone_country)) {
-                $ownerPhone = preg_replace('/[^0-9]/', '', $owner->phone_country) . $ownerPhone;
-            }
-        }
-        
         // Respuesta 100% dinámica
         return response()->json([
             'success' => true,
@@ -4010,10 +3998,6 @@ Route::get('/n8n/company-config-by-inbox/{inboxName}', function ($inboxName) {
             'company_name' => $company->name,
             'assistant_name' => $company->assistant_name ?? 'MIA',
             'ai_prompt' => $company->settings['ai_prompt'] ?? null,
-            // Dueño - para notificaciones
-            'owner_phone' => $ownerPhone,
-            'owner_name' => $owner?->name,
-            'owner_email' => $owner?->email,
             // Qdrant
             'collection_name' => 'company_' . $company->slug . '_knowledge',
             // Evolution API

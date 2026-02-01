@@ -180,6 +180,18 @@ class BotConfigController extends Controller
             'block_duration' => 'nullable|integer|min:60|max:86400', // #3: Tiempo bloqueo cuando empresa responde
             'buffer_wait_time' => 'nullable|integer|min:1|max:60',
             'humanize_wait_time' => 'nullable|integer|min:1|max:30',
+        ], [
+            // Mensajes de error personalizados en español
+            'unlock_keyword.max' => 'La palabra secreta no puede tener más de 50 caracteres',
+            'human_keyword.max' => 'La palabra de ayuda no puede tener más de 50 caracteres',
+            'human_block_duration.min' => 'El tiempo mínimo de espera es 60 segundos (1 minuto)',
+            'human_block_duration.max' => 'El tiempo máximo de espera es 86400 segundos (24 horas)',
+            'block_duration.min' => 'El tiempo mínimo de pausa es 60 segundos (1 minuto)',
+            'block_duration.max' => 'El tiempo máximo de pausa es 86400 segundos (24 horas)',
+            'buffer_wait_time.min' => 'El tiempo mínimo de espera al cliente es 1 segundo',
+            'buffer_wait_time.max' => 'El tiempo máximo de espera al cliente es 60 segundos',
+            'humanize_wait_time.min' => 'El tiempo mínimo de simulación es 1 segundo',
+            'humanize_wait_time.max' => 'El tiempo máximo de simulación es 30 segundos',
         ]);
 
         try {

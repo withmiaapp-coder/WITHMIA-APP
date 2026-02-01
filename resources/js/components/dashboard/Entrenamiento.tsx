@@ -171,11 +171,22 @@ export default function Entrenamiento({
       if (data.success) {
         setShowBotConfig(false);
       } else {
-        alert("Error al guardar: " + (data.error || JSON.stringify(data)));
+        // Extraer mensaje de error más amigable
+        let errorMsg = "Error desconocido";
+        if (data.message) {
+          errorMsg = data.message;
+        } else if (data.errors) {
+          // Validación de Laravel - obtener primer error
+          const firstField = Object.keys(data.errors)[0];
+          errorMsg = data.errors[firstField]?.[0] || "Error de validación";
+        } else if (data.error) {
+          errorMsg = data.error;
+        }
+        alert("⚠️ " + errorMsg);
       }
     } catch (error) {
       console.error("Error saving bot config:", error);
-      alert("Error al guardar la configuración: " + (error as Error).message);
+      alert("❌ Error al guardar la configuración. Intenta nuevamente.");
     } finally {
       setSavingBotConfig(false);
     }
@@ -959,7 +970,8 @@ export default function Entrenamiento({
                       <input
                         type="text"
                         value={botConfig.unlock_keyword}
-                        onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase() })}
+                        onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase().slice(0, 50) })}
+                        maxLength={50}
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         placeholder="BOT"
                       />
@@ -974,7 +986,8 @@ export default function Entrenamiento({
                       <input
                         type="text"
                         value={botConfig.human_keyword}
-                        onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase() })}
+                        onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase().slice(0, 50) })}
+                        maxLength={50}
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
                         placeholder="HUMANO"
                       />
@@ -990,7 +1003,10 @@ export default function Entrenamiento({
                         <input
                           type="number"
                           value={botConfig.human_block_duration}
-                          onChange={(e) => setBotConfig({ ...botConfig, human_block_duration: parseInt(e.target.value) || 600 })}
+                          onChange={(e) => {
+                            const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
+                            setBotConfig({ ...botConfig, human_block_duration: val });
+                          }}
                           min={60}
                           max={86400}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
@@ -999,7 +1015,7 @@ export default function Entrenamiento({
                           {botConfig.human_block_duration >= 60 ? `${Math.floor(botConfig.human_block_duration / 60)}m` : `${botConfig.human_block_duration}s`}
                         </span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Tiempo para que atiendas</p>
+                      <p className="mt-1 text-[10px] text-gray-500">1min - 24hrs (en segundos)</p>
                     </div>
 
                     {/* Col 2: Pausa cuando tú tomas el chat */}
@@ -1011,7 +1027,10 @@ export default function Entrenamiento({
                         <input
                           type="number"
                           value={botConfig.block_duration}
-                          onChange={(e) => setBotConfig({ ...botConfig, block_duration: parseInt(e.target.value) || 600 })}
+                          onChange={(e) => {
+                            const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
+                            setBotConfig({ ...botConfig, block_duration: val });
+                          }}
                           min={60}
                           max={86400}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
@@ -1020,7 +1039,7 @@ export default function Entrenamiento({
                           {botConfig.block_duration >= 60 ? `${Math.floor(botConfig.block_duration / 60)}m` : `${botConfig.block_duration}s`}
                         </span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Bot en pausa mientras chateas</p>
+                      <p className="mt-1 text-[10px] text-gray-500">1min - 24hrs (en segundos)</p>
                     </div>
 
                     {/* Col 1: Espera que termine de escribir */}
@@ -1032,14 +1051,17 @@ export default function Entrenamiento({
                         <input
                           type="number"
                           value={botConfig.buffer_wait_time}
-                          onChange={(e) => setBotConfig({ ...botConfig, buffer_wait_time: parseInt(e.target.value) || 7 })}
+                          onChange={(e) => {
+                            const val = Math.min(60, Math.max(1, parseInt(e.target.value) || 1));
+                            setBotConfig({ ...botConfig, buffer_wait_time: val });
+                          }}
                           min={1}
                           max={60}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         />
                         <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.buffer_wait_time}s</span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Que termine de escribir</p>
+                      <p className="mt-1 text-[10px] text-gray-500">1-60 segundos</p>
                     </div>
 
                     {/* Col 2: Simula que escribe */}
@@ -1051,14 +1073,17 @@ export default function Entrenamiento({
                         <input
                           type="number"
                           value={botConfig.humanize_wait_time}
-                          onChange={(e) => setBotConfig({ ...botConfig, humanize_wait_time: parseInt(e.target.value) || 2 })}
+                          onChange={(e) => {
+                            const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 1));
+                            setBotConfig({ ...botConfig, humanize_wait_time: val });
+                          }}
                           min={1}
                           max={30}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         />
                         <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.humanize_wait_time}s</span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Pausa para parecer humano</p>
+                      <p className="mt-1 text-[10px] text-gray-500">1-30 segundos</p>
                     </div>
                   </div>
                 </>
