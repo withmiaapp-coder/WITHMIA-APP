@@ -406,23 +406,38 @@ class EvolutionApiController extends Controller
         $result = $this->evolutionApi->getStatus($instanceName);
         Log::info('WhatsApp Status Result', ['result' => $result]);
 
-        // Broadcast status change to all connected clients
+        // Broadcast status change to all connected clients (CON RATE LIMITING)
         if ($result['success'] ?? false) {
             try {
                 $user = $request->user();
+                $state = $result['state'] ?? 'unknown';
+                
                 if ($user && $user->company_slug) {
-                    broadcast(new WhatsAppStatusChanged(
-                        $user->company_slug,
-                        $instanceName,
-                        $result['state'] ?? 'unknown',
-                        $result['qrCode'] ?? null,
-                        $result['profileInfo'] ?? null
-                    ));
+                    // 🔒 RATE LIMITING: Solo broadcast si el estado cambió
+                    $cacheKey = "status_broadcast_{$instanceName}";
+                    $lastBroadcastState = Cache::get($cacheKey);
+                    
+                    if ($lastBroadcastState !== $state) {
+                        Cache::put($cacheKey, $state, 30); // Cache por 30 segundos
+                        
+                        broadcast(new WhatsAppStatusChanged(
+                            $user->company_slug,
+                            $instanceName,
+                            $state,
+                            $result['qrCode'] ?? null,
+                            $result['profileInfo'] ?? null
+                        ));
+                        
+                        Log::info('📡 WhatsAppStatusChanged broadcast (estado cambió)', [
+                            'instance' => $instanceName,
+                            'state' => $state,
+                            'previous' => $lastBroadcastState
+                        ]);
+                    }
                 }
                 
                 // 🔄 AUTO-SYNC: Cuando la conexión está activa, sincronizar el inbox_id de Chatwoot
                 // Esto es CRÍTICO para que la app lea del inbox correcto después de reconectar
-                $state = $result['state'] ?? 'unknown';
                 if ($user && $state === 'open') {
                     $this->syncChatwootInboxIfNeeded($instanceName, $user);
                     
