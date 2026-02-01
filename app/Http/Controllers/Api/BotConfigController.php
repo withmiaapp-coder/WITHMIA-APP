@@ -17,8 +17,8 @@ class BotConfigController extends Controller
 
     public function __construct()
     {
-        $this->n8nUrl = config('services.n8n.url', 'https://n8n-production-00dd.up.railway.app');
-        $this->n8nApiKey = config('services.n8n.api_key', '');
+        $this->n8nUrl = config('services.n8n.url') ?? 'https://n8n-production-00dd.up.railway.app';
+        $this->n8nApiKey = config('services.n8n.api_key') ?? '';
     }
 
     /**

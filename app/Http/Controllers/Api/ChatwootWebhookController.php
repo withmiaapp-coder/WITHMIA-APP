@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Services\ConversationDeduplicationService;
+use App\Helpers\PhoneNormalizer;
 
 class ChatwootWebhookController extends Controller
 {
@@ -186,8 +187,8 @@ class ChatwootWebhookController extends Controller
 
             // Si no viene identifier, consultarlo de la API
             if ($conversationId && !$identifier) {
-                $chatwootUrl = env('CHATWOOT_URL', 'http://127.0.0.1:3000');
-                $chatwootToken = env('CHATWOOT_TOKEN');
+                $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
+                $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
                 
                 $convResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
                     ->get($chatwootUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId);
@@ -207,10 +208,10 @@ class ChatwootWebhookController extends Controller
                 return true; // Permitir que continúe
             }
 
-            // Extraer número base (sin @lid ni @s.whatsapp.net)
-            $phoneBase = $this->extractPhoneBase($identifier);
-            $isLid = strpos($identifier, '@lid') !== false;
-            $isRealNumber = strpos($identifier, '@s.whatsapp.net') !== false;
+            // Extraer número base usando helper centralizado
+            $phoneBase = PhoneNormalizer::normalize($identifier);
+            $isLid = PhoneNormalizer::isLid($identifier);
+            $isRealNumber = PhoneNormalizer::isRealNumber($identifier);
 
             Log::info('🔍 Analizando conversación', [
                 'conversation_id' => $conversationId,
@@ -220,12 +221,42 @@ class ChatwootWebhookController extends Controller
                 'is_real_number' => $isRealNumber
             ]);
 
-            // Buscar en Cache si ya existe conversación para este número
+            // Validar phoneBase no vacío
+            if (empty($phoneBase)) {
+                Log::warning('⚠️ phoneBase inválido, permitiendo conversación', [
+                    'conversation_id' => $conversationId,
+                    'identifier' => $identifier,
+                    'phone_base' => $phoneBase
+                ]);
+                return true;
+            }
+
+            // 🔒 OPERACIÓN ATÓMICA: Usar Cache::add() para prevenir race conditions
+            // Cache::add() solo guarda si la key NO existe (atómico)
             $cacheKey = "conversation:phone:{$phoneBase}:{$inboxId}";
+            
+            // Intentar registrar esta conversación atómicamente
+            $wasAdded = Cache::add($cacheKey, $conversationId, now()->addDays(7));
+            
+            if ($wasAdded) {
+                // ✅ Primera conversación para este número - registrada exitosamente
+                Cache::put("conversation:id:{$conversationId}", $phoneBase, now()->addDays(7));
+                Log::info('✅ Primera conversación para este número - Registrada atómicamente', [
+                    'conversation_id' => $conversationId,
+                    'phone_base' => $phoneBase
+                ]);
+                return true;
+            }
+            
+            // Ya existe una conversación - verificar si es la misma o diferente
             $existingConversationId = Cache::get($cacheKey);
 
-            if ($existingConversationId && $existingConversationId != $conversationId) {
-                // YA EXISTE UNA CONVERSACIÓN PARA ESTE NÚMERO
+            if ($existingConversationId == $conversationId) {
+                // Es la misma conversación, permitir
+                return true;
+            }
+            
+            // YA EXISTE UNA CONVERSACIÓN DIFERENTE PARA ESTE NÚMERO
                 Log::info('🚨 DUPLICADO DETECTADO', [
                     'existing_conversation_id' => $existingConversationId,
                     'new_conversation_id' => $conversationId,
@@ -233,8 +264,8 @@ class ChatwootWebhookController extends Controller
                 ]);
 
                 // Obtener información de la conversación existente
-                $chatwootUrl = env('CHATWOOT_URL', 'http://127.0.0.1:3000');
-                $chatwootToken = env('CHATWOOT_TOKEN');
+                $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
+                $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
                 
                 $existingConvResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
                     ->get($chatwootUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $existingConversationId);
@@ -242,8 +273,8 @@ class ChatwootWebhookController extends Controller
                 if ($existingConvResponse->successful()) {
                     $existingConvData = $existingConvResponse->json();
                     $existingIdentifier = $existingConvData['meta']['sender']['identifier'] ?? '';
-                    $existingIsLid = strpos($existingIdentifier, '@lid') !== false;
-                    $existingIsRealNumber = strpos($existingIdentifier, '@s.whatsapp.net') !== false;
+                    $existingIsLid = PhoneNormalizer::isLid($existingIdentifier);
+                    $existingIsRealNumber = PhoneNormalizer::isRealNumber($existingIdentifier);
 
                     Log::info('📊 Comparando conversaciones', [
                         'existing' => [
@@ -299,17 +330,6 @@ class ChatwootWebhookController extends Controller
                     // Si archivamos la nueva, NO propagar al frontend
                     return !$shouldArchiveNew;
                 }
-            } else {
-                // NO HAY DUPLICADO - Registrar en Cache
-                Log::info('✅ Primera conversación para este número - Registrando en Cache', [
-                    'conversation_id' => $conversationId,
-                    'phone_base' => $phoneBase,
-                    'cache_key' => $cacheKey
-                ]);
-
-                Cache::put($cacheKey, $conversationId, now()->addDays(7));
-                Cache::put("conversation:id:{$conversationId}", $phoneBase, now()->addDays(7));
-            }
 
             return true; // Permitir que continúe
 
@@ -328,8 +348,8 @@ class ChatwootWebhookController extends Controller
     private function archiveConversation($conversationId, $accountId)
     {
         try {
-            $chatwootUrl = env('CHATWOOT_URL', 'http://127.0.0.1:3000');
-            $chatwootToken = env('CHATWOOT_TOKEN');
+            $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
+            $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
             
             $response = Http::withHeaders([
                 'api_access_token' => $chatwootToken
@@ -362,18 +382,13 @@ class ChatwootWebhookController extends Controller
 
     /**
      * Extraer número base del identifier
-     * Ejemplos:
-     * - "5491112345678@lid" -> "5491112345678"
-     * - "5491112345678@s.whatsapp.net" -> "5491112345678"
-     * - "5491112345678" -> "5491112345678"
+     * Usa el helper centralizado para consistencia en toda la app.
+     * 
+     * @deprecated Use PhoneNormalizer::normalize() directamente
      */
     private function extractPhoneBase($identifier)
     {
-        // Remover @lid y @s.whatsapp.net
-        $phone = preg_replace('/@(lid|s\.whatsapp\.net)$/', '', $identifier);
-        // Limpiar cualquier carácter no numérico
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-        return $phone;
+        return PhoneNormalizer::normalize($identifier) ?? '';
     }
 
     /**

@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\EvolutionApiService;
 use App\Services\ConversationDeduplicationService;
-use App\Services\ConversationDeduplicationServiceV2;
 
 class ChatwootController extends Controller
 {
@@ -20,7 +19,6 @@ class ChatwootController extends Controller
     private $userId;
     private EvolutionApiService $evolutionApi;
     private ConversationDeduplicationService $deduplicationService;
-    private ConversationDeduplicationServiceV2 $deduplicationServiceV2;
 
     /**
      * Convertir timestamp UTC de la BD a Unix timestamp
@@ -35,13 +33,11 @@ class ChatwootController extends Controller
 
     public function __construct(
         EvolutionApiService $evolutionApi, 
-        ConversationDeduplicationService $deduplicationService,
-        ConversationDeduplicationServiceV2 $deduplicationServiceV2
+        ConversationDeduplicationService $deduplicationService
     )
     {
         $this->evolutionApi = $evolutionApi;
         $this->deduplicationService = $deduplicationService;
-        $this->deduplicationServiceV2 = $deduplicationServiceV2;
         
         // CRÍTICO: Asegurar que el middleware 'auth' se ejecute ANTES del constructor
         $this->middleware(function ($request, $next) {
@@ -266,23 +262,22 @@ class ChatwootController extends Controller
                 'filtered_evolutionapi' => count($conversationsFromDb) - count($allConversations)
             ]);
 
-            // 🔗 AUTO-FUSIÓN V2: Fusionar duplicados usando el servicio mejorado
-            // Usa phone_number normalizado en lugar de identifier/LID
-            try {
-                $mergeResult = $this->deduplicationServiceV2->autoMergeDuplicates($this->inboxId, $this->accountId);
-                if ($mergeResult['success'] && isset($mergeResult['merged']) && $mergeResult['merged'] > 0) {
-                    Log::info('✅ AUTO-FUSIÓN V2: Conversaciones fusionadas', $mergeResult);
-                    
-                    // Si hubo fusiones, volver a cargar las conversaciones
-                    // para reflejar los cambios (evitar mostrar datos obsoletos)
-                    return $this->getConversations($request);
-                }
-            } catch (\Exception $e) {
-                Log::error('❌ Error en auto-fusión V2', ['error' => $e->getMessage()]);
-            }
-
-            // 🔗 DEDUPLICACIÓN EN MEMORIA: Filtrar duplicados adicionales por phone_number
+            // 🔗 DEDUPLICACIÓN EN MEMORIA: Filtrar duplicados por phone_number
+            // La fusión real se ejecuta en background via MergeDuplicateConversationsJob
+            $originalCount = count($allConversations);
             $allConversations = $this->deduplicateByNormalizedPhone($allConversations);
+            
+            // Si detectamos duplicados en memoria, disparar job de fusión en background
+            // (no bloquea el request actual)
+            if ($originalCount > count($allConversations)) {
+                \App\Jobs\MergeDuplicateConversationsJob::dispatch($this->inboxId, $this->accountId)
+                    ->delay(now()->addSeconds(5)); // Pequeño delay para evitar sobrecarga
+                
+                Log::info('🔄 Job de fusión de duplicados despachado', [
+                    'inbox_id' => $this->inboxId,
+                    'duplicates_found' => $originalCount - count($allConversations)
+                ]);
+            }
 
             // ✅ Devolver estructura esperada por el frontend (SIN CACHE)
             return response()->json([
@@ -293,14 +288,6 @@ class ChatwootController extends Controller
                         'total' => count($allConversations),
                         'from_db' => true
                     ]
-                ]
-            ]);
-
-            // Si no hay conversaciones, devolver array vacío
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'payload' => []
                 ]
             ]);
 
@@ -1296,6 +1283,17 @@ class ChatwootController extends Controller
             Log::error('getAgents Error: ' . $e->getMessage());
             return response()->json(['success' => true, 'data' => []]);
         }
+    }
+
+    /**
+     * Crear un nuevo agente (stub - no implementado)
+     */
+    public function createAgent(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Función no implementada aún'
+        ]);
     }
 
     /**
@@ -2531,7 +2529,7 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            $diagnosis = $this->deduplicationServiceV2->getDuplicatesDiagnosis(
+            $diagnosis = $this->deduplicationService->getDuplicatesDiagnosis(
                 $this->inboxId, 
                 $this->accountId
             );
@@ -2561,7 +2559,7 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            $result = $this->deduplicationServiceV2->autoMergeDuplicates(
+            $result = $this->deduplicationService->autoMergeDuplicates(
                 $this->inboxId,
                 $this->accountId
             );

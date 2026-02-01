@@ -8,14 +8,14 @@ use Illuminate\Support\Facades\Log;
 class ChatwootService
 {
     private string $baseUrl;
-    private string $platformToken;
-    private string $superAdminToken;
+    private ?string $platformToken;
+    private ?string $superAdminToken;
     private int $accountId;
 
     public function __construct()
     {
         $this->baseUrl = rtrim(config('chatwoot.url', 'https://chatwoot-admin.withmia.com'), '/');
-        $this->platformToken = config('chatwoot.platform_token');
+        $this->platformToken = config('chatwoot.platform_token') ?? '';
         $this->superAdminToken = config('chatwoot.super_admin_token') ?? $this->platformToken;
         $this->accountId = (int) config('chatwoot.account_id', 1);
     }

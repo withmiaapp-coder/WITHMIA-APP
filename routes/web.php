@@ -605,16 +605,16 @@ Route::get('/dashboard/{company}/conversaciones', function (Request $request, $c
     */
 });
 
-// Chatwoot API Routes
+// Chatwoot API Routes - CONSOLIDADO: Usar Api\ChatwootController para consistencia
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/api/chatwoot/stats', [App\Http\Controllers\ChatwootController::class, 'getDashboardStats']);
-    Route::get('/api/chatwoot/conversations', [App\Http\Controllers\ChatwootController::class, 'getConversationsV2']);
-    Route::get('/api/chatwoot/conversations/search', [App\Http\Controllers\ChatwootController::class, 'searchConversations']);
-    Route::get('/api/chatwoot/contacts', [App\Http\Controllers\ChatwootController::class, 'getContacts']);
+    Route::get('/api/chatwoot/stats', [App\Http\Controllers\Api\ChatwootController::class, 'getDashboardStats']);
+    Route::get('/api/chatwoot/conversations', [App\Http\Controllers\Api\ChatwootController::class, 'getConversationsV2']);
+    Route::get('/api/chatwoot/conversations/search', [App\Http\Controllers\Api\ChatwootController::class, 'searchConversations']);
+    Route::get('/api/chatwoot/contacts', [App\Http\Controllers\Api\ChatwootController::class, 'getContacts']);
     // Rutas adicionales para funcionalidades completas de Chatwoot
-    Route::get('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\ChatwootController::class, 'getConversationMessages']);
-    Route::post('/api/chatwoot/conversations', [App\Http\Controllers\ChatwootController::class, 'createConversation']);
-    Route::post('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\ChatwootController::class, 'sendMessage']);
+    Route::get('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\Api\ChatwootController::class, 'getConversationMessages']);
+    Route::post('/api/chatwoot/conversations', [App\Http\Controllers\Api\ChatwootController::class, 'createConversation']);
+    Route::post('/api/chatwoot/conversations/{id}/messages', [App\Http\Controllers\Api\ChatwootController::class, 'sendMessage']);
 });
 
 // ============================================
@@ -631,16 +631,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/api/chatwoot/inboxes', [App\Http\Controllers\ChatwootEnterpriseController::class, 'createInbox']);
     
     // AGENTS MANAGEMENT  
-    Route::get('/api/chatwoot/agents', [App\Http\Controllers\TempChatwootController::class, 'getAgents']);
-    Route::post('/api/chatwoot/agents', [App\Http\Controllers\TempChatwootController::class, 'createAgent']);
+    Route::get('/api/chatwoot/agents', [App\Http\Controllers\Api\ChatwootController::class, 'getAgents']);
+    Route::post('/api/chatwoot/agents', [App\Http\Controllers\Api\ChatwootController::class, 'createAgent']);
     
     // TEAMS MANAGEMENT (Enterprise)
     Route::get('/api/chatwoot/teams', [App\Http\Controllers\ChatwootEnterpriseController::class, 'getTeams']);
     Route::post('/api/chatwoot/teams', [App\Http\Controllers\ChatwootEnterpriseController::class, 'createTeam']);
     
     // LABELS MANAGEMENT (Enterprise)
-    Route::get('/api/chatwoot/labels', [App\Http\Controllers\TempChatwootController::class, 'getLabels']);
-    Route::post('/api/chatwoot/labels', [App\Http\Controllers\TempChatwootController::class, 'createLabel']);
+    Route::get('/api/chatwoot/labels', [App\Http\Controllers\Api\ChatwootController::class, 'getLabels']);
+    Route::post('/api/chatwoot/labels', [App\Http\Controllers\Api\ChatwootController::class, 'createLabel']);
     
     // MACROS MANAGEMENT (Enterprise)
     Route::get('/api/chatwoot/macros', [App\Http\Controllers\ChatwootEnterpriseController::class, 'getMacros']);
