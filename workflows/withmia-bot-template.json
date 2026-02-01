@@ -1359,7 +1359,7 @@
                   {
                       "parameters":  {
                                          "operation":  "delete",
-                                         "key":  "={{ $json.message.chat_id }}"
+                                         "key":  "={{ $json.message?.chat_id || ($json.body?.conversation?.meta?.sender?.identifier || \"\").replace(\"@s.whatsapp.net\", \"\") }}"
                                      },
                       "type":  "n8n-nodes-base.redis",
                       "typeVersion":  1,
@@ -4031,7 +4031,7 @@
                                         {
                                             "parameters":  {
                                                                "operation":  "delete",
-                                                               "key":  "={{ $json.message.chat_id }}"
+                                                               "key":  "={{ $json.message?.chat_id || ($json.body?.conversation?.meta?.sender?.identifier || \"\").replace(\"@s.whatsapp.net\", \"\") }}"
                                                            },
                                             "type":  "n8n-nodes-base.redis",
                                             "typeVersion":  1,
