@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-02-01T18:09:38.842Z",
+    "updatedAt":  "2026-02-01T17:28:58.974Z",
     "createdAt":  "2026-01-28T01:57:04.485Z",
     "id":  "C1mhxAWt67pfg3BC",
     "name":  "WITHMIA Bot - withmia-evp7rj",
@@ -1997,38 +1997,38 @@
                       "typeVersion":  1
                   },
                   {
-                      "id":  "vps1",
+                      "id":  "verifica-palabra-saliente",
                       "name":  "Verifica Palabra Clave Saliente",
-                      "typeVersion":  2.2,
                       "type":  "n8n-nodes-base.if",
+                      "position":  [
+                                       -2980,
+                                       1400
+                                   ],
+                      "typeVersion":  2.2,
                       "parameters":  {
+                                         "options":  [
+
+                                                     ],
                                          "conditions":  {
                                                             "options":  {
-                                                                            "typeValidation":  "loose",
                                                                             "version":  2,
+                                                                            "typeValidation":  "loose",
                                                                             "caseSensitive":  false
                                                                         },
                                                             "conditions":  [
                                                                                {
+                                                                                   "id":  "check-keyword-outgoing",
                                                                                    "operator":  {
-                                                                                                    "operation":  "equals",
-                                                                                                    "type":  "string"
+                                                                                                    "type":  "string",
+                                                                                                    "operation":  "equals"
                                                                                                 },
-                                                                                   "rightValue":  "BOTA",
-                                                                                   "id":  "ck1",
-                                                                                   "leftValue":  "={{ ($json.body?.content || $json.content || \"\").toUpperCase().trim() }}"
+                                                                                   "leftValue":  "={{ ($json.body?.content || $json.content || \"\").toUpperCase().trim() }}",
+                                                                                   "rightValue":  "BOTA"
                                                                                }
                                                                            ],
                                                             "combinator":  "and"
-                                                        },
-                                         "options":  [
-
-                                                     ]
-                                     },
-                      "position":  [
-                                       -2980,
-                                       1400
-                                   ]
+                                                        }
+                                     }
                   }
               ],
     "connections":  {
@@ -2607,9 +2607,9 @@
     "pinData":  {
 
                 },
-    "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
-    "activeVersionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
-    "versionCounter":  162,
+    "versionId":  "cb41addd-9fc6-473f-8e6e-0317f19cb1e7",
+    "activeVersionId":  "cb41addd-9fc6-473f-8e6e-0317f19cb1e7",
+    "versionCounter":  159,
     "triggerCount":  1,
     "shared":  [
                    {
@@ -2674,9 +2674,9 @@
 
              ],
     "activeVersion":  {
-                          "updatedAt":  "2026-02-01T18:09:38.850Z",
-                          "createdAt":  "2026-02-01T18:09:38.850Z",
-                          "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
+                          "updatedAt":  "2026-02-01T17:28:58.980Z",
+                          "createdAt":  "2026-02-01T17:28:58.980Z",
+                          "versionId":  "cb41addd-9fc6-473f-8e6e-0317f19cb1e7",
                           "workflowId":  "C1mhxAWt67pfg3BC",
                           "nodes":  [
                                         {
@@ -4667,40 +4667,6 @@
                                                                "value":  "blocked-bot"
                                                            },
                                             "typeVersion":  1
-                                        },
-                                        {
-                                            "id":  "vps1",
-                                            "name":  "Verifica Palabra Clave Saliente",
-                                            "typeVersion":  2.2,
-                                            "type":  "n8n-nodes-base.if",
-                                            "parameters":  {
-                                                               "conditions":  {
-                                                                                  "options":  {
-                                                                                                  "typeValidation":  "loose",
-                                                                                                  "version":  2,
-                                                                                                  "caseSensitive":  false
-                                                                                              },
-                                                                                  "conditions":  [
-                                                                                                     {
-                                                                                                         "operator":  {
-                                                                                                                          "operation":  "equals",
-                                                                                                                          "type":  "string"
-                                                                                                                      },
-                                                                                                         "rightValue":  "BOTA",
-                                                                                                         "id":  "ck1",
-                                                                                                         "leftValue":  "={{ ($json.body?.content || $json.content || \"\").toUpperCase().trim() }}"
-                                                                                                     }
-                                                                                                 ],
-                                                                                  "combinator":  "and"
-                                                                              },
-                                                               "options":  [
-
-                                                                           ]
-                                                           },
-                                            "position":  [
-                                                             -2980,
-                                                             1400
-                                                         ]
                                         }
                                     ],
                           "connections":  {
@@ -5242,31 +5208,13 @@
                                                                          "main":  [
                                                                                       [
                                                                                           {
-                                                                                              "node":  "Verifica Palabra Clave Saliente",
+                                                                                              "node":  "Block Agent on Outgoing",
                                                                                               "type":  "main",
                                                                                               "index":  0
                                                                                           }
                                                                                       ]
                                                                                   ]
-                                                                     },
-                                              "Verifica Palabra Clave Saliente":  {
-                                                                                      "main":  [
-                                                                                                   [
-                                                                                                       {
-                                                                                                           "node":  "Activar BOT",
-                                                                                                           "type":  "main",
-                                                                                                           "index":  0
-                                                                                                       }
-                                                                                                   ],
-                                                                                                   [
-                                                                                                       {
-                                                                                                           "node":  "Block Agent on Outgoing",
-                                                                                                           "type":  "main",
-                                                                                                           "index":  0
-                                                                                                       }
-                                                                                                   ]
-                                                                                               ]
-                                                                                  }
+                                                                     }
                                           },
                           "authors":  "WITHMIA ADMIN",
                           "name":  null,
@@ -5274,10 +5222,10 @@
                           "autosaved":  false,
                           "workflowPublishHistory":  [
                                                          {
-                                                             "createdAt":  "2026-02-01T18:09:39.106Z",
-                                                             "id":  163,
+                                                             "createdAt":  "2026-02-01T17:28:59.212Z",
+                                                             "id":  162,
                                                              "workflowId":  "C1mhxAWt67pfg3BC",
-                                                             "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
+                                                             "versionId":  "cb41addd-9fc6-473f-8e6e-0317f19cb1e7",
                                                              "event":  "activated",
                                                              "userId":  "076c9167-3e08-4d7d-a69d-b951f641bbdf"
                                                          }
