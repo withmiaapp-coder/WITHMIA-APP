@@ -951,10 +951,10 @@ export default function Entrenamiento({
                 <>
                   {/* Grid 2 columnas */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* Col 1: Desbloquear Bot */}
+                    {/* Col 1: Palabra secreta para reactivar */}
                     <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
                       <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
-                        🔓 Desbloquear Bot
+                        🔑 Tu palabra secreta
                       </h4>
                       <input
                         type="text"
@@ -963,13 +963,13 @@ export default function Entrenamiento({
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
                         placeholder="BOT"
                       />
-                      <p className="mt-1 text-[10px] text-gray-500">Tú escribes → bot se reactiva</p>
+                      <p className="mt-1 text-[10px] text-gray-500">Escríbela para reactivar el bot</p>
                     </div>
 
-                    {/* Col 2: Cliente Pide Humano - Palabra */}
+                    {/* Col 2: Cliente pide ayuda humana */}
                     <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
                       <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
-                        🙋 Pedir Humano
+                        🙋 Cliente pide ayuda
                       </h4>
                       <input
                         type="text"
@@ -978,13 +978,13 @@ export default function Entrenamiento({
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
                         placeholder="HUMANO"
                       />
-                      <p className="mt-1 text-[10px] text-gray-500">Cliente escribe → bot se pausa</p>
+                      <p className="mt-1 text-[10px] text-gray-500">Si escribe esto, te avisamos</p>
                     </div>
 
-                    {/* Col 1: Tiempo bloqueo humano */}
+                    {/* Col 1: Cuánto espera por ti cuando pide humano */}
                     <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
                       <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
-                        ⏱️ Pausa por Humano
+                        ⏱️ Espera tu respuesta
                       </h4>
                       <div className="flex items-center gap-2">
                         <input
@@ -999,12 +999,13 @@ export default function Entrenamiento({
                           {botConfig.human_block_duration >= 60 ? `${Math.floor(botConfig.human_block_duration / 60)}m` : `${botConfig.human_block_duration}s`}
                         </span>
                       </div>
+                      <p className="mt-1 text-[10px] text-gray-500">Tiempo para que atiendas</p>
                     </div>
 
-                    {/* Col 2: Tiempo bloqueo empresa */}
+                    {/* Col 2: Pausa cuando tú tomas el chat */}
                     <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
                       <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
-                        💬 Tú Respondes
+                        💬 Cuando atiendes tú
                       </h4>
                       <div className="flex items-center gap-2">
                         <input
@@ -1019,12 +1020,13 @@ export default function Entrenamiento({
                           {botConfig.block_duration >= 60 ? `${Math.floor(botConfig.block_duration / 60)}m` : `${botConfig.block_duration}s`}
                         </span>
                       </div>
+                      <p className="mt-1 text-[10px] text-gray-500">Bot en pausa mientras chateas</p>
                     </div>
 
-                    {/* Col 1: Buffer */}
+                    {/* Col 1: Espera que termine de escribir */}
                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                       <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                        ⏳ Buffer Espera
+                        ✍️ Espera al cliente
                       </h4>
                       <div className="flex items-center gap-2">
                         <input
@@ -1037,13 +1039,13 @@ export default function Entrenamiento({
                         />
                         <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.buffer_wait_time}s</span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Espera antes de responder</p>
+                      <p className="mt-1 text-[10px] text-gray-500">Que termine de escribir</p>
                     </div>
 
-                    {/* Col 2: Humanización */}
+                    {/* Col 2: Simula que escribe */}
                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                       <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                        🤖 Humanización
+                        💭 Simula que escribe
                       </h4>
                       <div className="flex items-center gap-2">
                         <input
@@ -1056,7 +1058,7 @@ export default function Entrenamiento({
                         />
                         <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.humanize_wait_time}s</span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">Pausa entre mensajes</p>
+                      <p className="mt-1 text-[10px] text-gray-500">Pausa para parecer humano</p>
                     </div>
                   </div>
                 </>
