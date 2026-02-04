@@ -13,9 +13,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Traits\FormatsWhatsAppContacts;
 
 class DynamicContactsExcelManager
 {
+    use FormatsWhatsAppContacts;
+
     private $evolutionApiUrl;
     private $evolutionApiKey;
 
@@ -362,33 +365,6 @@ class DynamicContactsExcelManager
         $sheet->getColumnDimension('F')->setWidth(15);  // Agregado
         $sheet->getColumnDimension('G')->setWidth(15);  // Actualizado
         $sheet->getColumnDimension('H')->setWidth(30);  // Notas
-    }
-
-    /**
-     * Verificar si es contacto de grupo
-     */
-    private function isGroupContact($remoteJid)
-    {
-        return str_contains($remoteJid, '@g.us');
-    }
-
-    /**
-     * Formatear número de teléfono
-     */
-    private function formatPhoneNumber($remoteJid)
-    {
-        $number = str_replace(['@s.whatsapp.net', '@g.us'], '', $remoteJid);
-        
-        if (str_contains($number, '-')) {
-            $parts = explode('-', $number);
-            $number = $parts[0];
-        }
-
-        if (strlen($number) == 11 && str_starts_with($number, '569')) {
-            return '+56 9 ' . substr($number, 3, 4) . ' ' . substr($number, 7, 4);
-        }
-
-        return '+' . $number;
     }
 
     /**

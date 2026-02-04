@@ -12,9 +12,12 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Traits\FormatsWhatsAppContacts;
 
 class ContactsExcelExporter
 {
+    use FormatsWhatsAppContacts;
+
     private $evolutionApiUrl;
     private $evolutionApiKey;
 
@@ -244,36 +247,6 @@ class ContactsExcelExporter
                 'exported_at' => Carbon::now()->toISOString()
             ]
         ];
-    }
-
-    /**
-     * Verificar si es un contacto de grupo
-     */
-    private function isGroupContact($remoteJid)
-    {
-        return str_contains($remoteJid, '@g.us');
-    }
-
-    /**
-     * Formatear número de teléfono
-     */
-    private function formatPhoneNumber($remoteJid)
-    {
-        // Remover sufijos de WhatsApp
-        $number = str_replace(['@s.whatsapp.net', '@g.us'], '', $remoteJid);
-        
-        // Si contiene guión (grupo), tomar solo la primera parte
-        if (str_contains($number, '-')) {
-            $parts = explode('-', $number);
-            $number = $parts[0];
-        }
-
-        // Formatear número chileno si es el caso
-        if (strlen($number) == 11 && str_starts_with($number, '569')) {
-            return '+56 9 ' . substr($number, 3, 4) . ' ' . substr($number, 7, 4);
-        }
-
-        return '+' . $number;
     }
 
     /**
