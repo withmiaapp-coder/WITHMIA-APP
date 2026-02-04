@@ -1138,7 +1138,8 @@ class EvolutionApiController extends Controller
 
         // 🏢 OBTENER COMPANY Y CHATWOOT ACCOUNT_ID DESDE LA INSTANCIA
         // Esto asegura que cada empresa reciba sus propios mensajes
-        $accountId = 1; // Fallback
+        // ⚠️ CRÍTICO: NO usar fallback a account_id=1, debe venir de la instancia
+        $accountId = null;
         $inboxId = null;
         $companyId = null;
         
@@ -1166,14 +1167,24 @@ class EvolutionApiController extends Controller
                         'company_name' => $company->name,
                         'chatwoot_account_id' => $accountId
                     ]);
+                } else {
+                    Log::error('❌ CRÍTICO: Empresa sin chatwoot_account_id configurado', [
+                        'instance' => $instanceName,
+                        'company_id' => $companyId,
+                        'company_name' => $company->name ?? 'N/A'
+                    ]);
+                    return; // No procesar mensaje sin account_id válido
                 }
             } else {
-                Log::warning('⚠️ Instancia no encontrada en BD, usando account_id por defecto', [
-                    'instance' => $instanceName
+                Log::error('❌ CRÍTICO: Instancia no encontrada en BD - mensaje no será procesado', [
+                    'instance' => $instanceName,
+                    'message_id' => $messageId
                 ]);
+                return; // No procesar mensaje de instancia desconocida
             }
         } catch (\Exception $e) {
             Log::error('Error obteniendo company/account_id', ['error' => $e->getMessage()]);
+            return; // No procesar en caso de error
         }
 
         // 📡 BROADCAST: Notificar al frontend vía Reverb
@@ -1256,7 +1267,8 @@ class EvolutionApiController extends Controller
         }
 
         // 🏢 OBTENER ACCOUNT_ID CORRECTO DESDE LA INSTANCIA
-        $accountId = 1;
+        // ⚠️ CRÍTICO: NO usar fallback a account_id=1
+        $accountId = null;
         $inboxId = null;
         
         try {
@@ -1274,10 +1286,20 @@ class EvolutionApiController extends Controller
                 
                 if ($company && $company->chatwoot_account_id) {
                     $accountId = $company->chatwoot_account_id;
+                } else {
+                    Log::warning('⚠️ Empresa sin chatwoot_account_id para update', [
+                        'instance' => $instanceName,
+                        'company_id' => $instance->company_id
+                    ]);
+                    return; // No procesar sin account_id válido
                 }
+            } else {
+                Log::warning('⚠️ Instancia no encontrada para update', ['instance' => $instanceName]);
+                return; // No procesar instancia desconocida
             }
         } catch (\Exception $e) {
             Log::error('Error obteniendo account_id para update', ['error' => $e->getMessage()]);
+            return;
         }
 
         try {
@@ -1331,7 +1353,7 @@ class EvolutionApiController extends Controller
         ]);
 
         try {
-            // Obtener company_slug desde la instancia
+            // Obtener company_slug y account_id desde la instancia
             $instance = DB::table('whatsapp_instances')
                 ->where('instance_name', $instanceName)
                 ->where('is_active', 1)
@@ -1339,6 +1361,13 @@ class EvolutionApiController extends Controller
 
             if ($instance) {
                 $companySlug = $instance->company_slug ?? $instance->company_id;
+                
+                // Obtener account_id de la empresa (NO hardcodeado)
+                $company = DB::table('companies')
+                    ->where('id', $instance->company_id)
+                    ->first();
+                $accountId = $company->chatwoot_account_id ?? null;
+                $inboxId = $instance->chatwoot_inbox_id ?? null;
                 
                 // 🚀 CREAR WORKFLOW EN N8N cuando se conecta WhatsApp por primera vez
                 if (($state === 'open' || $state === 'connected') && empty($instance->n8n_workflow_id)) {
@@ -1361,21 +1390,30 @@ class EvolutionApiController extends Controller
                     $data['profileInfo'] ?? null
                 ));
 
-                Log::info('??? WhatsAppStatusChanged event broadcasted', [
+                Log::info('✅ WhatsAppStatusChanged event broadcasted', [
                     'company' => $companySlug,
                     'instance' => $instanceName,
                     'state' => $state
                 ]);
+                
+                // Broadcast de conexión con account_id correcto de la empresa
+                if ($accountId) {
+                    broadcast(new ConversationUpdated(
+                        ['state' => $state, 'instance' => $instanceName],
+                        $inboxId,
+                        $accountId
+                    ))->toOthers();
+                    
+                    Log::info('✅ Evento de conexión broadcasted', [
+                        'account_id' => $accountId,
+                        'inbox_id' => $inboxId
+                    ]);
+                }
+            } else {
+                Log::warning('⚠️ Instancia no encontrada en BD para connection update', [
+                    'instance' => $instanceName
+                ]);
             }
-
-            // Mantener el evento legacy para compatibilidad
-            broadcast(new ConversationUpdated(
-                ['state' => $state, 'instance' => $instanceName],  // conversation data
-                5,      // inboxId
-                1       // accountId
-            ))->toOthers();
-
-            Log::info('??? Evento de conexi??n broadcasted');
         } catch (\Exception $e) {
             Log::error('Error broadcasting connection event', [
                 'error' => $e->getMessage(),
@@ -1842,7 +1880,33 @@ class EvolutionApiController extends Controller
             
             $config = $currentConfig->json();
             $currentToken = $config['token'] ?? null;
-            $accountId = $config['accountId'] ?? '1';
+            
+            // Obtener accountId correcto de nuestra BD (NO usar fallback hardcodeado)
+            $instance = DB::table('whatsapp_instances')
+                ->where('instance_name', $instanceName)
+                ->where('is_active', 1)
+                ->first();
+            
+            if (!$instance) {
+                Log::warning('No se encontró instancia en BD para actualizar token', [
+                    'instance' => $instanceName
+                ]);
+                return;
+            }
+            
+            $company = DB::table('companies')
+                ->where('id', $instance->company_id)
+                ->first();
+            
+            if (!$company || !$company->chatwoot_account_id) {
+                Log::warning('Empresa sin chatwoot_account_id para actualizar token', [
+                    'instance' => $instanceName,
+                    'company_id' => $instance->company_id
+                ]);
+                return;
+            }
+            
+            $accountId = $company->chatwoot_account_id;
             
             // 2. Obtener el Channel Token desde Chatwoot DB
             $chatwootDb = DB::connection('chatwoot');

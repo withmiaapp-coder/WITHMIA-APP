@@ -919,11 +919,15 @@ class ChatwootController extends Controller
                 'isVoiceMessage' => $isVoiceMessage
             ]);
 
-            // Obtener instanceName
+            // Obtener instanceName - REQUIERE company_slug configurado
             $user = auth()->user();
-            $instanceName = $user && $user->company_slug 
-                ? $user->company_slug 
-                : 'with-mia-cqwp4d';
+            if (!$user || !$user->company_slug) {
+                Log::error('❌ No se puede enviar archivo: Usuario sin company_slug configurado', [
+                    'user_id' => $user ? $user->id : null
+                ]);
+                throw new \Exception('No hay instancia de WhatsApp configurada. Por favor conecta tu WhatsApp primero.');
+            }
+            $instanceName = $user->company_slug;
             
             // Limpiar número de teléfono
             $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
@@ -1048,11 +1052,15 @@ class ChatwootController extends Controller
                 'base64_length' => strlen($base64Media)
             ]);
 
-            // Obtener instanceName desde el usuario autenticado
+            // Obtener instanceName - REQUIERE company_slug configurado
             $user = auth()->user();
-            $instanceName = $user && $user->company_slug 
-                ? $user->company_slug 
-                : 'with-mia-cqwp4d'; // Fallback
+            if (!$user || !$user->company_slug) {
+                Log::error('❌ No se puede enviar archivo: Usuario sin company_slug configurado', [
+                    'user_id' => $user ? $user->id : null
+                ]);
+                throw new \Exception('No hay instancia de WhatsApp configurada. Por favor conecta tu WhatsApp primero.');
+            }
+            $instanceName = $user->company_slug;
             
             // Limpiar número de teléfono
             $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
@@ -1155,11 +1163,15 @@ class ChatwootController extends Controller
     private function sendToEvolutionAPI($phone, $message)
     {
         try {
-            // Obtener instanceName desde el usuario autenticado
+            // Obtener instanceName - REQUIERE company_slug configurado
             $user = auth()->user();
-            $instanceName = $user && $user->company_slug 
-                ? $user->company_slug 
-                : 'with-mia-cqwp4d'; // Fallback
+            if (!$user || !$user->company_slug) {
+                Log::error('❌ No se puede enviar mensaje: Usuario sin company_slug configurado', [
+                    'user_id' => $user ? $user->id : null
+                ]);
+                return false; // No hay instancia de WhatsApp configurada
+            }
+            $instanceName = $user->company_slug;
 
             // Limpiar número de teléfono (remover +, espacios, etc.)
             $cleanPhone = preg_replace('/[^0-9]/', '', $phone);

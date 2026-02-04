@@ -16,10 +16,14 @@ class CleanupOrphanInstances extends Command
         $this->info('🔍 Buscando instancias huérfanas en Evolution API...');
         
         try {
+            // Obtener configuración desde config/evolution.php (NO hardcodeado)
+            $evolutionUrl = config('evolution.api_url');
+            $evolutionApiKey = config('evolution.api_key');
+            
             // Obtener todas las instancias de Evolution API
             $response = \Http::withHeaders([
-                'apikey' => '429683C4C977415CAAFCCE10F7D57E11'
-            ])->get('http://localhost:8080/instance/fetchInstances');
+                'apikey' => $evolutionApiKey
+            ])->get("{$evolutionUrl}/instance/fetchInstances");
 
             if (!$response->successful()) {
                 $this->error('❌ No se pudo conectar a Evolution API');
