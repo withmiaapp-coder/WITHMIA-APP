@@ -568,7 +568,7 @@ class TeamInvitationController extends Controller
                 // Buscar empresa por slug si se proporciona
                 $companySlug = $request->input('company_slug');
                 if ($companySlug) {
-                    $company = \App\Models\Company::where('slug', $companySlug)->first();
+                    $company = \App\Models\Company::findBySlugCached($companySlug);
                 } else {
                     // Si es con clave secreta, obtener primera empresa con Chatwoot configurado
                     $company = \App\Models\Company::whereNotNull('chatwoot_account_id')
@@ -674,7 +674,7 @@ class TeamInvitationController extends Controller
             
             $companySlug = $request->input('company_slug', 'withmia-nfudrg');
             
-            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            $company = \App\Models\Company::findBySlugCached($companySlug);
             
             if (!$company) {
                 return response()->json([
@@ -907,7 +907,7 @@ class TeamInvitationController extends Controller
                 ], 400);
             }
             
-            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            $company = \App\Models\Company::findBySlugCached($companySlug);
             
             if (!$company) {
                 return response()->json([

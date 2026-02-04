@@ -29,7 +29,7 @@ class DashboardController extends Controller
         
         // Prioridad 1: Buscar por company_slug del usuario (para usuarios invitados)
         if ($user->company_slug) {
-            $company = Company::where('slug', $user->company_slug)->first();
+            $company = Company::findBySlugCached($user->company_slug);
         }
         
         // Prioridad 2: Buscar por user_id (para el dueño de la empresa)

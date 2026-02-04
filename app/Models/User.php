@@ -100,6 +100,12 @@ class User extends Authenticatable
         'chatwoot_agent_token'
     ];
 
+    /**
+     * 🚀 OPTIMIZACIÓN: Eager load company automáticamente
+     * Evita N+1 queries cuando se accede a $user->company
+     */
+    protected $with = ['company'];
+
     protected $hidden = [
         'password',
         'remember_token',

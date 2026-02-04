@@ -50,7 +50,7 @@ class BotConfigController extends Controller
         
         // Si tenemos company_slug pero no company_id, buscar el company_id en la tabla companies
         if ($companySlug && !$companyId) {
-            $company = \App\Models\Company::where('slug', $companySlug)->first();
+            $company = \App\Models\Company::findBySlugCached($companySlug);
             if ($company) {
                 $companyId = $company->id;
                 Log::debug('BotConfig - Got company_id from companies table', [

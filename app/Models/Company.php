@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Company extends Model
 {
@@ -14,6 +15,51 @@ class Company extends Model
         'chatwoot_provisioned_at' => 'datetime',
         'is_active' => 'boolean'
     ];
+
+    // ==========================================
+    // CACHE HELPERS
+    // ==========================================
+
+    /**
+     * 🚀 OPTIMIZACIÓN: Obtener company por slug con cache de 10 minutos
+     * Evita queries repetidas al buscar company por slug
+     */
+    public static function findBySlugCached(string $slug): ?self
+    {
+        if (empty($slug)) {
+            return null;
+        }
+
+        return Cache::remember(
+            "company_by_slug:{$slug}",
+            600, // 10 minutos
+            fn() => static::where('slug', $slug)->first()
+        );
+    }
+
+    /**
+     * Invalidar cache de company (llamar al actualizar)
+     */
+    public function clearCache(): void
+    {
+        Cache::forget("company_by_slug:{$this->slug}");
+    }
+
+    /**
+     * Boot del modelo para limpiar cache automáticamente
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updated(function ($company) {
+            $company->clearCache();
+        });
+
+        static::deleted(function ($company) {
+            $company->clearCache();
+        });
+    }
 
     // ==========================================
     // RELACIONES

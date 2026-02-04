@@ -70,7 +70,7 @@ class KnowledgeController extends Controller
             $company = $user->company;
             
             if (!$company && $user->company_slug) {
-                $company = Company::where('slug', $user->company_slug)->first();
+                $company = Company::findBySlugCached($user->company_slug);
             }
             
             if (!$company) {

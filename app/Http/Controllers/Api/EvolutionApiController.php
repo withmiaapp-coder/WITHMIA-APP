@@ -80,7 +80,7 @@ class EvolutionApiController extends Controller
             
             // Si no hay company por relación, buscar por el instanceName (que es el slug)
             if (!$companyId) {
-                $companyBySlug = \App\Models\Company::where('slug', $instanceName)->first();
+                $companyBySlug = \App\Models\Company::findBySlugCached($instanceName);
                 $companyId = $companyBySlug ? $companyBySlug->id : null;
             }
             
@@ -813,7 +813,7 @@ class EvolutionApiController extends Controller
                 
                 // 🔧 FIX: Buscar company_id por el slug del instanceName
                 // El instanceName ES el slug de la empresa (ej: salud-y-belleza-ehppbu)
-                $company = \App\Models\Company::where('slug', $instanceName)->first();
+                $company = \App\Models\Company::findBySlugCached($instanceName);
                 $companyId = $company ? $company->id : null;
                 
                 if (!$companyId) {
