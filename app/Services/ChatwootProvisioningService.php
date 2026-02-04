@@ -30,37 +30,37 @@ class ChatwootProvisioningService
     public function provisionCompanyAccount(Company $company, User $owner): array
     {
         try {
-            Log::info("🚀 Starting COMPLETE Chatwoot provisioning for company: {$company->name}");
+            Log::debug("🚀 Starting COMPLETE Chatwoot provisioning for company: {$company->name}");
 
             DB::beginTransaction();
             $this->chatwootDb->beginTransaction();
 
             // 1. Crear Account en Chatwoot
             $accountId = $this->createAccount($company);
-            Log::info("✅ Account created: ID={$accountId}");
+            Log::debug("✅ Account created: ID={$accountId}");
 
             // 2. Crear User en Chatwoot (administrator)
             $chatwootUserId = $this->createChatwootUser($owner, $accountId);
-            Log::info("✅ User created: ID={$chatwootUserId}");
+            Log::debug("✅ User created: ID={$chatwootUserId}");
 
             // 3. Crear relación Account-User (administrator)
             $this->createAccountUser($accountId, $chatwootUserId, 1); // role=1 (administrator) - En Chatwoot: 0=agent, 1=administrator
-            Log::info("✅ Account-User relation created");
+            Log::debug("✅ Account-User relation created");
 
             // 4. Crear Channel API (con identifier/token para Evolution API)
             $channelData = $this->createChannelApi($accountId);
             $channelId = $channelData['id'];
             $channelToken = $channelData['identifier'];
-            Log::info("✅ Channel API created: ID={$channelId}, Token={$channelToken}");
+            Log::debug("✅ Channel API created: ID={$channelId}, Token={$channelToken}");
 
             // 5. Crear Inbox (usar slug para multi-tenant)
             $inboxName = $company->slug ?? Str::slug($company->name) . '-' . Str::random(6);
             $inboxId = $this->createInbox($accountId, $channelId, $inboxName);
-            Log::info("✅ Inbox created: ID={$inboxId}, Name=WhatsApp {$inboxName}");
+            Log::debug("✅ Inbox created: ID={$inboxId}, Name=WhatsApp {$inboxName}");
 
             // 6. Asociar User al Inbox
             $this->createInboxMember($chatwootUserId, $inboxId);
-            Log::info("✅ Inbox member created");
+            Log::debug("✅ Inbox member created");
 
             // 7. Crear token de acceso en Chatwoot para el usuario (CRÍTICO para API de Chatwoot)
             $accessToken = $this->createAccessToken($chatwootUserId);
@@ -93,7 +93,7 @@ class ChatwootProvisioningService
             $this->chatwootDb->commit();
             DB::commit();
 
-            Log::info("🎉 Chatwoot provisioning completed successfully!", [
+            Log::debug("🎉 Chatwoot provisioning completed successfully!", [
                 'company_id' => $company->id,
                 'account_id' => $accountId,
                 'user_id' => $chatwootUserId,
@@ -263,7 +263,7 @@ class ChatwootProvisioningService
             'updated_at' => now()
         ]);
         
-        Log::info('✅ Access token created in Chatwoot', [
+        Log::debug('✅ Access token created in Chatwoot', [
             'chatwoot_user_id' => $chatwootUserId,
             'token_prefix' => substr($token, 0, 8) . '...'
         ]);
@@ -278,7 +278,7 @@ class ChatwootProvisioningService
     public function inviteAgent(Company $company, User $agent, string $role = 'agent'): array
     {
         try {
-            Log::info("👤 Inviting agent to company: {$company->name}", [
+            Log::debug("👤 Inviting agent to company: {$company->name}", [
                 'agent_email' => $agent->email,
                 'role' => $role
             ]);
@@ -292,12 +292,12 @@ class ChatwootProvisioningService
 
             // 1. Crear User en Chatwoot
             $chatwootUserId = $this->createChatwootUser($agent, $company->chatwoot_account_id);
-            Log::info("✅ Agent user created: ID={$chatwootUserId}");
+            Log::debug("✅ Agent user created: ID={$chatwootUserId}");
 
             // 2. Asociar al Account con role correcto (0=agent, 1=administrator)
             $agentRole = ($role === 'administrator') ? 1 : 0;
             $this->createAccountUser($company->chatwoot_account_id, $chatwootUserId, $agentRole);
-            Log::info("✅ Agent added to account with role={$agentRole}");
+            Log::debug("✅ Agent added to account with role={$agentRole}");
 
             // 3. Asociar al Inbox de la empresa
             $inboxId = $this->chatwootDb->table('inboxes')
@@ -306,7 +306,7 @@ class ChatwootProvisioningService
 
             if ($inboxId) {
                 $this->createInboxMember($chatwootUserId, $inboxId);
-                Log::info("✅ Agent added to inbox: ID={$inboxId}");
+                Log::debug("✅ Agent added to inbox: ID={$inboxId}");
             }
 
             // 4. Crear token de acceso en Chatwoot para el agente
@@ -324,7 +324,7 @@ class ChatwootProvisioningService
             $this->chatwootDb->commit();
             DB::commit();
 
-            Log::info("🎉 Agent invited successfully!", [
+            Log::debug("🎉 Agent invited successfully!", [
                 'agent_id' => $chatwootUserId,
                 'company_id' => $company->id
             ]);

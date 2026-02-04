@@ -127,7 +127,7 @@ class TeamInvitationController extends Controller
         try {
             Mail::to($email)->send(new TeamInvitationMail($invitation));
             
-            Log::info('Team invitation sent', [
+            Log::debug('Team invitation sent', [
                 'invitation_id' => $invitation->id,
                 'email' => $email,
                 'company_id' => $company->id,
@@ -315,7 +315,7 @@ class TeamInvitationController extends Controller
             // Marcar invitación como aceptada
             $invitation->markAsAccepted();
 
-            Log::info('Invitation accepted', [
+            Log::debug('Invitation accepted', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'company_id' => $invitation->company_id,

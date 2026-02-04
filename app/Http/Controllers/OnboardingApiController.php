@@ -20,7 +20,7 @@ class OnboardingApiController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        Log::info('OnboardingApiController@store received', [
+        Log::debug('OnboardingApiController@store received', [
             'step' => $request->input('step'),
             'all_data' => $request->all()
         ]);
@@ -53,7 +53,7 @@ class OnboardingApiController extends Controller
 
             $step = (int) $request->input('step', 0);
             
-            Log::info("OnboardingApiController processing step {$step} for user {$user->id}");
+            Log::debug("OnboardingApiController processing step {$step} for user {$user->id}");
 
             // Guardar datos del step según corresponda
             switch ($step) {
@@ -133,7 +133,7 @@ class OnboardingApiController extends Controller
             $tempSlug = Str::slug($data['company_name']) . '-' . strtolower(Str::random(6));
             
             try {
-                Log::info("📦 Pre-creating Qdrant collection in step 2 for: {$tempSlug}");
+                Log::debug("📦 Pre-creating Qdrant collection in step 2 for: {$tempSlug}");
                 CreateQdrantCollectionJob::dispatchSync($company->id, $tempSlug);
             } catch (\Exception $e) {
                 Log::error("Error pre-creating Qdrant: " . $e->getMessage());
@@ -194,12 +194,12 @@ class OnboardingApiController extends Controller
 
     private function processOnboardingCompletion(Request $request, User $user): array
     {
-        Log::info("OnboardingApiController::processOnboardingCompletion for user: {$user->id}");
+        Log::debug("OnboardingApiController::processOnboardingCompletion for user: {$user->id}");
 
         $companyName = $request->input('company_name') ?? $user->full_name ?? $user->name ?? 'empresa';
         $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
         
-        Log::info("Generated slug: {$uniqueSlug}");
+        Log::debug("Generated slug: {$uniqueSlug}");
 
         $user->update([
             'company_slug' => $uniqueSlug,
@@ -215,7 +215,7 @@ class OnboardingApiController extends Controller
         // � Asegurar que Qdrant collection existe (si no se creó en paso 2)
         if (empty($company->settings['qdrant_collection'])) {
             try {
-                Log::info("📦 Creating Qdrant collection (was missing): {$uniqueSlug}");
+                Log::debug("📦 Creating Qdrant collection (was missing): {$uniqueSlug}");
                 CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
             } catch (\Exception $e) {
                 Log::error("Error creating Qdrant: " . $e->getMessage());
@@ -224,9 +224,9 @@ class OnboardingApiController extends Controller
 
         // 🚀 Crear workflows n8n (RAG + Training) - ESTO ES LO IMPORTANTE
         try {
-            Log::info("🚀 Creating n8n workflows for: {$uniqueSlug}");
+            Log::debug("🚀 Creating n8n workflows for: {$uniqueSlug}");
             CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
-            Log::info("✅ N8n workflows created for: {$uniqueSlug}");
+            Log::debug("✅ N8n workflows created for: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error creating n8n workflows: " . $e->getMessage());
         }
@@ -284,7 +284,7 @@ class OnboardingApiController extends Controller
     {
         try {
             // Debug logging
-            Log::info('Improve description request', [
+            Log::debug('Improve description request', [
                 'all_input' => $request->all(),
                 'json_input' => $request->json()->all(),
                 'raw_content' => $request->getContent()
@@ -306,7 +306,7 @@ class OnboardingApiController extends Controller
             // Usar OpenAI real para mejorar la descripción
             $improvedDescription = $this->improveWithOpenAI($description);
 
-            Log::info('Description improved with OpenAI', [
+            Log::debug('Description improved with OpenAI', [
                 'original' => $description,
                 'improved' => $improvedDescription
             ]);

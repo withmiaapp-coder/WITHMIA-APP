@@ -46,7 +46,7 @@ class ConversationDeduplicationService
                 ];
             }
 
-            Log::info('ðŸ” ConversationDeduplication: Duplicados encontrados', [
+            Log::debug('ðŸ” ConversationDeduplication: Duplicados encontrados', [
                 'inbox_id' => $inboxId,
                 'groups_count' => count($duplicates),
                 'total_conversations' => array_sum(array_map('count', $duplicates))
@@ -189,7 +189,7 @@ class ConversationDeduplicationService
         $toKeep = $conversations[0];
         $toMerge = array_slice($conversations, 1);
 
-        Log::info('ðŸ”€ ConversationDeduplication: Iniciando fusiÃ³n', [
+        Log::debug('ðŸ”€ ConversationDeduplication: Iniciando fusiÃ³n', [
             'phone_key' => $phoneKey,
             'keep' => [
                 'conv_id' => $toKeep['conversation_id'],
@@ -233,7 +233,7 @@ class ConversationDeduplicationService
                     $deletedContactIds[] = $mergeContactId;
                 }
 
-                Log::info('âœ… ConversationDeduplication: ConversaciÃ³n fusionada', [
+                Log::debug('âœ… ConversationDeduplication: ConversaciÃ³n fusionada', [
                     'merged_conv_id' => $mergeConvId,
                     'messages_moved' => $movedCount
                 ]);
@@ -252,7 +252,7 @@ class ConversationDeduplicationService
 
             $this->connection->commit();
 
-            Log::info('âœ… ConversationDeduplication: FusiÃ³n completada', [
+            Log::debug('âœ… ConversationDeduplication: FusiÃ³n completada', [
                 'phone_key' => $phoneKey,
                 'kept_conv_id' => $toKeep['display_id'],
                 'merged_count' => count($toMerge),
@@ -429,7 +429,7 @@ class ConversationDeduplicationService
             $stmt = $this->connection->prepare($sql);
             $stmt->execute([':contact_id' => $contactId]);
 
-            Log::info('ðŸ—‘ï¸ ConversationDeduplication: Contacto huÃ©rfano eliminado', [
+            Log::debug('ðŸ—‘ï¸ ConversationDeduplication: Contacto huÃ©rfano eliminado', [
                 'contact_id' => $contactId
             ]);
 

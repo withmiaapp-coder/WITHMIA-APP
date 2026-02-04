@@ -21,7 +21,7 @@ class AttachmentProxyController extends Controller
         try {
             $url = $request->input('url');
             
-            Log::info('AttachmentProxy: Request recibido', [
+            Log::debug('AttachmentProxy: Request recibido', [
                 'url' => $url,
                 'all_params' => $request->all(),
                 'query_string' => $request->getQueryString()
@@ -73,7 +73,7 @@ class AttachmentProxyController extends Controller
 
             // Si el servidor devuelve error, retornar 404
             if (!$response->successful()) {
-                Log::info('Archivo no encontrado en Chatwoot', [
+                Log::debug('Archivo no encontrado en Chatwoot', [
                     'url' => $url,
                     'status' => $response->status()
                 ]);

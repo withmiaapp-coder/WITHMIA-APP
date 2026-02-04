@@ -97,7 +97,7 @@ class DynamicContactsExcelManager
         $writer = new Xlsx($spreadsheet);
         $writer->save(storage_path("app/{$filePath}"));
 
-        \Log::info("Excel inicial creado para usuario {$userId}: {$filePath}");
+        \Log::debug("Excel inicial creado para usuario {$userId}: {$filePath}");
     }
 
     /**
@@ -114,7 +114,7 @@ class DynamicContactsExcelManager
 
             // Verificar si el contacto ya existe
             if ($this->contactExists($sheet, $contact['remoteJid'] ?? $contact['id'])) {
-                \Log::info("Contacto ya existe, actualizando: " . ($contact['pushName'] ?? 'Sin nombre'));
+                \Log::debug("Contacto ya existe, actualizando: " . ($contact['pushName'] ?? 'Sin nombre'));
                 return $this->updateExistingContact($userId, $contact, $companyName);
             }
 
@@ -132,7 +132,7 @@ class DynamicContactsExcelManager
             $writer = new Xlsx($spreadsheet);
             $writer->save($fileInfo['full_path']);
 
-            \Log::info("Contacto agregado al Excel del usuario {$userId}: " . ($contact['pushName'] ?? 'Sin nombre'));
+            \Log::debug("Contacto agregado al Excel del usuario {$userId}: " . ($contact['pushName'] ?? 'Sin nombre'));
 
             return [
                 'success' => true,
@@ -185,7 +185,7 @@ class DynamicContactsExcelManager
             $writer = new Xlsx($spreadsheet);
             $writer->save($fileInfo['full_path']);
 
-            \Log::info("Importación masiva completada para usuario {$userId}: {$addedCount} agregados, {$updatedCount} existían");
+            \Log::debug("Importación masiva completada para usuario {$userId}: {$addedCount} agregados, {$updatedCount} existían");
 
             return [
                 'success' => true,

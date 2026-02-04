@@ -32,12 +32,12 @@ class KnowledgeController extends Controller
             $response = Http::get("{$this->qdrantHost}/collections/{$collectionName}");
             
             if ($response->successful()) {
-                Log::info("Qdrant collection {$collectionName} already exists");
+                Log::debug("Qdrant collection {$collectionName} already exists");
                 return true;
             }
             
             // Collection doesn't exist, create it
-            Log::info("Creating Qdrant collection: {$collectionName}");
+            Log::debug("Creating Qdrant collection: {$collectionName}");
             
             $createResponse = Http::put("{$this->qdrantHost}/collections/{$collectionName}", [
                 'vectors' => [
@@ -47,7 +47,7 @@ class KnowledgeController extends Controller
             ]);
             
             if ($createResponse->successful()) {
-                Log::info("Successfully created Qdrant collection: {$collectionName}");
+                Log::debug("Successfully created Qdrant collection: {$collectionName}");
                 return true;
             } else {
                 Log::error("Failed to create Qdrant collection: " . $createResponse->body());
@@ -66,7 +66,7 @@ class KnowledgeController extends Controller
     {
         try {
             $user = Auth::user();
-            Log::info('getOnboardingData - User ID: ' . $user->id . ', Company Slug: ' . $user->company_slug);
+            Log::debug('getOnboardingData - User ID: ' . $user->id . ', Company Slug: ' . $user->company_slug);
             
             // Buscar empresa: primero por relación, luego por slug directo
             $company = $user->company;
@@ -101,7 +101,7 @@ class KnowledgeController extends Controller
                 'assistant_name' => $company->assistant_name ?? 'WITHMIA'
             ];
             
-            Log::info('getOnboardingData - Response:', $responseData);
+            Log::debug('getOnboardingData - Response:', $responseData);
 
             return response()->json([
                 'success' => true,
@@ -214,7 +214,7 @@ class KnowledgeController extends Controller
 
             // Don't send if there's no meaningful content
             if (strlen($companyText) < 60) {
-                Log::info('Company info too short to send to Qdrant');
+                Log::debug('Company info too short to send to Qdrant');
                 return;
             }
 
@@ -242,7 +242,7 @@ class KnowledgeController extends Controller
                 'qdrant_host' => $qdrantHost,
             ];
 
-            Log::info('Sending company info to Qdrant via n8n', [
+            Log::debug('Sending company info to Qdrant via n8n', [
                 'company_slug' => $user->company_slug,
                 'text_length' => strlen($companyText)
             ]);
@@ -256,7 +256,7 @@ class KnowledgeController extends Controller
                 ]
             ])->wait(false); // Don't block
 
-            Log::info('Company info sent to Qdrant successfully');
+            Log::debug('Company info sent to Qdrant successfully');
 
         } catch (\Exception $e) {
             // Log but don't fail the main request
@@ -305,7 +305,7 @@ class KnowledgeController extends Controller
             }
             
             if (empty($companyInfoParts)) {
-                Log::info("No company info to update in Qdrant for company {$company->id}");
+                Log::debug("No company info to update in Qdrant for company {$company->id}");
                 return;
             }
 
@@ -330,7 +330,7 @@ class KnowledgeController extends Controller
             ]);
 
             if ($insertResult['success']) {
-                Log::info("✅ Company information updated in Qdrant (upsert with same ID)", [
+                Log::debug("✅ Company information updated in Qdrant (upsert with same ID)", [
                     'company_id' => $company->id,
                     'collection' => $collectionName
                 ]);
@@ -372,7 +372,7 @@ class KnowledgeController extends Controller
                 ]
             ]);
 
-            Log::info('Deleted existing company info from Qdrant', [
+            Log::debug('Deleted existing company info from Qdrant', [
                 'collection' => $collectionName,
                 'status' => $response->getStatusCode()
             ]);
@@ -389,11 +389,11 @@ class KnowledgeController extends Controller
      */
     public function trainingChat(Request $request)
     {
-        Log::info('🔴🔴🔴 TrainingChat ENTRANDO');
+        Log::debug('🔴🔴🔴 TrainingChat ENTRANDO');
         
         // 🔧 DEBUG: Log raw request body
         $rawBody = $request->getContent();
-        Log::info('TrainingChat - RAW BODY', [
+        Log::debug('TrainingChat - RAW BODY', [
             'raw_body_length' => strlen($rawBody),
             'raw_body_hex' => bin2hex(substr($rawBody, 0, 200)),
             'raw_body_preview' => substr($rawBody, 0, 300),
@@ -401,10 +401,10 @@ class KnowledgeController extends Controller
         
         try {
             $user = Auth::user();
-            Log::info('TrainingChat - User: ' . ($user ? $user->id : 'NULL'));
+            Log::debug('TrainingChat - User: ' . ($user ? $user->id : 'NULL'));
             
             $company = $user->company;
-            Log::info('TrainingChat - Company: ' . ($company ? $company->slug : 'NULL'));
+            Log::debug('TrainingChat - Company: ' . ($company ? $company->slug : 'NULL'));
             
             if (!$company) {
                 Log::error('TrainingChat - No company found');
@@ -424,7 +424,7 @@ class KnowledgeController extends Controller
             $userMessage = Utf8Helper::ensureUtf8($rawMessage);
             
             // Log para debug de encoding
-            Log::info('TrainingChat - Message encoding', [
+            Log::debug('TrainingChat - Message encoding', [
                 'raw_length' => strlen($rawMessage),
                 'fixed_length' => strlen($userMessage),
                 'raw_bytes' => bin2hex(substr($rawMessage, 0, 50)),
@@ -456,7 +456,7 @@ class KnowledgeController extends Controller
                 // 🧠 INTELIGENCIA: Detectar duplicados antes de guardar (solo si NO es pregunta)
                 $deduplicationResult = $this->intelligentTrainingStorage($userMessage, $company, $companySlug);
             } else {
-                Log::info('TrainingChat - Detected as QUESTION, skipping storage', [
+                Log::debug('TrainingChat - Detected as QUESTION, skipping storage', [
                     'message' => substr($userMessage, 0, 100)
                 ]);
                 $deduplicationResult = [
@@ -497,7 +497,7 @@ class KnowledgeController extends Controller
             // Forzar encoding UTF-8 en JSON
             $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             
-            Log::info('Sending training message to n8n', [
+            Log::debug('Sending training message to n8n', [
                 'company_slug' => $companySlug,
                 'message_length' => strlen($userMessage),
                 'json_length' => strlen($jsonPayload),
@@ -520,7 +520,7 @@ class KnowledgeController extends Controller
 
                 $responseBody = json_decode($response->getBody()->getContents(), true);
                 
-                Log::info('Training response received from n8n', [
+                Log::debug('Training response received from n8n', [
                     'status' => $response->getStatusCode()
                 ]);
 
@@ -528,7 +528,7 @@ class KnowledgeController extends Controller
                 $rawResponse = $responseBody['response'] ?? $responseBody['message'] ?? 'Entendido. He registrado esta información.';
                 $cleanResponse = Utf8Helper::fix($rawResponse);
                 
-                Log::info('Response encoding fixed', [
+                Log::debug('Response encoding fixed', [
                     'original_length' => strlen($rawResponse),
                     'fixed_length' => strlen($cleanResponse),
                     'had_mojibake' => Utf8Helper::hasMojibake($rawResponse)
@@ -607,7 +607,7 @@ class KnowledgeController extends Controller
             if (empty($results)) {
                 $newPointId = 'training_' . time() . '_' . bin2hex(random_bytes(4));
                 
-                Log::info('No similar content found - creating new point', [
+                Log::debug('No similar content found - creating new point', [
                     'point_id' => $newPointId,
                     'company_slug' => $companySlug,
                 ]);
@@ -629,7 +629,7 @@ class KnowledgeController extends Controller
             // 5. Umbral de decisión: 0.85 (85% de similitud)
             if ($similarity >= 0.85) {
                 // ES UN DUPLICADO O CORRECCIÓN - Actualizar el punto existente
-                Log::info('Similar content detected - updating existing point', [
+                Log::debug('Similar content detected - updating existing point', [
                     'point_id' => $existingId,
                     'similarity' => $similarity,
                     'company_slug' => $companySlug,
@@ -663,7 +663,7 @@ class KnowledgeController extends Controller
                 // Usar timestamp como ID numérico (Qdrant requiere integer o UUID)
                 $newPointId = intval(microtime(true) * 10000) + random_int(1, 9999);
                 
-                Log::info('Moderately similar content found - creating new point', [
+                Log::debug('Moderately similar content found - creating new point', [
                     'new_point_id' => $newPointId,
                     'similarity_to_existing' => $similarity,
                     'company_slug' => $companySlug,
@@ -707,7 +707,7 @@ class KnowledgeController extends Controller
         
         // 1. Detectar signos de interrogación (al inicio o al final)
         if (preg_match('/^¿|^\?|\?$/', $message)) {
-            Log::info('detectIfQuestion: Detected by interrogation marks');
+            Log::debug('detectIfQuestion: Detected by interrogation marks');
             return true;
         }
         
@@ -725,7 +725,7 @@ class KnowledgeController extends Controller
         
         foreach ($questionStarters as $starter) {
             if (str_starts_with($lowerMessage, $starter . ' ') || $lowerMessage === $starter) {
-                Log::info('detectIfQuestion: Detected by question starter', ['starter' => $starter]);
+                Log::debug('detectIfQuestion: Detected by question starter', ['starter' => $starter]);
                 return true;
             }
         }
@@ -746,7 +746,7 @@ class KnowledgeController extends Controller
         
         foreach ($questionPatterns as $pattern) {
             if (preg_match($pattern, $message)) {
-                Log::info('detectIfQuestion: Detected by pattern', ['pattern' => $pattern]);
+                Log::debug('detectIfQuestion: Detected by pattern', ['pattern' => $pattern]);
                 return true;
             }
         }
@@ -768,7 +768,7 @@ class KnowledgeController extends Controller
         
         foreach ($trainingKeywords as $keyword) {
             if (stripos($lowerMessage, $keyword) !== false) {
-                Log::info('detectIfQuestion: NOT a question - training keyword found', ['keyword' => $keyword]);
+                Log::debug('detectIfQuestion: NOT a question - training keyword found', ['keyword' => $keyword]);
                 return false; // Es información de entrenamiento, NO pregunta
             }
         }
@@ -785,7 +785,7 @@ class KnowledgeController extends Controller
             stripos($lowerMessage, 'abierto') !== false ||
             stripos($lowerMessage, 'cerrado') !== false
         )) {
-            Log::info('detectIfQuestion: Short message looks like question');
+            Log::debug('detectIfQuestion: Short message looks like question');
             return true;
         }
         
@@ -844,7 +844,7 @@ class KnowledgeController extends Controller
         // Actualizar en la base de datos
         $company->update(['assistant_name' => $newName]);
         
-        Log::info('Assistant name changed via chat', [
+        Log::debug('Assistant name changed via chat', [
             'company_id' => $company->id,
             'old_name' => $oldName,
             'new_name' => $newName
@@ -923,7 +923,7 @@ class KnowledgeController extends Controller
             // Update company logo_url with base64 data
             $company->update(['logo_url' => $logoUrl]);
 
-            Log::info('Logo uploaded successfully as base64', [
+            Log::debug('Logo uploaded successfully as base64', [
                 'company_id' => $company->id,
                 'mime_type' => $mimeType,
                 'size_bytes' => strlen($imageData)
@@ -994,7 +994,7 @@ class KnowledgeController extends Controller
         try {
             $user = Auth::user();
             
-            Log::info('deleteDocument called', [
+            Log::debug('deleteDocument called', [
                 'documentId' => $documentId,
                 'user' => $user ? $user->id : null,
                 'auth_check' => Auth::check(),
@@ -1051,7 +1051,7 @@ class KnowledgeController extends Controller
                         if ($httpCode != 200 && $httpCode != 201) {
                             Log::warning("Failed to delete from Qdrant: " . $qdrantResponse);
                         } else {
-                            Log::info("Deleted " . count($vectorIds) . " vectors from Qdrant for document: " . $document->filename);
+                            Log::debug("Deleted " . count($vectorIds) . " vectors from Qdrant for document: " . $document->filename);
                         }
                     }
                 } else {
@@ -1165,7 +1165,7 @@ class KnowledgeController extends Controller
                 ]);
 
             if ($updated) {
-                Log::info("Updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
+                Log::debug("Updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
                 return response()->json([
                     'success' => true,
                     'message' => 'Vector IDs actualizados correctamente'
@@ -1221,7 +1221,7 @@ class KnowledgeController extends Controller
                 ]);
 
             if ($updated) {
-                Log::info("N8N updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
+                Log::debug("N8N updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
                 return response()->json([
                     'success' => true,
                     'message' => 'Vector IDs actualizados correctamente'
@@ -1288,7 +1288,7 @@ class KnowledgeController extends Controller
                         'updated_at' => now()
                     ]);
                     
-                Log::info("Chunk stored for document {$validated['filename']}, chunk {$validated['chunk_index']}");
+                Log::debug("Chunk stored for document {$validated['filename']}, chunk {$validated['chunk_index']}");
             } else {
                 // Document not found - this shouldn't happen normally
                 // Create it anyway to not lose data
@@ -1307,7 +1307,7 @@ class KnowledgeController extends Controller
                     'updated_at' => now()
                 ]);
                 
-                Log::info("Created new document record for {$validated['filename']}");
+                Log::debug("Created new document record for {$validated['filename']}");
             }
 
             return response()->json([
@@ -1335,7 +1335,7 @@ class KnowledgeController extends Controller
      */
     public function proxyToN8n(Request $request)
     {
-        Log::info("proxyToN8n called", [
+        Log::debug("proxyToN8n called", [
             'has_user' => Auth::check(),
             'request_method' => $request->method(),
             'has_file' => $request->has('file'),
@@ -1350,7 +1350,7 @@ class KnowledgeController extends Controller
                 return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
             }
             
-            Log::info("proxyToN8n: User authenticated", ['user_id' => $user->id, 'email' => $user->email]);
+            Log::debug("proxyToN8n: User authenticated", ['user_id' => $user->id, 'email' => $user->email]);
             
             $company = $user->company;
             
@@ -1392,7 +1392,7 @@ class KnowledgeController extends Controller
                     
                     if (!$checkResponse->successful()) {
                         // Workflow was deleted, clear settings
-                        Log::info("Workflow {$workflowId} not found in n8n, will create new one");
+                        Log::debug("Workflow {$workflowId} not found in n8n, will create new one");
                         $settings = $company->settings ?? [];
                         unset($settings['rag_workflow_id']);
                         unset($settings['rag_webhook_path']);
@@ -1423,7 +1423,7 @@ class KnowledgeController extends Controller
                             if (stripos($wf['name'] ?? '', "RAG Documents - {$companySlug}") !== false || 
                                 stripos($wf['name'] ?? '', $expectedName) !== false) {
                                 // Encontramos un workflow existente, recuperar su info
-                                Log::info("Workflow RAG existente encontrado en N8N: {$wf['id']} - {$wf['name']}");
+                                Log::debug("Workflow RAG existente encontrado en N8N: {$wf['id']} - {$wf['name']}");
                                 
                                 // Extraer webhook path del workflow
                                 $existingWebhookPath = null;
@@ -1456,7 +1456,7 @@ class KnowledgeController extends Controller
             // Solo crear si definitivamente no existe
             if (!$webhookPath || !$workflowId) {
                 // Create company-specific workflow
-                Log::info("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
+                Log::debug("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
                 $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
                 
                 if (!$result['success']) {
@@ -1478,7 +1478,7 @@ class KnowledgeController extends Controller
                 'file' => 'required|string', // base64 content
             ]);
 
-            Log::info("Processing RAG request for {$validated['filename']}", [
+            Log::debug("Processing RAG request for {$validated['filename']}", [
                 'company_slug' => $companySlug,
                 'workflow_id' => $workflowId
             ]);
@@ -1516,7 +1516,7 @@ class KnowledgeController extends Controller
             $response = Http::timeout(120)->post($webhookUrl, $payload);
 
             if ($response->successful()) {
-                Log::info("n8n RAG webhook responded successfully for {$validated['filename']}");
+                Log::debug("n8n RAG webhook responded successfully for {$validated['filename']}");
                 return response()->json([
                     'success' => true,
                     'message' => 'Document sent to n8n for AI processing',
@@ -1581,7 +1581,7 @@ class KnowledgeController extends Controller
                     if ($returnCode === 0 && file_exists($tempTxtPath)) {
                         $extractedText = file_get_contents($tempTxtPath);
                         unlink($tempTxtPath);
-                        Log::info("pdftotext extraction: " . strlen($extractedText) . " characters");
+                        Log::debug("pdftotext extraction: " . strlen($extractedText) . " characters");
                     }
                     
                     unlink($tempPdfPath);
@@ -1589,7 +1589,7 @@ class KnowledgeController extends Controller
                 
                 // Method 2: Fallback to pdfparser if pdftotext failed or not available
                 if (strlen($extractedText) < 100) {
-                    Log::info("Falling back to pdfparser...");
+                    Log::debug("Falling back to pdfparser...");
                     $parser = new \Smalot\PdfParser\Parser();
                     $pdf = $parser->parseContent($fileContent);
                     
@@ -1615,7 +1615,7 @@ class KnowledgeController extends Controller
                         $extractedText = $pdf->getText();
                     }
                     
-                    Log::info("pdfparser extraction: " . count($pages) . " pages, " . strlen($extractedText) . " chars total");
+                    Log::debug("pdfparser extraction: " . count($pages) . " pages, " . strlen($extractedText) . " chars total");
                 }
                 
                 // Fix UTF-8 encoding issues
@@ -1624,7 +1624,7 @@ class KnowledgeController extends Controller
                     $detectedEncoding = mb_detect_encoding($extractedText, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ASCII'], true);
                     if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
                         $extractedText = mb_convert_encoding($extractedText, 'UTF-8', $detectedEncoding);
-                        Log::info("Converted PDF text from {$detectedEncoding} to UTF-8");
+                        Log::debug("Converted PDF text from {$detectedEncoding} to UTF-8");
                     }
                 }
                 
@@ -1636,11 +1636,11 @@ class KnowledgeController extends Controller
                 $extractedText = preg_replace('/\s+/', ' ', $extractedText);
                 $extractedText = trim($extractedText);
                 
-                Log::info("PDF final text: " . strlen($extractedText) . " characters");
+                Log::debug("PDF final text: " . strlen($extractedText) . " characters");
                 
                 // If text is too short, it's likely a visual/scanned PDF - use GPT-4 Vision
                 if (strlen($extractedText) < 500) {
-                    Log::info("PDF has little text (" . strlen($extractedText) . " chars), using GPT-4 Vision for visual content");
+                    Log::debug("PDF has little text (" . strlen($extractedText) . " chars), using GPT-4 Vision for visual content");
                     $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
                 }
                 
@@ -1675,7 +1675,7 @@ class KnowledgeController extends Controller
             
             // Fallback to Vision for PDFs
             if ($extension === 'pdf') {
-                Log::info("Falling back to GPT-4 Vision after extraction error");
+                Log::debug("Falling back to GPT-4 Vision after extraction error");
                 try {
                     $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
                 } catch (\Exception $e2) {
@@ -1696,8 +1696,8 @@ class KnowledgeController extends Controller
         $originalLength = strlen($text);
         $originalSample = mb_substr($text, 0, 100);
         
-        Log::info("fixUtf8Mojibake - Input sample (first 100 chars): " . $originalSample);
-        Log::info("fixUtf8Mojibake - Input bytes: " . bin2hex(substr($text, 0, 50)));
+        Log::debug("fixUtf8Mojibake - Input sample (first 100 chars): " . $originalSample);
+        Log::debug("fixUtf8Mojibake - Input bytes: " . bin2hex(substr($text, 0, 50)));
         
         // Method 1: Direct string replacement for visible mojibake patterns
         // When pdftotext outputs "Ã³" as actual characters (not bytes), we need string replacement
@@ -1731,28 +1731,28 @@ class KnowledgeController extends Controller
             $hasSpanishAfter = preg_match('/[áéíóúñüÁÉÍÓÚÑÜ¿¡]/u', $fixed);
             $hadMojibeforeFix = preg_match('/[\xC3][\x80-\xBF][\xC2][\x80-\xBF]/', $text);
             
-            Log::info("mb_convert_encoding attempt - hasSpanish: {$hasSpanishAfter}, hadMojibake: {$hadMojibeforeFix}");
+            Log::debug("mb_convert_encoding attempt - hasSpanish: {$hasSpanishAfter}, hadMojibake: {$hadMojibeforeFix}");
             
             if ($hasSpanishAfter || $hadMojibeforeFix) {
                 $text = $fixed;
-                Log::info("Applied Windows-1252 decode - Output sample: " . mb_substr($text, 0, 100));
+                Log::debug("Applied Windows-1252 decode - Output sample: " . mb_substr($text, 0, 100));
             }
         }
         
         // Method 3: Try utf8_decode for double-encoded UTF-8
         if (preg_match('/\xC3\x83/', $text)) {
-            Log::info("Still detecting C3 83 pattern, trying utf8_decode");
+            Log::debug("Still detecting C3 83 pattern, trying utf8_decode");
             $decoded = @utf8_decode($text);
             if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
                 $text = $decoded;
-                Log::info("Applied utf8_decode");
+                Log::debug("Applied utf8_decode");
             }
         }
         
         // Method 4: Clean invalid UTF-8 sequences
         if (!mb_check_encoding($text, 'UTF-8')) {
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
-            Log::info("Applied iconv UTF-8 cleanup");
+            Log::debug("Applied iconv UTF-8 cleanup");
         }
         
         // Remove control characters but keep printable chars and newlines
@@ -1765,8 +1765,8 @@ class KnowledgeController extends Controller
         }
         
         $finalSample = mb_substr($text, 0, 100);
-        Log::info("fixUtf8Mojibake - Output sample: " . $finalSample);
-        Log::info("fixUtf8Mojibake - Length changed: {$originalLength} -> " . strlen($text));
+        Log::debug("fixUtf8Mojibake - Output sample: " . $finalSample);
+        Log::debug("fixUtf8Mojibake - Length changed: {$originalLength} -> " . strlen($text));
         
         return $text;
     }
@@ -1831,7 +1831,7 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
         if ($response->successful()) {
             $data = $response->json();
             $text = $data['choices'][0]['message']['content'] ?? '';
-            Log::info("GPT-4 Vision extracted: " . strlen($text) . " characters");
+            Log::debug("GPT-4 Vision extracted: " . strlen($text) . " characters");
             return trim($text);
         } else {
             Log::error("GPT-4 Vision API error: " . $response->body());
@@ -2003,7 +2003,7 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
 
             // SIEMPRE activar el workflow después de crearlo
             // n8n requiere (object)[] para enviar {} como body JSON
-            Log::info("Activating workflow {$workflowId}...");
+            Log::debug("Activating workflow {$workflowId}...");
             $activateResponse = Http::withHeaders([
                 'X-N8N-API-KEY' => $n8nApiKey,
                 'Accept' => 'application/json',
@@ -2011,7 +2011,7 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
             if ($activateResponse->successful()) {
-                Log::info("✅ Workflow {$workflowId} activated successfully");
+                Log::debug("✅ Workflow {$workflowId} activated successfully");
             } else {
                 Log::error("❌ Failed to activate workflow: " . $activateResponse->body());
             }
@@ -2024,7 +2024,7 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $company->settings = $settings;
             $company->save();
 
-            Log::info("Created RAG workflow for company {$companySlug}", [
+            Log::debug("Created RAG workflow for company {$companySlug}", [
                 'workflow_id' => $workflowId,
                 'webhook_path' => $webhookPath,
                 'workflow_name' => $workflowName

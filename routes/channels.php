@@ -32,7 +32,7 @@ Broadcast::channel('inbox.{inboxId}', function ($user, $inboxId) {
     }
     
     // Log para debug
-    \Illuminate\Support\Facades\Log::info('🔐 Broadcasting auth check', [
+    \Illuminate\Support\Facades\Log::debug('🔐 Broadcasting auth check', [
         'user_id' => $user->id,
         'user_inbox_id' => $userInboxId,
         'company_slug' => $user->company_slug,

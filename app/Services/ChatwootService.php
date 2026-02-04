@@ -86,7 +86,7 @@ class ChatwootService
     public function configureInboxWebhook(int $inboxId, string $n8nWebhookUrl): array
     {
         try {
-            Log::info('ChatwootService: Configurando webhook para inbox', [
+            Log::debug('ChatwootService: Configurando webhook para inbox', [
                 'inbox_id' => $inboxId,
                 'webhook_url' => $n8nWebhookUrl,
             ]);
@@ -130,7 +130,7 @@ class ChatwootService
             $payload['inbox_ids'] = [$inboxId];
         }
 
-        Log::info('ChatwootService: Creando webhook subscription', [
+        Log::debug('ChatwootService: Creando webhook subscription', [
             'endpoint' => $endpoint,
             'payload' => $payload,
         ]);
@@ -141,7 +141,7 @@ class ChatwootService
         ])->post($endpoint, $payload);
 
         if ($response->successful()) {
-            Log::info('ChatwootService: Webhook creado exitosamente', [
+            Log::debug('ChatwootService: Webhook creado exitosamente', [
                 'response' => $response->json(),
             ]);
             
@@ -314,7 +314,7 @@ class ChatwootService
             $result = $this->configureInboxWebhook($inbox['id'], $n8nWebhookUrl);
             
             if ($result['success']) {
-                Log::info('ChatwootService: Webhook configurado para empresa', [
+                Log::debug('ChatwootService: Webhook configurado para empresa', [
                     'company_slug' => $companySlug,
                     'inbox_id' => $inbox['id'],
                     'webhook_url' => $n8nWebhookUrl,

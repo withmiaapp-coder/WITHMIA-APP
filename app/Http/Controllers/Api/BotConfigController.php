@@ -33,7 +33,7 @@ class BotConfigController extends Controller
         $companySlug = $user?->company_slug;
         $companyId = $user?->company_id;
         
-        Log::info('BotConfig - Getting workflow ID', [
+        Log::debug('BotConfig - Getting workflow ID', [
             'user_id' => $user?->id,
             'company_id' => $companyId,
             'company_slug' => $companySlug,
@@ -46,7 +46,7 @@ class BotConfigController extends Controller
             $referer = request()->header('Referer', '');
             if (preg_match('/\/dashboard\/([a-z0-9\-]+)/', $referer, $matches)) {
                 $companySlug = $matches[1];
-                Log::info('BotConfig - Got company_slug from referer', ['slug' => $companySlug]);
+                Log::debug('BotConfig - Got company_slug from referer', ['slug' => $companySlug]);
             }
         }
         
@@ -55,7 +55,7 @@ class BotConfigController extends Controller
             $company = \App\Models\Company::where('slug', $companySlug)->first();
             if ($company) {
                 $companyId = $company->id;
-                Log::info('BotConfig - Got company_id from companies table', [
+                Log::debug('BotConfig - Got company_id from companies table', [
                     'slug' => $companySlug,
                     'company_id' => $companyId
                 ]);
@@ -77,7 +77,7 @@ class BotConfigController extends Controller
                 ->where('company_id', $companyId)
                 ->first();
             
-            Log::info('BotConfig - Search by company_id', [
+            Log::debug('BotConfig - Search by company_id', [
                 'company_id' => $companyId,
                 'found' => $instance !== null
             ]);
@@ -113,7 +113,7 @@ class BotConfigController extends Controller
                 ->first();
         }
         
-        Log::info('BotConfig - Instance search result', [
+        Log::debug('BotConfig - Instance search result', [
             'instance_id' => $instance?->id,
             'instance_name' => $instance?->name,
             'workflow_id' => $instance?->n8n_workflow_id,
@@ -265,7 +265,7 @@ class BotConfigController extends Controller
                 }
             }
             
-            Log::info('Bot config update attempt', [
+            Log::debug('Bot config update attempt', [
                 'workflow_id' => $workflowId,
                 'updated' => $updated,
                 'updated_nodes' => $updatedNodes,
@@ -352,7 +352,7 @@ class BotConfigController extends Controller
             'settings' => $workflow['settings'] ?? new \stdClass(),
         ];
 
-        Log::info('Updating n8n workflow', [
+        Log::debug('Updating n8n workflow', [
             'workflow_id' => $workflowId,
             'url' => "{$this->n8nUrl}/api/v1/workflows/{$workflowId}",
             'api_key_present' => !empty($this->n8nApiKey),
@@ -365,7 +365,7 @@ class BotConfigController extends Controller
             'Content-Type' => 'application/json',
         ])->put("{$this->n8nUrl}/api/v1/workflows/{$workflowId}", $cleanWorkflow);
 
-        Log::info('n8n response', [
+        Log::debug('n8n response', [
             'status' => $response->status(),
             'successful' => $response->successful(),
             'body' => substr($response->body(), 0, 500),

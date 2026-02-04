@@ -82,7 +82,7 @@ class OnboardingController extends Controller
                             $request->header('Accept') === 'application/json' || 
                             $request->header('X-Requested-With') === 'XMLHttpRequest';
 
-            \Log::info('OnboardingController@store START', [
+            \Log::debug('OnboardingController@store START', [
                 'step' => $request->input('step'),
                 'is_json' => $isJsonRequest,
                 'auth_check' => auth()->check(),
@@ -121,7 +121,7 @@ class OnboardingController extends Controller
 
             $step = $request->input('step', 0);
             
-            \Log::info("OnboardingController@store - Processing step: {$step} for user: {$user->id}");
+            \Log::debug("OnboardingController@store - Processing step: {$step} for user: {$user->id}");
 
             switch ($step) {
                 case 1: $this->saveUserData($request, $user); break;
@@ -131,10 +131,10 @@ class OnboardingController extends Controller
                 case 5: $this->saveVolumeData($request, $user); break;
                 case 6: $this->saveDiscoveryDataInternal($request, $user); break;
                 case 7:
-                    \Log::info("OnboardingController@store - STEP 7 - About to call processOnboardingCompletion");
+                    \Log::debug("OnboardingController@store - STEP 7 - About to call processOnboardingCompletion");
                     $this->saveToolsData($request, $user);
                     $completionResult = $this->processOnboardingCompletion($request, $user);
-                    \Log::info("OnboardingController@store - STEP 7 - processOnboardingCompletion returned", ['result' => $completionResult]);
+                    \Log::debug("OnboardingController@store - STEP 7 - processOnboardingCompletion returned", ['result' => $completionResult]);
                     $user->refresh();
                     break;
             }
@@ -242,7 +242,7 @@ class OnboardingController extends Controller
 
     private function saveUserData(Request $request, User $user)
     {
-        \Log::info('saveUserData START', [
+        \Log::debug('saveUserData START', [
             'user_id' => $user->id,
             'request_data' => $request->all()
         ]);
@@ -253,14 +253,14 @@ class OnboardingController extends Controller
                 'phone' => 'required|string|max:20',
             ]);
 
-            \Log::info('saveUserData validation passed', ['validated' => $validated]);
+            \Log::debug('saveUserData validation passed', ['validated' => $validated]);
 
             $user->update([
                 'full_name' => $request->full_name,
                 'phone' => $request->phone,
             ]);
 
-            \Log::info('saveUserData update completed', [
+            \Log::debug('saveUserData update completed', [
                 'user_id' => $user->id,
                 'full_name' => $user->full_name,
                 'phone' => $user->phone
@@ -344,7 +344,7 @@ class OnboardingController extends Controller
         
         $company->update(['settings' => $settings]);
         
-        \Log::info('saveDiscoveryDataInternal completed', [
+        \Log::debug('saveDiscoveryDataInternal completed', [
             'company_id' => $company->id,
             'discovered_via' => $onboarding['discovered_via'],
             'tools' => $onboarding['tools']
@@ -365,7 +365,7 @@ class OnboardingController extends Controller
         
         $company->update(['settings' => $settings]);
         
-        \Log::info('saveToolsData completed', [
+        \Log::debug('saveToolsData completed', [
             'company_id' => $company->id,
             'tools' => $onboarding['tools']
         ]);
@@ -373,45 +373,45 @@ class OnboardingController extends Controller
 
     private function processOnboardingCompletion(Request $request, User $user): array
     {
-        Log::info("processOnboardingCompletion INICIADO para user: {$user->id} - {$user->email}");
+        Log::debug("processOnboardingCompletion INICIADO para user: {$user->id} - {$user->email}");
 
         $companyName = $request->company_name ?? $user->full_name ?? $user->name ?? 'empresa';
         $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
         
-        Log::info("Slug generado: {$uniqueSlug}");
+        Log::debug("Slug generado: {$uniqueSlug}");
 
         $user->update(['company_slug' => $uniqueSlug]);
-        Log::info("Usuario actualizado con slug");
+        Log::debug("Usuario actualizado con slug");
 
         $company = $this->getOrCreateCompany($user, $uniqueSlug);
 
         if ($company->slug !== $uniqueSlug) {
             $company->update(['slug' => $uniqueSlug]);
-            Log::info("Slug de empresa actualizado a: {$uniqueSlug}");
+            Log::debug("Slug de empresa actualizado a: {$uniqueSlug}");
         }
 
         // 🌍 Asignar timezone automáticamente según el país del teléfono
         $phoneCountry = $request->phone_country ?? '+56';
         $timezone = $this->getTimezoneFromPhoneCountry($phoneCountry);
         $company->update(['timezone' => $timezone]);
-        Log::info("Timezone asignado: {$timezone} (país: {$phoneCountry})");
+        Log::debug("Timezone asignado: {$timezone} (país: {$phoneCountry})");
 
-        Log::info("Empresa obtenida/creada: ID {$company->id}");
+        Log::debug("Empresa obtenida/creada: ID {$company->id}");
 
         // 📦 Crear colección Qdrant
         try {
-            Log::info("📦 Creating Qdrant collection for: {$uniqueSlug}");
+            Log::debug("📦 Creating Qdrant collection for: {$uniqueSlug}");
             CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
-            Log::info("✅ Qdrant collection created for: {$uniqueSlug}");
+            Log::debug("✅ Qdrant collection created for: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error creating Qdrant: " . $e->getMessage());
         }
 
         // 🚀 Crear workflows n8n (RAG + Training)
         try {
-            Log::info("🚀 Creating n8n workflows for: {$uniqueSlug}");
+            Log::debug("🚀 Creating n8n workflows for: {$uniqueSlug}");
             CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
-            Log::info("✅ N8n workflows created for: {$uniqueSlug}");
+            Log::debug("✅ N8n workflows created for: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error creating n8n workflows: " . $e->getMessage());
         }
@@ -424,7 +424,7 @@ class OnboardingController extends Controller
                 $uniqueSlug,
                 request()->ip() ?? '0.0.0.0'
             );
-            Log::info("PostOnboardingSetupJob completado para: {$uniqueSlug}");
+            Log::debug("PostOnboardingSetupJob completado para: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
         }
@@ -453,7 +453,7 @@ class OnboardingController extends Controller
 
         // 🚀 Ejecutar Job SINCRÓNICAMENTE para asegurar que workflows se creen
         try {
-            Log::info("Ejecutando PostOnboardingSetupJob sincrónicamente para: {$uniqueSlug}");
+            Log::debug("Ejecutando PostOnboardingSetupJob sincrónicamente para: {$uniqueSlug}");
             
             \App\Jobs\PostOnboardingSetupJob::dispatchSync(
                 $user->id,
@@ -462,13 +462,13 @@ class OnboardingController extends Controller
                 $request->ip() ?? '0.0.0.0'
             );
             
-            Log::info("PostOnboardingSetupJob completado para: {$uniqueSlug}");
+            Log::debug("PostOnboardingSetupJob completado para: {$uniqueSlug}");
         } catch (\Exception $e) {
             Log::error("Error en PostOnboardingSetupJob: " . $e->getMessage());
             // Continuar aunque falle - el usuario ya tiene su dashboard
         }
 
-        Log::info("Onboarding completado para {$user->email}, redirigiendo a dashboard");
+        Log::debug("Onboarding completado para {$user->email}, redirigiendo a dashboard");
 
         return redirect()->route('dashboard.company', ['companySlug' => $uniqueSlug]);
     }

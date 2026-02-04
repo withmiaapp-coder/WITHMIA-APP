@@ -279,7 +279,7 @@ Route::get('/fix-chatwoot-inbox-webhook/{inboxId}', function ($inboxId) {
                 'updated_at' => now()
             ]);
         
-        Log::info('? Webhook de inbox actualizado', [
+        Log::debug('? Webhook de inbox actualizado', [
             'inbox_id' => $inboxId,
             'old_webhook' => $oldWebhook,
             'new_webhook' => $newWebhook
@@ -487,7 +487,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         $companySlug = $instance->company_slug ?? null;
         $collectionName = $companySlug ? $qdrantService->getCollectionName($companySlug) : 'coleccion';
         
-        Log::info("Creando workflow para {$instanceName}", [
+        Log::debug("Creando workflow para {$instanceName}", [
             'company_slug' => $companySlug,
             'collection_name' => $collectionName
         ]);
@@ -522,7 +522,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
         $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
         
-        Log::info('Credentials obtenidas', [
+        Log::debug('Credentials obtenidas', [
             'openai_id' => $openaiCredentialId,
             'qdrant_id' => $qdrantCredentialId
         ]);
@@ -592,7 +592,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
             // Activar
             if ($workflowId) {
                 $activateResult = $n8nService->activateWorkflow($workflowId);
-                Log::info('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
+                Log::debug('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
             }
             
             // Configurar webhook de Evolution hacia n8n
@@ -601,7 +601,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
                 $webhookUrl,
                 ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
             );
-            Log::info('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
+            Log::debug('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
             
             // Guardar en BD
             \Illuminate\Support\Facades\DB::table('whatsapp_instances')
@@ -861,7 +861,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
                 'chatwoot_agent_token' => $existingToken->token
             ]);
             
-            Log::info('? Token sincronizado desde Chatwoot', [
+            Log::debug('? Token sincronizado desde Chatwoot', [
                 'user_id' => $user->id,
                 'chatwoot_user_id' => $user->chatwoot_agent_id
             ]);
@@ -892,7 +892,7 @@ Route::get('/fix-chatwoot-token/{userId?}', function ($userId = null) {
             'chatwoot_agent_token' => $newToken
         ]);
         
-        Log::info('? Nuevo token creado en Chatwoot', [
+        Log::debug('? Nuevo token creado en Chatwoot', [
             'user_id' => $user->id,
             'chatwoot_user_id' => $user->chatwoot_agent_id
         ]);
@@ -960,7 +960,7 @@ Route::get('/fix-all-chatwoot-tokens', function () {
             }
         }
         
-        Log::info('? All Chatwoot tokens fixed', ['count' => count($results)]);
+        Log::debug('? All Chatwoot tokens fixed', ['count' => count($results)]);
         
         return response()->json([
             'success' => true,
@@ -1143,7 +1143,7 @@ Route::get('/fix-chatwoot-user-type/{userId?}', function ($userId = null) {
                 ->where('id', $user->chatwoot_agent_id)
                 ->update(['type' => 'User']);
             
-            Log::info('? Chatwoot user type fixed', [
+            Log::debug('? Chatwoot user type fixed', [
                 'chatwoot_user_id' => $user->chatwoot_agent_id,
                 'old_type' => $oldType,
                 'new_type' => 'User'
@@ -1627,7 +1627,7 @@ Route::get('/fix-inbox-name/{instanceName}', function ($instanceName) {
         // 5. Limpiar caché
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('✅ Inbox renombrado', [
+        Log::debug('✅ Inbox renombrado', [
             'old_name' => $oldName,
             'new_name' => $correctInboxName,
             'inbox_id' => $existingInbox->id
@@ -2424,7 +2424,7 @@ Route::get('/diagnose-webhook-flow/{instanceName?}', function ($instanceName = n
         
         // 5. SI NO HAY WEBHOOK A N8N, CREARLO
         if (!$hasN8nWebhook && $n8nWebhookUrl) {
-            Log::info('🔧 Creando webhook de Chatwoot a n8n', [
+            Log::debug('🔧 Creando webhook de Chatwoot a n8n', [
                 'account_id' => $accountId,
                 'webhook_url' => $n8nWebhookUrl
             ]);

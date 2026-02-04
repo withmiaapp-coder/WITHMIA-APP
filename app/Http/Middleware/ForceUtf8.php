@@ -31,7 +31,7 @@ class ForceUtf8
         // 🔴 DEBUG: Log raw input at middleware level (before any processing)
         $rawInput = file_get_contents('php://input');
         if (strlen($rawInput) > 0 && strlen($rawInput) < 5000) {
-            Log::info('🔴 ForceUtf8 Middleware - RAW INPUT', [
+            Log::debug('🔴 ForceUtf8 Middleware - RAW INPUT', [
                 'uri' => $request->getRequestUri(),
                 'content_type' => $request->header('Content-Type'),
                 'raw_hex' => bin2hex(substr($rawInput, 0, 200)),

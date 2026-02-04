@@ -32,7 +32,7 @@ class RailwayAuthToken
             
             if ($user) {
                 Auth::login($user);
-                Log::info('RailwayAuthToken: User authenticated via token', [
+                Log::debug('RailwayAuthToken: User authenticated via token', [
                     'user_id' => $user->id,
                     'source' => $request->query('auth_token') ? 'query' : 
                                ($request->header('X-Railway-Auth-Token') ? 'header' : 'input')

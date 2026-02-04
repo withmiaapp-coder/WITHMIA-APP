@@ -121,7 +121,7 @@ class MembersController extends Controller
                 }
             }
             
-            Log::info('Member updated', [
+            Log::debug('Member updated', [
                 'member_id' => $member->id,
                 'updated_by' => $user->id,
                 'changes' => $updateData
@@ -224,7 +224,7 @@ class MembersController extends Controller
             // Finalmente, eliminar el usuario
             $member->forceDelete(); // Usar forceDelete para asegurar eliminación permanente
             
-            Log::info('Member completely deleted with all related data', [
+            Log::debug('Member completely deleted with all related data', [
                 'member_id' => $memberId,
                 'member_email' => $memberEmail,
                 'deleted_by' => $user->id

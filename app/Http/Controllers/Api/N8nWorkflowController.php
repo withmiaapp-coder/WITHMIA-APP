@@ -87,7 +87,7 @@ class N8nWorkflowController extends Controller
             // 6. Obtener URL del webhook
             $webhookUrl = $this->n8nService->getWebhookUrl($instanceName);
 
-            Log::info('✅ Workflow creado exitosamente', [
+            Log::debug('✅ Workflow creado exitosamente', [
                 'company_id' => $companyId,
                 'instance_name' => $instanceName,
                 'workflow_id' => $workflowId,
@@ -138,7 +138,7 @@ class N8nWorkflowController extends Controller
         $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
         $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
         
-        Log::info('Credentials obtenidas para workflow', [
+        Log::debug('Credentials obtenidas para workflow', [
             'openai_id' => $openaiCredentialId,
             'qdrant_id' => $qdrantCredentialId
         ]);
@@ -381,7 +381,7 @@ class N8nWorkflowController extends Controller
                 ]);
             }
 
-            Log::info("Creando workflow de entrenamiento para: {$companySlug}");
+            Log::debug("Creando workflow de entrenamiento para: {$companySlug}");
 
             // Crear el workflow
             $result = $this->n8nService->createTrainingWorkflow($companySlug);
@@ -408,7 +408,7 @@ class N8nWorkflowController extends Controller
                 ])
             ]);
 
-            Log::info("✅ Training workflow creado exitosamente", [
+            Log::debug("✅ Training workflow creado exitosamente", [
                 'company_slug' => $companySlug,
                 'workflow_id' => $result['workflow_id']
             ]);

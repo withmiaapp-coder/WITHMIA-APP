@@ -25,7 +25,7 @@ class QdrantService
         
         $this->apiKey = env('QDRANT_API_KEY');
         
-        Log::info("QdrantService initialized", ['baseUrl' => $this->baseUrl]);
+        Log::debug("QdrantService initialized", ['baseUrl' => $this->baseUrl]);
     }
 
     /**
@@ -42,7 +42,7 @@ class QdrantService
         try {
             // Verificar si la colección ya existe
             if ($this->collectionExists($collectionName)) {
-                Log::info("Qdrant: Colección ya existe", ['collection' => $collectionName]);
+                Log::debug("Qdrant: Colección ya existe", ['collection' => $collectionName]);
                 return [
                     'success' => true,
                     'collection' => $collectionName,
@@ -64,7 +64,7 @@ class QdrantService
             ]);
 
             if ($response['success']) {
-                Log::info("Qdrant: Colección creada exitosamente", [
+                Log::debug("Qdrant: Colección creada exitosamente", [
                     'collection' => $collectionName,
                     'company_slug' => $companySlug
                 ]);
@@ -137,7 +137,7 @@ class QdrantService
         try {
             $response = $this->request('DELETE', "/collections/{$collectionName}");
             
-            Log::info("Qdrant: Colección eliminada", ['collection' => $collectionName]);
+            Log::debug("Qdrant: Colección eliminada", ['collection' => $collectionName]);
             
             return [
                 'success' => $response['success'],
@@ -266,7 +266,7 @@ class QdrantService
             ]);
             
             if ($response['success']) {
-                Log::info("Qdrant: Points deleted", [
+                Log::debug("Qdrant: Points deleted", [
                     'collection' => $collectionName,
                     'count' => count($pointIds)
                 ]);
@@ -304,7 +304,7 @@ class QdrantService
             ]);
 
             if ($response['success']) {
-                Log::info("Qdrant: Points upserted successfully", [
+                Log::debug("Qdrant: Points upserted successfully", [
                     'collection' => $collectionName,
                     'count' => count($points)
                 ]);

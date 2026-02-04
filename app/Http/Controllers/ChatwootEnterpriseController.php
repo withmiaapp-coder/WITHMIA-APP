@@ -732,7 +732,7 @@ class ChatwootEnterpriseController extends Controller
                 ], $response->status());
             }
 
-            Log::info('✅ Webhook de Chatwoot creado exitosamente', [
+            Log::debug('✅ Webhook de Chatwoot creado exitosamente', [
                 'company_id' => $company->id,
                 'webhook_url' => $webhookUrl,
                 'subscriptions' => $subscriptions

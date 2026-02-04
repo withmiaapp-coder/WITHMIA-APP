@@ -59,7 +59,7 @@ Route::get('/migrate-workflows-to-withmia', function () {
         }
         
         $workflows = $workflowsResult['data'] ?? [];
-        Log::info('🔄 Iniciando migración de workflows', ['total' => count($workflows)]);
+        Log::debug('🔄 Iniciando migración de workflows', ['total' => count($workflows)]);
         
         foreach ($workflows as $workflow) {
             $workflowId = $workflow['id'];
@@ -98,7 +98,7 @@ Route::get('/migrate-workflows-to-withmia', function () {
                         $node['id'] = 'webhook-withmia';
                         $needsUpdate = true;
                         
-                        Log::info("🔄 Actualizando webhook path", [
+                        Log::debug("🔄 Actualizando webhook path", [
                             'workflow_id' => $workflowId,
                             'old_path' => $oldWebhookPath,
                             'new_path' => $newWebhookPath
@@ -164,7 +164,7 @@ Route::get('/migrate-workflows-to-withmia', function () {
                                             'url' => $newWebhookUrl
                                         ]);
                                         
-                                        Log::info("✅ Chatwoot webhook actualizado", [
+                                        Log::debug("✅ Chatwoot webhook actualizado", [
                                             'webhook_id' => $webhook['id'],
                                             'new_url' => $newWebhookUrl
                                         ]);
@@ -268,7 +268,7 @@ Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
             'chatwoot_agent_token' => $newToken
         ]);
         
-        Log::info('? Token de Chatwoot regenerado', [
+        Log::debug('? Token de Chatwoot regenerado', [
             'user_id' => $userId,
             'chatwoot_agent_id' => $user->chatwoot_agent_id,
             'deleted_old_tokens' => $deletedTokens,
@@ -613,7 +613,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
         // Usar workflow minimalista directamente
         $workflow = getMinimalWorkflow($instanceName);
         
-        Log::info('?? Creando workflow minimalista', ['name' => $workflow['name']]);
+        Log::debug('?? Creando workflow minimalista', ['name' => $workflow['name']]);
         
         // Crear en n8n
         $result = $n8nService->createWorkflow($workflow);
@@ -625,7 +625,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
             // Activar
             if ($workflowId) {
                 $activateResult = $n8nService->activateWorkflow($workflowId);
-                Log::info('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
+                Log::debug('? Workflow activado', ['id' => $workflowId, 'result' => $activateResult]);
             }
             
             // Configurar webhook de Evolution hacia n8n
@@ -634,7 +634,7 @@ Route::get('/create-minimal-workflow/{instanceName}', function ($instanceName) {
                 $webhookUrl,
                 ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
             );
-            Log::info('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
+            Log::debug('?? Webhook Evolution configurado', ['result' => $evolutionResult]);
             
             // Guardar en BD
             \Illuminate\Support\Facades\DB::table('whatsapp_instances')
@@ -988,7 +988,7 @@ Route::get('/regenerate-all-chatwoot-tokens', function () {
         // Limpiar cache de conversaciones
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('?? All Chatwoot tokens REGENERATED', ['count' => count($results)]);
+        Log::debug('?? All Chatwoot tokens REGENERATED', ['count' => count($results)]);
         
         return response()->json([
             'success' => true,
@@ -1082,7 +1082,7 @@ Route::get('/setup-evolution-chatwoot/{instanceName}', function ($instanceName) 
             'autoCreate' => true // Permitir crear inbox si no existe
         ]);
         
-        Log::info('🔧 Chatwoot configured in Evolution API', [
+        Log::debug('🔧 Chatwoot configured in Evolution API', [
             'instance' => $instanceName,
             'account_id' => $accountId,
             'inbox_name' => $inboxName,
@@ -1297,7 +1297,7 @@ Route::get('/reset-chatwoot-conversations/{confirm}', function ($confirm) {
         // 3. Limpiar cach�
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('?? RESET CHATWOOT COMPLETADO', [
+        Log::debug('?? RESET CHATWOOT COMPLETADO', [
             'account_id' => $accountId,
             'conversations_deleted' => $conversationsDeleted,
             'messages_deleted' => $messagesDeleted
@@ -1407,7 +1407,7 @@ Route::get('/sync-evolution-with-chatwoot/{instanceName}', function ($instanceNa
         // 6. Limpiar caché
         \Illuminate\Support\Facades\Cache::flush();
         
-        Log::info('✅ SYNC Evolution-Chatwoot completado', [
+        Log::debug('✅ SYNC Evolution-Chatwoot completado', [
             'instance' => $instanceName,
             'inbox_name' => $inboxName,
             'inbox_id' => $inboxId,
@@ -1605,7 +1605,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(
 
             $company->save();
 
-            Log::info('Company settings updated', [
+            Log::debug('Company settings updated', [
                 'company_id' => $company->id,
                 'user_id' => $user->id,
                 'timezone' => $company->timezone
@@ -2012,7 +2012,7 @@ Route::post('/n8n/notify-response', function (Request $request) {
                 $accountId
             ));
             
-            \Log::info('Notificacion WebSocket enviada', [
+            \Log::debug('Notificacion WebSocket enviada', [
                 'company_slug' => $companySlug,
                 'conversation_id' => $conversationId,
                 'inbox_id' => $inboxId,
@@ -2185,7 +2185,7 @@ Route::post('/repair-instance/{instanceName}', function (Request $request, strin
         
         // 2. Verificar/crear workflow en n8n si no existe
         if (empty($instance->n8n_workflow_id)) {
-            Log::info("🔧 Repair: Creating n8n workflow for {$instanceName}");
+            Log::debug("🔧 Repair: Creating n8n workflow for {$instanceName}");
             
             // Obtener company
             $company = \App\Models\Company::find($instance->company_id);
