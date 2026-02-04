@@ -5,20 +5,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppInstance;
+use App\Services\N8nService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
 class BotConfigController extends Controller
 {
-    private string $n8nUrl;
-    private string $n8nApiKey;
+    private N8nService $n8nService;
 
-    public function __construct()
+    public function __construct(N8nService $n8nService)
     {
-        $this->n8nUrl = config('services.n8n.url') ?? 'https://n8n-production-00dd.up.railway.app';
-        $this->n8nApiKey = config('services.n8n.api_key') ?? '';
+        $this->n8nService = $n8nService;
     }
 
     /**
@@ -311,15 +309,13 @@ class BotConfigController extends Controller
      */
     private function getWorkflow(string $workflowId): ?array
     {
-        $response = Http::withHeaders([
-            'X-N8N-API-KEY' => $this->n8nApiKey,
-        ])->get("{$this->n8nUrl}/api/v1/workflows/{$workflowId}");
+        $result = $this->n8nService->getWorkflow($workflowId);
 
-        if ($response->successful()) {
-            return $response->json();
+        if ($result['success']) {
+            return $result['data'];
         }
 
-        Log::error('Error getting workflow from n8n: ' . $response->body());
+        Log::error('Error getting workflow from n8n: ' . ($result['error'] ?? 'Unknown error'));
         return null;
     }
 
@@ -354,28 +350,20 @@ class BotConfigController extends Controller
 
         Log::debug('Updating n8n workflow', [
             'workflow_id' => $workflowId,
-            'url' => "{$this->n8nUrl}/api/v1/workflows/{$workflowId}",
-            'api_key_present' => !empty($this->n8nApiKey),
-            'api_key_length' => strlen($this->n8nApiKey),
             'nodes_count' => count($cleanNodes),
         ]);
 
-        $response = Http::withHeaders([
-            'X-N8N-API-KEY' => $this->n8nApiKey,
-            'Content-Type' => 'application/json',
-        ])->put("{$this->n8nUrl}/api/v1/workflows/{$workflowId}", $cleanWorkflow);
+        $result = $this->n8nService->updateWorkflow($workflowId, $cleanWorkflow);
 
         Log::debug('n8n response', [
-            'status' => $response->status(),
-            'successful' => $response->successful(),
-            'body' => substr($response->body(), 0, 500),
+            'successful' => $result['success'],
         ]);
 
-        if ($response->successful()) {
+        if ($result['success']) {
             return true;
         }
 
-        Log::error('Error updating workflow in n8n: ' . $response->body());
+        Log::error('Error updating workflow in n8n: ' . ($result['error'] ?? 'Unknown error'));
         return false;
     }
 

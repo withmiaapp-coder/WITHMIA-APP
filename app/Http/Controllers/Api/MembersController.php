@@ -4,15 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ChatwootService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class MembersController extends Controller
 {
+    private ChatwootService $chatwootService;
+
+    public function __construct(ChatwootService $chatwootService)
+    {
+        $this->chatwootService = $chatwootService;
+    }
+
     /**
      * Listar miembros de la empresa del usuario actual
      */
@@ -253,19 +260,17 @@ class MembersController extends Controller
     {
         try {
             $company = $member->company;
-            if (!$company || !$company->chatwoot_api_key || !$company->chatwoot_account_id) {
+            if (!$company || !$company->chatwoot_api_key || !$company->chatwoot_account_id || !$member->chatwoot_agent_id) {
                 return;
             }
             
-            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
-            $accountId = $company->chatwoot_account_id;
-            
-            Http::withHeaders([
-                'api_access_token' => $company->chatwoot_api_key,
-                'Content-Type' => 'application/json',
-            ])->patch("{$baseUrl}/api/v1/accounts/{$accountId}/agents/{$member->chatwoot_agent_id}", [
-                'role' => $member->role === 'admin' ? 'administrator' : 'agent',
-            ]);
+            $role = $member->role === 'admin' ? 'administrator' : 'agent';
+            $this->chatwootService->updateAgentRole(
+                $company->chatwoot_account_id,
+                $company->chatwoot_api_key,
+                $member->chatwoot_agent_id,
+                $role
+            );
             
         } catch (\Exception $e) {
             Log::error('Error updating Chatwoot agent role: ' . $e->getMessage());
@@ -279,16 +284,15 @@ class MembersController extends Controller
     {
         try {
             $company = $member->company;
-            if (!$company || !$company->chatwoot_api_key || !$company->chatwoot_account_id) {
+            if (!$company || !$company->chatwoot_api_key || !$company->chatwoot_account_id || !$member->chatwoot_agent_id) {
                 return;
             }
             
-            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
-            $accountId = $company->chatwoot_account_id;
-            
-            Http::withHeaders([
-                'api_access_token' => $company->chatwoot_api_key,
-            ])->delete("{$baseUrl}/api/v1/accounts/{$accountId}/agents/{$member->chatwoot_agent_id}");
+            $this->chatwootService->deleteAgent(
+                $company->chatwoot_account_id,
+                $company->chatwoot_api_key,
+                $member->chatwoot_agent_id
+            );
             
         } catch (\Exception $e) {
             Log::error('Error deleting Chatwoot agent: ' . $e->getMessage());

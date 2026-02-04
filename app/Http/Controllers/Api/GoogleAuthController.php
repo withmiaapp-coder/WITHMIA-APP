@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Services\ChatwootService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,13 @@ use Illuminate\Support\Facades\Log;
 
 class GoogleAuthController extends Controller
 {
+    private ChatwootService $chatwootService;
+
+    public function __construct(ChatwootService $chatwootService)
+    {
+        $this->chatwootService = $chatwootService;
+    }
+
     public function authenticate(Request $request)
     {
         try {
@@ -253,27 +261,25 @@ class GoogleAuthController extends Controller
             $company = $invitation->company;
             
             if (!$company->chatwoot_account_id || !$company->chatwoot_api_key) {
-
                 return null;
             }
 
-            $chatwootUrl = config('chatwoot.base_url');
+            // Crear agente usando el servicio
+            $result = $this->chatwootService->createAgent(
+                $company->chatwoot_account_id,
+                $company->chatwoot_api_key,
+                [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $invitation->role === 'administrator' ? 'administrator' : 'agent',
+                    'auto_offline' => true,
+                ]
+            );
 
-            
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'api_access_token' => $company->chatwoot_api_key,
-                'Content-Type' => 'application/json',
-            ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents", [
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $invitation->role === 'administrator' ? 'administrator' : 'agent',
-                'auto_offline' => true,
-            ]);
+            Log::debug('Chatwoot: Agent creation response', ['success' => $result['success']]);
 
-            Log::debug('Chatwoot: Agent creation response', ['status' => $response->status()]);
-
-            if ($response->successful()) {
-                $agentData = $response->json();
+            if ($result['success']) {
+                $agentData = $result['data'];
                 $user->update([
                     'chatwoot_agent_id' => $agentData['id'] ?? null,
                 ]);
@@ -281,18 +287,18 @@ class GoogleAuthController extends Controller
                 
                 // Add to team if specified
                 if ($invitation->team_id && isset($agentData['id'])) {
-                    $teamResponse = \Illuminate\Support\Facades\Http::withHeaders([
-                        'api_access_token' => $company->chatwoot_api_key,
-                        'Content-Type' => 'application/json',
-                    ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams/{$invitation->team_id}/team_members", [
-                        'user_ids' => [$agentData['id']]
-                    ]);
+                    $this->chatwootService->addAgentsToTeam(
+                        $company->chatwoot_account_id,
+                        $company->chatwoot_api_key,
+                        $invitation->team_id,
+                        [$agentData['id']]
+                    );
                     Log::debug('Chatwoot: Added agent to team', ['team_id' => $invitation->team_id]);
                 }
                 
                 return $agentData;
             } else {
-                Log::warning('Chatwoot: Failed to create agent', ['status' => $response->status()]);
+                Log::warning('Chatwoot: Failed to create agent', ['error' => $result['error'] ?? 'unknown']);
             }
         } catch (\Exception $e) {
             Log::error('Chatwoot: Agent creation error', ['error' => $e->getMessage()]);

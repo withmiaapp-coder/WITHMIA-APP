@@ -5,16 +5,23 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Controller;
 use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
+use App\Services\ChatwootService;
 use App\Services\ConversationDeduplicationService;
 use App\Helpers\PhoneNormalizer;
 use App\Helpers\SystemMessagePatterns;
 
 class ChatwootWebhookController extends Controller
 {
+    private ChatwootService $chatwootService;
+
+    public function __construct(ChatwootService $chatwootService)
+    {
+        $this->chatwootService = $chatwootService;
+    }
+
     /**
      * Recibir eventos de Chatwoot y notificar al frontend
      */
@@ -160,16 +167,14 @@ class ChatwootWebhookController extends Controller
             $identifier = $data['conversation']['meta']['sender']['identifier'] ?? 
                          $data['meta']['sender']['identifier'] ?? null;
 
-            // Si no viene identifier, consultarlo de la API
+            // Si no viene identifier, consultarlo de la API usando el servicio
             if ($conversationId && !$identifier) {
-                $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
                 $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
                 
-                $convResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
-                    ->get($chatwootUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId);
+                $result = $this->chatwootService->getConversation($accountId, $chatwootToken, $conversationId);
                 
-                if ($convResponse->successful()) {
-                    $convData = $convResponse->json();
+                if ($result['success']) {
+                    $convData = $result['data'];
                     $identifier = $convData['meta']['sender']['identifier'] ?? null;
                     Log::debug('📞 Identifier obtenido de API', ['identifier' => $identifier]);
                 }
@@ -238,15 +243,13 @@ class ChatwootWebhookController extends Controller
                     'phone_base' => $phoneBase
                 ]);
 
-                // Obtener información de la conversación existente
-                $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
+                // Obtener información de la conversación existente usando el servicio
                 $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
                 
-                $existingConvResponse = Http::withHeaders(['api_access_token' => $chatwootToken])
-                    ->get($chatwootUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $existingConversationId);
+                $existingResult = $this->chatwootService->getConversation($accountId, $chatwootToken, $existingConversationId);
 
-                if ($existingConvResponse->successful()) {
-                    $existingConvData = $existingConvResponse->json();
+                if ($existingResult['success']) {
+                    $existingConvData = $existingResult['data'];
                     $existingIdentifier = $existingConvData['meta']['sender']['identifier'] ?? '';
                     $existingIsLid = PhoneNormalizer::isLid($existingIdentifier);
                     $existingIsRealNumber = PhoneNormalizer::isRealNumber($existingIdentifier);
@@ -323,17 +326,16 @@ class ChatwootWebhookController extends Controller
     private function archiveConversation($conversationId, $accountId)
     {
         try {
-            $chatwootUrl = config('chatwoot.url', env('CHATWOOT_URL', 'http://127.0.0.1:3000'));
             $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
             
-            $response = Http::withHeaders([
-                'api_access_token' => $chatwootToken
-            ])->post(
-                $chatwootUrl . '/api/v1/accounts/' . $accountId . '/conversations/' . $conversationId . '/toggle_status',
-                ['status' => 'resolved']
+            $result = $this->chatwootService->toggleConversationStatus(
+                $accountId,
+                $chatwootToken,
+                $conversationId,
+                'resolved'
             );
 
-            if ($response->successful()) {
+            if ($result['success']) {
                 Log::debug('🗑️ Conversación archivada exitosamente', [
                     'conversation_id' => $conversationId
                 ]);
@@ -341,8 +343,7 @@ class ChatwootWebhookController extends Controller
             } else {
                 Log::error('❌ Error archivando conversación', [
                     'conversation_id' => $conversationId,
-                    'status' => $response->status(),
-                    'response' => $response->body()
+                    'error' => $result['error'] ?? 'Unknown error'
                 ]);
                 return false;
             }

@@ -873,4 +873,74 @@ class ChatwootService
             return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
         }
     }
+
+    /**
+     * Update an agent's role in an account
+     */
+    public function updateAgentRole(int $accountId, string $apiKey, int $agentId, string $role): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->patch("{$this->baseUrl}/api/v1/accounts/{$accountId}/agents/{$agentId}", [
+                'role' => $role,
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::updateAgentRole failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Delete an agent from an account
+     */
+    public function deleteAgent(int $accountId, string $apiKey, int $agentId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+            ])->delete("{$this->baseUrl}/api/v1/accounts/{$accountId}/agents/{$agentId}");
+
+            return [
+                'success' => $response->successful(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::deleteAgent failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Toggle conversation status (resolve/reopen)
+     */
+    public function toggleConversationStatus(int $accountId, string $apiKey, int $conversationId, string $status = 'resolved'): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/toggle_status", [
+                'status' => $status,
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::toggleConversationStatus failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

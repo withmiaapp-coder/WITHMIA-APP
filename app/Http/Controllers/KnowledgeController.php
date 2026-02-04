@@ -16,10 +16,12 @@ class KnowledgeController extends Controller
 {
     private $qdrantHost;
     private N8nService $n8nService;
+    private QdrantService $qdrantService;
 
-    public function __construct(N8nService $n8nService)
+    public function __construct(N8nService $n8nService, QdrantService $qdrantService)
     {
         $this->n8nService = $n8nService;
+        $this->qdrantService = $qdrantService;
         $this->qdrantHost = rtrim(config('qdrant.url'), '/');
     }
 
@@ -28,32 +30,25 @@ class KnowledgeController extends Controller
      */
     private function ensureQdrantCollection($companySlug)
     {
-        $collectionName = "company_{$companySlug}_knowledge";
+        $collectionName = $this->qdrantService->getCollectionName($companySlug);
         
         try {
-            // Check if collection exists
-            $response = Http::get("{$this->qdrantHost}/collections/{$collectionName}");
-            
-            if ($response->successful()) {
+            // Check if collection exists using service
+            if ($this->qdrantService->collectionExists($collectionName)) {
                 Log::debug("Qdrant collection {$collectionName} already exists");
                 return true;
             }
             
-            // Collection doesn't exist, create it
+            // Collection doesn't exist, create it using service
             Log::debug("Creating Qdrant collection: {$collectionName}");
             
-            $createResponse = Http::put("{$this->qdrantHost}/collections/{$collectionName}", [
-                'vectors' => [
-                    'size' => 1536,  // OpenAI text-embedding-3-small dimension
-                    'distance' => 'Cosine'
-                ]
-            ]);
+            $result = $this->qdrantService->createCompanyCollection($companySlug);
             
-            if ($createResponse->successful()) {
+            if ($result['success']) {
                 Log::debug("Successfully created Qdrant collection: {$collectionName}");
                 return true;
             } else {
-                Log::error("Failed to create Qdrant collection: " . $createResponse->body());
+                Log::error("Failed to create Qdrant collection: " . ($result['error'] ?? 'Unknown error'));
                 return false;
             }
             
