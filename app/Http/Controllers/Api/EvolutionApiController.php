@@ -112,6 +112,7 @@ class EvolutionApiController extends Controller
      * Multi-tenant: cada empresa tiene su propio account_id y token
      * 
      * 🔧 FIX: Ahora creamos el inbox PRIMERO y obtenemos el Channel Token correcto
+     * 🚀 OPTIMIZACIÓN: Cache de 5 minutos por usuario para evitar recálculos
      */
     private function getChatwootConfigForUser($user): array|bool
     {
@@ -119,64 +120,61 @@ class EvolutionApiController extends Controller
             return true; // Usar config global
         }
 
-        // Cargar la empresa del usuario
-        $company = $user->company;
+        // 🚀 CACHE: Evitar recálculos en cada request (5 minutos)
+        $cacheKey = "chatwoot_config_user_{$user->id}";
         
-        if ($company && $company->chatwoot_account_id) {
-            $chatwootUrl = config('chatwoot.url');
-            $accountId = $company->chatwoot_account_id;
+        return cache()->remember($cacheKey, 300, function () use ($user) {
+            // Cargar la empresa del usuario
+            $company = $user->company;
             
-            // IMPORTANTE: Usar company_slug para el nombre del inbox
-            $inboxName = $user->company_slug 
-                ? "WhatsApp {$user->company_slug}" 
-                : "WhatsApp {$company->name}";
-            
-            // 🔧 CRÍTICO: Evolution API necesita un API Access Token (NO Channel Token)
-            // El API Access Token permite:
-            // - Buscar contactos
-            // - Listar y crear conversaciones
-            // - Enviar mensajes
-            // El Channel Token SOLO sirve para recibir mensajes entrantes
-            
-            // Prioridad 1: API Access Token de la empresa (chatwoot_api_key)
-            $apiToken = $company->chatwoot_api_key;
-            
-            if ($apiToken) {
-                Log::info('✅ Usando API Access Token de la empresa para Evolution', [
+            if ($company && $company->chatwoot_account_id) {
+                $chatwootUrl = config('chatwoot.url');
+                $accountId = $company->chatwoot_account_id;
+                
+                // IMPORTANTE: Usar company_slug para el nombre del inbox
+                $inboxName = $user->company_slug 
+                    ? "WhatsApp {$user->company_slug}" 
+                    : "WhatsApp {$company->name}";
+                
+                // 🔧 CRÍTICO: Evolution API necesita un API Access Token (NO Channel Token)
+                $apiToken = $company->chatwoot_api_key;
+                
+                if ($apiToken) {
+                    Log::debug('✅ Usando API Access Token de la empresa para Evolution (cached)', [
+                        'user_id' => $user->id,
+                        'company_id' => $company->id,
+                        'account_id' => $accountId,
+                        'inbox_name' => $inboxName,
+                    ]);
+                    
+                    return [
+                        'account_id' => $accountId,
+                        'token' => $apiToken,
+                        'url' => $chatwootUrl,
+                        'inbox_name' => $inboxName,
+                        'auto_create' => true
+                    ];
+                }
+                
+                // Fallback: usar Platform Token
+                $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+                Log::warning('⚠️ No se encontró API Token de empresa, usando Platform Token', [
                     'user_id' => $user->id,
-                    'company_id' => $company->id,
-                    'account_id' => $accountId,
-                    'inbox_name' => $inboxName,
-                    'token_type' => 'api_access_token'
+                    'account_id' => $accountId
                 ]);
                 
                 return [
                     'account_id' => $accountId,
-                    'token' => $apiToken, // ✅ API ACCESS TOKEN (correcto para todas las operaciones)
+                    'token' => $platformToken,
                     'url' => $chatwootUrl,
                     'inbox_name' => $inboxName,
                     'auto_create' => true
                 ];
             }
-            
-            // Fallback: usar Platform Token
-            $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
-            Log::warning('⚠️ No se encontró API Token de empresa, usando Platform Token', [
-                'user_id' => $user->id,
-                'account_id' => $accountId
-            ]);
-            
-            return [
-                'account_id' => $accountId,
-                'token' => $platformToken,
-                'url' => $chatwootUrl,
-                'inbox_name' => $inboxName,
-                'auto_create' => true
-            ];
-        }
 
-        // Fallback: usar config global
-        return true;
+            // Fallback: usar config global
+            return true;
+        });
     }
     
     /**

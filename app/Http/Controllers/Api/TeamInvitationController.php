@@ -441,6 +441,8 @@ class TeamInvitationController extends Controller
             $allSynced = [];
             $allFailed = [];
 
+            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+
             foreach ($companies as $company) {
                 if (!$company || !$company->chatwoot_account_id || !$company->chatwoot_api_key) {
                     continue;
@@ -451,21 +453,35 @@ class TeamInvitationController extends Controller
                     ->whereNull('chatwoot_agent_id')
                     ->get();
 
-                $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
-                
-                foreach ($usersToSync as $syncUser) {
-                    try {
-                        $response = Http::withHeaders([
-                            'api_access_token' => $company->chatwoot_api_key,
-                            'Content-Type' => 'application/json',
-                        ])->post("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents", [
-                            'name' => $syncUser->name ?: $syncUser->full_name ?: 'Usuario',
-                            'email' => $syncUser->email,
-                            'role' => $syncUser->role === 'admin' ? 'administrator' : 'agent',
-                            'auto_offline' => true,
-                        ]);
+                if ($usersToSync->isEmpty()) {
+                    continue;
+                }
 
-                        if ($response->successful()) {
+                // 🚀 OPTIMIZACIÓN: Usar Http::pool() para llamadas paralelas (hasta 10x más rápido)
+                $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($usersToSync, $company, $baseUrl) {
+                    foreach ($usersToSync as $syncUser) {
+                        $pool->as("user_{$syncUser->id}")
+                            ->withHeaders([
+                                'api_access_token' => $company->chatwoot_api_key,
+                                'Content-Type' => 'application/json',
+                            ])
+                            ->timeout(15)
+                            ->post("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents", [
+                                'name' => $syncUser->name ?: $syncUser->full_name ?: 'Usuario',
+                                'email' => $syncUser->email,
+                                'role' => $syncUser->role === 'admin' ? 'administrator' : 'agent',
+                                'auto_offline' => true,
+                            ]);
+                    }
+                });
+
+                // Procesar respuestas del pool
+                foreach ($usersToSync as $syncUser) {
+                    $key = "user_{$syncUser->id}";
+                    try {
+                        $response = $responses[$key] ?? null;
+                        
+                        if ($response && $response->successful()) {
                             $agentData = $response->json();
                             $syncUser->update([
                                 'chatwoot_agent_id' => $agentData['id'] ?? null,
@@ -481,7 +497,7 @@ class TeamInvitationController extends Controller
                                 'company' => $company->name,
                                 'user_id' => $syncUser->id,
                                 'email' => $syncUser->email,
-                                'error' => $response->body(),
+                                'error' => $response ? $response->body() : 'No response',
                             ];
                         }
                     } catch (\Exception $e) {

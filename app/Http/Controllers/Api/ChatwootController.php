@@ -48,6 +48,7 @@ class ChatwootController extends Controller
 
     /**
      * Inicializar configuración de Chatwoot (se ejecuta DESPUÉS del middleware auth)
+     * 🚀 OPTIMIZACIÓN: Cache de 3 minutos por usuario para evitar recálculos
      */
     private function initializeChatwootConfig()
     {
@@ -55,40 +56,59 @@ class ChatwootController extends Controller
 
         // Obtener usuario autenticado y su company
         $user = auth()->user();
-        $company = $user ? $user->company : null;
-
-        // Guardar user ID para logs
-        $this->userId = $user ? $user->id : null;
-
-        // Usar Account ID de la company del usuario
-        $this->accountId = $company && $company->chatwoot_account_id
-            ? $company->chatwoot_account_id
-            : config('chatwoot.account_id', '1');
-
-        // NUEVO: Obtener inbox_id del usuario para filtrado de seguridad
-        $this->inboxId = $user && $user->chatwoot_inbox_id 
-            ? $user->chatwoot_inbox_id 
-            : null;
-
-        // PRIORIDAD: 1. Token de company, 2. Token de usuario, 3. Token platform
-        if ($company && $company->chatwoot_api_key) {
-            $this->chatwootToken = $company->chatwoot_api_key;
-        } elseif ($user && $user->chatwoot_agent_token) {
-            $this->chatwootToken = $user->chatwoot_agent_token;
-        } else {
-            $this->chatwootToken = config('services.chatwoot.api_token');
-        }
         
-        // SEGURIDAD: Log de acceso
-        if ($user) {
-            Log::info('ChatwootController initialized', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'company_slug' => $company ? $company->slug : null,
-                'account_id' => $this->accountId,
-                'inbox_id' => $this->inboxId
-            ]);
+        if (!$user) {
+            $this->userId = null;
+            $this->accountId = config('chatwoot.account_id', '1');
+            $this->chatwootToken = config('services.chatwoot.api_token');
+            $this->inboxId = null;
+            return;
         }
+
+        // 🚀 CACHE: Evitar recálculos en cada request (3 minutos)
+        $cacheKey = "chatwoot_init_user_{$user->id}";
+        $cachedConfig = cache()->remember($cacheKey, 180, function () use ($user) {
+            $company = $user->company;
+            
+            $accountId = $company && $company->chatwoot_account_id
+                ? $company->chatwoot_account_id
+                : config('chatwoot.account_id', '1');
+
+            $inboxId = $user->chatwoot_inbox_id ?: null;
+
+            // PRIORIDAD: 1. Token de company, 2. Token de usuario, 3. Token platform
+            if ($company && $company->chatwoot_api_key) {
+                $token = $company->chatwoot_api_key;
+            } elseif ($user->chatwoot_agent_token) {
+                $token = $user->chatwoot_agent_token;
+            } else {
+                $token = config('services.chatwoot.api_token');
+            }
+
+            return [
+                'user_id' => $user->id,
+                'account_id' => $accountId,
+                'inbox_id' => $inboxId,
+                'token' => $token,
+                'company_slug' => $company ? $company->slug : null,
+                'email' => $user->email,
+            ];
+        });
+
+        // Asignar valores desde cache
+        $this->userId = $cachedConfig['user_id'];
+        $this->accountId = $cachedConfig['account_id'];
+        $this->inboxId = $cachedConfig['inbox_id'];
+        $this->chatwootToken = $cachedConfig['token'];
+        
+        // Log solo en debug (reducir volumen de logs)
+        Log::debug('ChatwootController initialized (cached)', [
+            'user_id' => $cachedConfig['user_id'],
+            'email' => $cachedConfig['email'],
+            'company_slug' => $cachedConfig['company_slug'],
+            'account_id' => $cachedConfig['account_id'],
+            'inbox_id' => $cachedConfig['inbox_id']
+        ]);
     }
 
     /**

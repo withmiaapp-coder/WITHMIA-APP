@@ -148,13 +148,26 @@ class User extends Authenticatable
 
     /**
      * Obtener todos los permisos del usuario (merge de defaults + custom)
+     * 🚀 OPTIMIZACIÓN: Cache de 5 minutos por usuario para evitar recálculos
      */
     public function getPermissions(): array
     {
-        $defaults = self::DEFAULT_PERMISSIONS[$this->role] ?? self::DEFAULT_PERMISSIONS['agent'];
-        $custom = $this->permissions ?? [];
+        $cacheKey = "user_permissions_{$this->id}_{$this->role}";
         
-        return array_merge($defaults, $custom);
+        return cache()->remember($cacheKey, 300, function () {
+            $defaults = self::DEFAULT_PERMISSIONS[$this->role] ?? self::DEFAULT_PERMISSIONS['agent'];
+            $custom = $this->permissions ?? [];
+            
+            return array_merge($defaults, $custom);
+        });
+    }
+
+    /**
+     * Invalidar cache de permisos (llamar al actualizar permisos)
+     */
+    public function clearPermissionsCache(): void
+    {
+        cache()->forget("user_permissions_{$this->id}_{$this->role}");
     }
 
     /**
@@ -199,6 +212,7 @@ class User extends Authenticatable
     {
         $this->permissions = $permissions;
         $this->save();
+        $this->clearPermissionsCache(); // 🚀 Invalidar cache
     }
 
     /**
