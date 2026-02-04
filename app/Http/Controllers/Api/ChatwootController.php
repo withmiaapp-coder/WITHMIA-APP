@@ -853,19 +853,41 @@ class ChatwootController extends Controller
                     'phone' => $contactPhone
                 ]);
 
-                // Devolver respuesta optimista - Evolution guardará el mensaje real en Chatwoot
+                // 🔄 BROADCAST: Emitir el mensaje por WebSocket para actualización en tiempo real
+                $messagePayload = [
+                    'id' => 'sent-' . time() . '-' . rand(1000, 9999),
+                    'content' => $messageContent,
+                    'created_at' => now()->toISOString(),
+                    'message_type' => 1, // outgoing
+                    'status' => 'sent',
+                    'sender' => [
+                        'id' => $this->userId,
+                        'name' => auth()->user()->name ?? 'Agent',
+                        'type' => 'user'
+                    ],
+                    'conversation_id' => $conversation->display_id ?? $id,
+                    '_fromAgent' => true // Marcar como enviado por agente
+                ];
+
+                try {
+                    broadcast(new \App\Events\NewMessageReceived(
+                        $this->inboxId,
+                        $conversation->display_id ?? $id,
+                        $messagePayload
+                    ))->toOthers(); // toOthers() para no enviarse a sí mismo
+                    
+                    Log::debug('📡 Mensaje broadcast enviado', [
+                        'inbox_id' => $this->inboxId,
+                        'conversation_id' => $conversation->display_id ?? $id
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('⚠️ Error en broadcast (no crítico)', ['error' => $e->getMessage()]);
+                }
+
+                // Devolver respuesta con el mensaje
                 return response()->json([
                     'success' => true,
-                    'payload' => [
-                        'id' => 'pending-' . time(), // ID temporal
-                        'content' => $messageContent,
-                        'created_at' => now()->toISOString(),
-                        'message_type' => 1, // outgoing
-                        'status' => 'sent',
-                        'sender' => [
-                            'name' => auth()->user()->name ?? 'Agent'
-                        ]
-                    ]
+                    'payload' => $messagePayload
                 ]);
             }
 

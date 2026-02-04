@@ -1740,13 +1740,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             };
           });
           
-          // 🔄 FIX: Recargar mensajes después de 1.5s para obtener el mensaje real de Chatwoot
-          // Evolution guarda el mensaje de forma asíncrona, necesitamos recargarlo
-          setTimeout(() => {
-            invalidateMessagesCache(conversationId); // Limpiar cache para forzar reload
-            loadConversationMessages(conversationId, false); // false = no loadMore, fresh reload
-            debugLog.log('🔄 Recargando mensajes después de envío para sincronizar con Chatwoot');
-          }, 1500);
+          // ✅ El mensaje real llegará por WebSocket (broadcast desde el backend)
+          // Ya no es necesario hacer reload manual
         })
         .catch((error) => {
           debugLog.error('❌ Error sending message:', error);
