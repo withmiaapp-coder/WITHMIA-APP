@@ -743,10 +743,26 @@ class EvolutionApiService
      */
     public function listInstances(): array
     {
+        // 🚀 OPTIMIZACIÓN: Caché Redis para reducir llamadas HTTP
+        $cacheKey = "evolution:instances:list";
+        
+        try {
+            $cached = Redis::get($cacheKey);
+            if ($cached !== null) {
+                $cachedData = json_decode($cached, true);
+                if ($cachedData && isset($cachedData['success'])) {
+                    Log::info("Evolution instances list retrieved from cache");
+                    return $cachedData;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("Redis cache read failed for listInstances", ['error' => $e->getMessage()]);
+        }
+
         try {
             $response = Http::withHeaders([
                 'apikey' => $this->apiKey
-            ])->get("{$this->baseUrl}/instance/fetchInstances");
+            ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
 
             if (!$response->successful()) {
                 return [
@@ -755,10 +771,19 @@ class EvolutionApiService
                 ];
             }
 
-            return [
+            $result = [
                 'success' => true,
                 'instances' => $response->json()
             ];
+
+            // Guardar en caché por 30 segundos (las instancias no cambian tan frecuentemente)
+            try {
+                Redis::setex($cacheKey, 30, json_encode($result));
+            } catch (\Exception $e) {
+                Log::warning("Failed to cache instances list", ['error' => $e->getMessage()]);
+            }
+
+            return $result;
 
         } catch (\Exception $e) {
             return [
@@ -865,64 +890,38 @@ class EvolutionApiService
         ?string $accountId = null
     ): array {
         try {
-            $url = $chatwootUrl ?? config('chatwoot.url');
-            $token = $chatwootToken ?? config('chatwoot.token');
             $account = $accountId ?? config('chatwoot.account_id', '1');
 
-            if (!$url || !$token) {
-                return [
-                    'success' => false,
-                    'inbox_id' => null,
-                    'error' => 'Chatwoot URL or token not configured'
-                ];
-            }
-
-            // Consultar todos los inboxes de la cuenta
-            $response = Http::withHeaders([
-                'api_access_token' => $token,
-                'Content-Type' => 'application/json'
-            ])->timeout(10)->get("{$url}/api/v1/accounts/{$account}/inboxes");
-
-            if (!$response->successful()) {
-                Log::error('Failed to fetch Chatwoot inboxes', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-                return [
-                    'success' => false,
-                    'inbox_id' => null,
-                    'error' => 'Failed to fetch inboxes from Chatwoot'
-                ];
-            }
-
-            $inboxes = $response->json()['payload'] ?? [];
-            
-            // Buscar inbox que coincida con el nombre de la instancia
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
             // El nombre generado por Evolution API es: "WhatsApp {instanceName}"
             $expectedInboxName = "WhatsApp {$instanceName}";
             
-            foreach ($inboxes as $inbox) {
-                if ($inbox['name'] === $expectedInboxName) {
-                    Log::info('✅ Found matching Chatwoot inbox', [
-                        'instance' => $instanceName,
-                        'inbox_id' => $inbox['id'],
-                        'inbox_name' => $inbox['name']
-                    ]);
-                    
-                    return [
-                        'success' => true,
-                        'inbox_id' => $inbox['id'],
-                        'inbox_name' => $inbox['name'],
-                        'error' => null
-                    ];
-                }
+            $inbox = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('inboxes')
+                ->where('account_id', $account)
+                ->where('name', $expectedInboxName)
+                ->first(['id', 'name']);
+            
+            if ($inbox) {
+                Log::info('✅ Found matching Chatwoot inbox (BD directa)', [
+                    'instance' => $instanceName,
+                    'inbox_id' => $inbox->id,
+                    'inbox_name' => $inbox->name
+                ]);
+                
+                return [
+                    'success' => true,
+                    'inbox_id' => $inbox->id,
+                    'inbox_name' => $inbox->name,
+                    'error' => null
+                ];
             }
 
             // No se encontró el inbox
-            Log::warning('Chatwoot inbox not found for instance', [
+            Log::warning('Chatwoot inbox not found for instance (BD directa)', [
                 'instance' => $instanceName,
                 'expected_name' => $expectedInboxName,
-                'available_inboxes' => array_map(fn($i) => $i['name'], $inboxes)
+                'account_id' => $account
             ]);
 
             return [

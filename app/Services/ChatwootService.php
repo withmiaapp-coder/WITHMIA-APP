@@ -209,23 +209,31 @@ class ChatwootService
      */
     public function getInbox(int $inboxId): array
     {
-        $endpoint = "{$this->baseUrl}/api/v1/accounts/{$this->accountId}/inboxes/{$inboxId}";
+        try {
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            $inbox = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('inboxes')
+                ->where('id', $inboxId)
+                ->where('account_id', $this->accountId)
+                ->first();
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-        ])->get($endpoint);
+            if ($inbox) {
+                return [
+                    'success' => true,
+                    'inbox' => (array) $inbox,
+                ];
+            }
 
-        if ($response->successful()) {
             return [
-                'success' => true,
-                'inbox' => $response->json(),
+                'success' => false,
+                'error' => 'Inbox not found',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
             ];
         }
-
-        return [
-            'success' => false,
-            'error' => $response->body(),
-        ];
     }
 
     /**
@@ -233,23 +241,25 @@ class ChatwootService
      */
     public function listInboxes(): array
     {
-        $endpoint = "{$this->baseUrl}/api/v1/accounts/{$this->accountId}/inboxes";
+        try {
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            $inboxes = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('inboxes')
+                ->where('account_id', $this->accountId)
+                ->get()
+                ->map(fn($i) => (array) $i)
+                ->toArray();
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-        ])->get($endpoint);
-
-        if ($response->successful()) {
             return [
                 'success' => true,
-                'inboxes' => $response->json('payload') ?? $response->json(),
+                'inboxes' => $inboxes,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
             ];
         }
-
-        return [
-            'success' => false,
-            'error' => $response->body(),
-        ];
     }
 
     /**
@@ -257,19 +267,19 @@ class ChatwootService
      */
     public function findInboxByName(string $name): ?array
     {
-        $result = $this->listInboxes();
-        
-        if (!$result['success']) {
+        try {
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA con ILIKE para búsqueda case-insensitive
+            $inbox = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('inboxes')
+                ->where('account_id', $this->accountId)
+                ->whereRaw('name ILIKE ?', ["%{$name}%"])
+                ->first();
+
+            return $inbox ? (array) $inbox : null;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('findInboxByName error', ['error' => $e->getMessage()]);
             return null;
         }
-
-        foreach ($result['inboxes'] as $inbox) {
-            if (stripos($inbox['name'], $name) !== false) {
-                return $inbox;
-            }
-        }
-
-        return null;
     }
 
     /**

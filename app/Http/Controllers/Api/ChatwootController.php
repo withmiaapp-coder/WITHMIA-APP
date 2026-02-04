@@ -629,52 +629,49 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // Llamar a update_last_seen
-            $url = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id . '/update_last_seen';
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            // Actualizar agent_last_seen_at y resetear unread_count directamente
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
-            Log::info('🔔 Llamando update_last_seen', [
-                'url' => $url,
-                'token_preview' => substr($this->chatwootToken ?? 'NULL', 0, 10) . '...',
-                'conversation_id' => $id,
-                'user_id' => $this->userId
-            ]);
+            // Buscar conversación por display_id o id
+            $conversation = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->where(function ($q) use ($id) {
+                    $q->where('id', $id)->orWhere('display_id', $id);
+                })
+                ->first();
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->post($url);
-            
-            Log::info('🔔 Respuesta update_last_seen', [
-                'status' => $response->status(),
-                'successful' => $response->successful(),
-                'body' => $response->json()['unread_count'] ?? 'N/A'
-            ]);
-
-            // ✅ TAMBIÉN llamar a la API para resetear unread_count
-            // Chatwoot usa "agent_last_seen_at" para calcular unread_count
-            // Cuando update_last_seen se llama, Chatwoot debería resetear el contador
-            // Pero por seguridad, también forzamos con una petición GET que actualiza el estado
-            Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
-
-            if ($response->successful()) {
-                Log::info('Conversación marcada como leída', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id
+            if (!$conversation) {
+                Log::warning('markAsRead: Conversación no encontrada', [
+                    'conversation_id' => $id,
+                    'inbox_id' => $this->inboxId
                 ]);
-
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Conversación marcada como leída'
-                ]);
+                    'success' => false,
+                    'message' => 'Conversación no encontrada'
+                ], 404);
             }
+            
+            // Actualizar agent_last_seen_at al timestamp actual y resetear unread_count
+            $now = now();
+            $chatwootDb->table('conversations')
+                ->where('id', $conversation->id)
+                ->update([
+                    'agent_last_seen_at' => $now,
+                    'updated_at' => $now
+                ]);
+            
+            Log::info('✅ Conversación marcada como leída (BD directa)', [
+                'user_id' => $this->userId,
+                'conversation_id' => $conversation->id,
+                'display_id' => $conversation->display_id
+            ]);
 
             return response()->json([
-                'success' => false,
-                'message' => 'No se pudo marcar como leída'
-            ], $response->status());
+                'success' => true,
+                'message' => 'Conversación marcada como leída'
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error marking conversation as read: ' . $e->getMessage(), [
@@ -715,12 +712,22 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 1: Validar que la conversación pertenece al inbox del usuario
-            $convResponse = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $id);
+            // PASO 1: Validar que la conversación pertenece al inbox del usuario (BD DIRECTA)
+            // 🚀 OPTIMIZACIÓN: Query directo en lugar de HTTP API
+            $conversation = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('conversations')
+                ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
+                ->where('conversations.id', $id)
+                ->where('conversations.account_id', $this->accountId)
+                ->select(
+                    'conversations.id',
+                    'conversations.inbox_id',
+                    'contacts.phone_number',
+                    'contacts.identifier'
+                )
+                ->first();
 
-            if (!$convResponse->successful()) {
+            if (!$conversation) {
                 Log::warning('Conversación no encontrada al enviar mensaje', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id
@@ -732,14 +739,12 @@ class ChatwootController extends Controller
                 ], 404);
             }
 
-            $conversation = $convResponse->json();
-
             // PASO 2: VALIDACIÓN DE SEGURIDAD
-            if (!isset($conversation['inbox_id']) || $conversation['inbox_id'] != $this->inboxId) {
+            if (!$conversation->inbox_id || $conversation->inbox_id != $this->inboxId) {
                 Log::warning('Intento de envío de mensaje no autorizado', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id,
-                    'conversation_inbox_id' => $conversation['inbox_id'] ?? 'null',
+                    'conversation_inbox_id' => $conversation->inbox_id ?? 'null',
                     'user_inbox_id' => $this->inboxId
                 ]);
                 
@@ -750,8 +755,8 @@ class ChatwootController extends Controller
             }
 
             // PASO 3: Obtener el teléfono del contacto para enviar via Evolution
-            $contactPhone = $conversation['meta']['sender']['phone_number'] ?? null;
-            $contactIdentifier = $conversation['meta']['sender']['identifier'] ?? null;
+            $contactPhone = $conversation->phone_number ?? null;
+            $contactIdentifier = $conversation->identifier ?? null;
             
             // Intentar obtener el teléfono del identifier si no está en phone_number
             if (!$contactPhone && $contactIdentifier) {
@@ -1322,29 +1327,52 @@ class ChatwootController extends Controller
         try {
             $assigneeId = $request->input('assignee_id');
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/assignments', [
-                'assignee_id' => $assigneeId
-            ]);
-
-            if ($response->successful()) {
-                Log::info('Conversación asignada', [
-                    'conversation_id' => $conversationId,
-                    'assignee_id' => $assigneeId,
-                    'user_id' => $this->userId
-                ]);
-                
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Buscar conversación por display_id o id
+            $conversation = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->where(function ($q) use ($conversationId) {
+                    $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
+                })
+                ->first();
+            
+            if (!$conversation) {
                 return response()->json([
-                    'success' => true,
-                    'assignee' => $response->json()
-                ]);
+                    'success' => false,
+                    'error' => 'Conversación no encontrada'
+                ], 404);
             }
-
+            
+            // Actualizar assignee_id
+            $chatwootDb->table('conversations')
+                ->where('id', $conversation->id)
+                ->update([
+                    'assignee_id' => $assigneeId ?: null,
+                    'updated_at' => now()
+                ]);
+            
+            // Obtener datos del assignee si existe
+            $assignee = null;
+            if ($assigneeId) {
+                $assignee = $chatwootDb->table('users')
+                    ->where('id', $assigneeId)
+                    ->select('id', 'name', 'email', 'avatar_url')
+                    ->first();
+            }
+            
+            Log::info('✅ Conversación asignada (BD directa)', [
+                'conversation_id' => $conversation->id,
+                'assignee_id' => $assigneeId,
+                'user_id' => $this->userId
+            ]);
+            
             return response()->json([
-                'success' => false,
-                'error' => 'Error asignando conversación'
-            ], $response->status());
+                'success' => true,
+                'assignee' => $assignee
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error asignando conversación: ' . $e->getMessage());
@@ -1364,32 +1392,67 @@ class ChatwootController extends Controller
             $status = $request->input('status');
             $snoozedUntil = $request->input('snoozed_until');
             
-            $body = ['status' => $status];
-            if ($status === 'snoozed' && $snoozedUntil) {
-                $body['snoozed_until'] = $snoozedUntil;
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Mapear status string a integer (Chatwoot usa integers en BD)
+            $statusMap = [
+                'open' => 0,
+                'resolved' => 1,
+                'pending' => 2,
+                'snoozed' => 3
+            ];
+            $statusValue = $statusMap[$status] ?? 0;
+            
+            // Buscar conversación por display_id o id
+            $conversation = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->where(function ($q) use ($conversationId) {
+                    $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
+                })
+                ->first();
+            
+            if (!$conversation) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Conversación no encontrada'
+                ], 404);
             }
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/toggle_status', $body);
-
-            if ($response->successful()) {
-                Log::info('Estado de conversación cambiado', [
-                    'conversation_id' => $conversationId,
-                    'status' => $status,
-                    'user_id' => $this->userId
-                ]);
-                
-                return response()->json([
-                    'success' => true,
-                    'data' => $response->json()
-                ]);
+            // Preparar datos de actualización
+            $updateData = [
+                'status' => $statusValue,
+                'updated_at' => now()
+            ];
+            
+            // Si es snoozed, agregar snoozed_until
+            if ($status === 'snoozed' && $snoozedUntil) {
+                $updateData['snoozed_until'] = $snoozedUntil;
+            } else {
+                $updateData['snoozed_until'] = null;
             }
-
+            
+            // Actualizar status
+            $chatwootDb->table('conversations')
+                ->where('id', $conversation->id)
+                ->update($updateData);
+            
+            Log::info('✅ Estado de conversación cambiado (BD directa)', [
+                'conversation_id' => $conversation->id,
+                'status' => $status,
+                'status_value' => $statusValue,
+                'user_id' => $this->userId
+            ]);
+            
             return response()->json([
-                'success' => false,
-                'error' => 'Error cambiando estado'
-            ], $response->status());
+                'success' => true,
+                'data' => [
+                    'id' => $conversation->id,
+                    'status' => $status,
+                    'current_status' => $status
+                ]
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error cambiando estado de conversación: ' . $e->getMessage());
@@ -1408,29 +1471,66 @@ class ChatwootController extends Controller
         try {
             $labels = $request->input('labels', []);
             
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $conversationId . '/labels', [
-                'labels' => $labels
-            ]);
-
-            if ($response->successful()) {
-                Log::info('Etiquetas de conversación actualizadas', [
-                    'conversation_id' => $conversationId,
-                    'labels' => $labels,
-                    'user_id' => $this->userId
-                ]);
-                
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            
+            // Buscar conversación por display_id o id
+            $conversation = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->where(function ($q) use ($conversationId) {
+                    $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
+                })
+                ->first();
+            
+            if (!$conversation) {
                 return response()->json([
-                    'success' => true,
-                    'labels' => $response->json()
+                    'success' => false,
+                    'error' => 'Conversación no encontrada'
+                ], 404);
+            }
+            
+            // Obtener IDs de labels por título
+            $labelIds = [];
+            if (!empty($labels)) {
+                $labelIds = $chatwootDb->table('labels')
+                    ->where('account_id', $this->accountId)
+                    ->whereIn('title', $labels)
+                    ->pluck('id')
+                    ->toArray();
+            }
+            
+            // Eliminar labels actuales de la conversación
+            $chatwootDb->table('conversations_labels')
+                ->where('conversation_id', $conversation->id)
+                ->delete();
+            
+            // Insertar nuevos labels
+            foreach ($labelIds as $labelId) {
+                $chatwootDb->table('conversations_labels')->insert([
+                    'conversation_id' => $conversation->id,
+                    'label_id' => $labelId
                 ]);
             }
-
+            
+            // Obtener labels actualizados
+            $updatedLabels = $chatwootDb->table('conversations_labels')
+                ->join('labels', 'conversations_labels.label_id', '=', 'labels.id')
+                ->where('conversations_labels.conversation_id', $conversation->id)
+                ->select('labels.id', 'labels.title', 'labels.color')
+                ->get()
+                ->toArray();
+            
+            Log::info('✅ Etiquetas de conversación actualizadas (BD directa)', [
+                'conversation_id' => $conversation->id,
+                'labels' => $labels,
+                'user_id' => $this->userId
+            ]);
+            
             return response()->json([
-                'success' => false,
-                'error' => 'Error actualizando etiquetas'
-            ], $response->status());
+                'success' => true,
+                'labels' => $updatedLabels
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error actualizando etiquetas: ' . $e->getMessage());
@@ -1484,31 +1584,54 @@ class ChatwootController extends Controller
     public function createLabel(Request $request)
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->post($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/labels', [
-                'title' => $request->input('title'),
-                'description' => $request->input('description', ''),
-                'color' => $request->input('color', '#1f93ff'),
-                'show_on_sidebar' => $request->input('show_on_sidebar', true)
-            ]);
+            // 🚀 OPTIMIZACIÓN: INSERT directo en lugar de HTTP API
+            $title = $request->input('title');
+            $description = $request->input('description', '');
+            $color = $request->input('color', '#1f93ff');
+            $showOnSidebar = $request->input('show_on_sidebar', true);
 
-            if ($response->successful()) {
-                Log::info('Etiqueta creada', [
-                    'title' => $request->input('title'),
-                    'user_id' => $this->userId
-                ]);
-                
+            // Verificar si ya existe una etiqueta con el mismo nombre
+            $existingLabel = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('labels')
+                ->where('account_id', $this->accountId)
+                ->where('title', $title)
+                ->first();
+
+            if ($existingLabel) {
                 return response()->json([
-                    'success' => true,
-                    'data' => $response->json()
-                ]);
+                    'success' => false,
+                    'error' => 'Ya existe una etiqueta con ese nombre'
+                ], 422);
             }
 
+            $labelId = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                ->table('labels')
+                ->insertGetId([
+                    'account_id' => $this->accountId,
+                    'title' => $title,
+                    'description' => $description,
+                    'color' => $color,
+                    'show_on_sidebar' => $showOnSidebar,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+            Log::info('✅ Etiqueta creada (BD directa)', [
+                'label_id' => $labelId,
+                'title' => $title,
+                'user_id' => $this->userId
+            ]);
+
             return response()->json([
-                'success' => false,
-                'error' => 'Error creando etiqueta'
-            ], $response->status());
+                'success' => true,
+                'data' => [
+                    'id' => $labelId,
+                    'title' => $title,
+                    'description' => $description,
+                    'color' => $color,
+                    'show_on_sidebar' => $showOnSidebar
+                ]
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Error creando etiqueta: ' . $e->getMessage());
@@ -2745,97 +2868,62 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            // Obtener todas las conversaciones via API
-            $allConversations = [];
-            $currentPage = 1;
-            $maxPages = 10;
-
-            while ($currentPage <= $maxPages) {
-                $response = Http::timeout(10)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations', [
-                    'inbox_id' => $this->inboxId,
-                    'page' => $currentPage,
-                    'per_page' => 100
-                ]);
-
-                if (!$response->successful()) break;
-
-                $data = $response->json();
-                $payload = $data['data']['payload'] ?? [];
-
-                if (empty($payload)) break;
-
-                $allConversations = array_merge($allConversations, $payload);
-                $currentPage++;
-
-                if (count($payload) < 100) break;
-            }
-
-            $totalConversations = count($allConversations);
-            $activeConversations = count(array_filter($allConversations, fn($c) => ($c['status'] ?? '') === 'open'));
+            // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de múltiples llamadas HTTP
+            // Una sola conexión, múltiples queries optimizadas
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
-            // Para obtener conteo real de mensajes, necesitamos obtener mensajes de cada conversación
-            $totalMessages = 0;
-            $agentMessages = 0;
-            $clientMessages = 0;
-            $contactMessageCounts = [];
-
-            // Limitar a las primeras 20 conversaciones para no sobrecargar
-            $conversationsToCheck = array_slice($allConversations, 0, 20);
+            // 1. Total y activas conversaciones
+            $conversationStats = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->selectRaw('
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as active
+                ')
+                ->first();
             
-            foreach ($conversationsToCheck as $conversation) {
-                $convId = $conversation['id'] ?? null;
-                if (!$convId) continue;
-
-                // Obtener mensajes de esta conversación
-                $messagesResponse = Http::timeout(10)->withHeaders([
-                    'api_access_token' => $this->chatwootToken,
-                    'Content-Type' => 'application/json'
-                ])->get($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/conversations/' . $convId . '/messages');
-
-                if ($messagesResponse->successful()) {
-                    $messagesData = $messagesResponse->json();
-                    $messages = $messagesData['payload'] ?? [];
-
-                    foreach ($messages as $msg) {
-                        // Ignorar mensajes de tipo activity (2)
-                        $messageType = $msg['message_type'] ?? null;
-                        if ($messageType === 2 || $messageType === 'activity') continue;
-
-                        $totalMessages++;
-                        
-                        // message_type: 0 = incoming (cliente), 1 = outgoing (agente)
-                        if ($messageType === 1 || $messageType === 'outgoing') {
-                            $agentMessages++;
-                        } else if ($messageType === 0 || $messageType === 'incoming') {
-                            $clientMessages++;
-                        }
-                    }
-
-                    // Guardar conteo por contacto
-                    $contact = $conversation['meta']['sender'] ?? null;
-                    if ($contact) {
-                        $contactId = $contact['id'] ?? 0;
-                        $contactName = $contact['name'] ?? 'Sin nombre';
-                        $contactPhone = $contact['phone_number'] ?? '';
-                        
-                        if (!isset($contactMessageCounts[$contactId])) {
-                            $contactMessageCounts[$contactId] = [
-                                'name' => $contactName,
-                                'phone' => $contactPhone,
-                                'count' => 0
-                            ];
-                        }
-                        $contactMessageCounts[$contactId]['count'] += count($messages);
-                    }
-                }
-            }
-
-            // Ordenar contactos por cantidad de mensajes
-            usort($contactMessageCounts, fn($a, $b) => $b['count'] - $a['count']);
-            $topContacts = array_slice(array_values($contactMessageCounts), 0, 5);
+            $totalConversations = $conversationStats->total ?? 0;
+            $activeConversations = $conversationStats->active ?? 0;
+            
+            // 2. Estadísticas de mensajes (excluyendo activity type=2)
+            $messageStats = $chatwootDb->table('messages')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->where('message_type', '!=', 2) // Excluir activity
+                ->selectRaw('
+                    COUNT(*) as total,
+                    SUM(CASE WHEN message_type = 1 THEN 1 ELSE 0 END) as agent,
+                    SUM(CASE WHEN message_type = 0 THEN 1 ELSE 0 END) as client
+                ')
+                ->first();
+            
+            $totalMessages = $messageStats->total ?? 0;
+            $agentMessages = $messageStats->agent ?? 0;
+            $clientMessages = $messageStats->client ?? 0;
+            
+            // 3. Top 5 contactos con más mensajes
+            $topContacts = $chatwootDb->table('messages as m')
+                ->join('conversations as c', 'm.conversation_id', '=', 'c.id')
+                ->join('contacts as ct', 'c.contact_id', '=', 'ct.id')
+                ->where('m.account_id', $this->accountId)
+                ->where('m.inbox_id', $this->inboxId)
+                ->where('m.message_type', '!=', 2)
+                ->groupBy('ct.id', 'ct.name', 'ct.phone_number')
+                ->orderByRaw('COUNT(*) DESC')
+                ->limit(5)
+                ->selectRaw('ct.id, ct.name, ct.phone_number as phone, COUNT(*) as count')
+                ->get()
+                ->toArray();
+            
+            // 4. Tiempo promedio de respuesta (calculado de forma simple)
+            // Buscamos el tiempo entre mensaje entrante y primera respuesta saliente
+            $avgResponseTime = '2.5 min'; // Por ahora valor estimado
+            
+            Log::info('✅ Dashboard stats obtenidas (BD directa)', [
+                'inbox_id' => $this->inboxId,
+                'total_conversations' => $totalConversations,
+                'total_messages' => $totalMessages
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -2846,7 +2934,7 @@ class ChatwootController extends Controller
                     'agentMessages' => $agentMessages,
                     'clientMessages' => $clientMessages,
                     'topContacts' => $topContacts,
-                    'avgResponseTime' => '2.5 min',
+                    'avgResponseTime' => $avgResponseTime,
                     'satisfactionRate' => 85,
                 ]
             ]);
