@@ -15,7 +15,7 @@ class GoogleAuthController extends Controller
     {
         try {
             // Log request for debugging
-            error_log('=== Google Auth Debug ===');
+
             error_log('Request body: ' . $request->getContent());
 
             $email = null;
@@ -29,13 +29,13 @@ class GoogleAuthController extends Controller
                 if ($payload) {
                     $email = $payload['email'] ?? null;
                     $name = $payload['name'] ?? 'Usuario Google';
-                    error_log('Decoded from JWT - Email: ' . $email . ', Name: ' . $name);
+
                 }
             } else {
                 // Fallback to direct email/name (for testing)
                 $email = $request->input('email');
                 $name = $request->input('name', 'Usuario Google');
-                error_log('Direct input - Email: ' . $email . ', Name: ' . $name);
+
             }
 
             if (empty($email)) {
@@ -56,9 +56,9 @@ class GoogleAuthController extends Controller
                     'email_verified_at' => now(),
                     'phone_country' => 'CL',
                 ]);
-                error_log('Created new user: ' . $user->id);
+
             } else {
-                error_log('Found existing user: ' . $user->id);
+
             }
 
             // 🎯 TRACKING LOGIN: Actualizar last_login_at y login_ip
@@ -78,7 +78,7 @@ class GoogleAuthController extends Controller
             if (empty($user->auth_token)) {
                 $user->auth_token = Str::random(60);
                 $user->save();
-                error_log('Generated new auth_token for user: ' . $user->id);
+
             }
             
             // Login del usuario con remember=true para persistencia
@@ -93,7 +93,7 @@ class GoogleAuthController extends Controller
             $cookieSecure = config('session.secure');
             $cookieSameSite = config('session.same_site');
             
-            error_log('Session created - ID: ' . $sessionId . ', User: ' . $user->id);
+
             error_log('Cookie config - Name: ' . $cookieName . ', Domain: ' . $cookieDomain . ', Secure: ' . ($cookieSecure ? 'true' : 'false') . ', SameSite: ' . $cookieSameSite);
             error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
             
@@ -151,7 +151,7 @@ class GoogleAuthController extends Controller
     public function authenticateWithInvitation(Request $request)
     {
         try {
-            error_log('=== Google Auth with Invitation ===');
+
             
             $invitationToken = $request->input('invitation_token');
             if (!$invitationToken) {
@@ -177,7 +177,7 @@ class GoogleAuthController extends Controller
                 if ($payload) {
                     $email = $payload['email'] ?? null;
                     $name = $payload['name'] ?? 'Usuario';
-                    error_log('Decoded from JWT - Email: ' . $email . ', Name: ' . $name);
+
                 }
             }
 
@@ -210,7 +210,7 @@ class GoogleAuthController extends Controller
                     'company_slug' => $invitation->company->slug,
                     'role' => $invitation->role === 'administrator' ? 'admin' : 'agent',
                 ]);
-                error_log('Updated existing user to new company: ' . $user->id);
+
             } else {
                 // Create new user
                 $user = User::create([
@@ -223,7 +223,7 @@ class GoogleAuthController extends Controller
                     'phone_country' => 'CL',
                     'onboarding_completed' => true, // Skip onboarding for invited users
                 ]);
-                error_log('Created new user from invitation: ' . $user->id);
+
             }
 
             // Create Chatwoot agent if needed
@@ -243,7 +243,7 @@ class GoogleAuthController extends Controller
             $request->session()->regenerate();
             $request->session()->save();
 
-            error_log('User logged in successfully: ' . $user->id);
+
 
             // Redirect to dashboard
             $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
@@ -269,12 +269,12 @@ class GoogleAuthController extends Controller
             $company = $invitation->company;
             
             if (!$company->chatwoot_account_id || !$company->chatwoot_api_key) {
-                error_log('Cannot create Chatwoot agent: missing chatwoot credentials for company ' . $company->id);
+
                 return null;
             }
 
             $chatwootUrl = config('chatwoot.base_url');
-            error_log("Creating Chatwoot agent for user {$user->email} in account {$company->chatwoot_account_id}");
+
             
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'api_access_token' => $company->chatwoot_api_key,

@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class KnowledgeDocument extends Model
 {
-    protected \ = 'knowledge_documents';
+    protected $table = 'knowledge_documents';
     
-    protected \ = [
+    protected $fillable = [
         'company_id',
         'filename',
         'category',
@@ -18,13 +18,13 @@ class KnowledgeDocument extends Model
         'metadata'
     ];
 
-    protected \ = [
+    protected $casts = [
         'metadata' => 'array',
         'chunks_created' => 'integer'
     ];
 
     public function company()
     {
-        return \->belongsTo(Company::class);
+        return $this->belongsTo(Company::class);
     }
 }
