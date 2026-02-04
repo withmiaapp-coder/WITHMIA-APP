@@ -1103,6 +1103,16 @@ export const useConversations = () => {
   }, [persistMessagesCache]);
 
   // ========================================
+  // ✅ NUEVO: Invalidar caché de mensajes (forzar reload)
+  // ========================================
+  const invalidateMessagesCache = useCallback((conversationId: number) => {
+    if (!conversationId) return;
+    
+    messagesLocalCache.current.delete(conversationId);
+    debugLog.log(`🗑️ Caché de mensajes invalidada para conversación ${conversationId}`);
+  }, []);
+
+  // ========================================
   // ✅ NUEVO: Asignar conversación a un agente
   // ========================================
   const assignConversation = useCallback(async (conversationId: number, agentId: number | null) => {
@@ -1218,6 +1228,7 @@ export const useConversations = () => {
     setActiveConversation: setActiveConversationState,
     updateMessagesCache, // ✅ NUEVO: Función para actualizar caché de mensajes
     addMessageToCache, // ✅ NUEVO: Función para agregar mensaje a caché
+    invalidateMessagesCache, // ✅ NUEVO: Función para invalidar caché y forzar reload
     // ✅ NUEVO: Funciones de asignación y estado
     assignConversation,
     changeConversationStatus,
