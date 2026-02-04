@@ -8,7 +8,6 @@ use App\Services\ChatwootService;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\AgentInvitation;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
@@ -133,28 +132,22 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            // Crear la invitación en Chatwoot
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
-            $adminToken = config('services.chatwoot.super_admin_token');
+            // Crear la invitación en Chatwoot usando el servicio
+            $result = $this->chatwootService->createAccountUser(
+                $company->chatwoot_account_id,
+                $request->name,
+                $request->email,
+                $request->role
+            );
 
-            $response = Http::withHeaders([
-                'api_access_token' => $adminToken,
-                'Content-Type' => 'application/json'
-            ])->post("{$chatwootUrl}/platform/api/v1/accounts/{$company->chatwoot_account_id}/account_users", [
-                'name' => $request->name,
-                'email' => $request->email,
-                'role' => $request->role,
-                'auto_assign' => true
-            ]);
-
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error creando usuario en Chatwoot: ' . $response->body()
+                    'error' => 'Error creando usuario en Chatwoot: ' . ($result['error'] ?? 'Unknown')
                 ], 500);
             }
 
-            $chatwootUser = $response->json();
+            $chatwootUser = $result['data'];
 
             // Guardar la invitación en nuestra base de datos
             $invitation = AgentInvitation::create([
@@ -307,25 +300,17 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            // Obtener estadísticas de Chatwoot
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+            // Obtener estadísticas de Chatwoot usando el servicio
             $apiKey = $company->chatwoot_api_key;
+            $accountId = $company->chatwoot_account_id;
 
-            $conversationsResponse = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/conversations");
+            $conversationsResult = $this->chatwootService->getConversations($accountId, $apiKey);
+            $contactsResult = $this->chatwootService->getContacts($accountId, $apiKey);
+            $agentsResult = $this->chatwootService->getAgents($accountId, $apiKey);
 
-            $contactsResponse = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/contacts");
-
-            $agentsResponse = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents");
-
-            $conversations = $conversationsResponse->successful() ? $conversationsResponse->json()['data'] ?? [] : [];
-            $contacts = $contactsResponse->successful() ? $contactsResponse->json()['payload'] ?? [] : [];
-            $agents = $agentsResponse->successful() ? $agentsResponse->json() ?? [] : [];
+            $conversations = $conversationsResult['data'] ?? [];
+            $contacts = $contactsResult['data'] ?? [];
+            $agents = $agentsResult['data'] ?? [];
 
             $stats = [
                 'total_conversations' => count($conversations),
@@ -447,7 +432,6 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             $apiKey = $company->chatwoot_api_key;
 
             if (!$apiKey) {
@@ -457,20 +441,18 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams");
+            $result = $this->chatwootService->getTeams($company->chatwoot_account_id, $apiKey);
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error obteniendo equipos: ' . $response->body()
+                    'error' => 'Error obteniendo equipos: ' . ($result['error'] ?? 'Unknown')
                 ], 500);
             }
 
             return response()->json([
                 'success' => true,
-                'teams' => $response->json()
+                'teams' => $result['data']
             ]);
 
         } catch (\Exception $e) {
@@ -502,7 +484,6 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             $apiKey = $company->chatwoot_api_key;
 
             if (!$apiKey) {
@@ -512,24 +493,23 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams", [
-                'name' => $request->name,
-                'description' => $request->description
-            ]);
+            $result = $this->chatwootService->createTeam(
+                $company->chatwoot_account_id,
+                $apiKey,
+                $request->name,
+                $request->description
+            );
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error creando equipo: ' . $response->body()
+                    'error' => 'Error creando equipo: ' . ($result['error'] ?? 'Unknown')
                 ], 500);
             }
 
             return response()->json([
                 'success' => true,
-                'team' => $response->json()
+                'team' => $result['data']
             ]);
 
         } catch (\Exception $e) {
@@ -556,7 +536,6 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             $apiKey = $company->chatwoot_api_key;
 
             if (!$apiKey) {
@@ -566,20 +545,18 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents");
+            $result = $this->chatwootService->getAgents($company->chatwoot_account_id, $apiKey);
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error obteniendo agentes: ' . $response->body()
+                    'error' => 'Error obteniendo agentes: ' . ($result['error'] ?? 'Unknown')
                 ], 500);
             }
 
             return response()->json([
                 'success' => true,
-                'agents' => $response->json()
+                'agents' => $result['data']
             ]);
 
         } catch (\Exception $e) {
@@ -606,7 +583,6 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             $apiKey = $company->chatwoot_api_key;
 
             if (!$apiKey) {
@@ -616,20 +592,18 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/conversations");
+            $result = $this->chatwootService->getConversations($company->chatwoot_account_id, $apiKey);
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error obteniendo conversaciones: ' . $response->body()
+                    'error' => 'Error obteniendo conversaciones: ' . ($result['error'] ?? 'Unknown')
                 ], 500);
             }
 
             return response()->json([
                 'success' => true,
-                'conversations' => $response->json()
+                'conversations' => $result['data']
             ]);
 
         } catch (\Exception $e) {
@@ -656,17 +630,14 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             // Usar token del usuario (tiene permisos de agente/admin)
             $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->get("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks");
+            $result = $this->chatwootService->listAccountWebhooks($company->chatwoot_account_id, $apiKey);
 
             return response()->json([
-                'success' => true,
-                'webhooks' => $response->json()['payload'] ?? $response->json(),
+                'success' => $result['success'],
+                'webhooks' => $result['data'] ?? [],
                 'debug' => [
                     'account_id' => $company->chatwoot_account_id,
                     'user_has_token' => !empty($user->chatwoot_agent_token)
@@ -697,7 +668,6 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             // Usar token del usuario (tiene permisos de agente/admin)
             $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
             
@@ -714,22 +684,19 @@ class ChatwootEnterpriseController extends Controller
                 'conversation_status_changed'
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks", [
-                'webhook' => [
-                    'url' => $webhookUrl,
-                    'subscriptions' => $subscriptions
-                ]
-            ]);
+            $result = $this->chatwootService->createAccountWebhook(
+                $company->chatwoot_account_id,
+                $apiKey,
+                $webhookUrl,
+                $subscriptions
+            );
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error creando webhook: ' . $response->body(),
-                    'status' => $response->status()
-                ], $response->status());
+                    'error' => 'Error creando webhook: ' . ($result['error'] ?? 'Unknown'),
+                    'status' => $result['status'] ?? 500
+                ], $result['status'] ?? 500);
             }
 
             Log::debug('✅ Webhook de Chatwoot creado exitosamente', [
@@ -740,7 +707,7 @@ class ChatwootEnterpriseController extends Controller
 
             return response()->json([
                 'success' => true,
-                'webhook' => $response->json(),
+                'webhook' => $result['data'],
                 'message' => 'Webhook creado exitosamente'
             ]);
 
@@ -768,19 +735,20 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $chatwootUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
             // Usar token del usuario
             $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
 
-            $response = Http::withHeaders([
-                'api_access_token' => $apiKey
-            ])->delete("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/webhooks/{$webhookId}");
+            $result = $this->chatwootService->deleteAccountWebhook(
+                $company->chatwoot_account_id,
+                $apiKey,
+                (int) $webhookId
+            );
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Error eliminando webhook: ' . $response->body()
-                ], $response->status());
+                    'error' => 'Error eliminando webhook: ' . ($result['error'] ?? 'Unknown')
+                ], 500);
             }
 
             return response()->json([

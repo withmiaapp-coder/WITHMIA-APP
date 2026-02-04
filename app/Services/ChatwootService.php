@@ -380,4 +380,216 @@ class ChatwootService
 
         return null;
     }
+
+    /**
+     * Get conversations for an account (with custom API key)
+     */
+    public function getConversations(int $accountId, string $apiKey): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json()['data'] ?? [],
+                'meta' => $response->json()['meta'] ?? [],
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getConversations failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * Get contacts for an account (with custom API key)
+     */
+    public function getContacts(int $accountId, string $apiKey): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/contacts");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json()['payload'] ?? [],
+                'meta' => $response->json()['meta'] ?? [],
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getContacts failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * Get agents for an account (with custom API key)
+     */
+    public function getAgents(int $accountId, string $apiKey): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/agents");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json() ?? [],
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getAgents failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * Get teams for an account (with custom API key)
+     */
+    public function getTeams(int $accountId, string $apiKey): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/teams");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json() ?? [],
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getTeams failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * Create a team in an account (with custom API key)
+     */
+    public function createTeam(int $accountId, string $apiKey, string $name, ?string $description = null): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/teams", [
+                'name' => $name,
+                'description' => $description
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::createTeam failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Create a webhook in an account (with custom API key)
+     */
+    public function createAccountWebhook(int $accountId, string $apiKey, string $url, array $subscriptions = []): array
+    {
+        try {
+            if (empty($subscriptions)) {
+                $subscriptions = [
+                    'message_created',
+                    'message_updated',
+                    'conversation_created',
+                    'conversation_updated',
+                    'conversation_status_changed'
+                ];
+            }
+
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/webhooks", [
+                'webhook' => [
+                    'url' => $url,
+                    'subscriptions' => $subscriptions
+                ]
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'error' => $response->successful() ? null : $response->body(),
+                'status' => $response->status(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::createAccountWebhook failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * List webhooks for an account (with custom API key)
+     */
+    public function listAccountWebhooks(int $accountId, string $apiKey): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/webhooks");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json()['payload'] ?? $response->json(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::listAccountWebhooks failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * Delete a webhook from an account (with custom API key)
+     */
+    public function deleteAccountWebhook(int $accountId, string $apiKey, int $webhookId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey
+            ])->delete("{$this->baseUrl}/api/v1/accounts/{$accountId}/webhooks/{$webhookId}");
+
+            return [
+                'success' => $response->successful(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::deleteAccountWebhook failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create account user via Platform API (requires super admin token)
+     */
+    public function createAccountUser(int $accountId, string $name, string $email, string $role = 'agent'): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $this->superAdminToken,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/platform/api/v1/accounts/{$accountId}/account_users", [
+                'name' => $name,
+                'email' => $email,
+                'role' => $role,
+                'auto_assign' => true
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::createAccountUser failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
 }
