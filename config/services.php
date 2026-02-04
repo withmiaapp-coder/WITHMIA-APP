@@ -5,6 +5,15 @@ return [
     |--------------------------------------------------------------------------
     | Third Party Services
     |--------------------------------------------------------------------------
+    |
+    | Dedicated config files also exist for:
+    | - config/chatwoot.php (primary source)
+    | - config/n8n.php (primary source) 
+    | - config/qdrant.php (primary source)
+    | - config/evolution.php (primary source)
+    |
+    | The entries below are kept for backwards compatibility.
+    |
     */
 
     "mailgun" => [
@@ -33,23 +42,24 @@ return [
         "url" => env("BAILEYS_API_URL", "http://localhost:3001"),
     ],
 
+    // Chatwoot - see config/chatwoot.php for full config
     "chatwoot" => [
         "base_url" => env("CHATWOOT_API_BASE_URL", "http://localhost:3000"),
         "api_token" => env("CHATWOOT_PLATFORM_API_TOKEN", ""),
     ],
 
+    // n8n - see config/n8n.php for full config
     "n8n" => [
         "base_url" => env("N8N_PUBLIC_URL", env("N8N_URL")),
-        "url" => env("N8N_PUBLIC_URL", env("N8N_URL")), // Alias para compatibilidad
+        "url" => env("N8N_PUBLIC_URL", env("N8N_URL")),
         "api_key" => env("N8N_API_KEY"),
         "internal_url" => env("N8N_INTERNAL_URL", env("N8N_URL")),
-        // IDs de credenciales del Super Admin en n8n (configuradas una vez)
         "openai_credential_id" => env("N8N_OPENAI_CREDENTIAL_ID"),
         "qdrant_credential_id" => env("N8N_QDRANT_CREDENTIAL_ID"),
-        // ID del workflow principal del bot
         "workflow_id" => env("N8N_WORKFLOW_ID", "C1mhxAWt67pfg3BC"),
     ],
 
+    // Qdrant - see config/qdrant.php for full config
     "qdrant" => [
         "host" => env("QDRANT_HOST", env("QDRANT_URL")),
         "url" => env("QDRANT_URL", env("QDRANT_HOST")),
