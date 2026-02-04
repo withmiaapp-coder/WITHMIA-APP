@@ -31,7 +31,7 @@ class EvolutionApiService
     public function createInstance(string $instanceName, ?string $webhookUrl = null, bool|array $enableChatwoot = true): array
     {
         try {
-            Log::info('🆕 Creating Evolution instance', [
+            Log::debug('🆕 Creating Evolution instance', [
                 'instance' => $instanceName,
                 'url' => "{$this->baseUrl}/instance/create"
             ]);
@@ -96,7 +96,7 @@ class EvolutionApiService
                     $payload['chatwootImportMessages'] = config('chatwoot.import_messages', false);
                     $payload['chatwootAutoCreate'] = $chatwootAutoCreate;
                     
-                    Log::info('Creating instance with Chatwoot integration (multi-tenant)', [
+                    Log::debug('Creating instance with Chatwoot integration (multi-tenant)', [
                         'instance' => $instanceName,
                         'account_id' => $payload['chatwootAccountId'],
                         'inbox_name' => $chatwootInboxName,
@@ -118,7 +118,7 @@ class EvolutionApiService
                 'Content-Type' => 'application/json'
             ])->timeout(30)->post("{$this->baseUrl}/instance/create", $payload);
 
-            Log::info('📦 Create instance response', [
+            Log::debug('📦 Create instance response', [
                 'instance' => $instanceName,
                 'status' => $response->status(),
                 'body' => substr($response->body(), 0, 500)
@@ -138,14 +138,14 @@ class EvolutionApiService
                 ];
             }
 
-            Log::info('✅ Instance created successfully', ['instance' => $instanceName]);
+            Log::debug('✅ Instance created successfully', ['instance' => $instanceName]);
 
             // CRITICAL: Enable readMessages immediately after instance creation
             // Evolution API creates instances with readMessages=false by default
             // This prevents WhatsApp messages from being processed
             // We must enable it via a separate /settings/set API call
             try {
-                Log::info('Enabling readMessages for instance', ['instance' => $instanceName]);
+                Log::debug('Enabling readMessages for instance', ['instance' => $instanceName]);
                 
                 // Check for cached pending settings from user configuration
                 $cachedSettings = \Cache::get("whatsapp_pending_settings_{$instanceName}");
@@ -173,7 +173,7 @@ class EvolutionApiService
                         'body' => $settingsResponse->body()
                     ]);
                 } else {
-                    Log::info('Successfully applied settings to instance', [
+                    Log::debug('Successfully applied settings to instance', [
                         'instance' => $instanceName,
                         'settings' => $settings,
                         'fromCache' => $cachedSettings !== null
@@ -219,7 +219,7 @@ class EvolutionApiService
     public function connect(string $instanceName): array
     {
         try {
-            Log::info('Evolution API connect attempt', [
+            Log::debug('Evolution API connect attempt', [
                 'instance' => $instanceName,
                 'url' => "{$this->baseUrl}/instance/connect/{$instanceName}"
             ]);
@@ -228,7 +228,7 @@ class EvolutionApiService
                 'apikey' => $this->apiKey
             ])->timeout(30)->get("{$this->baseUrl}/instance/connect/{$instanceName}");
 
-            Log::info('Evolution API connect response', [
+            Log::debug('Evolution API connect response', [
                 'instance' => $instanceName,
                 'status' => $response->status(),
                 'body_length' => strlen($response->body())
@@ -316,7 +316,7 @@ class EvolutionApiService
                 ]
             ];
 
-            Log::info('🔗 Configurando webhook en Evolution API', [
+            Log::debug('🔗 Configurando webhook en Evolution API', [
                 'instance' => $instanceName,
                 'url' => $webhookUrl
             ]);
@@ -327,7 +327,7 @@ class EvolutionApiService
             ])->post("{$this->baseUrl}/webhook/set/{$instanceName}", $webhookConfig);
 
             if ($response->successful()) {
-                Log::info('✅ Webhook configurado exitosamente', [
+                Log::debug('✅ Webhook configurado exitosamente', [
                     'instance' => $instanceName,
                     'url' => $webhookUrl
                 ]);
@@ -374,7 +374,7 @@ class EvolutionApiService
             if ($checkResponse->successful()) {
                 $webhookData = $checkResponse->json();
                 if ($webhookData && !empty($webhookData['url'])) {
-                    Log::info("Webhook ya configurado, respetando configuración existente", [
+                    Log::debug("Webhook ya configurado, respetando configuración existente", [
                         'instance' => $instanceName,
                         'current_url' => $webhookData['url']
                     ]);
@@ -384,7 +384,7 @@ class EvolutionApiService
 
             // Solo configurar webhook hacia app si NO hay ninguno configurado
             // (El workflow de n8n se configura en createN8nWorkflowForInstance)
-            Log::info("No hay webhook configurado, configurando hacia app Laravel", [
+            Log::debug("No hay webhook configurado, configurando hacia app Laravel", [
                 'instance' => $instanceName
             ]);
             $webhookUrl = config('app.url') . '/api/evolution-whatsapp/webhook';
@@ -635,7 +635,7 @@ class EvolutionApiService
         try {
             $isBase64 = !filter_var($media, FILTER_VALIDATE_URL) && strlen($media) > 200;
             
-            Log::info('📤 Enviando media vía Evolution API', [
+            Log::debug('📤 Enviando media vía Evolution API', [
                 'instance' => $instanceName,
                 'number' => $number,
                 'mediaType' => $mediaType,
@@ -678,7 +678,7 @@ class EvolutionApiService
                 ];
             }
 
-            Log::info('✅ Media enviada exitosamente', [
+            Log::debug('✅ Media enviada exitosamente', [
                 'instance' => $instanceName,
                 'number' => $number,
                 'mediaType' => $mediaType
@@ -714,7 +714,7 @@ class EvolutionApiService
         try {
             $isBase64 = !filter_var($audio, FILTER_VALIDATE_URL) && strlen($audio) > 200;
             
-            Log::info('🎤 Enviando audio WhatsApp vía Evolution API', [
+            Log::debug('🎤 Enviando audio WhatsApp vía Evolution API', [
                 'instance' => $instanceName,
                 'number' => $number,
                 'isBase64' => $isBase64,
@@ -745,7 +745,7 @@ class EvolutionApiService
                 );
             }
 
-            Log::info('✅ Audio WhatsApp enviado exitosamente', [
+            Log::debug('✅ Audio WhatsApp enviado exitosamente', [
                 'instance' => $instanceName,
                 'number' => $number
             ]);
@@ -806,7 +806,7 @@ class EvolutionApiService
                 })
                 ->toArray();
 
-            Log::info("✅ Evolution instances from BD directa", ['count' => count($instances)]);
+            Log::debug("✅ Evolution instances from BD directa", ['count' => count($instances)]);
 
             return [
                 'success' => true,
@@ -816,30 +816,34 @@ class EvolutionApiService
         } catch (\Exception $e) {
             Log::warning("BD Evolution no disponible, usando HTTP API", ['error' => $e->getMessage()]);
             
-            // Fallback a HTTP API
-            try {
-                $response = Http::withHeaders([
-                    'apikey' => $this->apiKey
-                ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
+            // Fallback a HTTP API con cache corto (30 segundos)
+            $cacheKey = "evolution:instances_list";
+            
+            return cache()->remember($cacheKey, 30, function () {
+                try {
+                    $response = Http::withHeaders([
+                        'apikey' => $this->apiKey
+                    ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
 
-                if (!$response->successful()) {
+                    if (!$response->successful()) {
+                        return [
+                            'success' => false,
+                            'error' => 'Failed to list instances'
+                        ];
+                    }
+
+                    return [
+                        'success' => true,
+                        'instances' => $response->json()
+                    ];
+
+                } catch (\Exception $httpE) {
                     return [
                         'success' => false,
-                        'error' => 'Failed to list instances'
+                        'error' => $httpE->getMessage()
                     ];
                 }
-
-                return [
-                    'success' => true,
-                    'instances' => $response->json()
-                ];
-
-            } catch (\Exception $httpE) {
-                return [
-                    'success' => false,
-                    'error' => $httpE->getMessage()
-                ];
-            }
+            });
         }
     }
 
@@ -915,7 +919,7 @@ class EvolutionApiService
         try {
             $cacheKey = "whatsapp:status:{$instanceName}";
             Redis::del($cacheKey);
-            Log::info("WhatsApp cache cleared", ['instance' => $instanceName]);
+            Log::debug("WhatsApp cache cleared", ['instance' => $instanceName]);
         } catch (\Exception $e) {
             Log::warning("Failed to clear WhatsApp cache", ['error' => $e->getMessage()]);
         }
@@ -953,7 +957,7 @@ class EvolutionApiService
                 ->first(['id', 'name']);
             
             if ($inbox) {
-                Log::info('✅ Found matching Chatwoot inbox (BD directa)', [
+                Log::debug('✅ Found matching Chatwoot inbox (BD directa)', [
                     'instance' => $instanceName,
                     'inbox_id' => $inbox->id,
                     'inbox_name' => $inbox->name
@@ -1041,7 +1045,7 @@ class EvolutionApiService
             $user->chatwoot_inbox_id = $inboxId;
             $user->save();
             
-            Log::info('✅ Updated user chatwoot_inbox_id', [
+            Log::debug('✅ Updated user chatwoot_inbox_id', [
                 'user_id' => $user->id,
                 'inbox_id' => $inboxId
             ]);
@@ -1051,7 +1055,7 @@ class EvolutionApiService
                 $company->chatwoot_inbox_id = $inboxId;
                 $company->save();
                 
-                Log::info('✅ Updated company chatwoot_inbox_id', [
+                Log::debug('✅ Updated company chatwoot_inbox_id', [
                     'company_id' => $company->id,
                     'inbox_id' => $inboxId
                 ]);
@@ -1182,7 +1186,7 @@ class EvolutionApiService
                 ];
             }
 
-            Log::info('✅ Chatwoot reconfigured for instance', [
+            Log::debug('✅ Chatwoot reconfigured for instance', [
                 'instance' => $instanceName,
                 'account_id' => $accountId,
                 'url' => $chatwootUrl

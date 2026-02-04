@@ -34,7 +34,7 @@ class ChatwootWebhookController extends Controller
             }
         }
 
-        Log::info('🎯 Chatwoot Webhook Received', [
+        Log::debug('🎯 Chatwoot Webhook Received', [
             'event' => $event,
             'conversation_id' => $data['conversation']['id'] ?? $data['id'] ?? null,
             'message_id' => $data['id'] ?? null,
@@ -59,7 +59,7 @@ class ChatwootWebhookController extends Controller
             
             // Si retorna false, significa que archivamos esta conversación (es duplicada)
             if (!$shouldContinue) {
-                Log::info('🚫 Conversación duplicada archivada - NO se propaga al frontend');
+                Log::debug('🚫 Conversación duplicada archivada - NO se propaga al frontend');
                 return response()->json(['status' => 'success', 'message' => 'Duplicate conversation archived']);
             }
         }
@@ -86,7 +86,7 @@ class ChatwootWebhookController extends Controller
                 );
                 broadcast($convEvent);
 
-                Log::info('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
+                Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
                     'inbox_id' => $inboxId,
                     'conversation_id' => $conversationId,
                     'message_content' => substr($data['content'] ?? '', 0, 50)
@@ -103,7 +103,7 @@ class ChatwootWebhookController extends Controller
                 );
                 broadcast($convEvent);
 
-                Log::info('📤 ConversationUpdated event broadcasted', [
+                Log::debug('📤 ConversationUpdated event broadcasted', [
                     'event' => $event,
                     'inbox_id' => $inboxId,
                     'conversation_id' => $data['conversation']['id'] ?? null
@@ -171,7 +171,7 @@ class ChatwootWebhookController extends Controller
                 if ($convResponse->successful()) {
                     $convData = $convResponse->json();
                     $identifier = $convData['meta']['sender']['identifier'] ?? null;
-                    Log::info('📞 Identifier obtenido de API', ['identifier' => $identifier]);
+                    Log::debug('📞 Identifier obtenido de API', ['identifier' => $identifier]);
                 }
             }
 
@@ -188,7 +188,7 @@ class ChatwootWebhookController extends Controller
             $isLid = PhoneNormalizer::isLid($identifier);
             $isRealNumber = PhoneNormalizer::isRealNumber($identifier);
 
-            Log::info('🔍 Analizando conversación', [
+            Log::debug('🔍 Analizando conversación', [
                 'conversation_id' => $conversationId,
                 'identifier' => $identifier,
                 'phone_base' => $phoneBase,
@@ -216,7 +216,7 @@ class ChatwootWebhookController extends Controller
             if ($wasAdded) {
                 // ✅ Primera conversación para este número - registrada exitosamente
                 Cache::put("conversation:id:{$conversationId}", $phoneBase, now()->addDays(7));
-                Log::info('✅ Primera conversación para este número - Registrada atómicamente', [
+                Log::debug('✅ Primera conversación para este número - Registrada atómicamente', [
                     'conversation_id' => $conversationId,
                     'phone_base' => $phoneBase
                 ]);
@@ -232,7 +232,7 @@ class ChatwootWebhookController extends Controller
             }
             
             // YA EXISTE UNA CONVERSACIÓN DIFERENTE PARA ESTE NÚMERO
-                Log::info('🚨 DUPLICADO DETECTADO', [
+                Log::debug('🚨 DUPLICADO DETECTADO', [
                     'existing_conversation_id' => $existingConversationId,
                     'new_conversation_id' => $conversationId,
                     'phone_base' => $phoneBase
@@ -251,7 +251,7 @@ class ChatwootWebhookController extends Controller
                     $existingIsLid = PhoneNormalizer::isLid($existingIdentifier);
                     $existingIsRealNumber = PhoneNormalizer::isRealNumber($existingIdentifier);
 
-                    Log::info('📊 Comparando conversaciones', [
+                    Log::debug('📊 Comparando conversaciones', [
                         'existing' => [
                             'id' => $existingConversationId,
                             'identifier' => $existingIdentifier,
@@ -280,19 +280,19 @@ class ChatwootWebhookController extends Controller
                         $conversationToArchive = $existingConversationId;
                         $conversationToKeep = $conversationId;
                         $shouldArchiveNew = false;
-                        Log::info('✅ DECISIÓN: Mantener NUEVA (real), archivar EXISTENTE (lid)');
+                        Log::debug('✅ DECISIÓN: Mantener NUEVA (real), archivar EXISTENTE (lid)');
                     } elseif ($isLid && $existingIsRealNumber) {
                         // CASO 2: Nueva es LID, existente es REAL -> Archivar NUEVA, mantener EXISTENTE
                         $conversationToArchive = $conversationId;
                         $conversationToKeep = $existingConversationId;
                         $shouldArchiveNew = true;
-                        Log::info('✅ DECISIÓN: Mantener EXISTENTE (real), archivar NUEVA (lid)');
+                        Log::debug('✅ DECISIÓN: Mantener EXISTENTE (real), archivar NUEVA (lid)');
                     } else {
                         // CASO 3: Ambas del mismo tipo -> Mantener la más antigua (EXISTENTE)
                         $conversationToArchive = $conversationId;
                         $conversationToKeep = $existingConversationId;
                         $shouldArchiveNew = true;
-                        Log::info('✅ DECISIÓN: Mantener EXISTENTE (más antigua), archivar NUEVA');
+                        Log::debug('✅ DECISIÓN: Mantener EXISTENTE (más antigua), archivar NUEVA');
                     }
 
                     // Archivar la conversación seleccionada
@@ -334,7 +334,7 @@ class ChatwootWebhookController extends Controller
             );
 
             if ($response->successful()) {
-                Log::info('🗑️ Conversación archivada exitosamente', [
+                Log::debug('🗑️ Conversación archivada exitosamente', [
                     'conversation_id' => $conversationId
                 ]);
                 return true;

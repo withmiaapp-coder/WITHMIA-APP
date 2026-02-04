@@ -4,7 +4,9 @@
  * 🔧 Rutas de Diagnóstico y Debug
  * 
  * Este archivo contiene rutas temporales para diagnóstico y corrección.
- * Solo se carga en entorno local/development.
+ * Solo se carga en entorno local/development/staging.
+ * 
+ * 🔒 SEGURIDAD: Todas las rutas requieren header X-Debug-Key
  * 
  * @see config/app.php para APP_ENV
  */
@@ -13,6 +15,30 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+
+// ====================================
+// 🔒 MIDDLEWARE DE SEGURIDAD PARA DEBUG
+// ====================================
+Route::middleware(function ($request, $next) {
+    // En local permitir sin key
+    if (app()->environment('local')) {
+        return $next($request);
+    }
+    
+    // En staging/development requerir X-Debug-Key
+    $debugKey = config('app.debug_key', env('DEBUG_SECRET_KEY'));
+    $providedKey = $request->header('X-Debug-Key');
+    
+    if (!$debugKey || $providedKey !== $debugKey) {
+        Log::warning('Intento de acceso a rutas debug sin key válida', [
+            'ip' => $request->ip(),
+            'path' => $request->path()
+        ]);
+        return response()->json(['error' => 'Unauthorized - Debug key required'], 401);
+    }
+    
+    return $next($request);
+})->group(function () {
 
 // ====================================
 // 🔧 RUTAS DE DIAGNÓSTICO Y DEBUG
@@ -2849,3 +2875,5 @@ Route::get('/debug/session-routing-diagnostic', function () {
     }
 });
 
+
+}); // Cierre del grupo middleware de seguridad

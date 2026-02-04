@@ -91,7 +91,7 @@ class DashboardController extends Controller
         ];
 
         // Logging mejorado para debug
-        \Log::info('Dashboard Data Debug:', [
+        \Log::debug('Dashboard Data Debug:', [
             'user_id' => $user->id,
             'inbox_id' => $inboxId,
             'chatwoot_status' => $chatwootStatus

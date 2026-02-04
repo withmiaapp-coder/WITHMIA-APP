@@ -10,15 +10,17 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\EvolutionApiService;
 use App\Services\ConversationDeduplicationService;
 use App\Helpers\PhoneNormalizer;
+use App\Traits\ResolvesChatwootConfig;
 
 class ChatwootController extends Controller
 {
+    use ResolvesChatwootConfig;
+    
     // 🚀 CONSTANTES: Evita duplicación de statusMap en todo el controlador
     private const STATUS_TO_INT = ['open' => 0, 'resolved' => 1, 'pending' => 2, 'snoozed' => 3];
     private const INT_TO_STATUS = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
     
-    private $chatwootBaseUrl;
-    private $chatwootToken;
+    // Alias para compatibilidad con código existente (usan $this->accountId en lugar de $this->chatwootAccountId)
     private $accountId;
     private $inboxId;
     private $userId;
@@ -46,74 +48,14 @@ class ChatwootController extends Controller
         
         // CRÍTICO: Asegurar que el middleware 'auth' se ejecute ANTES del constructor
         $this->middleware(function ($request, $next) {
-            $this->initializeChatwootConfig();
+            // 🚀 USAR TRAIT: Inicialización unificada con cache
+            $this->initializeChatwootFromUser(auth()->user());
+            // Alias para compatibilidad con código existente
+            $this->userId = $this->chatwootUserId;
+            $this->accountId = $this->chatwootAccountId;
+            $this->inboxId = $this->chatwootInboxId;
             return $next($request);
         });
-    }
-
-    /**
-     * Inicializar configuración de Chatwoot (se ejecuta DESPUÉS del middleware auth)
-     * 🚀 OPTIMIZACIÓN: Cache de 3 minutos por usuario para evitar recálculos
-     */
-    private function initializeChatwootConfig()
-    {
-        $this->chatwootBaseUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
-
-        // Obtener usuario autenticado y su company
-        $user = auth()->user();
-        
-        if (!$user) {
-            $this->userId = null;
-            $this->accountId = config('chatwoot.account_id', '1');
-            $this->chatwootToken = config('services.chatwoot.api_token');
-            $this->inboxId = null;
-            return;
-        }
-
-        // 🚀 CACHE: Evitar recálculos en cada request (3 minutos)
-        $cacheKey = "chatwoot_init_user_{$user->id}";
-        $cachedConfig = cache()->remember($cacheKey, 180, function () use ($user) {
-            $company = $user->company;
-            
-            $accountId = $company && $company->chatwoot_account_id
-                ? $company->chatwoot_account_id
-                : config('chatwoot.account_id', '1');
-
-            $inboxId = $user->chatwoot_inbox_id ?: null;
-
-            // PRIORIDAD: 1. Token de company, 2. Token de usuario, 3. Token platform
-            if ($company && $company->chatwoot_api_key) {
-                $token = $company->chatwoot_api_key;
-            } elseif ($user->chatwoot_agent_token) {
-                $token = $user->chatwoot_agent_token;
-            } else {
-                $token = config('services.chatwoot.api_token');
-            }
-
-            return [
-                'user_id' => $user->id,
-                'account_id' => $accountId,
-                'inbox_id' => $inboxId,
-                'token' => $token,
-                'company_slug' => $company ? $company->slug : null,
-                'email' => $user->email,
-            ];
-        });
-
-        // Asignar valores desde cache
-        $this->userId = $cachedConfig['user_id'];
-        $this->accountId = $cachedConfig['account_id'];
-        $this->inboxId = $cachedConfig['inbox_id'];
-        $this->chatwootToken = $cachedConfig['token'];
-        
-        // Log solo en debug (reducir volumen de logs)
-        Log::debug('ChatwootController initialized (cached)', [
-            'user_id' => $cachedConfig['user_id'],
-            'email' => $cachedConfig['email'],
-            'company_slug' => $cachedConfig['company_slug'],
-            'account_id' => $cachedConfig['account_id'],
-            'inbox_id' => $cachedConfig['inbox_id']
-        ]);
     }
 
     /**
@@ -143,7 +85,7 @@ class ChatwootController extends Controller
             // Esto es mucho más rápido que hacer múltiples llamadas HTTP paginadas
             $allConversations = [];
             
-            Log::info('📥 Obteniendo conversaciones desde BD directa', [
+            Log::debug('📥 Obteniendo conversaciones desde BD directa', [
                 'user_id' => $this->userId,
                 'account_id' => $this->accountId,
                 'inbox_id' => $this->inboxId
@@ -186,7 +128,7 @@ class ChatwootController extends Controller
                 ->limit(200) // Aumentado para mejor cobertura
                 ->get();
             
-            Log::info('📊 Conversaciones obtenidas de BD', [
+            Log::debug('📊 Conversaciones obtenidas de BD', [
                 'count' => count($conversationsFromDb)
             ]);
             
@@ -280,7 +222,7 @@ class ChatwootController extends Controller
                 ];
             }
             
-            Log::info('✅ Conversaciones procesadas desde BD', [
+            Log::debug('✅ Conversaciones procesadas desde BD', [
                 'total' => count($allConversations),
                 'filtered_evolutionapi' => count($conversationsFromDb) - count($allConversations)
             ]);
@@ -296,7 +238,7 @@ class ChatwootController extends Controller
                 \App\Jobs\MergeDuplicateConversationsJob::dispatch($this->inboxId, $this->accountId)
                     ->delay(now()->addSeconds(5)); // Pequeño delay para evitar sobrecarga
                 
-                Log::info('🔄 Job de fusión de duplicados despachado', [
+                Log::debug('🔄 Job de fusión de duplicados despachado', [
                     'inbox_id' => $this->inboxId,
                     'duplicates_found' => $originalCount - count($allConversations)
                 ]);
@@ -457,7 +399,7 @@ class ChatwootController extends Controller
             // Compatibilidad: usar apiConversationId donde antes se usaba realConversationId
             $realConversationId = $apiConversationId;
             
-            Log::info('Conversación encontrada en DB', [
+            Log::debug('Conversación encontrada en DB', [
                 'requested_id' => $id,
                 'db_id' => $dbConversationId,
                 'api_id (display_id)' => $apiConversationId,
@@ -488,7 +430,7 @@ class ChatwootController extends Controller
             $allMessages = [];
             $hasMore = false;
             
-            Log::info("📥 Obteniendo mensajes desde DB para conversación", [
+            Log::debug("📥 Obteniendo mensajes desde DB para conversación", [
                 'db_conversation_id' => $dbConversationId,
                 'display_id' => $apiConversationId,
                 'limit' => $limit,
@@ -572,7 +514,7 @@ class ChatwootController extends Controller
                 ];
             }
             
-            Log::info("✅ Mensajes desde DB: " . count($allMessages) . ", hasMore: " . ($hasMore ? 'true' : 'false'));
+            Log::debug("✅ Mensajes desde DB: " . count($allMessages) . ", hasMore: " . ($hasMore ? 'true' : 'false'));
             
             // Ordenar por ID ascendente (más antiguos primero)
             usort($allMessages, fn($a, $b) => $a['id'] - $b['id']);
@@ -588,7 +530,7 @@ class ChatwootController extends Controller
                 return stripos($senderName, 'EvolutionAPI') === false;
             }));
             
-            Log::info("📊 Mensajes después de filtrar EvolutionAPI", [
+            Log::debug("📊 Mensajes después de filtrar EvolutionAPI", [
                 'antes' => count($allMessages),
                 'después' => count($filteredMessages)
             ]);
@@ -596,7 +538,7 @@ class ChatwootController extends Controller
             $oldestMessageId = !empty($filteredMessages) ? $filteredMessages[0]['id'] : null;
             $newestMessageId = !empty($filteredMessages) ? $filteredMessages[count($filteredMessages) - 1]['id'] : null;
             
-            Log::info("📊 Mensajes procesados", [
+            Log::debug("📊 Mensajes procesados", [
                 'total_raw' => count($allMessages),
                 'filtered' => count($filteredMessages),
                 'oldest_id' => $oldestMessageId,
@@ -682,7 +624,7 @@ class ChatwootController extends Controller
                     'updated_at' => $now
                 ]);
             
-            Log::info('✅ Conversación marcada como leída (BD directa)', [
+            Log::debug('✅ Conversación marcada como leída (BD directa)', [
                 'user_id' => $this->userId,
                 'conversation_id' => $conversation->id,
                 'display_id' => $conversation->display_id
@@ -803,7 +745,7 @@ class ChatwootController extends Controller
             
             // 🚀 MÉTODO 1: Archivo enviado como base64 (evita límites de PHP)
             if ($fileBase64 && $fileName && $fileType) {
-                Log::info('📦 Archivo recibido como base64', [
+                Log::debug('📦 Archivo recibido como base64', [
                     'fileName' => $fileName,
                     'fileType' => $fileType,
                     'base64_length' => strlen($fileBase64)
@@ -813,7 +755,7 @@ class ChatwootController extends Controller
             }
             
             // 🔄 MÉTODO 2: Upload tradicional (FormData)
-            Log::info('📦 Detectando upload tradicional', [
+            Log::debug('📦 Detectando upload tradicional', [
                 'hasFile' => $request->hasFile('file'),
                 'hasAttachments' => $request->hasFile('attachments'),
                 'allFiles' => array_keys($request->allFiles()),
@@ -851,7 +793,7 @@ class ChatwootController extends Controller
             
             if ($uploadedFile) {
                 // 📎 ENVÍO DE ARCHIVO (imagen, video, audio, documento)
-                Log::info('📎 Archivo detectado, procesando...', [
+                Log::debug('📎 Archivo detectado, procesando...', [
                     'fileName' => $uploadedFile->getClientOriginalName(),
                     'mimeType' => $uploadedFile->getMimeType(),
                     'size' => $uploadedFile->getSize()
@@ -872,7 +814,7 @@ class ChatwootController extends Controller
             $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
 
             if ($evolutionResult) {
-                Log::info('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
+                Log::debug('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id,
                     'phone' => $contactPhone
@@ -920,7 +862,7 @@ class ChatwootController extends Controller
     private function sendBase64File($base64Data, $fileName, $mimeType, $conversationId, $contactPhone)
     {
         try {
-            Log::info('📎 Procesando archivo base64 para envío', [
+            Log::debug('📎 Procesando archivo base64 para envío', [
                 'user_id' => $this->userId,
                 'conversation_id' => $conversationId,
                 'mimeType' => $mimeType,
@@ -934,12 +876,12 @@ class ChatwootController extends Controller
             if ($isVoiceMessage) {
                 $mediaType = 'audio';
                 $mimeType = 'audio/ogg';
-                Log::info('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
+                Log::debug('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
             } else {
                 $mediaType = $this->getMediaType($mimeType);
             }
             
-            Log::info('📁 Archivo base64 listo para enviar', [
+            Log::debug('📁 Archivo base64 listo para enviar', [
                 'mediaType' => $mediaType,
                 'isVoiceMessage' => $isVoiceMessage
             ]);
@@ -977,7 +919,7 @@ class ChatwootController extends Controller
             }
 
             if ($evolutionResult && $evolutionResult['success']) {
-                Log::info('✅ Archivo base64 enviado via Evolution API', [
+                Log::debug('✅ Archivo base64 enviado via Evolution API', [
                     'user_id' => $this->userId,
                     'conversation_id' => $conversationId,
                     'phone' => $cleanPhone,
@@ -1045,7 +987,7 @@ class ChatwootController extends Controller
             $originalName = $file->getClientOriginalName();
             $caption = $request->input('content', '');
             
-            Log::info('📎 Procesando archivo para envío', [
+            Log::debug('📎 Procesando archivo para envío', [
                 'user_id' => $this->userId,
                 'conversation_id' => $conversationId,
                 'mimeType' => $mimeType,
@@ -1061,7 +1003,7 @@ class ChatwootController extends Controller
                 $mediaType = 'audio';
                 // WhatsApp prefiere audio/ogg para notas de voz
                 $mimeType = 'audio/ogg';
-                Log::info('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
+                Log::debug('🎤 Detectado mensaje de voz, forzando tipo audio/ogg');
             } else {
                 // Determinar el tipo de media según el MIME type
                 $mediaType = $this->getMediaType($mimeType);
@@ -1071,7 +1013,7 @@ class ChatwootController extends Controller
             $fileContent = file_get_contents($file->getPathname());
             $base64Media = base64_encode($fileContent);
             
-            Log::info('📁 Archivo convertido a base64', [
+            Log::debug('📁 Archivo convertido a base64', [
                 'mediaType' => $mediaType,
                 'isVoiceMessage' => $isVoiceMessage,
                 'base64_length' => strlen($base64Media)
@@ -1095,7 +1037,7 @@ class ChatwootController extends Controller
             
             if ($isVoiceMessage) {
                 // Para audios de voz, usar endpoint especial de WhatsApp
-                Log::info('🎤 Enviando como nota de voz WhatsApp');
+                Log::debug('🎤 Enviando como nota de voz WhatsApp');
                 $evolutionResult = $this->evolutionApi->sendWhatsAppAudio(
                     $instanceName,
                     $cleanPhone,
@@ -1115,7 +1057,7 @@ class ChatwootController extends Controller
             }
 
             if ($evolutionResult && $evolutionResult['success']) {
-                Log::info('✅ Archivo enviado via Evolution API', [
+                Log::debug('✅ Archivo enviado via Evolution API', [
                     'user_id' => $this->userId,
                     'conversation_id' => $conversationId,
                     'phone' => $cleanPhone,
@@ -1201,7 +1143,7 @@ class ChatwootController extends Controller
             // Limpiar número de teléfono (remover +, espacios, etc.)
             $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
 
-            Log::info('📤 Enviando mensaje a WhatsApp vía EvolutionApiService', [
+            Log::debug('📤 Enviando mensaje a WhatsApp vía EvolutionApiService', [
                 'user_id' => $this->userId,
                 'instance' => $instanceName,
                 'phone' => $cleanPhone,
@@ -1216,7 +1158,7 @@ class ChatwootController extends Controller
             );
 
             if ($result['success']) {
-                Log::info('✅ Mensaje enviado exitosamente a WhatsApp', [
+                Log::debug('✅ Mensaje enviado exitosamente a WhatsApp', [
                     'user_id' => $this->userId,
                     'phone' => $cleanPhone,
                     'result' => $result
@@ -1383,7 +1325,7 @@ class ChatwootController extends Controller
                     ->first();
             }
             
-            Log::info('✅ Conversación asignada (BD directa)', [
+            Log::debug('✅ Conversación asignada (BD directa)', [
                 'conversation_id' => $conversation->id,
                 'assignee_id' => $assigneeId,
                 'user_id' => $this->userId
@@ -1452,7 +1394,7 @@ class ChatwootController extends Controller
                 ->where('id', $conversation->id)
                 ->update($updateData);
             
-            Log::info('✅ Estado de conversación cambiado (BD directa)', [
+            Log::debug('✅ Estado de conversación cambiado (BD directa)', [
                 'conversation_id' => $conversation->id,
                 'status' => $status,
                 'status_value' => $statusValue,
@@ -1535,7 +1477,7 @@ class ChatwootController extends Controller
                 ->get()
                 ->toArray();
             
-            Log::info('✅ Etiquetas de conversación actualizadas (BD directa)', [
+            Log::debug('✅ Etiquetas de conversación actualizadas (BD directa)', [
                 'conversation_id' => $conversation->id,
                 'labels' => $labels,
                 'user_id' => $this->userId
@@ -1630,7 +1572,7 @@ class ChatwootController extends Controller
                     'updated_at' => now()
                 ]);
 
-            Log::info('✅ Etiqueta creada (BD directa)', [
+            Log::debug('✅ Etiqueta creada (BD directa)', [
                 'label_id' => $labelId,
                 'title' => $title,
                 'user_id' => $this->userId
@@ -1833,7 +1775,7 @@ class ChatwootController extends Controller
                 ], 400);
             }
 
-            Log::info('🔧 Creando equipo en Chatwoot', [
+            Log::debug('🔧 Creando equipo en Chatwoot', [
                 'url' => $url,
                 'name' => $validated['name'],
                 'account_id' => $this->accountId,
@@ -1852,14 +1794,14 @@ class ChatwootController extends Controller
             $responseBody = $response->json();
             $responseStatus = $response->status();
             
-            Log::info('🔧 Respuesta createTeam', [
+            Log::debug('🔧 Respuesta createTeam', [
                 'status' => $responseStatus,
                 'successful' => $response->successful(),
                 'body' => $responseBody
             ]);
 
             if ($response->successful()) {
-                Log::info('✅ Equipo creado exitosamente en Chatwoot', [
+                Log::debug('✅ Equipo creado exitosamente en Chatwoot', [
                     'user_id' => $this->userId,
                     'team_name' => $validated['name'],
                     'team_id' => $responseBody['id'] ?? 'unknown'
@@ -1913,7 +1855,7 @@ class ChatwootController extends Controller
             ])->patch($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId, $validated);
 
             if ($response->successful()) {
-                Log::info('Equipo actualizado en Chatwoot', [
+                Log::debug('Equipo actualizado en Chatwoot', [
                     'user_id' => $this->userId,
                     'team_id' => $teamId
                 ]);
@@ -1950,7 +1892,7 @@ class ChatwootController extends Controller
             ])->delete($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId);
 
             if ($response->successful() || $response->status() === 204) {
-                Log::info('Equipo eliminado de Chatwoot', [
+                Log::debug('Equipo eliminado de Chatwoot', [
                     'user_id' => $this->userId,
                     'team_id' => $teamId
                 ]);
@@ -2067,7 +2009,7 @@ class ChatwootController extends Controller
                 }
             }
             
-            Log::info('🚀 BD directa: Miembros agregados al equipo', [
+            Log::debug('🚀 BD directa: Miembros agregados al equipo', [
                 'user_id' => $this->userId,
                 'team_id' => $teamId,
                 'added_users' => $validated['user_ids'],
@@ -2145,7 +2087,7 @@ class ChatwootController extends Controller
                 
                 $chatwootDb->commit();
                 
-                Log::info('🚀 BD directa: Miembros del equipo actualizados', [
+                Log::debug('🚀 BD directa: Miembros del equipo actualizados', [
                     'user_id' => $this->userId,
                     'team_id' => $teamId,
                     'new_member_count' => $insertedCount
@@ -2204,7 +2146,7 @@ class ChatwootController extends Controller
                 ->whereIn('user_id', $validated['user_ids'])
                 ->delete();
             
-            Log::info('🚀 BD directa: Miembros removidos del equipo', [
+            Log::debug('🚀 BD directa: Miembros removidos del equipo', [
                 'user_id' => $this->userId,
                 'team_id' => $teamId,
                 'removed_users' => $validated['user_ids'],
@@ -2246,7 +2188,7 @@ class ChatwootController extends Controller
                 ]);
             }
 
-            Log::info('Iniciando exportación de todas las conversaciones con mensajes', [
+            Log::debug('Iniciando exportación de todas las conversaciones con mensajes', [
                 'user_id' => $this->userId,
                 'inbox_id' => $this->inboxId
             ]);
@@ -2288,7 +2230,7 @@ class ChatwootController extends Controller
                 }
             }
 
-            Log::info('Total de conversaciones encontradas', [
+            Log::debug('Total de conversaciones encontradas', [
                 'count' => count($allConversations)
             ]);
 
@@ -2336,7 +2278,7 @@ class ChatwootController extends Controller
                 }
             }
 
-            Log::info('Exportación completada', [
+            Log::debug('Exportación completada', [
                 'total_conversaciones' => count($allConversations),
                 'procesadas_exitosamente' => $processedCount,
                 'errores' => $errorCount
@@ -2385,7 +2327,7 @@ class ChatwootController extends Controller
                 $email = null;
             }
 
-            Log::info('Actualizando contacto en Chatwoot', [
+            Log::debug('Actualizando contacto en Chatwoot', [
                 'contact_id' => $contactId,
                 'data' => $validated,
                 'email_final' => $email,
@@ -2418,7 +2360,7 @@ class ChatwootController extends Controller
             if ($response->successful()) {
                 $contactData = $response->json();
                 
-                Log::info('Contacto actualizado exitosamente', [
+                Log::debug('Contacto actualizado exitosamente', [
                     'contact_id' => $contactId,
                     'payload' => $contactData
                 ]);
@@ -2527,7 +2469,7 @@ class ChatwootController extends Controller
                     $processedIds[] = $mergeId;
                 }
 
-                Log::info('🔗 Conversaciones duplicadas detectadas por número real', [
+                Log::debug('🔗 Conversaciones duplicadas detectadas por número real', [
                     'phone_number' => $phoneNumber,
                     'keeping_id' => $keepId,
                     'merging_ids' => $mergeIds
@@ -2545,7 +2487,7 @@ class ChatwootController extends Controller
                         $conversationsToMerge[] = $lidConvId;
                         $processedIds[] = $lidConvId;
 
-                        Log::info('🔗 Conversación LID vinculada a número real', [
+                        Log::debug('🔗 Conversación LID vinculada a número real', [
                             'phone_number' => $phoneNumber,
                             'lid_conversation_id' => $lidConvId,
                             'linked_to_conversation_id' => $convIds[0]
@@ -2565,7 +2507,7 @@ class ChatwootController extends Controller
         $result = array_values($conversationsToKeep);
 
         if (!empty($conversationsToMerge)) {
-            Log::info('✅ Deduplicación completada', [
+            Log::debug('✅ Deduplicación completada', [
                 'original_count' => count($conversations),
                 'deduplicated_count' => count($result),
                 'merged_conversations' => count($conversationsToMerge),
@@ -2645,7 +2587,7 @@ class ChatwootController extends Controller
 
         $deduplicatedCount = count($conversations) - count($result);
         if ($deduplicatedCount > 0) {
-            Log::info('✅ Deduplicación por phone_number completada', [
+            Log::debug('✅ Deduplicación por phone_number completada', [
                 'original' => count($conversations),
                 'result' => count($result),
                 'removed' => $deduplicatedCount
@@ -2778,7 +2720,7 @@ class ChatwootController extends Controller
             ])->delete("{$this->chatwootBaseUrl}/api/v1/accounts/{$this->accountId}/conversations/{$conversationId}");
 
             if ($deleteResponse->successful()) {
-                Log::info('✅ Conversación eliminada exitosamente', [
+                Log::debug('✅ Conversación eliminada exitosamente', [
                     'user_id' => $this->userId,
                     'conversation_id' => $conversationId,
                     'contact_phone' => $conversation['meta']['sender']['phone_number'] ?? 'N/A'
@@ -2924,7 +2866,7 @@ class ChatwootController extends Controller
             // Buscamos el tiempo entre mensaje entrante y primera respuesta saliente
             $avgResponseTime = '2.5 min'; // Por ahora valor estimado
             
-            Log::info('✅ Dashboard stats obtenidas (BD directa)', [
+            Log::debug('✅ Dashboard stats obtenidas (BD directa)', [
                 'inbox_id' => $this->inboxId,
                 'total_conversations' => $totalConversations,
                 'total_messages' => $totalMessages

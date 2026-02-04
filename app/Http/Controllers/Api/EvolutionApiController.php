@@ -16,9 +16,12 @@ use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
+use App\Traits\ResolvesChatwootConfig;
 
 class EvolutionApiController extends Controller
 {
+    use ResolvesChatwootConfig;
+    
     private EvolutionApiService $evolutionApi;
     private N8nService $n8nService;
     private ChatwootService $chatwootService;
@@ -92,7 +95,7 @@ class EvolutionApiController extends Controller
                         'updated_at' => now()
                     ]
                 );
-                Log::info("WhatsApp instance registered", [
+                Log::debug("WhatsApp instance registered", [
                     'instance_name' => $instanceName,
                     'company_id' => $companyId
                 ]);
@@ -110,72 +113,11 @@ class EvolutionApiController extends Controller
 
     /**
      * Obtener configuración de Chatwoot específica para el usuario/empresa
-     * Multi-tenant: cada empresa tiene su propio account_id y token
-     * 
-     * 🔧 FIX: Ahora creamos el inbox PRIMERO y obtenemos el Channel Token correcto
-     * 🚀 OPTIMIZACIÓN: Cache de 5 minutos por usuario para evitar recálculos
+     * 🚀 REFACTORIZADO: Ahora usa el Trait ResolvesChatwootConfig
      */
     private function getChatwootConfigForUser($user): array|bool
     {
-        if (!$user) {
-            return true; // Usar config global
-        }
-
-        // 🚀 CACHE: Evitar recálculos en cada request (5 minutos)
-        $cacheKey = "chatwoot_config_user_{$user->id}";
-        
-        return cache()->remember($cacheKey, 300, function () use ($user) {
-            // Cargar la empresa del usuario
-            $company = $user->company;
-            
-            if ($company && $company->chatwoot_account_id) {
-                $chatwootUrl = config('chatwoot.url');
-                $accountId = $company->chatwoot_account_id;
-                
-                // IMPORTANTE: Usar company_slug para el nombre del inbox
-                $inboxName = $user->company_slug 
-                    ? "WhatsApp {$user->company_slug}" 
-                    : "WhatsApp {$company->name}";
-                
-                // 🔧 CRÍTICO: Evolution API necesita un API Access Token (NO Channel Token)
-                $apiToken = $company->chatwoot_api_key;
-                
-                if ($apiToken) {
-                    Log::debug('✅ Usando API Access Token de la empresa para Evolution (cached)', [
-                        'user_id' => $user->id,
-                        'company_id' => $company->id,
-                        'account_id' => $accountId,
-                        'inbox_name' => $inboxName,
-                    ]);
-                    
-                    return [
-                        'account_id' => $accountId,
-                        'token' => $apiToken,
-                        'url' => $chatwootUrl,
-                        'inbox_name' => $inboxName,
-                        'auto_create' => true
-                    ];
-                }
-                
-                // Fallback: usar Platform Token
-                $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
-                Log::warning('⚠️ No se encontró API Token de empresa, usando Platform Token', [
-                    'user_id' => $user->id,
-                    'account_id' => $accountId
-                ]);
-                
-                return [
-                    'account_id' => $accountId,
-                    'token' => $platformToken,
-                    'url' => $chatwootUrl,
-                    'inbox_name' => $inboxName,
-                    'auto_create' => true
-                ];
-            }
-
-            // Fallback: usar config global
-            return true;
-        });
+        return $this->getChatwootConfigForEvolution($user);
     }
     
     /**
@@ -200,7 +142,7 @@ class EvolutionApiController extends Controller
                     ->first();
                 
                 if ($channelApi && $channelApi->identifier) {
-                    Log::info('✅ Channel Token encontrado en DB', [
+                    Log::debug('✅ Channel Token encontrado en DB', [
                         'inbox_id' => $inbox->id,
                         'inbox_name' => $inboxName
                     ]);
@@ -209,7 +151,7 @@ class EvolutionApiController extends Controller
             }
             
             // 2. No existe inbox, crear uno via API de Chatwoot
-            Log::info('📦 Creando inbox en Chatwoot...', ['inbox_name' => $inboxName]);
+            Log::debug('📦 Creando inbox en Chatwoot...', ['inbox_name' => $inboxName]);
             
             $response = Http::withHeaders([
                 'api_access_token' => $platformToken,
@@ -235,7 +177,7 @@ class EvolutionApiController extends Controller
                         ->first();
                     
                     if ($channelApi && $channelApi->identifier) {
-                        Log::info('✅ Inbox creado y Channel Token obtenido', [
+                        Log::debug('✅ Inbox creado y Channel Token obtenido', [
                             'inbox_id' => $newInboxId,
                             'inbox_name' => $inboxName
                         ]);
@@ -267,7 +209,7 @@ class EvolutionApiController extends Controller
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
 
-        Log::info('🔗 Connect request received', ['instance' => $instanceName]);
+        Log::debug('🔗 Connect request received', ['instance' => $instanceName]);
 
         // 🧹 LIMPIEZA PREVIA: Verificar si la instancia existe y no está conectada
         // Si existe pero no está conectada, eliminarla primero para generar QR limpio
@@ -279,7 +221,7 @@ class EvolutionApiController extends Controller
         // Paso 1: Crear la instancia (con Chatwoot específico de la empresa)
         $createResult = $this->evolutionApi->createInstance($instanceName, null, $chatwootConfig);
 
-        Log::info('📦 Create instance result', [
+        Log::debug('📦 Create instance result', [
             'instance' => $instanceName,
             'success' => $createResult['success'] ?? false,
             'error' => $createResult['error'] ?? null,
@@ -314,7 +256,7 @@ class EvolutionApiController extends Controller
         // Paso 2: Conectar y obtener QR
         $result = $this->evolutionApi->connect($instanceName);
 
-        Log::info('🔌 Connect result', [
+        Log::debug('🔌 Connect result', [
             'instance' => $instanceName,
             'success' => $result['success'] ?? false,
             'has_qr' => isset($result['qr']),
@@ -356,21 +298,21 @@ class EvolutionApiController extends Controller
 
             if (!$response->successful()) {
                 // La instancia no existe, perfecto - se creará nueva
-                Log::info('🧹 Instancia no existe, se creará nueva', ['instance' => $instanceName]);
+                Log::debug('🧹 Instancia no existe, se creará nueva', ['instance' => $instanceName]);
                 return;
             }
 
             $data = $response->json();
             $state = $data['instance']['state'] ?? $data['state'] ?? 'close';
 
-            Log::info('🔍 Estado actual de instancia', [
+            Log::debug('🔍 Estado actual de instancia', [
                 'instance' => $instanceName,
                 'state' => $state
             ]);
 
             // Si está conectada (open), verificar si necesita workflow de n8n
             if ($state === 'open') {
-                Log::info('✅ Instancia ya conectada, no se elimina', ['instance' => $instanceName]);
+                Log::debug('✅ Instancia ya conectada, no se elimina', ['instance' => $instanceName]);
                 
                 // 🚀 CREAR WORKFLOW si no existe
                 $this->ensureN8nWorkflowExists($instanceName);
@@ -388,7 +330,7 @@ class EvolutionApiController extends Controller
                 'apikey' => $apiKey
             ])->timeout(15)->delete("{$baseUrl}/instance/delete/{$instanceName}");
 
-            Log::info('✅ Instancia eliminada, se generará QR nuevo', ['instance' => $instanceName]);
+            Log::debug('✅ Instancia eliminada, se generará QR nuevo', ['instance' => $instanceName]);
 
             // Pausa más larga para asegurar que Evolution API procesó la eliminación
             sleep(2); // 2 segundos
@@ -408,9 +350,9 @@ class EvolutionApiController extends Controller
     public function getStatus(Request $request, ?string $instanceName = null): JsonResponse
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
-        Log::info('WhatsApp Status Check', ['instanceName' => $instanceName]);
+        Log::debug('WhatsApp Status Check', ['instanceName' => $instanceName]);
         $result = $this->evolutionApi->getStatus($instanceName);
-        Log::info('WhatsApp Status Result', ['result' => $result]);
+        Log::debug('WhatsApp Status Result', ['result' => $result]);
 
         // Broadcast status change to all connected clients (CON RATE LIMITING)
         if ($result['success'] ?? false) {
@@ -434,7 +376,7 @@ class EvolutionApiController extends Controller
                             $result['profileInfo'] ?? null
                         ));
                         
-                        Log::info('📡 WhatsAppStatusChanged broadcast (estado cambió)', [
+                        Log::debug('📡 WhatsAppStatusChanged broadcast (estado cambió)', [
                             'instance' => $instanceName,
                             'state' => $state,
                             'previous' => $lastBroadcastState
@@ -479,7 +421,7 @@ class EvolutionApiController extends Controller
                 // Marcar como sincronizado por 1 hora
                 \Cache::put($cacheKey, true, 3600);
                 
-                Log::info('✅ Chatwoot inbox_id synchronized automatically', [
+                Log::debug('✅ Chatwoot inbox_id synchronized automatically', [
                     'instance' => $instanceName,
                     'user_id' => $user->id,
                     'inbox_id' => $syncResult['inbox_id']
@@ -551,13 +493,13 @@ class EvolutionApiController extends Controller
                 ->first();
             
             if (!$instance || empty($instance->n8n_workflow_id)) {
-                Log::info('🔍 No hay workflow de n8n para eliminar', [
+                Log::debug('🔍 No hay workflow de n8n para eliminar', [
                     'instance' => $instanceName
                 ]);
                 return;
             }
             
-            Log::info('🗑️ Eliminando workflow de n8n al desconectar WhatsApp', [
+            Log::debug('🗑️ Eliminando workflow de n8n al desconectar WhatsApp', [
                 'instance' => $instanceName,
                 'workflow_id' => $instance->n8n_workflow_id
             ]);
@@ -565,7 +507,7 @@ class EvolutionApiController extends Controller
             // Eliminar workflow de n8n
             try {
                 $this->n8nService->deleteWorkflow($instance->n8n_workflow_id);
-                Log::info('✅ Workflow eliminado de n8n exitosamente', [
+                Log::debug('✅ Workflow eliminado de n8n exitosamente', [
                     'workflow_id' => $instance->n8n_workflow_id
                 ]);
             } catch (\Exception $e) {
@@ -584,7 +526,7 @@ class EvolutionApiController extends Controller
                     'updated_at' => now()
                 ]);
             
-            Log::info('✅ Referencias de workflow limpiadas en base de datos', [
+            Log::debug('✅ Referencias de workflow limpiadas en base de datos', [
                 'instance' => $instanceName
             ]);
             
@@ -667,7 +609,7 @@ class EvolutionApiController extends Controller
 
             // If instance doesn't exist, return cached or default settings
             if (!$response->successful()) {
-                Log::info('Instance not found, returning cached or default settings', ['instance' => $instanceName]);
+                Log::debug('Instance not found, returning cached or default settings', ['instance' => $instanceName]);
                 
                 // Check if we have cached pending settings
                 $cachedSettings = \Cache::get("whatsapp_pending_settings_{$instanceName}");
@@ -727,7 +669,7 @@ class EvolutionApiController extends Controller
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
         
-        Log::info('updateSettings called', ['instanceName' => $instanceName, 'input' => $request->all()]);
+        Log::debug('updateSettings called', ['instanceName' => $instanceName, 'input' => $request->all()]);
         
         try {
             $baseUrl = config('evolution.api_url');
@@ -747,7 +689,7 @@ class EvolutionApiController extends Controller
             // Always save to cache first (for when instance doesn't exist or is created later)
             \Cache::put("whatsapp_pending_settings_{$instanceName}", $settings, now()->addHours(24));
             
-            Log::info('Settings saved to cache', ['instance' => $instanceName, 'settings' => $settings]);
+            Log::debug('Settings saved to cache', ['instance' => $instanceName, 'settings' => $settings]);
 
             // Try to update on Evolution API if instance exists
             try {
@@ -757,7 +699,7 @@ class EvolutionApiController extends Controller
                 ])->timeout(10)->post("{$baseUrl}/settings/set/{$instanceName}", $settings);
 
                 if ($response->successful()) {
-                    Log::info('WhatsApp settings updated on Evolution API', ['instance' => $instanceName]);
+                    Log::debug('WhatsApp settings updated on Evolution API', ['instance' => $instanceName]);
                     return response()->json([
                         'success' => true,
                         'message' => 'Settings updated successfully',
@@ -766,7 +708,7 @@ class EvolutionApiController extends Controller
                     ]);
                 }
             } catch (\Exception $apiEx) {
-                Log::info('Could not update Evolution API (instance may not exist)', ['error' => $apiEx->getMessage()]);
+                Log::debug('Could not update Evolution API (instance may not exist)', ['error' => $apiEx->getMessage()]);
             }
 
             // If we get here, instance doesn't exist but settings are cached
@@ -884,7 +826,7 @@ class EvolutionApiController extends Controller
         }
         Cache::put($rateLimitKey, true, 2); // 2 segundos
 
-        Log::info('Evolution API Webhook received', [
+        Log::debug('Evolution API Webhook received', [
             'event' => $event,
             'instance' => $instanceName
         ]);
@@ -895,7 +837,7 @@ class EvolutionApiController extends Controller
             
             // 🚀 Si la instancia no existe en BD, crearla automáticamente
             if (!$instance) {
-                Log::info('📝 Instancia no encontrada en BD, creándola automáticamente...', [
+                Log::debug('📝 Instancia no encontrada en BD, creándola automáticamente...', [
                     'instance' => $instanceName,
                     'event' => $event
                 ]);
@@ -923,7 +865,7 @@ class EvolutionApiController extends Controller
                     'updated_at' => now()
                 ]);
                 
-                Log::info('✅ Instancia creada en BD con company correcta', [
+                Log::debug('✅ Instancia creada en BD con company correcta', [
                     'instance' => $instanceName, 
                     'company_id' => $companyId,
                     'company_name' => $company->name
@@ -944,7 +886,7 @@ class EvolutionApiController extends Controller
             }
             
             if ($shouldCreateWorkflow && $instance && empty($instance->n8n_workflow_id)) {
-                Log::info('🤖 WhatsApp conectado, creando workflow automáticamente...', [
+                Log::debug('🤖 WhatsApp conectado, creando workflow automáticamente...', [
                     'instance' => $instanceName,
                     'event' => $event
                 ]);
@@ -960,7 +902,7 @@ class EvolutionApiController extends Controller
             
             if (in_array($event, $eventsToForward)) {
                 // Solo log para debug, NO reenviamos a n8n
-                Log::info('📨 Mensaje recibido de Evolution (Chatwoot lo reenviará a n8n)', [
+                Log::debug('📨 Mensaje recibido de Evolution (Chatwoot lo reenviará a n8n)', [
                     'instance' => $instanceName,
                     'event' => $event,
                     'fromMe' => $data['key']['fromMe'] ?? false
@@ -991,7 +933,7 @@ class EvolutionApiController extends Controller
                     break;
 
                 default:
-                    Log::info('Unhandled webhook event', ['event' => $event]);
+                    Log::debug('Unhandled webhook event', ['event' => $event]);
                     break;
             }
         } catch (\Exception $e) {
@@ -1085,7 +1027,7 @@ class EvolutionApiController extends Controller
 
         // 🔄 DEDUPLICACIÓN: Verificar si ya procesamos este mensaje
         if ($this->isMessageAlreadyProcessed($data)) {
-            Log::info('⏭️ Mensaje duplicado ignorado', [
+            Log::debug('⏭️ Mensaje duplicado ignorado', [
                 'message_id' => $messageId,
                 'phone' => $cleanPhone
             ]);
@@ -1094,14 +1036,14 @@ class EvolutionApiController extends Controller
         
         // 🚫 FILTRO DE MENSAJES DE SISTEMA
         if ($this->isSystemMessage($messageText, $data)) {
-            Log::info('🔇 Mensaje de sistema ignorado', [
+            Log::debug('🔇 Mensaje de sistema ignorado', [
                 'message' => substr($messageText, 0, 50),
                 'phone' => $cleanPhone
             ]);
             return;
         }
 
-        Log::info('📨 Nuevo mensaje recibido', [
+        Log::debug('📨 Nuevo mensaje recibido', [
             'phone' => $phoneNumber,
             'clean_phone' => $cleanPhone,
             'from_me' => $fromMe,
@@ -1112,7 +1054,7 @@ class EvolutionApiController extends Controller
 
         // 🛑 NO notificar si el mensaje es de nosotros (fromMe: true)
         if ($fromMe) {
-            Log::info('⏭️ Mensaje enviado por nosotros, no se notifica', [
+            Log::debug('⏭️ Mensaje enviado por nosotros, no se notifica', [
                 'phone' => $cleanPhone,
                 'from_me' => true
             ]);
@@ -1144,7 +1086,7 @@ class EvolutionApiController extends Controller
                 
                 if ($company && $company->chatwoot_account_id) {
                     $accountId = $company->chatwoot_account_id;
-                    Log::info('🏢 Account ID obtenido de company', [
+                    Log::debug('🏢 Account ID obtenido de company', [
                         'instance' => $instanceName,
                         'company_id' => $companyId,
                         'company_name' => $company->name,
@@ -1189,7 +1131,7 @@ class EvolutionApiController extends Controller
                 $accountId
             ));
 
-            Log::info('📡 NewMessageReceived BROADCAST enviado', [
+            Log::debug('📡 NewMessageReceived BROADCAST enviado', [
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId,
                 'phone' => $cleanPhone,
@@ -1211,7 +1153,7 @@ class EvolutionApiController extends Controller
                 $accountId
             ));
 
-            Log::info('📡 ConversationUpdated BROADCAST enviado', [
+            Log::debug('📡 ConversationUpdated BROADCAST enviado', [
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId,
                 'action' => 'new_message'
@@ -1235,7 +1177,7 @@ class EvolutionApiController extends Controller
     {
         $fromMe = $data['fromMe'] ?? false;
 
-        Log::info('📝 Actualización de mensaje', [
+        Log::debug('📝 Actualización de mensaje', [
             'data' => $data,
             'instance' => $instanceName,
             'from_me' => $fromMe
@@ -1243,7 +1185,7 @@ class EvolutionApiController extends Controller
 
         // 🛑 NO notificar si el mensaje es de nosotros (fromMe: true)
         if ($fromMe) {
-            Log::info('⏭️ Actualización de mensaje propio, no se notifica', [
+            Log::debug('⏭️ Actualización de mensaje propio, no se notifica', [
                 'from_me' => true
             ]);
             return;
@@ -1292,7 +1234,7 @@ class EvolutionApiController extends Controller
                 $accountId
             ))->toOthers();
 
-            Log::info('✅ Evento ConversationUpdated broadcasted', [
+            Log::debug('✅ Evento ConversationUpdated broadcasted', [
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId
             ]);
@@ -1328,7 +1270,7 @@ class EvolutionApiController extends Controller
         // Guardar estado por 30 segundos
         Cache::put($cacheKey, $state, 30);
 
-        Log::info('📡 Cambio de conexión', [
+        Log::debug('📡 Cambio de conexión', [
             'instance' => $instanceName,
             'state' => $state,
             'previous_state' => $lastState,
@@ -1373,7 +1315,7 @@ class EvolutionApiController extends Controller
                     $data['profileInfo'] ?? null
                 ));
 
-                Log::info('✅ WhatsAppStatusChanged event broadcasted', [
+                Log::debug('✅ WhatsAppStatusChanged event broadcasted', [
                     'company' => $companySlug,
                     'instance' => $instanceName,
                     'state' => $state
@@ -1387,7 +1329,7 @@ class EvolutionApiController extends Controller
                         $accountId
                     ))->toOthers();
                     
-                    Log::info('✅ Evento de conexión broadcasted', [
+                    Log::debug('✅ Evento de conexión broadcasted', [
                         'account_id' => $accountId,
                         'inbox_id' => $inboxId
                     ]);
@@ -1414,7 +1356,7 @@ class EvolutionApiController extends Controller
             // Usar el instance_name (slug) como identificador único del workflow
             $workflowName = $instance->instance_name;
 
-            Log::info('🤖 Creando workflow de n8n para instancia', [
+            Log::debug('🤖 Creando workflow de n8n para instancia', [
                 'instance' => $instance->instance_name,
                 'company_id' => $instance->company_id,
                 'workflow_name' => $workflowName
@@ -1444,7 +1386,7 @@ class EvolutionApiController extends Controller
             
             // Si falla el template del archivo, usar workflow minimalista embebido
             if (!$templateWorkflow) {
-                Log::info('🔧 Usando workflow minimalista embebido');
+                Log::debug('🔧 Usando workflow minimalista embebido');
                 $templateWorkflow = $this->getMinimalWorkflowTemplate($workflowName, $instance->instance_name);
             }
 
@@ -1466,7 +1408,7 @@ class EvolutionApiController extends Controller
             $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
             $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
             
-            Log::info('Credentials obtenidas para workflow Evolution', [
+            Log::debug('Credentials obtenidas para workflow Evolution', [
                 'openai_id' => $openaiCredentialId,
                 'qdrant_id' => $qdrantCredentialId
             ]);
@@ -1561,7 +1503,7 @@ class EvolutionApiController extends Controller
                             'error' => $activateResult['error'] ?? 'Unknown'
                         ]);
                     } else {
-                        Log::info('✅ Workflow activado correctamente', ['workflow_id' => $workflowId]);
+                        Log::debug('✅ Workflow activado correctamente', ['workflow_id' => $workflowId]);
                     }
                 }
                 
@@ -1578,7 +1520,7 @@ class EvolutionApiController extends Controller
                 );
                 
                 if ($evolutionWebhookResult['success']) {
-                    Log::info('🔗 Webhook de Evolution configurado hacia n8n', [
+                    Log::debug('🔗 Webhook de Evolution configurado hacia n8n', [
                         'instance' => $instance->instance_name,
                         'n8n_webhook_url' => $webhookUrl
                     ]);
@@ -1594,7 +1536,7 @@ class EvolutionApiController extends Controller
                         'updated_at' => now()
                     ]);
 
-                Log::info('✅ Workflow de n8n creado y webhook configurado', [
+                Log::debug('✅ Workflow de n8n creado y webhook configurado', [
                     'workflow_id' => $workflowId,
                     'webhook_url' => $webhookUrl,
                     'instance' => $instance->instance_name
@@ -1628,7 +1570,7 @@ class EvolutionApiController extends Controller
                 ->first();
 
             if (!$instance) {
-                Log::info('No se encontró instancia en DB para crear workflow', ['instance' => $instanceName]);
+                Log::debug('No se encontró instancia en DB para crear workflow', ['instance' => $instanceName]);
                 return;
             }
 
@@ -1651,7 +1593,7 @@ class EvolutionApiController extends Controller
                         'n8n_webhook_url' => $webhookUrl,
                         'updated_at' => now()
                     ]);
-                Log::info('🔧 Webhook URL regenerado para instancia existente', [
+                Log::debug('🔧 Webhook URL regenerado para instancia existente', [
                     'instance' => $instanceName,
                     'workflow_id' => $instance->n8n_workflow_id,
                     'webhook_url' => $webhookUrl
@@ -1659,7 +1601,7 @@ class EvolutionApiController extends Controller
                 return;
             }
 
-            Log::info('🤖 Creando workflow de n8n para instancia conectada', [
+            Log::debug('🤖 Creando workflow de n8n para instancia conectada', [
                 'instance' => $instanceName,
                 'company_id' => $instance->company_id
             ]);
@@ -1697,7 +1639,7 @@ class EvolutionApiController extends Controller
             $inboxId = $instance->chatwoot_inbox_id ?? null;
             
             if (!$inboxId) {
-                Log::info('📞 Buscando inbox de Chatwoot por nombre de instancia', [
+                Log::debug('📞 Buscando inbox de Chatwoot por nombre de instancia', [
                     'instance' => $instance->instance_name
                 ]);
                 
@@ -1729,7 +1671,7 @@ class EvolutionApiController extends Controller
             $result = $this->chatwootService->configureInboxWebhook($inboxId, $webhookUrl);
 
             if ($result['success']) {
-                Log::info('✅ Webhook de Chatwoot configurado exitosamente', [
+                Log::debug('✅ Webhook de Chatwoot configurado exitosamente', [
                     'instance' => $instance->instance_name,
                     'inbox_id' => $inboxId,
                     'webhook_url' => $webhookUrl,
@@ -1843,7 +1785,7 @@ class EvolutionApiController extends Controller
     private function ensureCorrectChatwootToken(string $instanceName): void
     {
         try {
-            Log::info('🔧 Verificando token de Chatwoot para Evolution', ['instance' => $instanceName]);
+            Log::debug('🔧 Verificando token de Chatwoot para Evolution', ['instance' => $instanceName]);
             
             // 1. Obtener la configuración actual de Evolution
             $evolutionUrl = config('evolution.api_url');
@@ -1909,7 +1851,7 @@ class EvolutionApiController extends Controller
             
             // 3. Verificar si necesita actualización
             if ($currentToken === $channelToken) {
-                Log::info('✅ Evolution ya tiene el Channel Token correcto', [
+                Log::debug('✅ Evolution ya tiene el Channel Token correcto', [
                     'instance' => $instanceName,
                     'token' => substr($channelToken, 0, 10) . '...'
                 ]);
@@ -1917,7 +1859,7 @@ class EvolutionApiController extends Controller
             }
             
             // 4. Actualizar Evolution con el Channel Token correcto
-            Log::info('🔄 Actualizando Evolution con Channel Token correcto', [
+            Log::debug('🔄 Actualizando Evolution con Channel Token correcto', [
                 'instance' => $instanceName,
                 'old_token' => substr($currentToken ?? '', 0, 10) . '...',
                 'new_token' => substr($channelToken, 0, 10) . '...'
@@ -1943,7 +1885,7 @@ class EvolutionApiController extends Controller
             ]);
             
             if ($updateResponse->successful()) {
-                Log::info('✅ Evolution actualizado con Channel Token correcto', [
+                Log::debug('✅ Evolution actualizado con Channel Token correcto', [
                     'instance' => $instanceName
                 ]);
             } else {
