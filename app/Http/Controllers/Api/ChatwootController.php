@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\EvolutionApiService;
+use App\Services\ChatwootService;
 use App\Services\ConversationDeduplicationService;
 use App\Helpers\PhoneNormalizer;
 use App\Traits\ResolvesChatwootConfig;
@@ -25,6 +26,7 @@ class ChatwootController extends Controller
     private $inboxId;
     private $userId;
     private EvolutionApiService $evolutionApi;
+    private ChatwootService $chatwootService;
     private ConversationDeduplicationService $deduplicationService;
 
     /**
@@ -40,10 +42,12 @@ class ChatwootController extends Controller
 
     public function __construct(
         EvolutionApiService $evolutionApi, 
+        ChatwootService $chatwootService,
         ConversationDeduplicationService $deduplicationService
     )
     {
         $this->evolutionApi = $evolutionApi;
+        $this->chatwootService = $chatwootService;
         $this->deduplicationService = $deduplicationService;
         
         // CRÍTICO: Asegurar que el middleware 'auth' se ejecute ANTES del constructor
@@ -1760,8 +1764,6 @@ class ChatwootController extends Controller
                 'allow_auto_assign' => 'nullable|boolean',
             ]);
 
-            $url = $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams';
-            
             // Verificar que tenemos token válido
             if (empty($this->chatwootToken)) {
                 Log::error('🔧 createTeam: No hay token de Chatwoot configurado', [
@@ -1776,31 +1778,28 @@ class ChatwootController extends Controller
             }
 
             Log::debug('🔧 Creando equipo en Chatwoot', [
-                'url' => $url,
                 'name' => $validated['name'],
                 'account_id' => $this->accountId,
                 'token_preview' => substr($this->chatwootToken, 0, 10) . '...',
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json',
-            ])->timeout(15)->post($url, [
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? '',
-                'allow_auto_assign' => $validated['allow_auto_assign'] ?? true,
-            ]);
+            $result = $this->chatwootService->createTeam(
+                $this->accountId,
+                $this->chatwootToken,
+                $validated['name'],
+                $validated['description'] ?? ''
+            );
 
-            $responseBody = $response->json();
-            $responseStatus = $response->status();
+            $responseBody = $result['data'] ?? [];
+            $responseStatus = $result['status'] ?? 500;
             
             Log::debug('🔧 Respuesta createTeam', [
                 'status' => $responseStatus,
-                'successful' => $response->successful(),
+                'successful' => $result['success'],
                 'body' => $responseBody
             ]);
 
-            if ($response->successful()) {
+            if ($result['success']) {
                 Log::debug('✅ Equipo creado exitosamente en Chatwoot', [
                     'user_id' => $this->userId,
                     'team_name' => $validated['name'],
@@ -1818,12 +1817,12 @@ class ChatwootController extends Controller
             Log::error('❌ Error al crear equipo en Chatwoot', [
                 'status' => $responseStatus,
                 'response' => $responseBody,
-                'url' => $url
+                'error' => $result['error'] ?? 'Unknown'
             ]);
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear equipo: ' . ($responseBody['message'] ?? $responseBody['error'] ?? 'Error desconocido'),
+                'message' => 'Error al crear equipo: ' . ($responseBody['message'] ?? $responseBody['error'] ?? $result['error'] ?? 'Error desconocido'),
                 'chatwoot_status' => $responseStatus,
                 'chatwoot_response' => $responseBody
             ], 400);
@@ -1849,12 +1848,14 @@ class ChatwootController extends Controller
                 'allow_auto_assign' => 'nullable|boolean',
             ]);
 
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json',
-            ])->patch($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId, $validated);
+            $result = $this->chatwootService->updateTeam(
+                $this->accountId,
+                $this->chatwootToken,
+                (int) $teamId,
+                $validated
+            );
 
-            if ($response->successful()) {
+            if ($result['success']) {
                 Log::debug('Equipo actualizado en Chatwoot', [
                     'user_id' => $this->userId,
                     'team_id' => $teamId
@@ -1862,7 +1863,7 @@ class ChatwootController extends Controller
                 
                 return response()->json([
                     'success' => true,
-                    'data' => $response->json(),
+                    'data' => $result['data'],
                     'message' => 'Equipo actualizado exitosamente'
                 ]);
             }
@@ -1887,11 +1888,13 @@ class ChatwootController extends Controller
     public function deleteTeam($teamId)
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-            ])->delete($this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/teams/' . $teamId);
+            $result = $this->chatwootService->deleteTeam(
+                $this->accountId,
+                $this->chatwootToken,
+                (int) $teamId
+            );
 
-            if ($response->successful() || $response->status() === 204) {
+            if ($result['success']) {
                 Log::debug('Equipo eliminado de Chatwoot', [
                     'user_id' => $this->userId,
                     'team_id' => $teamId
@@ -2348,17 +2351,16 @@ class ChatwootController extends Controller
                 $updateData['phone_number'] = $validated['phone_number'];
             }
 
-            // Llamar a la API de Chatwoot para actualizar el contacto
-            $response = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->put(
-                $this->chatwootBaseUrl . '/api/v1/accounts/' . $this->accountId . '/contacts/' . $contactId,
+            // Llamar al servicio para actualizar el contacto
+            $result = $this->chatwootService->updateContact(
+                $this->accountId,
+                $this->chatwootToken,
+                (int) $contactId,
                 $updateData
             );
 
-            if ($response->successful()) {
-                $contactData = $response->json();
+            if ($result['success']) {
+                $contactData = $result['data'] ?? [];
                 
                 Log::debug('Contacto actualizado exitosamente', [
                     'contact_id' => $contactId,
@@ -2374,15 +2376,15 @@ class ChatwootController extends Controller
 
             Log::error('Error actualizando contacto en Chatwoot', [
                 'contact_id' => $contactId,
-                'status' => $response->status(),
-                'response' => $response->body()
+                'status' => $result['status'] ?? 'N/A',
+                'error' => $result['error'] ?? 'Unknown'
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error al actualizar contacto en Chatwoot',
-                'error' => $response->body()
-            ], $response->status());
+                'error' => $result['error'] ?? 'Unknown'
+            ], $result['status'] ?? 500);
 
         } catch (\Exception $e) {
             Log::error('Error al actualizar contacto: ' . $e->getMessage(), [
@@ -2678,16 +2680,17 @@ class ChatwootController extends Controller
             }
 
             // PASO 1: Verificar que la conversación existe y pertenece al inbox del usuario
-            $convResponse = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->get("{$this->chatwootBaseUrl}/api/v1/accounts/{$this->accountId}/conversations/{$conversationId}");
+            $convResult = $this->chatwootService->getConversation(
+                $this->accountId,
+                $this->chatwootToken,
+                (int) $conversationId
+            );
 
-            if (!$convResponse->successful()) {
+            if (!$convResult['success']) {
                 Log::warning('Conversación no encontrada al intentar eliminar', [
                     'user_id' => $this->userId,
                     'conversation_id' => $conversationId,
-                    'status' => $convResponse->status()
+                    'status' => $convResult['status'] ?? 'N/A'
                 ]);
 
                 return response()->json([
@@ -2696,14 +2699,14 @@ class ChatwootController extends Controller
                 ], 404);
             }
 
-            $conversation = $convResponse->json();
+            $conversation = $convResult['data'] ?? [];
 
             // SEGURIDAD: Validar que la conversación pertenece al inbox del usuario
-            if ($conversation['inbox_id'] != $this->inboxId) {
+            if (($conversation['inbox_id'] ?? 0) != $this->inboxId) {
                 Log::warning('Intento de eliminar conversación de otro inbox', [
                     'user_id' => $this->userId,
                     'user_inbox_id' => $this->inboxId,
-                    'conversation_inbox_id' => $conversation['inbox_id'],
+                    'conversation_inbox_id' => $conversation['inbox_id'] ?? 'N/A',
                     'conversation_id' => $conversationId
                 ]);
 
@@ -2713,13 +2716,14 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
-            // PASO 2: Eliminar la conversación usando la API de Chatwoot
-            $deleteResponse = Http::withHeaders([
-                'api_access_token' => $this->chatwootToken,
-                'Content-Type' => 'application/json'
-            ])->delete("{$this->chatwootBaseUrl}/api/v1/accounts/{$this->accountId}/conversations/{$conversationId}");
+            // PASO 2: Eliminar la conversación usando el servicio
+            $deleteResult = $this->chatwootService->deleteConversation(
+                $this->accountId,
+                $this->chatwootToken,
+                (int) $conversationId
+            );
 
-            if ($deleteResponse->successful()) {
+            if ($deleteResult['success']) {
                 Log::debug('✅ Conversación eliminada exitosamente', [
                     'user_id' => $this->userId,
                     'conversation_id' => $conversationId,
@@ -2736,8 +2740,8 @@ class ChatwootController extends Controller
             Log::error('Error al eliminar conversación en Chatwoot', [
                 'user_id' => $this->userId,
                 'conversation_id' => $conversationId,
-                'status' => $deleteResponse->status(),
-                'response' => $deleteResponse->body()
+                'status' => $deleteResult['status'] ?? 'N/A',
+                'error' => $deleteResult['error'] ?? 'Unknown'
             ]);
 
             return response()->json([

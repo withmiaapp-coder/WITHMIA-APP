@@ -738,4 +738,139 @@ class ChatwootService
             return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
         }
     }
+
+    /**
+     * Update a team
+     */
+    public function updateTeam(int $accountId, string $apiKey, int $teamId, array $data): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->patch("{$this->baseUrl}/api/v1/accounts/{$accountId}/teams/{$teamId}", $data);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::updateTeam failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Delete a team
+     */
+    public function deleteTeam(int $accountId, string $apiKey, int $teamId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+            ])->delete("{$this->baseUrl}/api/v1/accounts/{$accountId}/teams/{$teamId}");
+
+            return [
+                'success' => $response->successful() || $response->status() === 204,
+                'status' => $response->status(),
+                'error' => ($response->successful() || $response->status() === 204) ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::deleteTeam failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get a specific conversation
+     */
+    public function getConversation(int $accountId, string $apiKey, int $conversationId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getConversation failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Delete a conversation
+     */
+    public function deleteConversation(int $accountId, string $apiKey, int $conversationId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->delete("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}");
+
+            return [
+                'success' => $response->successful(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::deleteConversation failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get messages from a conversation
+     */
+    public function getConversationMessages(int $accountId, string $apiKey, int $conversationId): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->get("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::getConversationMessages failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Update a contact
+     */
+    public function updateContact(int $accountId, string $apiKey, int $contactId, array $data): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->put("{$this->baseUrl}/api/v1/accounts/{$accountId}/contacts/{$contactId}", $data);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::updateContact failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
 }
