@@ -47,16 +47,16 @@ class PostOnboardingSetupJob implements ShouldQueue
             return;
         }
 
-        Log::info("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
+        Log::debug("PostOnboardingSetupJob iniciado para: {$this->companySlug}");
 
         // 1. Provisionar Chatwoot para la nueva empresa
         try {
             if (!$company->chatwoot_account_id) {
-                Log::info("Provisionando Chatwoot para: {$this->companySlug}");
+                Log::debug("Provisionando Chatwoot para: {$this->companySlug}");
                 $chatwootResult = $chatwootService->provisionCompanyAccount($company, $user);
                 
                 if ($chatwootResult['success'] ?? false) {
-                    Log::info("Chatwoot provisionado exitosamente para: {$this->companySlug}", [
+                    Log::debug("Chatwoot provisionado exitosamente para: {$this->companySlug}", [
                         'account_id' => $chatwootResult['account']['id'] ?? null
                     ]);
                 } else {
@@ -65,7 +65,7 @@ class PostOnboardingSetupJob implements ShouldQueue
                     ]);
                 }
             } else {
-                Log::info("Empresa ya tiene Chatwoot configurado: {$this->companySlug}");
+                Log::debug("Empresa ya tiene Chatwoot configurado: {$this->companySlug}");
             }
         } catch (\Exception $e) {
             Log::error("Error provisionando Chatwoot: " . $e->getMessage());
@@ -76,16 +76,16 @@ class PostOnboardingSetupJob implements ShouldQueue
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
                 Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));
-                Log::info("Correo admin enviado para: {$user->email}");
+                Log::debug("Correo admin enviado para: {$user->email}");
                 
                 Mail::to($user->email)->send(new OnboardingCompletedMail($user));
-                Log::info("Correo bienvenida enviado a: {$user->email}");
+                Log::debug("Correo bienvenida enviado a: {$user->email}");
             }
         } catch (\Exception $e) {
             Log::error("Error enviando correos: " . $e->getMessage());
         }
 
-        Log::info("PostOnboardingSetupJob completado para: {$this->companySlug}");
+        Log::debug("PostOnboardingSetupJob completado para: {$this->companySlug}");
     }
     
     // ⚠️ NOTA: El método createRagWorkflow fue eliminado por ser código muerto.

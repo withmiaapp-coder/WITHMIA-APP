@@ -46,7 +46,7 @@ class CreateN8nWorkflowsJob implements ShouldQueue
             return;
         }
 
-        Log::info("🚀 Creating n8n workflows for: {$this->companySlug}");
+        Log::debug("🚀 Creating n8n workflows for: {$this->companySlug}");
 
         // 1. Crear workflow RAG (si no existe)
         $this->createRagWorkflow($company, $n8nService, $qdrantService);
@@ -54,23 +54,23 @@ class CreateN8nWorkflowsJob implements ShouldQueue
         // 2. Crear workflow Training (si no existe)
         $this->createTrainingWorkflow($company, $n8nService);
 
-        Log::info("✅ N8n workflows job completed for: {$this->companySlug}");
+        Log::debug("✅ N8n workflows job completed for: {$this->companySlug}");
     }
 
     private function createRagWorkflow(Company $company, N8nService $n8nService, QdrantService $qdrantService): void
     {
         if (!empty($company->settings['rag_workflow_id'])) {
-            Log::info("RAG workflow already exists for: {$this->companySlug}");
+            Log::debug("RAG workflow already exists for: {$this->companySlug}");
             return;
         }
 
         try {
-            Log::info("Creating RAG workflow for: {$this->companySlug}");
+            Log::debug("Creating RAG workflow for: {$this->companySlug}");
             
             $ragResult = $this->buildRagWorkflow($company, $n8nService, $qdrantService);
             
             if ($ragResult['success']) {
-                Log::info("✅ RAG workflow created", [
+                Log::debug("✅ RAG workflow created", [
                     'workflow_id' => $ragResult['workflow_id'],
                     'webhook_path' => $ragResult['webhook_path'] ?? null
                 ]);
@@ -94,17 +94,17 @@ class CreateN8nWorkflowsJob implements ShouldQueue
     private function createTrainingWorkflow(Company $company, N8nService $n8nService): void
     {
         if (!empty($company->settings['training_workflow_id'])) {
-            Log::info("Training workflow already exists for: {$this->companySlug}");
+            Log::debug("Training workflow already exists for: {$this->companySlug}");
             return;
         }
 
         try {
-            Log::info("Creating Training workflow for: {$this->companySlug}");
+            Log::debug("Creating Training workflow for: {$this->companySlug}");
             
             $trainingResult = $n8nService->createTrainingWorkflow($this->companySlug);
             
             if ($trainingResult['success']) {
-                Log::info("✅ Training workflow created", [
+                Log::debug("✅ Training workflow created", [
                     'workflow_id' => $trainingResult['workflow_id'],
                     'webhook_path' => $trainingResult['webhook_path'] ?? null
                 ]);

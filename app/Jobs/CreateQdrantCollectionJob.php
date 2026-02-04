@@ -45,18 +45,18 @@ class CreateQdrantCollectionJob implements ShouldQueue
 
         // Si ya tiene colección, no crear otra
         if (!empty($company->settings['qdrant_collection'])) {
-            Log::info("Qdrant collection already exists for: {$this->companySlug}");
+            Log::debug("Qdrant collection already exists for: {$this->companySlug}");
             return;
         }
 
         try {
-            Log::info("📦 Creating Qdrant collection for: {$this->companySlug}");
+            Log::debug("📦 Creating Qdrant collection for: {$this->companySlug}");
             
             $result = $qdrantService->createCompanyCollection($this->companySlug);
             
             if ($result['success']) {
                 $collectionName = $result['collection'];
-                Log::info("✅ Qdrant collection created: {$collectionName}");
+                Log::debug("✅ Qdrant collection created: {$collectionName}");
                 
                 $company->update([
                     'settings' => array_merge($company->settings ?? [], [
@@ -104,7 +104,7 @@ class CreateQdrantCollectionJob implements ShouldQueue
             }
             
             if (empty($companyInfoParts)) {
-                Log::info("No company info to insert for: {$this->companySlug}");
+                Log::debug("No company info to insert for: {$this->companySlug}");
                 return;
             }
 
@@ -128,7 +128,7 @@ class CreateQdrantCollectionJob implements ShouldQueue
             ]);
 
             if ($insertResult['success']) {
-                Log::info("✅ Company information inserted as point #1 in Qdrant for: {$this->companySlug}");
+                Log::debug("✅ Company information inserted as point #1 in Qdrant for: {$this->companySlug}");
             } else {
                 Log::error("❌ Failed to insert company info: " . ($insertResult['error'] ?? 'Unknown'));
             }

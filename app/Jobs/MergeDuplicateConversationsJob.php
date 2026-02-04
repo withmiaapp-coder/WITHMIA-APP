@@ -52,7 +52,7 @@ class MergeDuplicateConversationsJob implements ShouldQueue
      */
     public function handle(ConversationDeduplicationService $deduplicationService): void
     {
-        Log::info('🔄 MergeDuplicateConversationsJob: Iniciando fusión de duplicados', [
+        Log::debug('🔄 MergeDuplicateConversationsJob: Iniciando fusión de duplicados', [
             'inbox_id' => $this->inboxId,
             'account_id' => $this->accountId
         ]);
@@ -65,7 +65,7 @@ class MergeDuplicateConversationsJob implements ShouldQueue
 
             if ($result['success']) {
                 if (isset($result['merged']) && $result['merged'] > 0) {
-                    Log::info('✅ MergeDuplicateConversationsJob: Fusión completada', [
+                    Log::debug('✅ MergeDuplicateConversationsJob: Fusión completada', [
                         'inbox_id' => $this->inboxId,
                         'merged' => $result['merged'],
                         'groups_processed' => $result['groups_processed'] ?? 0,

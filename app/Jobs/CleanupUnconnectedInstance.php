@@ -60,7 +60,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('🧹 CleanupUnconnectedInstance: Verificando conexión de instancia', [
+        Log::debug('🧹 CleanupUnconnectedInstance: Verificando conexión de instancia', [
             'instance' => $this->instanceName,
             'requested_at' => date('Y-m-d H:i:s', $this->connectionRequestedAt),
             'checking_at' => now()->toDateTimeString()
@@ -80,7 +80,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
             $state = $status['instance']['state'] ?? $status['state'] ?? 'close';
             $isConnected = $state === 'open';
 
-            Log::info('🧹 CleanupUnconnectedInstance: Estado de instancia', [
+            Log::debug('🧹 CleanupUnconnectedInstance: Estado de instancia', [
                 'instance' => $this->instanceName,
                 'state' => $state,
                 'is_connected' => $isConnected
@@ -88,7 +88,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
 
             // Si está conectada, no hacer nada
             if ($isConnected) {
-                Log::info('✅ CleanupUnconnectedInstance: Instancia conectada correctamente, no se elimina', [
+                Log::debug('✅ CleanupUnconnectedInstance: Instancia conectada correctamente, no se elimina', [
                     'instance' => $this->instanceName
                 ]);
                 return;
@@ -100,7 +100,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
             $latestAttempt = Cache::get($latestAttemptKey);
 
             if ($latestAttempt && $latestAttempt > $this->connectionRequestedAt) {
-                Log::info('⏭️ CleanupUnconnectedInstance: Hay un intento de conexión más reciente, omitiendo limpieza', [
+                Log::debug('⏭️ CleanupUnconnectedInstance: Hay un intento de conexión más reciente, omitiendo limpieza', [
                     'instance' => $this->instanceName,
                     'our_attempt' => $this->connectionRequestedAt,
                     'latest_attempt' => $latestAttempt
@@ -117,7 +117,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
             $deleted = $this->deleteInstance();
 
             if ($deleted) {
-                Log::info('✅ CleanupUnconnectedInstance: Instancia eliminada exitosamente', [
+                Log::debug('✅ CleanupUnconnectedInstance: Instancia eliminada exitosamente', [
                     'instance' => $this->instanceName
                 ]);
 
@@ -218,7 +218,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
                     'updated_at' => now()
                 ]);
 
-            Log::info('CleanupUnconnectedInstance: Registro de BD actualizado', [
+            Log::debug('CleanupUnconnectedInstance: Registro de BD actualizado', [
                 'instance' => $this->instanceName
             ]);
 
@@ -245,7 +245,7 @@ class CleanupUnconnectedInstance implements ShouldQueue
                 Cache::forget($key);
             }
 
-            Log::info('CleanupUnconnectedInstance: Cache limpiado', [
+            Log::debug('CleanupUnconnectedInstance: Cache limpiado', [
                 'instance' => $this->instanceName
             ]);
 
