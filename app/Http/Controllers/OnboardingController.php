@@ -20,9 +20,11 @@ use App\Services\N8nService;
 use App\Jobs\PostOnboardingSetupJob;
 use App\Jobs\CreateQdrantCollectionJob;
 use App\Jobs\CreateN8nWorkflowsJob;
+use App\Traits\HandlesOnboarding;
 
 class OnboardingController extends Controller
 {
+    use HandlesOnboarding;
     protected $chatwootProvisioningService;
     protected $qdrantService;
     protected $n8nService;
@@ -371,70 +373,8 @@ class OnboardingController extends Controller
         ]);
     }
 
-    private function processOnboardingCompletion(Request $request, User $user): array
-    {
-        Log::debug("processOnboardingCompletion INICIADO para user: {$user->id} - {$user->email}");
-
-        $companyName = $request->company_name ?? $user->full_name ?? $user->name ?? 'empresa';
-        $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
-        
-        Log::debug("Slug generado: {$uniqueSlug}");
-
-        $user->update(['company_slug' => $uniqueSlug]);
-        Log::debug("Usuario actualizado con slug");
-
-        $company = $this->getOrCreateCompany($user, $uniqueSlug);
-
-        if ($company->slug !== $uniqueSlug) {
-            $company->update(['slug' => $uniqueSlug]);
-            Log::debug("Slug de empresa actualizado a: {$uniqueSlug}");
-        }
-
-        // 🌍 Asignar timezone automáticamente según el país del teléfono
-        $phoneCountry = $request->phone_country ?? '+56';
-        $timezone = $this->getTimezoneFromPhoneCountry($phoneCountry);
-        $company->update(['timezone' => $timezone]);
-        Log::debug("Timezone asignado: {$timezone} (país: {$phoneCountry})");
-
-        Log::debug("Empresa obtenida/creada: ID {$company->id}");
-
-        // 📦 Crear colección Qdrant
-        try {
-            Log::debug("📦 Creating Qdrant collection for: {$uniqueSlug}");
-            CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
-            Log::debug("✅ Qdrant collection created for: {$uniqueSlug}");
-        } catch (\Exception $e) {
-            Log::error("Error creating Qdrant: " . $e->getMessage());
-        }
-
-        // 🚀 Crear workflows n8n (RAG + Training)
-        try {
-            Log::debug("🚀 Creating n8n workflows for: {$uniqueSlug}");
-            CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
-            Log::debug("✅ N8n workflows created for: {$uniqueSlug}");
-        } catch (\Exception $e) {
-            Log::error("Error creating n8n workflows: " . $e->getMessage());
-        }
-
-        // 📧 Enviar correos (no bloquea)
-        try {
-            PostOnboardingSetupJob::dispatchSync(
-                $user->id,
-                $company->id,
-                $uniqueSlug,
-                request()->ip() ?? '0.0.0.0'
-            );
-            Log::debug("PostOnboardingSetupJob completado para: {$uniqueSlug}");
-        } catch (\Exception $e) {
-            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
-        }
-
-        return [
-            'completed' => true,
-            'company_slug' => $uniqueSlug,
-            'dashboard_url' => route('dashboard.company', ['companySlug' => $uniqueSlug]) . '?auth_token=' . $user->auth_token
-        ];
-    }
+    // processOnboardingCompletion, generateUniqueCompanySlug, getOrCreateCompany, getTimezoneFromPhoneCountry
+    // are now provided by HandlesOnboarding trait
 
     private function completeOnboarding(Request $request): RedirectResponse
     {
@@ -471,73 +411,6 @@ class OnboardingController extends Controller
         Log::debug("Onboarding completado para {$user->email}, redirigiendo a dashboard");
 
         return redirect()->route('dashboard.company', ['companySlug' => $uniqueSlug]);
-    }
-
-    private function generateUniqueCompanySlug($companyName): string
-    {
-        $baseSlug = Str::slug($companyName);
-        if (empty($baseSlug)) {
-            $baseSlug = 'empresa';
-        }
-
-        do {
-            $randomCode = strtolower(Str::random(6));
-            $uniqueSlug = $baseSlug . '-' . $randomCode;
-        } while (Company::where('slug', $uniqueSlug)->exists());
-
-        return $uniqueSlug;
-    }
-
-    private function getOrCreateCompany(User $user, $slug = null)
-    {
-        return Company::firstOrCreate(
-            ['user_id' => $user->id],
-            [
-                'name' => $user->full_name ?? $user->name ?? 'Mi Empresa',
-                'slug' => $slug ?? $this->generateUniqueCompanySlug($user->full_name ?? $user->name ?? 'Mi Empresa'),
-                'is_active' => true,
-                'settings' => []
-            ]
-        );
-    }
-
-    /**
-     * Mapea el código de país del teléfono a la zona horaria correspondiente
-     */
-    private function getTimezoneFromPhoneCountry(string $phoneCountry): string
-    {
-        $timezoneMap = [
-            '+56' => 'America/Santiago',           // Chile
-            '+57' => 'America/Bogota',             // Colombia
-            '+52' => 'America/Mexico_City',        // México
-            '+51' => 'America/Lima',               // Perú
-            '+54' => 'America/Argentina/Buenos_Aires', // Argentina
-            '+55' => 'America/Sao_Paulo',          // Brasil
-            '+58' => 'America/Caracas',            // Venezuela
-            '+593' => 'America/Guayaquil',         // Ecuador
-            '+591' => 'America/La_Paz',            // Bolivia
-            '+598' => 'America/Montevideo',        // Uruguay
-            '+595' => 'America/Asuncion',          // Paraguay
-            '+506' => 'America/Costa_Rica',        // Costa Rica
-            '+502' => 'America/Guatemala',         // Guatemala
-            '+504' => 'America/Tegucigalpa',       // Honduras
-            '+503' => 'America/El_Salvador',       // El Salvador
-            '+505' => 'America/Managua',           // Nicaragua
-            '+507' => 'America/Panama',            // Panamá
-            '+1809' => 'America/Santo_Domingo',    // República Dominicana
-            '+53' => 'America/Havana',             // Cuba
-            '+1787' => 'America/Puerto_Rico',      // Puerto Rico
-            '+34' => 'Europe/Madrid',              // España
-            '+351' => 'Europe/Lisbon',             // Portugal
-            '+33' => 'Europe/Paris',               // Francia
-            '+49' => 'Europe/Berlin',              // Alemania
-            '+39' => 'Europe/Rome',                // Italia
-            '+44' => 'Europe/London',              // Reino Unido
-            '+31' => 'Europe/Amsterdam',           // Países Bajos
-            '+1' => 'America/New_York',            // Estados Unidos/Canadá (default EST)
-        ];
-
-        return $timezoneMap[$phoneCountry] ?? 'UTC';
     }
 
     // NOTA: El método createRagWorkflow fue eliminado porque era código muerto.

@@ -12,10 +12,13 @@ use App\Models\Company;
 use App\Jobs\PostOnboardingSetupJob;
 use App\Jobs\CreateQdrantCollectionJob;
 use App\Jobs\CreateN8nWorkflowsJob;
+use App\Traits\HandlesOnboarding;
 use OpenAI;
 
 class OnboardingApiController extends Controller
 {
+    use HandlesOnboarding;
+    
     // NO AUTH MIDDLEWARE - for API routes
 
     public function store(Request $request): JsonResponse
@@ -192,93 +195,8 @@ class OnboardingApiController extends Controller
         $company->update(['onboarding_data' => $onboarding]);
     }
 
-    private function processOnboardingCompletion(Request $request, User $user): array
-    {
-        Log::debug("OnboardingApiController::processOnboardingCompletion for user: {$user->id}");
-
-        $companyName = $request->input('company_name') ?? $user->full_name ?? $user->name ?? 'empresa';
-        $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
-        
-        Log::debug("Generated slug: {$uniqueSlug}");
-
-        $user->update([
-            'company_slug' => $uniqueSlug,
-            'onboarding_completed' => true,
-            'onboarding_completed_at' => now()
-        ]);
-
-        $company = $this->getOrCreateCompany($user, $uniqueSlug);
-        if ($company->slug !== $uniqueSlug) {
-            $company->update(['slug' => $uniqueSlug]);
-        }
-
-        // � Asegurar que Qdrant collection existe (si no se creó en paso 2)
-        if (empty($company->settings['qdrant_collection'])) {
-            try {
-                Log::debug("📦 Creating Qdrant collection (was missing): {$uniqueSlug}");
-                CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
-            } catch (\Exception $e) {
-                Log::error("Error creating Qdrant: " . $e->getMessage());
-            }
-        }
-
-        // 🚀 Crear workflows n8n (RAG + Training) - ESTO ES LO IMPORTANTE
-        try {
-            Log::debug("🚀 Creating n8n workflows for: {$uniqueSlug}");
-            CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
-            Log::debug("✅ N8n workflows created for: {$uniqueSlug}");
-        } catch (\Exception $e) {
-            Log::error("Error creating n8n workflows: " . $e->getMessage());
-        }
-
-        // 📧 Enviar correos en background (no bloquea)
-        try {
-            PostOnboardingSetupJob::dispatch(
-                $user->id,
-                $company->id,
-                $uniqueSlug,
-                $request->ip() ?? '0.0.0.0'
-            )->onConnection('sync');
-        } catch (\Exception $e) {
-            Log::error("Error sending emails: " . $e->getMessage());
-        }
-
-        $dashboardUrl = route('dashboard.company', ['companySlug' => $uniqueSlug]) . '?auth_token=' . $user->auth_token;
-
-        return [
-            'completed' => true,
-            'company_slug' => $uniqueSlug,
-            'dashboard_url' => $dashboardUrl
-        ];
-    }
-
-    private function getOrCreateCompany(User $user, ?string $slug = null): Company
-    {
-        $company = $user->company;
-        
-        if (!$company) {
-            $company = Company::create([
-                'user_id' => $user->id,
-                'name' => $user->full_name ?? $user->name ?? 'Mi Empresa',
-                'slug' => $slug ?? Str::random(10),
-            ]);
-            $user->update(['company_id' => $company->id]);
-        }
-        
-        return $company;
-    }
-
-    private function generateUniqueCompanySlug(string $companyName): string
-    {
-        $baseSlug = Str::slug($companyName);
-        if (empty($baseSlug)) {
-            $baseSlug = 'empresa';
-        }
-        
-        // Agregar random suffix para unicidad
-        $randomSuffix = strtolower(Str::random(6));
-        return "{$baseSlug}-{$randomSuffix}";
-    }
+    // processOnboardingCompletion, getOrCreateCompany, generateUniqueCompanySlug 
+    // are now provided by HandlesOnboarding trait
 
     public function improveDescription(Request $request): JsonResponse
     {
