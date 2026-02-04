@@ -9,7 +9,6 @@ use App\Services\ChatwootService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Events\NewMessageReceived;
@@ -153,19 +152,11 @@ class EvolutionApiController extends Controller
             // 2. No existe inbox, crear uno via API de Chatwoot
             Log::debug('📦 Creando inbox en Chatwoot...', ['inbox_name' => $inboxName]);
             
-            $response = Http::withHeaders([
-                'api_access_token' => $platformToken,
-                'Content-Type' => 'application/json'
-            ])->post("{$chatwootUrl}/api/v1/accounts/{$accountId}/inboxes", [
-                'name' => $inboxName,
-                'channel' => [
-                    'type' => 'api',
-                    'webhook_url' => config('evolution.api_url') . '/chatwoot/webhook/' . str_replace('WhatsApp ', 'withmia-', strtolower($inboxName))
-                ]
-            ]);
+            $webhookUrl = config('evolution.api_url') . '/chatwoot/webhook/' . str_replace('WhatsApp ', 'withmia-', strtolower($inboxName));
+            $result = $this->chatwootService->createApiInbox((int) $accountId, $platformToken, $inboxName, $webhookUrl);
             
-            if ($response->successful()) {
-                $inboxData = $response->json();
+            if ($result['success']) {
+                $inboxData = $result['data'] ?? [];
                 $newInboxId = $inboxData['id'] ?? null;
                 
                 if ($newInboxId) {
@@ -186,8 +177,8 @@ class EvolutionApiController extends Controller
                 }
             } else {
                 Log::warning('No se pudo crear inbox en Chatwoot', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
+                    'status' => $result['status'] ?? 'N/A',
+                    'error' => $result['error'] ?? 'Unknown'
                 ]);
             }
             
@@ -288,21 +279,16 @@ class EvolutionApiController extends Controller
     private function cleanupIfNotConnected(string $instanceName): void
     {
         try {
-            $baseUrl = config('evolution.api_url');
-            $apiKey = config('evolution.api_key');
+            // Verificar estado actual de la instancia usando el servicio
+            $statusResult = $this->evolutionApi->getStatus($instanceName);
 
-            // Verificar estado actual de la instancia
-            $response = Http::withHeaders([
-                'apikey' => $apiKey
-            ])->timeout(10)->get("{$baseUrl}/instance/connectionState/{$instanceName}");
-
-            if (!$response->successful()) {
+            if (!$statusResult['success']) {
                 // La instancia no existe, perfecto - se creará nueva
                 Log::debug('🧹 Instancia no existe, se creará nueva', ['instance' => $instanceName]);
                 return;
             }
 
-            $data = $response->json();
+            $data = $statusResult['data'] ?? [];
             $state = $data['instance']['state'] ?? $data['state'] ?? 'close';
 
             Log::debug('🔍 Estado actual de instancia', [
@@ -326,9 +312,7 @@ class EvolutionApiController extends Controller
                 'state' => $state
             ]);
 
-            Http::withHeaders([
-                'apikey' => $apiKey
-            ])->timeout(15)->delete("{$baseUrl}/instance/delete/{$instanceName}");
+            $this->evolutionApi->deleteInstance($instanceName);
 
             Log::debug('✅ Instancia eliminada, se generará QR nuevo', ['instance' => $instanceName]);
 
@@ -600,15 +584,10 @@ class EvolutionApiController extends Controller
         $instanceName = $instanceName ?? $this->getInstanceName($request);
         
         try {
-            $baseUrl = config('evolution.api_url');
-            $apiKey = config('evolution.api_key');
-
-            $response = Http::withHeaders([
-                'apikey' => $apiKey
-            ])->timeout(10)->get("{$baseUrl}/settings/find/{$instanceName}");
+            $result = $this->evolutionApi->getInstanceSettings($instanceName);
 
             // If instance doesn't exist, return cached or default settings
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 Log::debug('Instance not found, returning cached or default settings', ['instance' => $instanceName]);
                 
                 // Check if we have cached pending settings
@@ -638,7 +617,7 @@ class EvolutionApiController extends Controller
                 ]);
             }
 
-            $data = $response->json();
+            $data = $result['data'] ?? [];
             
             return response()->json([
                 'success' => true,
@@ -670,11 +649,8 @@ class EvolutionApiController extends Controller
         $instanceName = $instanceName ?? $this->getInstanceName($request);
         
         Log::debug('updateSettings called', ['instanceName' => $instanceName, 'input' => $request->all()]);
-        
-        try {
-            $baseUrl = config('evolution.api_url');
-            $apiKey = config('evolution.api_key');
 
+        try {
             $settings = [
                 'rejectCall' => (bool) $request->input('rejectCall', false),
                 'msgCall' => $request->input('msgCall', ''),
@@ -692,23 +668,16 @@ class EvolutionApiController extends Controller
             Log::debug('Settings saved to cache', ['instance' => $instanceName, 'settings' => $settings]);
 
             // Try to update on Evolution API if instance exists
-            try {
-                $response = Http::withHeaders([
-                    'apikey' => $apiKey,
-                    'Content-Type' => 'application/json'
-                ])->timeout(10)->post("{$baseUrl}/settings/set/{$instanceName}", $settings);
+            $result = $this->evolutionApi->updateInstanceSettings($instanceName, $settings);
 
-                if ($response->successful()) {
-                    Log::debug('WhatsApp settings updated on Evolution API', ['instance' => $instanceName]);
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Settings updated successfully',
-                        'settings' => $settings,
-                        'instanceExists' => true
-                    ]);
-                }
-            } catch (\Exception $apiEx) {
-                Log::debug('Could not update Evolution API (instance may not exist)', ['error' => $apiEx->getMessage()]);
+            if ($result['success']) {
+                Log::debug('WhatsApp settings updated on Evolution API', ['instance' => $instanceName]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Settings updated successfully',
+                    'settings' => $settings,
+                    'instanceExists' => true
+                ]);
             }
 
             // If we get here, instance doesn't exist but settings are cached
@@ -1787,23 +1756,18 @@ class EvolutionApiController extends Controller
         try {
             Log::debug('🔧 Verificando token de Chatwoot para Evolution', ['instance' => $instanceName]);
             
-            // 1. Obtener la configuración actual de Evolution
-            $evolutionUrl = config('evolution.api_url');
-            $evolutionKey = config('evolution.api_key');
+            // 1. Obtener la configuración actual de Evolution usando el servicio
+            $configResult = $this->evolutionApi->getChatwootConfig($instanceName);
             
-            $currentConfig = Http::withHeaders([
-                'apikey' => $evolutionKey
-            ])->timeout(10)->get("{$evolutionUrl}/chatwoot/find/{$instanceName}");
-            
-            if (!$currentConfig->successful()) {
+            if (!$configResult['success']) {
                 Log::warning('No se pudo obtener config de Chatwoot de Evolution', [
                     'instance' => $instanceName,
-                    'status' => $currentConfig->status()
+                    'error' => $configResult['error'] ?? 'Unknown'
                 ]);
                 return;
             }
             
-            $config = $currentConfig->json();
+            $config = $configResult['data'] ?? [];
             $currentToken = $config['token'] ?? null;
             
             // Obtener accountId correcto de nuestra BD (NO usar fallback hardcodeado)
@@ -1858,41 +1822,28 @@ class EvolutionApiController extends Controller
                 return;
             }
             
-            // 4. Actualizar Evolution con el Channel Token correcto
+            // 4. Actualizar Evolution con el Channel Token correcto usando el servicio
             Log::debug('🔄 Actualizando Evolution con Channel Token correcto', [
                 'instance' => $instanceName,
                 'old_token' => substr($currentToken ?? '', 0, 10) . '...',
                 'new_token' => substr($channelToken, 0, 10) . '...'
             ]);
             
-            $updateResponse = Http::withHeaders([
-                'apikey' => $evolutionKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(30)->post("{$evolutionUrl}/chatwoot/set/{$instanceName}", [
-                'enabled' => true,
-                'accountId' => $accountId,
-                'token' => $channelToken,
-                'url' => config('chatwoot.url'),
-                'signMsg' => false,
-                'reopenConversation' => true,
-                'conversationPending' => false,
-                'nameInbox' => "WhatsApp {$instanceName}",
-                'mergeBrazilContacts' => false,
-                'importContacts' => false,
-                'importMessages' => false,
-                'daysLimitImportMessages' => 0,
-                'autoCreate' => true
-            ]);
+            $updateResult = $this->evolutionApi->setChatwootIntegration(
+                $instanceName,
+                $accountId,
+                $channelToken,
+                "WhatsApp {$instanceName}"
+            );
             
-            if ($updateResponse->successful()) {
+            if ($updateResult['success']) {
                 Log::debug('✅ Evolution actualizado con Channel Token correcto', [
                     'instance' => $instanceName
                 ]);
             } else {
                 Log::error('❌ Error actualizando token de Evolution', [
                     'instance' => $instanceName,
-                    'status' => $updateResponse->status(),
-                    'body' => $updateResponse->body()
+                    'error' => $updateResult['error'] ?? 'Unknown'
                 ]);
             }
             

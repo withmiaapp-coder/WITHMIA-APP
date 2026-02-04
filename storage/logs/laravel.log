@@ -923,3 +923,4 @@
 #12 {main}
 "} 
 [2026-02-04 14:24:14] production.DEBUG: QdrantService initialized {"baseUrl":"http://qdrant.railway.internal:6333"} 
+[2026-02-04 14:29:22] production.DEBUG: QdrantService initialized {"baseUrl":"http://qdrant.railway.internal:6333"} 

@@ -1210,4 +1210,84 @@ class EvolutionApiService
             ];
         }
     }
+
+    /**
+     * Get instance settings
+     * 
+     * @param string $instanceName Instance name
+     * @return array
+     */
+    public function getInstanceSettings(string $instanceName): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey
+            ])->timeout(10)->get("{$this->baseUrl}/settings/find/{$instanceName}");
+
+            if (!$response->successful()) {
+                return [
+                    'success' => false,
+                    'error' => 'Instance not found or error getting settings',
+                    'status' => $response->status()
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => $response->json()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception getting instance settings', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Update instance settings
+     * 
+     * @param string $instanceName Instance name
+     * @param array $settings Settings to update
+     * @return array
+     */
+    public function updateInstanceSettings(string $instanceName, array $settings): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->timeout(10)->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
+
+            if (!$response->successful()) {
+                return [
+                    'success' => false,
+                    'error' => 'Error updating settings',
+                    'status' => $response->status()
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => $response->json()
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Exception updating instance settings', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
 }

@@ -592,4 +592,43 @@ class ChatwootService
             return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
         }
     }
+
+    /**
+     * Create an API inbox in a specific account
+     * 
+     * @param int $accountId Chatwoot account ID
+     * @param string $apiKey API key for the account
+     * @param string $inboxName Name for the inbox
+     * @param string $webhookUrl Webhook URL for the inbox
+     * @return array
+     */
+    public function createApiInbox(int $accountId, string $apiKey, string $inboxName, string $webhookUrl): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/inboxes", [
+                'name' => $inboxName,
+                'channel' => [
+                    'type' => 'api',
+                    'webhook_url' => $webhookUrl
+                ]
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::createApiInbox failed', [
+                'account_id' => $accountId,
+                'inbox_name' => $inboxName,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
 }
