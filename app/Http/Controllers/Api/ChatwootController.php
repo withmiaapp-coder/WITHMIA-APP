@@ -897,21 +897,11 @@ class ChatwootController extends Controller
                     }
                 }
 
-                try {
-                    broadcast(new \App\Events\NewMessageReceived(
-                        $messagePayload,                    // $message
-                        $conversation->display_id ?? $id,   // $conversationId
-                        $this->inboxId,                     // $inboxId
-                        $this->accountId                    // $accountId
-                    ))->toOthers(); // toOthers() para no enviarse a sí mismo
-                    
-                    Log::debug('📡 Mensaje broadcast enviado', [
-                        'inbox_id' => $this->inboxId,
-                        'conversation_id' => $conversation->display_id ?? $id
-                    ]);
-                } catch (\Exception $e) {
-                    Log::warning('⚠️ Error en broadcast (no crítico)', ['error' => $e->getMessage()]);
-                }
+                // ℹ️ NO hacer broadcast aquí - el frontend ya añade el mensaje optimísticamente
+                // El broadcast causaba mensajes duplicados porque:
+                // 1. Frontend añade mensaje con ID temporal (temp-xxx)
+                // 2. Backend hacía broadcast con ID diferente (sent-xxx)  
+                // 3. Frontend no podía detectar que era el mismo mensaje
 
                 // Devolver respuesta con el mensaje
                 return response()->json([
