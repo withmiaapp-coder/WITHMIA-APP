@@ -406,65 +406,95 @@ class EvolutionApiService
      */
     public function getStatus(string $instanceName): array
     {
-        $cacheKey = "whatsapp:status:{$instanceName}";
-        
-        // Intentar obtener del caché primero
+        // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API con cache
         try {
-            $cached = Redis::get($cacheKey);
-            if ($cached !== null) {
-                $cachedData = json_decode($cached, true);
-                if ($cachedData) {
-                    Log::info("WhatsApp status retrieved from cache", ['instance' => $instanceName]);
-                    return $cachedData;
-                }
-            }
-        } catch (\Exception $e) {
-            Log::warning("Redis cache read failed, fetching from API", ['error' => $e->getMessage()]);
-        }
+            $instance = \Illuminate\Support\Facades\DB::connection('evolution')
+                ->table('Instance')
+                ->where('name', $instanceName)
+                ->first(['connectionStatus', 'ownerJid', 'profileName', 'number']);
 
-        // Si no está en caché, consultar la API con timeout corto
-        try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->timeout($this->timeout)
-              ->connectTimeout($this->connectTimeout)
-              ->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
-
-            if (!$response->successful()) {
-                $result = [
-                    'success' => false,
-                    'connected' => false,
-                    'error' => $response->json()['message'] ?? 'Failed to get status'
+            if ($instance) {
+                $state = strtolower($instance->connectionStatus ?? 'close');
+                
+                return [
+                    'success' => true,
+                    'connected' => $state === 'open',
+                    'state' => $state,
+                    'data' => [
+                        'instance' => [
+                            'state' => $state,
+                            'owner' => $instance->ownerJid,
+                            'profileName' => $instance->profileName,
+                            'number' => $instance->number
+                        ]
+                    ]
                 ];
-                return $result;
             }
 
-            $data = $response->json();
-            $state = $data['instance']['state'] ?? $data['state'] ?? 'close';
-
-            $result = [
-                'success' => true,
-                'connected' => $state === 'open',
-                'state' => $state,
-                'data' => $data
-            ];
-
-            // Guardar en caché
-            try {
-                Redis::setex($cacheKey, $this->cacheTtl, json_encode($result));
-                Log::info("WhatsApp status cached", ['instance' => $instanceName, 'ttl' => $this->cacheTtl]);
-            } catch (\Exception $e) {
-                Log::warning("Failed to cache WhatsApp status", ['error' => $e->getMessage()]);
-            }
-
-            return $result;
-
-        } catch (\Exception $e) {
             return [
                 'success' => false,
                 'connected' => false,
-                'error' => $e->getMessage()
+                'error' => 'Instance not found'
             ];
+
+        } catch (\Exception $e) {
+            Log::warning("BD Evolution no disponible para getStatus, usando HTTP API", ['error' => $e->getMessage()]);
+            
+            // Fallback a HTTP API con cache
+            $cacheKey = "whatsapp:status:{$instanceName}";
+            
+            try {
+                $cached = Redis::get($cacheKey);
+                if ($cached !== null) {
+                    $cachedData = json_decode($cached, true);
+                    if ($cachedData) {
+                        return $cachedData;
+                    }
+                }
+            } catch (\Exception $cacheE) {
+                // Ignorar error de cache
+            }
+
+            try {
+                $response = Http::withHeaders([
+                    'apikey' => $this->apiKey
+                ])->timeout($this->timeout)
+                  ->connectTimeout($this->connectTimeout)
+                  ->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
+
+                if (!$response->successful()) {
+                    return [
+                        'success' => false,
+                        'connected' => false,
+                        'error' => $response->json()['message'] ?? 'Failed to get status'
+                    ];
+                }
+
+                $data = $response->json();
+                $state = $data['instance']['state'] ?? $data['state'] ?? 'close';
+
+                $result = [
+                    'success' => true,
+                    'connected' => $state === 'open',
+                    'state' => $state,
+                    'data' => $data
+                ];
+
+                try {
+                    Redis::setex($cacheKey, $this->cacheTtl, json_encode($result));
+                } catch (\Exception $cacheE) {
+                    // Ignorar error de cache
+                }
+
+                return $result;
+
+            } catch (\Exception $httpE) {
+                return [
+                    'success' => false,
+                    'connected' => false,
+                    'error' => $httpE->getMessage()
+                ];
+            }
         }
     }
 
@@ -743,53 +773,73 @@ class EvolutionApiService
      */
     public function listInstances(): array
     {
-        // 🚀 OPTIMIZACIÓN: Caché Redis para reducir llamadas HTTP
-        $cacheKey = "evolution:instances:list";
-        
+        // 🚀 OPTIMIZACIÓN: BD DIRECTA en lugar de HTTP API
         try {
-            $cached = Redis::get($cacheKey);
-            if ($cached !== null) {
-                $cachedData = json_decode($cached, true);
-                if ($cachedData && isset($cachedData['success'])) {
-                    Log::info("Evolution instances list retrieved from cache");
-                    return $cachedData;
-                }
-            }
+            $instances = \Illuminate\Support\Facades\DB::connection('evolution')
+                ->table('Instance')
+                ->select([
+                    'id',
+                    'name',
+                    'connectionStatus',
+                    'ownerJid',
+                    'profilePicUrl',
+                    'profileName',
+                    'number',
+                    'integration',
+                    'createdAt',
+                    'updatedAt'
+                ])
+                ->get()
+                ->map(function ($instance) {
+                    return [
+                        'instance' => [
+                            'instanceName' => $instance->name,
+                            'instanceId' => $instance->id,
+                            'status' => $instance->connectionStatus ?? 'close',
+                            'owner' => $instance->ownerJid,
+                            'profilePicUrl' => $instance->profilePicUrl,
+                            'profileName' => $instance->profileName,
+                            'number' => $instance->number,
+                            'integration' => $instance->integration,
+                        ]
+                    ];
+                })
+                ->toArray();
+
+            Log::info("✅ Evolution instances from BD directa", ['count' => count($instances)]);
+
+            return [
+                'success' => true,
+                'instances' => $instances
+            ];
+
         } catch (\Exception $e) {
-            Log::warning("Redis cache read failed for listInstances", ['error' => $e->getMessage()]);
-        }
+            Log::warning("BD Evolution no disponible, usando HTTP API", ['error' => $e->getMessage()]);
+            
+            // Fallback a HTTP API
+            try {
+                $response = Http::withHeaders([
+                    'apikey' => $this->apiKey
+                ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
 
-        try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
+                if (!$response->successful()) {
+                    return [
+                        'success' => false,
+                        'error' => 'Failed to list instances'
+                    ];
+                }
 
-            if (!$response->successful()) {
+                return [
+                    'success' => true,
+                    'instances' => $response->json()
+                ];
+
+            } catch (\Exception $httpE) {
                 return [
                     'success' => false,
-                    'error' => 'Failed to list instances'
+                    'error' => $httpE->getMessage()
                 ];
             }
-
-            $result = [
-                'success' => true,
-                'instances' => $response->json()
-            ];
-
-            // Guardar en caché por 30 segundos (las instancias no cambian tan frecuentemente)
-            try {
-                Redis::setex($cacheKey, 30, json_encode($result));
-            } catch (\Exception $e) {
-                Log::warning("Failed to cache instances list", ['error' => $e->getMessage()]);
-            }
-
-            return $result;
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
         }
     }
 
