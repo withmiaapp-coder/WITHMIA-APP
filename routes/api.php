@@ -12,8 +12,17 @@ use App\Events\NewMessageReceived;
 
 // 🔧 DEBUG: Ver configuración de Chatwoot por empresa (temporal)
 
-// 🛠 SETUP TRAINING WORKFLOW - DINÁMICO por company_slug
-Route::get('/setup-training-workflow/{companySlug}', function ($companySlug) {
+// ⚠️ RUTAS PELIGROSAS ELIMINADAS - Usar comandos Artisan en su lugar:
+// php artisan chatwoot:setup-workflow {companySlug}
+// php artisan migrate:workflows
+
+// 🛠 SETUP TRAINING WORKFLOW - Protegido con middleware admin
+Route::middleware(['auth:sanctum'])->get('/setup-training-workflow/{companySlug}', function ($companySlug, Request $request) {
+    // Solo admins pueden ejecutar esto
+    if (!$request->user() || $request->user()->role !== 'admin') {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    
     try {
         $company = \App\Models\Company::where('slug', $companySlug)->first();
         if (!$company) {
@@ -291,123 +300,13 @@ Route::get('/regenerate-chatwoot-token/{userId}', function ($userId) {
 
 // ??? FIX TEMPORAL: Arreglar usuarios sin inbox_id
 
-// 🔐 CREAR SUPER ADMIN EN CHATWOOT
-Route::get('/create-chatwoot-superadmin/{email}/{password}', function ($email, $password) {
-    try {
-        $chatwootDb = DB::connection('chatwoot');
-        
-        // Verificar si ya existe
-        $existing = $chatwootDb->table('users')->where('email', $email)->first();
-        if ($existing) {
-            return response()->json(['error' => 'Super Admin ya existe', 'id' => $existing->id], 400);
-        }
-        
-        // Crear Super Admin con type='SuperAdmin'
-        $id = $chatwootDb->table('users')->insertGetId([
-            'email' => $email,
-            'encrypted_password' => bcrypt($password),
-            'name' => 'Admin WITHMIA',
-            'type' => 'SuperAdmin',
-            'uid' => $email,
-            'provider' => 'email',
-            'confirmed_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Super Admin creado',
-            'id' => $id,
-            'email' => $email,
-            'login_url' => config('services.chatwoot.base_url') . '/super_admin/sign_in'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-});
-
-// ??? RESET TOTAL: Borra TODO (Laravel + Chatwoot) - SOLO PARA DESARROLLO
-Route::get('/reset-all-databases/{confirm}', function ($confirm) {
-    if ($confirm !== 'SI-BORRAR-TODO') {
-        return response()->json([
-            'error' => 'Para confirmar usa: /api/reset-all-databases/SI-BORRAR-TODO'
-        ], 400);
-    }
-    
-    $results = [];
-    
-    try {
-        // 1. Borrar tablas de Laravel (usuarios, empresas, etc)
-        DB::statement('SET session_replication_role = replica;'); // Deshabilitar FK temporalmente
-        
-        $laravelTables = [
-            'personal_access_tokens',
-            'knowledge_documents', 
-            'whatsapp_instances',
-            'agent_invitations',
-            'pipeline_items',
-            'pipelines',
-            'usage_metrics',
-            'integrations',
-            'ai_agents',
-            'subscriptions',
-            'sessions',
-            'cache',
-            'jobs',
-            'failed_jobs',
-            'companies',
-            'users'
-        ];
-        foreach ($laravelTables as $table) {
-            try {
-                DB::table($table)->truncate();
-                $results[] = "✅ Truncated: {$table}";
-            } catch (\Exception $e) {
-                $results[] = "⚠️ Skip {$table}: " . $e->getMessage();
-            }
-        }
-        
-        // 2. Borrar tablas de Chatwoot
-        $chatwootDb = DB::connection('chatwoot');
-        $chatwootDb->statement('SET session_replication_role = replica;');
-        
-        $chatwootTables = [
-            'inbox_members', 'inboxes', 'channel_api', 'access_tokens',
-            'account_users', 'users', 'accounts', 'conversations', 'messages', 'contacts'
-        ];
-        
-        foreach ($chatwootTables as $table) {
-            try {
-                $chatwootDb->table($table)->truncate();
-                $results[] = "? Chatwoot truncated: {$table}";
-            } catch (\Exception $e) {
-                $results[] = "?? Chatwoot skip {$table}: " . $e->getMessage();
-            }
-        }
-        
-        // Re-habilitar FK
-        DB::statement('SET session_replication_role = DEFAULT;');
-        $chatwootDb->statement('SET session_replication_role = DEFAULT;');
-        
-        // 3. Ejecutar migraciones de Laravel
-        Artisan::call('migrate', ['--force' => true]);
-        $results[] = "? Laravel migrations executed";
-        
-        return response()->json([
-            'success' => true,
-            'message' => '?? RESET COMPLETO',
-            'results' => $results
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage(),
-            'results' => $results
-        ], 500);
-    }
-});
+// ⛔ RUTAS PELIGROSAS ELIMINADAS EN PRODUCCIÓN
+// Las siguientes rutas fueron eliminadas por seguridad:
+// - /create-chatwoot-superadmin/{email}/{password} → Usar: php artisan chatwoot:create-admin
+// - /reset-all-databases/{confirm} → Usar: php artisan migrate:fresh (con precaución)
+// - /truncate-all-tables → ELIMINADO
+// - /wipe-database → ELIMINADO
+// Estas operaciones solo deben ejecutarse vía CLI en entornos controlados.
 
 // ? DIAGNOSTICAR INBOXES DE CHATWOOT - Ver configuraci�n actual
 
@@ -681,60 +580,8 @@ Route::get('/clear-all-cache', function () {
     }
 });
 
-// ??? TRUNCATE ALL TABLES - Eliminar todos los datos manteniendo estructura
-Route::get('/truncate-all-tables', function () {
-    try {
-        Artisan::call('db:truncate-all', ['--force' => true]);
-        $output = Artisan::output();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'All tables truncated successfully',
-            'output' => $output
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
-// ? RUN MIGRATIONS
-Route::get('/run-migrations', function () {
-    try {
-        Artisan::call('migrate', ['--force' => true]);
-        $output = Artisan::output();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Migrations executed successfully',
-            'output' => $output
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
-// ???? WIPE DATABASE - Solo estructura, sin datos
-Route::get('/wipe-database', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
-            '--force' => true
-        ]);
-        $output = \Illuminate\Support\Facades\Artisan::output();
-        return response()->json([
-            'success' => true,
-            'message' => 'Database wiped - empty tables created',
-            'output' => $output
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-});
+// ⛔ RUTAS ELIMINADAS: /truncate-all-tables, /run-migrations, /wipe-database
+// Usar comandos Artisan directamente en el servidor
 
 // ?? CLEANUP TEST DATA - Keep only specified company
 
@@ -1024,10 +871,6 @@ Route::get('/admin/recreate-qdrant/{companySlug}', function ($companySlug) {
 // Usa controlador separado sin dependencias de autenticación
 Route::get('/chatwoot-proxy/attachment-proxy', [\App\Http\Controllers\AttachmentProxyController::class, 'proxy']);
 
-// ============= BAILEYS WHATSAPP API ROUTES =============
-Route::prefix('baileys-whatsapp')->group(function () {
-});
-
 // ============= EVOLUTION API ROUTES (Multi-tenant WhatsApp) =============
 Route::prefix('evolution-whatsapp')->group(function () {
     Route::post('/webhook', [\App\Http\Controllers\Api\EvolutionApiController::class, 'webhook']);
@@ -1054,15 +897,8 @@ Route::post('/chatwoot/webhook/{instance}', [\App\Http\Controllers\Api\ChatwootW
 
 Route::post('/chatwoot/webhook', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
 
-// ============= EVOLUTION WEBHOOK ALIAS (para compatibilidad) =============
-// Evolution API está enviando webhooks a /api/evolution/webhook en lugar de /api/evolution-whatsapp/webhook
-Route::post('/evolution/webhook', [\App\Http\Controllers\Api\EvolutionApiController::class, 'webhook']);
-
-// DEPRECATED: use App\Http\Controllers\ChatwootWebhookController; // Usar App\Http\Controllers\Api\ChatwootWebhookController
-
-// Webhook de Chatwoot para notificaciones en tiempo real
-// DEPRECATED - Webhook consolidado en /api/chatwoot/webhook
-// Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handle'])->name('chatwoot.webhook');
+// ⚠️ ALIAS ELIMINADO: /evolution/webhook → Usar /evolution-whatsapp/webhook
+// La ruta duplicada fue removida. Actualizar configuración de Evolution si es necesario.
 
 // Knowledge Base / Conocimientos API routes - authenticated via session or RailwayAuthToken
 Route::middleware(['web', 'railway.auth:true'])->group(function () {

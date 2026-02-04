@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\JsonResponse;
 use App\Models\User;
 use App\Observers\UserObserver;
@@ -44,6 +45,34 @@ class AppServiceProvider extends ServiceProvider
             return $this->setEncodingOptions(
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
             );
+        });
+
+        // ========== HTTP Macros para APIs externas ==========
+        // 🚀 OPTIMIZACIÓN: Evita repetir headers en cada llamada HTTP
+        
+        // Macro para Chatwoot API
+        Http::macro('chatwoot', function (string $token = null) {
+            $token = $token ?? config('chatwoot.platform_token');
+            return Http::withHeaders([
+                'api_access_token' => $token,
+                'Content-Type' => 'application/json',
+            ])->timeout(15);
+        });
+
+        // Macro para Evolution API
+        Http::macro('evolution', function () {
+            return Http::withHeaders([
+                'apikey' => config('evolution.api_key'),
+                'Content-Type' => 'application/json',
+            ])->timeout(30);
+        });
+
+        // Macro para n8n API
+        Http::macro('n8n', function () {
+            return Http::withHeaders([
+                'X-N8N-API-KEY' => config('services.n8n.api_key'),
+                'Content-Type' => 'application/json',
+            ])->timeout(30);
         });
         
         // Set default timezone

@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'railway.auth' => \App\Http\Middleware\RailwayAuthToken::class,
             'utf8' => \App\Http\Middleware\ForceUtf8::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'has.inbox' => \App\Http\Middleware\EnsureHasChatwootInbox::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
