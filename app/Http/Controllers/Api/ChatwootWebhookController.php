@@ -76,28 +76,41 @@ class ChatwootWebhookController extends Controller
             if ($event === 'message_created' && $inboxId && $accountId) {
                 $conversationId = $data['conversation']['id'] ?? null;
                 
-                // 1️⃣ Broadcast mensaje nuevo al chat
-                $messageEvent = new NewMessageReceived(
-                    $data,
-                    $conversationId,
-                    $inboxId,
-                    $accountId
-                );
-                broadcast($messageEvent);
+                // 🚫 NO hacer broadcast para mensajes SALIENTES (enviados por agente)
+                // El frontend ya maneja esto optimísticamente
+                // Además, EvolutionApiController ya hace broadcast para estos mensajes
+                $messageType = $data['message_type'] ?? null;
+                $isOutgoing = $messageType === 'outgoing' || $messageType === 1;
+                
+                if ($isOutgoing) {
+                    Log::debug('⏭️ Saltando broadcast para mensaje saliente (ya manejado por frontend)', [
+                        'conversation_id' => $conversationId,
+                        'message_type' => $messageType
+                    ]);
+                } else {
+                    // Solo broadcast para mensajes ENTRANTES (del cliente)
+                    $messageEvent = new NewMessageReceived(
+                        $data,
+                        $conversationId,
+                        $inboxId,
+                        $accountId
+                    );
+                    broadcast($messageEvent);
 
-                // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
-                $convEvent = new ConversationUpdated(
-                    $data['conversation'] ?? $data,
-                    $inboxId,
-                    $accountId
-                );
-                broadcast($convEvent);
+                    // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
+                    $convEvent = new ConversationUpdated(
+                        $data['conversation'] ?? $data,
+                        $inboxId,
+                        $accountId
+                    );
+                    broadcast($convEvent);
 
-                Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
-                    'inbox_id' => $inboxId,
-                    'conversation_id' => $conversationId,
-                    'message_content' => substr($data['content'] ?? '', 0, 50)
-                ]);
+                    Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
+                        'inbox_id' => $inboxId,
+                        'conversation_id' => $conversationId,
+                        'message_content' => substr($data['content'] ?? '', 0, 50)
+                    ]);
+                }
             }
 
             // Solo para eventos que NO son message_created (evitar duplicado)
