@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Support\Str;
@@ -91,7 +92,7 @@ class DashboardController extends Controller
         ];
 
         // Logging mejorado para debug
-        \Log::debug('Dashboard Data Debug:', [
+        Log::debug('Dashboard Data Debug:', [
             'user_id' => $user->id,
             'inbox_id' => $inboxId,
             'chatwoot_status' => $chatwootStatus
@@ -175,7 +176,7 @@ class DashboardController extends Controller
                 })->toArray();
                 
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Error prefetching teams/agents: ' . $e->getMessage());
+                \Illuminate\Support\FacadesLog::error('Error prefetching teams/agents: ' . $e->getMessage());
             }
         }
 

@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ContactsExcelExporter
@@ -40,7 +41,7 @@ class ContactsExcelExporter
 
             return [];
         } catch (\Exception $e) {
-            \Log::error('Error obteniendo contactos de Evolution API: ' . $e->getMessage());
+            Log::error('Error obteniendo contactos de Evolution API: ' . $e->getMessage());
             return [];
         }
     }
@@ -300,7 +301,7 @@ class ContactsExcelExporter
                 'file_name' => basename($filePath)
             ];
         } catch (\Exception $e) {
-            \Log::error('Error leyendo estadísticas de Excel: ' . $e->getMessage());
+            Log::error('Error leyendo estadísticas de Excel: ' . $e->getMessage());
             return null;
         }
     }

@@ -277,7 +277,7 @@ class ChatwootService
 
             return $inbox ? (array) $inbox : null;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('findInboxByName error', ['error' => $e->getMessage()]);
+            \Illuminate\Support\FacadesLog::error('findInboxByName error', ['error' => $e->getMessage()]);
             return null;
         }
     }

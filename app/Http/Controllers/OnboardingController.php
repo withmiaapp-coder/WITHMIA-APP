@@ -84,7 +84,7 @@ class OnboardingController extends Controller
                             $request->header('Accept') === 'application/json' || 
                             $request->header('X-Requested-With') === 'XMLHttpRequest';
 
-            \Log::debug('OnboardingController@store START', [
+            Log::debug('OnboardingController@store START', [
                 'step' => $request->input('step'),
                 'is_json' => $isJsonRequest,
                 'auth_check' => auth()->check(),
@@ -94,7 +94,7 @@ class OnboardingController extends Controller
             ]);
 
             if (!auth()->check()) {
-                \Log::error('User not authenticated in onboarding');
+                Log::error('User not authenticated in onboarding');
                 if ($isJsonRequest) {
                     return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
                 }
@@ -123,7 +123,7 @@ class OnboardingController extends Controller
 
             $step = $request->input('step', 0);
             
-            \Log::debug("OnboardingController@store - Processing step: {$step} for user: {$user->id}");
+            Log::debug("OnboardingController@store - Processing step: {$step} for user: {$user->id}");
 
             switch ($step) {
                 case 1: $this->saveUserData($request, $user); break;
@@ -133,10 +133,10 @@ class OnboardingController extends Controller
                 case 5: $this->saveVolumeData($request, $user); break;
                 case 6: $this->saveDiscoveryDataInternal($request, $user); break;
                 case 7:
-                    \Log::debug("OnboardingController@store - STEP 7 - About to call processOnboardingCompletion");
+                    Log::debug("OnboardingController@store - STEP 7 - About to call processOnboardingCompletion");
                     $this->saveToolsData($request, $user);
                     $completionResult = $this->processOnboardingCompletion($request, $user);
-                    \Log::debug("OnboardingController@store - STEP 7 - processOnboardingCompletion returned", ['result' => $completionResult]);
+                    Log::debug("OnboardingController@store - STEP 7 - processOnboardingCompletion returned", ['result' => $completionResult]);
                     $user->refresh();
                     break;
             }
@@ -195,7 +195,7 @@ class OnboardingController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('OnboardingController@store exception', [
+            Log::error('OnboardingController@store exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -244,7 +244,7 @@ class OnboardingController extends Controller
 
     private function saveUserData(Request $request, User $user)
     {
-        \Log::debug('saveUserData START', [
+        Log::debug('saveUserData START', [
             'user_id' => $user->id,
             'request_data' => $request->all()
         ]);
@@ -255,20 +255,20 @@ class OnboardingController extends Controller
                 'phone' => 'required|string|max:20',
             ]);
 
-            \Log::debug('saveUserData validation passed', ['validated' => $validated]);
+            Log::debug('saveUserData validation passed', ['validated' => $validated]);
 
             $user->update([
                 'full_name' => $request->full_name,
                 'phone' => $request->phone,
             ]);
 
-            \Log::debug('saveUserData update completed', [
+            Log::debug('saveUserData update completed', [
                 'user_id' => $user->id,
                 'full_name' => $user->full_name,
                 'phone' => $user->phone
             ]);
         } catch (\Exception $e) {
-            \Log::error('saveUserData EXCEPTION', [
+            Log::error('saveUserData EXCEPTION', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -346,7 +346,7 @@ class OnboardingController extends Controller
         
         $company->update(['settings' => $settings]);
         
-        \Log::debug('saveDiscoveryDataInternal completed', [
+        Log::debug('saveDiscoveryDataInternal completed', [
             'company_id' => $company->id,
             'discovered_via' => $onboarding['discovered_via'],
             'tools' => $onboarding['tools']
@@ -367,7 +367,7 @@ class OnboardingController extends Controller
         
         $company->update(['settings' => $settings]);
         
-        \Log::debug('saveToolsData completed', [
+        Log::debug('saveToolsData completed', [
             'company_id' => $company->id,
             'tools' => $onboarding['tools']
         ]);

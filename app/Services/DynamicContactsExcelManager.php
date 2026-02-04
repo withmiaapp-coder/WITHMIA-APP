@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DynamicContactsExcelManager
@@ -97,7 +98,7 @@ class DynamicContactsExcelManager
         $writer = new Xlsx($spreadsheet);
         $writer->save(storage_path("app/{$filePath}"));
 
-        \Log::debug("Excel inicial creado para usuario {$userId}: {$filePath}");
+        Log::debug("Excel inicial creado para usuario {$userId}: {$filePath}");
     }
 
     /**
@@ -114,7 +115,7 @@ class DynamicContactsExcelManager
 
             // Verificar si el contacto ya existe
             if ($this->contactExists($sheet, $contact['remoteJid'] ?? $contact['id'])) {
-                \Log::debug("Contacto ya existe, actualizando: " . ($contact['pushName'] ?? 'Sin nombre'));
+                Log::debug("Contacto ya existe, actualizando: " . ($contact['pushName'] ?? 'Sin nombre'));
                 return $this->updateExistingContact($userId, $contact, $companyName);
             }
 
@@ -132,7 +133,7 @@ class DynamicContactsExcelManager
             $writer = new Xlsx($spreadsheet);
             $writer->save($fileInfo['full_path']);
 
-            \Log::debug("Contacto agregado al Excel del usuario {$userId}: " . ($contact['pushName'] ?? 'Sin nombre'));
+            Log::debug("Contacto agregado al Excel del usuario {$userId}: " . ($contact['pushName'] ?? 'Sin nombre'));
 
             return [
                 'success' => true,
@@ -143,7 +144,7 @@ class DynamicContactsExcelManager
             ];
 
         } catch (\Exception $e) {
-            \Log::error("Error agregando contacto al Excel: " . $e->getMessage());
+            Log::error("Error agregando contacto al Excel: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -185,7 +186,7 @@ class DynamicContactsExcelManager
             $writer = new Xlsx($spreadsheet);
             $writer->save($fileInfo['full_path']);
 
-            \Log::debug("Importación masiva completada para usuario {$userId}: {$addedCount} agregados, {$updatedCount} existían");
+            Log::debug("Importación masiva completada para usuario {$userId}: {$addedCount} agregados, {$updatedCount} existían");
 
             return [
                 'success' => true,
@@ -196,7 +197,7 @@ class DynamicContactsExcelManager
             ];
 
         } catch (\Exception $e) {
-            \Log::error("Error en importación masiva: " . $e->getMessage());
+            Log::error("Error en importación masiva: " . $e->getMessage());
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -417,7 +418,7 @@ class DynamicContactsExcelManager
             ];
             
         } catch (\Exception $e) {
-            \Log::error("Error obteniendo estadísticas del Excel: " . $e->getMessage());
+            Log::error("Error obteniendo estadísticas del Excel: " . $e->getMessage());
             return null;
         }
     }

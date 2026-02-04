@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Services\ContactsExcelExporter;
 
 class ContactsController extends Controller
@@ -73,7 +74,7 @@ class ContactsController extends Controller
             ], 500);
 
         } catch (\Exception $e) {
-            \Log::error('Error exportando contactos: ' . $e->getMessage());
+            Log::error('Error exportando contactos: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -118,7 +119,7 @@ class ContactsController extends Controller
             return response()->download($fullPath, $fileName, $headers);
 
         } catch (\Exception $e) {
-            \Log::error('Error descargando archivo: ' . $e->getMessage());
+            Log::error('Error descargando archivo: ' . $e->getMessage());
             abort(500, 'Error al descargar el archivo');
         }
     }
@@ -164,7 +165,7 @@ class ContactsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error listando exportaciones: ' . $e->getMessage());
+            Log::error('Error listando exportaciones: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -206,7 +207,7 @@ class ContactsController extends Controller
             ], 404);
 
         } catch (\Exception $e) {
-            \Log::error('Error eliminando exportación: ' . $e->getMessage());
+            Log::error('Error eliminando exportación: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -272,7 +273,7 @@ class ContactsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error descargando Excel dinámico: ' . $e->getMessage());
+            Log::error('Error descargando Excel dinámico: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -304,7 +305,7 @@ class ContactsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error obteniendo estadísticas Excel: ' . $e->getMessage());
+            Log::error('Error obteniendo estadísticas Excel: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -370,7 +371,7 @@ class ContactsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error refrescando Excel: ' . $e->getMessage());
+            Log::error('Error refrescando Excel: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -418,7 +419,7 @@ class ContactsController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error reseteando Excel: ' . $e->getMessage());
+            Log::error('Error reseteando Excel: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
