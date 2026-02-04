@@ -11,35 +11,10 @@ use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Services\ConversationDeduplicationService;
 use App\Helpers\PhoneNormalizer;
+use App\Helpers\SystemMessagePatterns;
 
 class ChatwootWebhookController extends Controller
 {
-    /**
-     * Mensajes de sistema que NO deben generar notificaciones
-     */
-    private const SYSTEM_MESSAGE_PATTERNS = [
-        '🚀 Connection successfully established!',
-        'Connection successfully established',
-        'QRCode generated',
-        'Waiting for QR Code',
-        'Connecting...',
-        'Connected!',
-        'Disconnected',
-    ];
-    
-    /**
-     * Verificar si es un mensaje de sistema que debe ser ignorado
-     */
-    private function isSystemMessage(string $content): bool
-    {
-        foreach (self::SYSTEM_MESSAGE_PATTERNS as $pattern) {
-            if (stripos($content, $pattern) !== false) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
     /**
      * Recibir eventos de Chatwoot y notificar al frontend
      */
@@ -51,7 +26,7 @@ class ChatwootWebhookController extends Controller
         // 🚫 FILTRAR MENSAJES DE SISTEMA antes de procesar
         if ($event === 'message_created') {
             $messageContent = $data['content'] ?? '';
-            if ($this->isSystemMessage($messageContent)) {
+            if (SystemMessagePatterns::isSystemMessage($messageContent)) {
                 Log::debug('🔇 Mensaje de sistema ignorado en Chatwoot webhook', [
                     'content' => substr($messageContent, 0, 50)
                 ]);

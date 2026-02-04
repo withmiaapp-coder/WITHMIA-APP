@@ -16,7 +16,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class PostOnboardingSetupJob implements ShouldQueue
 {
@@ -88,66 +87,7 @@ class PostOnboardingSetupJob implements ShouldQueue
 
         Log::info("PostOnboardingSetupJob completado para: {$this->companySlug}");
     }
-
-    private function createRagWorkflow(Company $company, string $companySlug, N8nService $n8nService, QdrantService $qdrantService): array
-    {
-        try {
-            // Use simplified text processor workflow (receives pre-extracted text from Laravel)
-            $templatePath = base_path('workflows/rag-text-processor.json');
-            
-            if (!file_exists($templatePath)) {
-                return ['success' => false, 'error' => 'Template not found'];
-            }
-
-            $content = file_get_contents($templatePath);
-            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-            $templateWorkflow = json_decode($content, true);
-
-            if (!$templateWorkflow) {
-                return ['success' => false, 'error' => 'Invalid template JSON'];
-            }
-
-            $collectionName = $qdrantService->getCollectionName($companySlug);
-            $webhookPath = "rag-{$companySlug}";
-            $newWebhookId = Str::uuid()->toString();
-
-            foreach ($templateWorkflow['nodes'] as &$node) {
-                if ($node['type'] === 'n8n-nodes-base.webhook') {
-                    $node['parameters']['path'] = $webhookPath;
-                    $node['webhookId'] = $newWebhookId;
-                }
-            }
-
-            $templateWorkflow['name'] = "RAG Documents - {$companySlug}";
-            unset($templateWorkflow['id']);
-            unset($templateWorkflow['versionId']);
-            unset($templateWorkflow['meta']);
-            unset($templateWorkflow['tags']);
-            unset($templateWorkflow['active']);
-
-            $result = $n8nService->createWorkflow($templateWorkflow);
-
-            if ($result['success']) {
-                $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = config('services.n8n.base_url') . "/webhook/{$webhookPath}";
-
-                if ($workflowId) {
-                    $n8nService->activateWorkflow($workflowId);
-                }
-
-                return [
-                    'success' => true,
-                    'workflow_id' => $workflowId,
-                    'webhook_url' => $webhookUrl,
-                    'webhook_path' => $webhookPath,
-                    'collection_name' => $collectionName
-                ];
-            }
-
-            return ['success' => false, 'error' => $result['error'] ?? 'Unknown'];
-
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
+    
+    // ⚠️ NOTA: El método createRagWorkflow fue eliminado por ser código muerto.
+    // Si se necesita, usar CreateN8nWorkflowsJob en su lugar.
 }

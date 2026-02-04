@@ -9,9 +9,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Services\EvolutionApiService;
 use App\Services\ConversationDeduplicationService;
+use App\Helpers\PhoneNormalizer;
 
 class ChatwootController extends Controller
 {
+    // 🚀 CONSTANTES: Evita duplicación de statusMap en todo el controlador
+    private const STATUS_TO_INT = ['open' => 0, 'resolved' => 1, 'pending' => 2, 'snoozed' => 3];
+    private const INT_TO_STATUS = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
+    
     private $chatwootBaseUrl;
     private $chatwootToken;
     private $accountId;
@@ -153,8 +158,7 @@ class ChatwootController extends Controller
             
             // Aplicar filtro de status si existe
             if ($request->has('status')) {
-                $statusMap = ['open' => 0, 'resolved' => 1, 'pending' => 2, 'snoozed' => 3];
-                $statusValue = $statusMap[$request->input('status')] ?? null;
+                $statusValue = self::STATUS_TO_INT[$request->input('status')] ?? null;
                 if ($statusValue !== null) {
                     $query->where('status', $statusValue);
                 }
@@ -240,8 +244,7 @@ class ChatwootController extends Controller
                 }
                 
                 // Mapear status numérico a string
-                $statusMap = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
-                $statusString = $statusMap[$conv->status] ?? 'open';
+                $statusString = self::INT_TO_STATUS[$conv->status] ?? 'open';
                 
                 $allConversations[] = [
                     'id' => $conv->display_id, // El frontend espera display_id
@@ -366,14 +369,11 @@ class ChatwootController extends Controller
                 ? $chatwootDb->table('users')->where('id', $conv->assignee_id)->first() 
                 : null;
             
-            // Mapear status
-            $statusMap = [0 => 'open', 1 => 'resolved', 2 => 'pending', 3 => 'snoozed'];
-            
             $conversation = [
                 'id' => $conv->display_id,
                 'account_id' => $conv->account_id,
                 'inbox_id' => $conv->inbox_id,
-                'status' => $statusMap[$conv->status] ?? 'open',
+                'status' => self::INT_TO_STATUS[$conv->status] ?? 'open',
                 'assignee' => $assignee ? [
                     'id' => $assignee->id,
                     'name' => $assignee->name ?? $assignee->display_name ?? 'Agente',
@@ -1416,13 +1416,7 @@ class ChatwootController extends Controller
             $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
             
             // Mapear status string a integer (Chatwoot usa integers en BD)
-            $statusMap = [
-                'open' => 0,
-                'resolved' => 1,
-                'pending' => 2,
-                'snoozed' => 3
-            ];
-            $statusValue = $statusMap[$status] ?? 0;
+            $statusValue = self::STATUS_TO_INT[$status] ?? 0;
             
             // Buscar conversación por display_id o id
             $conversation = $chatwootDb->table('conversations')
@@ -2595,16 +2589,6 @@ class ChatwootController extends Controller
         $phoneMap = [];
         $noPhoneConversations = [];
 
-        // Función para normalizar teléfono (solo dígitos)
-        $normalizePhone = function(?string $phone): ?string {
-            if (!$phone) return null;
-            $normalized = preg_replace('/[^0-9]/', '', $phone);
-            // Si el número es muy corto, retornar null
-            if (strlen($normalized) < 8) return null;
-            // Usar últimos 10 dígitos para manejar diferencias en código de país
-            return substr($normalized, -10);
-        };
-
         foreach ($conversations as $conv) {
             // Obtener phone_number del contacto
             $phoneNumber = $conv['meta']['sender']['phone_number'] ?? null;
@@ -2612,16 +2596,17 @@ class ChatwootController extends Controller
             // Si no hay phone_number, intentar extraerlo del identifier
             if (!$phoneNumber) {
                 $identifier = $conv['meta']['sender']['identifier'] ?? '';
-                if (strpos($identifier, '@s.whatsapp.net') !== false) {
-                    $phoneNumber = str_replace('@s.whatsapp.net', '', $identifier);
-                } elseif (strpos($identifier, '@g.us') !== false) {
+                if (PhoneNormalizer::isRealNumber($identifier)) {
+                    $phoneNumber = PhoneNormalizer::normalize($identifier);
+                } elseif (PhoneNormalizer::isGroup($identifier)) {
                     // Es un grupo, no deduplicar por teléfono
                     $noPhoneConversations[] = $conv;
                     continue;
                 }
             }
 
-            $normalizedPhone = $normalizePhone($phoneNumber);
+            // 🚀 REFACTORIZADO: Usar PhoneNormalizer centralizado
+            $normalizedPhone = PhoneNormalizer::getLastDigits($phoneNumber);
 
             if (!$normalizedPhone) {
                 // Sin teléfono válido, agregar sin deduplicar

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Events\WhatsAppStatusChanged;
+use App\Helpers\SystemMessagePatterns;
 
 class EvolutionApiController extends Controller
 {
@@ -1005,31 +1006,14 @@ class EvolutionApiController extends Controller
     }
 
     /**
-     * Mensajes de sistema de WhatsApp que NO deben generar notificaciones
-     * Estos son mensajes internos de la conexión, no mensajes reales de usuarios
-     */
-    private const SYSTEM_MESSAGE_PATTERNS = [
-        '🚀 Connection successfully established!',
-        'Connection successfully established',
-        'QRCode generated',
-        'Waiting for QR Code',
-        'Connecting...',
-        'Connected!',
-        'Disconnected',
-        'protocolomessage',
-        'protocolMessage',
-    ];
-    
-    /**
      * Verificar si es un mensaje de sistema que debe ser ignorado
+     * 🚀 REFACTORIZADO: Usa helper centralizado SystemMessagePatterns
      */
     private function isSystemMessage(string $messageText, array $data): bool
     {
-        // Verificar patrones de mensajes de sistema
-        foreach (self::SYSTEM_MESSAGE_PATTERNS as $pattern) {
-            if (stripos($messageText, $pattern) !== false) {
-                return true;
-            }
+        // Usar helper centralizado
+        if (SystemMessagePatterns::isSystemMessage($messageText)) {
+            return true;
         }
         
         // Mensajes de protocolo de WhatsApp (no son mensajes reales)
@@ -1038,7 +1022,8 @@ class EvolutionApiController extends Controller
         }
         
         // Mensajes de status@broadcast (actualizaciones de estado)
-        if (isset($data['key']['remoteJid']) && str_contains($data['key']['remoteJid'], 'status@broadcast')) {
+        $remoteJid = $data['key']['remoteJid'] ?? null;
+        if (SystemMessagePatterns::isSystemSender($remoteJid)) {
             return true;
         }
         
