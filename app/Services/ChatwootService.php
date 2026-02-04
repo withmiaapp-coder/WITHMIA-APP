@@ -631,4 +631,111 @@ class ChatwootService
             return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
         }
     }
+
+    /**
+     * Create an agent in a specific account
+     * 
+     * @param int $accountId Chatwoot account ID
+     * @param string $apiKey API key for the account
+     * @param string $name Agent name
+     * @param string $email Agent email
+     * @param string $role Agent role (agent or administrator)
+     * @return array
+     */
+    public function createAgent(int $accountId, string $apiKey, string $name, string $email, string $role = 'agent'): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/agents", [
+                'name' => $name,
+                'email' => $email,
+                'role' => $role,
+                'auto_offline' => true,
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::createAgent failed', [
+                'account_id' => $accountId,
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Update an agent in a specific account
+     * 
+     * @param int $accountId Chatwoot account ID
+     * @param string $apiKey API key for the account
+     * @param int $agentId Agent ID
+     * @param array $data Data to update
+     * @return array
+     */
+    public function updateAgent(int $accountId, string $apiKey, int $agentId, array $data): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->patch("{$this->baseUrl}/api/v1/accounts/{$accountId}/agents/{$agentId}", $data);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::updateAgent failed', [
+                'account_id' => $accountId,
+                'agent_id' => $agentId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
+
+    /**
+     * Add agents to a team
+     * 
+     * @param int $accountId Chatwoot account ID
+     * @param string $apiKey API key for the account
+     * @param int $teamId Team ID
+     * @param array $userIds Array of agent IDs to add
+     * @return array
+     */
+    public function addAgentsToTeam(int $accountId, string $apiKey, int $teamId, array $userIds): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'api_access_token' => $apiKey,
+                'Content-Type' => 'application/json'
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/teams/{$teamId}/team_members", [
+                'user_ids' => $userIds,
+            ]);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::addAgentsToTeam failed', [
+                'account_id' => $accountId,
+                'team_id' => $teamId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+        }
+    }
 }

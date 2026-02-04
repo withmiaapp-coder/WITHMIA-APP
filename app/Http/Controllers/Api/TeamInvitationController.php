@@ -6,15 +6,23 @@ use App\Http\Controllers\Controller;
 use App\Mail\TeamInvitationMail;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Services\ChatwootService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class TeamInvitationController extends Controller
 {
+    private ChatwootService $chatwootService;
+
+    public function __construct(ChatwootService $chatwootService)
+    {
+        $this->chatwootService = $chatwootService;
+    }
+
     /**
      * Listar invitaciones de la empresa
      */
@@ -348,27 +356,24 @@ class TeamInvitationController extends Controller
         if (!$company->chatwoot_account_id || !$company->chatwoot_api_key) {
             return null;
         }
-
-        $baseUrl = config('services.chatwoot.base_url');
-        $accountId = $company->chatwoot_account_id;
         
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $company->chatwoot_api_key,
-                'Content-Type' => 'application/json',
-            ])->post("{$baseUrl}/api/v1/accounts/{$accountId}/agents", [
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role === 'administrator' ? 'administrator' : 'agent',
-            ]);
+            $role = $user->role === 'administrator' ? 'administrator' : 'agent';
+            $result = $this->chatwootService->createAgent(
+                $company->chatwoot_account_id,
+                $company->chatwoot_api_key,
+                $user->name,
+                $user->email,
+                $role
+            );
 
-            if ($response->successful()) {
-                return $response->json();
+            if ($result['success']) {
+                return $result['data'];
             }
 
             Log::warning('Failed to create Chatwoot agent', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'status' => $result['status'] ?? 'N/A',
+                'error' => $result['error'] ?? 'Unknown',
             ]);
 
             return null;
@@ -387,16 +392,13 @@ class TeamInvitationController extends Controller
             return;
         }
 
-        $baseUrl = config('services.chatwoot.base_url');
-        $accountId = $company->chatwoot_account_id;
-
         try {
-            Http::withHeaders([
-                'api_access_token' => $company->chatwoot_api_key,
-                'Content-Type' => 'application/json',
-            ])->post("{$baseUrl}/api/v1/accounts/{$accountId}/teams/{$teamId}/team_members", [
-                'user_ids' => [$agentId],
-            ]);
+            $this->chatwootService->addAgentsToTeam(
+                $company->chatwoot_account_id,
+                $company->chatwoot_api_key,
+                (int) $teamId,
+                [$agentId]
+            );
         } catch (\Exception $e) {
             Log::error('Error adding agent to team', ['error' => $e->getMessage()]);
         }
@@ -589,31 +591,24 @@ class TeamInvitationController extends Controller
                 ->select('id', 'name', 'email', 'role', 'chatwoot_agent_id', 'chatwoot_inbox_id', 'created_at')
                 ->get();
             
-            // Obtener agentes de Chatwoot
-            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+            // Obtener agentes de Chatwoot usando el servicio
             $chatwootAgents = [];
             
             try {
-                $response = Http::withHeaders([
-                    'api_access_token' => $company->chatwoot_api_key,
-                ])->get("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents");
-                
-                if ($response->successful()) {
-                    $chatwootAgents = $response->json();
+                $result = $this->chatwootService->getAgents($company->chatwoot_account_id, $company->chatwoot_api_key);
+                if ($result['success']) {
+                    $chatwootAgents = $result['data'] ?? [];
                 }
             } catch (\Exception $e) {
                 Log::error('Error fetching Chatwoot agents for diagnostic', ['error' => $e->getMessage()]);
             }
             
-            // Obtener equipos de Chatwoot
+            // Obtener equipos de Chatwoot usando el servicio
             $chatwootTeams = [];
             try {
-                $response = Http::withHeaders([
-                    'api_access_token' => $company->chatwoot_api_key,
-                ])->get("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams");
-                
-                if ($response->successful()) {
-                    $chatwootTeams = $response->json();
+                $result = $this->chatwootService->getTeams($company->chatwoot_account_id, $company->chatwoot_api_key);
+                if ($result['success']) {
+                    $chatwootTeams = $result['data'] ?? [];
                 }
             } catch (\Exception $e) {
                 Log::error('Error fetching Chatwoot teams for diagnostic', ['error' => $e->getMessage()]);
@@ -721,13 +716,11 @@ class TeamInvitationController extends Controller
             foreach ($users as $user) {
                 try {
                     // Verificar si ya existe un agente con ese email en Chatwoot
-                    $checkResponse = Http::withHeaders([
-                        'api_access_token' => $apiKey,
-                    ])->get("{$baseUrl}/api/v1/accounts/{$accountId}/agents");
+                    $agentsResult = $this->chatwootService->getAgents($accountId, $apiKey);
                     
                     $existingAgent = null;
-                    if ($checkResponse->successful()) {
-                        $agents = $checkResponse->json();
+                    if ($agentsResult['success']) {
+                        $agents = $agentsResult['data'] ?? [];
                         foreach ($agents as $agent) {
                             if (strtolower($agent['email']) === strtolower($user->email)) {
                                 $existingAgent = $agent;
@@ -748,19 +741,18 @@ class TeamInvitationController extends Controller
                             'action' => 'linked_existing'
                         ];
                     } else {
-                        // Crear nuevo agente en Chatwoot
-                        $response = Http::withHeaders([
-                            'api_access_token' => $apiKey,
-                            'Content-Type' => 'application/json',
-                        ])->post("{$baseUrl}/api/v1/accounts/{$accountId}/agents", [
-                            'name' => $user->name ?: $user->full_name ?: 'Usuario',
-                            'email' => $user->email,
-                            'role' => $user->role === 'admin' ? 'administrator' : 'agent',
-                            'auto_offline' => true,
-                        ]);
+                        // Crear nuevo agente en Chatwoot usando el servicio
+                        $role = $user->role === 'admin' ? 'administrator' : 'agent';
+                        $result = $this->chatwootService->createAgent(
+                            $accountId,
+                            $apiKey,
+                            $user->name ?: $user->full_name ?: 'Usuario',
+                            $user->email,
+                            $role
+                        );
                         
-                        if ($response->successful()) {
-                            $agentData = $response->json();
+                        if ($result['success']) {
+                            $agentData = $result['data'] ?? [];
                             $user->update([
                                 'chatwoot_agent_id' => $agentData['id'] ?? null,
                             ]);
@@ -775,7 +767,7 @@ class TeamInvitationController extends Controller
                             $failed[] = [
                                 'user_id' => $user->id,
                                 'email' => $user->email,
-                                'error' => $response->body(),
+                                'error' => $result['error'] ?? 'Unknown error',
                             ];
                         }
                     }
@@ -858,15 +850,14 @@ class TeamInvitationController extends Controller
             if ($user->chatwoot_agent_id) {
                 $company = $user->company;
                 if ($company && $company->chatwoot_api_key) {
-                    $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
                     $accountId = $company->chatwoot_account_id ?? 1;
                     
-                    Http::withHeaders([
-                        'api_access_token' => $company->chatwoot_api_key,
-                        'Content-Type' => 'application/json',
-                    ])->patch("{$baseUrl}/api/v1/accounts/{$accountId}/agents/{$user->chatwoot_agent_id}", [
-                        'role' => $newRole === 'admin' ? 'administrator' : 'agent',
-                    ]);
+                    $this->chatwootService->updateAgent(
+                        $accountId,
+                        $company->chatwoot_api_key,
+                        (int) $user->chatwoot_agent_id,
+                        ['role' => $newRole === 'admin' ? 'administrator' : 'agent']
+                    );
                 }
             }
             
