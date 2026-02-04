@@ -8,15 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Services\QdrantService;
+use App\Services\N8nService;
 use App\Helpers\Utf8Helper;
 use App\Models\Company;
 
 class KnowledgeController extends Controller
 {
     private $qdrantHost;
+    private N8nService $n8nService;
 
-    public function __construct()
+    public function __construct(N8nService $n8nService)
     {
+        $this->n8nService = $n8nService;
         $this->qdrantHost = rtrim(config('qdrant.url'), '/');
     }
 
@@ -1360,10 +1363,6 @@ class KnowledgeController extends Controller
 
             $companySlug = $company->slug ?? 'company_' . $company->id;
             $companyName = $company->name ?? $companySlug;
-            
-            // Get n8n configuration
-            $n8nUrl = config('services.n8n.base_url');
-            $n8nApiKey = config('services.n8n.api_key');
 
             // Get OpenAI API key - company specific or fallback to global
             $openaiApiKey = $company->settings['openai_api_key'] ?? config('services.openai.api_key');
@@ -1383,73 +1382,49 @@ class KnowledgeController extends Controller
             $webhookPath = $company->settings['rag_webhook_path'] ?? null;
             $workflowId = $company->settings['rag_workflow_id'] ?? null;
 
-            // Verify workflow still exists in n8n
-            if ($workflowId && $n8nApiKey) {
-                try {
-                    $checkResponse = Http::withHeaders([
-                        'X-N8N-API-KEY' => $n8nApiKey
-                    ])->get("{$n8nUrl}/api/v1/workflows/{$workflowId}");
+            // Verify workflow still exists in n8n using N8nService
+            if ($workflowId) {
+                if (!$this->n8nService->workflowExists($workflowId)) {
+                    // Workflow was deleted, clear settings
+                    Log::debug("Workflow {$workflowId} not found in n8n, will create new one");
+                    $settings = $company->settings ?? [];
+                    unset($settings['rag_workflow_id']);
+                    unset($settings['rag_webhook_path']);
+                    unset($settings['rag_workflow_name']);
+                    $company->settings = $settings;
+                    $company->save();
                     
-                    if (!$checkResponse->successful()) {
-                        // Workflow was deleted, clear settings
-                        Log::debug("Workflow {$workflowId} not found in n8n, will create new one");
-                        $settings = $company->settings ?? [];
-                        unset($settings['rag_workflow_id']);
-                        unset($settings['rag_webhook_path']);
-                        unset($settings['rag_workflow_name']);
-                        $company->settings = $settings;
-                        $company->save();
-                        
-                        $webhookPath = null;
-                        $workflowId = null;
-                    }
-                } catch (\Exception $e) {
-                    Log::warning("Could not verify workflow existence: " . $e->getMessage());
+                    $webhookPath = null;
+                    $workflowId = null;
                 }
             }
 
             if (!$webhookPath || !$workflowId) {
-                // Antes de crear, buscar si ya existe un workflow RAG para esta empresa en N8N
-                try {
-                    $searchResponse = Http::withHeaders([
-                        'X-N8N-API-KEY' => $n8nApiKey
-                    ])->get("{$n8nUrl}/api/v1/workflows");
+                // Search for existing RAG workflow using N8nService
+                $existingWorkflow = $this->n8nService->findWorkflowByName("RAG Documents - {$companySlug}");
+                
+                if ($existingWorkflow) {
+                    Log::debug("Workflow RAG existente encontrado en N8N: {$existingWorkflow['id']} - {$existingWorkflow['name']}");
                     
-                    if ($searchResponse->successful()) {
-                        $workflows = $searchResponse->json()['data'] ?? [];
-                        $expectedName = "RAG Documents - {$companySlug}";
-                        
-                        foreach ($workflows as $wf) {
-                            if (stripos($wf['name'] ?? '', "RAG Documents - {$companySlug}") !== false || 
-                                stripos($wf['name'] ?? '', $expectedName) !== false) {
-                                // Encontramos un workflow existente, recuperar su info
-                                Log::debug("Workflow RAG existente encontrado en N8N: {$wf['id']} - {$wf['name']}");
-                                
-                                // Extraer webhook path del workflow
-                                $existingWebhookPath = null;
-                                foreach ($wf['nodes'] ?? [] as $node) {
-                                    if ($node['type'] === 'n8n-nodes-base.webhook') {
-                                        $existingWebhookPath = $node['parameters']['path'] ?? null;
-                                        break;
-                                    }
-                                }
-                                
-                                // Guardar en settings de la empresa
-                                $settings = $company->settings ?? [];
-                                $settings['rag_workflow_id'] = $wf['id'];
-                                $settings['rag_webhook_path'] = $existingWebhookPath;
-                                $settings['rag_workflow_name'] = $wf['name'];
-                                $company->settings = $settings;
-                                $company->save();
-                                
-                                $workflowId = $wf['id'];
-                                $webhookPath = $existingWebhookPath;
-                                break;
-                            }
+                    // Extract webhook path from workflow nodes
+                    $existingWebhookPath = null;
+                    foreach ($existingWorkflow['nodes'] ?? [] as $node) {
+                        if ($node['type'] === 'n8n-nodes-base.webhook') {
+                            $existingWebhookPath = $node['parameters']['path'] ?? null;
+                            break;
                         }
                     }
-                } catch (\Exception $e) {
-                    Log::warning("Could not search for existing workflows: " . $e->getMessage());
+                    
+                    // Save to company settings
+                    $settings = $company->settings ?? [];
+                    $settings['rag_workflow_id'] = $existingWorkflow['id'];
+                    $settings['rag_webhook_path'] = $existingWebhookPath;
+                    $settings['rag_workflow_name'] = $existingWorkflow['name'];
+                    $company->settings = $settings;
+                    $company->save();
+                    
+                    $workflowId = $existingWorkflow['id'];
+                    $webhookPath = $existingWebhookPath;
                 }
             }
 
@@ -1457,7 +1432,7 @@ class KnowledgeController extends Controller
             if (!$webhookPath || !$workflowId) {
                 // Create company-specific workflow
                 Log::debug("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
-                $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
+                $result = $this->createCompanyWorkflow($company, $companySlug, $companyName);
                 
                 if (!$result['success']) {
                     return response()->json([
@@ -1470,7 +1445,8 @@ class KnowledgeController extends Controller
                 $workflowId = $result['workflow_id'];
             }
 
-            $webhookUrl = "{$n8nUrl}/webhook/{$webhookPath}";
+            // Build webhook URL using N8nService
+            $webhookUrl = $this->n8nService->getWebhookUrl($webhookPath);
 
             $validated = $request->validate([
                 'category' => 'required|string',
@@ -1842,7 +1818,7 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
     /**
      * Create a company-specific RAG workflow in n8n
      */
-    private function createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey)
+    private function createCompanyWorkflow($company, $companySlug, $companyName)
     {
         try {
             // Generate webhook path for this company (simple, predictable pattern)
@@ -1987,33 +1963,24 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                 'settings' => ['executionOrder' => 'v1']
             ];
 
-            // Create workflow in n8n
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $n8nApiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$n8nUrl}/api/v1/workflows", $workflow);
+            // Create workflow in n8n using N8nService
+            $createResult = $this->n8nService->createWorkflow($workflow);
 
-            if (!$response->successful()) {
-                Log::error("Failed to create n8n workflow: " . $response->body());
+            if (!$createResult['success']) {
+                Log::error("Failed to create n8n workflow", ['error' => $createResult['error'] ?? 'Unknown']);
                 return ['success' => false, 'error' => 'Failed to create workflow in n8n'];
             }
 
-            $workflowData = $response->json();
-            $workflowId = $workflowData['id'];
+            $workflowId = $createResult['data']['id'];
 
-            // SIEMPRE activar el workflow después de crearlo
-            // n8n requiere (object)[] para enviar {} como body JSON
+            // Activate the workflow using N8nService
             Log::debug("Activating workflow {$workflowId}...");
-            $activateResponse = Http::withHeaders([
-                'X-N8N-API-KEY' => $n8nApiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-            ])->post("{$n8nUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
+            $activateResult = $this->n8nService->activateWorkflow($workflowId);
 
-            if ($activateResponse->successful()) {
+            if ($activateResult['success']) {
                 Log::debug("✅ Workflow {$workflowId} activated successfully");
             } else {
-                Log::error("❌ Failed to activate workflow: " . $activateResponse->body());
+                Log::error("❌ Failed to activate workflow", ['error' => $activateResult['error'] ?? 'Unknown']);
             }
 
             // Save workflow info to company settings
@@ -2223,18 +2190,12 @@ JS;
                 return response()->json(['success' => false, 'error' => 'No company found'], 404);
             }
 
-            $n8nUrl = config('services.n8n.base_url');
-            $n8nApiKey = config('services.n8n.api_key');
-
-            // Try to delete the old workflow if it exists
+            // Try to delete the old workflow if it exists using N8nService
             $oldWorkflowId = $company->settings['rag_workflow_id'] ?? null;
-            if ($oldWorkflowId && $n8nApiKey) {
-                try {
-                    Http::withHeaders([
-                        'X-N8N-API-KEY' => $n8nApiKey
-                    ])->delete("{$n8nUrl}/api/v1/workflows/{$oldWorkflowId}");
-                } catch (\Exception $e) {
-                    Log::warning("Could not delete old workflow: " . $e->getMessage());
+            if ($oldWorkflowId) {
+                $deleteResult = $this->n8nService->deleteWorkflow($oldWorkflowId);
+                if (!$deleteResult['success']) {
+                    Log::warning("Could not delete old workflow: " . ($deleteResult['error'] ?? 'Unknown'));
                 }
             }
 
@@ -2250,7 +2211,7 @@ JS;
             $companySlug = $company->slug ?? 'company_' . $company->id;
             $companyName = $company->name ?? $companySlug;
             
-            $result = $this->createCompanyWorkflow($company, $companySlug, $companyName, $n8nUrl, $n8nApiKey);
+            $result = $this->createCompanyWorkflow($company, $companySlug, $companyName);
 
             if (!$result['success']) {
                 return response()->json([

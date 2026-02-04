@@ -47,6 +47,35 @@ class N8nService
     }
 
     /**
+     * Find a workflow by name pattern (case-insensitive)
+     */
+    public function findWorkflowByName(string $namePattern): ?array
+    {
+        $result = $this->getWorkflows();
+        
+        if (!$result['success']) {
+            return null;
+        }
+        
+        foreach ($result['data'] as $workflow) {
+            if (stripos($workflow['name'] ?? '', $namePattern) !== false) {
+                return $workflow;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Check if a workflow exists by ID
+     */
+    public function workflowExists(string $workflowId): bool
+    {
+        $result = $this->getWorkflow($workflowId);
+        return $result['success'];
+    }
+
+    /**
      * Obtener un workflow por ID
      */
     public function getWorkflow(string $workflowId): array
