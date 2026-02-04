@@ -109,20 +109,22 @@ class ChatwootService
 
     /**
      * Crea una suscripción de webhook en Chatwoot
+     * 
+     * IMPORTANTE: Para n8n solo necesitamos message_created
+     * Los demás eventos causan ejecuciones duplicadas:
+     * - message_updated: se dispara cuando el bot responde
+     * - conversation_updated: se dispara con cada mensaje
+     * - conversation_created: innecesario para el flujo del bot
      */
     private function createWebhookSubscription(string $webhookUrl, ?int $inboxId = null): array
     {
         $endpoint = "{$this->baseUrl}/api/v1/accounts/{$this->accountId}/webhooks";
         
+        // Solo suscribirse a message_created para evitar ejecuciones duplicadas en n8n
         $payload = [
             'url' => $webhookUrl,
             'subscriptions' => [
-                'conversation_created',
-                'conversation_status_changed', 
-                'conversation_updated',
-                'message_created',
-                'message_updated',
-                'webwidget_triggered',
+                'message_created', // Único evento necesario para el bot
             ],
         ];
 
