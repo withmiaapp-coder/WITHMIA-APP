@@ -356,17 +356,6 @@ class ChatwootWebhookController extends Controller
     }
 
     /**
-     * Extraer número base del identifier
-     * Usa el helper centralizado para consistencia en toda la app.
-     * 
-     * @deprecated Use PhoneNormalizer::normalize() directamente
-     */
-    private function extractPhoneBase($identifier)
-    {
-        return PhoneNormalizer::normalize($identifier) ?? '';
-    }
-
-    /**
      * Limpiar eventos antiguos del cache
      */
     public function clearOldEvents(Request $request)

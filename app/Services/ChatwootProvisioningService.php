@@ -272,14 +272,6 @@ class ChatwootProvisioningService
     }
 
     /**
-     * @deprecated Use createAccessToken() instead - this method doesn't register the token in Chatwoot
-     */
-    private function generateAccessToken(): string
-    {
-        return Str::random(24);
-    }
-
-    /**
      * Invita un agente/vendedor a una empresa existente
      * El usuario DEBE existir en Laravel primero
      */
