@@ -1497,14 +1497,7 @@ class KnowledgeController extends Controller
                 ], 400);
             }
 
-            // DEBUG: Print to stderr so it appears in Railway logs
-            error_log("=== RAG DEBUG ===");
-            error_log("Text extracted: " . strlen($extractedText) . " characters");
-            error_log("First 300 chars: " . substr($extractedText, 0, 300));
-            
-            Log::info("Text extracted: " . strlen($extractedText) . " characters");
-            Log::info("Extracted text preview (first 500 chars): " . substr($extractedText, 0, 500));
-            Log::info("Extracted text preview (last 500 chars): " . substr($extractedText, -500));
+            Log::debug('RAG: Text extracted', ['characters' => strlen($extractedText)]);
 
             // Prepare payload for n8n
             $payload = [
@@ -1517,8 +1510,7 @@ class KnowledgeController extends Controller
                 'qdrant_api_key' => $qdrantApiKey,
             ];
 
-            error_log("Payload text length: " . strlen($payload['text']));
-            Log::info("Payload to n8n - text length: " . strlen($payload['text']));
+            Log::debug('RAG: Sending to n8n', ['text_length' => strlen($payload['text'])]);
 
             // Send EXTRACTED TEXT to n8n (not the binary file)
             $response = Http::timeout(120)->post($webhookUrl, $payload);

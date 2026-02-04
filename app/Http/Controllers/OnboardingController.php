@@ -74,9 +74,7 @@ class OnboardingController extends Controller
 
     public function store(Request $request)
     {
-        // IMMEDIATE LOG - debe aparecer siempre
-        \Log::info('🔴🔴🔴 OnboardingController@store ENTRANDO - step: ' . $request->input('step'));
-        error_log('🔴🔴🔴 OnboardingController@store ENTRANDO - step: ' . $request->input('step'));
+        Log::debug('OnboardingController: store', ['step' => $request->input('step')]);
         
         try {
             $isJsonRequest = $request->expectsJson() || $request->wantsJson() || $request->ajax() || 

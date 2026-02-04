@@ -8,15 +8,14 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class GoogleAuthController extends Controller
 {
     public function authenticate(Request $request)
     {
         try {
-            // Log request for debugging
-
-            error_log('Request body: ' . $request->getContent());
+            Log::debug('GoogleAuth: Request received');
 
             $email = null;
             $name = null;
@@ -61,19 +60,6 @@ class GoogleAuthController extends Controller
 
             }
 
-            // 🎯 TRACKING LOGIN: Actualizar last_login_at y login_ip
-            // Comentado temporalmente hasta que se agreguen las columnas
-            /*
-            $loginIp = $request->getClientIp() ?? $request->ip() ?? 'unknown';
-            
-            $user->update([
-                'last_login_at' => now(),
-                'login_ip' => $loginIp
-            ]);
-            
-            error_log('Login tracking updated - IP: ' . $loginIp . ', Time: ' . now());
-            */
-
             // Generar auth_token si no existe
             if (empty($user->auth_token)) {
                 $user->auth_token = Str::random(60);
@@ -93,9 +79,10 @@ class GoogleAuthController extends Controller
             $cookieSecure = config('session.secure');
             $cookieSameSite = config('session.same_site');
             
-
-            error_log('Cookie config - Name: ' . $cookieName . ', Domain: ' . $cookieDomain . ', Secure: ' . ($cookieSecure ? 'true' : 'false') . ', SameSite: ' . $cookieSameSite);
-            error_log('Auth check after login: ' . (Auth::check() ? 'YES' : 'NO'));
+            Log::debug('GoogleAuth: Session created', [
+                'cookie_name' => $cookieName,
+                'auth_check' => Auth::check()
+            ]);
             
             // Guardar sesión explícitamente
             $request->session()->save();
@@ -113,8 +100,7 @@ class GoogleAuthController extends Controller
             return view('auth-loading', ['redirect' => $redirectUrl]);
 
         } catch (\Exception $e) {
-            error_log('Google Auth Error: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            Log::error('GoogleAuth: Error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false, 
                 'error' => $e->getMessage(),
@@ -136,11 +122,10 @@ class GoogleAuthController extends Controller
             $payload = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
             $data = json_decode($payload, true);
 
-            error_log('JWT Payload: ' . json_encode($data));
             return $data;
 
         } catch (\Exception $e) {
-            error_log('JWT decode error: ' . $e->getMessage());
+            Log::debug('GoogleAuth: JWT decode error', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -251,8 +236,7 @@ class GoogleAuthController extends Controller
             return view('auth-loading', ['redirect' => $redirectUrl]);
 
         } catch (\Exception $e) {
-            error_log('Google Auth with Invitation Error: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            Log::error('GoogleAuth: Invitation error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false, 
                 'error' => $e->getMessage()
@@ -286,14 +270,14 @@ class GoogleAuthController extends Controller
                 'auto_offline' => true,
             ]);
 
-            error_log("Chatwoot agent creation response: " . $response->status() . " - " . $response->body());
+            Log::debug('Chatwoot: Agent creation response', ['status' => $response->status()]);
 
             if ($response->successful()) {
                 $agentData = $response->json();
                 $user->update([
                     'chatwoot_agent_id' => $agentData['id'] ?? null,
                 ]);
-                error_log("Chatwoot agent created successfully with ID: " . ($agentData['id'] ?? 'unknown'));
+                Log::debug('Chatwoot: Agent created', ['agent_id' => $agentData['id'] ?? 'unknown']);
                 
                 // Add to team if specified
                 if ($invitation->team_id && isset($agentData['id'])) {
@@ -303,15 +287,15 @@ class GoogleAuthController extends Controller
                     ])->post("{$chatwootUrl}/api/v1/accounts/{$company->chatwoot_account_id}/teams/{$invitation->team_id}/team_members", [
                         'user_ids' => [$agentData['id']]
                     ]);
-                    error_log("Added agent to team {$invitation->team_id}: " . $teamResponse->status());
+                    Log::debug('Chatwoot: Added agent to team', ['team_id' => $invitation->team_id]);
                 }
                 
                 return $agentData;
             } else {
-                error_log("Failed to create Chatwoot agent: " . $response->status() . " - " . $response->body());
+                Log::warning('Chatwoot: Failed to create agent', ['status' => $response->status()]);
             }
         } catch (\Exception $e) {
-            error_log('Failed to create Chatwoot agent: ' . $e->getMessage());
+            Log::error('Chatwoot: Agent creation error', ['error' => $e->getMessage()]);
         }
         
         return null;
@@ -330,7 +314,10 @@ class GoogleAuthController extends Controller
         $receivedCookies = array_keys($request->cookies->all());
         $hasCookie = in_array($cookieName, $receivedCookies);
         
-        error_log('Check session - ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO') . ', Cookies: ' . implode(',', $receivedCookies) . ', Has ' . $cookieName . ': ' . ($hasCookie ? 'YES' : 'NO'));
+        Log::debug('Session check', [
+            'auth' => Auth::check(),
+            'has_cookie' => $hasCookie
+        ]);
         
         return response()->json([
             'authenticated' => Auth::check(),

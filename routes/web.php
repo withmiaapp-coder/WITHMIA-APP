@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Api\GoogleAuthController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingApiController;
@@ -82,7 +83,7 @@ SVG;
         
         // Si hay cualquier error, devolver placeholder
         if ($error || $httpCode >= 400 || empty($body) || str_contains($contentType ?? '', 'text/html')) {
-            error_log("IMG-PROXY: Fallback a placeholder - HTTP: $httpCode, Error: $error");
+            Log::debug("IMG-PROXY: Fallback a placeholder - HTTP: {$httpCode}");
             return $generatePlaceholder($contactName);
         }
         
@@ -92,7 +93,7 @@ SVG;
             ->header('Access-Control-Allow-Origin', '*');
             
     } catch (\Exception $e) {
-        error_log("IMG-PROXY: Exception: " . $e->getMessage());
+        Log::debug("IMG-PROXY: Exception", ['error' => $e->getMessage()]);
         return $generatePlaceholder($contactName);
     }
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
@@ -103,87 +104,6 @@ Broadcast::routes(['middleware' => ['web', 'auth']]);
 // Proxy para archivos/imágenes de Chatwoot - SIN autenticación
 // Ruta en web.php para evitar problemas de caché de rutas API
 Route::get('/chatwoot-image-proxy', [AttachmentProxyController::class, 'proxy']);
-
-// Ruta temporal para agregar columnas faltantes
-Route::get('/fix-user-columns', function () {
-    try {
-        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'full_name'");
-        if (empty($columns)) {
-            DB::statement('ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL AFTER name');
-        }
-        
-        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'phone'");
-        if (empty($columns)) {
-            DB::statement('ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL AFTER email');
-        }
-        
-        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'onboarding_step'");
-        if (empty($columns)) {
-            DB::statement('ALTER TABLE users ADD COLUMN onboarding_step INT DEFAULT 0 AFTER email_verified_at');
-        }
-        
-        $columns = DB::select("SHOW COLUMNS FROM users LIKE 'onboarding_completed'");
-        if (empty($columns)) {
-            DB::statement('ALTER TABLE users ADD COLUMN onboarding_completed TINYINT(1) DEFAULT 0 AFTER onboarding_step');
-        }
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Todas las columnas verificadas y agregadas correctamente'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
-// Ruta temporal para crear DB de Chatwoot
-Route::get('/admin/create-chatwoot-db', function () {
-    try {
-        $pdo = new PDO(
-            'pgsql:host=postgres.railway.internal;port=5432;dbname=railway',
-            'postgres',
-            'dzMmfzVhEDLgeRIAvRlWofFnagOyItjs',
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        );
-        
-        $stmt = $pdo->query("SELECT 1 FROM pg_database WHERE datname = 'chatwoot'");
-        if ($stmt->fetchColumn()) {
-            return response()->json(['status' => 'exists', 'message' => 'Database chatwoot already exists']);
-        }
-        
-        $pdo->exec("CREATE DATABASE chatwoot");
-        return response()->json(['status' => 'created', 'message' => 'Database chatwoot created successfully']);
-    } catch (PDOException $e) {
-        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-    }
-});
-
-// Ruta temporal para habilitar pgvector en Chatwoot
-Route::get('/admin/enable-pgvector', function () {
-    try {
-        $pdo = new PDO(
-            'pgsql:host=postgres.railway.internal;port=5432;dbname=chatwoot',
-            'postgres',
-            'dzMmfzVhEDLgeRIAvRlWofFnagOyItjs',
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        );
-        
-        // Verificar si la extensión ya existe
-        $stmt = $pdo->query("SELECT 1 FROM pg_extension WHERE extname = 'vector'");
-        if ($stmt->fetchColumn()) {
-            return response()->json(['status' => 'exists', 'message' => 'Extension vector already enabled']);
-        }
-        
-        // Habilitar la extensión
-        $pdo->exec("CREATE EXTENSION vector");
-        return response()->json(['status' => 'created', 'message' => 'Extension vector enabled successfully']);
-    } catch (PDOException $e) {
-        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-    }
-});
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -276,7 +196,7 @@ Route::post('/api/improve-description', [OnboardingApiController::class, 'improv
 Route::get('/onboarding', function (\Illuminate\Http\Request $request) {
     $sessionId = session()->getId();
     
-    error_log('Onboarding - Session ID: ' . $sessionId . ', Auth: ' . (Auth::check() ? 'YES' : 'NO'));
+    Log::debug('Onboarding access', ['auth' => Auth::check()]);
     
     if (!Auth::check()) {
         // No autenticado - mostrar login directamente
