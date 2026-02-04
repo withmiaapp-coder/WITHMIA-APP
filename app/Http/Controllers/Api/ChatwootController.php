@@ -869,6 +869,24 @@ class ChatwootController extends Controller
                     '_fromAgent' => true // Marcar como enviado por agente
                 ];
 
+                // 🤖 HUMAN TAKEOVER: Pausar el bot cuando un agente humano interviene
+                // El bot se detendrá por 30 minutos (1800 segundos) para esta conversación
+                try {
+                    $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
+                    \Illuminate\Support\Facades\Redis::setex(
+                        "bot-state:{$phoneNumber}",
+                        1800, // 30 minutos
+                        'human-takeover'
+                    );
+                    Log::info('🛑 Bot pausado por intervención humana', [
+                        'phone' => $phoneNumber,
+                        'agent' => auth()->user()->name ?? 'Agent',
+                        'duration' => '30 minutos'
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('⚠️ No se pudo pausar el bot (no crítico)', ['error' => $e->getMessage()]);
+                }
+
                 try {
                     broadcast(new \App\Events\NewMessageReceived(
                         $messagePayload,                    // $message
