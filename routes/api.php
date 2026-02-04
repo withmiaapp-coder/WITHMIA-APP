@@ -989,6 +989,38 @@ Route::get('/debug-conv/{id}', function ($id) {
     }
 });
 
+// 🐛 DEBUG TEMPORAL: Listar todas las conversaciones existentes
+Route::get('/debug-convs', function () {
+    try {
+        $conversations = DB::connection('chatwoot')
+            ->table('conversations')
+            ->leftJoin('contacts', 'conversations.contact_id', '=', 'contacts.id')
+            ->select(
+                'conversations.id',
+                'conversations.account_id',
+                'conversations.inbox_id',
+                'conversations.status',
+                'contacts.phone_number',
+                'contacts.name as contact_name'
+            )
+            ->orderBy('conversations.id', 'desc')
+            ->limit(20)
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'total' => $conversations->count(),
+            'conversations' => $conversations
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 // ⚠️ ALIAS ELIMINADO: /evolution/webhook → Usar /evolution-whatsapp/webhook
 // La ruta duplicada fue removida. Actualizar configuración de Evolution si es necesario.
 
