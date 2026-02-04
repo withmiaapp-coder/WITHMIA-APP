@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\User;
-use App\Services\EvolutionInstanceManager;
+use App\Services\EvolutionApiService;
 use App\Services\QdrantService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -66,8 +66,8 @@ class UserObserver
         $instanceName = $user->whatsapp_instance_id;
         
         try {
-            $evolutionManager = new EvolutionInstanceManager();
-            $result = $evolutionManager->deleteInstance($instanceName);
+            $evolutionService = new EvolutionApiService();
+            $result = $evolutionService->deleteInstance($instanceName);
 
             if ($result['success']) {
                 Log::debug('Evolution instance deleted', ['instance' => $instanceName]);

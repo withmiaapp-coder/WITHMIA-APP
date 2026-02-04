@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\User;
-use App\Services\EvolutionInstanceManager;
+use App\Services\EvolutionApiService;
 
 class CleanupOrphanInstances extends Command
 {
@@ -76,14 +76,14 @@ class CleanupOrphanInstances extends Command
             }
 
             // Eliminar instancias huérfanas
-            $evolutionManager = new EvolutionInstanceManager();
+            $evolutionService = new EvolutionApiService();
             $deletedCount = 0;
             $failedCount = 0;
 
             foreach ($orphanInstances as $instance) {
                 $this->info("🗑️ Eliminando: {$instance['name']}");
                 
-                $result = $evolutionManager->deleteInstance($instance['name']);
+                $result = $evolutionService->deleteInstance($instance['name']);
                 
                 if ($result['success']) {
                     $this->info("✅ Eliminada: {$instance['name']}");
