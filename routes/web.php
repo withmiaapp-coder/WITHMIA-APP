@@ -267,33 +267,7 @@ Route::get('/dashboard/{company}/conversaciones', function (Request $request, $c
     ]);
     })->name('dashboard.conversaciones');
 
-    // NOTA: Las rutas de Equipo y Etiquetas ya no son necesarias
-    // porque están integradas como embed dentro del Dashboard principal
-    
-    /*
-    // Ruta para Equipo (Teams Management) - DESHABILITADA
-    Route::get('/dashboard/{company}/equipo', function (Request $request, $company) {
-        $user = auth()->user();
-        $company = $user->company()->where('slug', $company)->firstOrFail();
-
-        return Inertia::render('Equipo', [
-            'user' => $user,
-            'company' => $company
-        ]);
-    })->name('dashboard.equipo');
-
-    // Ruta para Etiquetas (Labels Management) - DESHABILITADA
-    Route::get('/dashboard/{company}/etiquetas', function (Request $request, $company) {
-        $user = auth()->user();
-        $company = $user->company()->where('slug', $company)->firstOrFail();
-
-        return Inertia::render('Etiquetas', [
-            'user' => $user,
-            'company' => $company
-        ]);
-    })->name('dashboard.etiquetas');
-    */
-});
+    });
 
 // Chatwoot API Routes - CONSOLIDADO: Usar Api\ChatwootController para consistencia
 Route::middleware(['auth', 'verified'])->group(function () {
