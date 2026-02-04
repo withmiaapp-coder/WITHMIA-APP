@@ -678,13 +678,26 @@ class ChatwootController extends Controller
                 ], 403);
             }
 
+            // 🐛 DEBUG: Log de valores antes del query
+            Log::debug('sendMessage: Buscando conversación', [
+                'conversation_id' => $id,
+                'conversation_id_type' => gettype($id),
+                'account_id' => $this->accountId,
+                'account_id_type' => gettype($this->accountId),
+                'inbox_id' => $this->inboxId,
+                'user_id' => $this->userId
+            ]);
+
             // PASO 1: Validar que la conversación pertenece al inbox del usuario (BD DIRECTA)
             // 🚀 OPTIMIZACIÓN: Query directo en lugar de HTTP API
+            // 🔧 FIX: Asegurar que account_id sea entero para la comparación
+            $accountIdInt = (int) $this->accountId;
+            
             $conversation = \Illuminate\Support\Facades\DB::connection('chatwoot')
                 ->table('conversations')
                 ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
                 ->where('conversations.id', $id)
-                ->where('conversations.account_id', $this->accountId)
+                ->where('conversations.account_id', $accountIdInt)
                 ->select(
                     'conversations.id',
                     'conversations.inbox_id',
@@ -694,9 +707,19 @@ class ChatwootController extends Controller
                 ->first();
 
             if (!$conversation) {
+                // 🐛 DEBUG: Intentar buscar sin filtro de account para ver si existe
+                $convExists = \Illuminate\Support\Facades\DB::connection('chatwoot')
+                    ->table('conversations')
+                    ->where('id', $id)
+                    ->first(['id', 'account_id', 'inbox_id']);
+                    
                 Log::warning('Conversación no encontrada al enviar mensaje', [
                     'user_id' => $this->userId,
-                    'conversation_id' => $id
+                    'conversation_id' => $id,
+                    'account_id_used' => $accountIdInt,
+                    'conv_exists_in_other_account' => $convExists ? true : false,
+                    'conv_actual_account' => $convExists->account_id ?? 'N/A',
+                    'conv_actual_inbox' => $convExists->inbox_id ?? 'N/A'
                 ]);
                 
                 return response()->json([
