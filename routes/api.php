@@ -897,6 +897,42 @@ Route::post('/chatwoot/webhook/{instance}', [\App\Http\Controllers\Api\ChatwootW
 
 Route::post('/chatwoot/webhook', [\App\Http\Controllers\Api\ChatwootWebhookController::class, 'handleWebhook']);
 
+// 🔓 Utility: Unblock phone in Redis (for bot session management)
+Route::delete('/unblock-phone/{phone}', function ($phone) {
+    // Validate secret key
+    $secretKey = request()->header('X-Secret-Key');
+    if ($secretKey !== config('app.debug_key', env('DEBUG_SECRET_KEY', 'withmia-debug-2026-secure'))) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    $deleted = \Illuminate\Support\Facades\Redis::del($phone);
+    
+    return response()->json([
+        'success' => true,
+        'phone' => $phone,
+        'deleted' => $deleted,
+        'message' => "Unblocked phone {$phone}"
+    ]);
+});
+
+Route::get('/check-phone-block/{phone}', function ($phone) {
+    $secretKey = request()->header('X-Secret-Key');
+    if ($secretKey !== config('app.debug_key', env('DEBUG_SECRET_KEY', 'withmia-debug-2026-secure'))) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    $value = \Illuminate\Support\Facades\Redis::get($phone);
+    
+    return response()->json([
+        'success' => true,
+        'phone' => $phone,
+        'blocked' => !empty($value),
+        'value' => $value
+    ]);
+});
+
 // ⚠️ ALIAS ELIMINADO: /evolution/webhook → Usar /evolution-whatsapp/webhook
 // La ruta duplicada fue removida. Actualizar configuración de Evolution si es necesario.
 
