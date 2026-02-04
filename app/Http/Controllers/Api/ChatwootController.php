@@ -691,15 +691,19 @@ class ChatwootController extends Controller
             // PASO 1: Validar que la conversación pertenece al inbox del usuario (BD DIRECTA)
             // 🚀 OPTIMIZACIÓN: Query directo en lugar de HTTP API
             // 🔧 FIX: Asegurar que account_id sea entero para la comparación
+            // 🔧 FIX: Buscar por id O display_id (frontend usa display_id)
             $accountIdInt = (int) $this->accountId;
             
             $conversation = \Illuminate\Support\Facades\DB::connection('chatwoot')
                 ->table('conversations')
                 ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
-                ->where('conversations.id', $id)
+                ->where(function($q) use ($id) {
+                    $q->where('conversations.id', $id)->orWhere('conversations.display_id', $id);
+                })
                 ->where('conversations.account_id', $accountIdInt)
                 ->select(
                     'conversations.id',
+                    'conversations.display_id',
                     'conversations.inbox_id',
                     'contacts.phone_number',
                     'contacts.identifier'
@@ -710,8 +714,10 @@ class ChatwootController extends Controller
                 // 🐛 DEBUG: Intentar buscar sin filtro de account para ver si existe
                 $convExists = \Illuminate\Support\Facades\DB::connection('chatwoot')
                     ->table('conversations')
-                    ->where('id', $id)
-                    ->first(['id', 'account_id', 'inbox_id']);
+                    ->where(function($q) use ($id) {
+                        $q->where('id', $id)->orWhere('display_id', $id);
+                    })
+                    ->first(['id', 'display_id', 'account_id', 'inbox_id']);
                     
                 Log::warning('Conversación no encontrada al enviar mensaje', [
                     'user_id' => $this->userId,
