@@ -871,9 +871,10 @@ class ChatwootController extends Controller
 
                 try {
                     broadcast(new \App\Events\NewMessageReceived(
-                        $this->inboxId,
-                        $conversation->display_id ?? $id,
-                        $messagePayload
+                        $messagePayload,                    // $message
+                        $conversation->display_id ?? $id,   // $conversationId
+                        $this->inboxId,                     // $inboxId
+                        $this->accountId                    // $accountId
                     ))->toOthers(); // toOthers() para no enviarse a sí mismo
                     
                     Log::debug('📡 Mensaje broadcast enviado', [
