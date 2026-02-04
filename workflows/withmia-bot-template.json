@@ -1966,6 +1966,15 @@
                                                                                    "rightValue":  false,
                                                                                    "id":  "check-not-private-outgoing",
                                                                                    "leftValue":  "={{ $json.private === true || $json.body?.private === true }}"
+                                                                               },
+                                                                               {
+                                                                                   "operator":  {
+                                                                                                    "operation":  "notContains",
+                                                                                                    "type":  "string"
+                                                                                                },
+                                                                                   "rightValue":  "withmia",
+                                                                                   "id":  "check-not-bot",
+                                                                                   "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || '').toLowerCase() }}"
                                                                                }
                                                                            ],
                                                             "combinator":  "and"
@@ -4638,6 +4647,15 @@
                                                                                                          "rightValue":  false,
                                                                                                          "id":  "check-not-private-outgoing",
                                                                                                          "leftValue":  "={{ $json.private === true || $json.body?.private === true }}"
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "operator":  {
+                                                                                                                          "operation":  "notContains",
+                                                                                                                          "type":  "string"
+                                                                                                                      },
+                                                                                                         "rightValue":  "withmia",
+                                                                                                         "id":  "check-not-bot",
+                                                                                                         "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || '').toLowerCase() }}"
                                                                                                      }
                                                                                                  ],
                                                                                   "combinator":  "and"
