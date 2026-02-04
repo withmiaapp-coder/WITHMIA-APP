@@ -363,7 +363,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     currentPage,
     updateMessagesCache, // ✅ NUEVO: Para actualizar caché de mensajes
     addMessageToCache, // ✅ NUEVO: Para agregar mensaje a caché
-    invalidateMessagesCache, // ✅ NUEVO: Para invalidar caché y forzar reload
     // 🏷️ NUEVOS: Funciones de asignación y estado
     assignConversation,
     changeConversationStatus,
