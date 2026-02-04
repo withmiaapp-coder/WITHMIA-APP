@@ -2949,5 +2949,104 @@ Route::get('/debug/session-routing-diagnostic', function () {
     }
 });
 
+// ================================================
+// 🐛 DEBUG: Verificar conversación específica en Chatwoot
+// ================================================
+Route::get('/check-conversation/{id}', function ($id) {
+    try {
+        // Buscar en la BD de Chatwoot sin filtro de account
+        $conversation = DB::connection('chatwoot')
+            ->table('conversations')
+            ->leftJoin('contacts', 'conversations.contact_id', '=', 'contacts.id')
+            ->where('conversations.id', $id)
+            ->select(
+                'conversations.id',
+                'conversations.account_id',
+                'conversations.inbox_id',
+                'conversations.status',
+                'conversations.display_id',
+                'contacts.phone_number',
+                'contacts.identifier',
+                'contacts.name as contact_name'
+            )
+            ->first();
+            
+        if (!$conversation) {
+            return response()->json([
+                'success' => false,
+                'message' => "Conversación {$id} NO existe en Chatwoot"
+            ], 404);
+        }
+        
+        // Buscar todos los accounts
+        $accounts = DB::connection('chatwoot')
+            ->table('accounts')
+            ->select('id', 'name')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'conversation' => $conversation,
+            'all_accounts' => $accounts,
+            'note' => "Verifica que account_id={$conversation->account_id} coincide con el del usuario"
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// ================================================
+// 🐛 DEBUG: Verificar configuración de usuario autenticado
+// ================================================
+Route::get('/check-user-chatwoot-config/{userId}', function ($userId) {
+    try {
+        $user = \App\Models\User::with('company')->find($userId);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => "Usuario {$userId} no encontrado"
+            ], 404);
+        }
+        
+        $company = $user->company;
+        
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'chatwoot_inbox_id' => $user->chatwoot_inbox_id,
+                'chatwoot_agent_token' => $user->chatwoot_agent_token ? '***set***' : null,
+                'company_slug' => $user->company_slug
+            ],
+            'company' => $company ? [
+                'id' => $company->id,
+                'name' => $company->name,
+                'slug' => $company->slug,
+                'chatwoot_account_id' => $company->chatwoot_account_id,
+                'chatwoot_account_id_type' => gettype($company->chatwoot_account_id),
+                'chatwoot_api_key' => $company->chatwoot_api_key ? '***set***' : null
+            ] : null,
+            'resolved_config' => [
+                'account_id' => $company && $company->chatwoot_account_id 
+                    ? $company->chatwoot_account_id 
+                    : config('chatwoot.account_id', '1'),
+                'inbox_id' => $user->chatwoot_inbox_id
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 
 }); // Cierre del grupo middleware de seguridad
