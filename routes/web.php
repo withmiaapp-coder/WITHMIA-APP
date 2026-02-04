@@ -14,10 +14,12 @@ use App\Http\Controllers\AttachmentProxyController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
-// TEST ROUTE - muy simple para verificar que las rutas funcionan
-Route::get('/test-route', function () {
-    return response()->json(['status' => 'ok', 'time' => now()->toISOString()]);
-});
+// TEST ROUTE - solo en desarrollo
+if (app()->environment('local', 'development', 'staging')) {
+    Route::get('/test-route', function () {
+        return response()->json(['status' => 'ok', 'time' => now()->toISOString()]);
+    });
+}
 
 // ============================================================================
 // PROXY DE IMÁGENES - PRIMERA RUTA (máxima prioridad, sin middleware)
