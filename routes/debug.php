@@ -2486,6 +2486,24 @@ Route::get('/list-chatwoot-webhooks', function () {
     }
 });
 
+/**
+ * Optimiza los webhooks de n8n existentes para evitar ejecuciones duplicadas
+ * Reduce las suscripciones a solo 'message_created'
+ */
+Route::post('/optimize-n8n-webhooks', function () {
+    try {
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $result = $chatwootService->optimizeN8nWebhooks();
+        
+        return response()->json($result);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::post('/cleanup-chatwoot-webhooks', function (Request $request) {
     try {
         $chatwootService = app(\App\Services\ChatwootService::class);

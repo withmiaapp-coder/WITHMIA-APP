@@ -166,6 +166,76 @@ class ChatwootService
     }
 
     /**
+     * Optimiza los webhooks de n8n existentes reduciendo las suscripciones
+     * para evitar ejecuciones duplicadas.
+     * 
+     * Solo necesitamos 'message_created' para el bot.
+     * 
+     * @return array Lista de webhooks actualizados
+     */
+    public function optimizeN8nWebhooks(): array
+    {
+        $result = $this->listWebhooks();
+        
+        if (!$result['success']) {
+            return ['success' => false, 'error' => 'Could not list webhooks'];
+        }
+
+        $webhooks = $result['webhooks'] ?? [];
+        $updated = [];
+        $errors = [];
+
+        foreach ($webhooks as $webhook) {
+            $url = $webhook['url'] ?? '';
+            $subscriptions = $webhook['subscriptions'] ?? [];
+            
+            // Solo procesar webhooks que apuntan a n8n
+            if (!str_contains($url, 'n8n') && !str_contains($url, '/webhook/')) {
+                continue;
+            }
+
+            // Si ya solo tiene message_created, saltar
+            if ($subscriptions === ['message_created']) {
+                continue;
+            }
+
+            // Actualizar a solo message_created
+            $updateResult = $this->updateWebhook(
+                $webhook['id'],
+                $url,
+                ['message_created']
+            );
+
+            if ($updateResult['success']) {
+                $updated[] = [
+                    'id' => $webhook['id'],
+                    'url' => $url,
+                    'old_subscriptions' => $subscriptions,
+                    'new_subscriptions' => ['message_created'],
+                ];
+                Log::info('ChatwootService: Webhook de n8n optimizado', [
+                    'webhook_id' => $webhook['id'],
+                    'url' => $url,
+                ]);
+            } else {
+                $errors[] = [
+                    'id' => $webhook['id'],
+                    'error' => $updateResult['error'] ?? 'Unknown error',
+                ];
+            }
+        }
+
+        return [
+            'success' => true,
+            'updated' => $updated,
+            'errors' => $errors,
+            'message' => count($updated) > 0 
+                ? "Optimized " . count($updated) . " webhook(s) to reduce n8n executions"
+                : "No webhooks needed optimization",
+        ];
+    }
+
+    /**
      * Lista todos los webhooks de la cuenta
      */
     public function listWebhooks(): array
