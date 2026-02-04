@@ -2504,6 +2504,62 @@ Route::post('/optimize-n8n-webhooks', function () {
     }
 });
 
+/**
+ * Desbloquear un número de teléfono en Redis (para n8n)
+ * El número debe ser sin + y sin espacios (ej: 56956333446)
+ */
+Route::delete('/unblock-phone/{phone}', function ($phone) {
+    try {
+        // Limpiar el número (quitar + y espacios)
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // El key en Redis es el número de teléfono
+        $deleted = \Illuminate\Support\Facades\Redis::del($phone);
+        
+        // También intentar con el prefijo que podría usar n8n
+        $deleted2 = \Illuminate\Support\Facades\Redis::del("bot-state:{$phone}");
+        
+        return response()->json([
+            'success' => true,
+            'phone' => $phone,
+            'deleted' => $deleted + $deleted2,
+            'message' => "Unblocked phone {$phone}"
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * Ver el estado de bloqueo de un número en Redis
+ */
+Route::get('/check-phone-block/{phone}', function ($phone) {
+    try {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        $value1 = \Illuminate\Support\Facades\Redis::get($phone);
+        $value2 = \Illuminate\Support\Facades\Redis::get("bot-state:{$phone}");
+        
+        return response()->json([
+            'success' => true,
+            'phone' => $phone,
+            'blocked' => !empty($value1) || !empty($value2),
+            'values' => [
+                'direct' => $value1,
+                'bot-state' => $value2
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::post('/cleanup-chatwoot-webhooks', function (Request $request) {
     try {
         $chatwootService = app(\App\Services\ChatwootService::class);
