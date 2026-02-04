@@ -2434,3 +2434,4 @@ Route::get('/chatwoot-debug', function () {
 if (app()->environment('local', 'development', 'staging')) {
     require __DIR__ . '/debug.php';
 }
+
