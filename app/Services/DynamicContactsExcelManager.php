@@ -20,8 +20,8 @@ class DynamicContactsExcelManager
 
     public function __construct()
     {
-        $this->evolutionApiUrl = env('EVOLUTION_API_URL', 'https://localhost:8080');
-        $this->evolutionApiKey = env('EVOLUTION_API_KEY', '280D0A06A47B-4F4C-BB9F-F3B3460AA24C');
+        $this->evolutionApiUrl = config('evolution.api_url');
+        $this->evolutionApiKey = config('evolution.api_key');
     }
 
     /**

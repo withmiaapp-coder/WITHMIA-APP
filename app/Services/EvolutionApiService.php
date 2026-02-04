@@ -9,15 +9,15 @@ use Illuminate\Support\Facades\Redis;
 class EvolutionApiService
 {
     private string $baseUrl;
-    private string $apiKey;
+    private ?string $apiKey;
     private int $cacheTtl = 5; // Tiempo de vida del caché en segundos (reducido para polling rápido)
     private int $timeout = 5; // Timeout en segundos para evitar bloqueos
     private int $connectTimeout = 3; // Timeout de conexión
 
     public function __construct()
     {
-        $this->baseUrl = config('evolution.api_url', 'http://localhost:8080');
-        $this->apiKey = config('evolution.api_key', 'withmia_evolution_api_key_2025_secure_token');
+        $this->baseUrl = config('evolution.api_url');
+        $this->apiKey = config('evolution.api_key');
     }
 
     /**

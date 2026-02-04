@@ -17,7 +17,7 @@ class KnowledgeController extends Controller
 
     public function __construct()
     {
-        $this->qdrantHost = rtrim(env('QDRANT_HOST', 'http://localhost:6333'), '/');
+        $this->qdrantHost = rtrim(config('qdrant.url'), '/');
     }
 
     /**
@@ -238,7 +238,7 @@ class KnowledgeController extends Controller
                 'filename' => 'informacion_empresa.txt',
                 'category' => 'empresa',
                 'text' => $companyText,
-                'openai_api_key' => env('OPENAI_API_KEY'),
+                'openai_api_key' => config('services.openai.api_key'),
                 'qdrant_host' => $qdrantHost,
             ];
 
@@ -487,7 +487,7 @@ class KnowledgeController extends Controller
                 'company_name' => Utf8Helper::ensureUtf8($company->name ?? 'la empresa'),
                 'user_message' => Utf8Helper::ensureUtf8($userMessage),
                 'context' => $context,
-                'openai_api_key' => env('OPENAI_API_KEY'),
+                'openai_api_key' => config('services.openai.api_key'),
                 'qdrant_host' => config('services.qdrant.host'),
                 'timestamp' => now()->toIso8601String(),
                 // Agregar información de deduplicación
@@ -1028,7 +1028,7 @@ class KnowledgeController extends Controller
             try {
                 $companySlug = $company->slug ?? 'company_' . $company->id;
                 $collectionName = $document->qdrant_collection ?? "company_{$companySlug}_knowledge";
-                $qdrantUrl = rtrim(env('QDRANT_HOST', 'http://localhost:6333'), '/');
+                $qdrantUrl = rtrim(config('qdrant.url'), '/');
 
                 // Get vector IDs from qdrant_vector_ids column (JSON array)
                 if (!empty($document->qdrant_vector_ids)) {
@@ -1366,7 +1366,7 @@ class KnowledgeController extends Controller
             $n8nApiKey = config('services.n8n.api_key');
 
             // Get OpenAI API key - company specific or fallback to global
-            $openaiApiKey = $company->settings['openai_api_key'] ?? env('OPENAI_API_KEY');
+            $openaiApiKey = $company->settings['openai_api_key'] ?? config('services.openai.api_key');
             
             if (!$openaiApiKey) {
                 return response()->json([

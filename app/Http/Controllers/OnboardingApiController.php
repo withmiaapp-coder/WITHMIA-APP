@@ -342,7 +342,7 @@ class OnboardingApiController extends Controller
     {
         try {
             // Crear cliente OpenAI con API key desde .env
-            $apiKey = env('OPENAI_API_KEY');
+            $apiKey = config('services.openai.api_key');
             
             if (empty($apiKey)) {
                 throw new \Exception('OpenAI API key not configured');

@@ -12,18 +12,8 @@ class QdrantService
 
     public function __construct()
     {
-        // Priorizar URL pública para evitar problemas de DNS interno
-        // El orden es: QDRANT_URL (pública) > QDRANT_HOST > fallback interno
-        $url = env('RAILWAY_SERVICE_QDRANT_URL');
-        
-        if ($url) {
-            // Asegurar que tenga protocolo https
-            $this->baseUrl = 'https://' . ltrim($url, 'https://');
-        } else {
-            $this->baseUrl = env('QDRANT_HOST', 'http://qdrant.railway.internal:6333');
-        }
-        
-        $this->apiKey = env('QDRANT_API_KEY');
+        $this->baseUrl = config('qdrant.url');
+        $this->apiKey = config('qdrant.api_key');
         
         Log::debug("QdrantService initialized", ['baseUrl' => $this->baseUrl]);
     }
@@ -339,7 +329,7 @@ class QdrantService
     public function generateEmbedding(string $text): array
     {
         try {
-            $openaiKey = env('OPENAI_API_KEY');
+            $openaiKey = config('services.openai.api_key');
             
             if (!$openaiKey) {
                 throw new \Exception('OpenAI API key not configured');

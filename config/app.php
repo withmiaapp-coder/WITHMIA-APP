@@ -137,6 +137,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Secret Key
+    |--------------------------------------------------------------------------
+    |
+    | This key is used for admin API operations that require authentication.
+    |
+    */
+    'admin_secret_key' => env('ADMIN_SECRET_KEY'),
+
 ];
 
 // Deploy trigger: 01/28/2026 08:55:12

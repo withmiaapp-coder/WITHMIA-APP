@@ -12,9 +12,8 @@ class N8nService
 
     public function __construct()
     {
-        // Usar red privada de Railway si está disponible
-        $this->baseUrl = env('N8N_INTERNAL_URL', env('N8N_URL', 'http://n8n.railway.internal:5678'));
-        $this->apiKey = env('N8N_API_KEY', '');
+        $this->baseUrl = config('n8n.url');
+        $this->apiKey = config('n8n.api_key') ?? '';
     }
 
     /**
@@ -268,7 +267,7 @@ class N8nService
     {
         try {
             // Usar URL interna para webhooks dentro de Railway
-            $internalUrl = env('N8N_INTERNAL_URL', 'http://n8n.railway.internal:5678');
+            $internalUrl = config('n8n.url');
             
             $response = Http::timeout(10)
                 ->post("{$internalUrl}/webhook/{$webhookPath}", $data);

@@ -21,14 +21,14 @@ class CleanupUnconnectedInstances extends Command
     
     protected $description = 'Elimina instancias de Evolution API que no están conectadas (estado != open)';
 
-    private string $baseUrl;
-    private string $apiKey;
+    private ?string $baseUrl;
+    private ?string $apiKey;
 
     public function __construct()
     {
         parent::__construct();
-        $this->baseUrl = config('evolution.api_url', 'http://localhost:8080');
-        $this->apiKey = config('evolution.api_key', 'withmia_evolution_api_key_2025_secure_token');
+        $this->baseUrl = config('evolution.api_url');
+        $this->apiKey = config('evolution.api_key');
     }
 
     public function handle(): int

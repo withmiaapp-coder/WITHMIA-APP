@@ -529,7 +529,7 @@ Route::get('/create-n8n-workflow/{instanceName}', function ($instanceName) {
         
         // Replace placeholders in template
         $templateJson = json_encode($templateWorkflow);
-        $appUrl = env('APP_URL', 'https://app.withmia.com');
+        $appUrl = config('app.url');
         $replacements = [
             '{{COMPANY_SLUG}}' => $companySlug ?? 'default',
             '{{COMPANY_NAME}}' => $companyName,

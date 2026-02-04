@@ -288,8 +288,8 @@ class EvolutionApiController extends Controller
     private function cleanupIfNotConnected(string $instanceName): void
     {
         try {
-            $baseUrl = config('evolution.api_url', 'http://localhost:8080');
-            $apiKey = config('evolution.api_key', 'withmia_evolution_api_key_2025_secure_token');
+            $baseUrl = config('evolution.api_url');
+            $apiKey = config('evolution.api_key');
 
             // Verificar estado actual de la instancia
             $response = Http::withHeaders([
@@ -1395,7 +1395,7 @@ class EvolutionApiController extends Controller
             $companySlug = $company ? ($company->slug ?? 'company_' . $instance->company_id) : 'company_' . $instance->company_id;
             $companyName = $company ? ($company->name ?? $workflowName) : $workflowName;
             $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
-            $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? env('OPENAI_API_KEY')) : env('OPENAI_API_KEY');
+            $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? config('services.openai.api_key')) : config('services.openai.api_key');
             $appUrl = config('app.url');
             $evolutionApiUrl = config('evolution.api_url');
             $evolutionApiKey = config('evolution.api_key');

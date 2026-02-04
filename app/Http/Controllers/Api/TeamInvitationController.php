@@ -414,7 +414,7 @@ class TeamInvitationController extends Controller
             $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
             
             // Verificar autenticación: usuario admin o clave secreta
-            if (!$user && $secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+            if (!$user && $secretKey !== config('app.admin_secret_key')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -539,7 +539,7 @@ class TeamInvitationController extends Controller
             $user = auth()->user();
             
             // Verificar autenticación
-            if (!$user && $secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+            if (!$user && $secretKey !== config('app.admin_secret_key')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -670,7 +670,7 @@ class TeamInvitationController extends Controller
         try {
             $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
             
-            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+            if ($secretKey !== config('app.admin_secret_key')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -821,7 +821,7 @@ class TeamInvitationController extends Controller
         try {
             $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');
             
-            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+            if ($secretKey !== config('app.admin_secret_key')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -900,7 +900,7 @@ class TeamInvitationController extends Controller
         try {
             $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');
             
-            if ($secretKey !== env('ADMIN_SECRET_KEY', 'mia-sync-2024')) {
+            if ($secretKey !== config('app.admin_secret_key')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
