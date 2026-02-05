@@ -913,14 +913,18 @@ class ChatwootController extends Controller
                             'bot_config' => $botConfig
                         ]);
                         
-                        if ($messageUpper === $unlockKeyword) {
-                            // 🔓 REACTIVAR BOT: El agente escribió la palabra secreta
-                            $redis->del($phoneNumber);
-                            Log::channel('stderr')->info('🔓 [HUMAN_TAKEOVER] Bot REACTIVADO', [
-                                'phone' => $phoneNumber,
-                                'keyword' => $unlockKeyword
-                            ]);
-                        } else {
+                        // 🔓 REACTIVACIÓN POR PALABRA SECRETA - DESACTIVADO TEMPORALMENTE
+                        // El bot solo se reactiva cuando expira el TTL de Redis
+                        // if ($messageUpper === $unlockKeyword) {
+                        //     $redis->del($phoneNumber);
+                        //     Log::channel('stderr')->info('🔓 [HUMAN_TAKEOVER] Bot REACTIVADO', [
+                        //         'phone' => $phoneNumber,
+                        //         'keyword' => $unlockKeyword
+                        //     ]);
+                        // } else {
+                        
+                        // Siempre pausar el bot cuando el agente envía un mensaje
+                        {
                             // 🛑 PAUSAR BOT: El agente envió un mensaje normal
                             $redis->setex($phoneNumber, $blockDuration, 'human-takeover');
                             Log::channel('stderr')->info('🛑 [HUMAN_TAKEOVER] Bot PAUSADO', [

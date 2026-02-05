@@ -962,7 +962,7 @@ export default function Entrenamiento({
                 <>
                   {/* Grid 2 columnas */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* Col 1: Palabra secreta para reactivar */}
+                    {/* Col 1: Palabra secreta para reactivar - DESACTIVADO TEMPORALMENTE
                     <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
                       <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
                         🔑 Tu palabra secreta
@@ -977,6 +977,7 @@ export default function Entrenamiento({
                       />
                       <p className="mt-1 text-[10px] text-gray-500">Escríbela para reactivar el bot</p>
                     </div>
+                    */
 
                     {/* Col 2: Cliente pide ayuda humana */}
                     <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
