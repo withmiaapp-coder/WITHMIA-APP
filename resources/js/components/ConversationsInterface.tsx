@@ -1055,19 +1055,40 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const event = wsEvent.event;
         const conversationId = wsEvent.conversationId;
         
-        // 🔒 DEDUPLICACIÓN - usar solo el ID del mensaje (sin Date.now que cambia)
+        // 🔒 DEDUPLICACIÓN MEJORADA - múltiples estrategias
         const messageId = wsEvent.message?.id || event?.message?.id;
-        const eventId = `msg-${conversationId}-${messageId}`;
-        if (processedEventsRef.current.has(eventId)) {
+        const sourceId = wsEvent.message?.source_id || event?.message?.source_id;
+        const content = wsEvent.message?.content || event?.message?.content || '';
+        
+        // Generar múltiples claves de deduplicación
+        const dedupKeys = [
+          `msg-${conversationId}-${messageId}`,
+          sourceId ? `src-${sourceId}` : null,
+          `content-${conversationId}-${content.substring(0, 50)}-${Math.floor(Date.now() / 5000)}` // 5 segundos ventana
+        ].filter(Boolean);
+        
+        // Verificar si alguna clave ya existe
+        const isDuplicate = dedupKeys.some(key => processedEventsRef.current.has(key));
+        if (isDuplicate) {
+          console.log('🚫 [DEDUP] Mensaje duplicado ignorado:', { messageId, sourceId, content: content.substring(0, 30) });
           return;
         }
-        processedEventsRef.current.add(eventId);
         
-        // Limpiar eventos antiguos
-        if (processedEventsRef.current.size > 100) {
+        // Marcar todas las claves como procesadas
+        dedupKeys.forEach(key => {
+          if (key) processedEventsRef.current.add(key);
+        });
+        
+        // Limpiar eventos antiguos (mantener últimos 200)
+        if (processedEventsRef.current.size > 200) {
           const iterator = processedEventsRef.current.values();
-          const firstItem = iterator.next().value;
-          if (firstItem) processedEventsRef.current.delete(firstItem);
+          for (let i = 0; i < 50; i++) {
+            const item = iterator.next().value;
+            if (item) processedEventsRef.current.delete(item);
+          }
+        }
+        
+        console.log('✅ [DEDUP] Mensaje nuevo procesado:', { messageId, sourceId, content: content.substring(0, 30) });
         }
 
         debugLog.log('📩 [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);

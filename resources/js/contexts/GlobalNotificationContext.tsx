@@ -500,6 +500,9 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         channel.listen('.message.received', (event: any) => {
           const messageId = event?.message?.id;
+          const sourceId = event?.message?.source_id;
+          
+          console.log('🔔 [GlobalNotif] .message.received:', { messageId, sourceId, content: event?.message?.content?.substring(0, 30) });
           
           // Filtrar mensajes de prueba o sin ID válido
           if (event?.message?.test === true || event?.test === true) {
@@ -516,19 +519,26 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             return;
           }
 
-          // Deduplicación
+          // Deduplicación mejorada: por ID y por source_id
           const messageKey = `${convId}-${messageId}`;
-          if (processedMessageIds.current.has(messageKey)) {
+          const sourceKey = sourceId ? `src-${sourceId}` : null;
+          
+          if (processedMessageIds.current.has(messageKey) || (sourceKey && processedMessageIds.current.has(sourceKey))) {
+            console.log('🚫 [GlobalNotif] Duplicado detectado, ignorando:', { messageKey, sourceKey });
             return;
           }
+          
           processedMessageIds.current.add(messageKey);
+          if (sourceKey) processedMessageIds.current.add(sourceKey);
+          
+          console.log('✅ [GlobalNotif] Mensaje nuevo, notificando subscribers:', messageSubscribers.current.size);
           
           // Limpiar IDs antiguos
           if (processedMessageIds.current.size > 200) {
             const iterator = processedMessageIds.current.values();
-            const firstItem = iterator.next().value;
-            if (firstItem) {
-              processedMessageIds.current.delete(firstItem);
+            for (let i = 0; i < 20; i++) {
+              const item = iterator.next().value;
+              if (item) processedMessageIds.current.delete(item);
             }
           }
 
