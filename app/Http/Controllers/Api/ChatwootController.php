@@ -847,10 +847,11 @@ class ChatwootController extends Controller
             $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
 
             if ($evolutionResult) {
-                Log::debug('✅ Mensaje enviado via Evolution (sin duplicado en Chatwoot)', [
+                Log::channel('stderr')->info('✅ [SEND_MESSAGE] Mensaje enviado via Evolution', [
                     'user_id' => $this->userId,
                     'conversation_id' => $id,
-                    'phone' => $contactPhone
+                    'phone' => $contactPhone,
+                    'message' => substr($messageContent, 0, 50)
                 ]);
 
                 // 🔄 BROADCAST: Emitir el mensaje por WebSocket para actualización en tiempo real
