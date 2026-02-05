@@ -225,7 +225,10 @@ export const useConversations = () => {
   
   // 🆕 Helper: Construir last_message con soporte para attachments
   const buildLastMessage = (conv: any) => {
-    const lastMsg = conv.last_non_activity_message;
+    // Buscar el último mensaje en múltiples ubicaciones posibles
+    const lastMsg = conv.last_non_activity_message 
+      || conv.messages?.[0] 
+      || conv.last_message;
     const attachments = lastMsg?.attachments || [];
     const content = lastMsg?.content || '';
     
@@ -247,7 +250,7 @@ export const useConversations = () => {
     
     return {
       content: displayContent,
-      timestamp: conv.last_activity_at || conv.created_at,
+      timestamp: lastMsg?.created_at || conv.last_activity_at || conv.created_at,
       sender: lastMsg?.message_type === 0 ? 'contact' : 'agent',
       attachments: attachments
     };
