@@ -76,19 +76,41 @@ class ChatwootWebhookController extends Controller
             if ($event === 'message_created' && $inboxId && $accountId) {
                 $conversationId = $data['conversation']['id'] ?? null;
                 $messageId = $data['id'] ?? null;
+                $sourceId = $data['source_id'] ?? null; // ID único de WhatsApp
+                $content = $data['content'] ?? '';
                 
-                // 🔒 DEDUPLICACIÓN: Prevenir broadcast duplicado del mismo mensaje
+                // 🔒 DEDUPLICACIÓN MEJORADA: Múltiples estrategias
+                // 1. Por message_id de Chatwoot
+                // 2. Por source_id de WhatsApp (más confiable)
+                // 3. Por hash de contenido + conversación (fallback)
+                $dedupKeys = [];
+                
                 if ($messageId) {
-                    $dedupKey = "message_broadcast_{$conversationId}_{$messageId}";
-                    if (\Cache::has($dedupKey)) {
-                        Log::debug('🚫 Mensaje ya procesado, ignorando duplicado', [
+                    $dedupKeys[] = "msg_id_{$conversationId}_{$messageId}";
+                }
+                if ($sourceId) {
+                    $dedupKeys[] = "msg_src_{$sourceId}";
+                }
+                // Hash del contenido como fallback
+                $contentHash = md5($conversationId . $content . floor(time() / 10)); // 10 segundos de ventana
+                $dedupKeys[] = "msg_hash_{$contentHash}";
+                
+                // Verificar si alguna clave ya existe
+                foreach ($dedupKeys as $key) {
+                    if (\Cache::has($key)) {
+                        Log::debug('🚫 Mensaje duplicado detectado', [
+                            'key' => $key,
                             'conversation_id' => $conversationId,
-                            'message_id' => $messageId
+                            'message_id' => $messageId,
+                            'source_id' => $sourceId
                         ]);
                         return response()->json(['status' => 'success', 'message' => 'Duplicate message ignored']);
                     }
-                    // Marcar como procesado por 30 segundos
-                    \Cache::put($dedupKey, true, 30);
+                }
+                
+                // Marcar todas las claves como procesadas (60 segundos)
+                foreach ($dedupKeys as $key) {
+                    \Cache::put($key, true, 60);
                 }
                 
                 $messageType = $data['message_type'] ?? null;
@@ -97,9 +119,10 @@ class ChatwootWebhookController extends Controller
                 Log::debug('📨 Chatwoot mensaje para broadcast', [
                     'conversation_id' => $conversationId,
                     'message_id' => $messageId,
+                    'source_id' => $sourceId,
                     'message_type' => $messageType,
                     'is_outgoing' => $isOutgoing,
-                    'content_preview' => substr($data['content'] ?? '', 0, 50)
+                    'content_preview' => substr($content, 0, 50)
                 ]);
                 
                 // Broadcast para TODOS los mensajes (entrantes y del bot)
