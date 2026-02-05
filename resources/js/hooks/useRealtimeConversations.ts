@@ -56,49 +56,15 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
           debugLog.error(`❌ Error en canal ${channelName}:`, error);
         });
 
-        // Listener: Nuevo mensaje recibido
-        channel.listen('.message.received', (event: any) => {
-          debugLog.log('📩 Nuevo mensaje recibido:', event);
-          
-          // 🧪 FILTRAR MENSAJES DE PRUEBA
-          if (event?.message?.test === true || event?.test === true) {
-            debugLog.log('🧪 [WS] Mensaje de PRUEBA detectado - ignorando');
-            return;
-          }
-          
-          // 🔢 Verificar conversation_id válido
-          const convId = event?.conversation_id || event?.conversation?.id;
-          if (!convId || convId <= 0) {
-            debugLog.log('⚠️ [WS] conversation_id inválido:', convId, '- ignorando');
-            return;
-          }
-          
-          setLastEventTime(new Date());
-
-          if (config.onNewMessage) {
-            config.onNewMessage(event);
-          }
-        });
-
-        // Listener: Conversación actualizada
-        channel.listen('.conversation.updated', (event: any) => {
-          debugLog.log('🔄 Conversación actualizada:', event);
-          setLastEventTime(new Date());
-
-          if (config.onConversationUpdated) {
-            config.onConversationUpdated(event);
-          }
-        });
-
-        // Listener: Mensaje actualizado (para estados read/delivered)
-        channel.listen('.message.updated', (event: any) => {
-          debugLog.log('📝 Mensaje actualizado:', event);
-          setLastEventTime(new Date());
-
-          if (config.onMessageUpdated) {
-            config.onMessageUpdated(event);
-          }
-        });
+        // ========================================
+        // NOTA: Los listeners de mensajes están DESHABILITADOS aquí
+        // porque GlobalNotificationContext ya maneja todo centralizadamente
+        // y distribuye los eventos a través del sistema de subscribers.
+        // Tener listeners aquí causaría mensajes duplicados.
+        // ========================================
+        
+        // Solo monitorear conexión, no escuchar mensajes
+        // (GlobalNotificationContext ya lo hace)
 
         // Monitorear estado de conexión
         if (echo.connector?.pusher?.connection) {
@@ -152,10 +118,7 @@ export const useRealtimeConversations = (config: RealtimeConfig) => {
         debugLog.log(`🔌 Desconectando de canal: inbox.${config.inboxId}`);
         
         try {
-          channelRef.current.stopListening('.message.received');
-          channelRef.current.stopListening('.message.updated');
-          channelRef.current.stopListening('.conversation.updated');
-
+          // Solo dejar el canal, los listeners ya no existen aquí
           if (echoRef.current) {
             echoRef.current.leave(`inbox.${config.inboxId}`);
           }
