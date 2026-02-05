@@ -1055,15 +1055,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const event = wsEvent.event;
         const conversationId = wsEvent.conversationId;
         
-        // ?? DEDUPLICACIÓN
-        const eventId = `${wsEvent.message?.id || 'unknown'}-${Date.now()}`;
+        // 🔒 DEDUPLICACIÓN - usar solo el ID del mensaje (sin Date.now que cambia)
+        const messageId = wsEvent.message?.id || event?.message?.id;
+        const eventId = `msg-${conversationId}-${messageId}`;
         if (processedEventsRef.current.has(eventId)) {
           return;
         }
         processedEventsRef.current.add(eventId);
         
         // Limpiar eventos antiguos
-        if (processedEventsRef.current.size > 50) {
+        if (processedEventsRef.current.size > 100) {
           const iterator = processedEventsRef.current.values();
           const firstItem = iterator.next().value;
           if (firstItem) processedEventsRef.current.delete(firstItem);
