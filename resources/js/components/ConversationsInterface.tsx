@@ -1204,7 +1204,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             const existingMessages = prev.messages || [];
             
-            console.log('📊 [setActiveConv] Mensajes actuales:', existingMessages.length, 'Nuevo mensaje ID:', newMessage.id, 'source_id:', newMessage.source_id);
+            // Log últimos 3 mensajes para debug
+            const lastThree = existingMessages.slice(-3).map((m: any) => ({ id: m.id, source_id: m.source_id, content: m.content?.substring(0, 20) }));
+            console.log('📊 [setActiveConv] Últimos 3 mensajes:', JSON.stringify(lastThree));
+            console.log('📊 [setActiveConv] Total:', existingMessages.length, 'Nuevo ID:', newMessage.id, 'source_id:', newMessage.source_id);
             
             // 🔒 Verificar duplicados - comparación robusta
             const messageExists = existingMessages.some((m: any) => {
@@ -1227,20 +1230,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             });
             
             if (messageExists) {
-              console.log('🚫 [setActiveConv] Mensaje ya existe, no agregando:', newMessage.id);
-              // Reemplazar mensaje optimista con el real
-              const updatedMessages = existingMessages.map((m: any) => {
-                if ((m._isOptimistic || String(m.id).startsWith('temp-')) && 
-                    m.content === newMessage.content && 
-                    (newMessage.message_type === 1 || newMessage.sender === 'agent')) {
-                  return { ...newMessage, _isOptimistic: false };
-                }
-                return m;
-              });
-              if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, updatedMessages);
-              return { ...prev, messages: updatedMessages };
+              console.log('🚫 [setActiveConv] Mensaje YA EXISTE, retornando sin cambios');
+              return prev; // NO modificar el state si ya existe
             }
             
+            console.log('➕ [setActiveConv] Agregando mensaje nuevo:', newMessage.id);
             const newMessages = [...existingMessages, newMessage];
             if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, newMessages);
             return { ...prev, messages: newMessages };
