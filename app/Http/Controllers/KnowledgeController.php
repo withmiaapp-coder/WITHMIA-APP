@@ -190,10 +190,15 @@ class KnowledgeController extends Controller
         try {
             // Build the company info text for the knowledge base
             $assistantName = $company->assistant_name ?? 'WITHMIA';
+            $companyName = $company->name ?? 'la empresa';
             
             $companyText = "INFORMACIÓN DE LA EMPRESA Y ASISTENTE\n\n";
-            $companyText .= "Nombre del Asistente de IA: " . $assistantName . "\n\n";
-            $companyText .= "Nombre de la Empresa: " . ($company->name ?? 'No especificado') . "\n\n";
+            $companyText .= "IDENTIDAD DEL ASISTENTE:\n";
+            $companyText .= "- Mi nombre es " . $assistantName . "\n";
+            $companyText .= "- Cuando me pregunten cómo me llamo, debo responder que me llamo " . $assistantName . "\n";
+            $companyText .= "- Soy el asistente virtual de " . $companyName . "\n\n";
+            
+            $companyText .= "Nombre de la Empresa: " . $companyName . "\n\n";
             
             if (!empty($company->website)) {
                 $companyText .= "Sitio Web: " . $company->website . "\n\n";
@@ -208,7 +213,7 @@ class KnowledgeController extends Controller
                 $companyText .= "Tipo de Clientes: " . $clientTypeText . "\n\n";
             }
             
-            $companyText .= "IMPORTANTE: Cuando respondas, debes identificarte como " . $assistantName . ", el asistente de inteligencia artificial de " . ($company->name ?? 'la empresa') . ".\n";
+            $companyText .= "IMPORTANTE: Cuando respondas a preguntas sobre tu nombre o identidad, debes decir que te llamas " . $assistantName . " y eres el asistente de " . $companyName . ".\n";
 
             // Don't send if there's no meaningful content
             if (strlen($companyText) < 60) {
@@ -281,9 +286,10 @@ class KnowledgeController extends Controller
             // Construir el texto con toda la información de la empresa
             $companyInfoParts = [];
             
-            if (!empty($company->assistant_name)) {
-                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
-            }
+            $assistantName = $company->assistant_name ?? 'MIA';
+            
+            // Información explícita sobre la identidad del asistente
+            $companyInfoParts[] = "IDENTIDAD DEL ASISTENTE:\n- Mi nombre es {$assistantName}\n- Cuando me pregunten cómo me llamo, debo responder que me llamo {$assistantName}\n- Soy el asistente virtual de {$company->name}";
             
             if (!empty($company->name)) {
                 $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
