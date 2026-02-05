@@ -1202,9 +1202,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             const existingMessages = prev.messages || [];
             
-            // Verificar duplicados
+            // 🔒 Verificar duplicados - comparación robusta
             const messageExists = existingMessages.some((m: any) => {
-              if (m.id === newMessage.id) return true;
+              // Comparar por ID (numérico para evitar string vs number)
+              if (Number(m.id) === Number(newMessage.id)) return true;
+              // Comparar por source_id (ID de WhatsApp)
+              if (newMessage.source_id && m.source_id === newMessage.source_id) return true;
+              // Comparar mensajes optimistas por contenido
               if (newMessage.message_type === 1 || newMessage.sender === 'agent') {
                 const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-');
                 if (isOptimistic && m.content === newMessage.content) return true;
@@ -1213,6 +1217,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             });
             
             if (messageExists) {
+              console.log('🚫 [setActiveConv] Mensaje ya existe, no agregando:', newMessage.id);
               // Reemplazar mensaje optimista con el real
               const updatedMessages = existingMessages.map((m: any) => {
                 if ((m._isOptimistic || String(m.id).startsWith('temp-')) && 
@@ -1266,14 +1271,26 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     const allMessages = activeConversation.messages || [];
     
-    // 🔒 PRIMERO: Deduplicar por ID de mensaje (mismo ID = mismo mensaje)
-    const seenIds = new Set<string | number>();
+    // 🔒 DEDUPLICACIÓN ROBUSTA: por ID numérico Y por source_id
+    const seenIds = new Set<number>();
+    const seenSourceIds = new Set<string>();
     const uniqueMessages = allMessages.filter((m: any) => {
-      const id = m.id;
-      if (seenIds.has(id)) {
-        return false; // Ya vimos este ID, es duplicado
+      const numId = Number(m.id);
+      const sourceId = m.source_id;
+      
+      // Si ya vimos este ID numérico, es duplicado
+      if (!isNaN(numId) && seenIds.has(numId)) {
+        console.log('🔄 [filteredMessages] Duplicado por ID:', numId);
+        return false;
       }
-      seenIds.add(id);
+      // Si ya vimos este source_id (WhatsApp ID), es duplicado
+      if (sourceId && seenSourceIds.has(sourceId)) {
+        console.log('🔄 [filteredMessages] Duplicado por source_id:', sourceId);
+        return false;
+      }
+      
+      if (!isNaN(numId)) seenIds.add(numId);
+      if (sourceId) seenSourceIds.add(sourceId);
       return true;
     });
     
