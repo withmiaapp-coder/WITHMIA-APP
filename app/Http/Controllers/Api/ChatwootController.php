@@ -882,7 +882,7 @@ class ChatwootController extends Controller
                         $user = auth()->user();
                         $botConfig = $this->getBotConfigForUser($user);
                         $unlockKeyword = strtoupper($botConfig['unlock_keyword'] ?? 'BOT');
-                        $blockDuration = (int)($botConfig['block_duration'] ?? 600); // Default 10 min
+                        $blockDuration = (int)($botConfig['block_duration'] ?? 60);
                         
                         $messageUpper = strtoupper(trim($messageContent));
                         
@@ -892,7 +892,8 @@ class ChatwootController extends Controller
                             'message' => $messageUpper,
                             'unlock_keyword' => $unlockKeyword,
                             'block_duration' => $blockDuration,
-                            'is_unlock' => ($messageUpper === $unlockKeyword)
+                            'is_unlock' => ($messageUpper === $unlockKeyword),
+                            'bot_config' => $botConfig
                         ]);
                         
                         if ($messageUpper === $unlockKeyword) {
@@ -957,14 +958,16 @@ class ChatwootController extends Controller
      */
     private function getBotConfigForUser($user): array
     {
+        // Defaults genéricos - la configuración real se lee del workflow de n8n
         $defaults = [
             'unlock_keyword' => 'BOT',
-            'block_duration' => 600, // 10 minutos
+            'block_duration' => 60,
         ];
         
         try {
             $companySlug = $user->company_slug ?? null;
             if (!$companySlug) {
+                Log::debug('🤖 [getBotConfigForUser] Sin company_slug, usando defaults', $defaults);
                 return $defaults;
             }
             
@@ -974,35 +977,52 @@ class ChatwootController extends Controller
                 ->first();
             
             if (!$instance || !$instance->n8n_workflow_id) {
+                Log::debug('🤖 [getBotConfigForUser] Sin instancia/workflow, usando defaults', [
+                    'company_slug' => $companySlug,
+                    'defaults' => $defaults
+                ]);
                 return $defaults;
             }
             
             // Obtener workflow de n8n
             $n8nService = app(\App\Services\N8nService::class);
-            $workflow = $n8nService->getWorkflow($instance->n8n_workflow_id);
+            $result = $n8nService->getWorkflow($instance->n8n_workflow_id);
             
-            if (!$workflow || !isset($workflow['nodes'])) {
+            // El servicio devuelve ['success' => bool, 'data' => workflow]
+            if (!$result['success'] || !isset($result['data']['nodes'])) {
+                Log::warning('🤖 [getBotConfigForUser] Workflow no encontrado o sin nodos', [
+                    'workflow_id' => $instance->n8n_workflow_id,
+                    'success' => $result['success'] ?? false,
+                    'has_data' => isset($result['data']),
+                    'has_nodes' => isset($result['data']['nodes'])
+                ]);
                 return $defaults;
             }
             
             $config = $defaults;
             
-            foreach ($workflow['nodes'] as $node) {
+            foreach ($result['data']['nodes'] as $node) {
                 // Palabra clave de desbloqueo
                 if ($node['name'] === 'Verifica Palabra Clave') {
-                    $config['unlock_keyword'] = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT';
+                    $config['unlock_keyword'] = strtoupper($node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT');
                 }
                 
                 // Tiempo de bloqueo cuando empresa responde (nodo Bloquea al Agente)
                 if ($node['name'] === 'Bloquea al Agente') {
-                    $config['block_duration'] = $node['parameters']['ttl'] ?? 600;
+                    $config['block_duration'] = (int)($node['parameters']['ttl'] ?? 60);
                 }
             }
+            
+            Log::info('🤖 [getBotConfigForUser] Configuración obtenida del workflow', [
+                'workflow_id' => $instance->n8n_workflow_id,
+                'config' => $config
+            ]);
             
             return $config;
         } catch (\Exception $e) {
             Log::warning('No se pudo obtener config del bot, usando defaults', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'defaults' => $defaults
             ]);
             return $defaults;
         }
