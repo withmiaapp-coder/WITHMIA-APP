@@ -1221,17 +1221,28 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 console.log('🔍 Duplicado encontrado por source_id:', m.source_id);
                 return true;
               }
-              // Comparar mensajes optimistas por contenido
-              if (newMessage.message_type === 1 || newMessage.sender === 'agent') {
-                const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-');
-                if (isOptimistic && m.content === newMessage.content) return true;
+              // 🔥 NUEVO: Verificar mensajes optimistas por contenido (sin importar message_type)
+              const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-') || String(m.id).startsWith('sent-');
+              if (isOptimistic && m.content === newMessage.content) {
+                console.log('🔍 Duplicado encontrado por contenido optimista:', m.id, 'content:', m.content);
+                return true;
               }
               return false;
             });
             
             if (messageExists) {
-              console.log('🚫 [setActiveConv] Mensaje YA EXISTE, retornando sin cambios');
-              return prev; // NO modificar el state si ya existe
+              console.log('🚫 [setActiveConv] Mensaje YA EXISTE, reemplazando optimista con real');
+              // Reemplazar mensaje optimista con el real
+              const updatedMessages = existingMessages.map((m: any) => {
+                const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-') || String(m.id).startsWith('sent-');
+                if (isOptimistic && m.content === newMessage.content) {
+                  console.log('🔄 Reemplazando mensaje optimista:', m.id, '→', newMessage.id);
+                  return { ...newMessage, _isOptimistic: false };
+                }
+                return m;
+              });
+              if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, updatedMessages);
+              return { ...prev, messages: updatedMessages };
             }
             
             console.log('➕ [setActiveConv] Agregando mensaje nuevo:', newMessage.id);
