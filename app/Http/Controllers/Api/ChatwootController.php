@@ -460,6 +460,33 @@ class ChatwootController extends Controller
                 $messagesFromDb = $messagesFromDb->take($messagesPerBatch);
             }
             
+            // 📎 Obtener attachments para los mensajes
+            $messageIds = $messagesFromDb->pluck('id')->toArray();
+            $attachmentsFromDb = [];
+            if (!empty($messageIds)) {
+                $attachmentsFromDb = $chatwootDb->table('attachments')
+                    ->whereIn('message_id', $messageIds)
+                    ->get()
+                    ->groupBy('message_id')
+                    ->map(function ($items) {
+                        return $items->map(function ($att) {
+                            return [
+                                'id' => $att->id,
+                                'file_type' => $att->file_type,
+                                'data_url' => $att->data_url ?? null,
+                                'file_name' => $att->extension ? "archivo.{$att->extension}" : null,
+                                'thumb_url' => null,
+                            ];
+                        })->toArray();
+                    })
+                    ->toArray();
+                    
+                Log::debug("📎 Attachments encontrados en DB", [
+                    'total' => count(array_merge(...array_values($attachmentsFromDb ?: [[]]))),
+                    'message_ids_with_attachments' => array_keys($attachmentsFromDb)
+                ]);
+            }
+            
             // Obtener info del contacto
             $contact = $chatwootDb->table('contacts')
                 ->where('id', $conversationFromDb->contact_id)
@@ -499,12 +526,8 @@ class ChatwootController extends Controller
                     ];
                 }
                 
-                // Procesar attachments si existen
-                $attachments = [];
-                if ($msg->content_attributes) {
-                    $contentAttrs = json_decode($msg->content_attributes, true);
-                    // TODO: procesar attachments si es necesario
-                }
+                // 📎 Obtener attachments para este mensaje
+                $attachments = $attachmentsFromDb[$msg->id] ?? [];
                 
                 $allMessages[] = [
                     'id' => $msg->id,
