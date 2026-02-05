@@ -906,26 +906,26 @@ export default function Entrenamiento({
 
       {/* Bot Configuration Modal */}
       {showBotConfig && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Settings className="w-6 h-6 text-white" />
-                  <h3 className="text-xl font-bold text-white">Configuración del Bot</h3>
+                  <Settings className="w-5 h-5 text-white" />
+                  <h3 className="text-lg font-bold text-white">Configuración del Bot</h3>
                 </div>
                 <button
                   onClick={() => setShowBotConfig(false)}
                   className="text-white/80 hover:text-white transition-colors"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-6 space-y-6">
+            {/* Content - Scrollable */}
+            <div className="p-5 overflow-y-auto flex-1">
               {loadingBotConfig ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader className="w-8 h-8 animate-spin text-violet-600" />
@@ -959,141 +959,154 @@ export default function Entrenamiento({
                   </button>
                 </div>
               ) : (
-                <>
-                  {/* Grid 2 columnas */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Col 1: Palabra secreta para reactivar - DESACTIVADO TEMPORALMENTE
-                    <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
-                      <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
-                        🔑 Tu palabra secreta
-                      </h4>
-                      <input
-                        type="text"
-                        value={botConfig.unlock_keyword}
-                        onChange={(e) => setBotConfig({ ...botConfig, unlock_keyword: e.target.value.toUpperCase().slice(0, 50) })}
-                        maxLength={50}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
-                        placeholder="BOT"
-                      />
-                      <p className="mt-1 text-[10px] text-gray-500">Escríbela para reactivar el bot</p>
-                    </div>
-                    */}
-
-                    {/* Col 2: Cliente pide ayuda humana */}
-                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
-                      <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
-                        🙋 Cliente pide ayuda
-                      </h4>
-                      <input
-                        type="text"
-                        value={botConfig.human_keyword}
-                        onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase().slice(0, 50) })}
-                        maxLength={50}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
-                        placeholder="HUMANO"
-                      />
-                      <p className="mt-1 text-[10px] text-gray-500">Si escribe esto, te avisamos</p>
-                    </div>
-
-                    {/* Col 1: Cuánto espera por ti cuando pide humano */}
-                    <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
-                      <h4 className="text-xs font-semibold text-orange-800 mb-2 flex items-center gap-1">
-                        ⏱️ Espera tu respuesta
-                      </h4>
-                      <div className="flex items-center gap-2">
+                <div className="space-y-4">
+                  {/* 1. Palabra clave del cliente */}
+                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🙋</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-orange-800">Palabra clave del cliente</h4>
+                        <p className="text-xs text-orange-600 mt-0.5 mb-3">
+                          Si el cliente escribe esta palabra, te llegará una notificación para que lo atiendas personalmente.
+                        </p>
                         <input
-                          type="number"
-                          value={botConfig.human_block_duration}
-                          onChange={(e) => {
-                            const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
-                            setBotConfig({ ...botConfig, human_block_duration: val });
-                          }}
-                          min={60}
-                          max={86400}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white"
+                          type="text"
+                          value={botConfig.human_keyword}
+                          onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase().slice(0, 50) })}
+                          maxLength={50}
+                          className="w-full px-3 py-2.5 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          placeholder="Ej: HUMANO, AYUDA, AGENTE"
                         />
-                        <span className="text-xs text-orange-700 whitespace-nowrap">
-                          {botConfig.human_block_duration >= 60 ? `${Math.floor(botConfig.human_block_duration / 60)}m` : `${botConfig.human_block_duration}s`}
-                        </span>
                       </div>
-                      <p className="mt-1 text-[10px] text-gray-500">1min - 24hrs (en segundos)</p>
-                    </div>
-
-                    {/* Col 2: Pausa cuando tú tomas el chat */}
-                    <div className="bg-violet-50 rounded-lg p-3 border border-violet-100">
-                      <h4 className="text-xs font-semibold text-violet-800 mb-2 flex items-center gap-1">
-                        💬 Cuando atiendes tú
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={botConfig.block_duration}
-                          onChange={(e) => {
-                            const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
-                            setBotConfig({ ...botConfig, block_duration: val });
-                          }}
-                          min={60}
-                          max={86400}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
-                        />
-                        <span className="text-xs text-violet-700 whitespace-nowrap">
-                          {botConfig.block_duration >= 60 ? `${Math.floor(botConfig.block_duration / 60)}m` : `${botConfig.block_duration}s`}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-gray-500">1min - 24hrs (en segundos)</p>
-                    </div>
-
-                    {/* Col 1: Espera que termine de escribir */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                        ✍️ Espera al cliente
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={botConfig.buffer_wait_time}
-                          onChange={(e) => {
-                            const val = Math.min(60, Math.max(1, parseInt(e.target.value) || 1));
-                            setBotConfig({ ...botConfig, buffer_wait_time: val });
-                          }}
-                          min={1}
-                          max={60}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
-                        />
-                        <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.buffer_wait_time}s</span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-gray-500">1-60 segundos</p>
-                    </div>
-
-                    {/* Col 2: Simula que escribe */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                      <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                        💭 Simula que escribe
-                      </h4>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={botConfig.humanize_wait_time}
-                          onChange={(e) => {
-                            const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 1));
-                            setBotConfig({ ...botConfig, humanize_wait_time: val });
-                          }}
-                          min={1}
-                          max={30}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white"
-                        />
-                        <span className="text-xs text-gray-600 whitespace-nowrap">{botConfig.humanize_wait_time}s</span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-gray-500">1-30 segundos</p>
                     </div>
                   </div>
-                </>
+
+                  {/* 2. Tiempo de espera por respuesta humana */}
+                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">⏳</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-orange-800">Tiempo para responder al cliente</h4>
+                        <p className="text-xs text-orange-600 mt-0.5 mb-3">
+                          Cuando el cliente pide ayuda humana, el bot se pausa este tiempo esperando tu respuesta. Si no respondes, el bot vuelve a atender.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            value={botConfig.human_block_duration}
+                            onChange={(e) => {
+                              const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
+                              setBotConfig({ ...botConfig, human_block_duration: val });
+                            }}
+                            min={60}
+                            max={86400}
+                            className="w-32 px-3 py-2.5 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          />
+                          <span className="text-sm text-orange-700 font-medium">
+                            segundos = {botConfig.human_block_duration >= 3600 
+                              ? `${Math.floor(botConfig.human_block_duration / 3600)}h ${Math.floor((botConfig.human_block_duration % 3600) / 60)}m`
+                              : `${Math.floor(botConfig.human_block_duration / 60)} minutos`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Pausa cuando tú respondes */}
+                  <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">💬</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-violet-800">Pausa cuando tú respondes</h4>
+                        <p className="text-xs text-violet-600 mt-0.5 mb-3">
+                          Cuando escribes al cliente desde Chatwoot, el bot se pausa este tiempo para que puedas conversar sin interrupciones.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            value={botConfig.block_duration}
+                            onChange={(e) => {
+                              const val = Math.min(86400, Math.max(60, parseInt(e.target.value) || 60));
+                              setBotConfig({ ...botConfig, block_duration: val });
+                            }}
+                            min={60}
+                            max={86400}
+                            className="w-32 px-3 py-2.5 text-sm border border-violet-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          />
+                          <span className="text-sm text-violet-700 font-medium">
+                            segundos = {botConfig.block_duration >= 3600 
+                              ? `${Math.floor(botConfig.block_duration / 3600)}h ${Math.floor((botConfig.block_duration % 3600) / 60)}m`
+                              : `${Math.floor(botConfig.block_duration / 60)} minutos`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Espera mensajes del cliente */}
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">✍️</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-gray-700">Espera mensajes del cliente</h4>
+                        <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                          El bot espera estos segundos después de cada mensaje por si el cliente sigue escribiendo, así puede responder todo junto.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            value={botConfig.buffer_wait_time}
+                            onChange={(e) => {
+                              const val = Math.min(60, Math.max(1, parseInt(e.target.value) || 1));
+                              setBotConfig({ ...botConfig, buffer_wait_time: val });
+                            }}
+                            min={1}
+                            max={60}
+                            className="w-32 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          />
+                          <span className="text-sm text-gray-600 font-medium">
+                            segundos
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Simula que escribe */}
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">💭</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-gray-700">Simula que escribe</h4>
+                        <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                          Antes de enviar la respuesta, el bot muestra "escribiendo..." este tiempo para parecer más humano y natural.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            value={botConfig.humanize_wait_time}
+                            onChange={(e) => {
+                              const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 1));
+                              setBotConfig({ ...botConfig, humanize_wait_time: val });
+                            }}
+                            min={1}
+                            max={30}
+                            className="w-32 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          />
+                          <span className="text-sm text-gray-600 font-medium">
+                            segundos
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Footer - only show when workflow is configured */}
             {!noWorkflowConfigured && !loadingBotConfig && (
-              <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+              <div className="px-5 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
                 <button
                   onClick={() => setShowBotConfig(false)}
                   className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
