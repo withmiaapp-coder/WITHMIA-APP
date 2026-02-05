@@ -1,6 +1,6 @@
 <?php
 
-// Deploy trigger: 2026-01-28 CSRF fix for bot-config
+// Deploy trigger: 2026-02-05 AI Agent prompt fix for audio transcription
 
 return [
 
