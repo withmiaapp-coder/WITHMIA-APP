@@ -94,6 +94,7 @@ class EvolutionApiService
                     $payload['chatwootMergeBrazilContacts'] = config('chatwoot.merge_brazil_contacts', true);
                     $payload['chatwootImportContacts'] = config('chatwoot.import_contacts', false);
                     $payload['chatwootImportMessages'] = config('chatwoot.import_messages', false);
+                    $payload['chatwootMessagesWithMedia'] = true; // 🎤 Habilitar envío de archivos multimedia (incluyendo audios)
                     $payload['chatwootAutoCreate'] = $chatwootAutoCreate;
                     
                     Log::debug('Creating instance with Chatwoot integration (multi-tenant)', [
@@ -885,7 +886,8 @@ class EvolutionApiService
                 'merge_brazil_contacts' => false,
                 'import_contacts' => true,
                 'import_messages' => true,
-                'days_limit_import_messages' => 60
+                'days_limit_import_messages' => 60,
+                'messages_with_media' => true // 🎤 Habilitar envío de archivos multimedia (audios, imágenes, etc)
             ]);
 
             if (!$response->successful()) {
