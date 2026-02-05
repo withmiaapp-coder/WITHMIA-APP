@@ -885,26 +885,32 @@ class ChatwootController extends Controller
                         
                         $messageUpper = strtoupper(trim($messageContent));
                         
+                        // DEBUG: Log para verificar qué valores estamos comparando
+                        Log::channel('stderr')->info('🤖 [HUMAN_TAKEOVER] Procesando mensaje de agente', [
+                            'phone' => $phoneNumber,
+                            'message' => $messageUpper,
+                            'unlock_keyword' => $unlockKeyword,
+                            'block_duration' => $blockDuration,
+                            'is_unlock' => ($messageUpper === $unlockKeyword)
+                        ]);
+                        
                         if ($messageUpper === $unlockKeyword) {
                             // 🔓 REACTIVAR BOT: El agente escribió la palabra secreta
                             $redis->del($phoneNumber);
-                            Log::info('🔓 Bot REACTIVADO por palabra secreta', [
+                            Log::channel('stderr')->info('🔓 [HUMAN_TAKEOVER] Bot REACTIVADO', [
                                 'phone' => $phoneNumber,
-                                'agent' => $user->name ?? 'Agent',
                                 'keyword' => $unlockKeyword
                             ]);
                         } else {
                             // 🛑 PAUSAR BOT: El agente envió un mensaje normal
                             $redis->setex($phoneNumber, $blockDuration, 'human-takeover');
-                            Log::info('🛑 Bot PAUSADO por intervención humana', [
+                            Log::channel('stderr')->info('🛑 [HUMAN_TAKEOVER] Bot PAUSADO', [
                                 'phone' => $phoneNumber,
-                                'agent' => $user->name ?? 'Agent',
-                                'duration_seconds' => $blockDuration,
-                                'redis_key' => $phoneNumber
+                                'duration_seconds' => $blockDuration
                             ]);
                         }
                     } catch (\Exception $e) {
-                        Log::warning('⚠️ No se pudo gestionar estado del bot (no crítico)', [
+                        Log::channel('stderr')->error('❌ [HUMAN_TAKEOVER] Error', [
                             'error' => $e->getMessage(),
                             'phone' => $phoneNumber
                         ]);
