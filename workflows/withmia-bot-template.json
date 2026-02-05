@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-02-05T20:18:29.358Z",
+    "updatedAt":  "2026-02-05T20:32:18.383Z",
     "createdAt":  "2026-01-28T01:57:04.485Z",
     "id":  "C1mhxAWt67pfg3BC",
     "name":  "WITHMIA Bot - withmia-evp7rj",
@@ -215,7 +215,7 @@
                                                                                  {
                                                                                      "id":  "message-source-id",
                                                                                      "name":  "message.source_id",
-                                                                                     "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027 }}",
+                                                                                     "value":  "={{ ($(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027).replace(\u0027WAID:\u0027, \u0027\u0027) }}",
                                                                                      "type":  "string"
                                                                                  }
                                                                              ]
@@ -663,15 +663,33 @@
                   },
                   {
                       "parameters":  {
-                                         "method":  "GET",
-                                         "url":  "={{ $(\u0027Normalize Data\u0027).item.json.message.audio_url }}",
+                                         "sendBody":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "value":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.apikey }}",
+                                                                                         "name":  "apikey"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "bodyParameters":  {
+                                                                "parameters":  [
+                                                                                   {
+                                                                                       "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.source_id }}",
+                                                                                       "name":  "message.key.id"
+                                                                                   },
+                                                                                   {
+                                                                                       "value":  "={{ Boolean(false) }}",
+                                                                                       "name":  "convertToMp4"
+                                                                                   }
+                                                                               ]
+                                                            },
+                                         "method":  "POST",
                                          "options":  {
-                                                         "response":  {
-                                                                          "response":  {
-                                                                                           "responseFormat":  "file"
-                                                                                       }
-                                                                      }
-                                                     }
+
+                                                     },
+                                         "sendHeaders":  true,
+                                         "url":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalize Data\u0027).item.json.instance.name }}"
                                      },
                       "type":  "n8n-nodes-base.httpRequest",
                       "typeVersion":  4.2,
@@ -771,10 +789,14 @@
                   },
                   {
                       "parameters":  {
-                                         "mode":  "passthrough"
+                                         "operation":  "toBinary",
+                                         "sourceProperty":  "base64",
+                                         "options":  {
+                                                         "mimeType":  "={{ $json.mimetype }}"
+                                                     }
                                      },
-                      "type":  "n8n-nodes-base.set",
-                      "typeVersion":  3.4,
+                      "type":  "n8n-nodes-base.convertToFile",
+                      "typeVersion":  1.1,
                       "position":  [
                                        -1040,
                                        896
@@ -2606,9 +2628,9 @@
     "pinData":  {
 
                 },
-    "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
-    "activeVersionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
-    "versionCounter":  215,
+    "versionId":  "126046d9-4da6-4bf2-9fb2-5b27c48407b8",
+    "activeVersionId":  "126046d9-4da6-4bf2-9fb2-5b27c48407b8",
+    "versionCounter":  227,
     "triggerCount":  1,
     "shared":  [
                    {
@@ -2673,9 +2695,9 @@
 
              ],
     "activeVersion":  {
-                          "updatedAt":  "2026-02-05T20:18:29.362Z",
-                          "createdAt":  "2026-02-05T20:18:29.362Z",
-                          "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
+                          "updatedAt":  "2026-02-05T20:32:02.953Z",
+                          "createdAt":  "2026-02-05T20:32:02.953Z",
+                          "versionId":  "126046d9-4da6-4bf2-9fb2-5b27c48407b8",
                           "workflowId":  "C1mhxAWt67pfg3BC",
                           "nodes":  [
                                         {
@@ -2886,7 +2908,7 @@
                                                                                                        {
                                                                                                            "id":  "message-source-id",
                                                                                                            "name":  "message.source_id",
-                                                                                                           "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027 }}",
+                                                                                                           "value":  "={{ ($(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027).replace(\u0027WAID:\u0027, \u0027\u0027) }}",
                                                                                                            "type":  "string"
                                                                                                        }
                                                                                                    ]
@@ -3334,15 +3356,33 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "method":  "GET",
-                                                               "url":  "={{ $(\u0027Normalize Data\u0027).item.json.message.audio_url }}",
+                                                               "sendBody":  true,
+                                                               "headerParameters":  {
+                                                                                        "parameters":  [
+                                                                                                           {
+                                                                                                               "value":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.apikey }}",
+                                                                                                               "name":  "apikey"
+                                                                                                           }
+                                                                                                       ]
+                                                                                    },
+                                                               "bodyParameters":  {
+                                                                                      "parameters":  [
+                                                                                                         {
+                                                                                                             "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.source_id }}",
+                                                                                                             "name":  "message.key.id"
+                                                                                                         },
+                                                                                                         {
+                                                                                                             "value":  "={{ Boolean(false) }}",
+                                                                                                             "name":  "convertToMp4"
+                                                                                                         }
+                                                                                                     ]
+                                                                                  },
+                                                               "method":  "POST",
                                                                "options":  {
-                                                                               "response":  {
-                                                                                                "response":  {
-                                                                                                                 "responseFormat":  "file"
-                                                                                                             }
-                                                                                            }
-                                                                           }
+
+                                                                           },
+                                                               "sendHeaders":  true,
+                                                               "url":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalize Data\u0027).item.json.instance.name }}"
                                                            },
                                             "type":  "n8n-nodes-base.httpRequest",
                                             "typeVersion":  4.2,
@@ -3442,10 +3482,14 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "mode":  "passthrough"
+                                                               "operation":  "toBinary",
+                                                               "sourceProperty":  "base64",
+                                                               "options":  {
+                                                                               "mimeType":  "={{ $json.mimetype }}"
+                                                                           }
                                                            },
-                                            "type":  "n8n-nodes-base.set",
-                                            "typeVersion":  3.4,
+                                            "type":  "n8n-nodes-base.convertToFile",
+                                            "typeVersion":  1.1,
                                             "position":  [
                                                              -1040,
                                                              896
@@ -5272,10 +5316,18 @@
                           "autosaved":  false,
                           "workflowPublishHistory":  [
                                                          {
-                                                             "createdAt":  "2026-02-05T20:18:29.515Z",
-                                                             "id":  182,
+                                                             "createdAt":  "2026-02-05T20:32:03.117Z",
+                                                             "id":  185,
                                                              "workflowId":  "C1mhxAWt67pfg3BC",
-                                                             "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
+                                                             "versionId":  "126046d9-4da6-4bf2-9fb2-5b27c48407b8",
+                                                             "event":  "activated",
+                                                             "userId":  "076c9167-3e08-4d7d-a69d-b951f641bbdf"
+                                                         },
+                                                         {
+                                                             "createdAt":  "2026-02-05T20:32:18.557Z",
+                                                             "id":  186,
+                                                             "workflowId":  "C1mhxAWt67pfg3BC",
+                                                             "versionId":  "126046d9-4da6-4bf2-9fb2-5b27c48407b8",
                                                              "event":  "activated",
                                                              "userId":  "076c9167-3e08-4d7d-a69d-b951f641bbdf"
                                                          }
