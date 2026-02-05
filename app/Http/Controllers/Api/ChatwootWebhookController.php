@@ -205,11 +205,127 @@ class ChatwootWebhookController extends Controller
 
         Cache::put($cacheKey, $events, now()->addMinutes(5));
 
+        // 🔊 ENRIQUECER Y REENVIAR A N8N para mensajes entrantes
+        // Si el mensaje es incoming, enriquecer con attachments si es necesario y reenviar a n8n
+        if ($event === 'message_created') {
+            $this->forwardToN8nWithEnrichment($data, $inboxId, $accountId);
+        }
+
         return response()->json(['status' => 'success']);
     }
 
     /**
-     * 🔥 PREVENIR DUPLICADOS CON CACHE - SOLUCIÓN DEFINITIVA
+     * � Enriquecer mensaje con attachments y reenviar a n8n
+     * 
+     * Chatwoot puede disparar el webhook ANTES de que el attachment se guarde (race condition).
+     * Este método detecta mensajes sin contenido ni attachments, espera a que Chatwoot guarde
+     * el attachment, consulta la API para obtenerlo, y reenvía el payload enriquecido a n8n.
+     */
+    private function forwardToN8nWithEnrichment(array $data, ?int $inboxId, ?int $accountId): void
+    {
+        try {
+            $messageType = $data['message_type'] ?? null;
+            $isIncoming = $messageType === 'incoming' || $messageType === 0;
+            
+            // Solo procesar mensajes entrantes
+            if (!$isIncoming) {
+                return;
+            }
+            
+            $content = $data['content'] ?? '';
+            $attachments = $data['attachments'] ?? [];
+            $messageId = $data['id'] ?? null;
+            $conversationId = $data['conversation']['id'] ?? null;
+            $inboxName = $data['inbox']['name'] ?? null;
+            
+            // Determinar el instance slug desde el inbox name
+            $instanceSlug = $inboxName ? preg_replace('/^WhatsApp\s+/i', '', $inboxName) : null;
+            
+            if (!$instanceSlug) {
+                Log::warning('🔊 No se pudo determinar instanceSlug para n8n forward', [
+                    'inbox_name' => $inboxName,
+                    'inbox_id' => $inboxId,
+                ]);
+                return;
+            }
+            
+            Log::info('🔀 Preparando forward a n8n', [
+                'instance' => $instanceSlug,
+                'message_id' => $messageId,
+                'content_empty' => empty($content),
+                'has_attachments' => !empty($attachments),
+                'attachment_count' => count($attachments),
+            ]);
+            
+            // Si el mensaje NO tiene contenido Y NO tiene attachments, 
+            // probablemente es un audio/imagen cuyo attachment no se guardó aún
+            if (empty($content) && empty($attachments) && $messageId && $conversationId) {
+                Log::info('🔄 Mensaje sin contenido ni attachments - posible audio/media, esperando...', [
+                    'message_id' => $messageId,
+                ]);
+                
+                // Esperar a que Chatwoot guarde el attachment
+                usleep(2000000); // 2 segundos
+                
+                // Consultar Chatwoot API para obtener el mensaje completo
+                $chatwootUrl = rtrim(config('chatwoot.url', 'https://chatwoot-production-50cc.up.railway.app'), '/');
+                $apiToken = config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token');
+                
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'api_access_token' => $apiToken,
+                ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
+                
+                if ($response->successful()) {
+                    $messages = $response->json('payload', []);
+                    $targetMsg = collect($messages)->firstWhere('id', $messageId);
+                    
+                    if ($targetMsg && !empty($targetMsg['attachments'])) {
+                        $data['attachments'] = $targetMsg['attachments'];
+                        $fileType = $targetMsg['attachments'][0]['file_type'] ?? null;
+                        
+                        Log::info('✅ Attachments enriquecidos desde API de Chatwoot', [
+                            'message_id' => $messageId,
+                            'attachment_count' => count($data['attachments']),
+                            'file_type' => $fileType,
+                            'data_url' => $targetMsg['attachments'][0]['data_url'] ?? 'none',
+                        ]);
+                    } else {
+                        Log::warning('⚠️ No se encontraron attachments después del retry', [
+                            'message_id' => $messageId,
+                            'target_found' => !is_null($targetMsg),
+                        ]);
+                    }
+                }
+            }
+            
+            // Reenviar a n8n
+            $n8nBaseUrl = rtrim(config('n8n.url', 'https://n8n-production-00dd.up.railway.app'), '/');
+            $n8nWebhookUrl = "{$n8nBaseUrl}/webhook/{$instanceSlug}";
+            
+            Log::info('📤 Reenviando a n8n', [
+                'url' => $n8nWebhookUrl,
+                'has_attachments' => !empty($data['attachments']),
+                'file_type' => $data['attachments'][0]['file_type'] ?? 'none',
+            ]);
+            
+            $n8nResponse = \Illuminate\Support\Facades\Http::timeout(10)
+                ->post($n8nWebhookUrl, $data);
+            
+            Log::info('✅ n8n forward completado', [
+                'status' => $n8nResponse->status(),
+                'instance' => $instanceSlug,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Error en forwardToN8nWithEnrichment', [
+                'error' => $e->getMessage(),
+                'trace' => substr($e->getTraceAsString(), 0, 500),
+            ]);
+        }
+    }
+
+    /**
+     * �🔥 PREVENIR DUPLICADOS CON CACHE - SOLUCIÓN DEFINITIVA
      * 
      * Estrategia:
      * 1. Extraer número base del identifier (limpio, sin @lid ni @s.whatsapp.net)
