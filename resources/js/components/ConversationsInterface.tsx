@@ -1097,6 +1097,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const isOutgoing = messageType === 1 || messageType === 'outgoing';
         const isActiveConversation = activeConversationRef.current?.id === conversationId;
         
+        console.log('🎯 [WebSocket] isActiveConversation:', isActiveConversation, 'activeRef:', activeConversationRef.current?.id, 'msgConv:', conversationId);
+        
         // ✅ Incrementar badge en contexto global si es mensaje entrante y no está activa
         if (!isOutgoing && !isActiveConversation && globalNotificationsRef.current?.incrementBadge) {
           globalNotificationsRef.current.incrementBadge(conversationId);
@@ -1202,12 +1204,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             const existingMessages = prev.messages || [];
             
+            console.log('📊 [setActiveConv] Mensajes actuales:', existingMessages.length, 'Nuevo mensaje ID:', newMessage.id, 'source_id:', newMessage.source_id);
+            
             // 🔒 Verificar duplicados - comparación robusta
             const messageExists = existingMessages.some((m: any) => {
               // Comparar por ID (numérico para evitar string vs number)
-              if (Number(m.id) === Number(newMessage.id)) return true;
+              if (Number(m.id) === Number(newMessage.id)) {
+                console.log('🔍 Duplicado encontrado por ID:', m.id, '===', newMessage.id);
+                return true;
+              }
               // Comparar por source_id (ID de WhatsApp)
-              if (newMessage.source_id && m.source_id === newMessage.source_id) return true;
+              if (newMessage.source_id && m.source_id === newMessage.source_id) {
+                console.log('🔍 Duplicado encontrado por source_id:', m.source_id);
+                return true;
+              }
               // Comparar mensajes optimistas por contenido
               if (newMessage.message_type === 1 || newMessage.sender === 'agent') {
                 const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-');
