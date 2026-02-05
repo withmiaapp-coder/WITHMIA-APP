@@ -871,17 +871,14 @@ class ChatwootController extends Controller
 
                 // 🤖 HUMAN TAKEOVER: Pausar el bot cuando un agente humano interviene
                 // El bot se detendrá por 30 minutos (1800 segundos) para esta conversación
-                // IMPORTANTE: Usar Redis directamente SIN prefix para compatibilidad con n8n
-                // Este bloque NO debe fallar - es una mejora pero no crítica
+                // IMPORTANTE: Usar conexión Redis 'n8n' SIN prefix para compatibilidad con n8n
                 $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
                 if ($phoneNumber) {
                     try {
-                        // Intentar usar el comando SETEX directamente
-                        \Illuminate\Support\Facades\Redis::command('setex', [
-                            "bot-state:{$phoneNumber}",
-                            1800, // 30 minutos
-                            'human-takeover'
-                        ]);
+                        // Usar conexión 'n8n' que NO tiene prefix
+                        $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+                        $redis->setex("bot-state:{$phoneNumber}", 1800, 'human-takeover');
+                        
                         Log::info('🛑 Bot pausado por intervención humana', [
                             'phone' => $phoneNumber,
                             'agent' => auth()->user()->name ?? 'Agent',

@@ -200,6 +200,22 @@ return [
             'timeout' => 2,
         ],
 
+        // 🤖 Conexión sin prefix para compatibilidad con n8n
+        // n8n usa claves como "bot-state:{phone}" sin prefix
+        'n8n' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_DB', '0'),
+            'read_timeout' => 2,
+            'timeout' => 2,
+            'options' => [
+                'prefix' => '', // Sin prefix para n8n
+            ],
+        ],
+
     ],
 
 ];
