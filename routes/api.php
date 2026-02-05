@@ -593,6 +593,78 @@ Route::delete('/debug/bot-state/{phone}', function ($phone) {
     }
 });
 
+// 🔧 DEBUG: Simular human takeover - SET key
+Route::post('/debug/bot-state/{phone}', function ($phone, Request $request) {
+    try {
+        $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+        $ttl = $request->input('ttl', 60);
+        
+        $redis->setex($phone, $ttl, 'human-takeover');
+        
+        return response()->json([
+            'phone' => $phone,
+            'set' => true,
+            'ttl_seconds' => $ttl,
+            'message' => "Bot pausado por {$ttl} segundos"
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+// 🔧 DEBUG: Obtener config del bot para un usuario
+Route::middleware(['auth:sanctum'])->get('/debug/bot-config', function (Request $request) {
+    try {
+        $user = $request->user();
+        $company = $user->company;
+        
+        if (!$company) {
+            return response()->json(['error' => 'Usuario sin empresa'], 400);
+        }
+        
+        $n8nService = app(\App\Services\N8nService::class);
+        $workflowId = $company->settings['n8n_workflow_id'] ?? null;
+        
+        if (!$workflowId) {
+            return response()->json(['error' => 'Sin workflow ID'], 400);
+        }
+        
+        // Obtener workflow
+        $result = $n8nService->getWorkflow($workflowId);
+        if (!$result['success']) {
+            return response()->json(['error' => 'No se pudo obtener workflow'], 500);
+        }
+        
+        $workflow = $result['data'];
+        $config = [
+            'workflow_id' => $workflowId,
+            'workflow_name' => $workflow['name'] ?? 'Unknown',
+            'unlock_keyword' => null,
+            'block_duration' => null
+        ];
+        
+        // Buscar nodos de configuración
+        foreach ($workflow['nodes'] ?? [] as $node) {
+            $nodeName = $node['name'] ?? '';
+            $params = $node['parameters'] ?? [];
+            
+            if (str_contains($nodeName, 'Palabra Clave') || str_contains($nodeName, 'Verifica Palabra')) {
+                $config['unlock_keyword'] = $params['value1'] ?? $params['conditions']['options'][0]['leftValue'] ?? null;
+                $config['unlock_node_name'] = $nodeName;
+            }
+            
+            if (str_contains($nodeName, 'Bloquea') && str_contains($nodeName, 'Agente')) {
+                $config['block_duration'] = $params['value'] ?? $params['ttl'] ?? null;
+                $config['block_node_name'] = $nodeName;
+            }
+        }
+        
+        return response()->json($config);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // ?? DEBUG: Ver usuarios en la base de datos
 
 // ?? DEBUG: Ver tokens de usuarios
