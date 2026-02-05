@@ -76,48 +76,34 @@ class ChatwootWebhookController extends Controller
             if ($event === 'message_created' && $inboxId && $accountId) {
                 $conversationId = $data['conversation']['id'] ?? null;
                 
-                // Detectar tipo de mensaje y remitente
+                // ✅ SIMPLIFICADO: Hacer broadcast para TODOS los mensajes
+                // 
+                // Los mensajes del agente humano (enviados desde nuestra app WITHMIA)
+                // van directo a Evolution API, NO pasan por Chatwoot.
+                // Por lo tanto, este webhook SOLO recibe:
+                // 1. Mensajes entrantes (del cliente via WhatsApp)
+                // 2. Mensajes del bot (via n8n → Chatwoot API)
+                // 
+                // Ambos tipos necesitan broadcast al frontend.
+                
                 $messageType = $data['message_type'] ?? null;
                 $isOutgoing = $messageType === 'outgoing' || $messageType === 1;
                 
-                // 🤖 Detectar si es mensaje del BOT vs AGENTE HUMANO
-                // El bot envía via API de Chatwoot, el agente envía via nuestra app
-                // Cuando el agente envía desde nuestra app, NO llega por webhook porque
-                // enviamos directamente a Evolution (no a Chatwoot)
-                // Por lo tanto, TODOS los mensajes outgoing que llegan aquí son del BOT
-                // 
-                // Estructura del sender para mensajes outgoing:
-                // - sender.type = 'user' (agente) o null/vacío (bot via API)
-                // - sender.id existe para agentes, no para bot
-                $sender = $data['sender'] ?? [];
-                $senderType = $sender['type'] ?? null;
-                $senderId = $sender['id'] ?? null;
-                
-                // Si es outgoing y tiene sender con type='user' y id, es de un agente Chatwoot
-                // Si es outgoing sin sender o sender vacío, es del bot
-                $isFromChatwootAgent = $isOutgoing && $senderType === 'user' && $senderId;
-                $isFromBot = $isOutgoing && !$isFromChatwootAgent;
-                
-                Log::debug('🔍 Análisis de mensaje saliente', [
+                Log::debug('📨 Chatwoot mensaje para broadcast', [
                     'conversation_id' => $conversationId,
                     'message_type' => $messageType,
                     'is_outgoing' => $isOutgoing,
-                    'sender_type' => $senderType,
-                    'sender_id' => $senderId,
-                    'is_from_chatwoot_agent' => $isFromChatwootAgent,
-                    'is_from_bot' => $isFromBot,
                     'content_preview' => substr($data['content'] ?? '', 0, 50)
                 ]);
                 
-                // 🚫 NO hacer broadcast para mensajes de AGENTE HUMANO (enviados desde nuestra app)
-                // ✅ SÍ hacer broadcast para mensajes del BOT y mensajes ENTRANTES
-                if ($isFromChatwootAgent) {
-                    Log::debug('⏭️ Saltando broadcast - mensaje de agente Chatwoot', [
-                        'conversation_id' => $conversationId,
-                        'sender_id' => $senderId
-                    ]);
-                } else {
-                    // Broadcast para: mensajes entrantes Y mensajes del bot
+                // Broadcast para TODOS los mensajes (entrantes y del bot)
+                $messageEvent = new NewMessageReceived(
+                    $data,
+                    $conversationId,
+                    $inboxId,
+                    $accountId
+                );
+                broadcast($messageEvent);
                     $messageEvent = new NewMessageReceived(
                         $data,
                         $conversationId,
