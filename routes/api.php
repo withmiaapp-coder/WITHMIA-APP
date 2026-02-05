@@ -560,6 +560,39 @@ Route::post('/update-workflow/{instanceName}', function ($instanceName, \Illumin
     ]);
 });
 
+// 🔧 DEBUG: Ver y gestionar bot-state en Redis (para human takeover)
+Route::get('/debug/bot-state/{phone}', function ($phone) {
+    try {
+        $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+        $value = $redis->get($phone);
+        $ttl = $redis->ttl($phone);
+        
+        return response()->json([
+            'phone' => $phone,
+            'value' => $value,
+            'ttl_seconds' => $ttl,
+            'ttl_human' => $ttl > 0 ? gmdate('H:i:s', $ttl) : 'expired/not-set'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
+Route::delete('/debug/bot-state/{phone}', function ($phone) {
+    try {
+        $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+        $deleted = $redis->del($phone);
+        
+        return response()->json([
+            'phone' => $phone,
+            'deleted' => $deleted > 0,
+            'message' => $deleted > 0 ? 'Bot reactivado - key eliminada' : 'Key no existía'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // ?? DEBUG: Ver usuarios en la base de datos
 
 // ?? DEBUG: Ver tokens de usuarios
