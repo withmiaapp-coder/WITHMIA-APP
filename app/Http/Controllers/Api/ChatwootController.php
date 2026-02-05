@@ -967,8 +967,16 @@ class ChatwootController extends Controller
         try {
             $companySlug = $user->company_slug ?? null;
             if (!$companySlug) {
-                Log::debug('🤖 [getBotConfigForUser] Sin company_slug, usando defaults', $defaults);
+                Log::channel('stderr')->warning('🤖 [getBotConfigForUser] Sin company_slug, usando defaults', $defaults);
                 return $defaults;
+            }
+            
+            // 🚀 CACHE: Evitar consultar n8n API en cada mensaje (5 minutos de caché)
+            $cacheKey = "bot_config_{$companySlug}";
+            $cachedConfig = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($cachedConfig) {
+                Log::channel('stderr')->debug('🤖 [getBotConfigForUser] Config desde caché', $cachedConfig);
+                return $cachedConfig;
             }
             
             // Buscar instancia de WhatsApp con workflow
@@ -977,12 +985,19 @@ class ChatwootController extends Controller
                 ->first();
             
             if (!$instance || !$instance->n8n_workflow_id) {
-                Log::debug('🤖 [getBotConfigForUser] Sin instancia/workflow, usando defaults', [
+                Log::channel('stderr')->warning('🤖 [getBotConfigForUser] Sin instancia/workflow', [
                     'company_slug' => $companySlug,
-                    'defaults' => $defaults
+                    'has_instance' => !!$instance,
+                    'workflow_id' => $instance->n8n_workflow_id ?? null
                 ]);
                 return $defaults;
             }
+            
+            Log::channel('stderr')->info('🤖 [getBotConfigForUser] Consultando n8n API', [
+                'workflow_id' => $instance->n8n_workflow_id,
+                'n8n_url' => config('n8n.url'),
+                'has_api_key' => !empty(config('n8n.api_key'))
+            ]);
             
             // Obtener workflow de n8n
             $n8nService = app(\App\Services\N8nService::class);
@@ -990,9 +1005,10 @@ class ChatwootController extends Controller
             
             // El servicio devuelve ['success' => bool, 'data' => workflow]
             if (!$result['success'] || !isset($result['data']['nodes'])) {
-                Log::warning('🤖 [getBotConfigForUser] Workflow no encontrado o sin nodos', [
+                Log::channel('stderr')->error('🤖 [getBotConfigForUser] Workflow no encontrado o sin nodos', [
                     'workflow_id' => $instance->n8n_workflow_id,
                     'success' => $result['success'] ?? false,
+                    'error' => $result['error'] ?? null,
                     'has_data' => isset($result['data']),
                     'has_nodes' => isset($result['data']['nodes'])
                 ]);
@@ -1002,27 +1018,36 @@ class ChatwootController extends Controller
             $config = $defaults;
             
             foreach ($result['data']['nodes'] as $node) {
-                // Palabra clave de desbloqueo
-                if ($node['name'] === 'Verifica Palabra Clave') {
-                    $config['unlock_keyword'] = strtoupper($node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT');
+                // Palabra clave de desbloqueo (buscar en ambos nodos posibles)
+                if ($node['name'] === 'Verifica Palabra Clave' || $node['name'] === 'Verifica Palabra Clave Saliente') {
+                    $keyword = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? null;
+                    if ($keyword) {
+                        $config['unlock_keyword'] = strtoupper($keyword);
+                    }
                 }
                 
                 // Tiempo de bloqueo cuando empresa responde (nodo Bloquea al Agente)
-                if ($node['name'] === 'Bloquea al Agente') {
-                    $config['block_duration'] = (int)($node['parameters']['ttl'] ?? 60);
+                if ($node['name'] === 'Bloquea al Agente' || $node['name'] === 'Block Agent on Outgoing') {
+                    $ttl = $node['parameters']['ttl'] ?? null;
+                    if ($ttl) {
+                        $config['block_duration'] = (int)$ttl;
+                    }
                 }
             }
             
-            Log::info('🤖 [getBotConfigForUser] Configuración obtenida del workflow', [
+            // Guardar en caché por 5 minutos
+            \Illuminate\Support\Facades\Cache::put($cacheKey, $config, 300);
+            
+            Log::channel('stderr')->info('🤖 [getBotConfigForUser] ✅ Configuración obtenida y cacheada', [
                 'workflow_id' => $instance->n8n_workflow_id,
                 'config' => $config
             ]);
             
             return $config;
         } catch (\Exception $e) {
-            Log::warning('No se pudo obtener config del bot, usando defaults', [
+            Log::channel('stderr')->error('🤖 [getBotConfigForUser] ❌ Error obteniendo config', [
                 'error' => $e->getMessage(),
-                'defaults' => $defaults
+                'trace' => $e->getTraceAsString()
             ]);
             return $defaults;
         }
