@@ -1081,62 +1081,18 @@ class EvolutionApiController extends Controller
             return; // No procesar en caso de error
         }
 
-        // 📡 BROADCAST: Notificar al frontend vía Reverb
-        // Evolution API ya creó la conversación en Chatwoot (integración nativa)
-        // Solo necesitamos notificar al frontend para que refresque
-        try {
-            // 🔊 Broadcast NewMessageReceived
-            broadcast(new \App\Events\NewMessageReceived(
-                [
-                    'content' => $messageText,
-                    'phone' => $cleanPhone,
-                    'from_me' => $fromMe,
-                    'instance' => $instanceName,
-                    'timestamp' => now()->toIso8601String(),
-                    'company_id' => $companyId,
-                ],
-                null, // conversation_id - Chatwoot lo maneja
-                $inboxId,
-                $accountId
-            ));
-
-            Log::debug('📡 NewMessageReceived BROADCAST enviado', [
-                'account_id' => $accountId,
-                'inbox_id' => $inboxId,
-                'phone' => $cleanPhone,
-                'message_preview' => substr($messageText, 0, 50)
-            ]);
-            
-            // También enviar ConversationUpdated para actualizar la lista
-            broadcast(new ConversationUpdated(
-                [
-                    'action' => 'new_message',
-                    'phone' => $cleanPhone,
-                    'message' => $messageText,
-                    'from_me' => $fromMe,
-                    'instance' => $instanceName,
-                    'should_refresh' => true,
-                    'company_id' => $companyId,
-                ],
-                $inboxId,
-                $accountId
-            ));
-
-            Log::debug('📡 ConversationUpdated BROADCAST enviado', [
-                'account_id' => $accountId,
-                'inbox_id' => $inboxId,
-                'action' => 'new_message'
-            ]);
-
-            // ✅ Los datos de conversaciones se obtienen en tiempo real desde BD (sin cache)
-
-        } catch (\Exception $e) {
-            Log::error('Error broadcasting message signal', [
-                'error' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
-            ]);
-        }
+        // 📡 BROADCAST DESHABILITADO
+        // El webhook de Chatwoot ya maneja el broadcast de mensajes entrantes.
+        // Evolution API envía el mensaje a Chatwoot (integración nativa),
+        // y luego Chatwoot dispara su webhook que hace el broadcast.
+        // Si hacemos broadcast aquí, el mensaje aparece DUPLICADO en el frontend.
+        
+        Log::debug('📡 Mensaje recibido de Evolution - Chatwoot webhook hará el broadcast', [
+            'account_id' => $accountId,
+            'inbox_id' => $inboxId,
+            'phone' => $cleanPhone,
+            'message_preview' => substr($messageText, 0, 50)
+        ]);
     }
 
     /**
