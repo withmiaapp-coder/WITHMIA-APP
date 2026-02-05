@@ -75,22 +75,28 @@ class ChatwootWebhookController extends Controller
         try {
             if ($event === 'message_created' && $inboxId && $accountId) {
                 $conversationId = $data['conversation']['id'] ?? null;
+                $messageId = $data['id'] ?? null;
                 
-                // ✅ SIMPLIFICADO: Hacer broadcast para TODOS los mensajes
-                // 
-                // Los mensajes del agente humano (enviados desde nuestra app WITHMIA)
-                // van directo a Evolution API, NO pasan por Chatwoot.
-                // Por lo tanto, este webhook SOLO recibe:
-                // 1. Mensajes entrantes (del cliente via WhatsApp)
-                // 2. Mensajes del bot (via n8n → Chatwoot API)
-                // 
-                // Ambos tipos necesitan broadcast al frontend.
+                // 🔒 DEDUPLICACIÓN: Prevenir broadcast duplicado del mismo mensaje
+                if ($messageId) {
+                    $dedupKey = "message_broadcast_{$conversationId}_{$messageId}";
+                    if (\Cache::has($dedupKey)) {
+                        Log::debug('🚫 Mensaje ya procesado, ignorando duplicado', [
+                            'conversation_id' => $conversationId,
+                            'message_id' => $messageId
+                        ]);
+                        return response()->json(['status' => 'success', 'message' => 'Duplicate message ignored']);
+                    }
+                    // Marcar como procesado por 30 segundos
+                    \Cache::put($dedupKey, true, 30);
+                }
                 
                 $messageType = $data['message_type'] ?? null;
                 $isOutgoing = $messageType === 'outgoing' || $messageType === 1;
                 
                 Log::debug('📨 Chatwoot mensaje para broadcast', [
                     'conversation_id' => $conversationId,
+                    'message_id' => $messageId,
                     'message_type' => $messageType,
                     'is_outgoing' => $isOutgoing,
                     'content_preview' => substr($data['content'] ?? '', 0, 50)
