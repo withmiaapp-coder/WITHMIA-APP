@@ -79,10 +79,8 @@ class ChatwootWebhookController extends Controller
                 $sourceId = $data['source_id'] ?? null; // ID único de WhatsApp
                 $content = $data['content'] ?? '';
                 
-                // 🔒 DEDUPLICACIÓN MEJORADA: Múltiples estrategias
-                // 1. Por message_id de Chatwoot
-                // 2. Por source_id de WhatsApp (más confiable)
-                // 3. Por hash de contenido + conversación (fallback)
+                // 🔒 DEDUPLICACIÓN: Solo por IDs únicos (sin hash de contenido)
+                // El hash causaba que mensajes con mismo contenido se filtraran
                 $dedupKeys = [];
                 
                 if ($messageId) {
@@ -91,9 +89,6 @@ class ChatwootWebhookController extends Controller
                 if ($sourceId) {
                     $dedupKeys[] = "msg_src_{$sourceId}";
                 }
-                // Hash del contenido como fallback
-                $contentHash = md5($conversationId . $content . floor(time() / 10)); // 10 segundos de ventana
-                $dedupKeys[] = "msg_hash_{$contentHash}";
                 
                 // Verificar si alguna clave ya existe
                 foreach ($dedupKeys as $key) {
