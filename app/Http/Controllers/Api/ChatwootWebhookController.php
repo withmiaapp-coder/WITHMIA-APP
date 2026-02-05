@@ -104,28 +104,20 @@ class ChatwootWebhookController extends Controller
                     $accountId
                 );
                 broadcast($messageEvent);
-                    $messageEvent = new NewMessageReceived(
-                        $data,
-                        $conversationId,
-                        $inboxId,
-                        $accountId
-                    );
-                    broadcast($messageEvent);
 
-                    // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
-                    $convEvent = new ConversationUpdated(
-                        $data['conversation'] ?? $data,
-                        $inboxId,
-                        $accountId
-                    );
-                    broadcast($convEvent);
+                // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
+                $convEvent = new ConversationUpdated(
+                    $data['conversation'] ?? $data,
+                    $inboxId,
+                    $accountId
+                );
+                broadcast($convEvent);
 
-                    Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
-                        'inbox_id' => $inboxId,
-                        'conversation_id' => $conversationId,
-                        'message_content' => substr($data['content'] ?? '', 0, 50)
-                    ]);
-                }
+                Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
+                    'inbox_id' => $inboxId,
+                    'conversation_id' => $conversationId,
+                    'message_content' => substr($data['content'] ?? '', 0, 50)
+                ]);
             }
 
             // Solo para eventos que NO son message_created (evitar duplicado)
