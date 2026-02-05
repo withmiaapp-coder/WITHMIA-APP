@@ -110,6 +110,9 @@ set -e\n\
 # Run migrations\n\
 php artisan migrate --force\n\
 \n\
+# Update Chatwoot media config (enable audio support)\n\
+php artisan chatwoot:update-media-config || echo "⚠️ Chatwoot update skipped (non-critical)"\n\
+\n\
 # Clear caches\n\
 php artisan config:clear\n\
 php artisan route:clear\n\
