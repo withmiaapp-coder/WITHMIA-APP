@@ -874,9 +874,22 @@ class ChatwootController extends Controller
                 // - Si el mensaje es la PALABRA SECRETA (unlock_keyword) → REACTIVAR bot
                 // - Si es cualquier otro mensaje → PAUSAR bot por block_duration segundos
                 $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
+                
+                Log::channel('stderr')->info('🔧 [HUMAN_TAKEOVER] Iniciando procesamiento', [
+                    'contact_phone_original' => $contactPhone,
+                    'phone_cleaned' => $phoneNumber,
+                    'message_content' => $messageContent
+                ]);
+                
                 if ($phoneNumber) {
                     try {
                         $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+                        
+                        // Verificar conexión Redis
+                        $redisPing = $redis->ping();
+                        Log::channel('stderr')->info('🔧 [HUMAN_TAKEOVER] Redis conexión OK', [
+                            'ping' => $redisPing
+                        ]);
                         
                         // Obtener configuración del bot del usuario
                         $user = auth()->user();
@@ -886,13 +899,17 @@ class ChatwootController extends Controller
                         
                         $messageUpper = strtoupper(trim($messageContent));
                         
-                        // DEBUG: Log para verificar qué valores estamos comparando
-                        Log::channel('stderr')->info('🤖 [HUMAN_TAKEOVER] Procesando mensaje de agente', [
+                        // Verificar estado actual de Redis para este teléfono
+                        $currentRedisValue = $redis->get($phoneNumber);
+                        
+                        // DEBUG: Log completo para diagnosticar
+                        Log::channel('stderr')->info('🤖 [HUMAN_TAKEOVER] Estado actual', [
                             'phone' => $phoneNumber,
                             'message' => $messageUpper,
                             'unlock_keyword' => $unlockKeyword,
                             'block_duration' => $blockDuration,
                             'is_unlock' => ($messageUpper === $unlockKeyword),
+                            'current_redis_value' => $currentRedisValue,
                             'bot_config' => $botConfig
                         ]);
                         
