@@ -2530,6 +2530,214 @@ Route::get('/chatwoot-debug', function () {
  * GET /api/fix-n8n-workflow/{instanceName?}
  */
 
+// ============== N8N WEBHOOK PROXY: Enriquecer datos de Chatwoot antes de enviar a n8n ==============
+// Chatwoot puede enviar webhooks SIN attachments (race condition: el attachment se guarda después del mensaje)
+// Este proxy intercepta, verifica si hay attachments vía API, y reenvía a n8n con datos completos
+Route::post('/n8n/webhook-proxy/{instanceSlug}', function (Request $request, $instanceSlug) {
+    $data = $request->all();
+    $event = $data['event'] ?? null;
+    
+    // Solo procesar message_created
+    if ($event !== 'message_created') {
+        return response()->json(['status' => 'ignored', 'reason' => 'not message_created']);
+    }
+    
+    $messageId = $data['id'] ?? null;
+    $messageType = $data['message_type'] ?? null;
+    $content = $data['content'] ?? '';
+    $contentType = $data['content_type'] ?? 'text';
+    $attachments = $data['attachments'] ?? [];
+    $accountId = $data['account']['id'] ?? 1;
+    $conversationId = $data['conversation']['id'] ?? null;
+    
+    \Log::info('🔀 N8N Webhook Proxy recibido', [
+        'instance' => $instanceSlug,
+        'message_id' => $messageId,
+        'message_type' => $messageType,
+        'content_type' => $contentType,
+        'content_empty' => empty($content),
+        'has_attachments' => !empty($attachments),
+        'attachment_count' => count($attachments),
+    ]);
+    
+    // Si el mensaje no tiene contenido Y no tiene attachments, puede ser un audio/imagen
+    // cuyo attachment aún no se ha guardado (race condition).
+    // Hacemos un retry con delay para obtener los attachments.
+    if (empty($content) && empty($attachments) && $messageId && $conversationId) {
+        \Log::info('🔄 Mensaje sin contenido ni attachments - esperando attachment (posible audio/media)', [
+            'message_id' => $messageId,
+        ]);
+        
+        // Esperar un poco a que Chatwoot guarde el attachment
+        usleep(1500000); // 1.5 seconds
+        
+        // Consultar API de Chatwoot para obtener el mensaje completo con attachments
+        $chatwootUrl = rtrim(config('chatwoot.url', 'https://chatwoot-production-50cc.up.railway.app'), '/');
+        $apiToken = config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token');
+        
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $apiToken,
+            ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
+            
+            if ($response->successful()) {
+                $messages = $response->json('payload', []);
+                $targetMsg = collect($messages)->firstWhere('id', $messageId);
+                
+                if ($targetMsg && !empty($targetMsg['attachments'])) {
+                    $data['attachments'] = $targetMsg['attachments'];
+                    // Si content_type sigue siendo "text" pero tiene audio attachment, corregir
+                    $fileType = $targetMsg['attachments'][0]['file_type'] ?? null;
+                    if ($fileType && $fileType !== 'text') {
+                        $data['_enriched_content_type'] = $fileType;
+                    }
+                    
+                    \Log::info('✅ Attachments enriquecidos desde API de Chatwoot', [
+                        'message_id' => $messageId,
+                        'attachment_count' => count($data['attachments']),
+                        'file_type' => $fileType,
+                    ]);
+                } else {
+                    \Log::warning('⚠️ No se encontraron attachments después del retry', [
+                        'message_id' => $messageId,
+                        'target_found' => !is_null($targetMsg),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('❌ Error consultando Chatwoot API para attachments', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+    
+    // Buscar la URL del webhook n8n para esta instancia
+    $n8nBaseUrl = rtrim(config('n8n.url', 'https://n8n-production-00dd.up.railway.app'), '/');
+    // Usar el webhook path estándar de n8n (el que ya existe configurado)
+    $n8nWebhookUrl = "{$n8nBaseUrl}/webhook/{$instanceSlug}";
+    
+    \Log::info('📤 Reenviando a n8n', [
+        'url' => $n8nWebhookUrl,
+        'has_attachments' => !empty($data['attachments']),
+        'enriched_content_type' => $data['_enriched_content_type'] ?? 'none',
+    ]);
+    
+    // Reenviar a n8n
+    try {
+        $n8nResponse = \Illuminate\Support\Facades\Http::timeout(10)
+            ->post($n8nWebhookUrl, $data);
+        
+        \Log::info('✅ n8n webhook response', [
+            'status' => $n8nResponse->status(),
+            'body_preview' => substr($n8nResponse->body(), 0, 200),
+        ]);
+        
+        return response()->json([
+            'status' => 'forwarded',
+            'n8n_status' => $n8nResponse->status(),
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('❌ Error reenviando a n8n', [
+            'url' => $n8nWebhookUrl,
+            'error' => $e->getMessage(),
+        ]);
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+})->name('n8n.webhook-proxy');
+
+// ============== ACTUALIZAR WEBHOOK DE CHATWOOT PARA USAR PROXY ==============
+Route::get('/n8n/setup-webhook-proxy/{instanceSlug?}', function ($instanceSlug = null) {
+    $chatwootUrl = rtrim(config('chatwoot.url', 'https://chatwoot-production-50cc.up.railway.app'), '/');
+    $appUrl = rtrim(config('app.url', 'https://app.withmia.com'), '/');
+    $apiToken = config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token');
+    $results = [];
+    
+    // Si se especifica instanceSlug, solo actualizar esa. Si no, actualizar todas las activas.
+    if ($instanceSlug) {
+        $instances = \App\Models\WhatsAppInstance::where('instance_name', $instanceSlug)
+            ->where('is_active', true)->get();
+    } else {
+        $instances = \App\Models\WhatsAppInstance::where('is_active', true)->get();
+    }
+    
+    foreach ($instances as $instance) {
+        $company = $instance->company;
+        if (!$company || !$company->chatwoot_account_id) continue;
+        
+        $accountId = $company->chatwoot_account_id;
+        $slug = $instance->instance_name;
+        
+        // URLs
+        $oldDirectUrl = "https://n8n-production-00dd.up.railway.app/webhook/{$slug}";
+        $newProxyUrl = "{$appUrl}/api/n8n/webhook-proxy/{$slug}";
+        
+        try {
+            // Obtener webhooks existentes
+            $webhooksResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                'api_access_token' => $apiToken,
+            ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks");
+            
+            if (!$webhooksResponse->successful()) {
+                $results[] = ['instance' => $slug, 'status' => 'error', 'error' => 'Could not get webhooks'];
+                continue;
+            }
+            
+            $webhooks = $webhooksResponse->json('payload.webhooks', []);
+            
+            // Buscar webhook directo a n8n y actualizarlo al proxy
+            foreach ($webhooks as $webhook) {
+                $webhookUrl = $webhook['url'] ?? '';
+                
+                // Si ya apunta al proxy, skip
+                if (str_contains($webhookUrl, '/api/n8n/webhook-proxy/')) {
+                    $results[] = ['instance' => $slug, 'status' => 'already_proxied', 'url' => $webhookUrl];
+                    continue;
+                }
+                
+                // Si apunta directamente a n8n, actualizar al proxy
+                if (str_contains($webhookUrl, '/webhook/' . $slug) && str_contains($webhookUrl, 'n8n')) {
+                    $webhookId = $webhook['id'];
+                    
+                    $updateResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                        'api_access_token' => $apiToken,
+                    ])->patch("{$chatwootUrl}/api/v1/accounts/{$accountId}/webhooks/{$webhookId}", [
+                        'url' => $newProxyUrl,
+                        'subscriptions' => ['message_created'],
+                    ]);
+                    
+                    if ($updateResponse->successful()) {
+                        $results[] = [
+                            'instance' => $slug,
+                            'status' => 'updated',
+                            'old_url' => $webhookUrl,
+                            'new_url' => $newProxyUrl,
+                        ];
+                        \Log::info('✅ Webhook actualizado a proxy', [
+                            'instance' => $slug,
+                            'old' => $webhookUrl,
+                            'new' => $newProxyUrl,
+                        ]);
+                    } else {
+                        $results[] = [
+                            'instance' => $slug,
+                            'status' => 'update_failed',
+                            'error' => $updateResponse->body(),
+                        ];
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            $results[] = ['instance' => $slug, 'status' => 'error', 'error' => $e->getMessage()];
+        }
+    }
+    
+    return response()->json([
+        'success' => true,
+        'results' => $results,
+        'message' => 'Webhook proxy setup complete',
+    ]);
+});
+
 // ============== 🔍 DIAGNÓSTICO DE SESIONES Y ENRUTAMIENTO ==============
 // Usar cuando hay problemas de mensajes yendo al usuario incorrecto
 

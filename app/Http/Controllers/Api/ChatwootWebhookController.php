@@ -50,6 +50,19 @@ class ChatwootWebhookController extends Controller
             'identifier' => $data['conversation']['meta']['sender']['identifier'] ?? $data['meta']['sender']['identifier'] ?? null
         ]);
 
+        // 🔍 DIAGNÓSTICO: Log completo para mensajes con content vacío (posibles audios/media)
+        if ($event === 'message_created' && empty($data['content'] ?? '')) {
+            Log::info('🔊 Chatwoot webhook - mensaje sin contenido (posible media)', [
+                'message_id' => $data['id'] ?? null,
+                'content_type' => $data['content_type'] ?? null,
+                'has_attachments' => isset($data['attachments']) && is_array($data['attachments']) ? count($data['attachments']) : 'NO',
+                'attachments_raw' => $data['attachments'] ?? 'NOT_PRESENT',
+                'source_id' => $data['source_id'] ?? null,
+                'message_type' => $data['message_type'] ?? null,
+                'all_keys' => array_keys($data),
+            ]);
+        }
+
         // Validar que sea una solicitud válida
         if (!$event) {
             Log::warning('Invalid webhook - no event');
