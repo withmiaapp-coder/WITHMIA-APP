@@ -876,18 +876,18 @@ class EvolutionApiService
                 'Content-Type' => 'application/json'
             ])->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
                 'enabled' => true,
-                'account_id' => $accountId,
+                'accountId' => $accountId,
                 'token' => $token,
                 'url' => $url,
-                'sign_msg' => $signMsg,
-                'reopen_conversation' => $reopenConversation,
-                'conversation_pending' => $conversationPending,
-                'name_inbox' => $instanceName,
-                'merge_brazil_contacts' => false,
-                'import_contacts' => true,
-                'import_messages' => true,
-                'days_limit_import_messages' => 60,
-                'messages_with_media' => true // 🎤 Habilitar envío de archivos multimedia (audios, imágenes, etc)
+                'signMsg' => $signMsg,
+                'reopenConversation' => $reopenConversation,
+                'conversationPending' => $conversationPending,
+                'nameInbox' => $instanceName,
+                'mergeBrazilContacts' => false,
+                'importContacts' => true,
+                'importMessages' => true,
+                'daysLimitImportMessages' => 60,
+                'messagesWithMedia' => true // 🎤 Habilitar envío de archivos multimedia (audios, imágenes, etc)
             ]);
 
             Log::debug('setChatwootIntegration response', [
