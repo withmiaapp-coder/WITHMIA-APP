@@ -219,10 +219,12 @@ class BotConfigController extends Controller
                 $node = &$workflow['nodes'][$i];
                 
                 // #1: Actualizar palabra clave de desbloqueo (empresa escribe para reactivar bot)
-                if ($node['name'] === 'Verifica Palabra Clave' && $request->has('unlock_keyword')) {
+                // Se actualiza en AMBOS nodos para mantener sincronizado
+                if (($node['name'] === 'Verifica Palabra Clave' || $node['name'] === 'Verifica Palabra Clave Saliente') 
+                    && $request->has('unlock_keyword')) {
                     $workflow['nodes'][$i]['parameters']['conditions']['conditions'][0]['rightValue'] = strtoupper($request->unlock_keyword);
                     $updated = true;
-                    $updatedNodes[] = 'Verifica Palabra Clave';
+                    $updatedNodes[] = $node['name'] . ' (unlock_keyword)';
                 }
 
                 // #2: Actualizar palabra clave para pedir humano (cliente final)
@@ -241,11 +243,13 @@ class BotConfigController extends Controller
                     $updatedNodes[] = 'Bloqueo a Humano (ttl)';
                 }
 
-                // #3: Actualizar tiempo de bloqueo cuando empresa responde (Block Agent on Outgoing)
-                if ($node['name'] === 'Block Agent on Outgoing' && $request->has('block_duration')) {
+                // #3: Actualizar tiempo de bloqueo cuando empresa responde
+                // Se actualiza en AMBOS nodos: "Bloquea al Agente" (incoming) y "Block Agent on Outgoing" (outgoing)
+                if (($node['name'] === 'Block Agent on Outgoing' || $node['name'] === 'Bloquea al Agente') 
+                    && $request->has('block_duration')) {
                     $workflow['nodes'][$i]['parameters']['ttl'] = (int) $request->block_duration;
                     $updated = true;
-                    $updatedNodes[] = 'Block Agent on Outgoing';
+                    $updatedNodes[] = $node['name'] . ' (block_duration)';
                 }
 
                 // Actualizar tiempo de buffer (Wait principal)
