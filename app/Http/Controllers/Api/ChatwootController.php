@@ -869,29 +869,42 @@ class ChatwootController extends Controller
                     '_fromAgent' => true // Marcar como enviado por agente
                 ];
 
-                // 🤖 HUMAN TAKEOVER: Pausar el bot cuando un agente humano interviene
-                // El bot se detendrá por 30 minutos (1800 segundos) para esta conversación
-                // IMPORTANTE: La key debe coincidir con lo que n8n busca en "Verifica Bloqueo"
-                // n8n usa: key = $json.message.chat_id (solo el número)
-                // n8n guarda el resultado en propertyName = "bot-state"
+                // 🤖 HUMAN TAKEOVER: Gestionar el estado del bot según el mensaje del agente
+                // - Si el mensaje es la PALABRA SECRETA (unlock_keyword) → REACTIVAR bot
+                // - Si es cualquier otro mensaje → PAUSAR bot por block_duration segundos
                 $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
                 if ($phoneNumber) {
                     try {
-                        // Usar conexión 'n8n' que NO tiene prefix
-                        // La key es SOLO el número (ej: 56940233053)
-                        // n8n verifica: if $json['bot-state'] is not empty -> skip AI
                         $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
-                        $redis->setex($phoneNumber, 1800, 'human-takeover');
                         
-                        Log::info('🛑 Bot pausado por intervención humana', [
-                            'phone' => $phoneNumber,
-                            'agent' => auth()->user()->name ?? 'Agent',
-                            'duration' => '30 minutos',
-                            'redis_key' => $phoneNumber
-                        ]);
+                        // Obtener configuración del bot del usuario
+                        $user = auth()->user();
+                        $botConfig = $this->getBotConfigForUser($user);
+                        $unlockKeyword = strtoupper($botConfig['unlock_keyword'] ?? 'BOT');
+                        $blockDuration = (int)($botConfig['block_duration'] ?? 600); // Default 10 min
+                        
+                        $messageUpper = strtoupper(trim($messageContent));
+                        
+                        if ($messageUpper === $unlockKeyword) {
+                            // 🔓 REACTIVAR BOT: El agente escribió la palabra secreta
+                            $redis->del($phoneNumber);
+                            Log::info('🔓 Bot REACTIVADO por palabra secreta', [
+                                'phone' => $phoneNumber,
+                                'agent' => $user->name ?? 'Agent',
+                                'keyword' => $unlockKeyword
+                            ]);
+                        } else {
+                            // 🛑 PAUSAR BOT: El agente envió un mensaje normal
+                            $redis->setex($phoneNumber, $blockDuration, 'human-takeover');
+                            Log::info('🛑 Bot PAUSADO por intervención humana', [
+                                'phone' => $phoneNumber,
+                                'agent' => $user->name ?? 'Agent',
+                                'duration_seconds' => $blockDuration,
+                                'redis_key' => $phoneNumber
+                            ]);
+                        }
                     } catch (\Exception $e) {
-                        // NO fallar si Redis no funciona - solo loguear
-                        Log::warning('⚠️ No se pudo pausar el bot (no crítico)', [
+                        Log::warning('⚠️ No se pudo gestionar estado del bot (no crítico)', [
                             'error' => $e->getMessage(),
                             'phone' => $phoneNumber
                         ]);
@@ -928,6 +941,63 @@ class ChatwootController extends Controller
                 'success' => false,
                 'message' => 'Error al enviar mensaje: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Obtener configuración del bot para el usuario
+     * Lee la configuración desde el workflow de n8n
+     */
+    private function getBotConfigForUser($user): array
+    {
+        $defaults = [
+            'unlock_keyword' => 'BOT',
+            'block_duration' => 600, // 10 minutos
+        ];
+        
+        try {
+            $companySlug = $user->company_slug ?? null;
+            if (!$companySlug) {
+                return $defaults;
+            }
+            
+            // Buscar instancia de WhatsApp con workflow
+            $instance = \App\Models\WhatsAppInstance::where('company_slug', $companySlug)
+                ->whereNotNull('n8n_workflow_id')
+                ->first();
+            
+            if (!$instance || !$instance->n8n_workflow_id) {
+                return $defaults;
+            }
+            
+            // Obtener workflow de n8n
+            $n8nService = app(\App\Services\N8nService::class);
+            $workflow = $n8nService->getWorkflow($instance->n8n_workflow_id);
+            
+            if (!$workflow || !isset($workflow['nodes'])) {
+                return $defaults;
+            }
+            
+            $config = $defaults;
+            
+            foreach ($workflow['nodes'] as $node) {
+                // Palabra clave de desbloqueo
+                if ($node['name'] === 'Verifica Palabra Clave') {
+                    $config['unlock_keyword'] = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT';
+                }
+                
+                // Tiempo de bloqueo cuando empresa responde (nodo Bloquea al Agente)
+                if ($node['name'] === 'Bloquea al Agente') {
+                    $config['block_duration'] = $node['parameters']['ttl'] ?? 600;
+                }
+            }
+            
+            return $config;
+        } catch (\Exception $e) {
+            Log::warning('No se pudo obtener config del bot, usando defaults', [
+                'error' => $e->getMessage()
+            ]);
+            return $defaults;
         }
     }
 
