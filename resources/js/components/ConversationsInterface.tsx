@@ -1088,16 +1088,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           }
         }
         
-        console.log('✅ [DEDUP] Mensaje nuevo procesado:', { messageId, sourceId, content: content.substring(0, 30) });
-
         debugLog.log('📩 [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);
 
         // ✅ Determinar si es mensaje entrante
         const messageType = event?.message?.message_type;
         const isOutgoing = messageType === 1 || messageType === 'outgoing';
         const isActiveConversation = activeConversationRef.current?.id === conversationId;
-        
-        console.log('🎯 [WebSocket] isActiveConversation:', isActiveConversation, 'activeRef:', activeConversationRef.current?.id, 'msgConv:', conversationId);
         
         // ✅ Incrementar badge en contexto global si es mensaje entrante y no está activa
         if (!isOutgoing && !isActiveConversation && globalNotificationsRef.current?.incrementBadge) {
@@ -1204,39 +1200,23 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             const existingMessages = prev.messages || [];
             
-            // Log últimos 3 mensajes para debug
-            const lastThree = existingMessages.slice(-3).map((m: any) => ({ id: m.id, source_id: m.source_id, content: m.content?.substring(0, 20) }));
-            console.log('📊 [setActiveConv] Últimos 3 mensajes:', JSON.stringify(lastThree));
-            console.log('📊 [setActiveConv] Total:', existingMessages.length, 'Nuevo ID:', newMessage.id, 'source_id:', newMessage.source_id);
-            
             // 🔒 Verificar duplicados - comparación robusta
             const messageExists = existingMessages.some((m: any) => {
               // Comparar por ID (numérico para evitar string vs number)
-              if (Number(m.id) === Number(newMessage.id)) {
-                console.log('🔍 Duplicado encontrado por ID:', m.id, '===', newMessage.id);
-                return true;
-              }
+              if (Number(m.id) === Number(newMessage.id)) return true;
               // Comparar por source_id (ID de WhatsApp)
-              if (newMessage.source_id && m.source_id === newMessage.source_id) {
-                console.log('🔍 Duplicado encontrado por source_id:', m.source_id);
-                return true;
-              }
-              // 🔥 NUEVO: Verificar mensajes optimistas por contenido (sin importar message_type)
+              if (newMessage.source_id && m.source_id === newMessage.source_id) return true;
+              // Verificar mensajes optimistas por contenido
               const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-') || String(m.id).startsWith('sent-');
-              if (isOptimistic && m.content === newMessage.content) {
-                console.log('🔍 Duplicado encontrado por contenido optimista:', m.id, 'content:', m.content);
-                return true;
-              }
+              if (isOptimistic && m.content === newMessage.content) return true;
               return false;
             });
             
             if (messageExists) {
-              console.log('🚫 [setActiveConv] Mensaje YA EXISTE, reemplazando optimista con real');
               // Reemplazar mensaje optimista con el real
               const updatedMessages = existingMessages.map((m: any) => {
                 const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-') || String(m.id).startsWith('sent-');
                 if (isOptimistic && m.content === newMessage.content) {
-                  console.log('🔄 Reemplazando mensaje optimista:', m.id, '→', newMessage.id);
                   return { ...newMessage, _isOptimistic: false };
                 }
                 return m;
@@ -1245,7 +1225,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               return { ...prev, messages: updatedMessages };
             }
             
-            console.log('➕ [setActiveConv] Agregando mensaje nuevo:', newMessage.id);
             const newMessages = [...existingMessages, newMessage];
             if (updateMessagesCacheRef.current) updateMessagesCacheRef.current(prev.id, newMessages);
             return { ...prev, messages: newMessages };
@@ -1294,15 +1273,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const sourceId = m.source_id;
       
       // Si ya vimos este ID numérico, es duplicado
-      if (!isNaN(numId) && seenIds.has(numId)) {
-        console.log('🔄 [filteredMessages] Duplicado por ID:', numId);
-        return false;
-      }
+      if (!isNaN(numId) && seenIds.has(numId)) return false;
       // Si ya vimos este source_id (WhatsApp ID), es duplicado
-      if (sourceId && seenSourceIds.has(sourceId)) {
-        console.log('🔄 [filteredMessages] Duplicado por source_id:', sourceId);
-        return false;
-      }
+      if (sourceId && seenSourceIds.has(sourceId)) return false;
       
       if (!isNaN(numId)) seenIds.add(numId);
       if (sourceId) seenSourceIds.add(sourceId);

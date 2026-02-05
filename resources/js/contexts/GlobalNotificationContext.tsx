@@ -502,8 +502,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           const messageId = event?.message?.id;
           const sourceId = event?.message?.source_id;
           
-          console.log('🔔 [GlobalNotif] .message.received:', { messageId, sourceId, content: event?.message?.content?.substring(0, 30) });
-          
           // Filtrar mensajes de prueba o sin ID válido
           if (event?.message?.test === true || event?.test === true) {
             return;
@@ -524,14 +522,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           const sourceKey = sourceId ? `src-${sourceId}` : null;
           
           if (processedMessageIds.current.has(messageKey) || (sourceKey && processedMessageIds.current.has(sourceKey))) {
-            console.log('🚫 [GlobalNotif] Duplicado detectado, ignorando:', { messageKey, sourceKey });
             return;
           }
           
           processedMessageIds.current.add(messageKey);
           if (sourceKey) processedMessageIds.current.add(sourceKey);
-          
-          console.log('✅ [GlobalNotif] Mensaje nuevo, notificando subscribers:', messageSubscribers.current.size);
           
           // Limpiar IDs antiguos
           if (processedMessageIds.current.size > 200) {
