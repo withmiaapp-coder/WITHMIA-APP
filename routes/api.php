@@ -612,6 +612,63 @@ Route::post('/debug/bot-state/{phone}', function ($phone, Request $request) {
     }
 });
 
+// 🔧 DEBUG: Obtener config del bot por company_slug (sin auth)
+Route::get('/debug/bot-config/{companySlug}', function ($companySlug) {
+    try {
+        // Buscar instancia de WhatsApp con workflow
+        $instance = \App\Models\WhatsAppInstance::where('company_slug', $companySlug)
+            ->orWhere('name', 'like', "%{$companySlug}%")
+            ->whereNotNull('n8n_workflow_id')
+            ->first();
+        
+        if (!$instance || !$instance->n8n_workflow_id) {
+            return response()->json([
+                'error' => 'No instance found',
+                'company_slug' => $companySlug,
+                'searched_by' => ['company_slug', 'name like']
+            ], 404);
+        }
+        
+        // Obtener workflow de n8n
+        $n8nService = app(\App\Services\N8nService::class);
+        $result = $n8nService->getWorkflow($instance->n8n_workflow_id);
+        
+        if (!$result['success'] || !isset($result['data']['nodes'])) {
+            return response()->json([
+                'error' => 'Could not get workflow',
+                'workflow_id' => $instance->n8n_workflow_id,
+                'n8n_result' => $result
+            ], 500);
+        }
+        
+        $workflow = $result['data'];
+        $config = [
+            'workflow_id' => $instance->n8n_workflow_id,
+            'workflow_name' => $workflow['name'] ?? 'Unknown',
+            'instance_name' => $instance->name,
+            'unlock_keyword' => 'BOT', // default
+            'block_duration' => 600,   // default
+        ];
+        
+        // Buscar nodos de configuración
+        foreach ($workflow['nodes'] ?? [] as $node) {
+            if ($node['name'] === 'Verifica Palabra Clave') {
+                $config['unlock_keyword'] = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOT';
+                $config['unlock_node_found'] = true;
+            }
+            
+            if ($node['name'] === 'Bloquea al Agente') {
+                $config['block_duration'] = $node['parameters']['ttl'] ?? 600;
+                $config['block_node_found'] = true;
+            }
+        }
+        
+        return response()->json($config);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
+
 // 🔧 DEBUG: Obtener config del bot para un usuario
 Route::middleware(['auth:sanctum'])->get('/debug/bot-config', function (Request $request) {
     try {
