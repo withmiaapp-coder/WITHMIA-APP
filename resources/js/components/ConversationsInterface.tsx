@@ -1246,10 +1246,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     const allMessages = activeConversation.messages || [];
     
+    // 🔒 PRIMERO: Deduplicar por ID de mensaje (mismo ID = mismo mensaje)
+    const seenIds = new Set<string | number>();
+    const uniqueMessages = allMessages.filter((m: any) => {
+      const id = m.id;
+      if (seenIds.has(id)) {
+        return false; // Ya vimos este ID, es duplicado
+      }
+      seenIds.add(id);
+      return true;
+    });
+    
     // Obtener contenidos de mensajes reales (no optimistas)
     // Un mensaje es "real" si tiene ID numérico y NO tiene flags optimistas
     const realMessageContents = new Set(
-      allMessages
+      uniqueMessages
         .filter((m: any) => {
           const isReal = (
             typeof m.id === 'number' &&
@@ -1263,7 +1274,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     );
     
     // Filtrar: excluir mensajes optimistas/pending cuyo contenido ya existe en mensajes reales
-    const deduplicatedMessages = allMessages.filter((m: any) => {
+    const deduplicatedMessages = uniqueMessages.filter((m: any) => {
       // Si es mensaje real (ID numérico, no flags), siempre incluir (excepto privados)
       const isRealMessage = (
         typeof m.id === 'number' &&
