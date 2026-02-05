@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-02-01T18:09:38.842Z",
+    "updatedAt":  "2026-02-05T20:18:29.358Z",
     "createdAt":  "2026-01-28T01:57:04.485Z",
     "id":  "C1mhxAWt67pfg3BC",
     "name":  "WITHMIA Bot - withmia-evp7rj",
@@ -149,7 +149,7 @@
                                                                                  {
                                                                                      "id":  "message-content-type",
                                                                                      "name":  "message.content_type",
-                                                                                     "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.content_type || $(\u0027WITHMIA Webhook\u0027).item.json.body?.content_type || \u0027text\u0027 }}",
+                                                                                     "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.attachments?.[0]?.file_type || $(\u0027WITHMIA Webhook\u0027).item.json.attachments?.[0]?.file_type || $(\u0027WITHMIA Webhook\u0027).item.json.content_type || $(\u0027WITHMIA Webhook\u0027).item.json.body?.content_type || \u0027text\u0027 }}",
                                                                                      "type":  "string"
                                                                                  },
                                                                                  {
@@ -204,6 +204,18 @@
                                                                                      "id":  "chatwoot-api-token",
                                                                                      "name":  "chatwoot.api_token",
                                                                                      "value":  "={{ $json.chatwoot_api_token || \u0027LsgCRFINz50YWZ9PrNDQj2Be\u0027 }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "message-audio-url",
+                                                                                     "name":  "message.audio_url",
+                                                                                     "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.attachments?.[0]?.data_url || $(\u0027WITHMIA Webhook\u0027).item.json.attachments?.[0]?.data_url || \u0027\u0027 }}",
+                                                                                     "type":  "string"
+                                                                                 },
+                                                                                 {
+                                                                                     "id":  "message-source-id",
+                                                                                     "name":  "message.source_id",
+                                                                                     "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027 }}",
                                                                                      "type":  "string"
                                                                                  }
                                                                              ]
@@ -651,33 +663,15 @@
                   },
                   {
                       "parameters":  {
-                                         "method":  "POST",
-                                         "url":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalize Data\u0027).item.json.instance.name }}",
-                                         "sendHeaders":  true,
-                                         "headerParameters":  {
-                                                                  "parameters":  [
-                                                                                     {
-                                                                                         "name":  "apikey",
-                                                                                         "value":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.apikey }}"
-                                                                                     }
-                                                                                 ]
-                                                              },
-                                         "sendBody":  true,
-                                         "bodyParameters":  {
-                                                                "parameters":  [
-                                                                                   {
-                                                                                       "name":  "message.key.id",
-                                                                                       "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.message_id }}"
-                                                                                   },
-                                                                                   {
-                                                                                       "name":  "convertToMp4",
-                                                                                       "value":  "={{ Boolean(false) }}"
-                                                                                   }
-                                                                               ]
-                                                            },
-                                         "options":  [
-
-                                                     ]
+                                         "method":  "GET",
+                                         "url":  "={{ $(\u0027Normalize Data\u0027).item.json.message.audio_url }}",
+                                         "options":  {
+                                                         "response":  {
+                                                                          "response":  {
+                                                                                           "responseFormat":  "file"
+                                                                                       }
+                                                                      }
+                                                     }
                                      },
                       "type":  "n8n-nodes-base.httpRequest",
                       "typeVersion":  4.2,
@@ -777,14 +771,10 @@
                   },
                   {
                       "parameters":  {
-                                         "operation":  "toBinary",
-                                         "sourceProperty":  "base64",
-                                         "options":  {
-                                                         "mimeType":  "={{ $json.mimetype }}"
-                                                     }
+                                         "mode":  "passthrough"
                                      },
-                      "type":  "n8n-nodes-base.convertToFile",
-                      "typeVersion":  1.1,
+                      "type":  "n8n-nodes-base.set",
+                      "typeVersion":  3.4,
                       "position":  [
                                        -1040,
                                        896
@@ -987,7 +977,7 @@
                   },
                   {
                       "parameters":  {
-                                         "amount":  10
+                                         "amount":  5
                                      },
                       "type":  "n8n-nodes-base.wait",
                       "typeVersion":  1.1,
@@ -1539,12 +1529,12 @@
                   {
                       "parameters":  {
                                          "descriptionType":  "manual",
-                                         "toolDescription":  "Cuando el cliente escriba la palabra \"HUMANOASDDSA\" ejecuta esta tool",
+                                         "toolDescription":  "Cuando el cliente escriba la palabra \"HUMANO\" ejecuta esta tool",
                                          "operation":  "set",
                                          "key":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.message.chat_id }}",
                                          "value":  "blocked-bot",
                                          "expire":  true,
-                                         "ttl":  60
+                                         "ttl":  600
                                      },
                       "type":  "n8n-nodes-base.redisTool",
                       "typeVersion":  1,
@@ -1713,7 +1703,7 @@
                   },
                   {
                       "parameters":  {
-                                         "amount":  6
+                                         "amount":  2
                                      },
                       "type":  "n8n-nodes-base.wait",
                       "typeVersion":  1.1,
@@ -1727,7 +1717,7 @@
                   },
                   {
                       "parameters":  {
-                                         "amount":  6
+                                         "amount":  2
                                      },
                       "type":  "n8n-nodes-base.wait",
                       "typeVersion":  1.1,
@@ -1974,7 +1964,7 @@
                                                                                                 },
                                                                                    "rightValue":  "withmia",
                                                                                    "id":  "check-not-bot",
-                                                                                   "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || '').toLowerCase() }}"
+                                                                                   "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || \u0027\u0027).toLowerCase() }}"
                                                                                }
                                                                            ],
                                                             "combinator":  "and"
@@ -2616,9 +2606,9 @@
     "pinData":  {
 
                 },
-    "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
-    "activeVersionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
-    "versionCounter":  162,
+    "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
+    "activeVersionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
+    "versionCounter":  215,
     "triggerCount":  1,
     "shared":  [
                    {
@@ -2643,7 +2633,7 @@
                                                                     "userId":  "076c9167-3e08-4d7d-a69d-b951f641bbdf",
                                                                     "projectId":  "JYZcwql470ya5ahw",
                                                                     "user":  {
-                                                                                 "updatedAt":  "2026-02-01T16:12:26.347Z",
+                                                                                 "updatedAt":  "2026-02-05T10:50:15.573Z",
                                                                                  "createdAt":  "2026-01-23T13:15:46.853Z",
                                                                                  "id":  "076c9167-3e08-4d7d-a69d-b951f641bbdf",
                                                                                  "email":  "automatiza@withmia.com",
@@ -2671,7 +2661,7 @@
                                                                                               },
                                                                                  "disabled":  false,
                                                                                  "mfaEnabled":  false,
-                                                                                 "lastActiveAt":  "2026-02-01",
+                                                                                 "lastActiveAt":  "2026-02-05",
                                                                                  "isPending":  false
                                                                              }
                                                                 }
@@ -2683,9 +2673,9 @@
 
              ],
     "activeVersion":  {
-                          "updatedAt":  "2026-02-01T18:09:38.850Z",
-                          "createdAt":  "2026-02-01T18:09:38.850Z",
-                          "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
+                          "updatedAt":  "2026-02-05T20:18:29.362Z",
+                          "createdAt":  "2026-02-05T20:18:29.362Z",
+                          "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
                           "workflowId":  "C1mhxAWt67pfg3BC",
                           "nodes":  [
                                         {
@@ -2830,7 +2820,7 @@
                                                                                                        {
                                                                                                            "id":  "message-content-type",
                                                                                                            "name":  "message.content_type",
-                                                                                                           "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.content_type || $(\u0027WITHMIA Webhook\u0027).item.json.body?.content_type || \u0027text\u0027 }}",
+                                                                                                           "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.attachments?.[0]?.file_type || $(\u0027WITHMIA Webhook\u0027).item.json.attachments?.[0]?.file_type || $(\u0027WITHMIA Webhook\u0027).item.json.content_type || $(\u0027WITHMIA Webhook\u0027).item.json.body?.content_type || \u0027text\u0027 }}",
                                                                                                            "type":  "string"
                                                                                                        },
                                                                                                        {
@@ -2885,6 +2875,18 @@
                                                                                                            "id":  "chatwoot-api-token",
                                                                                                            "name":  "chatwoot.api_token",
                                                                                                            "value":  "={{ $json.chatwoot_api_token || \u0027LsgCRFINz50YWZ9PrNDQj2Be\u0027 }}",
+                                                                                                           "type":  "string"
+                                                                                                       },
+                                                                                                       {
+                                                                                                           "id":  "message-audio-url",
+                                                                                                           "name":  "message.audio_url",
+                                                                                                           "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.attachments?.[0]?.data_url || $(\u0027WITHMIA Webhook\u0027).item.json.attachments?.[0]?.data_url || \u0027\u0027 }}",
+                                                                                                           "type":  "string"
+                                                                                                       },
+                                                                                                       {
+                                                                                                           "id":  "message-source-id",
+                                                                                                           "name":  "message.source_id",
+                                                                                                           "value":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.body?.source_id || $(\u0027WITHMIA Webhook\u0027).item.json.source_id || \u0027\u0027 }}",
                                                                                                            "type":  "string"
                                                                                                        }
                                                                                                    ]
@@ -3332,33 +3334,15 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "method":  "POST",
-                                                               "url":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.server_url }}/chat/getBase64FromMediaMessage/{{ $(\u0027Normalize Data\u0027).item.json.instance.name }}",
-                                                               "sendHeaders":  true,
-                                                               "headerParameters":  {
-                                                                                        "parameters":  [
-                                                                                                           {
-                                                                                                               "name":  "apikey",
-                                                                                                               "value":  "={{ $(\u0027Normalize Data\u0027).item.json.instance.apikey }}"
-                                                                                                           }
-                                                                                                       ]
-                                                                                    },
-                                                               "sendBody":  true,
-                                                               "bodyParameters":  {
-                                                                                      "parameters":  [
-                                                                                                         {
-                                                                                                             "name":  "message.key.id",
-                                                                                                             "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.message_id }}"
-                                                                                                         },
-                                                                                                         {
-                                                                                                             "name":  "convertToMp4",
-                                                                                                             "value":  "={{ Boolean(false) }}"
-                                                                                                         }
-                                                                                                     ]
-                                                                                  },
-                                                               "options":  [
-
-                                                                           ]
+                                                               "method":  "GET",
+                                                               "url":  "={{ $(\u0027Normalize Data\u0027).item.json.message.audio_url }}",
+                                                               "options":  {
+                                                                               "response":  {
+                                                                                                "response":  {
+                                                                                                                 "responseFormat":  "file"
+                                                                                                             }
+                                                                                            }
+                                                                           }
                                                            },
                                             "type":  "n8n-nodes-base.httpRequest",
                                             "typeVersion":  4.2,
@@ -3458,14 +3442,10 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "operation":  "toBinary",
-                                                               "sourceProperty":  "base64",
-                                                               "options":  {
-                                                                               "mimeType":  "={{ $json.mimetype }}"
-                                                                           }
+                                                               "mode":  "passthrough"
                                                            },
-                                            "type":  "n8n-nodes-base.convertToFile",
-                                            "typeVersion":  1.1,
+                                            "type":  "n8n-nodes-base.set",
+                                            "typeVersion":  3.4,
                                             "position":  [
                                                              -1040,
                                                              896
@@ -3668,7 +3648,7 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "amount":  10
+                                                               "amount":  5
                                                            },
                                             "type":  "n8n-nodes-base.wait",
                                             "typeVersion":  1.1,
@@ -4220,12 +4200,12 @@
                                         {
                                             "parameters":  {
                                                                "descriptionType":  "manual",
-                                                               "toolDescription":  "Cuando el cliente escriba la palabra \"HUMANOASDDSA\" ejecuta esta tool",
+                                                               "toolDescription":  "Cuando el cliente escriba la palabra \"HUMANO\" ejecuta esta tool",
                                                                "operation":  "set",
                                                                "key":  "={{ $(\u0027WITHMIA Webhook\u0027).item.json.message.chat_id }}",
                                                                "value":  "blocked-bot",
                                                                "expire":  true,
-                                                               "ttl":  60
+                                                               "ttl":  600
                                                            },
                                             "type":  "n8n-nodes-base.redisTool",
                                             "typeVersion":  1,
@@ -4394,7 +4374,7 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "amount":  6
+                                                               "amount":  2
                                                            },
                                             "type":  "n8n-nodes-base.wait",
                                             "typeVersion":  1.1,
@@ -4408,7 +4388,7 @@
                                         },
                                         {
                                             "parameters":  {
-                                                               "amount":  6
+                                                               "amount":  2
                                                            },
                                             "type":  "n8n-nodes-base.wait",
                                             "typeVersion":  1.1,
@@ -4655,7 +4635,7 @@
                                                                                                                       },
                                                                                                          "rightValue":  "withmia",
                                                                                                          "id":  "check-not-bot",
-                                                                                                         "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || '').toLowerCase() }}"
+                                                                                                         "leftValue":  "={{ ($json.sender?.email || $json.body?.sender?.email || \u0027\u0027).toLowerCase() }}"
                                                                                                      }
                                                                                                  ],
                                                                                   "combinator":  "and"
@@ -5292,10 +5272,10 @@
                           "autosaved":  false,
                           "workflowPublishHistory":  [
                                                          {
-                                                             "createdAt":  "2026-02-01T18:09:39.106Z",
-                                                             "id":  163,
+                                                             "createdAt":  "2026-02-05T20:18:29.515Z",
+                                                             "id":  182,
                                                              "workflowId":  "C1mhxAWt67pfg3BC",
-                                                             "versionId":  "549d28e6-f9eb-47d0-ab28-faa40a577374",
+                                                             "versionId":  "c4d1a9bf-96ff-4630-9142-96e4f3f32223",
                                                              "event":  "activated",
                                                              "userId":  "076c9167-3e08-4d7d-a69d-b951f641bbdf"
                                                          }
