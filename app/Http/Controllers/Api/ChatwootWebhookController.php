@@ -78,6 +78,13 @@ class ChatwootWebhookController extends Controller
                 $messageId = $data['id'] ?? null;
                 $sourceId = $data['source_id'] ?? null; // ID único de WhatsApp
                 $content = $data['content'] ?? '';
+                $messageType = $data['message_type'] ?? null;
+                $isIncoming = $messageType === 'incoming' || $messageType === 0;
+                
+                // 🔓 HUMAN TAKEOVER: Si es mensaje entrante con palabra clave de desbloqueo → eliminar bloqueo
+                if ($isIncoming && $content) {
+                    $this->handleUnlockKeyword($data, $inboxId, $content);
+                }
                 
                 // 🔒 DEDUPLICACIÓN: Solo por IDs únicos (sin hash de contenido)
                 // El hash causaba que mensajes con mismo contenido se filtraran
@@ -422,5 +429,102 @@ class ChatwootWebhookController extends Controller
         $events = Cache::get($cacheKey, []);
 
         return response()->json(['events' => $events]);
+    }
+
+    /**
+     * 🔓 HUMAN TAKEOVER: Verificar si el mensaje entrante es la palabra clave de desbloqueo
+     * Si es "BOTA" (o la unlock_keyword configurada), eliminar la clave de bloqueo de Redis
+     */
+    private function handleUnlockKeyword(array $data, int $inboxId, string $content): void
+    {
+        try {
+            // Obtener el teléfono del remitente
+            $identifier = $data['conversation']['meta']['sender']['identifier'] ?? 
+                         $data['sender']['identifier'] ?? 
+                         $data['sender']['phone_number'] ?? null;
+            
+            if (!$identifier) {
+                return;
+            }
+            
+            // Limpiar el número de teléfono
+            $phoneNumber = preg_replace('/[^0-9]/', '', $identifier);
+            $phoneNumber = preg_replace('/^(\+|00)/', '', $phoneNumber);
+            
+            if (!$phoneNumber) {
+                return;
+            }
+            
+            // Obtener la unlock_keyword configurada para este inbox
+            $unlockKeyword = $this->getUnlockKeywordForInbox($inboxId);
+            $messageUpper = strtoupper(trim($content));
+            
+            // Si el mensaje es la palabra clave de desbloqueo
+            if ($messageUpper === $unlockKeyword) {
+                $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+                
+                // Verificar si hay un bloqueo activo
+                $currentValue = $redis->get($phoneNumber);
+                
+                if ($currentValue) {
+                    // Eliminar el bloqueo
+                    $redis->del($phoneNumber);
+                    Log::info('🔓 [HUMAN_TAKEOVER_WEBHOOK] Bot REACTIVADO por cliente', [
+                        'phone' => $phoneNumber,
+                        'keyword' => $unlockKeyword,
+                        'previous_value' => $currentValue
+                    ]);
+                } else {
+                    Log::debug('🔓 [HUMAN_TAKEOVER_WEBHOOK] Palabra clave recibida pero no hay bloqueo activo', [
+                        'phone' => $phoneNumber,
+                        'keyword' => $unlockKeyword
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('⚠️ [HUMAN_TAKEOVER_WEBHOOK] Error procesando unlock keyword', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Obtener la unlock_keyword configurada para un inbox específico
+     */
+    private function getUnlockKeywordForInbox(int $inboxId): string
+    {
+        try {
+            // Buscar la instancia de WhatsApp asociada al inbox
+            $instance = \App\Models\WhatsAppInstance::where('chatwoot_inbox_id', $inboxId)
+                ->whereNotNull('n8n_workflow_id')
+                ->first();
+            
+            if (!$instance || !$instance->n8n_workflow_id) {
+                return 'BOTA'; // Default
+            }
+            
+            // Obtener workflow de n8n
+            $n8nService = app(\App\Services\N8nService::class);
+            $result = $n8nService->getWorkflow($instance->n8n_workflow_id);
+            
+            if (!$result['success'] || !isset($result['data']['nodes'])) {
+                return 'BOTA'; // Default
+            }
+            
+            // Buscar el nodo "Verifica Palabra Clave"
+            foreach ($result['data']['nodes'] as $node) {
+                if ($node['name'] === 'Verifica Palabra Clave') {
+                    return $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOTA';
+                }
+            }
+            
+            return 'BOTA'; // Default
+        } catch (\Exception $e) {
+            Log::warning('⚠️ Error obteniendo unlock_keyword, usando default BOTA', [
+                'inbox_id' => $inboxId,
+                'error' => $e->getMessage()
+            ]);
+            return 'BOTA';
+        }
     }
 }
