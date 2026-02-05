@@ -890,10 +890,16 @@ class EvolutionApiService
                 'messages_with_media' => true // 🎤 Habilitar envío de archivos multimedia (audios, imágenes, etc)
             ]);
 
+            Log::debug('setChatwootIntegration response', [
+                'instance' => $instanceName,
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
             if (!$response->successful()) {
                 return [
                     'success' => false,
-                    'error' => $response->json()['message'] ?? 'Failed to set Chatwoot integration'
+                    'error' => $response->json()['message'] ?? $response->body() ?? 'Failed to set Chatwoot integration'
                 ];
             }
 
@@ -903,6 +909,11 @@ class EvolutionApiService
             ];
 
         } catch (\Exception $e) {
+            Log::error('setChatwootIntegration exception', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return [
                 'success' => false,
                 'error' => $e->getMessage()

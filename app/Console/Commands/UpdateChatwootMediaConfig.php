@@ -82,8 +82,14 @@ class UpdateChatwootMediaConfig extends Command
 
             if ($result['success']) {
                 $this->info("  ✅ Configuración actualizada correctamente");
+                if (isset($result['data'])) {
+                    $this->line("     Datos: " . json_encode($result['data'], JSON_PRETTY_PRINT));
+                }
             } else {
                 $this->error("  ❌ Error: " . ($result['error'] ?? 'Unknown error'));
+                $this->error("     Instancia: {$instance->instance_name}");
+                $this->error("     Account ID: {$company->chatwoot_account_id}");
+                $this->error("     Evolution URL: " . config('evolution.api_url'));
             }
         }
 
