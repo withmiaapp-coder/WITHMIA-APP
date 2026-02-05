@@ -977,7 +977,7 @@ export default function Entrenamiento({
                       />
                       <p className="mt-1 text-[10px] text-gray-500">Escríbela para reactivar el bot</p>
                     </div>
-                    */
+                    */}
 
                     {/* Col 2: Cliente pide ayuda humana */}
                     <div className="bg-orange-50 rounded-lg p-3 border border-orange-100">
