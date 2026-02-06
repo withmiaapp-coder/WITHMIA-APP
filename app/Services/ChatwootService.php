@@ -260,6 +260,91 @@ class ChatwootService
     }
 
     /**
+     * 🔧 Migrar webhooks: Eliminar webhooks directos a n8n y asegurar que
+     * solo el webhook a Laravel (con enriquecimiento de media) exista.
+     * 
+     * Esto resuelve el problema de audio: si Chatwoot envía directamente a n8n,
+     * el webhook llega sin attachments (race condition). Al pasar por Laravel,
+     * se enriquece con los attachments reales antes de enviar a n8n.
+     * 
+     * @return array Resultado de la migración
+     */
+    public function migrateWebhooksToLaravel(): array
+    {
+        $result = $this->listWebhooks();
+        
+        if (!$result['success']) {
+            return ['success' => false, 'error' => 'Could not list webhooks'];
+        }
+
+        $webhooks = $result['webhooks'] ?? [];
+        $deleted = [];
+        $kept = [];
+        $errors = [];
+        $appUrl = rtrim(config('app.url', 'https://app.withmia.com'), '/');
+        $n8nUrl = rtrim(config('n8n.url', ''), '/');
+        
+        foreach ($webhooks as $webhook) {
+            $url = $webhook['url'] ?? '';
+            
+            // Detectar webhooks que van DIRECTAMENTE a n8n (sin pasar por Laravel)
+            $isDirectN8n = (
+                (str_contains($url, 'n8n') || str_contains($url, '/webhook/')) &&
+                !str_contains($url, $appUrl) &&
+                !str_contains($url, 'app.withmia.com') &&
+                !str_contains($url, '/api/chatwoot/')
+            );
+            
+            if ($isDirectN8n) {
+                // Eliminar el webhook directo a n8n
+                $deleteResult = $this->deleteWebhook($webhook['id']);
+                
+                if ($deleteResult['success']) {
+                    $deleted[] = [
+                        'id' => $webhook['id'],
+                        'url' => $url,
+                        'reason' => 'Direct n8n webhook removed - will use Laravel enrichment path',
+                    ];
+                    Log::info('🗑️ Webhook directo a n8n eliminado', [
+                        'webhook_id' => $webhook['id'],
+                        'url' => $url,
+                    ]);
+                } else {
+                    $errors[] = [
+                        'id' => $webhook['id'],
+                        'url' => $url,
+                        'error' => 'Could not delete webhook',
+                    ];
+                }
+            } else {
+                $kept[] = [
+                    'id' => $webhook['id'],
+                    'url' => $url,
+                ];
+            }
+        }
+        
+        // Verificar que existe un webhook a Laravel
+        $hasLaravelWebhook = collect($kept)->contains(function ($wh) use ($appUrl) {
+            return str_contains($wh['url'], $appUrl) || str_contains($wh['url'], '/api/chatwoot/');
+        });
+        
+        return [
+            'success' => true,
+            'deleted' => $deleted,
+            'kept' => $kept,
+            'errors' => $errors,
+            'has_laravel_webhook' => $hasLaravelWebhook,
+            'message' => count($deleted) > 0 
+                ? "Migrated: deleted " . count($deleted) . " direct n8n webhook(s). Laravel enrichment path is now the only route."
+                : "No direct n8n webhooks found - configuration looks correct.",
+            'warning' => !$hasLaravelWebhook 
+                ? "⚠️ No Laravel webhook found! You need to create one pointing to {$appUrl}/api/chatwoot/webhook"
+                : null,
+        ];
+    }
+
+    /**
      * Elimina un webhook por ID
      */
     public function deleteWebhook(int $webhookId): array
@@ -357,6 +442,11 @@ class ChatwootService
     /**
      * Configura el webhook para una empresa específica
      * 
+     * IMPORTANTE: El webhook apunta a Laravel (no directamente a n8n) para que
+     * Laravel pueda enriquecer mensajes multimedia (audio, imagen) con attachments
+     * antes de reenviar a n8n. Esto resuelve el race condition donde Chatwoot
+     * dispara el webhook antes de guardar los attachments multimedia.
+     * 
      * @param string $companySlug Slug de la empresa
      * @param string|null $inboxName Nombre del inbox (opcional)
      * @return array
@@ -379,17 +469,19 @@ class ChatwootService
                 ];
             }
 
-            // 2. Construir URL del webhook de n8n
-            $n8nWebhookUrl = config('services.n8n.url') . '/webhook/withmia-' . $companySlug;
+            // 2. Construir URL del webhook de Laravel (NO directamente a n8n)
+            // Laravel enriquecerá (attachments/audio) y reenviará a n8n
+            $appUrl = rtrim(config('app.url', 'https://app.withmia.com'), '/');
+            $webhookUrl = "{$appUrl}/api/chatwoot/webhook/{$companySlug}";
 
             // 3. Configurar el webhook
-            $result = $this->configureInboxWebhook($inbox['id'], $n8nWebhookUrl);
+            $result = $this->configureInboxWebhook($inbox['id'], $webhookUrl);
             
             if ($result['success']) {
-                Log::debug('ChatwootService: Webhook configurado para empresa', [
+                Log::debug('ChatwootService: Webhook configurado para empresa (vía Laravel)', [
                     'company_slug' => $companySlug,
                     'inbox_id' => $inbox['id'],
-                    'webhook_url' => $n8nWebhookUrl,
+                    'webhook_url' => $webhookUrl,
                 ]);
             }
 

@@ -2427,12 +2427,13 @@ Route::post('/repair-instance/{instanceName}', function (Request $request, strin
                 $repairs[] = "Updated chatwoot_inbox_id in local DB: {$inboxId}";
             }
             
-            // Configurar webhook en Chatwoot apuntando a n8n
-            $n8nWebhookUrl = $instance->n8n_webhook_url ?? $n8nService->getWebhookUrl($instanceName);
-            $chatwootWebhookResult = $chatwootService->configureInboxWebhook($inboxId, $n8nWebhookUrl);
+            // Configurar webhook en Chatwoot apuntando a LARAVEL (no directamente a n8n)
+            // Laravel enriquecerá los mensajes multimedia (audio/imagen) antes de reenviar a n8n
+            $laravelWebhookUrl = "{$appUrl}/api/chatwoot/webhook/" . preg_replace('/^WhatsApp\s+/i', '', $inbox['name'] ?? $instanceName);
+            $chatwootWebhookResult = $chatwootService->configureInboxWebhook($inboxId, $laravelWebhookUrl);
             
             if ($chatwootWebhookResult['success']) {
-                $repairs[] = "Configured Chatwoot webhook for inbox {$inboxId} to: {$n8nWebhookUrl}";
+                $repairs[] = "Configured Chatwoot webhook for inbox {$inboxId} to: {$laravelWebhookUrl} (via Laravel enrichment)";
             } else {
                 $repairs[] = "ERROR configuring Chatwoot webhook: " . ($chatwootWebhookResult['error'] ?? 'Unknown');
             }
@@ -2468,14 +2469,38 @@ Route::post('/repair-instance/{instanceName}', function (Request $request, strin
  */
 
 /**
- * �🔄 Listar todos los webhooks de Chatwoot
+ * 🔄 Listar todos los webhooks de Chatwoot
  * GET /api/list-chatwoot-webhooks
  */
+Route::get('/list-chatwoot-webhooks', function () {
+    try {
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $result = $chatwootService->listWebhooks();
+        return response()->json($result);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
 
 /**
  * 🗑️ Limpiar webhooks duplicados/viejos de Chatwoot
  * POST /api/cleanup-chatwoot-webhooks
  */
+
+/**
+ * 🔧 Migrar webhooks: eliminar webhooks directos a n8n y usar solo la ruta via Laravel
+ * Esto resuelve el problema de audio/media no siendo transcritos correctamente.
+ * POST /api/migrate-chatwoot-webhooks
+ */
+Route::post('/migrate-chatwoot-webhooks', function () {
+    try {
+        $chatwootService = app(\App\Services\ChatwootService::class);
+        $result = $chatwootService->migrateWebhooksToLaravel();
+        return response()->json($result);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
 
 /**
  * 🔥 CREAR WEBHOOK DE CHATWOOT A N8N - DIRECTO EN BD

@@ -257,44 +257,97 @@ class ChatwootWebhookController extends Controller
                 'attachment_count' => count($attachments),
             ]);
             
+            // 🎯 Si ya vienen attachments, asegurar que content_type esté seteado correctamente
+            if (!empty($attachments)) {
+                $fileType = $attachments[0]['file_type'] ?? null;
+                if ($fileType && !isset($data['content_type'])) {
+                    $data['content_type'] = $fileType; // audio, image, video, file
+                    Log::info('🏷️ content_type seteado desde attachments existentes', [
+                        'file_type' => $fileType,
+                    ]);
+                }
+            }
+            
             // Si el mensaje NO tiene contenido Y NO tiene attachments, 
             // probablemente es un audio/imagen cuyo attachment no se guardó aún
             if (empty($content) && empty($attachments) && $messageId && $conversationId) {
-                Log::info('🔄 Mensaje sin contenido ni attachments - posible audio/media, esperando...', [
+                Log::info('🔄 Mensaje sin contenido ni attachments - posible audio/media, esperando con retry...', [
                     'message_id' => $messageId,
                 ]);
                 
-                // Esperar a que Chatwoot guarde el attachment
-                usleep(2000000); // 2 segundos
-                
-                // Consultar Chatwoot API para obtener el mensaje completo
                 $chatwootUrl = rtrim(config('chatwoot.url', 'https://chatwoot-production-50cc.up.railway.app'), '/');
                 $apiToken = config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token');
                 
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'api_access_token' => $apiToken,
-                ])->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
+                // 🔄 RETRY LOOP: Intentar hasta 4 veces con espera incremental (2s, 3s, 4s, 5s = 14s max)
+                $maxRetries = 4;
+                $attachmentsFound = false;
                 
-                if ($response->successful()) {
-                    $messages = $response->json('payload', []);
-                    $targetMsg = collect($messages)->firstWhere('id', $messageId);
+                for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                    $waitSeconds = $attempt + 1; // 2s, 3s, 4s, 5s
+                    usleep($waitSeconds * 1000000);
                     
-                    if ($targetMsg && !empty($targetMsg['attachments'])) {
-                        $data['attachments'] = $targetMsg['attachments'];
-                        $fileType = $targetMsg['attachments'][0]['file_type'] ?? null;
+                    Log::debug("🔄 Retry #{$attempt}/{$maxRetries} - buscando attachments después de {$waitSeconds}s", [
+                        'message_id' => $messageId,
+                    ]);
+                    
+                    try {
+                        $response = \Illuminate\Support\Facades\Http::withHeaders([
+                            'api_access_token' => $apiToken,
+                        ])->timeout(10)->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
                         
-                        Log::info('✅ Attachments enriquecidos desde API de Chatwoot', [
+                        if ($response->successful()) {
+                            $messages = $response->json('payload', []);
+                            $targetMsg = collect($messages)->firstWhere('id', $messageId);
+                            
+                            if ($targetMsg && !empty($targetMsg['attachments'])) {
+                                $data['attachments'] = $targetMsg['attachments'];
+                                $fileType = $targetMsg['attachments'][0]['file_type'] ?? null;
+                                
+                                // También enriquecer content_type explícitamente para audio
+                                if ($fileType === 'audio') {
+                                    $data['content_type'] = 'audio';
+                                } elseif ($fileType === 'image') {
+                                    $data['content_type'] = 'image';
+                                } elseif ($fileType === 'video') {
+                                    $data['content_type'] = 'video';
+                                } elseif ($fileType === 'file') {
+                                    $data['content_type'] = 'file';
+                                }
+                                
+                                Log::info("✅ Attachments enriquecidos en intento #{$attempt}", [
+                                    'message_id' => $messageId,
+                                    'attachment_count' => count($data['attachments']),
+                                    'file_type' => $fileType,
+                                    'content_type' => $data['content_type'] ?? 'not_set',
+                                    'data_url' => $targetMsg['attachments'][0]['data_url'] ?? 'none',
+                                ]);
+                                $attachmentsFound = true;
+                                break; // Salir del retry loop
+                            }
+                            
+                            // Si encontramos el mensaje pero sin attachments, seguir intentando
+                            if ($targetMsg && empty($targetMsg['attachments'])) {
+                                Log::debug("⏳ Mensaje encontrado pero sin attachments aún (intento #{$attempt})", [
+                                    'message_id' => $messageId,
+                                    'content_type' => $targetMsg['content_type'] ?? 'null',
+                                    'content_attributes' => $targetMsg['content_attributes'] ?? [],
+                                ]);
+                            }
+                        }
+                    } catch (\Exception $retryException) {
+                        Log::warning("⚠️ Error en retry #{$attempt}", [
                             'message_id' => $messageId,
-                            'attachment_count' => count($data['attachments']),
-                            'file_type' => $fileType,
-                            'data_url' => $targetMsg['attachments'][0]['data_url'] ?? 'none',
-                        ]);
-                    } else {
-                        Log::warning('⚠️ No se encontraron attachments después del retry', [
-                            'message_id' => $messageId,
-                            'target_found' => !is_null($targetMsg),
+                            'error' => $retryException->getMessage(),
                         ]);
                     }
+                }
+                
+                if (!$attachmentsFound) {
+                    Log::warning('⚠️ No se encontraron attachments después de todos los reintentos', [
+                        'message_id' => $messageId,
+                        'total_retries' => $maxRetries,
+                        'total_wait_seconds' => 2 + 3 + 4 + 5, // 14 seconds total
+                    ]);
                 }
             }
             
