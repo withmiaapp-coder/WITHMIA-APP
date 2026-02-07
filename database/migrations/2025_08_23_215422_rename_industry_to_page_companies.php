@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('page_companies', function (Blueprint $table) {
-            //
-        });
+        // No-op: Originally referenced non-existent 'page_companies' table.
+        // Kept as empty migration since it's already in the migrations history.
     }
 
     /**
@@ -21,8 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('page_companies', function (Blueprint $table) {
-            //
-        });
+        // No-op
     }
 };

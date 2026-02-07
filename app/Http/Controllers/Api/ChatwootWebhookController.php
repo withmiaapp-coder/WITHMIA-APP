@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Services\ChatwootService;
-use App\Services\ConversationDeduplicationService;
 use App\Helpers\PhoneNormalizer;
 use App\Helpers\SystemMessagePatterns;
 
@@ -183,8 +182,7 @@ class ChatwootWebhookController extends Controller
         } catch (\Exception $e) {
             Log::error('❌ Error broadcasting event', [
                 'event' => $event,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
         }
 
@@ -220,6 +218,8 @@ class ChatwootWebhookController extends Controller
      * Chatwoot puede disparar el webhook ANTES de que el attachment se guarde (race condition).
      * Este método detecta mensajes sin contenido ni attachments, espera a que Chatwoot guarde
      * el attachment, consulta la API para obtenerlo, y reenvía el payload enriquecido a n8n.
+     * 
+     * OPTIMIZACIÓN: Despacha un Job en cola para no bloquear workers de Octane.
      */
     private function forwardToN8nWithEnrichment(array $data, ?int $inboxId, ?int $accountId): void
     {
@@ -232,10 +232,6 @@ class ChatwootWebhookController extends Controller
                 return;
             }
             
-            $content = $data['content'] ?? '';
-            $attachments = $data['attachments'] ?? [];
-            $messageId = $data['id'] ?? null;
-            $conversationId = $data['conversation']['id'] ?? null;
             $inboxName = $data['inbox']['name'] ?? null;
             
             // Determinar el instance slug desde el inbox name
@@ -249,130 +245,21 @@ class ChatwootWebhookController extends Controller
                 return;
             }
             
-            Log::info('🔀 Preparando forward a n8n', [
+            Log::info('🔀 Despachando ForwardToN8nWithEnrichmentJob', [
                 'instance' => $instanceSlug,
-                'message_id' => $messageId,
-                'content_empty' => empty($content),
-                'has_attachments' => !empty($attachments),
-                'attachment_count' => count($attachments),
+                'message_id' => $data['id'] ?? null,
             ]);
             
-            // 🎯 Si ya vienen attachments, asegurar que content_type esté seteado correctamente
-            if (!empty($attachments)) {
-                $fileType = $attachments[0]['file_type'] ?? null;
-                if ($fileType && !isset($data['content_type'])) {
-                    $data['content_type'] = $fileType; // audio, image, video, file
-                    Log::info('🏷️ content_type seteado desde attachments existentes', [
-                        'file_type' => $fileType,
-                    ]);
-                }
-            }
-            
-            // Si el mensaje NO tiene contenido Y NO tiene attachments, 
-            // probablemente es un audio/imagen cuyo attachment no se guardó aún
-            if (empty($content) && empty($attachments) && $messageId && $conversationId) {
-                Log::info('🔄 Mensaje sin contenido ni attachments - posible audio/media, esperando con retry...', [
-                    'message_id' => $messageId,
-                ]);
-                
-                $chatwootUrl = rtrim(config('chatwoot.url', 'https://chatwoot-production-50cc.up.railway.app'), '/');
-                $apiToken = config('chatwoot.super_admin_token') ?? config('chatwoot.platform_token');
-                
-                // 🔄 RETRY LOOP: Intentar hasta 4 veces con espera incremental (2s, 3s, 4s, 5s = 14s max)
-                $maxRetries = 4;
-                $attachmentsFound = false;
-                
-                for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-                    $waitSeconds = $attempt + 1; // 2s, 3s, 4s, 5s
-                    usleep($waitSeconds * 1000000);
-                    
-                    Log::debug("🔄 Retry #{$attempt}/{$maxRetries} - buscando attachments después de {$waitSeconds}s", [
-                        'message_id' => $messageId,
-                    ]);
-                    
-                    try {
-                        $response = \Illuminate\Support\Facades\Http::withHeaders([
-                            'api_access_token' => $apiToken,
-                        ])->timeout(10)->get("{$chatwootUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages");
-                        
-                        if ($response->successful()) {
-                            $messages = $response->json('payload', []);
-                            $targetMsg = collect($messages)->firstWhere('id', $messageId);
-                            
-                            if ($targetMsg && !empty($targetMsg['attachments'])) {
-                                $data['attachments'] = $targetMsg['attachments'];
-                                $fileType = $targetMsg['attachments'][0]['file_type'] ?? null;
-                                
-                                // También enriquecer content_type explícitamente para audio
-                                if ($fileType === 'audio') {
-                                    $data['content_type'] = 'audio';
-                                } elseif ($fileType === 'image') {
-                                    $data['content_type'] = 'image';
-                                } elseif ($fileType === 'video') {
-                                    $data['content_type'] = 'video';
-                                } elseif ($fileType === 'file') {
-                                    $data['content_type'] = 'file';
-                                }
-                                
-                                Log::info("✅ Attachments enriquecidos en intento #{$attempt}", [
-                                    'message_id' => $messageId,
-                                    'attachment_count' => count($data['attachments']),
-                                    'file_type' => $fileType,
-                                    'content_type' => $data['content_type'] ?? 'not_set',
-                                    'data_url' => $targetMsg['attachments'][0]['data_url'] ?? 'none',
-                                ]);
-                                $attachmentsFound = true;
-                                break; // Salir del retry loop
-                            }
-                            
-                            // Si encontramos el mensaje pero sin attachments, seguir intentando
-                            if ($targetMsg && empty($targetMsg['attachments'])) {
-                                Log::debug("⏳ Mensaje encontrado pero sin attachments aún (intento #{$attempt})", [
-                                    'message_id' => $messageId,
-                                    'content_type' => $targetMsg['content_type'] ?? 'null',
-                                    'content_attributes' => $targetMsg['content_attributes'] ?? [],
-                                ]);
-                            }
-                        }
-                    } catch (\Exception $retryException) {
-                        Log::warning("⚠️ Error en retry #{$attempt}", [
-                            'message_id' => $messageId,
-                            'error' => $retryException->getMessage(),
-                        ]);
-                    }
-                }
-                
-                if (!$attachmentsFound) {
-                    Log::warning('⚠️ No se encontraron attachments después de todos los reintentos', [
-                        'message_id' => $messageId,
-                        'total_retries' => $maxRetries,
-                        'total_wait_seconds' => 2 + 3 + 4 + 5, // 14 seconds total
-                    ]);
-                }
-            }
-            
-            // Reenviar a n8n
-            $n8nBaseUrl = rtrim(config('n8n.url', 'https://n8n-production-00dd.up.railway.app'), '/');
-            $n8nWebhookUrl = "{$n8nBaseUrl}/webhook/{$instanceSlug}";
-            
-            Log::info('📤 Reenviando a n8n', [
-                'url' => $n8nWebhookUrl,
-                'has_attachments' => !empty($data['attachments']),
-                'file_type' => $data['attachments'][0]['file_type'] ?? 'none',
-            ]);
-            
-            $n8nResponse = \Illuminate\Support\Facades\Http::timeout(10)
-                ->post($n8nWebhookUrl, $data);
-            
-            Log::info('✅ n8n forward completado', [
-                'status' => $n8nResponse->status(),
-                'instance' => $instanceSlug,
-            ]);
+            \App\Jobs\ForwardToN8nWithEnrichmentJob::dispatch(
+                $data,
+                $inboxId,
+                $accountId,
+                $instanceSlug,
+            );
             
         } catch (\Exception $e) {
-            Log::error('❌ Error en forwardToN8nWithEnrichment', [
-                'error' => $e->getMessage(),
-                'trace' => substr($e->getTraceAsString(), 0, 500),
+            Log::error('❌ Error al despachar ForwardToN8nWithEnrichmentJob', [
+                'error' => $e->getMessage()
             ]);
         }
     }
@@ -402,7 +289,7 @@ class ChatwootWebhookController extends Controller
 
             // Si no viene identifier, consultarlo de la API usando el servicio
             if ($conversationId && !$identifier) {
-                $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
+                $chatwootToken = config('chatwoot.platform_token');
                 
                 $result = $this->chatwootService->getConversation($accountId, $chatwootToken, $conversationId);
                 
@@ -477,7 +364,7 @@ class ChatwootWebhookController extends Controller
                 ]);
 
                 // Obtener información de la conversación existente usando el servicio
-                $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
+                $chatwootToken = config('chatwoot.platform_token');
                 
                 $existingResult = $this->chatwootService->getConversation($accountId, $chatwootToken, $existingConversationId);
 
@@ -546,8 +433,7 @@ class ChatwootWebhookController extends Controller
 
         } catch (\Exception $e) {
             Log::error('❌ Error en preventDuplicateConversationWithRedis', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             return true; // En caso de error, permitir que continúe
         }
@@ -559,7 +445,7 @@ class ChatwootWebhookController extends Controller
     private function archiveConversation($conversationId, $accountId)
     {
         try {
-            $chatwootToken = config('chatwoot.token', env('CHATWOOT_TOKEN'));
+            $chatwootToken = config('chatwoot.platform_token');
             
             $result = $this->chatwootService->toggleConversationStatus(
                 $accountId,
@@ -587,30 +473,6 @@ class ChatwootWebhookController extends Controller
             ]);
             return false;
         }
-    }
-
-    /**
-     * Limpiar eventos antiguos del cache
-     */
-    public function clearOldEvents(Request $request)
-    {
-        $accountId = $request->input('account_id', 1);
-        $cacheKey = 'chatwoot_events_' . $accountId;
-        Cache::forget($cacheKey);
-
-        return response()->json(['status' => 'success', 'message' => 'Events cleared']);
-    }
-
-    /**
-     * Obtener eventos del cache (polling fallback)
-     */
-    public function getEvents(Request $request)
-    {
-        $accountId = $request->input('account_id', 1);
-        $cacheKey = 'chatwoot_events_' . $accountId;
-        $events = Cache::get($cacheKey, []);
-
-        return response()->json(['events' => $events]);
     }
 
     /**

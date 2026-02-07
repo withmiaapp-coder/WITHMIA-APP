@@ -19,25 +19,19 @@ class AttachmentProxyController extends Controller
     public function proxy(Request $request)
     {
         try {
-            $url = $request->input('url');
-            
-            Log::debug('AttachmentProxy: Request recibido', [
-                'url' => $url,
-                'all_params' => $request->all(),
-                'query_string' => $request->getQueryString()
+            $request->validate([
+                'url' => 'required|url',
             ]);
-            
-            if (!$url) {
-                Log::warning('AttachmentProxy: URL vacía');
-                return response()->json(['error' => 'URL requerida'], 400);
-            }
 
-            // Validar que la URL sea de Chatwoot (puede tener diferentes subdominios en Railway)
+            $url = $request->input('url');
+
+            // Validar que la URL sea de Chatwoot
             $urlHost = parse_url($url, PHP_URL_HOST);
+            $chatwootHost = parse_url(config('chatwoot.url'), PHP_URL_HOST);
             
-            // Permitir cualquier URL de Chatwoot en Railway
+            // Permitir cualquier URL del mismo host que Chatwoot configurado
             $isValidChatwootUrl = (
-                $urlHost && str_contains($urlHost, 'chatwoot') && str_contains($urlHost, 'railway.app')
+                $urlHost && $chatwootHost && $urlHost === $chatwootHost
             );
             
             if (!$isValidChatwootUrl) {
@@ -58,7 +52,7 @@ class AttachmentProxyController extends Controller
                         'protocols' => ['http', 'https'],
                         'track_redirects' => true
                     ],
-                    'verify' => false,
+                    'verify' => true,
                     'http_errors' => false,
                 ])
                 ->timeout(15)

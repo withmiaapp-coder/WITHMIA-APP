@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\WhatsAppInstance;
 use App\Services\EvolutionApiService;
 use App\Services\N8nService;
 use App\Services\ChatwootService;
@@ -11,7 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Events\NewMessageReceived;
 use App\Events\ConversationUpdated;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
@@ -45,9 +46,9 @@ class EvolutionApiController extends Controller
             return $user->company_slug;
         }
 
-        // Fallback: company_id si no hay slug
-        if ($user && $user->company_id) {
-            return "company_{$user->company_id}";
+        // Fallback: company->id si no hay slug
+        if ($user && $user->company?->id) {
+            return "company_{$user->company->id}";
         }
 
         // Último recurso: user_id
@@ -80,18 +81,17 @@ class EvolutionApiController extends Controller
             
             // Si no hay company por relación, buscar por el instanceName (que es el slug)
             if (!$companyId) {
-                $companyBySlug = \App\Models\Company::findBySlugCached($instanceName);
+                $companyBySlug = Company::findBySlugCached($instanceName);
                 $companyId = $companyBySlug ? $companyBySlug->id : null;
             }
             
             if ($companyId) {
-                DB::table('whatsapp_instances')->updateOrInsert(
+                WhatsAppInstance::updateOrCreate(
                     ['instance_name' => $instanceName],
                     [
                         'company_id' => $companyId,
                         'instance_url' => config('evolution.api_url', 'http://evolution_api:8080'),
                         'is_active' => 1,
-                        'updated_at' => now()
                     ]
                 );
                 Log::debug("WhatsApp instance registered", [
@@ -472,9 +472,7 @@ class EvolutionApiController extends Controller
     private function deleteN8nWorkflowForInstance(string $instanceName): void
     {
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->first();
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)->first();
             
             if (!$instance || empty($instance->n8n_workflow_id)) {
                 Log::debug('🔍 No hay workflow de n8n para eliminar', [
@@ -502,12 +500,10 @@ class EvolutionApiController extends Controller
             }
             
             // Limpiar referencias en la base de datos
-            DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
+            WhatsAppInstance::where('instance_name', $instanceName)
                 ->update([
                     'n8n_workflow_id' => null,
                     'n8n_webhook_url' => null,
-                    'updated_at' => now()
                 ]);
             
             Log::debug('✅ Referencias de workflow limpiadas en base de datos', [
@@ -566,7 +562,7 @@ class EvolutionApiController extends Controller
                 'message' => 'Inbox synchronized successfully',
                 'inbox_id' => $result['inbox_id'],
                 'user_id' => $user->id,
-                'company_id' => $user->company_id
+                'company_id' => $user->company?->id
             ]);
         }
 
@@ -689,7 +685,7 @@ class EvolutionApiController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -802,9 +798,9 @@ class EvolutionApiController extends Controller
 
         // REENVIO A N8N (usando red interna de Railway)
         try {
-            $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
             
-            // 🚀 Si la instancia no existe en BD, crearla automáticamente
+            // Si la instancia no existe en BD, crearla automáticamente
             if (!$instance) {
                 Log::debug('📝 Instancia no encontrada en BD, creándola automáticamente...', [
                     'instance' => $instanceName,
@@ -813,7 +809,7 @@ class EvolutionApiController extends Controller
                 
                 // 🔧 FIX: Buscar company_id por el slug del instanceName
                 // El instanceName ES el slug de la empresa (ej: salud-y-belleza-ehppbu)
-                $company = \App\Models\Company::findBySlugCached($instanceName);
+                $company = Company::findBySlugCached($instanceName);
                 $companyId = $company ? $company->id : null;
                 
                 if (!$companyId) {
@@ -825,13 +821,11 @@ class EvolutionApiController extends Controller
                     return response()->json(['status' => 'error', 'message' => 'Company not found for instance']);
                 }
                 
-                DB::table('whatsapp_instances')->insert([
+                WhatsAppInstance::create([
                     'instance_name' => $instanceName,
                     'company_id' => $companyId,
                     'instance_url' => config('evolution.base_url'),
                     'is_active' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now()
                 ]);
                 
                 Log::debug('✅ Instancia creada en BD con company correcta', [
@@ -841,7 +835,7 @@ class EvolutionApiController extends Controller
                 ]);
                 
                 // Recargar instancia
-                $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+                $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
             }
             
             // 🚀 AUTO-CREAR WORKFLOW solo cuando WhatsApp se conecta (connection.update con estado open)
@@ -861,7 +855,7 @@ class EvolutionApiController extends Controller
                 ]);
                 $this->createN8nWorkflowForInstance($instance);
                 // Recargar instancia para obtener el nuevo workflow_id
-                $instance = DB::table('whatsapp_instances')->where('instance_name', $instanceName)->where('is_active', 1)->first();
+                $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
             }
             
             // 📨 NO reenviar a n8n directamente desde aquí
@@ -908,8 +902,7 @@ class EvolutionApiController extends Controller
         } catch (\Exception $e) {
             Log::error('Error processing webhook', [
                 'event' => $event,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
         }
 
@@ -1039,9 +1032,8 @@ class EvolutionApiController extends Controller
         
         try {
             // Buscar la instancia en nuestra BD
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->where('is_active', 1)
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)
+                ->active()
                 ->first();
             
             if ($instance) {
@@ -1049,9 +1041,7 @@ class EvolutionApiController extends Controller
                 $inboxId = $instance->chatwoot_inbox_id ?? null;
                 
                 // Obtener el chatwoot_account_id de la empresa
-                $company = DB::table('companies')
-                    ->where('id', $companyId)
-                    ->first();
+                $company = Company::find($companyId);
                 
                 if ($company && $company->chatwoot_account_id) {
                     $accountId = $company->chatwoot_account_id;
@@ -1122,17 +1112,14 @@ class EvolutionApiController extends Controller
         $inboxId = null;
         
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->where('is_active', 1)
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)
+                ->active()
                 ->first();
             
             if ($instance) {
                 $inboxId = $instance->chatwoot_inbox_id ?? null;
                 
-                $company = DB::table('companies')
-                    ->where('id', $instance->company_id)
-                    ->first();
+                $company = Company::find($instance->company_id);
                 
                 if ($company && $company->chatwoot_account_id) {
                     $accountId = $company->chatwoot_account_id;
@@ -1204,18 +1191,15 @@ class EvolutionApiController extends Controller
 
         try {
             // Obtener company_slug y account_id desde la instancia
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->where('is_active', 1)
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)
+                ->active()
                 ->first();
 
             if ($instance) {
                 $companySlug = $instance->company_slug ?? $instance->company_id;
                 
                 // Obtener account_id de la empresa (NO hardcodeado)
-                $company = DB::table('companies')
-                    ->where('id', $instance->company_id)
-                    ->first();
+                $company = Company::find($instance->company_id);
                 $accountId = $company->chatwoot_account_id ?? null;
                 $inboxId = $instance->chatwoot_inbox_id ?? null;
                 
@@ -1278,197 +1262,33 @@ class EvolutionApiController extends Controller
     private function createN8nWorkflowForInstance($instance): void
     {
         try {
-            // Usar el instance_name (slug) como identificador único del workflow
-            $workflowName = $instance->instance_name;
+            $company = Company::find($instance->company_id);
 
-            Log::debug('🤖 Creando workflow de n8n para instancia', [
-                'instance' => $instance->instance_name,
-                'company_id' => $instance->company_id,
-                'workflow_name' => $workflowName
-            ]);
-
-            // Intentar cargar template del archivo
-            $templatePath = base_path('workflows/withmia-bot-template.json');
-            $templateWorkflow = null;
-            
-            if (file_exists($templatePath)) {
-                $content = file_get_contents($templatePath);
-                // Limpiar BOM y caracteres invisibles
-                $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-                $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
-                
-                $templateWorkflow = json_decode($content, true);
-                
-                if (!$templateWorkflow) {
-                    Log::warning('Error parseando template de workflow desde archivo', [
-                        'json_error' => json_last_error_msg(),
-                        'file_size' => strlen($content)
-                    ]);
-                }
-            } else {
-                Log::warning('Template de workflow no encontrado en disco');
-            }
-            
-            // Si falla el template del archivo, usar workflow minimalista embebido
-            if (!$templateWorkflow) {
-                Log::debug('🔧 Usando workflow minimalista embebido');
-                $templateWorkflow = $this->getMinimalWorkflowTemplate($workflowName, $instance->instance_name);
+            if (!$company) {
+                Log::warning('Company no encontrada para instancia', [
+                    'instance' => $instance->instance_name,
+                    'company_id' => $instance->company_id
+                ]);
+                return;
             }
 
-            // Get company for settings
-            $company = \App\Models\Company::find($instance->company_id);
-            $companySlug = $company ? ($company->slug ?? 'company_' . $instance->company_id) : 'company_' . $instance->company_id;
-            $companyName = $company ? ($company->name ?? $workflowName) : $workflowName;
-            $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
-            $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? config('services.openai.api_key')) : config('services.openai.api_key');
-            $appUrl = config('app.url');
-            $evolutionApiUrl = config('evolution.api_url');
-            $evolutionApiKey = config('evolution.api_key');
-            $qdrantUrl = config('services.qdrant.url');
-            
-            // Get n8n credential IDs
-            $credentialIds = $this->n8nService->getCredentialIds();
-            $openaiCredentialId = $credentialIds['openai']['id'] ?? '';
-            $openaiCredentialName = $credentialIds['openai']['name'] ?? 'OpenAI Account';
-            $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
-            $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
-            
-            Log::debug('Credentials obtenidas para workflow Evolution', [
-                'openai_id' => $openaiCredentialId,
-                'qdrant_id' => $qdrantCredentialId
-            ]);
-            
-            // Replace placeholders in the template
-            $templateJson = json_encode($templateWorkflow);
-            $replacements = [
-                '{{COMPANY_SLUG}}' => $companySlug,
-                '{{COMPANY_NAME}}' => $companyName,
-                '{{ASSISTANT_NAME}}' => $assistantName,
-                '{{OPENAI_API_KEY}}' => $openaiApiKey,
-                '{{INSTANCE_NAME}}' => $instance->instance_name,
-                '{{APP_URL}}' => $appUrl,
-                '{{EVOLUTION_API_URL}}' => $evolutionApiUrl,
-                '{{EVOLUTION_API_KEY}}' => $evolutionApiKey,
-                '{{QDRANT_URL}}' => $qdrantUrl,
-                '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
-                '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
-                '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
-                '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
-                '{{OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
-                '{{QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
-            ];
-            foreach ($replacements as $placeholder => $value) {
-                $templateJson = str_replace($placeholder, $value, $templateJson);
-            }
-            $templateWorkflow = json_decode($templateJson, true);
-
-            // Limpiar y personalizar nodos
-            $cleanNodes = [];
-            $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
-            
-            foreach ($templateWorkflow['nodes'] as $node) {
-                // Asegurar que parameters sea un objeto (stdClass) no un array vacío
-                $params = $node['parameters'] ?? [];
-                if (empty($params) || (is_array($params) && count($params) === 0)) {
-                    $params = new \stdClass(); // n8n requiere objeto vacío {}, no array []
-                }
-                
-                // Limpiar nodo - solo propiedades esenciales
-                $cleanNode = [
-                    'parameters' => $params,
-                    'type' => $node['type'],
-                    'typeVersion' => $node['typeVersion'] ?? 1,
-                    'position' => $node['position'],
-                    'id' => $node['id'],
-                    'name' => $node['name'],
-                ];
-                
-                // Incluir credentials si existen (ya tienen IDs correctos en el template)
-                if (isset($node['credentials'])) {
-                    $cleanNode['credentials'] = $node['credentials'];
-                }
-                
-                // Configurar webhook
-                if ($node['type'] === 'n8n-nodes-base.webhook') {
-                    $cleanNode['webhookId'] = $newWebhookId;
-                    if (isset($cleanNode['parameters']['path'])) {
-                        // El instance_name ya tiene formato "withmia-{slug}", usarlo directamente
-                        $cleanNode['parameters']['path'] = $instance->instance_name;
-                    }
-                }
-                
-                $cleanNodes[] = $cleanNode;
-            }
-
-            // Crear workflow limpio
-            $cleanWorkflow = [
-                'name' => "WITHMIA Bot - {$workflowName}",
-                'nodes' => $cleanNodes,
-                'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
-                'settings' => [
-                    'executionOrder' => 'v1',
-                    'timezone' => 'America/Santiago',
-                    'callerPolicy' => 'workflowsFromSameOwner'
-                ],
-            ];
-
-            // Crear en n8n via API
-            $result = $this->n8nService->createWorkflow($cleanWorkflow);
+            $result = $this->n8nService->createBotWorkflow($company, $instance->instance_name);
 
             if ($result['success']) {
-                $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = $this->n8nService->getWebhookUrl($instance->instance_name);
-                
-                // Activar workflow
-                if ($workflowId) {
-                    $activateResult = $this->n8nService->activateWorkflow($workflowId);
-                    if (!$activateResult['success']) {
-                        Log::warning('⚠️ No se pudo activar el workflow', [
-                            'workflow_id' => $workflowId,
-                            'error' => $activateResult['error'] ?? 'Unknown'
-                        ]);
-                    } else {
-                        Log::debug('✅ Workflow activado correctamente', ['workflow_id' => $workflowId]);
-                    }
-                }
-                
-                // 🎯 NOTA: NO configuramos webhook directo de Evolution a N8N
-                // El reenvío se hace desde el backend (EvolutionApiController::webhook)
-                // para tener mejor control, logs, y evitar eventos duplicados
-                // Si prefieres webhook directo, descomenta este bloque y comenta
-                // el reenvío en el método webhook()
-                /*
-                $evolutionWebhookResult = $this->evolutionApi->setWebhook(
-                    $instance->instance_name,
-                    $webhookUrl,
-                    ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE']
-                );
-                
-                if ($evolutionWebhookResult['success']) {
-                    Log::debug('🔗 Webhook de Evolution configurado hacia n8n', [
-                        'instance' => $instance->instance_name,
-                        'n8n_webhook_url' => $webhookUrl
-                    ]);
-                }
-                */
-                
                 // Guardar referencia en la base de datos
-                DB::table('whatsapp_instances')
-                    ->where('id', $instance->id)
+                WhatsAppInstance::where('id', $instance->id)
                     ->update([
-                        'n8n_workflow_id' => $workflowId,
-                        'n8n_webhook_url' => $webhookUrl,
-                        'updated_at' => now()
+                        'n8n_workflow_id' => $result['workflow_id'],
+                        'n8n_webhook_url' => $result['webhook_url'],
                     ]);
 
-                Log::debug('✅ Workflow de n8n creado y webhook configurado', [
-                    'workflow_id' => $workflowId,
-                    'webhook_url' => $webhookUrl,
+                Log::debug('Workflow de n8n creado para instancia', [
+                    'workflow_id' => $result['workflow_id'],
                     'instance' => $instance->instance_name
                 ]);
-                
-                // 🎯 Configurar webhook de Chatwoot automáticamente
-                $this->configureChatwootWebhook($instance, $webhookUrl);
+
+                // Configurar webhook de Chatwoot
+                $this->configureChatwootWebhook($instance, $result['webhook_url']);
             } else {
                 Log::warning('No se pudo crear workflow en n8n', [
                     'error' => $result['error'] ?? 'Unknown',
@@ -1489,9 +1309,8 @@ class EvolutionApiController extends Controller
     private function ensureN8nWorkflowExists(string $instanceName): void
     {
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->where('is_active', 1)
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)
+                ->active()
                 ->first();
 
             if (!$instance) {
@@ -1512,11 +1331,9 @@ class EvolutionApiController extends Controller
             // Si tiene workflow_id pero no webhook_url, regenerar el webhook_url
             if (!empty($instance->n8n_workflow_id) && empty($instance->n8n_webhook_url)) {
                 $webhookUrl = $this->n8nService->getWebhookUrl($instanceName);
-                DB::table('whatsapp_instances')
-                    ->where('id', $instance->id)
+                WhatsAppInstance::where('id', $instance->id)
                     ->update([
                         'n8n_webhook_url' => $webhookUrl,
-                        'updated_at' => now()
                     ]);
                 Log::debug('🔧 Webhook URL regenerado para instancia existente', [
                     'instance' => $instanceName,
@@ -1550,7 +1367,7 @@ class EvolutionApiController extends Controller
     {
         try {
             // Obtener información de la empresa
-            $company = \App\Models\Company::find($instance->company_id);
+            $company = Company::find($instance->company_id);
             
             if (!$company) {
                 Log::warning('No se encontró empresa para configurar webhook Chatwoot', [
@@ -1575,11 +1392,9 @@ class EvolutionApiController extends Controller
                     $inboxId = $inbox['id'];
                     
                     // Guardar inbox_id en la instancia para futuras referencias
-                    DB::table('whatsapp_instances')
-                        ->where('id', $instance->id)
+                    WhatsAppInstance::where('id', $instance->id)
                         ->update([
                             'chatwoot_inbox_id' => $inboxId,
-                            'updated_at' => now()
                         ]);
                 }
             }
@@ -1619,87 +1434,6 @@ class EvolutionApiController extends Controller
     }
 
     /**
-     * Genera un workflow minimalista embebido cuando el template JSON falla
-     */
-    private function getMinimalWorkflowTemplate(string $workflowName, string $instanceName): array
-    {
-        // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
-        $webhookPath = $instanceName;
-        
-        return [
-            'name' => "WITHMIA Bot - {$workflowName}",
-            'nodes' => [
-                [
-                    'parameters' => [
-                        'path' => $webhookPath,
-                        'httpMethod' => 'POST',
-                        'responseMode' => 'onReceived',
-                        'responseData' => 'allEntries'
-                    ],
-                    'type' => 'n8n-nodes-base.webhook',
-                    'typeVersion' => 2,
-                    'position' => [0, 0],
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'Webhook WITHMIA',
-                    'webhookId' => \Illuminate\Support\Str::uuid()->toString()
-                ],
-                [
-                    'parameters' => [
-                        'promptType' => 'define',
-                        'text' => "Responde como asistente de {$workflowName}",
-                        'options' => [
-                            'systemMessage' => "Eres MIA, asistente digital de {$workflowName}. Responde de forma profesional y amigable."
-                        ]
-                    ],
-                    'type' => '@n8n/n8n-nodes-langchain.agent',
-                    'typeVersion' => 2,
-                    'position' => [300, 0],
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'AI Agent'
-                ],
-                [
-                    'parameters' => [
-                        'model' => 'gpt-4o-mini',
-                        'options' => new \stdClass()
-                    ],
-                    'type' => '@n8n/n8n-nodes-langchain.lmChatOpenAi',
-                    'typeVersion' => 1.2,
-                    'position' => [300, -200],
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'OpenAI Chat Model'
-                ],
-                [
-                    'parameters' => [
-                        'sessionIdType' => 'customKey',
-                        'sessionKey' => "company_{$instanceName}_" . '={{ $json.message.chat_id }}',
-                        'contextWindowLength' => 10
-                    ],
-                    'type' => '@n8n/n8n-nodes-langchain.memoryBufferWindow',
-                    'typeVersion' => 1.3,
-                    'position' => [500, -200],
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'name' => 'Window Buffer Memory'
-                ]
-            ],
-            'connections' => [
-                'Webhook WhatsApp' => [
-                    'main' => [[['node' => 'AI Agent', 'type' => 'main', 'index' => 0]]]
-                ],
-                'OpenAI Chat Model' => [
-                    'ai_languageModel' => [[['node' => 'AI Agent', 'type' => 'ai_languageModel', 'index' => 0]]]
-                ],
-                'Window Buffer Memory' => [
-                    'ai_memory' => [[['node' => 'AI Agent', 'type' => 'ai_memory', 'index' => 0]]]
-                ]
-            ],
-            'settings' => [
-                'executionOrder' => 'v1',
-                'timezone' => 'America/Santiago',
-                'callerPolicy' => 'workflowsFromSameOwner'
-            ]
-        ];
-    }
-    
     /**
      * Asegurar que Evolution tenga el Channel Token correcto de Chatwoot
      * 
@@ -1727,9 +1461,8 @@ class EvolutionApiController extends Controller
             $currentToken = $config['token'] ?? null;
             
             // Obtener accountId correcto de nuestra BD (NO usar fallback hardcodeado)
-            $instance = DB::table('whatsapp_instances')
-                ->where('instance_name', $instanceName)
-                ->where('is_active', 1)
+            $instance = WhatsAppInstance::where('instance_name', $instanceName)
+                ->active()
                 ->first();
             
             if (!$instance) {
@@ -1739,9 +1472,7 @@ class EvolutionApiController extends Controller
                 return;
             }
             
-            $company = DB::table('companies')
-                ->where('id', $instance->company_id)
-                ->first();
+            $company = Company::find($instance->company_id);
             
             if (!$company || !$company->chatwoot_account_id) {
                 Log::warning('Empresa sin chatwoot_account_id para actualizar token', [

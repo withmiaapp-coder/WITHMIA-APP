@@ -78,12 +78,10 @@ export function usePermissions() {
         setError(null);
       } else {
         // Si no hay success, usar defaults
-        console.log('📋 Usando permisos por defecto (sin success)');
         setPermissions(DEFAULT_PERMISSIONS);
       }
     } catch (err: any) {
       // En cualquier error, usar defaults de admin para no bloquear la UI
-      console.log('📋 Usando permisos por defecto (error:', err.response?.status || err.message, ')');
       setPermissions(DEFAULT_PERMISSIONS);
       // Limpiar cache inválido
       permissionsCache = DEFAULT_PERMISSIONS;

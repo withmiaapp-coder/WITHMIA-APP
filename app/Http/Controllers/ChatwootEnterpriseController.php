@@ -6,10 +6,9 @@ use Illuminate\Http\Request;
 use App\Services\ChatwootProvisioningService;
 use App\Services\ChatwootService;
 use App\Models\Company;
-use App\Models\User;
-use App\Models\AgentInvitation;
+use App\Models\TeamInvitation;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ChatwootEnterpriseController extends Controller
@@ -23,6 +22,22 @@ class ChatwootEnterpriseController extends Controller
     ) {
         $this->provisioningService = $provisioningService;
         $this->chatwootService = $chatwootService;
+
+        // Only admin users can access enterprise endpoints
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+            if ($user?->role !== 'admin') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            // Super-admin required for enterprise operations
+            $superAdminEmails = config('app.super_admin_emails', []);
+            if (!empty($superAdminEmails) && !in_array($user->email, $superAdminEmails)) {
+                return response()->json(['error' => 'Super admin access required'], 403);
+            }
+
+            return $next($request);
+        });
     }
 
     /**
@@ -53,9 +68,10 @@ class ChatwootEnterpriseController extends Controller
             return response()->json($result);
 
         } catch (\Exception $e) {
+            Log::error('Error en provisionamiento', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error en el provisionamiento: ' . $e->getMessage()
+                'error' => 'Error en el provisionamiento'
             ], 500);
         }
     }
@@ -90,9 +106,10 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error obteniendo configuración', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error obteniendo configuración: ' . $e->getMessage()
+                'error' => 'Error obteniendo configuración'
             ], 500);
         }
     }
@@ -120,7 +137,7 @@ class ChatwootEnterpriseController extends Controller
             }
 
             // Verificar si ya existe una invitación pendiente
-            $existingInvitation = AgentInvitation::where('company_id', $company->id)
+            $existingInvitation = TeamInvitation::where('company_id', $company->id)
                 ->where('email', $request->email)
                 ->where('status', 'pending')
                 ->first();
@@ -150,20 +167,16 @@ class ChatwootEnterpriseController extends Controller
             $chatwootUser = $result['data'];
 
             // Guardar la invitación en nuestra base de datos
-            $invitation = AgentInvitation::create([
+            $invitation = TeamInvitation::create([
                 'company_id' => $company->id,
-                'invited_by_user_id' => $user->id,
+                'invited_by' => $user->id,
                 'email' => $request->email,
                 'name' => $request->name,
                 'role' => $request->role,
-                'chatwoot_user_id' => $chatwootUser['id'] ?? null,
-                'invitation_token' => Str::random(32),
+                'token' => Str::random(32),
                 'status' => 'pending',
                 'expires_at' => Carbon::now()->addDays(7)
             ]);
-
-            // Aquí podrías enviar un email de invitación
-            // Mail::to($request->email)->send(new AgentInvitationMail($invitation));
 
             return response()->json([
                 'success' => true,
@@ -179,9 +192,10 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error enviando invitación', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error enviando invitación: ' . $e->getMessage()
+                'error' => 'Error enviando invitación'
             ], 500);
         }
     }
@@ -202,7 +216,7 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $invitations = AgentInvitation::where('company_id', $company->id)
+            $invitations = TeamInvitation::where('company_id', $company->id)
                 ->with(['invitedBy:id,name,email'])
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -228,9 +242,10 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error obteniendo invitaciones', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error obteniendo invitaciones: ' . $e->getMessage()
+                'error' => 'Error obteniendo invitaciones'
             ], 500);
         }
     }
@@ -251,7 +266,7 @@ class ChatwootEnterpriseController extends Controller
                 ], 400);
             }
 
-            $invitation = AgentInvitation::where('id', $invitationId)
+            $invitation = TeamInvitation::where('id', $invitationId)
                 ->where('company_id', $company->id)
                 ->first();
 
@@ -277,9 +292,10 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error cancelando invitación', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error cancelando invitación: ' . $e->getMessage()
+                'error' => 'Error cancelando invitación'
             ], 500);
         }
     }
@@ -335,22 +351,12 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error obteniendo dashboard', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error obteniendo dashboard: ' . $e->getMessage()
+                'error' => 'Error obteniendo dashboard'
             ], 500);
         }
-    }
-
-    /**
-     * Mostrar interfaz de prueba (solo para desarrollo)
-     */
-    public function showTestInterface()
-    {
-        $user = auth()->user();
-        $company = $user->company;
-
-        return view('enterprise', compact('user', 'company'));
     }
 
     /**
@@ -409,357 +415,10 @@ class ChatwootEnterpriseController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error en provisionamiento masivo', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error en provisionamiento masivo: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener equipos de Chatwoot
-     */
-    public function getTeams(Request $request)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot provisionada'
-                ], 400);
-            }
-
-            $apiKey = $company->chatwoot_api_key;
-
-            if (!$apiKey) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'API key de Chatwoot no configurada'
-                ], 400);
-            }
-
-            $result = $this->chatwootService->getTeams($company->chatwoot_account_id, $apiKey);
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error obteniendo equipos: ' . ($result['error'] ?? 'Unknown')
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'teams' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Error obteniendo equipos: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Crear nuevo equipo en Chatwoot
-     */
-    public function createTeam(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000'
-        ]);
-
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot provisionada'
-                ], 400);
-            }
-
-            $apiKey = $company->chatwoot_api_key;
-
-            if (!$apiKey) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'API key de Chatwoot no configurada'
-                ], 400);
-            }
-
-            $result = $this->chatwootService->createTeam(
-                $company->chatwoot_account_id,
-                $apiKey,
-                $request->name,
-                $request->description
-            );
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error creando equipo: ' . ($result['error'] ?? 'Unknown')
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'team' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Error creando equipo: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener agentes de Chatwoot
-     */
-    public function getAgents(Request $request)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot provisionada'
-                ], 400);
-            }
-
-            $apiKey = $company->chatwoot_api_key;
-
-            if (!$apiKey) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'API key de Chatwoot no configurada'
-                ], 400);
-            }
-
-            $result = $this->chatwootService->getAgents($company->chatwoot_account_id, $apiKey);
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error obteniendo agentes: ' . ($result['error'] ?? 'Unknown')
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'agents' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Error obteniendo agentes: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener conversaciones de Chatwoot
-     */
-    public function getConversations(Request $request)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot provisionada'
-                ], 400);
-            }
-
-            $apiKey = $company->chatwoot_api_key;
-
-            if (!$apiKey) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'API key de Chatwoot no configurada'
-                ], 400);
-            }
-
-            $result = $this->chatwootService->getConversations($company->chatwoot_account_id, $apiKey);
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error obteniendo conversaciones: ' . ($result['error'] ?? 'Unknown')
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'conversations' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Error obteniendo conversaciones: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener webhooks configurados en Chatwoot
-     */
-    public function getWebhooks(Request $request)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot'
-                ], 400);
-            }
-
-            // Usar token del usuario (tiene permisos de agente/admin)
-            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
-
-            $result = $this->chatwootService->listAccountWebhooks($company->chatwoot_account_id, $apiKey);
-
-            return response()->json([
-                'success' => $result['success'],
-                'webhooks' => $result['data'] ?? [],
-                'debug' => [
-                    'account_id' => $company->chatwoot_account_id,
-                    'user_has_token' => !empty($user->chatwoot_agent_token)
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Crear webhook en Chatwoot para recibir eventos en tiempo real
-     */
-    public function createWebhook(Request $request)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot'
-                ], 400);
-            }
-
-            // Usar token del usuario (tiene permisos de agente/admin)
-            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
-            
-            // URL del webhook de Laravel (donde Chatwoot enviará los eventos)
-            $appUrl = config('app.url', 'https://app.withmia.com');
-            $webhookUrl = $request->input('url', "{$appUrl}/api/chatwoot/webhook");
-
-            // Eventos que queremos recibir
-            $subscriptions = $request->input('subscriptions', [
-                'message_created',
-                'message_updated',
-                'conversation_created',
-                'conversation_updated',
-                'conversation_status_changed'
-            ]);
-
-            $result = $this->chatwootService->createAccountWebhook(
-                $company->chatwoot_account_id,
-                $apiKey,
-                $webhookUrl,
-                $subscriptions
-            );
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error creando webhook: ' . ($result['error'] ?? 'Unknown'),
-                    'status' => $result['status'] ?? 500
-                ], $result['status'] ?? 500);
-            }
-
-            Log::debug('✅ Webhook de Chatwoot creado exitosamente', [
-                'company_id' => $company->id,
-                'webhook_url' => $webhookUrl,
-                'subscriptions' => $subscriptions
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'webhook' => $result['data'],
-                'message' => 'Webhook creado exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Eliminar webhook de Chatwoot
-     */
-    public function deleteWebhook(Request $request, $webhookId)
-    {
-        try {
-            $user = auth()->user();
-            $company = $user->company;
-
-            if (!$company || !$company->chatwoot_account_id) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Empresa no tiene cuenta de Chatwoot'
-                ], 400);
-            }
-
-            // Usar token del usuario
-            $apiKey = $user->chatwoot_agent_token ?? $company->chatwoot_api_key;
-
-            $result = $this->chatwootService->deleteAccountWebhook(
-                $company->chatwoot_account_id,
-                $apiKey,
-                (int) $webhookId
-            );
-
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error eliminando webhook: ' . ($result['error'] ?? 'Unknown')
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Webhook eliminado exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
+                'message' => 'Error en provisionamiento masivo'
             ], 500);
         }
     }

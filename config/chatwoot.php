@@ -12,13 +12,23 @@ return [
 
     // API tokens
     'api_key' => env('CHATWOOT_API_KEY'),
-    'api_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
     'platform_token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
-    'token' => env('CHATWOOT_PLATFORM_API_TOKEN'),
 
     // URLs
     'url' => env('CHATWOOT_URL', 'http://localhost:3000'),
-    'base_url' => env('CHATWOOT_API_BASE_URL', 'http://localhost:3000'),
+
+    // Website token
+    'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
+
+    // Database connection
+    'database_url' => env('CHATWOOT_DATABASE_URL'),
+    'db' => [
+        'host' => env('CHATWOOT_DB_HOST'),
+        'port' => env('CHATWOOT_DB_PORT', '5432'),
+        'database' => env('CHATWOOT_DB_DATABASE', 'chatwoot'),
+        'username' => env('CHATWOOT_DB_USERNAME'),
+        'password' => env('CHATWOOT_DB_PASSWORD'),
+    ],
 
     // Configuration
     'reopen_conversation' => env('CHATWOOT_REOPEN_CONVERSATION', true),
@@ -28,4 +38,7 @@ return [
     'auto_create' => env('CHATWOOT_AUTO_CREATE', true),
     'import_contacts' => env('CHATWOOT_IMPORT_CONTACTS', false),
     'import_messages' => env('CHATWOOT_IMPORT_MESSAGES', false),
+
+    // Webhook HMAC signature verification secret
+    'webhook_secret' => env('CHATWOOT_WEBHOOK_SECRET'),
 ];

@@ -20,11 +20,17 @@ class WhatsAppInstance extends Model
         'api_key',
         'n8n_workflow_id',
         'n8n_webhook_url',
+        'chatwoot_inbox_id',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'chatwoot_inbox_id' => 'integer',
+    ];
+
+    protected $hidden = [
+        'api_key',
     ];
 
     /**

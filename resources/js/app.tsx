@@ -22,7 +22,6 @@ const RAILWAY_TOKEN_KEY = 'railway_auth_token';
 function saveRailwayToken(token: string | null) {
     if (token) {
         localStorage.setItem(RAILWAY_TOKEN_KEY, token);
-        console.log('[Railway Auth] Token saved to localStorage');
     }
 }
 

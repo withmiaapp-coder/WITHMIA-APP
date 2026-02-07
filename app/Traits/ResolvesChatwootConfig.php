@@ -28,12 +28,12 @@ trait ResolvesChatwootConfig
      */
     protected function initializeChatwootFromUser($user): void
     {
-        $this->chatwootBaseUrl = config('services.chatwoot.base_url', 'http://localhost:3000');
+        $this->chatwootBaseUrl = config('chatwoot.url', 'http://localhost:3000');
         
         if (!$user) {
             $this->chatwootUserId = null;
             $this->chatwootAccountId = config('chatwoot.account_id', '1');
-            $this->chatwootToken = config('services.chatwoot.api_token');
+            $this->chatwootToken = config('chatwoot.platform_token');
             $this->chatwootInboxId = null;
             $this->chatwootCompanySlug = null;
             return;
@@ -78,7 +78,7 @@ trait ResolvesChatwootConfig
             } elseif ($user->chatwoot_agent_token) {
                 $token = $user->chatwoot_agent_token;
             } else {
-                $token = config('services.chatwoot.api_token');
+                $token = config('chatwoot.platform_token');
             }
 
             return [
@@ -86,7 +86,7 @@ trait ResolvesChatwootConfig
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId,
                 'token' => $token,
-                'base_url' => config('services.chatwoot.base_url', 'http://localhost:3000'),
+                'base_url' => config('chatwoot.url', 'http://localhost:3000'),
                 'company_slug' => $company ? $company->slug : null,
                 'company_name' => $company ? $company->name : null,
                 'email' => $user->email,
@@ -129,7 +129,7 @@ trait ResolvesChatwootConfig
                     ];
                 }
                 
-                $platformToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+                $platformToken = config('chatwoot.platform_token');
                 return [
                     'account_id' => $accountId,
                     'token' => $platformToken,
@@ -152,8 +152,8 @@ trait ResolvesChatwootConfig
             'user_id' => null,
             'account_id' => config('chatwoot.account_id', '1'),
             'inbox_id' => null,
-            'token' => config('services.chatwoot.api_token'),
-            'base_url' => config('services.chatwoot.base_url', 'http://localhost:3000'),
+            'token' => config('chatwoot.platform_token'),
+            'base_url' => config('chatwoot.url', 'http://localhost:3000'),
             'company_slug' => null,
             'company_name' => null,
             'email' => null,

@@ -22,7 +22,6 @@ class OnboardingCompletedNotificationMail extends Mailable
         $this->user = $user;
         $this->userIP = $userIP;
         $this->company = $company;
-        $this->company = $company;
     }
 
     public function envelope(): Envelope

@@ -70,7 +70,6 @@ class ChatwootProvisioningService
             // channel_token se guarda en chatwoot_data para Evolution API
             $company->update([
                 'chatwoot_account_id' => $accountId,
-                'chatwoot_api_key' => $accessToken, // ACCESS TOKEN para API de Chatwoot
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_provisioned' => true,
                 'chatwoot_provisioned_at' => now(),
@@ -79,6 +78,9 @@ class ChatwootProvisioningService
                     'channel_id' => $channelId,
                 ])
             ]);
+            // Set chatwoot_api_key via direct assignment (not in $fillable for security)
+            $company->chatwoot_api_key = $accessToken;
+            $company->save();
 
             // 9. Actualizar User en Laravel
             $owner->update([
@@ -86,9 +88,10 @@ class ChatwootProvisioningService
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_agent_token' => $accessToken,
                 'chatwoot_agent_role' => 'administrator',
-                'role' => 'admin', // El creador de la empresa siempre es admin
                 'onboarding_completed' => true
             ]);
+            $owner->role = 'admin'; // El creador de la empresa siempre es admin
+            $owner->save();
 
             $this->chatwootDb->commit();
             DB::commit();
@@ -127,13 +130,12 @@ class ChatwootProvisioningService
             DB::rollBack();
 
             Log::error("❌ Chatwoot provisioning FAILED for company {$company->name}: " . $e->getMessage(), [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Provisioning failed'
             ];
         }
     }
@@ -348,44 +350,9 @@ class ChatwootProvisioningService
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to invite agent'
             ];
         }
     }
 
-    /**
-     * Obtiene estadísticas del account de Chatwoot
-     */
-    public function getAccountStats(int $accountId): array
-    {
-        try {
-            $stats = [
-                'total_agents' => $this->chatwootDb->table('account_users')
-                    ->where('account_id', $accountId)
-                    ->count(),
-                'total_inboxes' => $this->chatwootDb->table('inboxes')
-                    ->where('account_id', $accountId)
-                    ->count(),
-                'total_conversations' => $this->chatwootDb->table('conversations')
-                    ->where('account_id', $accountId)
-                    ->count(),
-                'active_conversations' => $this->chatwootDb->table('conversations')
-                    ->where('account_id', $accountId)
-                    ->where('status', 'open')
-                    ->count()
-            ];
-
-            return [
-                'success' => true,
-                'stats' => $stats
-            ];
-
-        } catch (Exception $e) {
-            Log::error("Failed to get account stats: " . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
 }

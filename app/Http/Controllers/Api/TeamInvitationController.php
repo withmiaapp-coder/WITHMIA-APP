@@ -302,9 +302,10 @@ class TeamInvitationController extends Controller
                 'email' => $invitation->email,
                 'password' => Hash::make($request->password),
                 'company_slug' => $invitation->company->slug,
-                'role' => $invitation->role === 'administrator' ? 'admin' : 'agent',
                 'email_verified_at' => now(),
             ]);
+            $user->role = $invitation->role === 'administrator' ? 'admin' : 'agent';
+            $user->save();
 
             // Crear agente en Chatwoot
             $chatwootAgent = $this->createChatwootAgent($invitation->company, $user);
@@ -443,7 +444,7 @@ class TeamInvitationController extends Controller
             $allSynced = [];
             $allFailed = [];
 
-            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+            $baseUrl = config('chatwoot.url');
 
             foreach ($companies as $company) {
                 if (!$company || !$company->chatwoot_account_id || !$company->chatwoot_api_key) {
@@ -526,7 +527,7 @@ class TeamInvitationController extends Controller
             Log::error('Error syncing users with Chatwoot', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al sincronizar: ' . $e->getMessage()
+                'message' => 'Error al sincronizar'
             ], 500);
         }
     }
@@ -651,7 +652,7 @@ class TeamInvitationController extends Controller
             Log::error('Error in diagnostic', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error en diagnóstico'
             ], 500);
         }
     }
@@ -686,10 +687,9 @@ class TeamInvitationController extends Controller
             // Obtener API key desde config/env
             $apiKey = config('chatwoot.api_key') 
                 ?? config('chatwoot.platform_token') 
-                ?? config('services.chatwoot.api_token')
                 ?? $request->input('api_key');
             
-            $baseUrl = config('chatwoot.base_url') ?: config('services.chatwoot.base_url');
+            $baseUrl = config('chatwoot.url');
             $accountId = $company->chatwoot_account_id ?? config('chatwoot.account_id', 1);
             
             if (!$apiKey) {
@@ -800,7 +800,7 @@ class TeamInvitationController extends Controller
             Log::error('Error fixing company chatwoot', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al reparar la configuración de Chatwoot'
             ], 500);
         }
     }
@@ -842,15 +842,14 @@ class TeamInvitationController extends Controller
             $oldRole = $user->role;
             
             // Actualizar rol
-            $user->update([
-                'role' => $newRole,
-            ]);
+            $user->role = $newRole;
+            $user->save();
             
             // Si tiene chatwoot_agent_id, actualizar también en Chatwoot
             if ($user->chatwoot_agent_id) {
                 $company = $user->company;
-                if ($company && $company->chatwoot_api_key) {
-                    $accountId = $company->chatwoot_account_id ?? 1;
+                if ($company && $company->chatwoot_api_key && $company->chatwoot_account_id) {
+                    $accountId = $company->chatwoot_account_id;
                     
                     $this->chatwootService->updateAgent(
                         $accountId,
@@ -878,7 +877,7 @@ class TeamInvitationController extends Controller
             Log::error('Error fixing user role', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al actualizar rol'
             ], 500);
         }
     }
@@ -975,10 +974,10 @@ class TeamInvitationController extends Controller
             }
             
         } catch (\Exception $e) {
-            Log::error('Error provisioning company chatwoot', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Error provisioning company chatwoot', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al provisionar Chatwoot'
             ], 500);
         }
     }

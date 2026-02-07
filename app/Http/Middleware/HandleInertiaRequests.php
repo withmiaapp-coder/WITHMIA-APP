@@ -45,10 +45,11 @@ class HandleInertiaRequests extends Middleware
             $railwayAuthToken = $request->user()->auth_token;
         }
 
-        // Get company timezone
+        // Get company timezone — eager load company for serialization to frontend
         $companyTimezone = 'UTC';
-        if ($request->user() && $request->user()->company) {
-            $companyTimezone = $request->user()->company->timezone ?? 'UTC';
+        if ($request->user()) {
+            $request->user()->load('company');
+            $companyTimezone = $request->user()->company?->timezone ?? 'UTC';
         }
 
         return [
@@ -58,6 +59,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'isSuperAdmin' => $request->user() && in_array($request->user()->email, explode(',', config('app.super_admin_emails', ''))),
             'companyTimezone' => $companyTimezone,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),

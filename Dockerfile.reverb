@@ -55,6 +55,12 @@ RUN composer dump-autoload --optimize
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /bin/bash appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 # Copy the startup script
 COPY start-reverb.sh /app/start-reverb.sh
 RUN chmod +x /app/start-reverb.sh

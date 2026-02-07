@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import debugLog from '@/utils/debugLogger';
 import {
   TrendingUp,
   MessageCircle,
@@ -54,7 +55,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           }
         }
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        debugLog.error('Error fetching dashboard stats:', error);
       } finally {
         setLoadingStats(false);
       }

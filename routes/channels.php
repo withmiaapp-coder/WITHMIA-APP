@@ -43,14 +43,4 @@ Broadcast::channel('inbox.{inboxId}', function ($user, $inboxId) {
     return $userInboxId == (int) $inboxId;
 });
 
-// Canal para conversaciones de un usuario específico (LEGACY - puede eliminarse)
-Broadcast::channel('user.{userId}.conversations', function ($user, $userId) {
-    return (int) $user->id === (int) $userId;
-});
 
-// Canal para mensajes de una conversación específica (LEGACY - puede eliminarse)
-Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
-    // Aquí podrías validar que el usuario tenga acceso a esta conversación
-    // Por ahora permitimos acceso a usuarios autenticados
-    return $user !== null;
-});

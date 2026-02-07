@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import debugLog from '@/utils/debugLogger';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +50,7 @@ export default function AdminCompanies() {
             const data = await response.json();
             setCompanies(data.companies || []);
         } catch (error) {
-            console.error('Error fetching companies:', error);
+            debugLog.error('Error fetching companies:', error);
         } finally {
             setLoading(false);
         }

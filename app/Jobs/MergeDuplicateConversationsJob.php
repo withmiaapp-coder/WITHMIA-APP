@@ -86,8 +86,7 @@ class MergeDuplicateConversationsJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('💥 MergeDuplicateConversationsJob: Excepción', [
                 'inbox_id' => $this->inboxId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             
             throw $e; // Re-throw para que el job se reintente

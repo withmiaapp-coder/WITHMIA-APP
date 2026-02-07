@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -49,7 +48,7 @@ class ContactsController extends Controller
             $result = $this->exporter->exportContactsToExcel(
                 $contacts, 
                 $user->id,
-                $user->company_name ?? $user->name
+                $user->company?->name ?? $user->name
             );
 
             if ($result['success']) {
@@ -246,7 +245,7 @@ class ContactsController extends Controller
             // Obtener o crear el Excel dinámico del usuario
             $result = $dynamicManager->getUserExcelFile(
                 $user->id,
-                $user->company_name ?? $user->name
+                $user->company?->name ?? $user->name
             );
 
             if (!$result['success']) {
@@ -299,7 +298,7 @@ class ContactsController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'company_name' => $user->company_name,
+                    'company_name' => $user->company?->name,
                     'whatsapp_connected' => !empty($user->whatsapp_instance_id)
                 ]
             ]);
@@ -345,7 +344,7 @@ class ContactsController extends Controller
             $result = $dynamicManager->importContactsToExcel(
                 $user->id,
                 $contacts,
-                $user->company_name ?? $user->name
+                $user->company?->name ?? $user->name
             );
 
             if ($result['success']) {
@@ -398,7 +397,7 @@ class ContactsController extends Controller
             // Crear nuevo Excel vacío
             $result = $dynamicManager->getUserExcelFile(
                 $user->id,
-                $user->company_name ?? $user->name
+                $user->company?->name ?? $user->name
             );
 
             if ($result['success']) {

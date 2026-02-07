@@ -15,10 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
-        then: function () {
-            Route::middleware('api')
-                ->group(base_path('routes/stats.php'));
-        },
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Trust Railway proxies for proper HTTPS detection
@@ -27,8 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // UTF-8 encoding middleware - MUST be first to handle all requests
         $middleware->prepend(\App\Http\Middleware\ForceUtf8::class);
         
-        // Railway auth token middleware (before auth)
-        $middleware->append(\App\Http\Middleware\RailwayAuthToken::class);
+        // RailwayAuthToken removed from global middleware stack.
+        // Use 'railway.auth' alias on specific route groups that need token-based auth.
         
         // Excluir rutas de verificación CSRF
         $middleware->validateCsrfTokens(except: [
@@ -49,8 +45,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.clean' => \App\Http\Middleware\AuthWithoutRedirectText::class,
             'railway.auth' => \App\Http\Middleware\RailwayAuthToken::class,
             'utf8' => \App\Http\Middleware\ForceUtf8::class,
-            'permission' => \App\Http\Middleware\CheckPermission::class,
-            'has.inbox' => \App\Http\Middleware\EnsureHasChatwootInbox::class,
+            'n8n.secret' => \App\Http\Middleware\ValidateN8nSecret::class,
+            'webhook.hmac' => \App\Http\Middleware\ValidateWebhookSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import {
   Users,
   UserPlus,
@@ -57,7 +58,7 @@ const TeamModal: React.FC<{
       await onSave({ name: name.trim(), description: description.trim(), allow_auto_assign: allowAutoAssign });
       onClose();
     } catch (err) {
-      console.error('Error saving team:', err);
+      debugLog.error('Error saving team:', err);
     } finally {
       setSaving(false);
     }
@@ -175,7 +176,7 @@ const AddMembersModal: React.FC<{
       setSelectedIds([]);
       onClose();
     } catch (err) {
-      console.error('Error adding members:', err);
+      debugLog.error('Error adding members:', err);
     } finally {
       setSaving(false);
     }
@@ -502,7 +503,7 @@ const TeamsManagement: React.FC = () => {
       // Notificar a MainDashboard para actualizar el contador
       window.dispatchEvent(new CustomEvent('teams-changed'));
     } catch (err) {
-      console.error('Error deleting team:', err);
+      debugLog.error('Error deleting team:', err);
     }
   };
 

@@ -23,6 +23,12 @@ class GoogleAuthController extends Controller
     public function authenticate(Request $request)
     {
         try {
+            $request->validate([
+                'credential' => 'nullable|string',
+                'email' => 'nullable|email',
+                'name' => 'nullable|string|max:255',
+            ]);
+
             Log::debug('GoogleAuth: Request received');
 
             $email = null;
@@ -111,8 +117,7 @@ class GoogleAuthController extends Controller
             Log::error('GoogleAuth: Error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false, 
-                'error' => $e->getMessage(),
-                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+                'error' => 'Error en autenticación'
             ], 500);
         }
     }
@@ -120,20 +125,34 @@ class GoogleAuthController extends Controller
     private function decodeGoogleJWT($jwt)
     {
         try {
-            // Split the JWT into its parts
-            $parts = explode('.', $jwt);
-            if (count($parts) !== 3) {
+            // Verify the JWT via Google's OAuth2 tokeninfo endpoint
+            $response = \Illuminate\Support\Facades\Http::get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $jwt,
+            ]);
+
+            if (!$response->successful()) {
+                Log::warning('GoogleAuth: Token verification failed', [
+                    'status' => $response->status(),
+                ]);
                 return null;
             }
 
-            // Decode the payload (second part)
-            $payload = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
-            $data = json_decode($payload, true);
+            $data = $response->json();
+
+            // Validate audience matches our Google Client ID
+            $expectedClientId = config('services.google.client_id');
+            if ($expectedClientId && ($data['aud'] ?? '') !== $expectedClientId) {
+                Log::warning('GoogleAuth: Token audience mismatch', [
+                    'expected' => $expectedClientId,
+                    'got' => $data['aud'] ?? 'missing',
+                ]);
+                return null;
+            }
 
             return $data;
 
         } catch (\Exception $e) {
-            Log::debug('GoogleAuth: JWT decode error', ['error' => $e->getMessage()]);
+            Log::error('GoogleAuth: JWT verification error', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -144,6 +163,10 @@ class GoogleAuthController extends Controller
     public function authenticateWithInvitation(Request $request)
     {
         try {
+            $request->validate([
+                'invitation_token' => 'required|string',
+                'credential' => 'nullable|string',
+            ]);
 
             
             $invitationToken = $request->input('invitation_token');
@@ -199,10 +222,9 @@ class GoogleAuthController extends Controller
                 }
                 
                 // User exists but for different company - update to new company
-                $user->update([
-                    'company_slug' => $invitation->company->slug,
-                    'role' => $invitation->role === 'administrator' ? 'admin' : 'agent',
-                ]);
+                $user->company_slug = $invitation->company->slug;
+                $user->role = $invitation->role === 'administrator' ? 'admin' : 'agent';
+                $user->save();
 
             } else {
                 // Create new user
@@ -212,10 +234,11 @@ class GoogleAuthController extends Controller
                     'password' => Hash::make(Str::random(32)),
                     'email_verified_at' => now(),
                     'company_slug' => $invitation->company->slug,
-                    'role' => $invitation->role === 'administrator' ? 'admin' : 'agent',
                     'phone_country' => 'CL',
                     'onboarding_completed' => true, // Skip onboarding for invited users
                 ]);
+                $user->role = $invitation->role === 'administrator' ? 'admin' : 'agent';
+                $user->save();
 
             }
 
@@ -247,7 +270,7 @@ class GoogleAuthController extends Controller
             Log::error('GoogleAuth: Invitation error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false, 
-                'error' => $e->getMessage()
+                'error' => 'Error al procesar la invitación'
             ], 500);
         }
     }

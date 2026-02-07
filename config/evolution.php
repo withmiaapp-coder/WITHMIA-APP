@@ -13,9 +13,9 @@ return [
 
     'api_url' => env('EVOLUTION_API_URL', 'http://localhost:8080'),
     
-    'base_url' => env('EVOLUTION_API_URL', 'http://localhost:8080'),
-    
     'api_key' => env('EVOLUTION_API_KEY'),
+
+    'database_url' => env('EVOLUTION_DATABASE_URL'),
     
     /*
     |--------------------------------------------------------------------------
@@ -41,6 +41,9 @@ return [
     */
     
     'webhook_url' => env('EVOLUTION_WEBHOOK_URL', null),
+
+    // Webhook HMAC signature verification secret
+    'webhook_secret' => env('EVOLUTION_WEBHOOK_SECRET'),
     
     /*
     |--------------------------------------------------------------------------

@@ -83,16 +83,25 @@ interface User {
   id: number;
   name: string;
   email: string;
+  full_name?: string;
+  phone?: string;
   company_name?: string;
   company_slug?: string;
+  company_id?: number;
+  company_description?: string;
+  has_website?: boolean;
+  website?: string;
+  client_type?: string;
   chatwoot_inbox_id?: number;
   chatwoot_agent_id?: number;
   role?: string;
+  logo_url?: string;
 }
 
 interface Company {
   name: string;
   email?: string;
+  settings?: Record<string, any>;
 }
 
 interface Chatwoot {
@@ -118,6 +127,7 @@ interface Props {
   companySlug: string;
   prefetchedTeams?: any[];
   prefetchedAgents?: any[];
+  isSuperAdmin?: boolean;
 }
 
 // ====== COMPONENTE: MENo� DESPLEGABLE DE USUARIO ======
@@ -131,6 +141,8 @@ interface UserMenuDropdownProps {
   };
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onNavigateToProfile?: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropdownProps) {
@@ -162,7 +174,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     };
   }, [isOpen]);
 
-  const helpSubmenuItems = [
+  const helpSubmenuItems: Array<{icon: any; label: string; onClick: (() => void) | null; className: string; isDisabled: boolean}> = [
     {
       icon: BookOpen,
       label: 'Centro de ayuda',
@@ -435,7 +447,56 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
   );
 }
 
-export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents }: Props) {
+// ====== COMPONENTE: RELOJ (aislado para evitar re-renders del dashboard) ======
+function DashboardClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getGreeting = () => {
+    const hour = now.getHours();
+    if (hour < 12) return '¡Buenos días';
+    if (hour < 18) return '¡Buenas tardes';
+    return '¡Buenas noches';
+  };
+
+  const getTimeIcon = () => {
+    const hour = now.getHours();
+    if (hour < 6) return '🌙';
+    if (hour < 12) return '🌅';
+    if (hour < 18) return '☀️';
+    if (hour < 21) return '🌆';
+    return '🌙';
+  };
+
+  return { greeting: getGreeting(), icon: getTimeIcon(), date: now };
+}
+
+function ClockDisplay({ firstName }: { firstName: string }) {
+  const { greeting, icon, date } = DashboardClock();
+  return (
+    <div>
+      <div className="flex items-center space-x-2.5 mb-1">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-neutral-700 to-neutral-600 bg-clip-text text-transparent">
+          {greeting}, {firstName}!
+        </h1>
+        <span className="text-xl">{icon}</span>
+      </div>
+      <p className="text-sm text-neutral-500 font-medium">
+        {date.toLocaleDateString('es-ES', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}
+      </p>
+    </div>
+  );
+}
+
+export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents, isSuperAdmin }: Props) {
   
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
@@ -451,20 +512,16 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     if (prefetchedTeams && prefetchedTeams.length > 0) {
       // Inyectar datos prefetch al cache global de teams
       (window as any).__prefetchedTeams = prefetchedTeams;
-      console.log('✅ Teams prefetch cargados:', prefetchedTeams.length);
     }
     if (prefetchedAgents && prefetchedAgents.length > 0) {
       // Inyectar datos prefetch al cache global de agents
       (window as any).__prefetchedAgents = prefetchedAgents;
-      console.log('✅ Agents prefetch cargados:', prefetchedAgents.length);
     }
   }, [prefetchedTeams, prefetchedAgents]);
   
   useEffect(() => {
     if (inboxId) {
-      console.log('✅ Inbox ID disponible:', inboxId);
-    } else {
-      console.warn('!⚠️ No se encontró inbox_id. El WebSocket de conversaciones no estará disponible.');
+      // Inbox ID available
     }
   }, [inboxId]);
   
@@ -472,33 +529,27 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   useEffect(() => {
     // Validar companySlug
     if (!validators.isValidCompanySlug(companySlug)) {
-      console.error('🛡�� SEGURIDAD: Company slug invo�lido');
       window.location.href = '/error';
       return;
     }
     
     // Validar user
     if (!user || !user.id || !user.name || !user.email) {
-      console.error('🛡�� SEGURIDAD: Datos de usuario invo�lidos');
       window.location.href = '/login';
       return;
     }
     
     // Validar email
     if (!validators.isValidEmail(user.email)) {
-      console.error('🛡�� SEGURIDAD: Email de usuario invo�lido');
       window.location.href = '/login';
       return;
     }
     
     // Validar nombre (contra XSS)
     if (!validators.isSafeString(user.name)) {
-      console.error('🛡�� SEGURIDAD: Nombre de usuario contiene caracteres peligrosos');
       window.location.href = '/login';
       return;
     }
-    
-    console.log('✅ Validaciones de seguridad pasadas');
   }, [user, companySlug]);
   
   const [mounted, setMounted] = useState(false);
@@ -509,7 +560,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       // Si hay query param conversation, ir directamente a chats
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('conversation')) {
-        console.log('🔀 Query param conversation detectado, forzando activeSection a chats');
         localStorage.setItem('dashboardActiveSection', 'chats');
         return 'chats';
       }
@@ -520,7 +570,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   
   // ====== NAVEGACIÓN LIBRE - TODOS LOS USUARIOS PUEDEN ACCEDER A TODAS LAS SECCIONES ======
   // La lógica de permisos se manejará dentro de cada sección individual si es necesario
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime] = useState(new Date());
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   // Restaurar estado de WhatsApp desde secureStorage (encriptado)
   const [whatsAppStatus, setWhatsAppStatus] = useState<'disconnected' | 'connected' | 'open'>(() => {
@@ -594,7 +644,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(`🚨 Error al verificar WhatsApp: ${error.message}`);
         showNotification(error.message, 'error');
         
         // Si es error de autenticacio�n, redirigir al login
@@ -604,7 +653,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           }, 2000);
         }
       } else {
-        console.error("Error inesperado:", error);
+        // Error handled silently
       }
     }
   };
@@ -638,10 +687,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       }
     } catch (error) {
       if (error instanceof ApiError) {
-        console.error(`🚨 Error al desconectar WhatsApp: ${error.message}`);
         showNotification(error.message, 'error');
       } else {
-        console.error("Error inesperado:", error);
         showNotification("❌ Error al desconectar WhatsApp", 'error');
       }
     }
@@ -666,7 +713,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         });
       }
     } catch (error) {
-      console.error("Error al obtener configuraciones de WhatsApp:", error);
+      // Error handled silently
     }
   };
 
@@ -690,7 +737,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         showNotification("❌ Error al guardar configuraciones", 'error');
       }
     } catch (error) {
-      console.error("Error al actualizar configuraciones de WhatsApp:", error);
       showNotification("❌ Error al guardar configuraciones", 'error');
     } finally {
       setIsUpdatingWhatsAppSettings(false);
@@ -748,10 +794,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
   useEffect(() => {
     setMounted(true);
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
   }, []);
 
   // Escuchar evento para navegar a conversación sin recargar página
@@ -793,11 +835,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     // Subscribirse a eventos de WhatsApp en tiempo real
     const channelName = `company.${companySlug}.whatsapp`;
     subscribe(channelName, 'WhatsAppStatusChanged', (data: any) => {
-      console.log('📡 WhatsApp status actualizado vo�a WebSocket:', data);
       // Actualizar estado directamente sin hacer request
       if (data.status) {
-        setWhatsappConnected(data.status.connected || false);
-        setWhatsappQr(data.status.qrCode || null);
+        setWhatsAppStatus(data.status.connected ? 'connected' : 'disconnected');
       }
     });
     
@@ -965,8 +1005,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       gradient: 'from-orange-500 to-red-500',
       permission: 'sidebar.products'
     },
-    // Admin Panel - SOLO para super-admin (withmia.app@gmail.com)
-    ...(user?.email === 'withmia.app@gmail.com' ? [{
+    // Admin Panel - SOLO para super-admin (controlado desde el servidor)
+    ...(isSuperAdmin ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,
@@ -980,7 +1020,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
   // Filtrar items según permisos
   const sidebarItems = allSidebarItems.filter(item => 
-    item.permission === 'superadmin' ? user?.email === 'withmia.app@gmail.com' : 
+    item.permission === 'superadmin' ? !!isSuperAdmin : 
     item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
   );
 
@@ -990,14 +1030,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   }
 
   const getGreeting = () => {
-    const hour = currentTime.getHours();
+    const hour = new Date().getHours();
     if (hour < 12) return '¡Buenos días';
     if (hour < 18) return '¡Buenas tardes';
     return '¡Buenas noches';
   };
 
   const getTimeIcon = () => {
-    const hour = currentTime.getHours();
+    const hour = new Date().getHours();
     if (hour < 6) return '🌙';
     if (hour < 12) return '🌅';
     if (hour < 18) return '☀️';
@@ -1098,8 +1138,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               }}
               isCollapsed={sidebarCollapsed}
               onToggleCollapse={() => setSidebarCollapsed(false)}
-              onNavigateToProfile={() => handleSectionChange('profile')}
-              onNavigateToSettings={() => handleSectionChange('settings')}
+              onNavigateToProfile={() => handleNavigation('profile')}
+              onNavigateToSettings={() => handleNavigation('settings')}
             />
           </div>
 
@@ -1129,22 +1169,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               
               {/* Hero Greeting */}
               <div className="flex items-center space-x-6">
-                <div>
-                  <div className="flex items-center space-x-2.5 mb-1">
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-neutral-700 to-neutral-600 bg-clip-text text-transparent">
-                      {getGreeting()}, {safeUser.firstName}!
-                    </h1>
-                    <span className="text-xl">{getTimeIcon()}</span>
-                  </div>
-                  <p className="text-sm text-neutral-500 font-medium">
-                    {currentTime.toLocaleDateString('es-ES', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                </div>
+                <ClockDisplay firstName={safeUser.firstName} />
               </div>
               
               {/* Action Bar */}
@@ -1183,8 +1208,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 <Conocimientos 
                   user={user} 
                   company={{
-                    id: user.company_id,
-                    name: user.company_name,
+                    id: user.company_id as number,
+                    name: user.company_name || '',
                     slug: companySlug,
                     description: user.company_description,
                     settings: company?.settings
@@ -1194,10 +1219,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             ) : activeSection === 'training' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
                 <Entrenamiento 
-                  user={user} 
+                  user={{...user, client_type: (user.client_type as "interno" | "externo" | undefined) ?? undefined}} 
                   company={{
-                    id: user.company_id,
-                    name: user.company_name,
+                    id: user.company_id as number,
+                    name: user.company_name || '',
                     slug: companySlug,
                     description: user.company_description,
                     settings: company?.settings
@@ -1207,7 +1232,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                     company_description: user.company_description || '',
                     has_website: user.has_website || false,
                     website: user.website || '',
-                    client_type: user.client_type || null
+                    client_type: (user.client_type as "interno" | "externo") || null
                   }}
                 />
               </div>
@@ -1355,7 +1380,6 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 <div className="p-6">
                   <MetricsDashboard
                     conversations={conversations || []}
-                    currentUserId={undefined}
                   />
                 </div>
               </div>

@@ -148,7 +148,7 @@ class DynamicContactsExcelManager
 
         } catch (\Exception $e) {
             Log::error("Error agregando contacto al Excel: " . $e->getMessage());
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to add contact to Excel'];
         }
     }
 
@@ -201,7 +201,7 @@ class DynamicContactsExcelManager
 
         } catch (\Exception $e) {
             Log::error("Error en importación masiva: " . $e->getMessage());
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to import contacts to Excel'];
         }
     }
 
@@ -229,6 +229,46 @@ class DynamicContactsExcelManager
     {
         // Remover sufijos de WhatsApp y espacios
         return str_replace(['@s.whatsapp.net', '@g.us', ' ', '+'], '', $contactId);
+    }
+
+    /**
+     * Actualizar un contacto existente en el Excel
+     */
+    private function updateExistingContact($userId, $contact, $companyName = null)
+    {
+        $fileInfo = $this->getUserExcelFile($userId, $companyName);
+
+        try {
+            $spreadsheet = IOFactory::load($fileInfo['full_path']);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $contactId = $contact['remoteJid'] ?? $contact['id'] ?? '';
+            $lastRow = $this->findLastDataRow($sheet);
+
+            for ($row = 7; $row <= $lastRow; $row++) {
+                $existingId = $sheet->getCell('C' . $row)->getValue();
+                if ($this->normalizeContactId($existingId) === $this->normalizeContactId($contactId)) {
+                    // Update name and timestamp
+                    $name = $contact['pushName'] ?? $contact['name'] ?? $sheet->getCell('B' . $row)->getValue();
+                    $sheet->setCellValue('B' . $row, $name);
+                    $sheet->setCellValue('G' . $row, Carbon::now()->format('d/m/Y H:i'));
+                    break;
+                }
+            }
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($fileInfo['full_path']);
+
+            return [
+                'success' => true,
+                'action' => 'updated',
+                'contact_name' => $contact['pushName'] ?? $contact['name'] ?? 'Sin nombre',
+                'file_info' => $fileInfo,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Error actualizando contacto en Excel: " . $e->getMessage());
+            return ['success' => false, 'error' => 'Failed to update contact in Excel'];
+        }
     }
 
     /**

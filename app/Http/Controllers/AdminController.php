@@ -2,20 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
+use App\Models\User;
+use App\Services\UserDeletionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 
 class AdminController extends Controller
 {
-    /**
-     * Check if user is admin
-     */
-    private function isAdmin()
+    public function __construct()
     {
-        $user = Auth::user();
-        return $user && $user->role === 'admin';
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+            if (!$user || $user->role !== 'admin') {
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => 'Unauthorized'], 403);
+                }
+                return redirect('/dashboard')->with('error', 'No tienes permisos de administrador');
+            }
+
+            // Global admin panel requires super-admin — regular admins manage via their company dashboard
+            $superAdminEmails = array_filter(explode(',', config('app.super_admin_emails', '')));
+            if (!empty($superAdminEmails) && !in_array($user->email, $superAdminEmails)) {
+                if ($request->expectsJson()) {
+                    return response()->json(['error' => 'Unauthorized — super admin required'], 403);
+                }
+                return redirect('/dashboard')->with('error', 'Acceso restringido a super administradores');
+            }
+
+            return $next($request);
+        });
     }
 
     /**
@@ -23,10 +39,6 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
-        if (!$this->isAdmin()) {
-            return redirect('/dashboard')->with('error', 'No tienes permisos de administrador');
-        }
-
         return inertia('admin/AdminDashboard');
     }
 
@@ -35,10 +47,6 @@ class AdminController extends Controller
      */
     public function users()
     {
-        if (!$this->isAdmin()) {
-            return redirect('/dashboard')->with('error', 'No tienes permisos de administrador');
-        }
-
         return inertia('admin/Users');
     }
 
@@ -47,59 +55,33 @@ class AdminController extends Controller
      */
     public function companies()
     {
-        if (!$this->isAdmin()) {
-            return redirect('/dashboard')->with('error', 'No tienes permisos de administrador');
-        }
-
         return inertia('admin/Companies');
     }
 
     /**
      * API: Get all users
-     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function apiUsers()
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        $users = User::select('id', 'name', 'email', 'role', 'company_slug', 'onboarding_completed', 'created_at', 'updated_at')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
 
-        try {
-            $users = DB::select("
-                SELECT id, name, email, role, company_slug, onboarding_completed, created_at, updated_at
-                FROM users
-                ORDER BY created_at DESC
-                LIMIT 100
-            ");
-
-            return response()->json(['users' => $users]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json(['users' => $users]);
     }
 
     /**
      * API: Get all companies
-     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function apiCompanies()
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        $companies = Company::select('id', 'name', 'slug', 'is_active', 'chatwoot_inbox_id', 'created_at', 'updated_at')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
 
-        try {
-            $companies = DB::select("
-                SELECT id, name, slug, email, phone, is_active, chatwoot_inbox_id, created_at, updated_at
-                FROM companies
-                ORDER BY created_at DESC
-                LIMIT 100
-            ");
-
-            return response()->json(['companies' => $companies]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json(['companies' => $companies]);
     }
 
     /**
@@ -107,94 +89,57 @@ class AdminController extends Controller
      */
     public function updateUserRole(Request $request, $id)
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $request->validate([
-            'role' => 'required|in:user,manager,admin'
+            'role' => 'required|in:agent,admin'
         ]);
 
-        try {
-            $affected = DB::table('users')
-                ->where('id', $id)
-                ->update([
-                    'role' => $request->role,
-                    'updated_at' => now()
-                ]);
+        $user = User::findOrFail($id);
+        $user->role = $request->role;
+        $user->save();
 
-            if ($affected === 0) {
-                return response()->json(['error' => 'Usuario no encontrado'], 404);
-            }
-
-            return response()->json(['success' => true, 'message' => 'Rol actualizado correctamente']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json(['success' => true, 'message' => 'Rol actualizado correctamente']);
     }
 
     /**
-     * API: Delete user
-     * NOTA: Usa Eloquent para activar UserObserver (elimina Evolution API, Qdrant, archivos, etc.)
+     * API: Delete user.
+     * Usa UserDeletionService para limpieza completa de datos.
      */
-    public function deleteUser($id)
+    public function deleteUser($id, UserDeletionService $deletionService)
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (Auth::id() == $id) {
+            return response()->json(['error' => 'No puedes eliminarte a ti mismo'], 400);
         }
 
-        try {
-            // Prevent deleting current user
-            if (Auth::id() == $id) {
-                return response()->json(['error' => 'No puedes eliminarte a ti mismo'], 400);
-            }
+        $user = User::findOrFail($id);
+        $result = $deletionService->delete($user, force: false, deletedBy: Auth::id());
 
-            // Usar Eloquent para activar el UserObserver (limpia Evolution API, Qdrant, archivos)
-            $user = \App\Models\User::find($id);
-            
-            if (!$user) {
-                return response()->json(['error' => 'Usuario no encontrado'], 404);
-            }
-
-            // Esto dispara UserObserver::deleting() que limpia:
-            // - Instancia Evolution API
-            // - Colección Qdrant
-            // - Archivos Excel
-            $user->delete();
-
-            return response()->json(['success' => true, 'message' => 'Usuario eliminado correctamente']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$result['success']) {
+            return response()->json(['error' => $result['message']], 500);
         }
+
+        return response()->json(['success' => true, 'message' => 'Usuario eliminado correctamente']);
     }
 
     /**
      * API: Get admin stats
-     * ✅ SIN CACHE - Consulta directa a BD
      */
     public function stats()
     {
-        if (!$this->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        $users = User::select('id', 'name', 'email', 'role', 'company_slug', 'onboarding_completed', 'created_at')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
 
-        try {
-            $users = DB::select("SELECT id, name, email, role, company_slug, onboarding_completed, created_at FROM users ORDER BY created_at DESC LIMIT 20");
-            $companies = DB::select("SELECT id, name, slug, is_active, chatwoot_inbox_id, created_at FROM companies ORDER BY created_at DESC LIMIT 20");
-            
-            $totalUsers = DB::selectOne("SELECT COUNT(*) as count FROM users")->count;
-            $totalCompanies = DB::selectOne("SELECT COUNT(*) as count FROM companies")->count;
+        $companies = Company::select('id', 'name', 'slug', 'is_active', 'chatwoot_inbox_id', 'created_at')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
 
-            $data = [
-                'total_users' => $totalUsers,
-                'total_companies' => $totalCompanies,
-                'users' => $users,
-                'companies' => $companies
-            ];
-
-            return response()->json($data);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json([
+            'total_users' => User::count(),
+            'total_companies' => Company::count(),
+            'users' => $users,
+            'companies' => $companies,
+        ]);
     }
 }

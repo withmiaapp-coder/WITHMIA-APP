@@ -100,14 +100,12 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
       );
       return JSON.parse(jsonPayload);
     } catch (e) {
-      console.error('Error parsing JWT:', e);
       return null;
     }
   };
 
   // Handle Google Sign-In response
   const handleCredentialResponse = useCallback(async (response: any) => {
-    console.log('Google credential received');
     setLoading(true);
     setError(null);
 
@@ -156,7 +154,6 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
         setError(data.error || 'Error al procesar la invitación');
       }
     } catch (err) {
-      console.error('Error:', err);
       setError('Error de conexión. Intenta nuevamente.');
     } finally {
       setLoading(false);

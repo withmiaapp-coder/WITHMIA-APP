@@ -153,8 +153,7 @@ class CleanupUnconnectedInstances extends Command
         } catch (\Exception $e) {
             $this->error("💥 Error: " . $e->getMessage());
             Log::error('CleanupUnconnectedInstances command error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             return 1;
         }

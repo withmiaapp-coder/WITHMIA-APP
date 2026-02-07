@@ -61,7 +61,7 @@ class UpdateChatwootMediaConfig extends Command
                 continue;
             }
 
-            $chatwootToken = config('chatwoot.token');
+            $chatwootToken = config('chatwoot.platform_token');
             $chatwootUrl = config('chatwoot.url');
 
             if (!$chatwootToken || !$chatwootUrl) {

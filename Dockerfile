@@ -103,6 +103,12 @@ RUN php artisan storage:link || true
 # Set permissions
 RUN chmod -R 775 storage bootstrap/cache
 
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /bin/bash appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 # Create start script with Octane (4 parallel workers)
 RUN echo '#!/bin/bash\n\
 set -e\n\
@@ -122,8 +128,8 @@ php artisan view:clear\n\
 php artisan config:cache\n\
 php artisan route:cache\n\
 \n\
-# Start queue worker in background\n\
-php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &\n\
+# Start Horizon queue manager in background (auto-scaling, monitoring, priority queues)\n\
+php artisan horizon &\n\
 \n\
 # Start Octane with Roadrunner (4 workers for concurrent requests)\n\
 exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=4 --max-requests=500\n\

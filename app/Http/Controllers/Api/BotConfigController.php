@@ -1,5 +1,4 @@
 <?php
-// Fix: parameters must be object - v3 force deploy
 
 namespace App\Http\Controllers\Api;
 
@@ -303,7 +302,7 @@ class BotConfigController extends Controller
             Log::error('Error updating bot config: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error' => 'Error al actualizar la configuración: ' . $e->getMessage()
+                'error' => 'Error al actualizar la configuración'
             ], 500);
         }
     }

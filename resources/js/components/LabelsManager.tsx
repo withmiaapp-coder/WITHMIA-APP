@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import { 
   Tag, 
   Plus, 
@@ -110,7 +111,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
       try {
         await onUpdateLabels(selectedLabels);
       } catch (error) {
-        console.error('Error al actualizar etiquetas:', error);
+        debugLog.error('Error al actualizar etiquetas:', error);
       } finally {
         setLoading(false);
       }
@@ -132,7 +133,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
     try {
       await onUpdateLabels(newLabels);
     } catch (error) {
-      console.error('Error al actualizar etiquetas:', error);
+      debugLog.error('Error al actualizar etiquetas:', error);
       // Revertir en caso de error
       setSelectedLabels(selectedLabels);
     }
@@ -157,7 +158,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
       setShowCreateForm(false);
       fetchLabels(); // Refrescar lista
     } catch (error) {
-      console.error('Error al crear etiqueta:', error);
+      debugLog.error('Error al crear etiqueta:', error);
     } finally {
       setLoading(false);
     }

@@ -17,15 +17,24 @@ class N8nService
     }
 
     /**
+     * Base HTTP client with timeout and auth headers.
+     */
+    private function client(): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::timeout(config('services.timeouts.n8n', 15))
+            ->withHeaders([
+                'X-N8N-API-KEY' => $this->apiKey,
+                'Accept' => 'application/json',
+            ]);
+    }
+
+    /**
      * Obtener todos los workflows
      */
     public function getWorkflows(): array
     {
         try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-            ])->get("{$this->baseUrl}/api/v1/workflows");
+            $response = $this->client()->get("{$this->baseUrl}/api/v1/workflows");
 
             if ($response->successful()) {
                 return [
@@ -42,7 +51,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al obtener workflows'];
         } catch (\Exception $e) {
             Log::error('n8n getWorkflows exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to get workflows'];
         }
     }
 
@@ -81,10 +90,7 @@ class N8nService
     public function getWorkflow(string $workflowId): array
     {
         try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-            ])->get("{$this->baseUrl}/api/v1/workflows/{$workflowId}");
+            $response = $this->client()->get("{$this->baseUrl}/api/v1/workflows/{$workflowId}");
 
             if ($response->successful()) {
                 return [
@@ -96,7 +102,7 @@ class N8nService
             return ['success' => false, 'error' => 'Workflow no encontrado'];
         } catch (\Exception $e) {
             Log::error('n8n getWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to get workflow'];
         }
     }
 
@@ -113,11 +119,9 @@ class N8nService
                 'nodes_count' => count($workflowData['nodes'] ?? []),
             ]);
             
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post("{$this->baseUrl}/api/v1/workflows", $workflowData);
+            $response = $this->client()
+                ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
+                ->post("{$this->baseUrl}/api/v1/workflows", $workflowData);
 
             if ($response->successful()) {
                 return [
@@ -136,7 +140,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al crear workflow'];
         } catch (\Exception $e) {
             Log::error('n8n createWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to create workflow'];
         }
     }
 
@@ -151,11 +155,9 @@ class N8nService
                 'nodes_count' => count($workflowData['nodes'] ?? [])
             ]);
             
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $workflowData);
+            $response = $this->client()
+                ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
+                ->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $workflowData);
 
             if ($response->successful()) {
                 Log::debug('✅ Workflow actualizado', ['workflow_id' => $workflowId]);
@@ -169,7 +171,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al actualizar workflow: ' . $response->status()];
         } catch (\Exception $e) {
             Log::error('n8n updateWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to update workflow'];
         }
     }
 
@@ -183,11 +185,9 @@ class N8nService
             
             // n8n API requiere un body JSON object vacío {} en el POST
             // Usar (object)[] para forzar {} en lugar de []
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
+            $response = $this->client()
+                ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
+                ->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
             if ($response->successful()) {
                 Log::debug('✅ Workflow activado exitosamente', ['workflow_id' => $workflowId]);
@@ -202,7 +202,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al activar workflow: ' . $response->status()];
         } catch (\Exception $e) {
             Log::error('n8n activateWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to activate workflow'];
         }
     }
 
@@ -213,11 +213,9 @@ class N8nService
     {
         try {
             // n8n API requiere un body vacío {} en el POST
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/deactivate", []);
+            $response = $this->client()
+                ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
+                ->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/deactivate", []);
 
             if ($response->successful()) {
                 return ['success' => true];
@@ -226,7 +224,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al desactivar workflow'];
         } catch (\Exception $e) {
             Log::error('n8n deactivateWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to deactivate workflow'];
         }
     }
 
@@ -236,10 +234,7 @@ class N8nService
     public function deleteWorkflow(string $workflowId): array
     {
         try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-            ])->delete("{$this->baseUrl}/api/v1/workflows/{$workflowId}");
+            $response = $this->client()->delete("{$this->baseUrl}/api/v1/workflows/{$workflowId}");
 
             if ($response->successful()) {
                 return ['success' => true];
@@ -248,33 +243,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al eliminar workflow'];
         } catch (\Exception $e) {
             Log::error('n8n deleteWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Ejecutar un workflow manualmente
-     */
-    public function executeWorkflow(string $workflowId, array $data = []): array
-    {
-        try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/execute", $data);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json()
-                ];
-            }
-
-            return ['success' => false, 'error' => 'Error al ejecutar workflow'];
-        } catch (\Exception $e) {
-            Log::error('n8n executeWorkflow exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete workflow'];
         }
     }
 
@@ -298,7 +267,7 @@ class N8nService
             // Usar URL interna para webhooks dentro de Railway
             $internalUrl = config('n8n.url');
             
-            $response = Http::timeout(10)
+            $response = Http::timeout(config('services.timeouts.default', 10))
                 ->post("{$internalUrl}/webhook/{$webhookPath}", $data);
 
             return [
@@ -312,7 +281,7 @@ class N8nService
                 'error' => $e->getMessage()
             ]);
             // No bloquear si el webhook falla
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to trigger webhook'];
         }
     }
 
@@ -378,7 +347,7 @@ class N8nService
 
             if ($result['success']) {
                 $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = config('services.n8n.base_url') . "/webhook/{$webhookPath}";
+                $webhookUrl = config('n8n.public_url') . "/webhook/{$webhookPath}";
 
                 // Activate the workflow
                 if ($workflowId) {
@@ -410,7 +379,7 @@ class N8nService
                 'company_slug' => $companySlug,
                 'error' => $e->getMessage()
             ]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to create training workflow'];
         }
     }
 
@@ -420,10 +389,7 @@ class N8nService
     public function getCredentials(): array
     {
         try {
-            $response = Http::withHeaders([
-                'X-N8N-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-            ])->get("{$this->baseUrl}/api/v1/credentials");
+            $response = $this->client()->get("{$this->baseUrl}/api/v1/credentials");
 
             if ($response->successful()) {
                 return [
@@ -440,7 +406,7 @@ class N8nService
             return ['success' => false, 'error' => 'Error al obtener credentials'];
         } catch (\Exception $e) {
             Log::error('n8n getCredentials exception', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to get credentials'];
         }
     }
 
@@ -482,6 +448,178 @@ class N8nService
                 'id' => $qdrantCredential['id'] ?? null,
                 'name' => $qdrantCredential['name'] ?? 'Qdrant'
             ]
+        ];
+    }
+
+    /**
+     * Crear workflow de bot desde template para una instancia/company.
+     * Consolida la lógica duplicada de EvolutionApiController y N8nWorkflowController.
+     *
+     * @param \App\Models\Company $company
+     * @param string $instanceName
+     * @return array{success: bool, workflow_id?: string, webhook_url?: string, error?: string}
+     */
+    public function createBotWorkflow($company, string $instanceName): array
+    {
+        try {
+            $templatePath = base_path('workflows/withmia-bot-template.json');
+
+            if (!file_exists($templatePath)) {
+                Log::error('Bot workflow template not found', ['path' => $templatePath]);
+                return ['success' => false, 'error' => 'Template de bot no encontrado'];
+            }
+
+            $content = file_get_contents($templatePath);
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $templateWorkflow = json_decode($content, true);
+
+            if (!$templateWorkflow) {
+                Log::error('Invalid bot workflow JSON', ['json_error' => json_last_error_msg()]);
+                return ['success' => false, 'error' => 'JSON del template inválido'];
+            }
+
+            // Datos de la empresa
+            $companySlug = $company->slug ?? 'company_' . $company->id;
+            $companyName = $company->name ?? $instanceName;
+            $assistantName = $company->assistant_name ?? 'MIA';
+            $openaiApiKey = $company->settings['openai_api_key'] ?? config('services.openai.api_key');
+
+            // Credentials de n8n
+            $credentialIds = $this->getCredentialIds();
+
+            // Reemplazar placeholders
+            $replacements = [
+                '{{COMPANY_SLUG}}' => $companySlug,
+                '{{COMPANY_NAME}}' => $companyName,
+                '{{ASSISTANT_NAME}}' => $assistantName,
+                '{{OPENAI_API_KEY}}' => $openaiApiKey,
+                '{{INSTANCE_NAME}}' => $instanceName,
+                '{{APP_URL}}' => config('app.url'),
+                '{{EVOLUTION_API_URL}}' => config('evolution.api_url'),
+                '{{EVOLUTION_API_KEY}}' => config('evolution.api_key'),
+                '{{QDRANT_URL}}' => config('qdrant.url'),
+                '{{N8N_OPENAI_CREDENTIAL_ID}}' => $credentialIds['openai']['id'] ?? '',
+                '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $credentialIds['openai']['name'] ?? 'OpenAI Account',
+                '{{N8N_QDRANT_CREDENTIAL_ID}}' => $credentialIds['qdrant']['id'] ?? '',
+                '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $credentialIds['qdrant']['name'] ?? 'Qdrant',
+                '{{OPENAI_CREDENTIAL_ID}}' => $credentialIds['openai']['id'] ?? '',
+                '{{QDRANT_CREDENTIAL_ID}}' => $credentialIds['qdrant']['id'] ?? '',
+            ];
+
+            $templateJson = json_encode($templateWorkflow);
+            foreach ($replacements as $placeholder => $value) {
+                $templateJson = str_replace($placeholder, (string) $value, $templateJson);
+            }
+            $templateWorkflow = json_decode($templateJson, true);
+
+            // Limpiar y personalizar nodos
+            $cleanNodes = [];
+            $newWebhookId = \Illuminate\Support\Str::uuid()->toString();
+
+            foreach ($templateWorkflow['nodes'] as $node) {
+                $params = $node['parameters'] ?? [];
+                if (empty($params) || (is_array($params) && count($params) === 0)) {
+                    $params = new \stdClass();
+                }
+
+                $cleanNode = [
+                    'parameters' => $params,
+                    'type' => $node['type'],
+                    'typeVersion' => $node['typeVersion'] ?? 1,
+                    'position' => $node['position'],
+                    'id' => $node['id'],
+                    'name' => $node['name'],
+                ];
+
+                if (isset($node['credentials'])) {
+                    $cleanNode['credentials'] = $node['credentials'];
+                }
+
+                if ($node['type'] === 'n8n-nodes-base.webhook') {
+                    $cleanNode['webhookId'] = $newWebhookId;
+                    if (isset($cleanNode['parameters']['path'])) {
+                        $cleanNode['parameters']['path'] = $instanceName;
+                    }
+                }
+
+                $cleanNodes[] = $cleanNode;
+            }
+
+            unset($templateWorkflow['id']);
+            unset($templateWorkflow['versionId']);
+            unset($templateWorkflow['active']);
+
+            $cleanWorkflow = [
+                'name' => "WITHMIA Bot - {$instanceName}",
+                'nodes' => $cleanNodes,
+                'connections' => $templateWorkflow['connections'] ?? new \stdClass(),
+                'settings' => [
+                    'executionOrder' => 'v1',
+                    'timezone' => 'America/Santiago',
+                    'callerPolicy' => 'workflowsFromSameOwner'
+                ],
+            ];
+
+            $result = $this->createWorkflow($cleanWorkflow);
+
+            if ($result['success']) {
+                $workflowId = $result['data']['id'] ?? null;
+                $webhookUrl = $this->getWebhookUrl($instanceName);
+
+                if ($workflowId) {
+                    $this->activateWorkflow($workflowId);
+                }
+
+                Log::info('Bot workflow created', [
+                    'company_slug' => $companySlug,
+                    'instance' => $instanceName,
+                    'workflow_id' => $workflowId,
+                ]);
+
+                return [
+                    'success' => true,
+                    'workflow_id' => $workflowId,
+                    'webhook_url' => $webhookUrl,
+                ];
+            }
+
+            return ['success' => false, 'error' => $result['error'] ?? 'Error desconocido'];
+
+        } catch (\Exception $e) {
+            Log::error('Exception creating bot workflow', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'error' => 'Failed to create bot workflow'];
+        }
+    }
+
+    /**
+     * Generate a minimal workflow definition for a new instance.
+     */
+    public function getMinimalWorkflow(string $instanceName): array
+    {
+        return [
+            'name' => "WITHMIA Bot - {$instanceName}",
+            'nodes' => [
+                [
+                    'parameters' => [
+                        'path' => $instanceName,
+                        'httpMethod' => 'POST',
+                        'responseMode' => 'onReceived',
+                        'responseData' => 'allEntries',
+                    ],
+                    'type' => 'n8n-nodes-base.webhook',
+                    'typeVersion' => 2,
+                    'position' => [0, 0],
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'name' => 'Webhook WITHMIA',
+                    'webhookId' => \Illuminate\Support\Str::uuid()->toString(),
+                ],
+            ],
+            'connections' => new \stdClass(),
+            'settings' => ['executionOrder' => 'v1'],
         ];
     }
 }

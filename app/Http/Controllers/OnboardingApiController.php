@@ -4,16 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Company;
 use App\Jobs\PostOnboardingSetupJob;
 use App\Jobs\CreateQdrantCollectionJob;
-use App\Jobs\CreateN8nWorkflowsJob;
 use App\Traits\HandlesOnboarding;
-use OpenAI;
+use Illuminate\Support\Facades\Validator;
 
 class OnboardingApiController extends Controller
 {
@@ -23,10 +21,26 @@ class OnboardingApiController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        Log::debug('OnboardingApiController@store received', [
-            'step' => $request->input('step'),
-            'all_data' => $request->all()
+        // Validación básica
+        $validator = Validator::make($request->all(), [
+            'step' => 'required|integer|between:1,7',
+            'full_name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'role' => 'nullable|string|max:100',
+            'company_name' => 'nullable|string|max:255',
+            'industry' => 'nullable|string|max:100',
+            'description' => 'nullable|string|max:2000',
+            'company_size' => 'nullable|string|max:50',
+            'website' => 'nullable|url|max:500',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Datos inválidos',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
         try {
             // Autenticar por auth_token del header o cookie
@@ -104,20 +118,19 @@ class OnboardingApiController extends Controller
 
         } catch (\Exception $e) {
             Log::error('OnboardingApiController error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Error al guardar el paso'
             ], 500);
         }
     }
 
     private function saveUserData(Request $request, User $user): void
     {
-        $data = $request->only(['full_name', 'phone', 'role']);
+        $data = $request->only(['full_name', 'phone']);
         if (!empty($data)) {
             $user->update(array_filter($data));
         }
@@ -128,29 +141,36 @@ class OnboardingApiController extends Controller
         $company = $this->getOrCreateCompany($user);
         $data = $request->only(['company_name', 'industry', 'description', 'company_size']);
         
+        $updates = [];
+        
         if (!empty($data['company_name'])) {
-            $company->update(['name' => $data['company_name']]);
-            
-            // 📦 Generar slug temporal y crear colección Qdrant AHORA (rápido, ~100ms)
-            // Esto se hace aquí para que cuando llegue al paso 7, ya esté listo
+            $updates['name'] = $data['company_name'];
+        }
+        if (!empty($data['industry'])) {
+            $updates['industry'] = $data['industry'];
+        }
+        if (!empty($data['description'])) {
+            $updates['description'] = $data['description'];
+        }
+        if (!empty($data['company_size'])) {
+            $updates['company_size'] = $data['company_size'];
+        }
+        
+        if (!empty($updates)) {
+            $company->update($updates);
+        }
+        
+        // Pre-crear colección Qdrant si tenemos nombre de empresa
+        if (!empty($data['company_name'])) {
             $tempSlug = Str::slug($data['company_name']) . '-' . strtolower(Str::random(6));
             
             try {
-                Log::debug("📦 Pre-creating Qdrant collection in step 2 for: {$tempSlug}");
-                CreateQdrantCollectionJob::dispatchSync($company->id, $tempSlug);
+                Log::debug("📦 Dispatching Qdrant collection creation in step 2 for: {$tempSlug}");
+                CreateQdrantCollectionJob::dispatch($company->id, $tempSlug);
             } catch (\Exception $e) {
-                Log::error("Error pre-creating Qdrant: " . $e->getMessage());
+                Log::error("Error dispatching Qdrant job: " . $e->getMessage());
                 // No bloquear el onboarding si falla
             }
-        }
-        if (!empty($data['industry'])) {
-            $company->update(['industry' => $data['industry']]);
-        }
-        if (!empty($data['description'])) {
-            $company->update(['description' => $data['description']]);
-        }
-        if (!empty($data['company_size'])) {
-            $company->update(['company_size' => $data['company_size']]);
         }
     }
 
@@ -166,150 +186,40 @@ class OnboardingApiController extends Controller
     private function saveUsageData(Request $request, User $user): void
     {
         $company = $this->getOrCreateCompany($user);
-        $onboarding = $company->onboarding_data ?? [];
-        $onboarding['usage'] = $request->input('usage');
-        $company->update(['onboarding_data' => $onboarding]);
+        $settings = $company->settings ?? [];
+        $settings['onboarding'] = array_merge($settings['onboarding'] ?? [], [
+            'usage' => $request->input('usage'),
+        ]);
+        $company->update(['settings' => $settings]);
     }
 
     private function saveVolumeData(Request $request, User $user): void
     {
         $company = $this->getOrCreateCompany($user);
-        $onboarding = $company->onboarding_data ?? [];
-        $onboarding['volume'] = $request->input('volume');
-        $company->update(['onboarding_data' => $onboarding]);
+        $settings = $company->settings ?? [];
+        $settings['onboarding'] = array_merge($settings['onboarding'] ?? [], [
+            'volume' => $request->input('volume'),
+        ]);
+        $company->update(['settings' => $settings]);
     }
 
     private function saveDiscoveryData(Request $request, User $user): void
     {
         $company = $this->getOrCreateCompany($user);
-        $onboarding = $company->onboarding_data ?? [];
-        $onboarding['discovery'] = $request->input('discovery');
-        $company->update(['onboarding_data' => $onboarding]);
+        $settings = $company->settings ?? [];
+        $settings['onboarding'] = array_merge($settings['onboarding'] ?? [], [
+            'discovery' => $request->input('discovery'),
+        ]);
+        $company->update(['settings' => $settings]);
     }
 
     private function saveToolsData(Request $request, User $user): void
     {
         $company = $this->getOrCreateCompany($user);
-        $onboarding = $company->onboarding_data ?? [];
-        $onboarding['tools'] = $request->input('tools');
-        $company->update(['onboarding_data' => $onboarding]);
-    }
-
-    // processOnboardingCompletion, getOrCreateCompany, generateUniqueCompanySlug 
-    // are now provided by HandlesOnboarding trait
-
-    public function improveDescription(Request $request): JsonResponse
-    {
-        try {
-            // Debug logging
-            Log::debug('Improve description request', [
-                'all_input' => $request->all(),
-                'json_input' => $request->json()->all(),
-                'raw_content' => $request->getContent()
-            ]);
-
-            $description = $request->input('description', '');
-
-            if (empty($description)) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Descripción no puede estar vacía',
-                    'debug' => [
-                        'received_description' => $description,
-                        'all_input' => $request->all()
-                    ]
-                ]);
-            }
-
-            // Usar OpenAI real para mejorar la descripción
-            $improvedDescription = $this->improveWithOpenAI($description);
-
-            Log::debug('Description improved with OpenAI', [
-                'original' => $description,
-                'improved' => $improvedDescription
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'improved_description' => $improvedDescription
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error improving description:', [
-                'error' => $e->getMessage(),
-                'description' => $request->input('description'),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            // Fallback to simple improvement if OpenAI fails
-            $description = $request->input('description', '');
-            $fallbackDescription = $this->simpleFallback($description);
-
-            return response()->json([
-                'success' => true,
-                'improved_description' => $fallbackDescription,
-                'note' => 'Used fallback method due to OpenAI error'
-            ]);
-        }
-    }
-
-    /**
-     * Mejora la descripción usando OpenAI
-     */
-    private function improveWithOpenAI($description)
-    {
-        try {
-            // Crear cliente OpenAI con API key desde .env
-            $apiKey = config('services.openai.api_key');
-            
-            if (empty($apiKey)) {
-                throw new \Exception('OpenAI API key not configured');
-            }
-
-            $client = OpenAI::client($apiKey);
-
-            $result = $client->chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'Eres un experto en marketing y redacción comercial. Tu tarea es mejorar descripciones de empresas haciéndolas más profesionales, atractivas y claras. Mantén el mismo sentido pero hazlas más impactantes.'
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => "Mejora esta descripción de empresa: \"$description\". Hazla más profesional y atractiva, pero mantén la esencia. Responde solo con la descripción mejorada, sin explicaciones adicionales."
-                    ]
-                ],
-                'max_tokens' => 200,
-                'temperature' => 0.7,
-            ]);
-
-            return trim($result->choices[0]->message->content);
-
-        } catch (\Exception $e) {
-            Log::error('OpenAI API error', [
-                'error' => $e->getMessage(),
-                'description' => $description,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            // Return fallback if OpenAI fails
-            return $this->simpleFallback($description);
-        }
-    }
-
-    /**
-     * Fallback simple si OpenAI falla
-     */
-    private function simpleFallback($description)
-    {
-        $improved = trim($description);
-        $improved = ucfirst($improved);
-        
-        if (!empty($improved) && !str_ends_with($improved, '.')) {
-            $improved .= '.';
-        }
-        
-        return $improved;
+        $settings = $company->settings ?? [];
+        $settings['onboarding'] = array_merge($settings['onboarding'] ?? [], [
+            'tools' => $request->input('tools'),
+        ]);
+        $company->update(['settings' => $settings]);
     }
 }

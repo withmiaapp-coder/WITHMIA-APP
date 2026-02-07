@@ -29,9 +29,6 @@ class CreateQdrantCollectionJob implements ShouldQueue
     {
         $this->companyId = $companyId;
         $this->companySlug = $companySlug;
-        
-        // Ejecutar en cola 'sync' para que sea inmediato sin worker
-        $this->onConnection('sync');
     }
 
     public function handle(QdrantService $qdrantService): void

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import debugLog from '@/utils/debugLogger';
 import axios from 'axios';
 import {
   Users,
@@ -99,7 +100,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
         setMembers(response.data.data || []);
       }
     } catch (err) {
-      console.error('Error fetching members:', err);
+      debugLog.error('Error fetching members:', err);
       setError('Error al cargar miembros');
     } finally {
       setLoading(false);

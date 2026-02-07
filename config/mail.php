@@ -113,4 +113,12 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Notification Address
+    |--------------------------------------------------------------------------
+    */
+
+    'admin_address' => env('MAIL_ADMIN_ADDRESS', 'a.diaz@withmia.com'),
+
 ];

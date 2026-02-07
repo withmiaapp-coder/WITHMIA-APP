@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import debugLog from '@/utils/debugLogger';
 import { X } from 'lucide-react';
 
 interface WhatsAppQRModalProps {
@@ -72,7 +73,7 @@ export const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error checking WhatsApp status:', error);
+      debugLog.error('Error checking WhatsApp status:', error);
     }
   };
 
@@ -103,11 +104,9 @@ export const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
       } else if (!data.success) {
         // No mostrar error inmediatamente, puede estar creando la instancia
         // Mantener loading activo y reintentar
-        console.log('Waiting for instance creation...', data);
-        // No cambiar isLoading, seguir mostrando spinner
       }
     } catch (error) {
-      console.error('Error fetching QR code:', error);
+      debugLog.error('Error fetching QR code:', error);
       // No mostrar error en el modal mientras se crea la instancia
       // Solo loguear en consola
     }
@@ -210,7 +209,7 @@ export const WhatsAppQRModal: React.FC<WhatsAppQRModalProps> = ({
       }
     } catch (error) {
       setError('Error al desconectar WhatsApp');
-      console.error('Error disconnecting:', error);
+      debugLog.error('Error disconnecting:', error);
     } finally {
       setIsLoading(false);
     }

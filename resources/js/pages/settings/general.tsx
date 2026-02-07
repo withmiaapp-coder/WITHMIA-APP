@@ -69,7 +69,6 @@ export default function GeneralSettings() {
         setOriginalSettings(loadedSettings);
       }
     } catch (err: any) {
-      console.error('Error loading settings:', err);
       setError('Error al cargar la configuración');
     } finally {
       setLoading(false);
@@ -93,7 +92,6 @@ export default function GeneralSettings() {
         setError(response.data.message || 'Error al guardar');
       }
     } catch (err: any) {
-      console.error('Error saving settings:', err);
       setError(err.response?.data?.message || 'Error al guardar la configuración');
     } finally {
       setSaving(false);

@@ -3,41 +3,25 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use OpenAI;
 use Inertia\Inertia;
 use App\Models\User;
 use App\Models\Company;
-use App\Mail\OnboardingCompletedNotificationMail;
-use App\Mail\OnboardingCompletedMail;
 use App\Services\ChatwootProvisioningService;
-use App\Services\QdrantService;
-use App\Services\N8nService;
 use App\Jobs\PostOnboardingSetupJob;
-use App\Jobs\CreateQdrantCollectionJob;
-use App\Jobs\CreateN8nWorkflowsJob;
 use App\Traits\HandlesOnboarding;
 
 class OnboardingController extends Controller
 {
     use HandlesOnboarding;
     protected $chatwootProvisioningService;
-    protected $qdrantService;
-    protected $n8nService;
 
-    public function __construct(
-        ChatwootProvisioningService $chatwootProvisioningService,
-        QdrantService $qdrantService,
-        N8nService $n8nService
-    )
+    public function __construct(ChatwootProvisioningService $chatwootProvisioningService)
     {
         $this->chatwootProvisioningService = $chatwootProvisioningService;
-        $this->qdrantService = $qdrantService;
-        $this->n8nService = $n8nService;
         $this->middleware('auth')->only(['show', 'index']);
     }
 
@@ -196,14 +180,13 @@ class OnboardingController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('OnboardingController@store exception', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'message' => $e->getMessage()
             ]);
 
             if ($isJsonRequest) {
                 return response()->json([
                     'success' => false,
-                    'error' => $e->getMessage(),
+                    'error' => 'Error al guardar el paso',
                     'debug_info' => [
                         'authenticated' => auth()->check(),
                         'user_id' => auth()->id()
@@ -211,7 +194,7 @@ class OnboardingController extends Controller
                 ], 500);
             }
 
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al guardar el paso']);
         }
     }
 
@@ -244,34 +227,18 @@ class OnboardingController extends Controller
 
     private function saveUserData(Request $request, User $user)
     {
-        Log::debug('saveUserData START', [
-            'user_id' => $user->id,
-            'request_data' => $request->all()
-        ]);
-
         try {
             $validated = $request->validate([
                 'full_name' => 'required|string|max:255',
                 'phone' => 'required|string|max:20',
             ]);
 
-            Log::debug('saveUserData validation passed', ['validated' => $validated]);
-
             $user->update([
                 'full_name' => $request->full_name,
                 'phone' => $request->phone,
             ]);
-
-            Log::debug('saveUserData update completed', [
-                'user_id' => $user->id,
-                'full_name' => $user->full_name,
-                'phone' => $user->phone
-            ]);
         } catch (\Exception $e) {
-            Log::error('saveUserData EXCEPTION', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            Log::error('saveUserData EXCEPTION', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -376,44 +343,130 @@ class OnboardingController extends Controller
     // processOnboardingCompletion, generateUniqueCompanySlug, getOrCreateCompany, getTimezoneFromPhoneCountry
     // are now provided by HandlesOnboarding trait
 
+    /**
+     * Completar onboarding — delega a HandlesOnboarding::processOnboardingCompletion()
+     * para evitar duplicación de lógica.
+     */
     private function completeOnboarding(Request $request): RedirectResponse
     {
         $user = auth()->user();
-        $companyName = $request->company_name ?? $user->full_name ?? $user->name ?? 'empresa';
-        $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
-
-        $user->update(['company_slug' => $uniqueSlug]);
-        $company = $this->getOrCreateCompany($user, $uniqueSlug);
-
-        // Marcar onboarding como completado inmediatamente
-        $user->update([
-            'onboarding_completed' => true,
-            'onboarding_completed_at' => now()
-        ]);
-
-        // 🚀 Ejecutar Job SINCRÓNICAMENTE para asegurar que workflows se creen
-        try {
-            Log::debug("Ejecutando PostOnboardingSetupJob sincrónicamente para: {$uniqueSlug}");
-            
-            \App\Jobs\PostOnboardingSetupJob::dispatchSync(
-                $user->id,
-                $company->id,
-                $uniqueSlug,
-                $request->ip() ?? '0.0.0.0'
-            );
-            
-            Log::debug("PostOnboardingSetupJob completado para: {$uniqueSlug}");
-        } catch (\Exception $e) {
-            Log::error("Error en PostOnboardingSetupJob: " . $e->getMessage());
-            // Continuar aunque falle - el usuario ya tiene su dashboard
-        }
+        $result = $this->processOnboardingCompletion($request, $user);
 
         Log::debug("Onboarding completado para {$user->email}, redirigiendo a dashboard");
 
-        return redirect()->route('dashboard.company', ['companySlug' => $uniqueSlug]);
+        return redirect()->route('dashboard.company', ['companySlug' => $result['company_slug']]);
     }
 
-    // NOTA: El método createRagWorkflow fue eliminado porque era código muerto.
-    // La creación del workflow RAG se hace en PostOnboardingSetupJob.
-    // Si necesitas crear un workflow RAG manualmente, usa KnowledgeController@createCompanyWorkflow
+    public function improveDescription(Request $request): JsonResponse
+    {
+        try {
+            // Debug logging
+            Log::debug('Improve description request', [
+                'all_input' => $request->all(),
+                'json_input' => $request->json()->all(),
+                'raw_content' => $request->getContent()
+            ]);
+
+            $description = $request->input('description', '');
+
+            if (empty($description)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Descripción no puede estar vacía',
+                    'debug' => [
+                        'received_description' => $description,
+                        'all_input' => $request->all()
+                    ]
+                ]);
+            }
+
+            // Usar OpenAI real para mejorar la descripción
+            $improvedDescription = $this->improveWithOpenAI($description);
+
+            Log::debug('Description improved with OpenAI', [
+                'original' => $description,
+                'improved' => $improvedDescription
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'improved_description' => $improvedDescription
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error improving description:', [
+                'error' => $e->getMessage(),
+                'description' => $request->input('description')
+            ]);
+
+            // Fallback to simple improvement if OpenAI fails
+            $description = $request->input('description', '');
+            $fallbackDescription = $this->simpleFallback($description);
+
+            return response()->json([
+                'success' => true,
+                'improved_description' => $fallbackDescription,
+                'note' => 'Used fallback method due to OpenAI error'
+            ]);
+        }
+    }
+
+    /**
+     * Mejora la descripción usando OpenAI
+     */
+    private function improveWithOpenAI($description)
+    {
+        try {
+            // Crear cliente OpenAI con API key desde .env
+            $apiKey = config('services.openai.api_key');
+            
+            if (empty($apiKey)) {
+                throw new \Exception('OpenAI API key not configured');
+            }
+
+            $client = OpenAI::client($apiKey);
+
+            $result = $client->chat()->create([
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'Eres un experto en marketing y redacción comercial. Tu tarea es mejorar descripciones de empresas haciéndolas más profesionales, atractivas y claras. Mantén el mismo sentido pero hazlas más impactantes.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => "Mejora esta descripción de empresa: \"$description\". Hazla más profesional y atractiva, pero mantén la esencia. Responde solo con la descripción mejorada, sin explicaciones adicionales."
+                    ]
+                ],
+                'max_tokens' => 200,
+                'temperature' => 0.7,
+            ]);
+
+            return trim($result->choices[0]->message->content);
+
+        } catch (\Exception $e) {
+            Log::error('OpenAI API error', [
+                'error' => $e->getMessage(),
+                'description' => $description
+            ]);
+            
+            // Return fallback if OpenAI fails
+            return $this->simpleFallback($description);
+        }
+    }
+
+    /**
+     * Fallback simple si OpenAI falla
+     */
+    private function simpleFallback($description)
+    {
+        $improved = trim($description);
+        $improved = ucfirst($improved);
+        
+        if (!empty($improved) && !str_ends_with($improved, '.')) {
+            $improved .= '.';
+        }
+        
+        return $improved;
+    }
 }

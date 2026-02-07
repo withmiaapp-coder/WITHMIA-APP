@@ -115,7 +115,7 @@ class QdrantService
 
             return ['success' => false, 'error' => $response['error'] ?? 'Unknown error'];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to list collections'];
         }
     }
 
@@ -134,28 +134,7 @@ class QdrantService
                 'message' => $response['success'] ? 'Collection deleted' : ($response['error'] ?? 'Error')
             ];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Obtener información de una colección
-     */
-    public function getCollectionInfo(string $collectionName): array
-    {
-        try {
-            $response = $this->request('GET', "/collections/{$collectionName}");
-            
-            if ($response['success']) {
-                return [
-                    'success' => true,
-                    'data' => $response['data']['result'] ?? []
-                ];
-            }
-
-            return ['success' => false, 'error' => $response['error'] ?? 'Collection not found'];
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete collection'];
         }
     }
 
@@ -187,7 +166,7 @@ class QdrantService
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error fetching points'];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to get points'];
         }
     }
 
@@ -212,7 +191,7 @@ class QdrantService
 
             return ['success' => false, 'error' => 'Point not found'];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to get point'];
         }
     }
 
@@ -241,7 +220,7 @@ class QdrantService
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error updating point'];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to update point'];
         }
     }
 
@@ -269,7 +248,7 @@ class QdrantService
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error deleting points'];
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete points'];
         }
     }
 

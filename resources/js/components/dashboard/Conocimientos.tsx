@@ -1,4 +1,5 @@
-﻿import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
+import debugLog from '@/utils/debugLogger';
 import {
   BookOpen,
   Upload,
@@ -138,7 +139,7 @@ export default function Conocimientos({
         setQdrantCollection(data.collection || '');
       }
     } catch (error) {
-      console.error('Error fetching Qdrant points:', error);
+      debugLog.error('Error fetching Qdrant points:', error);
     } finally {
       setLoadingPoints(false);
     }
@@ -164,7 +165,7 @@ export default function Conocimientos({
         alert('Error al eliminar punto: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error deleting Qdrant point:', error);
+      debugLog.error('Error deleting Qdrant point:', error);
       alert('Error al eliminar punto');
     } finally {
       setDeletingPointId(null);
@@ -209,7 +210,7 @@ export default function Conocimientos({
         alert('Error al guardar: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error saving point:', error);
+      debugLog.error('Error saving point:', error);
       alert('Error al guardar los cambios.');
     } finally {
       setSavingPoint(false);
@@ -228,7 +229,7 @@ export default function Conocimientos({
         setDocuments(data.documents || []);
       }
     } catch (error) {
-      console.error("Error fetching documents:", error);
+      debugLog.error("Error fetching documents:", error);
     } finally {
       setLoadingDocuments(false);
     }
@@ -250,7 +251,6 @@ export default function Conocimientos({
           const doc = data.documents.find((d: Document) => d.filename === filename);
           
           if (doc && doc.qdrant_vector_ids && doc.qdrant_vector_ids !== 'null') {
-            console.log('✅ Vector IDs disponibles para:', filename);
             clearInterval(intervalId);
             setPollingIntervals(prev => {
               const newIntervals = { ...prev };
@@ -260,7 +260,6 @@ export default function Conocimientos({
             // Refresh documents list
             await fetchDocuments();
           } else if (attempts >= maxAttempts) {
-            console.warn('⏱️ Timeout esperando vector IDs para:', filename);
             clearInterval(intervalId);
             setPollingIntervals(prev => {
               const newIntervals = { ...prev };
@@ -270,7 +269,7 @@ export default function Conocimientos({
           }
         }
       } catch (error) {
-        console.error('Error en polling:', error);
+        debugLog.error('Error en polling:', error);
       }
     }, 5000); // Poll every 5 seconds
     
@@ -302,7 +301,6 @@ export default function Conocimientos({
       // Usar company_slug para la colección de Qdrant
       const companySlug = company?.slug || user?.company_slug || 'default';
       const collectionName = `company_${companySlug.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}_knowledge`;
-      console.log('Company Slug:', companySlug, 'Collection:', collectionName, 'Company:', company, 'User:', user);
       
       setUploadProgress((prev) => ({ ...prev, [fileId]: 60 }));
 
@@ -338,7 +336,6 @@ export default function Conocimientos({
         filename: file.name,
         file: base64Content,
       };
-      console.log('📤 Enviando a n8n RAG via proxy:', requestBody.filename);
       
       // Send to Laravel proxy which forwards to n8n
       fetch(`/api/documents/process-rag${authToken ? `?auth_token=${authToken}` : ''}`, {
@@ -353,13 +350,12 @@ export default function Conocimientos({
       })
       .then(res => res.json())
       .then(data => {
-        console.log('✅ n8n RAG proxy respondió:', data);
         // n8n responded, now it's processing in background
         // Start polling to check when vector_ids are ready
         startPollingForVectorIds(file.name, companySlug);
       })
       .catch(err => {
-        console.error('Error iniciando procesamiento RAG:', err);
+        debugLog.error('Error iniciando procesamiento RAG:', err);
       });
 
       // Refresh documents list
@@ -373,7 +369,7 @@ export default function Conocimientos({
         });
       }, 1000);
     } catch (error: any) {
-      console.error("Upload error:", error);
+      debugLog.error("Upload error:", error);
       alert(`Error al subir ${file.name}: ${error.message}`);
       setUploadingFiles((prev) => prev.filter((id) => id !== fileId));
     }
@@ -457,7 +453,7 @@ export default function Conocimientos({
         alert("Error al eliminar: " + (data.error || "Intente nuevamente"));
       }
     } catch (error) {
-      console.error("Error deleting document:", error);
+      debugLog.error("Error deleting document:", error);
       alert("Error al eliminar el documento. Por favor intente nuevamente.");
     } finally {
       setIsDeleting(false);

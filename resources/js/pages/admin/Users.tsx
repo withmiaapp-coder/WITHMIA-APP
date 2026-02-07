@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import debugLog from '@/utils/debugLogger';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +72,7 @@ export default function AdminUsers() {
             const data = await response.json();
             setUsers(data.users || []);
         } catch (error) {
-            console.error('Error fetching users:', error);
+            debugLog.error('Error fetching users:', error);
         } finally {
             setLoading(false);
         }
@@ -108,7 +109,7 @@ export default function AdminUsers() {
                 setIsEditDialogOpen(false);
             }
         } catch (error) {
-            console.error('Error updating role:', error);
+            debugLog.error('Error updating role:', error);
         } finally {
             setIsSaving(false);
         }
@@ -131,7 +132,7 @@ export default function AdminUsers() {
                 setUsers(prev => prev.filter(u => u.id !== userId));
             }
         } catch (error) {
-            console.error('Error deleting user:', error);
+            debugLog.error('Error deleting user:', error);
         }
     };
 

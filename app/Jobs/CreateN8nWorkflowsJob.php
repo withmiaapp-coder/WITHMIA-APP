@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Company;
-use App\Models\User;
 use App\Services\N8nService;
 use App\Services\QdrantService;
 use Illuminate\Bus\Queueable;
@@ -12,7 +11,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Job para crear workflows n8n de forma asíncrona usando HTTP sin esperar respuesta
@@ -32,9 +30,6 @@ class CreateN8nWorkflowsJob implements ShouldQueue
     {
         $this->companyId = $companyId;
         $this->companySlug = $companySlug;
-        
-        // Ejecutar en cola 'sync' para que sea inmediato
-        $this->onConnection('sync');
     }
 
     public function handle(N8nService $n8nService, QdrantService $qdrantService): void
@@ -160,7 +155,7 @@ class CreateN8nWorkflowsJob implements ShouldQueue
 
             if ($result['success']) {
                 $workflowId = $result['data']['id'] ?? null;
-                $webhookUrl = config('services.n8n.base_url') . "/webhook/{$webhookPath}";
+                $webhookUrl = config('n8n.public_url') . "/webhook/{$webhookPath}";
 
                 if ($workflowId) {
                     $n8nService->activateWorkflow($workflowId);

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import { 
   UserPlus, 
   User, 
@@ -83,7 +84,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
       setIsOpen(false);
       setSearchTerm('');
     } catch (error) {
-      console.error('Error al asignar agente:', error);
+      debugLog.error('Error al asignar agente:', error);
     } finally {
       setLoading(false);
     }

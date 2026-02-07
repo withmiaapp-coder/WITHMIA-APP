@@ -3,17 +3,39 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
 class Company extends Model
 {
-    protected $guarded = [];
+    use SoftDeletes;
+    protected $fillable = [
+        'user_id',
+        'name',
+        'assistant_name',
+        'slug',
+        'chatwoot_account_id',
+        'chatwoot_inbox_id',
+        'chatwoot_data',
+        'chatwoot_provisioned',
+        'chatwoot_provisioned_at',
+        'description',
+        'website',
+        'client_type',
+        'logo_url',
+        'branding',
+        'timezone',
+        'settings',
+        'is_active',
+    ];
 
     protected $casts = [
         'settings' => 'array',
         'chatwoot_data' => 'array',
         'chatwoot_provisioned_at' => 'datetime',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'chatwoot_provisioned' => 'boolean',
+        'branding' => 'array',
     ];
 
     // ==========================================

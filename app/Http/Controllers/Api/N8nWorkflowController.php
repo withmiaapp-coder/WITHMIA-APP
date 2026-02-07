@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\WhatsAppInstance;
 use App\Services\N8nService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class N8nWorkflowController extends Controller
@@ -30,160 +30,48 @@ class N8nWorkflowController extends Controller
         ]);
 
         $companyId = $request->company_id;
-        $companyName = $request->company_name;
         $instanceName = $request->instance_name;
 
         try {
-            // 1. Cargar el template del workflow desde el archivo local
-            $templatePath = base_path('workflows/withmia-bot-template.json');
-            
-            if (!file_exists($templatePath)) {
-                Log::error('Template de workflow no encontrado', ['path' => $templatePath]);
+            $company = \App\Models\Company::find($companyId);
+
+            if (!$company) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Template de workflow no encontrado'
-                ], 500);
+                    'message' => 'Empresa no encontrada'
+                ], 404);
             }
 
-            $templateWorkflow = json_decode(file_get_contents($templatePath), true);
-
-            if (!$templateWorkflow) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al parsear template de workflow'
-                ], 500);
-            }
-
-            // 2. Personalizar el workflow para la empresa
-            $customizedWorkflow = $this->customizeWorkflowForCompany(
-                $templateWorkflow,
-                $companyId,
-                $companyName,
-                $instanceName
-            );
-
-            // 3. Crear el workflow en n8n via API
-            $result = $this->n8nService->createWorkflow($customizedWorkflow);
+            $result = $this->n8nService->createBotWorkflow($company, $instanceName);
 
             if (!$result['success']) {
-                Log::error('Error creando workflow en n8n', ['error' => $result['error'] ?? 'Unknown']);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al crear workflow en n8n: ' . ($result['error'] ?? 'Unknown error')
+                    'message' => 'Error al crear workflow: ' . ($result['error'] ?? 'Unknown error')
                 ], 500);
             }
 
-            $createdWorkflow = $result['data'];
-            $workflowId = $createdWorkflow['id'] ?? null;
-
-            // 4. Activar el workflow
-            if ($workflowId) {
-                $this->n8nService->activateWorkflow($workflowId);
-            }
-
-            // 5. Guardar referencia en la base de datos
-            $this->saveWorkflowReference($companyId, $instanceName, $workflowId, $createdWorkflow['name'] ?? '');
-
-            // 6. Obtener URL del webhook
-            $webhookUrl = $this->n8nService->getWebhookUrl($instanceName);
-
-            Log::debug('✅ Workflow creado exitosamente', [
-                'company_id' => $companyId,
-                'instance_name' => $instanceName,
-                'workflow_id' => $workflowId,
-                'webhook_url' => $webhookUrl
-            ]);
+            // Guardar referencia en la base de datos
+            $this->saveWorkflowReference($companyId, $instanceName, $result['workflow_id'], '');
 
             return response()->json([
                 'success' => true,
                 'message' => 'Workflow creado y activado exitosamente',
-                'workflow_id' => $workflowId,
-                'workflow_name' => $createdWorkflow['name'] ?? '',
-                'webhook_url' => $webhookUrl
+                'workflow_id' => $result['workflow_id'],
+                'webhook_url' => $result['webhook_url']
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error al crear workflow para empresa', [
                 'company_id' => $companyId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear workflow: ' . $e->getMessage()
+                'message' => 'Error al crear workflow'
             ], 500);
         }
-    }
-
-    /**
-     * Personalizar workflow para una empresa específica
-     */
-    private function customizeWorkflowForCompany(array $workflow, int $companyId, string $companyName, string $instanceName): array
-    {
-        // Remover ID para que n8n genere uno nuevo
-        unset($workflow['id']);
-        
-        // Get company for settings
-        $company = \App\Models\Company::find($companyId);
-        $companySlug = $company ? ($company->slug ?? 'company_' . $companyId) : 'company_' . $companyId;
-        $assistantName = $company ? ($company->assistant_name ?? 'MIA') : 'MIA';
-        $openaiApiKey = $company ? ($company->settings['openai_api_key'] ?? config('services.openai.api_key')) : config('services.openai.api_key');
-        $appUrl = config('app.url');
-        
-        // Get n8n credential IDs
-        $credentialIds = $this->n8nService->getCredentialIds();
-        $openaiCredentialId = $credentialIds['openai']['id'] ?? '';
-        $openaiCredentialName = $credentialIds['openai']['name'] ?? 'OpenAI Account';
-        $qdrantCredentialId = $credentialIds['qdrant']['id'] ?? '';
-        $qdrantCredentialName = $credentialIds['qdrant']['name'] ?? 'Qdrant';
-        
-        Log::debug('Credentials obtenidas para workflow', [
-            'openai_id' => $openaiCredentialId,
-            'qdrant_id' => $qdrantCredentialId
-        ]);
-        
-        // Convert to JSON string for replacements
-        $workflowJson = json_encode($workflow);
-        
-        // Replace all placeholders
-        $replacements = [
-            '{{COMPANY_SLUG}}' => $companySlug,
-            '{{COMPANY_NAME}}' => $companyName,
-            '{{ASSISTANT_NAME}}' => $assistantName,
-            '{{OPENAI_API_KEY}}' => $openaiApiKey,
-            '{{INSTANCE_NAME}}' => $instanceName,
-            '{{APP_URL}}' => $appUrl,
-            '{{N8N_OPENAI_CREDENTIAL_ID}}' => $openaiCredentialId,
-            '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $openaiCredentialName,
-            '{{N8N_QDRANT_CREDENTIAL_ID}}' => $qdrantCredentialId,
-            '{{N8N_QDRANT_CREDENTIAL_NAME}}' => $qdrantCredentialName,
-        ];
-        
-        foreach ($replacements as $placeholder => $value) {
-            $workflowJson = str_replace($placeholder, $value, $workflowJson);
-        }
-        
-        $workflow = json_decode($workflowJson, true);
-        
-        // Personalizar nombre
-        $workflow['name'] = "WITHMIA Bot - {$companyName}";
-        
-        // Generar nuevo webhook ID
-        $newWebhookId = Str::uuid()->toString();
-
-        foreach ($workflow['nodes'] as &$node) {
-            // Personalizar webhook path
-            if ($node['type'] === 'n8n-nodes-base.webhook') {
-                $node['webhookId'] = $newWebhookId;
-                if (isset($node['parameters']['path'])) {
-                    // instanceName ya tiene formato "withmia-{slug}", usarlo directamente
-                    $node['parameters']['path'] = $instanceName;
-                }
-            }
-        }
-
-        return $workflow;
     }
 
     /**
@@ -193,13 +81,11 @@ class N8nWorkflowController extends Controller
     {
         try {
             // Insertar o actualizar en whatsapp_instances
-            DB::table('whatsapp_instances')
-                ->where('company_id', $companyId)
+            WhatsAppInstance::where('company_id', $companyId)
                 ->where('instance_name', $instanceName)
                 ->update([
                     'n8n_workflow_id' => $workflowId,
                     'n8n_webhook_url' => $this->n8nService->getWebhookUrl($instanceName),
-                    'updated_at' => now()
                 ]);
         } catch (\Exception $e) {
             Log::warning('Error guardando referencia de workflow', ['error' => $e->getMessage()]);
@@ -234,7 +120,7 @@ class N8nWorkflowController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al obtener workflows'
             ], 500);
         }
     }
@@ -245,9 +131,7 @@ class N8nWorkflowController extends Controller
     public function getCompanyWorkflow(int $companyId)
     {
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('company_id', $companyId)
-                ->first();
+            $instance = WhatsAppInstance::where('company_id', $companyId)->first();
 
             if (!$instance || !$instance->n8n_workflow_id) {
                 return response()->json([
@@ -268,7 +152,7 @@ class N8nWorkflowController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al obtener workflow'
             ], 500);
         }
     }
@@ -279,22 +163,17 @@ class N8nWorkflowController extends Controller
     public function deleteCompanyWorkflow(int $companyId)
     {
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('company_id', $companyId)
-                ->first();
+            $instance = WhatsAppInstance::where('company_id', $companyId)->first();
 
             if ($instance && $instance->n8n_workflow_id) {
                 // Eliminar de n8n
                 $this->n8nService->deleteWorkflow($instance->n8n_workflow_id);
                 
                 // Limpiar referencia
-                DB::table('whatsapp_instances')
-                    ->where('company_id', $companyId)
-                    ->update([
-                        'n8n_workflow_id' => null,
-                        'n8n_webhook_url' => null,
-                        'updated_at' => now()
-                    ]);
+                $instance->update([
+                    'n8n_workflow_id' => null,
+                    'n8n_webhook_url' => null,
+                ]);
             }
 
             return response()->json([
@@ -305,7 +184,7 @@ class N8nWorkflowController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al eliminar workflow'
             ], 500);
         }
     }
@@ -320,9 +199,7 @@ class N8nWorkflowController extends Controller
         ]);
 
         try {
-            $instance = DB::table('whatsapp_instances')
-                ->where('company_id', $companyId)
-                ->first();
+            $instance = WhatsAppInstance::where('company_id', $companyId)->first();
 
             if (!$instance || !$instance->n8n_workflow_id) {
                 return response()->json([
@@ -345,7 +222,7 @@ class N8nWorkflowController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al cambiar estado del workflow'
             ], 500);
         }
     }
@@ -425,7 +302,7 @@ class N8nWorkflowController extends Controller
             Log::error('Exception creating training workflow', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Error al crear workflow de entrenamiento'
             ], 500);
         }
     }

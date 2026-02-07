@@ -1,4 +1,5 @@
-﻿import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import debugLog from '@/utils/debugLogger';
 import { router } from "@inertiajs/react";
 import {
   Building2,
@@ -140,7 +141,7 @@ export default function Entrenamiento({
         setBotConfig(data.data);
       }
     } catch (error) {
-      console.error("Error fetching bot config:", error);
+      debugLog.error("Error fetching bot config:", error);
     } finally {
       setLoadingBotConfig(false);
     }
@@ -150,8 +151,6 @@ export default function Entrenamiento({
     setSavingBotConfig(true);
     try {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      
-      console.log("Saving bot config:", botConfig);
       
       const response = await fetch("/api/bot-config", {
         method: "PUT",
@@ -164,9 +163,7 @@ export default function Entrenamiento({
         body: JSON.stringify(botConfig),
       });
 
-      console.log("Response status:", response.status);
       const data = await response.json();
-      console.log("Response data:", data);
       
       if (data.success) {
         setShowBotConfig(false);
@@ -185,7 +182,7 @@ export default function Entrenamiento({
         alert("⚠️ " + errorMsg);
       }
     } catch (error) {
-      console.error("Error saving bot config:", error);
+      debugLog.error("Error saving bot config:", error);
       alert("❌ Error al guardar la configuración. Intenta nuevamente.");
     } finally {
       setSavingBotConfig(false);
@@ -206,7 +203,7 @@ export default function Entrenamiento({
       }
       setDataLoaded(true);
     } catch (error) {
-      console.error("Error fetching onboarding data:", error);
+      debugLog.error("Error fetching onboarding data:", error);
       setDataLoaded(true);
     }
   };
@@ -247,7 +244,7 @@ export default function Entrenamiento({
         alert("Error al guardar: " + (data.error || "Intente nuevamente"));
       }
     } catch (error) {
-      console.error("Error saving onboarding:", error);
+      debugLog.error("Error saving onboarding:", error);
       alert("Error al guardar. Por favor intente nuevamente.");
     } finally {
       setSavingOnboarding(false);
@@ -295,7 +292,7 @@ export default function Entrenamiento({
         alert('Error al subir el logo: ' + (data.error || 'Intente nuevamente'));
       }
     } catch (error) {
-      console.error('Error uploading logo:', error);
+      debugLog.error('Error uploading logo:', error);
       alert('Error al subir el logo');
     } finally {
       setUploadingLogo(false);
@@ -315,15 +312,6 @@ export default function Entrenamiento({
     setShouldAutoScroll(true); // Activar scroll al enviar mensaje
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage.trim();
-    
-    // 🔧 DEBUG: Log encoding info
-    console.log('📍 Training message debug:', {
-      originalMessage: messageToSend,
-      messageLength: messageToSend.length,
-      // Check for problematic characters
-      hasAccents: /[áéíóúñÁÉÍÓÚÑ]/.test(messageToSend),
-      charCodes: messageToSend.slice(0, 50).split('').map(c => c.charCodeAt(0)),
-    });
     
     setInputMessage("");
     setIsTyping(true);
@@ -370,12 +358,11 @@ export default function Entrenamiento({
             ...prev,
             assistant_name: data.new_name,
           }));
-          console.log('✅ Nombre del asistente actualizado a:', data.new_name);
         }
         
         // Mostrar indicador si se guardó en Qdrant
         if (data.saved_to_knowledge) {
-          console.log('✅ Información guardada en la base de conocimiento');
+          // Knowledge base updated
         }
       } else {
         // Fallback response on error
@@ -389,7 +376,7 @@ export default function Entrenamiento({
         setMessages((prev) => [...prev, errorMessage]);
       }
     } catch (error) {
-      console.error("Error sending training message:", error);
+      debugLog.error("Error sending training message:", error);
       // Fallback response on network error
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

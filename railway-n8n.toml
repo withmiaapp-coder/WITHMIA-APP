@@ -1,9 +1,0 @@
-[build]
-# No build needed for Docker image
-
-[deploy]
-startCommand = "n8n start"
-healthcheckPath = "/"
-healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3

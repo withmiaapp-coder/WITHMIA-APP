@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     // Permisos por defecto según rol
     const DEFAULT_PERMISSIONS = [
@@ -92,8 +93,6 @@ class User extends Authenticatable
         'last_login_at',
         'whatsapp_instance_id',
         'whatsapp_instance_data',
-        'role',
-        'permissions',
         'phone_country',
         'chatwoot_agent_id',
         'chatwoot_inbox_id',
@@ -101,14 +100,15 @@ class User extends Authenticatable
     ];
 
     /**
-     * 🚀 OPTIMIZACIÓN: Eager load company automáticamente
-     * Evita N+1 queries cuando se accede a $user->company
+     * Eager load company only when needed via ->with('company').
+     * Removed from $with to avoid loading on bulk queries (admin panel, etc.)
      */
-    protected $with = ['company'];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'auth_token',
+        'chatwoot_agent_token',
     ];
 
     protected function casts(): array
@@ -118,6 +118,9 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_login_at' => 'datetime',
             'permissions' => 'array',
+            'whatsapp_instance_data' => 'array',
+            'onboarding_completed' => 'boolean',
+            'onboarding_step' => 'integer',
         ];
     }
 
@@ -228,5 +231,24 @@ class User extends Authenticatable
     {
         $this->permissions = null;
         $this->save();
+    }
+
+    // ==========================================
+    // RELACIONES ADICIONALES
+    // ==========================================
+
+    public function pipelineItems()
+    {
+        return $this->hasMany(PipelineItem::class, 'assigned_to');
+    }
+
+    public function createdPipelineItems()
+    {
+        return $this->hasMany(PipelineItem::class, 'created_by');
+    }
+
+    public function teamInvitations()
+    {
+        return $this->hasMany(TeamInvitation::class, 'invited_by');
     }
 }

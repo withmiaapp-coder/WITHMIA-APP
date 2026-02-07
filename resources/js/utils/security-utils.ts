@@ -7,45 +7,35 @@
  * npm install --save-dev @types/crypto-js
  */
 
-// @ts-ignore - CryptoJS se instalará después
-import CryptoJS from 'crypto-js';
+// Security utilities - no client-side crypto needed
 
 // ====================================================================================
-// 1. SECURE STORAGE - Encriptación de datos en localStorage/sessionStorage
+// 1. SECURE STORAGE - sessionStorage wrapper (datos se borran al cerrar pestaña)
+// NOTE: Client-side "encryption" with a bundled key provides zero security.
+// sessionStorage already isolates data per tab and clears on close.
 // ====================================================================================
-
-const STORAGE_SECRET_KEY = (typeof window !== 'undefined' && (window as any).ENV?.VITE_STORAGE_SECRET) || 'withmia-secure-2025';
 
 export const secureStorage = {
   /**
-   * Guarda datos de forma encriptada en sessionStorage
+   * Guarda datos en sessionStorage
    */
   set: (key: string, value: any): void => {
     try {
-      const stringValue = JSON.stringify(value);
-      const encrypted = CryptoJS.AES.encrypt(stringValue, STORAGE_SECRET_KEY).toString();
-      sessionStorage.setItem(key, encrypted);
+      sessionStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      console.error('Error al guardar en secureStorage:', error);
+      // Error handled silently
     }
   },
 
   /**
-   * Obtiene y desencripta datos de sessionStorage
+   * Obtiene datos de sessionStorage
    */
   get: <T>(key: string): T | null => {
     try {
-      const encrypted = sessionStorage.getItem(key);
-      if (!encrypted) return null;
-
-      const decrypted = CryptoJS.AES.decrypt(encrypted, STORAGE_SECRET_KEY);
-      const stringValue = decrypted.toString(CryptoJS.enc.Utf8);
-      
-      if (!stringValue) return null;
-      
-      return JSON.parse(stringValue) as T;
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw) as T;
     } catch (error) {
-      console.error('Error al leer de secureStorage:', error);
       return null;
     }
   },
@@ -92,14 +82,12 @@ export class CsrfTokenManager {
     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     
     if (!csrfMeta) {
-      console.error('❌ CRÍTICO: CSRF token no encontrado en el DOM');
       return;
     }
 
     const tokenValue = csrfMeta.getAttribute('content');
     
     if (!tokenValue || tokenValue.trim() === '') {
-      console.error('❌ CRÍTICO: CSRF token está vacío');
       return;
     }
 
@@ -118,7 +106,6 @@ export class CsrfTokenManager {
 
     // Verificar si el token expiró
     if (Date.now() > this.tokenExpiry) {
-      console.warn('⚠️ CSRF token expirado, recargando página...');
       window.location.reload();
       throw new Error('CSRF token expirado');
     }
@@ -264,7 +251,6 @@ class RateLimiter {
     // Verificar si está bloqueado
     const blockUntil = this.blocked.get(key);
     if (blockUntil && now < blockUntil) {
-      console.warn(`⚠️ Rate limit: ${key} bloqueado hasta ${new Date(blockUntil).toLocaleTimeString()}`);
       return false;
     }
 
@@ -278,7 +264,6 @@ class RateLimiter {
     if (recentCalls.length >= config.maxCalls) {
       // Bloquear temporalmente
       this.blocked.set(key, now + config.blockDuration);
-      console.error(`❌ Rate limit excedido para ${key}. Bloqueado por ${config.blockDuration / 1000}s`);
       return false;
     }
 

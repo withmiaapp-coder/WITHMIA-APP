@@ -75,7 +75,7 @@ class PostOnboardingSetupJob implements ShouldQueue
         // 2. Enviar correos (NO BLOQUEA - si falla, no importa)
         try {
             if (class_exists('App\Mail\OnboardingCompletedNotificationMail')) {
-                Mail::to("a.diaz@withmia.com")->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));
+                Mail::to(config('mail.admin_address'))->send(new OnboardingCompletedNotificationMail($user, $this->userIP, $company));
                 Log::debug("Correo admin enviado para: {$user->email}");
                 
                 Mail::to($user->email)->send(new OnboardingCompletedMail($user));

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import { 
   CheckCircle2, 
   Clock, 
@@ -75,7 +76,7 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
       setIsOpen(false);
       setShowSnoozeOptions(false);
     } catch (error) {
-      console.error('Error al cambiar estado:', error);
+      debugLog.error('Error al cambiar estado:', error);
     } finally {
       setLoading(false);
     }

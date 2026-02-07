@@ -38,31 +38,20 @@ return [
         "api_key" => env("OPENAI_API_KEY"),
     ],
 
+    "google" => [
+        "client_id" => env("GOOGLE_CLIENT_ID"),
+        "cse_api_key" => env("GOOGLE_CSE_API_KEY"),
+        "cse_engine_id" => env("GOOGLE_CSE_ENGINE_ID"),
+    ],
+
     "baileys" => [
         "url" => env("BAILEYS_API_URL", "http://localhost:3001"),
     ],
 
-    // Chatwoot - see config/chatwoot.php for full config
-    "chatwoot" => [
-        "base_url" => env("CHATWOOT_API_BASE_URL", "http://localhost:3000"),
-        "api_token" => env("CHATWOOT_PLATFORM_API_TOKEN", ""),
-    ],
-
-    // n8n - see config/n8n.php for full config
-    "n8n" => [
-        "base_url" => env("N8N_PUBLIC_URL", env("N8N_URL")),
-        "url" => env("N8N_PUBLIC_URL", env("N8N_URL")),
-        "api_key" => env("N8N_API_KEY"),
-        "internal_url" => env("N8N_INTERNAL_URL", env("N8N_URL")),
-        "openai_credential_id" => env("N8N_OPENAI_CREDENTIAL_ID"),
-        "qdrant_credential_id" => env("N8N_QDRANT_CREDENTIAL_ID"),
-        "workflow_id" => env("N8N_WORKFLOW_ID", "C1mhxAWt67pfg3BC"),
-    ],
-
-    // Qdrant - see config/qdrant.php for full config
-    "qdrant" => [
-        "host" => env("QDRANT_HOST", env("QDRANT_URL")),
-        "url" => env("QDRANT_URL", env("QDRANT_HOST")),
-        "api_key" => env("QDRANT_API_KEY"),
+    "timeouts" => [
+        "default" => (int) env("HTTP_TIMEOUT_DEFAULT", 10),
+        "n8n" => (int) env("HTTP_TIMEOUT_N8N", 120),
+        "openai" => (int) env("HTTP_TIMEOUT_OPENAI", 180),
+        "training" => (int) env("HTTP_TIMEOUT_TRAINING", 30),
     ],
 ];

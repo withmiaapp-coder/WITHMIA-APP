@@ -20,6 +20,14 @@ class EvolutionApiService
         $this->apiKey = config('evolution.api_key');
     }
 
+    private function client(string $baseUrl = null, string $apiKey = null): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::withHeaders([
+            'apikey' => $apiKey ?? $this->apiKey,
+            'Content-Type' => 'application/json',
+        ])->timeout(30);
+    }
+
     /**
      * Crear una nueva instancia de WhatsApp CON integración Chatwoot
      * 
@@ -75,7 +83,7 @@ class EvolutionApiService
                     $chatwootAutoCreate = $enableChatwoot['auto_create'] ?? config('chatwoot.auto_create', true);
                 } else {
                     // Usar config global (fallback)
-                    $chatwootToken = config('chatwoot.token');
+                    $chatwootToken = config('chatwoot.platform_token');
                     $chatwootUrl = config('chatwoot.url');
                     $chatwootAccountId = config('chatwoot.account_id', '1');
                     $chatwootInboxName = "WhatsApp {$instanceName}";
@@ -114,10 +122,7 @@ class EvolutionApiService
                 }
             }
 
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(30)->post("{$this->baseUrl}/instance/create", $payload);
+            $response = $this->client()->post("{$this->baseUrl}/instance/create", $payload);
 
             Log::debug('📦 Create instance response', [
                 'instance' => $instanceName,
@@ -162,10 +167,7 @@ class EvolutionApiService
                     'daysLimitImportMessages' => $cachedSettings['daysLimitImportMessages'] ?? 7
                 ];
                 
-                $settingsResponse = Http::withHeaders([
-                    'apikey' => $this->apiKey,
-                    'Content-Type' => 'application/json'
-                ])->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
+                $settingsResponse = $this->client()->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
 
                 if (!$settingsResponse->successful()) {
                     Log::warning('Failed to enable readMessages, but instance created', [
@@ -200,13 +202,12 @@ class EvolutionApiService
 
         } catch (\Exception $e) {
             Log::error('Evolution API createInstance exception', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'message' => $e->getMessage()
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to create WhatsApp instance'
             ];
         }
     }
@@ -225,9 +226,7 @@ class EvolutionApiService
                 'url' => "{$this->baseUrl}/instance/connect/{$instanceName}"
             ]);
 
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->timeout(30)->get("{$this->baseUrl}/instance/connect/{$instanceName}");
+            $response = $this->client()->get("{$this->baseUrl}/instance/connect/{$instanceName}");
 
             Log::debug('Evolution API connect response', [
                 'instance' => $instanceName,
@@ -278,13 +277,12 @@ class EvolutionApiService
         } catch (\Exception $e) {
             Log::error('Evolution API connect exception', [
                 'instance' => $instanceName,
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'message' => $e->getMessage()
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to connect WhatsApp instance'
             ];
         }
     }
@@ -322,10 +320,7 @@ class EvolutionApiService
                 'url' => $webhookUrl
             ]);
 
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/webhook/set/{$instanceName}", $webhookConfig);
+            $response = $this->client()->post("{$this->baseUrl}/webhook/set/{$instanceName}", $webhookConfig);
 
             if ($response->successful()) {
                 Log::debug('✅ Webhook configurado exitosamente', [
@@ -354,7 +349,7 @@ class EvolutionApiService
             ]);
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to configure webhook'
             ];
         }
     }
@@ -367,9 +362,7 @@ class EvolutionApiService
     {
         try {
             // Verificar si ya tiene webhooks
-            $checkResponse = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->get("{$this->baseUrl}/webhook/find/{$instanceName}");
+            $checkResponse = $this->client()->get("{$this->baseUrl}/webhook/find/{$instanceName}");
 
             // Si ya tiene webhooks configurados, no hacer nada (respetar config de n8n)
             if ($checkResponse->successful()) {
@@ -457,9 +450,8 @@ class EvolutionApiService
             }
 
             try {
-                $response = Http::withHeaders([
-                    'apikey' => $this->apiKey
-                ])->timeout($this->timeout)
+                $response = $this->client()
+                  ->timeout($this->timeout)
                   ->connectTimeout($this->connectTimeout)
                   ->get("{$this->baseUrl}/instance/connectionState/{$instanceName}");
 
@@ -493,7 +485,7 @@ class EvolutionApiService
                 return [
                     'success' => false,
                     'connected' => false,
-                    'error' => $httpE->getMessage()
+                    'error' => 'Failed to get WhatsApp status'
                 ];
             }
         }
@@ -510,9 +502,7 @@ class EvolutionApiService
         try {
             // Eliminar completamente la instancia en lugar de solo logout
             // Esto evita problemas de "No se pueden vincular nuevos dispositivos"
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->delete("{$this->baseUrl}/instance/delete/{$instanceName}");
+            $response = $this->client()->delete("{$this->baseUrl}/instance/delete/{$instanceName}");
 
             // Invalidar caché
             $this->clearCache($instanceName);
@@ -549,9 +539,7 @@ class EvolutionApiService
     public function deleteInstance(string $instanceName): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->delete("{$this->baseUrl}/instance/delete/{$instanceName}");
+            $response = $this->client()->delete("{$this->baseUrl}/instance/delete/{$instanceName}");
 
             if (!$response->successful()) {
                 return [
@@ -568,7 +556,7 @@ class EvolutionApiService
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to delete instance'
             ];
         }
     }
@@ -584,10 +572,7 @@ class EvolutionApiService
     public function sendTextMessage(string $instanceName, string $number, string $message): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/message/sendText/{$instanceName}", [
+            $response = $this->client()->post("{$this->baseUrl}/message/sendText/{$instanceName}", [
                 'number' => $number,
                 'text' => $message
             ]);
@@ -607,7 +592,7 @@ class EvolutionApiService
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to send text message'
             ];
         }
     }
@@ -663,10 +648,7 @@ class EvolutionApiService
                 $payload['fileName'] = $fileName;
             }
 
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(60)->post("{$this->baseUrl}/message/sendMedia/{$instanceName}", $payload);
+            $response = $this->client()->timeout(60)->post("{$this->baseUrl}/message/sendMedia/{$instanceName}", $payload);
 
             if (!$response->successful()) {
                 Log::error('❌ Error enviando media vía Evolution API', [
@@ -696,7 +678,7 @@ class EvolutionApiService
             ]);
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to send media message'
             ];
         }
     }
@@ -722,10 +704,7 @@ class EvolutionApiService
                 'audio_length' => strlen($audio)
             ]);
 
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(60)->post("{$this->baseUrl}/message/sendWhatsAppAudio/{$instanceName}", [
+            $response = $this->client()->timeout(60)->post("{$this->baseUrl}/message/sendWhatsAppAudio/{$instanceName}", [
                 'number' => $number,
                 'audio' => $audio
             ]);
@@ -762,7 +741,7 @@ class EvolutionApiService
             ]);
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to send WhatsApp audio'
             ];
         }
     }
@@ -822,9 +801,7 @@ class EvolutionApiService
             
             return cache()->remember($cacheKey, 30, function () {
                 try {
-                    $response = Http::withHeaders([
-                        'apikey' => $this->apiKey
-                    ])->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
+                    $response = $this->client()->timeout(10)->get("{$this->baseUrl}/instance/fetchInstances");
 
                     if (!$response->successful()) {
                         return [
@@ -841,7 +818,7 @@ class EvolutionApiService
                 } catch (\Exception $httpE) {
                     return [
                         'success' => false,
-                        'error' => $httpE->getMessage()
+                        'error' => 'Failed to list instances'
                     ];
                 }
             });
@@ -871,10 +848,7 @@ class EvolutionApiService
     ): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
+            $response = $this->client()->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
                 'enabled' => true,
                 'accountId' => $accountId,
                 'token' => $token,
@@ -911,12 +885,11 @@ class EvolutionApiService
         } catch (\Exception $e) {
             Log::error('setChatwootIntegration exception', [
                 'instance' => $instanceName,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to configure Chatwoot integration'
             ];
         }
     }
@@ -1006,7 +979,7 @@ class EvolutionApiService
             return [
                 'success' => false,
                 'inbox_id' => null,
-                'error' => $e->getMessage()
+                'error' => 'Failed to find Chatwoot inbox'
             ];
         }
     }
@@ -1036,7 +1009,7 @@ class EvolutionApiService
         // 🔧 FIX: Usar PLATFORM TOKEN para buscar inboxes (necesita permisos de admin)
         // El chatwoot_agent_token del usuario no tiene acceso a la lista de inboxes
         $chatwootUrl = config('chatwoot.url');
-        $chatwootToken = config('chatwoot.platform_token') ?? config('chatwoot.token');
+        $chatwootToken = config('chatwoot.platform_token');
         $accountId = $company?->chatwoot_account_id ?? config('chatwoot.account_id', '1');
 
         // Buscar el inbox
@@ -1090,7 +1063,7 @@ class EvolutionApiService
             return [
                 'success' => false,
                 'inbox_id' => $inboxId,
-                'error' => 'Failed to update database: ' . $e->getMessage()
+                'error' => 'Failed to update database'
             ];
         }
     }
@@ -1104,10 +1077,7 @@ class EvolutionApiService
     public function getChatwootConfig(string $instanceName): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->get("{$this->baseUrl}/chatwoot/find/{$instanceName}");
+            $response = $this->client()->get("{$this->baseUrl}/chatwoot/find/{$instanceName}");
 
             if (!$response->successful()) {
                 return [
@@ -1125,7 +1095,7 @@ class EvolutionApiService
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to get Chatwoot configuration'
             ];
         }
     }
@@ -1161,14 +1131,11 @@ class EvolutionApiService
             // Obtener configuración de Chatwoot
             // CRÍTICO: Usar el API Access Token del usuario de la empresa, NO el channel token
             $chatwootUrl = config('chatwoot.url');
-            $chatwootToken = $company->chatwoot_api_key ?? config('chatwoot.token');
+            $chatwootToken = $company->chatwoot_api_key ?? config('chatwoot.platform_token');
             $accountId = $company->chatwoot_account_id ?: config('chatwoot.account_id', '1');
 
             // Reconfigurar la integración
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
+            $response = $this->client()->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
                 'enabled' => true,
                 'account_id' => (string) $accountId,
                 'token' => $chatwootToken,
@@ -1219,7 +1186,7 @@ class EvolutionApiService
             
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to reconfigure Chatwoot'
             ];
         }
     }
@@ -1233,9 +1200,7 @@ class EvolutionApiService
     public function getInstanceSettings(string $instanceName): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey
-            ])->timeout(10)->get("{$this->baseUrl}/settings/find/{$instanceName}");
+            $response = $this->client()->timeout(10)->get("{$this->baseUrl}/settings/find/{$instanceName}");
 
             if (!$response->successful()) {
                 return [
@@ -1258,7 +1223,7 @@ class EvolutionApiService
             
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to get instance settings'
             ];
         }
     }
@@ -1273,10 +1238,7 @@ class EvolutionApiService
     public function updateInstanceSettings(string $instanceName, array $settings): array
     {
         try {
-            $response = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->timeout(10)->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
+            $response = $this->client()->timeout(10)->post("{$this->baseUrl}/settings/set/{$instanceName}", $settings);
 
             if (!$response->successful()) {
                 return [
@@ -1299,8 +1261,41 @@ class EvolutionApiService
             
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Failed to update instance settings'
             ];
+        }
+    }
+
+    /**
+     * Obtener contactos de una instancia de WhatsApp.
+     *
+     * @param string $instanceName Nombre de la instancia
+     * @return array Lista de contactos o array vacío si falla
+     */
+    public function findContacts(string $instanceName): array
+    {
+        try {
+            $response = $this->client()
+                ->timeout(15)
+                ->get("{$this->baseUrl}/chat/findContacts/{$instanceName}");
+
+            if ($response->successful()) {
+                return $response->json() ?? [];
+            }
+
+            Log::warning('findContacts failed', [
+                'instance' => $instanceName,
+                'status' => $response->status(),
+            ]);
+
+            return [];
+        } catch (\Exception $e) {
+            Log::error('Exception finding contacts', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 }

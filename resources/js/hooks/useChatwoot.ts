@@ -352,7 +352,7 @@ export const useConversations = () => {
   // ========================================
   const fetchAllConversations = useCallback(async () => {
     try {
-      // console.log('📚 Cargando TODAS las conversaciones...');
+
       
       // El backend ahora devuelve TODAS las conversaciones automáticamente
       const result = await apiCall('/api/chatwoot-proxy/conversations', 'GET');
@@ -391,7 +391,6 @@ export const useConversations = () => {
         setCurrentPage(1);
         setHasMorePages(false); // Ya cargamos todas
         
-        // console.log(`✅ Total conversaciones cargadas: ${chatwootConversations.length}`);
       } else {
         setConversations([]);
         setTotalConversations(0);
@@ -400,7 +399,6 @@ export const useConversations = () => {
     } catch (err: any) {
       // Ignorar errores de abort (componente desmontado)
       if (err?.name === 'AbortError') return;
-      console.error('❌ Error cargando todas las conversaciones:', err);
       setConversations([]);
     }
   }, [apiCall]);
@@ -634,15 +632,11 @@ export const useConversations = () => {
     // Para loadMore, usamos una key diferente para permitir cargar más mientras hay mensajes en cache
     const loadingKey = loadMore ? `${conversationId}-loadMore` : `${conversationId}`;
     
-    console.log(`🔄 loadConversationMessages llamado: convId=${conversationId}, loadingKey=${loadingKey}, alreadyLoading=${isLoadingMessagesRef.current.has(loadingKey)}`);
-    
     if (isLoadingMessagesRef.current.has(loadingKey)) {
-      console.log(`⏭️ BLOQUEADO - Ya cargando: ${loadingKey}`);
       debugLog.log(`⏭️ Ya se están cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore}), omitiendo...`);
       return;
     }
     
-    console.log(`📥 loadConversationMessages INICIO: convId=${conversationId}, loadMore=${loadMore}`);
     debugLog.log(`📥 Cargando mensajes para conversación ${conversationId} (loadMore: ${loadMore})`);
     isLoadingMessagesRef.current.add(loadingKey);
     
@@ -655,8 +649,6 @@ export const useConversations = () => {
     const cached = messagesLocalCache.current.get(conversationId);
     const now = Date.now();
     
-    console.log(`🗃️ Cache check: exists=${!!cached}, msgs=${cached?.messages?.length || 0}, age=${cached ? now - cached.timestamp : 'N/A'}ms, TTL=${LOCAL_CACHE_TTL}ms`);
-    
     // 🔧 FIX: Si el caché tiene hasMore=false pero pocos mensajes (< 25), 
     // asumir que puede haber más (el backend anterior tenía un bug)
     const cachedHasMore = cached?.hasMore ?? (cached?.messages?.length >= 20);
@@ -665,7 +657,6 @@ export const useConversations = () => {
     const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
     
     if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
-      console.log(`⚡ Usando cache local: ${cached.messages.length} mensajes`);
       debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
       if (conversation) {
@@ -697,66 +688,28 @@ export const useConversations = () => {
       if (loadMore) {
         // Buscar mensajes en cache o en la conversación activa
         const currentMessages = cached?.messages || activeConversationRef.current?.messages || [];
-        console.log('🔍 LoadMore - mensajes actuales:', currentMessages.length);
         if (currentMessages.length > 0) {
           // Ordenar por ID ascendente y obtener el más antiguo (menor ID)
           const sortedMessages = [...currentMessages].sort((a, b) => a.id - b.id);
           const oldestId = sortedMessages[0]?.id;
-          console.log('🔍 Mensaje más antiguo ID:', oldestId);
           if (oldestId) {
             url += `&before=${oldestId}`;
-            console.log(`📜 URL con before: ${url}`);
           }
         }
       }
       
-      console.log(`🌐 Llamando API: ${url}`);
       const result = await apiCall(url);
-      console.log(`📦 Respuesta API:`, {
-        success: result?.success,
-        messagesCount: result?.payload?.payload?.length || result?.payload?.length || 0,
-        hasMore: result?.meta?.has_more,
-        firstMsgId: (result?.payload?.payload || result?.payload)?.[0]?.id,
-        lastMsgId: (result?.payload?.payload || result?.payload)?.[(result?.payload?.payload || result?.payload)?.length - 1]?.id,
-        _debug: result?.meta?._debug // Mostrar debug del backend
-      });
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
-      
-      console.log('🔍 DEBUG messagesArray:', {
-        isArray: Array.isArray(messagesArray),
-        length: messagesArray?.length,
-        firstMsg: messagesArray?.[0],
-        rawPayload: result?.payload
-      });
-      
-      // Debug: ver todos los message_type
-      console.log('🔍 DEBUG message_types RAW:', messagesArray?.slice(0, 5).map((m: any) => ({
-        id: m.id,
-        message_type: m.message_type,
-        typeOf: typeof m.message_type,
-        content: m.content?.substring(0, 30)
-      })));
-      
-      // 🔍 DEBUG: Contar tipos de mensaje
-      const typesCounts: Record<string, number> = {};
-      messagesArray?.forEach((m: any) => {
-        const key = `${m.message_type}(${typeof m.message_type})`;
-        typesCounts[key] = (typesCounts[key] || 0) + 1;
-      });
-      console.log('🔍 DEBUG message_types COUNTS:', typesCounts);
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
-        // 🚫 TEMPORALMENTE DESACTIVADO: Filtrar mensajes de actividad para debug
-        // NOTA: Comparar tanto con número como con string por si acaso
+        // Filtrar: solo mensajes reales (0=incoming, 1=outgoing), excluir actividad (2)
         const chatwootMessages = messagesArray
           .filter((msg: any) => {
             const msgType = msg.message_type;
-            // 🔍 DEBUG TEMPORAL: No filtrar nada, solo loguear
-            console.log('🔍 MSG:', msg.id, 'type:', msgType, 'typeof:', typeof msgType, 'content:', msg.content?.substring(0, 30));
-            // BYPASS TEMPORAL: Aceptar TODO excepto undefined
-            return msgType !== undefined;
+            // Aceptar incoming (0) y outgoing (1), excluir activity (2) y undefined
+            return msgType === 0 || msgType === 1 || msgType === '0' || msgType === '1';
           })
           .map((msg: any) => {
             // Determinar sender basado en message_type
@@ -777,11 +730,6 @@ export const useConversations = () => {
               _isOptimistic: false
             };
           });
-        
-        console.log('🔍 DEBUG chatwootMessages después de filtro:', {
-          count: chatwootMessages.length,
-          firstMsg: chatwootMessages[0]
-        });
 
         // Deduplicación Evolution
         const duplicateIds = new Set<number>();
@@ -824,21 +772,13 @@ export const useConversations = () => {
         // 🚀 Si es loadMore, combinar con mensajes existentes (usar cache O conversación activa)
         if (loadMore) {
           const existingMessages = cached?.messages || activeConversationRef.current?.messages || [];
-          console.log('🔄 LoadMore combinar:', {
-            nuevos: uniqueMessages.length,
-            existentes: existingMessages.length,
-            nuevosIds: uniqueMessages.map((m: any) => m.id).slice(0, 5),
-            existentesIds: existingMessages.map((m: any) => m.id).slice(0, 5)
-          });
           if (existingMessages.length > 0) {
             const existingIds = new Set(existingMessages.map((m: any) => m.id));
             const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
-            console.log(`📜 Mensajes nuevos (no duplicados): ${newOlderMessages.length}`, newOlderMessages.map((m: any) => m.id));
             debugLog.log(`📜 LoadMore: ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes`);
             
             // ⚠️ Si no hay mensajes nuevos, significa que no hay más mensajes anteriores
             if (newOlderMessages.length === 0) {
-              console.log('⚠️ No hay más mensajes anteriores - marcando hasMore=false');
               meta.has_more = false;
             }
             
@@ -849,7 +789,6 @@ export const useConversations = () => {
               const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
               return timeA - timeB;
             });
-            console.log(`✅ Total mensajes después de combinar: ${uniqueMessages.length}`);
           }
         } else if (cached?.messages) {
           // ✅ FIX: Preservar mensajes optimistas/pendientes que aún no están en API
@@ -884,12 +823,6 @@ export const useConversations = () => {
         persistMessagesCache(); // ✅ Persistir en sessionStorage
 
         const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
-        console.log('🔍 DEBUG conversation encontrada:', {
-          found: !!conversation,
-          conversationId,
-          conversationsCount: conversationsRef.current.length,
-          uniqueMessagesCount: uniqueMessages.length
-        });
         
         if (conversation) {
           setActiveConversationState({
@@ -919,7 +852,6 @@ export const useConversations = () => {
           }
         } else {
           // ✅ FIX: Si la conversación no está en la lista, igual actualizar activeConversation
-          console.log('⚠️ Conversación no en lista, actualizando activeConversation directamente');
           setActiveConversationState(prev => {
             if (prev && prev.id === conversationId) {
               return {
@@ -1282,7 +1214,6 @@ const initTeamsCacheFromPrefetch = () => {
   if ((window as any).__prefetchedTeams && (window as any).__prefetchedTeams.length > 0 && !teamsCache.data) {
     teamsCache.data = (window as any).__prefetchedTeams;
     teamsCache.timestamp = Date.now();
-    console.log('🚀 Teams cache inicializado con prefetch');
   }
 };
 
@@ -1329,7 +1260,6 @@ export const useTeams = () => {
     } catch (err: any) {
       teamsCache.promise = null;
       if (err?.name === 'AbortError') return teamsCache.data || [];
-      console.error('Error fetching teams:', err);
       return teamsCache.data || [];
     }
   }, [apiCall]);
@@ -1356,7 +1286,6 @@ export const useTeams = () => {
       
       return teamData;
     } catch (err) {
-      console.error('Error fetching team:', err);
       throw err;
     }
   }, [apiCall]);
@@ -1369,7 +1298,6 @@ export const useTeams = () => {
       await fetchTeams(true);
       return result?.data || result;
     } catch (err) {
-      console.error('Error creating team:', err);
       throw err;
     }
   }, [apiCall, fetchTeams, invalidateCache]);
@@ -1382,7 +1310,6 @@ export const useTeams = () => {
       await fetchTeams(true);
       return result?.data || result;
     } catch (err) {
-      console.error('Error updating team:', err);
       throw err;
     }
   }, [apiCall, fetchTeams, invalidateCache]);
@@ -1398,7 +1325,6 @@ export const useTeams = () => {
       }
       return true;
     } catch (err) {
-      console.error('Error deleting team:', err);
       throw err;
     }
   }, [apiCall, selectedTeam]);
@@ -1409,7 +1335,6 @@ export const useTeams = () => {
       const result = await apiCall(`/api/chatwoot-proxy/teams/${teamId}/members`);
       return result?.data || result || [];
     } catch (err) {
-      console.error('Error fetching team members:', err);
       return [];
     }
   }, [apiCall]);
@@ -1423,7 +1348,6 @@ export const useTeams = () => {
       await fetchTeams(true); // true = forzar recarga
       return result?.data || result;
     } catch (err) {
-      console.error('Error adding team members:', err);
       throw err;
     }
   }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
@@ -1437,7 +1361,6 @@ export const useTeams = () => {
       await fetchTeams(true); // true = forzar recarga
       return result?.data || result;
     } catch (err) {
-      console.error('Error updating team members:', err);
       throw err;
     }
   }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
@@ -1451,7 +1374,6 @@ export const useTeams = () => {
       await fetchTeams(true); // true = forzar recarga
       return true;
     } catch (err) {
-      console.error('Error removing team member:', err);
       throw err;
     }
   }, [apiCall, fetchTeam, fetchTeams, invalidateCache]);
@@ -1493,7 +1415,6 @@ export const useLabels = () => {
       // Asegurar que siempre sea un array
       setLabels(Array.isArray(result) ? result : (result?.data || result?.payload || []));
     } catch (err) {
-      console.error('Error fetching labels:', err);
       setLabels([]); // Reset to empty array on error
     }
   }, [apiCall]);
@@ -1504,7 +1425,6 @@ export const useLabels = () => {
       await fetchLabels();
       return result;
     } catch (err) {
-      console.error('Error creating label:', err);
       throw err;
     }
   }, [apiCall, fetchLabels]);
@@ -1533,7 +1453,6 @@ const initAgentsCacheFromPrefetch = () => {
   if ((window as any).__prefetchedAgents && (window as any).__prefetchedAgents.length > 0 && !agentsCache.data) {
     agentsCache.data = (window as any).__prefetchedAgents;
     agentsCache.timestamp = Date.now();
-    console.log('🚀 Agents cache inicializado con prefetch');
   }
 };
 
@@ -1576,7 +1495,6 @@ export const useAgents = () => {
       return agentsData;
     } catch (err) {
       agentsCache.promise = null;
-      console.error('Error fetching agents:', err);
       setAgents(agentsCache.data || []);
       return agentsCache.data || [];
     }
@@ -1593,7 +1511,6 @@ export const useAgents = () => {
       await fetchAgents(true);
       return result;
     } catch (err) {
-      console.error('Error creating agent:', err);
       throw err;
     }
   }, [apiCall, fetchAgents, invalidateAgentsCache]);
@@ -1618,7 +1535,7 @@ export const useEnterpriseDashboard = () => {
       const result = await apiCall('/api/chatwoot-proxy/enterprise/dashboard');
       setDashboardData(result);
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
+      // Error handled silently
     }
   }, [apiCall]);
 
@@ -1642,7 +1559,7 @@ export const useUserStats = () => {
       const result = await apiCall('/api/chatwoot-proxy/user/stats');
       setStats(result);
     } catch (err) {
-      console.error('Error fetching user stats:', err);
+      // Error handled silently
     }
   }, [apiCall]);
 
@@ -1695,7 +1612,6 @@ export const useTeamInvitations = () => {
       const result = await response.json();
       setInvitations(Array.isArray(result?.data) ? result.data : []);
     } catch (err) {
-      console.error('Error fetching invitations:', err);
       setError('Error al cargar invitaciones');
     } finally {
       setLoading(false);

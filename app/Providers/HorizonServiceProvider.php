@@ -28,16 +28,12 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewHorizon', function ($user = null) {
-            // Permitir acceso a admins
-            if ($user && $user->hasRole('admin')) {
-                return true;
+            if (!$user) {
+                return false;
             }
-            
-            // O por email específico
-            return in_array(optional($user)->email, [
-                'admin@withmia.com',
-                'withmia.app@gmail.com',
-            ]);
+
+            $superAdminEmails = array_filter(explode(',', config('app.super_admin_emails', '')));
+            return !empty($superAdminEmails) && in_array($user->email, $superAdminEmails);
         });
     }
 }

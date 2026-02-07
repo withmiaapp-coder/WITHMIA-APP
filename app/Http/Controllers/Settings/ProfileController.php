@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\UserDeletionService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,8 +43,9 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     * Usa UserDeletionService para limpieza completa.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, UserDeletionService $deletionService): RedirectResponse
     {
         $request->validate([
             'password' => ['required', 'current_password'],
@@ -53,7 +55,7 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        $deletionService->delete($user, force: false, deletedBy: $user->id);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

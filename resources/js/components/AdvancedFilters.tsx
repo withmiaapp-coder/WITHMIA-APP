@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import { 
   Filter, 
   X, 
@@ -72,7 +73,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
       try {
         setSavedFilters(JSON.parse(saved));
       } catch (e) {
-        console.error('Error loading saved filters:', e);
+        debugLog.error('Error loading saved filters:', e);
       }
     }
   }, []);

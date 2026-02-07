@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Company;
@@ -38,11 +35,11 @@ class DashboardController extends Controller
         }
 
         if (!$company) {
-            // Si no existe Company, usar datos del User
+            // Si no existe Company, crear objeto placeholder
             $company = (object) [
-                'name' => $user->company_name ?? 'Mi Empresa',
-                'description' => $user->company_description ?? '',
-                'website' => $user->company_website ?? '',
+                'name' => 'Mi Empresa',
+                'description' => '',
+                'website' => '',
                 'settings' => []
             ];
         }
@@ -54,11 +51,11 @@ class DashboardController extends Controller
 
         // Obtener datos del onboarding con verificaciones seguras
         $onboardingData = [
-            'company_name' => $company->name ?? $user->company_name ?? '',
-            'company_description' => $company->description ?? $user->company_description ?? '',
-            'website' => $company->website ?? $user->company_website ?? '',
-            'client_type' => $user->use_case ?? $company->settings['onboarding']['client_type'] ?? '',
-            'monthly_conversations' => $user->monthly_volume ?? $company->settings['onboarding']['monthly_conversations'] ?? '0',
+            'company_name' => $company->name ?? '',
+            'company_description' => $company->description ?? '',
+            'website' => $company->website ?? '',
+            'client_type' => $company->settings['onboarding']['client_type'] ?? '',
+            'monthly_conversations' => $company->settings['onboarding']['monthly_conversations'] ?? '0',
             'tools' => isset($company->settings['onboarding']['current_tools']) && is_array($company->settings['onboarding']['current_tools'])
                 ? $company->settings['onboarding']['current_tools'] : [],
             'current_tools' => isset($company->settings['onboarding']['current_tools']) && is_array($company->settings['onboarding']['current_tools'])
@@ -69,21 +66,21 @@ class DashboardController extends Controller
             'assistant_name' => $company->assistant_name ?? 'WITHMIA'
         ];
 
-        // Estadisticas basicas (por ahora mockeadas, despues se conectaran con datos reales)
+        // Estadísticas básicas
         $stats = [
-            'conversations' => rand(50, 500),
-            'leads' => rand(10, 100),
-            'conversion_rate' => rand(15, 45),
+            'conversations' => 0,
+            'leads' => 0,
+            'conversion_rate' => 0,
             'active_tools' => count($onboardingData['tools'] ?? [])
         ];
 
         // 🚀 INFORMACIÓN CHATWOOT - MEJORADA con inbox_id y url dinámicos
         $inboxId = $user->chatwoot_inbox_id ?? $company->chatwoot_inbox_id ?? 1;
-        $chatwootUrl = config('chatwoot.url') ?? env('CHATWOOT_URL') ?? env('CHATWOOT_API_BASE_URL');
+        $chatwootUrl = config('chatwoot.url');
         
         $chatwootStatus = [
             'provisioned' => $company->chatwoot_provisioned ?? false,
-            'account_id' => $company->chatwoot_account_id ?? 1,
+            'account_id' => $company->chatwoot_account_id ?? null,
             'inbox_id' => $inboxId, // ✅ inbox_id dinámico
             'url' => $chatwootUrl, // ✅ NUEVO: url dinámico desde config
             'provisioned_at' => $company->chatwoot_provisioned_at ?? null,
@@ -176,7 +173,7 @@ class DashboardController extends Controller
                 })->toArray();
                 
             } catch (\Exception $e) {
-                \Illuminate\Support\FacadesLog::error('Error prefetching teams/agents: ' . $e->getMessage());
+                Log::error('Error prefetching teams/agents: ' . $e->getMessage());
             }
         }
 

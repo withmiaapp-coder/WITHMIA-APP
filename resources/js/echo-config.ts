@@ -24,12 +24,6 @@ window.Pusher = Pusher;
 // Obtener CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-// Configuración de Reverb - DEBUG
-console.log('🔧 VITE_REVERB_HOST:', import.meta.env.VITE_REVERB_HOST);
-console.log('🔧 VITE_REVERB_APP_KEY:', import.meta.env.VITE_REVERB_APP_KEY);
-console.log('🔧 VITE_REVERB_PORT:', import.meta.env.VITE_REVERB_PORT);
-console.log('🔧 VITE_REVERB_SCHEME:', import.meta.env.VITE_REVERB_SCHEME);
-
 // Configuración de Reverb - Obtener del meta tag del servidor (inyectado por Laravel)
 // Esto permite que cada empresa tenga su propia configuración sin hardcodes
 const getMetaContent = (name: string): string | null => {
@@ -43,13 +37,7 @@ const reverbKey = getMetaContent('reverb-key') || import.meta.env.VITE_REVERB_AP
 const reverbPort = getMetaContent('reverb-port') || import.meta.env.VITE_REVERB_PORT || '443';
 const reverbScheme = getMetaContent('reverb-scheme') || import.meta.env.VITE_REVERB_SCHEME || 'https';
 
-// Validación: Si no hay host o key, mostrar error claro
-if (!reverbHost || !reverbKey) {
-  console.error('❌ REVERB CONFIG ERROR: Missing required configuration');
-  console.error('❌ Required: reverb-host and reverb-key meta tags, or VITE_REVERB_* env variables');
-}
-
-console.log('🔧 Using Reverb config:', { reverbHost, reverbKey: reverbKey ? '***' : 'MISSING', reverbPort, reverbScheme });
+// Validación: Si no hay host o key, la conexión fallará silenciosamente
 
 // Configurar Laravel Echo con Reverb
 const echoConfig: any = {
@@ -97,7 +85,7 @@ const echoConfig: any = {
             return response.json();
           })
           .then(data => {
-            // console.log('✅ Broadcasting auth success for channel:', channel.name);
+
             callback(null, data);
           })
           .catch(error => {
@@ -131,7 +119,7 @@ echo.connector.pusher.connection.bind('error', (err: any) => {
 });
 
 echo.connector.pusher.connection.bind('state_change', (states: any) => {
-  // console.log('🔄 Estado WebSocket:', states.previous, '→', states.current);
+  // State change handled silently
 });
 
 // Exportar para uso global

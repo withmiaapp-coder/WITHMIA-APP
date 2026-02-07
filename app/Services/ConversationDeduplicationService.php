@@ -7,9 +7,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * ConversationDeduplicationService
- * 
- * Servicio mejorado para fusionar conversaciones duplicadas en Chatwoot.
- * 
+ *
+ * Servicio para fusionar conversaciones duplicadas en Chatwoot.
+ * Usa DB::connection('chatwoot') de Laravel en lugar de PDO raw.
+ *
  * CASOS EDGE MANEJADOS:
  * 1. LID vs número real: Usa phone_number del contacto (no identifier)
  * 2. Múltiples inboxes: Solo fusiona dentro del mismo inbox
@@ -19,37 +20,45 @@ use Illuminate\Support\Facades\Log;
  */
 class ConversationDeduplicationService
 {
-    private ?\PDO $connection = null;
+    /**
+     * Shorthand para la conexión Chatwoot.
+     */
+    private function db(): \Illuminate\Database\Connection
+    {
+        return DB::connection('chatwoot');
+    }
 
     /**
-     * Ejecutar auto-fusiÃ³n de duplicados para un inbox especÃ­fico
+     * Ejecutar auto-fusión de duplicados para un inbox específico
      */
-    public function autoMergeDuplicates(int $inboxId, int $accountId = null): array
+    public function autoMergeDuplicates(int $inboxId, ?int $accountId = null): array
     {
         try {
-            $this->connection = $this->getChatwootConnection();
-            
-            if (!$this->connection) {
-                Log::error('âŒ ConversationDeduplication: No se pudo conectar a Chatwoot DB');
-                return ['success' => false, 'error' => 'Database connection failed'];
-            }
+            // Verificar conectividad
+            $this->db()->getPdo();
+        } catch (\Exception $e) {
+            Log::error('❌ ConversationDeduplication: No se pudo conectar a Chatwoot DB', [
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'error' => 'Database connection failed'];
+        }
 
-            // 1. Buscar duplicados basándose en phone_number normalizado
+        try {
             $duplicates = $this->findDuplicatesByPhoneNumber($inboxId, $accountId);
-            
+
             if (empty($duplicates)) {
                 return [
                     'success' => true,
                     'merged' => 0,
                     'message' => 'No se encontraron duplicados',
-                    'analyzed' => 0
+                    'analyzed' => 0,
                 ];
             }
 
-            Log::debug('ðŸ” ConversationDeduplication: Duplicados encontrados', [
+            Log::debug('🔍 ConversationDeduplication: Duplicados encontrados', [
                 'inbox_id' => $inboxId,
                 'groups_count' => count($duplicates),
-                'total_conversations' => array_sum(array_map('count', $duplicates))
+                'total_conversations' => array_sum(array_map('count', $duplicates)),
             ]);
 
             $mergedCount = 0;
@@ -65,15 +74,15 @@ class ConversationDeduplicationService
                             'phone' => $phoneNumber,
                             'kept_id' => $result['kept_conversation_id'],
                             'merged_ids' => $result['merged_conversation_ids'],
-                            'messages_moved' => $result['messages_moved']
+                            'messages_moved' => $result['messages_moved'],
                         ];
                     } else {
                         $errors[] = "Phone {$phoneNumber}: " . ($result['error'] ?? 'Unknown error');
                     }
                 } catch (\Exception $e) {
-                    Log::error('âŒ ConversationDeduplication: Error fusionando', [
+                    Log::error('❌ ConversationDeduplication: Error fusionando', [
                         'phone' => $phoneNumber,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
                     ]);
                     $errors[] = "Phone {$phoneNumber}: " . $e->getMessage();
                 }
@@ -85,23 +94,23 @@ class ConversationDeduplicationService
                 'groups_processed' => count($duplicates),
                 'errors' => $errors,
                 'details' => $details,
-                'message' => "Fusionadas {$mergedCount} conversaciones duplicadas"
+                'message' => "Fusionadas {$mergedCount} conversaciones duplicadas",
             ];
 
         } catch (\Exception $e) {
-            Log::error('âŒ ConversationDeduplication: Error general', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            Log::error('❌ ConversationDeduplication: Error general', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => 'Failed to deduplicate conversations'];
         }
     }
 
     /**
-     * Buscar conversaciones duplicadas usando phone_number normalizado
-     * Esta es la forma correcta de encontrar duplicados, no por identifier/LID
+     * Buscar conversaciones duplicadas usando phone_number normalizado.
+     * Esta es la forma correcta de encontrar duplicados, no por identifier/LID.
      */
     private function findDuplicatesByPhoneNumber(int $inboxId, ?int $accountId): array
     {
         $sql = "
-            SELECT 
+            SELECT
                 c.id as conversation_id,
                 c.display_id,
                 c.status,
@@ -111,62 +120,50 @@ class ConversationDeduplicationService
                 ct.name as contact_name,
                 ct.phone_number,
                 ct.identifier,
-                -- Normalizar phone_number: eliminar +, espacios, guiones
                 REGEXP_REPLACE(ct.phone_number, '[^0-9]', '', 'g') as normalized_phone,
                 (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count
             FROM conversations c
             JOIN contacts ct ON c.contact_id = ct.id
-            WHERE c.inbox_id = :inbox_id
-              AND c.status != 1  -- No incluir resolved/archived
+            WHERE c.inbox_id = ?
+              AND c.status != 1
               AND ct.phone_number IS NOT NULL
               AND ct.phone_number != ''
-              -- Excluir grupos
               AND ct.identifier NOT LIKE '%@g.us'
               AND ct.identifier NOT LIKE '%@broadcast'
-            ORDER BY ct.phone_number, c.last_activity_at DESC
         ";
 
-        $params = [':inbox_id' => $inboxId];
-        
+        $bindings = [$inboxId];
+
         if ($accountId) {
-            $sql = str_replace('WHERE c.inbox_id', 'WHERE c.account_id = :account_id AND c.inbox_id', $sql);
-            $params[':account_id'] = $accountId;
+            $sql .= ' AND c.account_id = ?';
+            $bindings[] = $accountId;
         }
 
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute($params);
-        $allConversations = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $sql .= ' ORDER BY ct.phone_number, c.last_activity_at DESC';
 
-        // Agrupar por número normalizado
+        $allConversations = $this->db()->select($sql, $bindings);
+
+        // Agrupar por número normalizado (últimos 10 dígitos)
         $groupedByPhone = [];
-        
+
         foreach ($allConversations as $conv) {
+            $conv = (array) $conv;
             $normalizedPhone = $conv['normalized_phone'];
-            
-            // Ignorar números muy cortos (probablemente inválidos)
+
             if (strlen($normalizedPhone) < 8) {
                 continue;
             }
 
-            // Crear clave única para deduplicar
-            // Usamos los Ãºltimos 10 dÃ­gitos para manejar diferencias en cÃ³digo de paÃ­s
             $phoneKey = substr($normalizedPhone, -10);
-            
-            if (!isset($groupedByPhone[$phoneKey])) {
-                $groupedByPhone[$phoneKey] = [];
-            }
             $groupedByPhone[$phoneKey][] = $conv;
         }
 
-        // Filtrar solo grupos con duplicados (más de 1 conversaciÃ³n)
-        $duplicates = array_filter($groupedByPhone, fn($group) => count($group) > 1);
-
-        return $duplicates;
+        return array_filter($groupedByPhone, fn($group) => count($group) > 1);
     }
 
     /**
-     * Fusionar un grupo de conversaciones duplicadas
-     * Mantiene la conversaciÃ³n con más mensajes o más reciente
+     * Fusionar un grupo de conversaciones duplicadas.
+     * Mantiene la conversación con más mensajes o más reciente.
      */
     private function mergeConversationGroup(array $conversations, string $phoneKey): array
     {
@@ -174,34 +171,33 @@ class ConversationDeduplicationService
             return ['success' => false, 'error' => 'Menos de 2 conversaciones para fusionar'];
         }
 
-        // Ordenar: priorizar por message_count, luego por last_activity_at
-        usort($conversations, function($a, $b) {
-            // Primero por cantidad de mensajes (descendente)
+        usort($conversations, function ($a, $b) {
             $msgDiff = ($b['message_count'] ?? 0) - ($a['message_count'] ?? 0);
-            if ($msgDiff !== 0) return $msgDiff;
-            
-            // Luego por Ãºltima actividad (más reciente primero)
-            return strtotime($b['last_activity_at'] ?? '1970-01-01') - 
-                   strtotime($a['last_activity_at'] ?? '1970-01-01');
+            if ($msgDiff !== 0) {
+                return $msgDiff;
+            }
+            return strtotime($b['last_activity_at'] ?? '1970-01-01')
+                 - strtotime($a['last_activity_at'] ?? '1970-01-01');
         });
 
-        // La primera es la que mantenemos
         $toKeep = $conversations[0];
         $toMerge = array_slice($conversations, 1);
 
-        Log::debug('ðŸ”€ ConversationDeduplication: Iniciando fusiÃ³n', [
+        Log::debug('🔀 ConversationDeduplication: Iniciando fusión', [
             'phone_key' => $phoneKey,
             'keep' => [
                 'conv_id' => $toKeep['conversation_id'],
                 'display_id' => $toKeep['display_id'],
                 'contact' => $toKeep['contact_name'],
-                'messages' => $toKeep['message_count']
+                'messages' => $toKeep['message_count'],
             ],
-            'merge_count' => count($toMerge)
+            'merge_count' => count($toMerge),
         ]);
 
+        $db = $this->db();
+
         try {
-            $this->connection->beginTransaction();
+            $db->beginTransaction();
 
             $totalMessagesMoved = 0;
             $mergedIds = [];
@@ -212,51 +208,38 @@ class ConversationDeduplicationService
                 $mergeContactId = $mergeConv['contact_id'];
                 $mergedIds[] = $mergeConv['display_id'];
 
-                // 1. Mover mensajes a la conversaciÃ³n principal
                 $movedCount = $this->moveMessages($mergeConvId, $toKeep['conversation_id']);
                 $totalMessagesMoved += $movedCount;
 
-                // 2. Mover attachments (si existen en tabla separada)
                 $this->moveAttachments($mergeConvId, $toKeep['conversation_id']);
-
-                // 3. Mover labels de conversaciÃ³n
                 $this->moveConversationLabels($mergeConvId, $toKeep['conversation_id']);
-
-                // 4. Actualizar referencias en otras tablas
                 $this->updateConversationReferences($mergeConvId, $toKeep['conversation_id']);
-
-                // 5. Eliminar la conversaciÃ³n duplicada
                 $this->deleteConversation($mergeConvId);
 
-                // 6. Marcar contacto para potencial eliminaciÃ³n
                 if ($mergeContactId != $toKeep['contact_id']) {
                     $deletedContactIds[] = $mergeContactId;
                 }
 
-                Log::debug('âœ… ConversationDeduplication: ConversaciÃ³n fusionada', [
+                Log::debug('✅ ConversationDeduplication: Conversación fusionada', [
                     'merged_conv_id' => $mergeConvId,
-                    'messages_moved' => $movedCount
+                    'messages_moved' => $movedCount,
                 ]);
             }
 
-            // 7. Intentar eliminar contactos huÃ©rfanos
             foreach ($deletedContactIds as $contactId) {
                 $this->tryDeleteOrphanContact($contactId);
             }
 
-            // 8. Actualizar timestamp de la conversaciÃ³n principal
             $this->updateConversationActivity($toKeep['conversation_id']);
-
-            // 9. Recalcular unread_count
             $this->recalculateUnreadCount($toKeep['conversation_id']);
 
-            $this->connection->commit();
+            $db->commit();
 
-            Log::debug('âœ… ConversationDeduplication: FusiÃ³n completada', [
+            Log::debug('✅ ConversationDeduplication: Fusión completada', [
                 'phone_key' => $phoneKey,
                 'kept_conv_id' => $toKeep['display_id'],
                 'merged_count' => count($toMerge),
-                'total_messages_moved' => $totalMessagesMoved
+                'total_messages_moved' => $totalMessagesMoved,
             ]);
 
             return [
@@ -264,231 +247,163 @@ class ConversationDeduplicationService
                 'kept_conversation_id' => $toKeep['display_id'],
                 'merged_conversation_ids' => $mergedIds,
                 'merged_count' => count($toMerge),
-                'messages_moved' => $totalMessagesMoved
+                'messages_moved' => $totalMessagesMoved,
             ];
 
         } catch (\Exception $e) {
-            $this->connection->rollBack();
-            Log::error('âŒ ConversationDeduplication: Error en transacciÃ³n', [
+            $db->rollBack();
+            Log::error('❌ ConversationDeduplication: Error en transacción', [
                 'phone_key' => $phoneKey,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to merge conversations'];
         }
     }
 
-    /**
-     * Mover mensajes de una conversaciÃ³n a otra
-     */
+    // ------------------------------------------------------------------
+    //  Operaciones individuales sobre Chatwoot DB
+    // ------------------------------------------------------------------
+
     private function moveMessages(int $fromConvId, int $toConvId): int
     {
-        $sql = "UPDATE messages SET conversation_id = :to_id WHERE conversation_id = :from_id";
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute([':to_id' => $toConvId, ':from_id' => $fromConvId]);
-        return $stmt->rowCount();
+        return $this->db()->update(
+            'UPDATE messages SET conversation_id = ? WHERE conversation_id = ?',
+            [$toConvId, $fromConvId]
+        );
     }
 
-    /**
-     * Mover attachments (Chatwoot puede tener tabla separada)
-     */
     private function moveAttachments(int $fromConvId, int $toConvId): void
     {
-        // Los attachments en Chatwoot estÃ¡n asociados a messages, no a conversations
-        // Por lo que se mueven automáticamente con los mensajes
-        // Pero verificamos si existe una tabla de attachments directos
         try {
-            $sql = "UPDATE attachments SET record_id = :to_id 
-                    WHERE record_type = 'Conversation' AND record_id = :from_id";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':to_id' => $toConvId, ':from_id' => $fromConvId]);
-        } catch (\Exception $e) {
+            $this->db()->update(
+                "UPDATE attachments SET record_id = ? WHERE record_type = 'Conversation' AND record_id = ?",
+                [$toConvId, $fromConvId]
+            );
+        } catch (\Exception) {
             // Tabla puede no existir, ignorar
         }
     }
 
-    /**
-     * Mover labels de conversaciÃ³n
-     */
     private function moveConversationLabels(int $fromConvId, int $toConvId): void
     {
         try {
-            // Evitar duplicados: solo insertar labels que no existan en destino
-            $sql = "INSERT INTO conversation_labels (conversation_id, label_id, created_at, updated_at)
-                    SELECT :to_id, label_id, NOW(), NOW()
-                    FROM conversation_labels cl
-                    WHERE cl.conversation_id = :from_id
-                    AND NOT EXISTS (
-                        SELECT 1 FROM conversation_labels cl2 
-                        WHERE cl2.conversation_id = :to_id AND cl2.label_id = cl.label_id
-                    )";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':to_id' => $toConvId, ':from_id' => $fromConvId]);
+            $this->db()->insert(
+                "INSERT INTO conversation_labels (conversation_id, label_id, created_at, updated_at)
+                 SELECT ?, label_id, NOW(), NOW()
+                 FROM conversation_labels cl
+                 WHERE cl.conversation_id = ?
+                   AND NOT EXISTS (
+                       SELECT 1 FROM conversation_labels cl2
+                       WHERE cl2.conversation_id = ? AND cl2.label_id = cl.label_id
+                   )",
+                [$toConvId, $fromConvId, $toConvId]
+            );
 
-            // Eliminar labels originales
-            $sql = "DELETE FROM conversation_labels WHERE conversation_id = :from_id";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':from_id' => $fromConvId]);
+            $this->db()->delete('DELETE FROM conversation_labels WHERE conversation_id = ?', [$fromConvId]);
         } catch (\Exception $e) {
-            // Tabla puede no existir o no tener esa estructura
             Log::debug('ConversationDeduplication: No se pudieron mover labels', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
-    /**
-     * Actualizar referencias en otras tablas que apunten a la conversaciÃ³n
-     */
     private function updateConversationReferences(int $fromConvId, int $toConvId): void
     {
-        // Tablas que pueden tener referencias a conversation_id
         $tables = [
-            'conversation_participants' => 'conversation_id',
-            'mentions' => 'conversation_id',
-            'notifications' => 'primary_actor_id', // Solo si primary_actor_type = 'Conversation'
+            ['table' => 'conversation_participants', 'column' => 'conversation_id', 'condition' => ''],
+            ['table' => 'mentions', 'column' => 'conversation_id', 'condition' => ''],
+            ['table' => 'notifications', 'column' => 'primary_actor_id', 'condition' => "AND primary_actor_type = 'Conversation'"],
         ];
 
-        foreach ($tables as $table => $column) {
+        foreach ($tables as $ref) {
             try {
-                if ($table === 'notifications') {
-                    $sql = "UPDATE {$table} SET {$column} = :to_id 
-                            WHERE {$column} = :from_id AND primary_actor_type = 'Conversation'";
-                } else {
-                    $sql = "UPDATE {$table} SET {$column} = :to_id WHERE {$column} = :from_id";
-                }
-                $stmt = $this->connection->prepare($sql);
-                $stmt->execute([':to_id' => $toConvId, ':from_id' => $fromConvId]);
-            } catch (\Exception $e) {
-                // Tabla puede no existir, ignorar silenciosamente
+                $sql = "UPDATE {$ref['table']} SET {$ref['column']} = ? WHERE {$ref['column']} = ? {$ref['condition']}";
+                $this->db()->update($sql, [$toConvId, $fromConvId]);
+            } catch (\Exception) {
+                // Tabla puede no existir, ignorar
             }
         }
     }
 
-    /**
-     * Eliminar una conversaciÃ³n
-     */
     private function deleteConversation(int $convId): void
     {
-        // Primero eliminar dependencias directas
-        $dependencyTables = [
-            'conversation_participants',
-            'conversation_labels', 
-            'mentions',
-        ];
+        $dependencyTables = ['conversation_participants', 'conversation_labels', 'mentions'];
 
         foreach ($dependencyTables as $table) {
             try {
-                $sql = "DELETE FROM {$table} WHERE conversation_id = :conv_id";
-                $stmt = $this->connection->prepare($sql);
-                $stmt->execute([':conv_id' => $convId]);
-            } catch (\Exception $e) {
-                // Ignorar si la tabla no existe
+                $this->db()->delete("DELETE FROM {$table} WHERE conversation_id = ?", [$convId]);
+            } catch (\Exception) {
+                // Tabla puede no existir
             }
         }
 
-        // Eliminar la conversaciÃ³n
-        $sql = "DELETE FROM conversations WHERE id = :conv_id";
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute([':conv_id' => $convId]);
+        $this->db()->delete('DELETE FROM conversations WHERE id = ?', [$convId]);
     }
 
-    /**
-     * Intentar eliminar un contacto huÃ©rfano
-     * Solo elimina si no tiene más conversaciones ni referencias
-     */
     private function tryDeleteOrphanContact(int $contactId): void
     {
         try {
-            // Verificar si tiene otras conversaciones
-            $sql = "SELECT COUNT(*) FROM conversations WHERE contact_id = :contact_id";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':contact_id' => $contactId]);
-            $count = $stmt->fetchColumn();
+            $count = $this->db()->selectOne(
+                'SELECT COUNT(*) as cnt FROM conversations WHERE contact_id = ?',
+                [$contactId]
+            )->cnt;
 
             if ($count > 0) {
-                // Tiene otras conversaciones, no eliminar
                 return;
             }
 
-            // Verificar contact_inboxes
-            $sql = "SELECT COUNT(*) FROM contact_inboxes WHERE contact_id = :contact_id";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':contact_id' => $contactId]);
-            $inboxCount = $stmt->fetchColumn();
+            $this->db()->delete('DELETE FROM contact_inboxes WHERE contact_id = ?', [$contactId]);
+            $this->db()->delete('DELETE FROM contacts WHERE id = ?', [$contactId]);
 
-            // Eliminar contact_inboxes primero
-            if ($inboxCount > 0) {
-                $sql = "DELETE FROM contact_inboxes WHERE contact_id = :contact_id";
-                $stmt = $this->connection->prepare($sql);
-                $stmt->execute([':contact_id' => $contactId]);
-            }
-
-            // Intentar eliminar el contacto
-            $sql = "DELETE FROM contacts WHERE id = :contact_id";
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute([':contact_id' => $contactId]);
-
-            Log::debug('ðŸ—‘ï¸ ConversationDeduplication: Contacto huÃ©rfano eliminado', [
-                'contact_id' => $contactId
-            ]);
-
-        } catch (\Exception $e) {
-            // No es crÃ­tico si falla, el contacto queda huÃ©rfano pero no causa problemas
-            Log::debug('ConversationDeduplication: No se pudo eliminar contacto huÃ©rfano', [
+            Log::debug('🗑️ ConversationDeduplication: Contacto huérfano eliminado', [
                 'contact_id' => $contactId,
-                'error' => $e->getMessage()
+            ]);
+        } catch (\Exception $e) {
+            Log::debug('ConversationDeduplication: No se pudo eliminar contacto huérfano', [
+                'contact_id' => $contactId,
+                'error' => $e->getMessage(),
             ]);
         }
     }
 
-    /**
-     * Actualizar last_activity_at de la conversaciÃ³n
-     */
     private function updateConversationActivity(int $convId): void
     {
-        $sql = "UPDATE conversations 
-                SET last_activity_at = (
-                    SELECT COALESCE(MAX(created_at), NOW()) 
-                    FROM messages 
-                    WHERE conversation_id = :conv_id
-                ),
-                updated_at = NOW()
-                WHERE id = :conv_id";
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute([':conv_id' => $convId]);
+        $this->db()->update(
+            "UPDATE conversations
+             SET last_activity_at = (
+                 SELECT COALESCE(MAX(created_at), NOW()) FROM messages WHERE conversation_id = ?
+             ),
+             updated_at = NOW()
+             WHERE id = ?",
+            [$convId, $convId]
+        );
     }
 
-    /**
-     * Recalcular unread_count basado en mensajes no leÃ­dos reales
-     */
     private function recalculateUnreadCount(int $convId): void
     {
-        $sql = "UPDATE conversations 
-                SET unread_count = (
-                    SELECT COUNT(*) 
-                    FROM messages 
-                    WHERE conversation_id = :conv_id 
-                    AND message_type = 0  -- INCOMING
-                    AND status != 2       -- No leÃ­dos (status != read)
-                )
-                WHERE id = :conv_id";
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute([':conv_id' => $convId]);
+        $this->db()->update(
+            "UPDATE conversations
+             SET unread_count = (
+                 SELECT COUNT(*) FROM messages
+                 WHERE conversation_id = ? AND message_type = 0 AND status != 2
+             )
+             WHERE id = ?",
+            [$convId, $convId]
+        );
     }
 
     /**
-     * Obtener diagnÃ³stico de duplicados sin fusionar
+     * Obtener diagnóstico de duplicados sin fusionar.
      */
-    public function getDuplicatesDiagnosis(int $inboxId, int $accountId = null): array
+    public function getDuplicatesDiagnosis(int $inboxId, ?int $accountId = null): array
     {
         try {
-            $this->connection = $this->getChatwootConnection();
-            
-            if (!$this->connection) {
-                return ['success' => false, 'error' => 'Database connection failed'];
-            }
+            $this->db()->getPdo(); // Verificar conexión
+        } catch (\Exception) {
+            return ['success' => false, 'error' => 'Database connection failed'];
+        }
 
+        try {
             $duplicates = $this->findDuplicatesByPhoneNumber($inboxId, $accountId);
 
             $diagnosis = [];
@@ -496,17 +411,15 @@ class ConversationDeduplicationService
                 $diagnosis[] = [
                     'phone_key' => $phoneKey,
                     'count' => count($conversations),
-                    'conversations' => array_map(function($c) {
-                        return [
-                            'id' => $c['display_id'],
-                            'contact' => $c['contact_name'],
-                            'phone' => $c['phone_number'],
-                            'identifier' => $c['identifier'],
-                            'messages' => $c['message_count'],
-                            'last_activity' => $c['last_activity_at'],
-                            'status' => $c['status']
-                        ];
-                    }, $conversations)
+                    'conversations' => array_map(fn($c) => [
+                        'id' => $c['display_id'],
+                        'contact' => $c['contact_name'],
+                        'phone' => $c['phone_number'],
+                        'identifier' => $c['identifier'],
+                        'messages' => $c['message_count'],
+                        'last_activity' => $c['last_activity_at'],
+                        'status' => $c['status'],
+                    ], $conversations),
                 ];
             }
 
@@ -515,135 +428,8 @@ class ConversationDeduplicationService
                 'inbox_id' => $inboxId,
                 'duplicate_groups' => count($duplicates),
                 'total_duplicated_conversations' => array_sum(array_map('count', $duplicates)),
-                'details' => $diagnosis
+                'details' => $diagnosis,
             ];
 
         } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Buscar y mapear LIDs a números reales usando Evolution API
-     * (Para casos donde necesitamos correlacionar @lid con @s.whatsapp.net)
-     */
-    public function mapLidsToRealNumbers(int $inboxId): array
-    {
-        try {
-            // Obtener conexiÃ³n a Evolution DB (si estÃ¡ configurada)
-            $evolutionConnection = $this->getEvolutionConnection();
-            
-            if (!$evolutionConnection) {
-                return ['success' => false, 'error' => 'Evolution DB not configured'];
-            }
-
-            // Buscar en la tabla IsOnWhatsapp de Evolution
-            $sql = "SELECT 
-                        \"remoteJid\" as real_number,
-                        \"jidOptions\" as lid_info,
-                        \"lid\"
-                    FROM public.\"IsOnWhatsapp\"
-                    WHERE \"lid\" = 'lid' OR \"jidOptions\" LIKE '%@lid%'
-                    LIMIT 1000";
-
-            $stmt = $evolutionConnection->prepare($sql);
-            $stmt->execute();
-            $mappings = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-            return [
-                'success' => true,
-                'mappings_count' => count($mappings),
-                'mappings' => $mappings
-            ];
-
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Obtener conexiÃ³n a Chatwoot DB
-     */
-    private function getChatwootConnection(): ?\PDO
-    {
-        try {
-            // Intentar usar la conexiÃ³n de Laravel primero
-            $laravelConnection = DB::connection('chatwoot')->getPdo();
-            if ($laravelConnection) {
-                return $laravelConnection;
-            }
-        } catch (\Exception $e) {
-            Log::debug('ConversationDeduplication: Laravel connection failed, trying direct PDO');
-        }
-
-        // Fallback a conexiÃ³n directa
-        try {
-            $databaseUrl = env('CHATWOOT_DATABASE_URL');
-            
-            if ($databaseUrl) {
-                $parsed = parse_url($databaseUrl);
-                $host = $parsed['host'] ?? 'localhost';
-                $port = $parsed['port'] ?? 5432;
-                $database = ltrim($parsed['path'] ?? '/chatwoot', '/');
-                $username = $parsed['user'] ?? 'postgres';
-                $password = urldecode($parsed['pass'] ?? '');
-            } else {
-                $host = env('CHATWOOT_DB_HOST', 'localhost');
-                $port = env('CHATWOOT_DB_PORT', '5432');
-                $database = env('CHATWOOT_DB_DATABASE', 'chatwoot');
-                $username = env('CHATWOOT_DB_USERNAME', 'postgres');
-                $password = env('CHATWOOT_DB_PASSWORD', '');
-            }
-            
-            $pdo = new \PDO(
-                "pgsql:host={$host};port={$port};dbname={$database}",
-                $username,
-                $password,
-                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
-            );
-            
-            return $pdo;
-        } catch (\PDOException $e) {
-            Log::error('ConversationDeduplication: Database connection failed', [
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Obtener conexiÃ³n a Evolution DB (si estÃ¡ disponible)
-     */
-    private function getEvolutionConnection(): ?\PDO
-    {
-        try {
-            $databaseUrl = env('EVOLUTION_DATABASE_URL');
-            
-            if (!$databaseUrl) {
-                return null;
-            }
-
-            $parsed = parse_url($databaseUrl);
-            $host = $parsed['host'] ?? 'localhost';
-            $port = $parsed['port'] ?? 5432;
-            $database = ltrim($parsed['path'] ?? '/evolution', '/');
-            $username = $parsed['user'] ?? 'postgres';
-            $password = urldecode($parsed['pass'] ?? '');
-            
-            $pdo = new \PDO(
-                "pgsql:host={$host};port={$port};dbname={$database}",
-                $username,
-                $password,
-                [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION]
-            );
-            
-            return $pdo;
-        } catch (\PDOException $e) {
-            Log::debug('ConversationDeduplication: Evolution DB connection failed', [
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
-    }
-}
-
+            return ['success' => false, 'error' => 'Failed to diagnose conversations'];

@@ -14,19 +14,34 @@ class ChatwootService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('chatwoot.url', 'https://chatwoot-admin.withmia.com'), '/');
+        $this->baseUrl = rtrim(config('chatwoot.url', ''), '/');
         $this->platformToken = config('chatwoot.platform_token') ?? '';
         $this->superAdminToken = config('chatwoot.super_admin_token') ?? $this->platformToken;
         $this->accountId = (int) config('chatwoot.account_id', 1);
     }
 
+    private function platformClient(): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::timeout(config('services.timeouts.chatwoot', 15))
+            ->withHeaders([
+                'api_access_token' => $this->platformToken,
+                'Content-Type' => 'application/json',
+            ]);
+    }
+
+    private function accountClient(): \Illuminate\Http\Client\PendingRequest
+    {
+        return Http::timeout(config('services.timeouts.chatwoot', 15))
+            ->withHeaders([
+                'api_access_token' => $this->superAdminToken,
+                'Content-Type' => 'application/json',
+            ]);
+    }
+
     public function createAccount(string $name): array
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->platformToken,
-                'Content-Type' => 'application/json'
-            ])->post("$this->baseUrl/platform/api/v1/accounts", [
+            $response = $this->platformClient()->post("$this->baseUrl/platform/api/v1/accounts", [
                 'name' => $name
             ]);
 
@@ -47,10 +62,7 @@ class ChatwootService
     public function createUser(int $accountId, string $name, string $email, string $password): array
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->platformToken,
-                'Content-Type' => 'application/json'
-            ])->post("$this->baseUrl/platform/api/v1/accounts/$accountId/users", [
+            $response = $this->platformClient()->post("$this->baseUrl/platform/api/v1/accounts/$accountId/users", [
                 'name' => $name,
                 'email' => $email,
                 'password' => $password,
@@ -137,10 +149,7 @@ class ChatwootService
             'payload' => $payload,
         ]);
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-            'Content-Type' => 'application/json',
-        ])->post($endpoint, $payload);
+        $response = $this->accountClient()->post($endpoint, $payload);
 
         if ($response->successful()) {
             Log::debug('ChatwootService: Webhook creado exitosamente', [
@@ -166,85 +175,13 @@ class ChatwootService
     }
 
     /**
-     * Optimiza los webhooks de n8n existentes reduciendo las suscripciones
-     * para evitar ejecuciones duplicadas.
-     * 
-     * Solo necesitamos 'message_created' para el bot.
-     * 
-     * @return array Lista de webhooks actualizados
-     */
-    public function optimizeN8nWebhooks(): array
-    {
-        $result = $this->listWebhooks();
-        
-        if (!$result['success']) {
-            return ['success' => false, 'error' => 'Could not list webhooks'];
-        }
-
-        $webhooks = $result['webhooks'] ?? [];
-        $updated = [];
-        $errors = [];
-
-        foreach ($webhooks as $webhook) {
-            $url = $webhook['url'] ?? '';
-            $subscriptions = $webhook['subscriptions'] ?? [];
-            
-            // Solo procesar webhooks que apuntan a n8n
-            if (!str_contains($url, 'n8n') && !str_contains($url, '/webhook/')) {
-                continue;
-            }
-
-            // Si ya solo tiene message_created, saltar
-            if ($subscriptions === ['message_created']) {
-                continue;
-            }
-
-            // Actualizar a solo message_created
-            $updateResult = $this->updateWebhook(
-                $webhook['id'],
-                $url,
-                ['message_created']
-            );
-
-            if ($updateResult['success']) {
-                $updated[] = [
-                    'id' => $webhook['id'],
-                    'url' => $url,
-                    'old_subscriptions' => $subscriptions,
-                    'new_subscriptions' => ['message_created'],
-                ];
-                Log::info('ChatwootService: Webhook de n8n optimizado', [
-                    'webhook_id' => $webhook['id'],
-                    'url' => $url,
-                ]);
-            } else {
-                $errors[] = [
-                    'id' => $webhook['id'],
-                    'error' => $updateResult['error'] ?? 'Unknown error',
-                ];
-            }
-        }
-
-        return [
-            'success' => true,
-            'updated' => $updated,
-            'errors' => $errors,
-            'message' => count($updated) > 0 
-                ? "Optimized " . count($updated) . " webhook(s) to reduce n8n executions"
-                : "No webhooks needed optimization",
-        ];
-    }
-
-    /**
      * Lista todos los webhooks de la cuenta
      */
     public function listWebhooks(): array
     {
         $endpoint = "{$this->baseUrl}/api/v1/accounts/{$this->accountId}/webhooks";
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-        ])->get($endpoint);
+        $response = $this->accountClient()->get($endpoint);
 
         if ($response->successful()) {
             return [
@@ -281,7 +218,7 @@ class ChatwootService
         $deleted = [];
         $kept = [];
         $errors = [];
-        $appUrl = rtrim(config('app.url', 'https://app.withmia.com'), '/');
+        $appUrl = rtrim(config('app.url', ''), '/');
         $n8nUrl = rtrim(config('n8n.url', ''), '/');
         
         foreach ($webhooks as $webhook) {
@@ -291,7 +228,6 @@ class ChatwootService
             $isDirectN8n = (
                 (str_contains($url, 'n8n') || str_contains($url, '/webhook/')) &&
                 !str_contains($url, $appUrl) &&
-                !str_contains($url, 'app.withmia.com') &&
                 !str_contains($url, '/api/chatwoot/')
             );
             
@@ -351,9 +287,7 @@ class ChatwootService
     {
         $endpoint = "{$this->baseUrl}/api/v1/accounts/{$this->accountId}/webhooks/{$webhookId}";
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-        ])->delete($endpoint);
+        $response = $this->accountClient()->delete($endpoint);
 
         return [
             'success' => $response->successful(),
@@ -440,67 +374,6 @@ class ChatwootService
     }
 
     /**
-     * Configura el webhook para una empresa específica
-     * 
-     * IMPORTANTE: El webhook apunta a Laravel (no directamente a n8n) para que
-     * Laravel pueda enriquecer mensajes multimedia (audio, imagen) con attachments
-     * antes de reenviar a n8n. Esto resuelve el race condition donde Chatwoot
-     * dispara el webhook antes de guardar los attachments multimedia.
-     * 
-     * @param string $companySlug Slug de la empresa
-     * @param string|null $inboxName Nombre del inbox (opcional)
-     * @return array
-     */
-    public function setupCompanyWebhook(string $companySlug, ?string $inboxName = null): array
-    {
-        try {
-            // 1. Buscar el inbox de la empresa
-            $inbox = $this->findInboxByName($inboxName ?? $companySlug);
-            
-            if (!$inbox) {
-                Log::warning('ChatwootService: No se encontró inbox para empresa', [
-                    'company_slug' => $companySlug,
-                    'inbox_name' => $inboxName,
-                ]);
-                
-                return [
-                    'success' => false,
-                    'error' => 'Inbox not found',
-                ];
-            }
-
-            // 2. Construir URL del webhook de Laravel (NO directamente a n8n)
-            // Laravel enriquecerá (attachments/audio) y reenviará a n8n
-            $appUrl = rtrim(config('app.url', 'https://app.withmia.com'), '/');
-            $webhookUrl = "{$appUrl}/api/chatwoot/webhook/{$companySlug}";
-
-            // 3. Configurar el webhook
-            $result = $this->configureInboxWebhook($inbox['id'], $webhookUrl);
-            
-            if ($result['success']) {
-                Log::debug('ChatwootService: Webhook configurado para empresa (vía Laravel)', [
-                    'company_slug' => $companySlug,
-                    'inbox_id' => $inbox['id'],
-                    'webhook_url' => $webhookUrl,
-                ]);
-            }
-
-            return $result;
-
-        } catch (\Exception $e) {
-            Log::error('ChatwootService: Error configurando webhook de empresa', [
-                'company_slug' => $companySlug,
-                'error' => $e->getMessage(),
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
      * Actualiza un webhook existente
      */
     public function updateWebhook(int $webhookId, string $webhookUrl, array $subscriptions = []): array
@@ -513,36 +386,13 @@ class ChatwootService
             $payload['subscriptions'] = $subscriptions;
         }
 
-        $response = Http::withHeaders([
-            'api_access_token' => $this->superAdminToken,
-            'Content-Type' => 'application/json',
-        ])->patch($endpoint, $payload);
+        $response = $this->accountClient()->patch($endpoint, $payload);
 
         return [
             'success' => $response->successful(),
             'webhook' => $response->json(),
             'status' => $response->status(),
         ];
-    }
-
-    /**
-     * Encuentra webhooks que apuntan a una URL específica
-     */
-    public function findWebhookByUrl(string $urlPattern): ?array
-    {
-        $result = $this->listWebhooks();
-        
-        if (!$result['success']) {
-            return null;
-        }
-
-        foreach ($result['webhooks'] as $webhook) {
-            if (stripos($webhook['url'] ?? '', $urlPattern) !== false) {
-                return $webhook;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -562,7 +412,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getConversations failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+            return ['success' => false, 'error' => 'Failed to get conversations', 'data' => []];
         }
     }
 
@@ -583,7 +433,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getContacts failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+            return ['success' => false, 'error' => 'Failed to get contacts', 'data' => []];
         }
     }
 
@@ -603,7 +453,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getAgents failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+            return ['success' => false, 'error' => 'Failed to get agents', 'data' => []];
         }
     }
 
@@ -623,7 +473,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getTeams failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+            return ['success' => false, 'error' => 'Failed to get teams', 'data' => []];
         }
     }
 
@@ -648,7 +498,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::createTeam failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to create team', 'data' => null];
         }
     }
 
@@ -686,7 +536,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::createAccountWebhook failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to create webhook', 'data' => null];
         }
     }
 
@@ -706,7 +556,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::listAccountWebhooks failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => []];
+            return ['success' => false, 'error' => 'Failed to list webhooks', 'data' => []];
         }
     }
 
@@ -726,7 +576,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::deleteAccountWebhook failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete webhook'];
         }
     }
 
@@ -736,10 +586,7 @@ class ChatwootService
     public function createAccountUser(int $accountId, string $name, string $email, string $role = 'agent'): array
     {
         try {
-            $response = Http::withHeaders([
-                'api_access_token' => $this->superAdminToken,
-                'Content-Type' => 'application/json'
-            ])->post("{$this->baseUrl}/platform/api/v1/accounts/{$accountId}/account_users", [
+            $response = $this->accountClient()->post("{$this->baseUrl}/platform/api/v1/accounts/{$accountId}/account_users", [
                 'name' => $name,
                 'email' => $email,
                 'role' => $role,
@@ -753,7 +600,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::createAccountUser failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to create account user', 'data' => null];
         }
     }
 
@@ -792,12 +639,12 @@ class ChatwootService
                 'inbox_name' => $inboxName,
                 'error' => $e->getMessage()
             ]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to create API inbox', 'data' => null];
         }
     }
 
     /**
-     * Create an agent in a specific account
+     * Create a new agent in a Chatwoot account
      * 
      * @param int $accountId Chatwoot account ID
      * @param string $apiKey API key for the account
@@ -828,15 +675,14 @@ class ChatwootService
         } catch (\Exception $e) {
             Log::error('ChatwootService::createAgent failed', [
                 'account_id' => $accountId,
-                'email' => $email,
                 'error' => $e->getMessage()
             ]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to create agent', 'data' => null];
         }
     }
 
     /**
-     * Update an agent in a specific account
+     * Update an existing agent in a Chatwoot account
      * 
      * @param int $accountId Chatwoot account ID
      * @param string $apiKey API key for the account
@@ -864,7 +710,7 @@ class ChatwootService
                 'agent_id' => $agentId,
                 'error' => $e->getMessage()
             ]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to update agent', 'data' => null];
         }
     }
 
@@ -899,7 +745,7 @@ class ChatwootService
                 'team_id' => $teamId,
                 'error' => $e->getMessage()
             ]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to add agents to team', 'data' => null];
         }
     }
 
@@ -922,7 +768,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::updateTeam failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to update team', 'data' => null];
         }
     }
 
@@ -943,7 +789,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::deleteTeam failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete team'];
         }
     }
 
@@ -966,7 +812,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getConversation failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to get conversation', 'data' => null];
         }
     }
 
@@ -988,7 +834,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::deleteConversation failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete conversation'];
         }
     }
 
@@ -1011,7 +857,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::getConversationMessages failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to get conversation messages', 'data' => null];
         }
     }
 
@@ -1034,7 +880,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::updateContact failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage(), 'data' => null];
+            return ['success' => false, 'error' => 'Failed to update contact', 'data' => null];
         }
     }
 
@@ -1059,7 +905,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::updateAgentRole failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to update agent role'];
         }
     }
 
@@ -1080,7 +926,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::deleteAgent failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to delete agent'];
         }
     }
 
@@ -1104,7 +950,7 @@ class ChatwootService
             ];
         } catch (\Exception $e) {
             Log::error('ChatwootService::toggleConversationStatus failed', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => $e->getMessage()];
+            return ['success' => false, 'error' => 'Failed to toggle conversation status'];
         }
     }
 }

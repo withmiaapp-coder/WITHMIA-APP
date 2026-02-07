@@ -9,7 +9,6 @@ use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Traits\FormatsWhatsAppContacts;
@@ -18,35 +17,19 @@ class ContactsExcelExporter
 {
     use FormatsWhatsAppContacts;
 
-    private $evolutionApiUrl;
-    private $evolutionApiKey;
+    private EvolutionApiService $evolutionApiService;
 
-    public function __construct()
+    public function __construct(EvolutionApiService $evolutionApiService)
     {
-        $this->evolutionApiUrl = config('evolution.api_url');
-        $this->evolutionApiKey = config('evolution.api_key');
+        $this->evolutionApiService = $evolutionApiService;
     }
 
     /**
-     * Obtener contactos de Evolution API
+     * Obtener contactos de Evolution API.
      */
-    public function getContactsFromEvolution($instanceId)
+    public function getContactsFromEvolution(string $instanceId): array
     {
-        try {
-            $response = Http::withHeaders([
-                'apikey' => $this->evolutionApiKey,
-                'Content-Type' => 'application/json'
-            ])->get("{$this->evolutionApiUrl}/chat/findContacts/{$instanceId}");
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            return [];
-        } catch (\Exception $e) {
-            Log::error('Error obteniendo contactos de Evolution API: ' . $e->getMessage());
-            return [];
-        }
+        return $this->evolutionApiService->findContacts($instanceId);
     }
 
     /**

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 import {
     Shield,
     Users,
@@ -89,7 +90,7 @@ export default function AdminPanel() {
             const data = await response.json();
             setStats(data);
         } catch (error) {
-            console.error('Error fetching stats:', error);
+            debugLog.error('Error fetching stats:', error);
         } finally {
             setLoading(false);
         }
@@ -111,7 +112,7 @@ export default function AdminPanel() {
                 setEditingUser(null);
             }
         } catch (error) {
-            console.error('Error updating role:', error);
+            debugLog.error('Error updating role:', error);
         }
     };
 
@@ -125,7 +126,7 @@ export default function AdminPanel() {
                 fetchStats();
             }
         } catch (error) {
-            console.error('Error deleting user:', error);
+            debugLog.error('Error deleting user:', error);
         }
     };
 

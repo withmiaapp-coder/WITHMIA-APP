@@ -10,15 +10,15 @@ export const debugLog = {
     if (DEBUG_ENABLED) console.warn(...args);
   },
   error: (...args: any[]) => {
-    // Los errores siempre se muestran
-    console.error(...args);
+    // Errors only in debug mode to avoid leaking info in production
+    if (DEBUG_ENABLED) console.error(...args);
   },
   info: (...args: any[]) => {
     if (DEBUG_ENABLED) console.info(...args);
   },
-  // Función para logs de eventos importantes (siempre se muestran)
+  // Función para logs de eventos importantes (solo en debug)
   event: (...args: any[]) => {
-    console.log(...args);
+    if (DEBUG_ENABLED) console.log(...args);
   }
 };
 

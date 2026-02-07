@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import debugLog from '@/utils/debugLogger';
 
 interface Message {
   id: number | string;
@@ -114,7 +115,6 @@ export const useMessagePagination = (
   const loadMore = useCallback(async () => {
     // Evitar cargas simultáneas
     if (loadingRef.current || isLoading) {
-      console.log('⏳ Ya hay una carga en progreso');
       return;
     }
 
@@ -129,7 +129,6 @@ export const useMessagePagination = (
         loadingRef.current = true;
         
         try {
-          console.log(`📥 Cargando página ${currentPage + 1} del servidor...`);
           const olderMessages = await onLoadMore(currentPage + 1);
           
           if (olderMessages && olderMessages.length > 0) {
@@ -142,18 +141,15 @@ export const useMessagePagination = (
             });
             
             setCurrentPage(prev => prev + 1);
-            console.log(`✅ Cargados ${olderMessages.length} mensajes más antiguos`);
-          } else {
-            console.log('ℹ️ No hay más mensajes en el servidor');
           }
         } catch (error) {
-          console.error('❌ Error cargando mensajes:', error);
+          debugLog.error('❌ Error cargando mensajes:', error);
         } finally {
           setIsLoading(false);
           loadingRef.current = false;
         }
       } else {
-        console.log('ℹ️ No hay más mensajes para cargar');
+        // No more messages to load
       }
       return;
     }
@@ -168,8 +164,6 @@ export const useMessagePagination = (
     setCurrentPage(prev => prev + 1);
     setIsLoading(false);
     loadingRef.current = false;
-    
-    console.log(`✅ Mostrando página ${currentPage + 1}`);
   }, [allMessages.length, currentPage, pageSize, onLoadMore, conversationId, isLoading]);
 
   /**

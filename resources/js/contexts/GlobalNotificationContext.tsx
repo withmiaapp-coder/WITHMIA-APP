@@ -340,13 +340,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   }, []);
 
   const clearBadge = useCallback((conversationId: number) => {
-    console.log('🧹 clearBadge llamado para conversación:', conversationId);
-    
     // ✅ Limpiar badge del Map
     setConversationBadges(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(conversationId) || 0;
-      console.log('🧹 Badge actual en Map:', current);
       newMap.set(conversationId, 0);
       setTotalUnreadMessages(total => Math.max(0, total - current));
       
@@ -358,13 +355,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     
     // ✅ TAMBIÉN limpiar notificaciones de la campana para esta conversación
     setNotifications(prev => {
-      console.log('🧹 Notificaciones antes:', prev.length, 'para conv', conversationId, ':', prev.filter(n => n.conversationId === conversationId).length);
       const removedUnread = prev.filter(n => n.conversationId === conversationId && !n.read).length;
       if (removedUnread > 0) {
         setUnreadCount(count => Math.max(0, count - removedUnread));
       }
       const filtered = prev.filter(n => n.conversationId !== conversationId);
-      console.log('🧹 Notificaciones después:', filtered.length);
       
       // ✅ PERSISTIR en localStorage inmediatamente
       if (filtered.length > 0) {
@@ -387,7 +382,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       try {
         const parsed = JSON.parse(savedBadges);
         const restoredMap = new Map<number, number>(parsed);
-        console.log('🔄 Badges restaurados desde sessionStorage:', restoredMap.size);
         setConversationBadges(restoredMap);
         let total = 0;
         restoredMap.forEach(v => total += v);
@@ -395,7 +389,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         hasInitializedBadges.current = true;
         return;
       } catch (e) {
-        console.error('Error restaurando badges:', e);
+        // Error handled silently
       }
     }
     
@@ -405,7 +399,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     }
     hasInitializedBadges.current = true;
     
-    console.log('🔄 Inicializando badges desde servidor:', conversations.length, 'conversaciones');
     const newMap = new Map<number, number>();
     let total = 0;
     conversations.forEach(conv => {
@@ -441,7 +434,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       try {
         setSettings(JSON.parse(saved));
       } catch (e) {
-        console.error('Error loading notification settings:', e);
+        // Error handled silently
       }
     }
 
@@ -458,7 +451,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         setNotifications(parsed.map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) })));
         setUnreadCount(parsed.filter((n: any) => !n.read).length);
       } catch (e) {
-        console.error('Error loading notifications:', e);
+        // Error handled silently
       }
     }
 
@@ -470,7 +463,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // ============================================================================
   useEffect(() => {
     if (!inboxId) {
-      console.log('⚠️ [UNIFIED] No hay inboxId, WebSocket no iniciado');
       return;
     }
 
@@ -492,7 +484,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
 
         // Error en canal
         channel.error((error: any) => {
-          console.error(`❌ [UNIFIED] Error en canal ${channelName}:`, error);
+          // Error handled silently
         });
 
         // ========================================
@@ -558,7 +550,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
               try {
                 callback(wsEvent);
               } catch (err) {
-                console.error('Error en subscriber:', err);
+                // Error handled silently
               }
             });
           }
@@ -653,7 +645,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             try {
               callback(wsEvent);
             } catch (err) {
-              console.error('Error en subscriber:', err);
+              // Error handled silently
             }
           });
         });
@@ -678,7 +670,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             try {
               callback(wsEvent);
             } catch (err) {
-              console.error('Error en subscriber:', err);
+              // Error handled silently
             }
           });
         });
@@ -691,17 +683,15 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           const connection = connector.pusher.connection;
 
           connection.bind('connected', () => {
-            console.log('✅ [UNIFIED] WebSocket CONECTADO');
             setIsWebSocketConnected(true);
           });
 
           connection.bind('disconnected', () => {
-            console.log('⚠️ [UNIFIED] WebSocket DESCONECTADO');
             setIsWebSocketConnected(false);
           });
 
           connection.bind('error', (err: any) => {
-            console.error('❌ [UNIFIED] Error WebSocket:', err);
+            // Error handled silently
           });
 
           // Estado inicial
@@ -711,7 +701,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         }
 
       } catch (error) {
-        console.error('❌ [UNIFIED] Error inicializando WebSocket:', error);
         setIsWebSocketConnected(false);
       }
     };
@@ -730,7 +719,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             echoRef.current.leave(`inbox.${inboxId}`);
           }
         } catch (error) {
-          console.error('Error limpiando WebSocket:', error);
+          // Error handled silently
         }
       }
     };
@@ -845,7 +834,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           try {
             callback(wsEvent);
           } catch (err) {
-            console.error('Error entregando mensaje pendiente:', err);
+            // Error handled silently
           }
         });
         

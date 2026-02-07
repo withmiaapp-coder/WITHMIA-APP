@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import * as XLSX from 'xlsx';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from 'axios';
@@ -79,6 +79,8 @@ import debugLog from '../utils/debugLogger';
 import ConversationActionsDropdown from './ConversationActionsDropdown';
 import AssignAgentDropdown from './AssignAgentDropdown';
 import LabelsManager from './LabelsManager';
+import MessageStatus from './conversations/MessageStatus';
+import { formatLastMessagePreview, formatAvatar, getAvatarProxyUrl } from '../utils/conversationHelpers';
 
 interface Conversation {
   id: number;
@@ -105,180 +107,8 @@ interface Conversation {
   };
 }
 
-interface _Message {
-  id: number;
-  content: string;
-  timestamp: string;
-  sender: 'agent' | 'contact';
-  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
-}
-
-// 🎯 Componente para mostrar estado del mensaje (checks de WhatsApp)
-const MessageStatus = ({ status, isHighlighted }: { status?: string | number | null | undefined; isHighlighted?: boolean }) => {
-  const baseColor = isHighlighted ? 'text-gray-600' : 'text-blue-200';
-  const readColor = 'text-blue-400'; // Azul más brillante para leído
-  
-  // 📌 Normalizar status - si es null/undefined, mostrar delivered (doble check)
-  if (status === null || status === undefined) {
-    // Default: 2 checks grises - entregado al dispositivo
-    return (
-      <svg className={`w-4 h-3 ${baseColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 7l4 4L14 3" />
-        <path d="M8 7l4 4L20 3" />
-      </svg>
-    );
-  }
-  
-  // Normalizar status (Chatwoot puede enviar números o strings diferentes)
-  let normalizedStatus: string = 'delivered';
-  
-  if (typeof status === 'number') {
-    // Chatwoot status: 0=sent, 1=delivered, 2=read, 3=failed
-    const statusMap: Record<number, string> = { 0: 'sent', 1: 'delivered', 2: 'read', 3: 'failed' };
-    normalizedStatus = statusMap[status] ?? 'delivered';
-  } else if (typeof status === 'string') {
-    // Normalizar variaciones de strings
-    const statusLower = status.toLowerCase();
-    if (statusLower === 'sending' || statusLower === 'pending' || statusLower === 'progress') {
-      normalizedStatus = 'sending';
-    } else if (statusLower === 'sent' || statusLower === 'created') {
-      normalizedStatus = 'sent';
-    } else if (statusLower === 'delivered') {
-      normalizedStatus = 'delivered';
-    } else if (statusLower === 'read' || statusLower === 'seen') {
-      normalizedStatus = 'read';
-    } else if (statusLower === 'failed' || statusLower === 'error') {
-      normalizedStatus = 'failed';
-    } else {
-      // Para cualquier otro valor desconocido, mostrar delivered
-      normalizedStatus = 'delivered';
-    }
-  }
-  
-  switch (normalizedStatus) {
-    case 'sending':
-      // Reloj girando - mensaje enviándose
-      return (
-        <svg className={`w-3 h-3 ${baseColor} animate-spin`} fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      );
-    case 'failed':
-      // Error - mensaje no enviado
-      return (
-        <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      );
-    case 'sent':
-      // 1 check - enviado al servidor
-      return (
-        <svg className={`w-3 h-3 ${baseColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-        </svg>
-      );
-    case 'read':
-      // 2 checks azules - leído
-      return (
-        <svg className={`w-4 h-3 ${readColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 7l4 4L14 3" />
-          <path d="M8 7l4 4L20 3" />
-        </svg>
-      );
-    case 'delivered':
-    default:
-      // 2 checks grises - entregado al dispositivo (default)
-      return (
-        <svg className={`w-4 h-3 ${baseColor}`} viewBox="0 0 24 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 7l4 4L14 3" />
-          <path d="M8 7l4 4L20 3" />
-        </svg>
-      );
-  }
-};
-
-
-  // Helper: Formatea preview del ultimo mensaje (con limpieza de formato)
-  const formatLastMessagePreview = (message, attachments?: any[]) => {
-    // 🆕 NUEVO: Si no hay contenido pero hay attachments, mostrar tipo de archivo
-    if ((!message || message.trim() === '') && attachments && attachments.length > 0) {
-      const attachment = attachments[0];
-      const fileType = attachment.file_type || attachment.content_type || '';
-      const fileName = attachment.data_url?.split('/').pop() || attachment.file_name || 'archivo';
-      
-      if (fileType.startsWith('image/')) return '📷 Imagen';
-      if (fileType.startsWith('video/')) return '🎥 Video';
-      if (fileType.startsWith('audio/')) return '🎵 Audio';
-      if (fileType.includes('pdf')) return '📄 PDF';
-      if (fileType.includes('document') || fileType.includes('word')) return '📄 Documento';
-      if (fileType.includes('sheet') || fileType.includes('excel')) return '📊 Hoja de cálculo';
-      
-      return `📎 ${fileName}`;
-    }
-    
-    if (!message) return "";
-    
-    // Limpiar mensaje de formato markdown/HTML
-    let cleanMessage = message;
-    
-    // Eliminar citas/replies (> texto)
-    cleanMessage = cleanMessage.replace(/^>\s*[^:]+:\s*/gm, "");
-    
-    // Eliminar markdown bold (**texto** o __texto__)
-    cleanMessage = cleanMessage.replace(/\*\*([^*]+)\*\*/g, "$1");
-    cleanMessage = cleanMessage.replace(/__([^_]+)__/g, "$1");
-    
-    // Eliminar markdown italic (*texto* o _texto_)
-    cleanMessage = cleanMessage.replace(/\*([^*]+)\*/g, "$1");
-    cleanMessage = cleanMessage.replace(/_([^_]+)_/g, "$1");
-    
-    // Eliminar saltos de l??nea m??ltiples
-    cleanMessage = cleanMessage.replace(/\n+/g, " ").trim();
-    
-    // Si es URL de imagen
-    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp)$/i;
-    if (imageExtensions.test(cleanMessage) || 
-        cleanMessage.includes("active_storage") || 
-        cleanMessage.includes("chatwoot-admin")) {
-      return "📷 Imagen";
-    }
-    
-    // URL larga generica
-    if (cleanMessage.startsWith("http") && cleanMessage.length > 50) {
-      return "🔗 Enlace";
-    }
-    
-    // Multimedia (incluir .oga, .opus, .aac para audios de WhatsApp)
-    if (/\.(mp3|wav|ogg|oga|opus|m4a|aac|amr|3gp)$/i.test(cleanMessage)) return "🎵 Audio";
-    if (/\.(mp4|mov|avi|webm|mkv)$/i.test(cleanMessage)) return "🎥 Video";
-    if (/\.(pdf|doc|docx|xls|xlsx)$/i.test(cleanMessage)) return "📄 Documento";
-    
-    return cleanMessage;
-  };
-
-
-  // Helper: Formatea el avatar para mostrar solo iniciales
-  const formatAvatar = (avatar, name) => {
-    // Si el avatar es una URL, extraer iniciales del nombre
-    if (avatar && (avatar.startsWith('http') || avatar.includes('/'))) {
-      return name?.charAt(0).toUpperCase() || 'U';
-    }
-    // Si ya son iniciales, retornar tal cual
-    return avatar || name?.charAt(0).toUpperCase() || 'U';
-  };
-
-  // Helper: Obtiene la URL del avatar a través del proxy si es de Chatwoot
-  const getAvatarProxyUrl = (avatarUrl: string | null | undefined, contactName?: string): string | null => {
-    if (!avatarUrl) return null;
-    // Si es una URL de Chatwoot Railway, usar el proxy
-    if (avatarUrl.includes('chatwoot') && avatarUrl.includes('railway.app')) {
-      const nameParam = contactName ? `&name=${encodeURIComponent(contactName)}` : '';
-      return `/img-proxy?url=${encodeURIComponent(avatarUrl)}${nameParam}`;
-    }
-    // Para otras URLs, retornar directamente
-    return avatarUrl;
-  };
+// MessageStatus component extracted to ./conversations/MessageStatus.tsx
+// Utility functions extracted to ../utils/conversationHelpers.ts
 
 // Props del componente
 interface ConversationsInterfaceProps {
@@ -419,7 +249,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         return new Set(JSON.parse(saved));
       }
     } catch (e) {
-      console.error('Error loading muted conversations:', e);
+      debugLog.error('Error loading muted conversations:', e);
     }
     return new Set();
   });
@@ -849,14 +679,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         }
         return true;
       } else {
-        console.log('❌ Conversación no encontrada en lista:', conversationId);
+        // Conversación no encontrada en lista
       }
       return false;
     };
 
     // Si hay una conversación pendiente y ahora tenemos conversaciones, seleccionarla
     if (pendingConversationRef.current && conversations && conversations.length > 0) {
-      console.log('🔔 Intentando seleccionar conversación pendiente:', pendingConversationRef.current);
       selectConversationById(pendingConversationRef.current);
     }
 
@@ -901,17 +730,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Si el usuario está cerca del tope (menos de 50px del inicio)
       const isNearTop = container.scrollTop < 50;
       
-      // Debug: mostrar estado actual
-      if (isNearTop) {
-        console.log('🔍 Estado scroll:', {
-          scrollTop: container.scrollTop,
-          hasMoreMessages: activeConversation?._hasMoreMessages,
-          isLoading: activeConversation?._isLoading,
-          isLoadingMore: isLoadingMoreRef.current,
-          messagesCount: activeConversation?.messages?.length
-        });
-      }
-      
       // Cargar si: está cerca del tope, no está cargando, y tiene mensajes (asumimos que siempre hay más si no sabemos)
       const hasMore = activeConversation?._hasMoreMessages !== false; // true o undefined = intentar cargar
       
@@ -921,7 +739,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           !isLoadingMoreRef.current &&
           activeConversation?.messages?.length > 0) {
         
-        console.log('📜 Cargando más mensajes...');
         isLoadingMoreRef.current = true;
         lastLoadTimeRef.current = now;
         
@@ -934,7 +751,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             setTimeout(() => {
               const newScrollHeight = container.scrollHeight;
               const addedHeight = newScrollHeight - prevScrollHeight;
-              console.log('✅ Mensajes cargados:', { prevHeight: prevScrollHeight, newHeight: newScrollHeight, added: addedHeight });
               // Mover el scroll hacia abajo por la cantidad de contenido nuevo
               if (addedHeight > 0) {
                 container.scrollTop = addedHeight + 50; // +50 para no re-disparar inmediatamente
@@ -943,7 +759,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             }, 150);
           })
           .catch((err) => {
-            console.error('❌ Error cargando mensajes:', err);
+            debugLog.error('❌ Error cargando mensajes:', err);
             isLoadingMoreRef.current = false;
           });
       }
@@ -996,15 +812,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     // Evitar suscripciones duplicadas - solo suscribirse una vez
     if (hasSubscribedRef.current) {
-      console.log('🔌 [ConversationsInterface] Ya suscrito, ignorando');
       return;
     }
     hasSubscribedRef.current = true;
-    
-    // Log solo en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔌 [ConversationsInterface] Suscribiéndose a WebSocket');
-    }
     
     const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
       setLastEventTime(new Date());
@@ -1070,7 +880,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         // Verificar si alguna clave ya existe
         const isDuplicate = dedupKeys.some(key => processedEventsRef.current.has(key));
         if (isDuplicate) {
-          console.log('🚫 [DEDUP] Mensaje duplicado ignorado:', { messageId, sourceId, content: content.substring(0, 30) });
           return;
         }
         
@@ -1405,9 +1214,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                              conv.contact?.avatar_url ||
                              conv.contact?.avatarUrl ||
                              null;
-            
-            // Debug temporal
-            debugLog.log(' Avatar para', conv.contact?.name, ':', avatarUrl);
             
             return {
               ...conv,
@@ -1899,10 +1705,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
-        console.log(`🔔 Notificaciones activadas para conversación ${id}`);
       } else {
         newSet.add(id);
-        console.log(`🔕 Notificaciones silenciadas para conversación ${id}`);
       }
       // Persistir en localStorage
       localStorage.setItem('mutedConversations', JSON.stringify([...newSet]));
@@ -1929,7 +1733,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       );
       debugLog.log(`✅ Conversación ${activeConversation.id} asignada a agente ${agentId}`);
     } catch (error) {
-      console.error('Error asignando conversación:', error);
+      debugLog.error('Error asignando conversación:', error);
     }
   };
 
@@ -1948,7 +1752,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       );
       debugLog.log(`✅ Estado de conversación ${activeConversation.id} cambiado a ${status}`);
     } catch (error) {
-      console.error('Error cambiando estado:', error);
+      debugLog.error('Error cambiando estado:', error);
     }
   };
 
@@ -1971,7 +1775,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       );
       debugLog.log(`✅ Etiquetas actualizadas para conversación ${activeConversation.id}:`, labels);
     } catch (error) {
-      console.error('Error actualizando etiquetas:', error);
+      debugLog.error('Error actualizando etiquetas:', error);
     }
   };
   

@@ -63,7 +63,6 @@ export default function Onboarding({
     const authToken = urlParams.get('auth_token');
     if (authToken) {
       localStorage.setItem('railway_auth_token', authToken);
-      console.log('[Onboarding] Auth token saved from URL');
     }
   }, []);
 
@@ -148,7 +147,7 @@ export default function Onboarding({
         const parsedData = JSON.parse(savedData);
         setFormData((prev) => ({ ...prev, ...parsedData }));
       } catch (error) {
-        console.log("Error loading saved onboarding data:", error);
+        // Silently handled
       }
     }
   }, []);
@@ -193,36 +192,27 @@ export default function Onboarding({
     setIsSearching(true);
 
     try {
-      const API_KEY = "AIzaSyC-nS8Eu0l_GKNftmlIJ8KbWtiATkTF24o";
-      const SEARCH_ENGINE_ID = "13a9622dd2a6945db";
-
       const response = await fetch(
-        "https://www.googleapis.com/customsearch/v1?key=" +
-          API_KEY +
-          "&cx=" +
-          SEARCH_ENGINE_ID +
-          "&q=" +
-          encodeURIComponent(query) +
-          "&num=5"
+        `/api/google-search?q=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        }
       );
 
       const data = await response.json();
 
-      if (data.items && data.items.length > 0) {
-        const formatted = data.items.map((item: any) => ({
-          title: item.title,
-          description: item.snippet,
-          domain: item.link,
-        }));
-
-        setSuggestions(formatted);
+      if (data.success && data.items && data.items.length > 0) {
+        setSuggestions(data.items);
         setShowDropdown(true);
       } else {
         setSuggestions([]);
         setShowDropdown(false);
       }
     } catch (error) {
-      console.error("Error buscando:", error);
       setSuggestions([]);
       setShowDropdown(false);
     }
@@ -366,7 +356,6 @@ export default function Onboarding({
         );
       }
     } catch (error) {
-      console.error("Error saving step:", error);
       showNotification("Error al guardar. Intenta de nuevo.", "error");
     }
     setLoading(false);
@@ -668,7 +657,6 @@ export default function Onboarding({
                     }
                   } catch (error) {
                     showNotification("Error de conexión. Intenta de nuevo.", "error");
-                    console.error(error);
                   } finally {
                     btn.disabled = false;
                     btn.textContent = "✨ Mejorar con WITHMIA";
@@ -1737,7 +1725,6 @@ export default function Onboarding({
               window.location.href = "/login";
             })
             .catch((err) => {
-              console.log("Logout completed");
               window.location.href = "/login";
             });
         }}

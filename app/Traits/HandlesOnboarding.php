@@ -48,31 +48,31 @@ trait HandlesOnboarding
         // 📦 Crear colección Qdrant si no existe
         if (empty($company->settings['qdrant_collection'])) {
             try {
-                Log::debug("📦 Creating Qdrant collection: {$uniqueSlug}");
-                CreateQdrantCollectionJob::dispatchSync($company->id, $uniqueSlug);
+                Log::debug("📦 Dispatching Qdrant collection creation: {$uniqueSlug}");
+                CreateQdrantCollectionJob::dispatch($company->id, $uniqueSlug);
             } catch (\Exception $e) {
-                Log::error("Error creating Qdrant: " . $e->getMessage());
+                Log::error("Error dispatching Qdrant job: " . $e->getMessage());
             }
         }
 
         // 🚀 Crear workflows n8n (RAG + Training)
         try {
-            Log::debug("🚀 Creating n8n workflows for: {$uniqueSlug}");
-            CreateN8nWorkflowsJob::dispatchSync($company->id, $uniqueSlug);
+            Log::debug("🚀 Dispatching n8n workflows for: {$uniqueSlug}");
+            CreateN8nWorkflowsJob::dispatch($company->id, $uniqueSlug);
         } catch (\Exception $e) {
-            Log::error("Error creating n8n workflows: " . $e->getMessage());
+            Log::error("Error dispatching n8n workflows: " . $e->getMessage());
         }
 
         // 📧 Enviar correos
         try {
-            PostOnboardingSetupJob::dispatchSync(
+            PostOnboardingSetupJob::dispatch(
                 $user->id,
                 $company->id,
                 $uniqueSlug,
                 $request->ip() ?? '0.0.0.0'
             );
         } catch (\Exception $e) {
-            Log::error("Error in PostOnboardingSetupJob: " . $e->getMessage());
+            Log::error("Error dispatching PostOnboardingSetupJob: " . $e->getMessage());
         }
 
         $dashboardUrl = route('dashboard.company', ['companySlug' => $uniqueSlug]) . '?auth_token=' . $user->auth_token;

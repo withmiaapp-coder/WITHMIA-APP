@@ -6,7 +6,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\JsonResponse;
 use App\Models\User;
+use App\Models\WhatsAppInstance;
+use App\Models\KnowledgeDocument;
 use App\Observers\UserObserver;
+use App\Observers\WhatsAppInstanceObserver;
+use App\Observers\KnowledgeDocumentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -70,7 +74,7 @@ class AppServiceProvider extends ServiceProvider
         // Macro para n8n API
         Http::macro('n8n', function () {
             return Http::withHeaders([
-                'X-N8N-API-KEY' => config('services.n8n.api_key'),
+                'X-N8N-API-KEY' => config('n8n.api_key'),
                 'Content-Type' => 'application/json',
             ])->timeout(30);
         });
@@ -83,7 +87,9 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
         
-        // Registrar Observer para el modelo User
+        // Registrar Observers
         User::observe(UserObserver::class);
+        WhatsAppInstance::observe(WhatsAppInstanceObserver::class);
+        KnowledgeDocument::observe(KnowledgeDocumentObserver::class);
     }
 }
