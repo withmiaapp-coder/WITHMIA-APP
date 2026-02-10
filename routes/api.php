@@ -73,7 +73,21 @@ Route::get('/chatwoot-diag', function () {
 
     $results['php_version'] = PHP_VERSION;
     $results['laravel_version'] = app()->version();
+    $results['log_channel'] = config('logging.default');
+    $results['log_stack_channels'] = config('logging.channels.stack.channels');
     $results['timestamp'] = now()->toIso8601String();
+
+    // Test: try to instantiate ChatwootConversationController
+    try {
+        $controller = app(\App\Http\Controllers\Api\ChatwootConversationController::class);
+        $results['controller_instantiation'] = 'OK';
+    } catch (\Throwable $e) {
+        $results['controller_error'] = get_class($e) . ': ' . $e->getMessage();
+        $results['controller_error_file'] = $e->getFile() . ':' . $e->getLine();
+    }
+
+    // Test Log to stderr
+    \Illuminate\Support\Facades\Log::info('[WITHMIA-DIAG] diagnostic route called');
 
     return response()->json($results);
 });
@@ -133,7 +147,14 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(
 // 6. CHATWOOT PROXY (auth via RailwayAuthToken)
 // ============================================================================
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->prefix('chatwoot-proxy')->group(function () {
-
+    // --- DEBUG: Test route to isolate middleware vs controller errors ---
+    Route::get('/ping', function () {
+        return response()->json([
+            'pong' => true,
+            'user' => auth()->id(),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    });
     // --- Conversaciones ---
     Route::get('/conversations', [ChatwootConversationController::class, 'getConversations']);
     Route::get('/conversations/export-all', [ChatwootConversationController::class, 'exportAllConversationsWithMessages']);
