@@ -149,8 +149,18 @@ class ChatwootController extends Controller
             $labels = $request->input('labels', []);
             $chatwootDb = $this->chatwootDb();
 
+            Log::info('[WITHMIA] updateConversationLabels ENTRY', [
+                'conversationId' => $conversationId,
+                'labels' => $labels,
+                'accountId' => $this->accountId,
+                'inboxId' => $this->inboxId,
+            ]);
+
             $conversation = $this->findConversation($conversationId);
             if (!$conversation) {
+                Log::warning('[WITHMIA] updateConversationLabels: conversation not found', [
+                    'conversationId' => $conversationId,
+                ]);
                 return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
             }
 
@@ -164,23 +174,36 @@ class ChatwootController extends Controller
                     ->toArray();
             }
 
-            // Chatwoot almacena labels como text[] en la columna label_list
-            $pgArray = '{' . implode(',', array_map(fn($l) => '"' . addslashes($l) . '"', $validLabels)) . '}';
+            Log::info('[WITHMIA] updateConversationLabels: valid labels resolved', [
+                'input_labels' => $labels,
+                'valid_labels' => $validLabels,
+                'conv_id' => $conversation->id,
+            ]);
 
-            $chatwootDb->table('conversations')
-                ->where('id', $conversation->id)
-                ->update([
-                    'label_list' => $pgArray,
-                    'updated_at' => now(),
-                ]);
+            // Chatwoot almacena labels como text[] en la columna label_list
+            // Usar raw SQL con cast ::text[] para evitar problemas de tipo
+            $pgArrayLiteral = '{' . implode(',', $validLabels) . '}';
+
+            $chatwootDb->update(
+                'UPDATE conversations SET label_list = ?::text[], updated_at = NOW() WHERE id = ?',
+                [$pgArrayLiteral, $conversation->id]
+            );
 
             // Retornar labels enriquecidos con metadata
-            $updatedLabels = $chatwootDb->table('labels')
-                ->where('account_id', $this->accountId)
-                ->whereIn('title', $validLabels)
-                ->select('id', 'title', 'color')
-                ->get()
-                ->toArray();
+            $updatedLabels = [];
+            if (!empty($validLabels)) {
+                $updatedLabels = $chatwootDb->table('labels')
+                    ->where('account_id', $this->accountId)
+                    ->whereIn('title', $validLabels)
+                    ->select('id', 'title', 'color')
+                    ->get()
+                    ->toArray();
+            }
+
+            Log::info('[WITHMIA] updateConversationLabels SUCCESS', [
+                'conv_id' => $conversation->id,
+                'labels_set' => $validLabels,
+            ]);
 
             return response()->json(['success' => true, 'labels' => $updatedLabels]);
         } catch (\Throwable $e) {
