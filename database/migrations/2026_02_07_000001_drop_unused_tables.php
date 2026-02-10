@@ -21,10 +21,11 @@ return new class extends Migration
     public function up(): void
     {
         // Drop orphaned tables with no models and 0 rows
+        // Order matters: drop tables with FKs first (usage_metrics references ai_agents)
         $tablesToDrop = [
+            'usage_metrics',
             'ai_agents',
             'subscriptions',
-            'usage_metrics',
             'custom_configs',
             'integrations',
         ];
