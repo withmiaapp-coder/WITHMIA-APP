@@ -95,7 +95,7 @@ interface Conversation {
     timestamp: string;
     sender: 'agent' | 'contact';
   };
-  status: 'open' | 'resolved' | 'pending';
+  status: 'open' | 'resolved' | 'pending' | 'snoozed';
   priority: 'urgent' | 'high' | 'medium' | 'low';
   labels: string[];
   unread_count: number;
@@ -1722,14 +1722,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const handleAssignConversation = async (agentId: number | null) => {
     if (!activeConversation) return;
     try {
-      await assignConversation(activeConversation.id, agentId);
-      // Actualizar la conversación localmente
-      setConversations((prev: Conversation[]) => 
-        prev.map((conv: Conversation) => 
-          conv.id === activeConversation.id 
-            ? { ...conv, assignee_id: agentId } 
-            : conv
-        )
+      const result = await assignConversation(activeConversation.id, agentId);
+      // Actualizar la conversación activa (el hook ya actualiza setConversations)
+      _setActiveConversation((prev: Conversation | null) => 
+        prev ? { ...prev, assignee_id: agentId, assignee: result?.assignee || null } : null
       );
       debugLog.log(`✅ Conversación ${activeConversation.id} asignada a agente ${agentId}`);
     } catch (error) {
@@ -1741,14 +1737,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const handleChangeStatus = async (status: string, snoozedUntil?: number) => {
     if (!activeConversation) return;
     try {
-      await changeConversationStatus(activeConversation.id, status, snoozedUntil);
-      // Actualizar la conversación localmente
-      setConversations((prev: Conversation[]) => 
-        prev.map((conv: Conversation) => 
-          conv.id === activeConversation.id 
-            ? { ...conv, status: status as 'open' | 'resolved' | 'pending' } 
-            : conv
-        )
+      await changeConversationStatus(
+        activeConversation.id, 
+        status as 'open' | 'resolved' | 'pending' | 'snoozed', 
+        snoozedUntil
+      );
+      // Actualizar la conversación activa (el hook ya actualiza setConversations)
+      _setActiveConversation((prev: Conversation | null) => 
+        prev ? { ...prev, status: status as 'open' | 'resolved' | 'pending' | 'snoozed' } : null
       );
       debugLog.log(`✅ Estado de conversación ${activeConversation.id} cambiado a ${status}`);
     } catch (error) {
@@ -1761,17 +1757,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     if (!activeConversation) return;
     try {
       await updateConversationLabels(activeConversation.id, labels);
-      // Actualizar la conversación activa
+      // Actualizar la conversación activa (el hook ya actualiza setConversations)
       _setActiveConversation((prev: Conversation | null) => 
         prev ? { ...prev, labels } : null
-      );
-      // Actualizar la lista de conversaciones
-      setConversations((prev: Conversation[]) => 
-        prev.map((conv: Conversation) => 
-          conv.id === activeConversation.id 
-            ? { ...conv, labels } 
-            : conv
-        )
       );
       debugLog.log(`✅ Etiquetas actualizadas para conversación ${activeConversation.id}:`, labels);
     } catch (error) {

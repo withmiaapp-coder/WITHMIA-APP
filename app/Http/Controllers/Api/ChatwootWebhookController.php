@@ -232,21 +232,19 @@ class ChatwootWebhookController extends Controller
                 return;
             }
             
-            $inboxName = $data['inbox']['name'] ?? null;
+            // Resolver company slug desde inbox_id (DB lookup con cache, fallback inbox name)
+            $companySlug = $this->resolveCompanySlugFromInbox($inboxId, $data);
             
-            // Determinar el instance slug desde el inbox name
-            $instanceSlug = $inboxName ? preg_replace('/^WhatsApp\s+/i', '', $inboxName) : null;
-            
-            if (!$instanceSlug) {
-                Log::warning('🔊 No se pudo determinar instanceSlug para n8n forward', [
-                    'inbox_name' => $inboxName,
+            if (!$companySlug) {
+                Log::warning('🔊 No se pudo determinar companySlug para n8n forward', [
                     'inbox_id' => $inboxId,
+                    'inbox_name' => $data['inbox']['name'] ?? null,
                 ]);
                 return;
             }
             
             Log::info('🔀 Despachando ForwardToN8nWithEnrichmentJob', [
-                'instance' => $instanceSlug,
+                'company_slug' => $companySlug,
                 'message_id' => $data['id'] ?? null,
             ]);
             
@@ -254,7 +252,7 @@ class ChatwootWebhookController extends Controller
                 $data,
                 $inboxId,
                 $accountId,
-                $instanceSlug,
+                $companySlug,
             );
             
         } catch (\Exception $e) {
@@ -262,6 +260,36 @@ class ChatwootWebhookController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Resolver el company slug desde un inbox_id.
+     * Cadena de fallback: WhatsAppInstance → Company → inbox name parsing (legacy)
+     */
+    private function resolveCompanySlugFromInbox(?int $inboxId, array $data): ?string
+    {
+        if (!$inboxId) return null;
+
+        // 1. Buscar en WhatsAppInstance por chatwoot_inbox_id (cached 10 min)
+        $companySlug = \Illuminate\Support\Facades\Cache::remember(
+            "inbox_to_company:{$inboxId}",
+            600,
+            function () use ($inboxId) {
+                return \App\Models\WhatsAppInstance::where('chatwoot_inbox_id', $inboxId)
+                    ->where('is_active', true)
+                    ->value('company_slug');
+            }
+        );
+
+        if ($companySlug) return $companySlug;
+
+        // 2. Fallback: buscar en Company por chatwoot_inbox_id
+        $companySlug = \App\Models\Company::where('chatwoot_inbox_id', $inboxId)->value('slug');
+        if ($companySlug) return $companySlug;
+
+        // 3. Fallback legacy: derivar del nombre del inbox (ej: "WhatsApp mi-empresa" → "mi-empresa")
+        $inboxName = $data['inbox']['name'] ?? null;
+        return $inboxName ? preg_replace('/^WhatsApp\s+/i', '', $inboxName) : null;
     }
 
     /**
@@ -491,9 +519,8 @@ class ChatwootWebhookController extends Controller
                 return;
             }
             
-            // Limpiar el número de teléfono
-            $phoneNumber = preg_replace('/[^0-9]/', '', $identifier);
-            $phoneNumber = preg_replace('/^(\+|00)/', '', $phoneNumber);
+            // Limpiar el número de teléfono usando PhoneNormalizer (consistente con el resto del sistema)
+            $phoneNumber = PhoneNormalizer::normalize($identifier);
             
             if (!$phoneNumber) {
                 return;
@@ -537,6 +564,21 @@ class ChatwootWebhookController extends Controller
      */
     private function getUnlockKeywordForInbox(int $inboxId): string
     {
+        // Cache para evitar llamadas HTTP a n8n en cada mensaje entrante
+        return \Illuminate\Support\Facades\Cache::remember(
+            "unlock_keyword_inbox:{$inboxId}",
+            300, // 5 minutos
+            function () use ($inboxId) {
+                return $this->fetchUnlockKeywordFromN8n($inboxId);
+            }
+        );
+    }
+
+    /**
+     * Fetch unlock keyword from n8n workflow (sin cache)
+     */
+    private function fetchUnlockKeywordFromN8n(int $inboxId): string
+    {
         try {
             // Buscar la instancia de WhatsApp asociada al inbox
             $instance = \App\Models\WhatsAppInstance::where('chatwoot_inbox_id', $inboxId)
@@ -557,8 +599,9 @@ class ChatwootWebhookController extends Controller
             
             // Buscar el nodo "Verifica Palabra Clave"
             foreach ($result['data']['nodes'] as $node) {
-                if ($node['name'] === 'Verifica Palabra Clave') {
-                    return $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? 'BOTA';
+                if (in_array($node['name'], ['Verifica Palabra Clave', 'Verifica Palabra Clave Saliente'])) {
+                    $keyword = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? null;
+                    if ($keyword) return strtoupper($keyword);
                 }
             }
             

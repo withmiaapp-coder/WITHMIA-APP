@@ -96,19 +96,47 @@ class ChatwootConversationController extends Controller
             $conversationIds = $conversationsFromDb->pluck('id')->toArray();
             $lastMessages = [];
             if (!empty($conversationIds)) {
-                $lastMessagesRaw = $chatwootDb->table('messages')
-                    ->select('messages.*')
+                // Subquery para obtener el MAX(id) por conversation_id
+                $maxIdsSubquery = $chatwootDb->table('messages')
+                    ->select('conversation_id', $chatwootDb->raw('MAX(id) as max_id'))
                     ->whereIn('conversation_id', $conversationIds)
                     ->whereIn('message_type', [0, 1])
-                    ->whereRaw('messages.id = (
-                        SELECT MAX(m2.id) FROM messages m2 
-                        WHERE m2.conversation_id = messages.conversation_id 
-                        AND m2.message_type IN (0, 1)
-                    )')
+                    ->groupBy('conversation_id');
+
+                $lastMessagesRaw = $chatwootDb->table('messages')
+                    ->joinSub($maxIdsSubquery, 'latest', function ($join) {
+                        $join->on('messages.id', '=', 'latest.max_id');
+                    })
                     ->get();
 
                 foreach ($lastMessagesRaw as $msg) {
                     $lastMessages[$msg->conversation_id] = $msg;
+                }
+            }
+
+            // Obtener labels de todas las conversaciones en una sola query
+            $internalConvIds = $conversationsFromDb->pluck('id')->toArray();
+            $labelsMap = [];
+            if (!empty($internalConvIds)) {
+                $convLabels = $chatwootDb->table('labels')
+                    ->whereIn('id', function ($q) use ($chatwootDb, $internalConvIds) {
+                        $q->select('label_id')
+                          ->from('conversations_labels')
+                          ->whereIn('conversation_id', $internalConvIds);
+                    })
+                    ->select('id', 'title')
+                    ->get()
+                    ->keyBy('id');
+
+                $convLabelRows = $chatwootDb->table('conversations_labels')
+                    ->whereIn('conversation_id', $internalConvIds)
+                    ->get();
+
+                foreach ($convLabelRows as $row) {
+                    $label = $convLabels[$row->label_id] ?? null;
+                    if ($label) {
+                        $labelsMap[$row->conversation_id][] = $label->title;
+                    }
                 }
             }
 
@@ -151,6 +179,7 @@ class ChatwootConversationController extends Controller
                         'message_type' => $lastMessage->message_type,
                         'created_at' => $this->utcToTimestamp($lastMessage->created_at)
                     ]] : [],
+                    'labels' => $labelsMap[$conv->id] ?? [],
                     'unread_count' => $conv->unread_count ?? 0,
                     'created_at' => $this->utcToTimestamp($conv->created_at),
                     'last_activity_at' => $this->utcToTimestamp($conv->last_activity_at) ?? $this->utcToTimestamp($conv->created_at),
@@ -185,7 +214,7 @@ class ChatwootConversationController extends Controller
             Log::error('Error fetching conversations: ' . $e->getMessage(), [
                 'user_id' => $this->userId, 'account_id' => $this->accountId, 'inbox_id' => $this->inboxId
             ]);
-            return response()->json(['success' => true, 'data' => ['payload' => []]]);
+            return response()->json(['success' => false, 'data' => ['payload' => []], 'error' => 'Error al obtener conversaciones'], 500);
         }
     }
 

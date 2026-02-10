@@ -3,12 +3,28 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\EvolutionApiService;
+use App\Services\ChatwootService;
 use App\Traits\ChatwootDbAccess;
 use App\Traits\ResolvesChatwootConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * ChatwootMessageController
+ *
+ * Envío de mensajes directamente via Chatwoot API.
+ * Chatwoot enruta automáticamente al canal correcto (WhatsApp, Web, Email, etc.)
+ *
+ * FLUJO:
+ *   App (frontend) → Laravel proxy → Chatwoot API → Canal destino
+ *
+ * SOPORTA:
+ *   - Mensajes de texto
+ *   - Notas privadas (private: true) — solo visibles para agentes
+ *   - Archivos vía base64 (imágenes, videos, audio, documentos)
+ *   - Archivos vía upload FormData
+ *   - Audio/voice messages
+ */
 class ChatwootMessageController extends Controller
 {
     use ResolvesChatwootConfig, ChatwootDbAccess;
@@ -16,211 +32,326 @@ class ChatwootMessageController extends Controller
     private $accountId;
     private $inboxId;
     private $userId;
-    private EvolutionApiService $evolutionApi;
+    private ChatwootService $chatwootService;
 
-    public function __construct(EvolutionApiService $evolutionApi)
+    public function __construct(ChatwootService $chatwootService)
     {
-        $this->evolutionApi = $evolutionApi;
+        $this->chatwootService = $chatwootService;
         $this->bootChatwootMiddleware();
     }
 
     /**
-     * Enviar mensaje a una conversación - VIA EVOLUTION API (SIN DUPLICADOS)
-     *
-     * FLUJO CORRECTO:
-     * 1. App → Evolution API → WhatsApp
-     * 2. Evolution → Chatwoot (un solo mensaje con source_id)
-     *
-     * SOPORTA:
-     * - Mensajes de texto
-     * - Archivos (imágenes, videos, audio, documentos)
+     * Enviar mensaje a una conversación via Chatwoot API
      */
     public function sendMessage(Request $request, $id)
     {
         try {
             if (!$this->inboxId) {
-                Log::warning('Usuario sin inbox_id intentó enviar mensaje', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id
-                ]);
                 return response()->json(['success' => false, 'message' => 'No tienes un inbox asignado'], 403);
             }
 
-            Log::debug('sendMessage: Buscando conversación', [
-                'conversation_id' => $id,
-                'account_id' => $this->accountId,
-                'inbox_id' => $this->inboxId,
-                'user_id' => $this->userId
-            ]);
-
-            // PASO 1: Validar que la conversación pertenece al inbox del usuario (BD DIRECTA)
-            $accountIdInt = (int) $this->accountId;
-
-            $conversation = $this->chatwootDb()
-                ->table('conversations')
-                ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
-                ->where(function ($q) use ($id) {
-                    $q->where('conversations.id', $id)->orWhere('conversations.display_id', $id);
-                })
-                ->where('conversations.account_id', $accountIdInt)
-                ->select(
-                    'conversations.id',
-                    'conversations.display_id',
-                    'conversations.inbox_id',
-                    'contacts.phone_number',
-                    'contacts.identifier'
-                )
-                ->first();
-
+            // PASO 1: Validar conversación y permisos
+            $conversation = $this->findAndValidateConversation($id);
             if (!$conversation) {
-                $convExists = $this->chatwootDb()
-                    ->table('conversations')
-                    ->where(function ($q) use ($id) {
-                        $q->where('id', $id)->orWhere('display_id', $id);
-                    })
-                    ->first(['id', 'display_id', 'account_id', 'inbox_id']);
-
-                Log::warning('Conversación no encontrada al enviar mensaje', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'account_id_used' => $accountIdInt,
-                    'conv_exists_in_other_account' => $convExists ? true : false,
-                    'conv_actual_account' => $convExists->account_id ?? 'N/A',
-                    'conv_actual_inbox' => $convExists->inbox_id ?? 'N/A'
-                ]);
-
-                return response()->json(['success' => false, 'message' => 'Conversación no encontrada'], 404);
+                return response()->json(['success' => false, 'message' => 'Conversación no encontrada o sin permisos'], 404);
             }
 
-            // PASO 2: VALIDACIÓN DE SEGURIDAD
-            if (!$conversation->inbox_id || $conversation->inbox_id != $this->inboxId) {
-                Log::warning('Intento de envío de mensaje no autorizado', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'conversation_inbox_id' => $conversation->inbox_id ?? 'null',
-                    'user_inbox_id' => $this->inboxId
-                ]);
-                return response()->json(['success' => false, 'message' => 'No tienes permiso para enviar mensajes a esta conversación'], 403);
-            }
+            $isPrivate = (bool) $request->input('private', false);
+            $conversationDisplayId = $conversation->display_id;
 
-            // PASO 3: Obtener teléfono del contacto
-            $contactPhone = $conversation->phone_number ?? null;
-            $contactIdentifier = $conversation->identifier ?? null;
+            // PASO 2: Detectar tipo de contenido y enviar
 
-            if (!$contactPhone && $contactIdentifier) {
-                $contactPhone = preg_replace('/@.*$/', '', $contactIdentifier);
-            }
-
-            if (!$contactPhone) {
-                Log::error('No se pudo obtener teléfono del contacto', ['conversation_id' => $id]);
-                return response()->json(['success' => false, 'message' => 'No se pudo obtener el teléfono del contacto'], 400);
-            }
-
-            // PASO 4: Detectar si es archivo (base64 o upload tradicional)
+            // MÉTODO 1: Archivo como base64 (imágenes, audio, docs)
             $fileBase64 = $request->input('file_base64');
             $fileName = $request->input('file_name');
             $fileType = $request->input('file_type');
 
-            // MÉTODO 1: Archivo enviado como base64
             if ($fileBase64 && $fileName && $fileType) {
-                Log::debug('📦 Archivo recibido como base64', [
-                    'fileName' => $fileName, 'fileType' => $fileType, 'base64_length' => strlen($fileBase64)
+                Log::debug('📦 Archivo base64 recibido', [
+                    'fileName' => $fileName,
+                    'fileType' => $fileType,
+                    'base64_length' => strlen($fileBase64),
                 ]);
-                return $this->sendBase64File($fileBase64, $fileName, $fileType, $id, $contactPhone);
+                return $this->handleBase64Attachment(
+                    $fileBase64, $fileName, $fileType, $conversationDisplayId,
+                    $request->input('content'), $isPrivate, $conversation
+                );
             }
 
             // MÉTODO 2: Upload tradicional (FormData)
-            // Use Laravel's request abstraction (Octane-safe, unlike $_FILES)
             $uploadedFile = $request->file('file') ?? $request->file('attachments') ?? $request->file('attachment');
-
-            if ($uploadedFile && !$uploadedFile->isValid()) {
-                $errorMsg = 'El archivo no se subió correctamente: ' . $uploadedFile->getErrorMessage();
-                Log::error('❌ Error de upload: ' . $errorMsg);
-                return response()->json(['success' => false, 'message' => $errorMsg], 400);
-            }
-
             if ($uploadedFile) {
-                Log::debug('📎 Archivo detectado, procesando...', [
+                if (!$uploadedFile->isValid()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El archivo no se subió correctamente: ' . $uploadedFile->getErrorMessage()
+                    ], 400);
+                }
+                Log::debug('📎 Archivo FormData recibido', [
                     'fileName' => $uploadedFile->getClientOriginalName(),
                     'mimeType' => $uploadedFile->getMimeType(),
-                    'size' => $uploadedFile->getSize()
+                    'size' => $uploadedFile->getSize(),
                 ]);
-                return $this->sendFileMessage($request, $id, $contactPhone);
+                return $this->handleUploadAttachment(
+                    $uploadedFile, $conversationDisplayId,
+                    $request->input('content'), $isPrivate, $conversation
+                );
             }
 
-            // PASO 5: Enviar mensaje de texto
+            // MÉTODO 3: Mensaje de texto
             $messageContent = $request->input('content');
-
             if (empty($messageContent)) {
                 return response()->json(['success' => false, 'message' => 'El mensaje no puede estar vacío'], 400);
             }
 
-            $evolutionResult = $this->sendToEvolutionAPI($contactPhone, $messageContent);
-
-            if ($evolutionResult) {
-                Log::channel('stderr')->info('✅ [SEND_MESSAGE] Mensaje enviado via Evolution', [
-                    'user_id' => $this->userId,
-                    'conversation_id' => $id,
-                    'phone' => $contactPhone,
-                    'message' => substr($messageContent, 0, 50)
-                ]);
-
-                $messagePayload = [
-                    'id' => 'sent-' . time() . '-' . rand(1000, 9999),
-                    'content' => $messageContent,
-                    'created_at' => now()->toISOString(),
-                    'message_type' => 1,
-                    'status' => 'sent',
-                    'sender' => [
-                        'id' => $this->userId,
-                        'name' => auth()->user()->name ?? 'Agent',
-                        'type' => 'user'
-                    ],
-                    'conversation_id' => $conversation->display_id ?? $id,
-                    '_fromAgent' => true
-                ];
-
-                // HUMAN TAKEOVER: Pausar bot cuando agente envía mensaje
-                $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
-
-                if ($phoneNumber) {
-                    try {
-                        $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
-
-                        $user = auth()->user();
-                        $botConfig = $this->getBotConfigForUser($user);
-                        $blockDuration = (int)($botConfig['block_duration'] ?? 60);
-
-                        $redis->setex($phoneNumber, $blockDuration, 'human-takeover');
-                        Log::channel('stderr')->info('🛑 [HUMAN_TAKEOVER] Bot PAUSADO', [
-                            'phone' => $phoneNumber,
-                            'duration_seconds' => $blockDuration
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::channel('stderr')->error('❌ [HUMAN_TAKEOVER] Error', [
-                            'error' => $e->getMessage(),
-                            'phone' => $phoneNumber
-                        ]);
-                    }
-                }
-
-                return response()->json(['success' => true, 'payload' => $messagePayload]);
-            }
-
-            return response()->json(['success' => false, 'message' => 'No se pudo enviar el mensaje a WhatsApp'], 500);
+            return $this->handleTextMessage($messageContent, $conversationDisplayId, $isPrivate, $conversation);
 
         } catch (\Exception $e) {
-            Log::error('💥 Chatwoot Send Message Error: ' . $e->getMessage(), [
+            Log::error('💥 SendMessage Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId,
-                'conversation_id' => $id
+                'conversation_id' => $id,
             ]);
             return $this->errorResponse($e);
         }
     }
 
+    // =========================================================================
+    // HANDLERS POR TIPO DE CONTENIDO
+    // =========================================================================
+
     /**
-     * Obtener configuración del bot para el usuario.
-     * Lee la configuración desde el workflow de n8n.
+     * Enviar mensaje de texto via Chatwoot API
+     */
+    private function handleTextMessage(string $content, int $conversationId, bool $isPrivate, object $conversation)
+    {
+        $result = $this->chatwootService->sendTextMessage(
+            $this->accountId,
+            $this->chatwootToken,
+            $conversationId,
+            $content,
+            $isPrivate
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el mensaje',
+                'error' => $result['error'] ?? 'Error desconocido',
+            ], $result['status'] ?? 500);
+        }
+
+        Log::channel('stderr')->info('✅ [SEND_MESSAGE] Mensaje enviado via Chatwoot API', [
+            'user_id' => $this->userId,
+            'conversation_id' => $conversationId,
+            'private' => $isPrivate,
+            'content_preview' => substr($content, 0, 50),
+        ]);
+
+        // Human Takeover: pausar bot cuando agente envía (solo mensajes públicos)
+        if (!$isPrivate) {
+            $this->activateHumanTakeover($conversation);
+        }
+
+        return response()->json([
+            'success' => true,
+            'payload' => $this->formatPayload($result['data'], $content),
+        ]);
+    }
+
+    /**
+     * Enviar archivo base64 via Chatwoot API
+     */
+    private function handleBase64Attachment(string $base64Data, string $fileName, string $mimeType, int $conversationId, ?string $caption, bool $isPrivate, object $conversation)
+    {
+        $result = $this->chatwootService->sendAttachmentMessage(
+            $this->accountId,
+            $this->chatwootToken,
+            $conversationId,
+            $base64Data,
+            $fileName,
+            $mimeType,
+            $caption,
+            $isPrivate
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el archivo',
+                'error' => $result['error'] ?? 'Error desconocido',
+            ], $result['status'] ?? 500);
+        }
+
+        Log::channel('stderr')->info('✅ [SEND_ATTACHMENT] Archivo enviado via Chatwoot API', [
+            'user_id' => $this->userId,
+            'conversation_id' => $conversationId,
+            'file_name' => $fileName,
+            'mime_type' => $mimeType,
+        ]);
+
+        if (!$isPrivate) {
+            $this->activateHumanTakeover($conversation);
+        }
+
+        return response()->json([
+            'success' => true,
+            'payload' => $this->formatPayload($result['data'], $caption ?: "📎 {$fileName}"),
+        ]);
+    }
+
+    /**
+     * Enviar archivo upload (FormData) via Chatwoot API
+     */
+    private function handleUploadAttachment($file, int $conversationId, ?string $caption, bool $isPrivate, object $conversation)
+    {
+        $result = $this->chatwootService->sendUploadMessage(
+            $this->accountId,
+            $this->chatwootToken,
+            $conversationId,
+            $file,
+            $caption,
+            $isPrivate
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el archivo',
+                'error' => $result['error'] ?? 'Error desconocido',
+            ], $result['status'] ?? 500);
+        }
+
+        $originalName = $file->getClientOriginalName();
+
+        Log::channel('stderr')->info('✅ [SEND_UPLOAD] Archivo upload enviado via Chatwoot API', [
+            'user_id' => $this->userId,
+            'conversation_id' => $conversationId,
+            'file_name' => $originalName,
+        ]);
+
+        if (!$isPrivate) {
+            $this->activateHumanTakeover($conversation);
+        }
+
+        return response()->json([
+            'success' => true,
+            'payload' => $this->formatPayload($result['data'], $caption ?: "📎 {$originalName}"),
+        ]);
+    }
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+
+    /**
+     * Validar que la conversación existe y el usuario tiene permisos.
+     * Retorna el registro con display_id, inbox_id, phone_number, identifier.
+     */
+    private function findAndValidateConversation($id): ?object
+    {
+        $accountIdInt = (int) $this->accountId;
+
+        $conversation = $this->chatwootDb()
+            ->table('conversations')
+            ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
+            ->where(function ($q) use ($id) {
+                $q->where('conversations.id', $id)->orWhere('conversations.display_id', $id);
+            })
+            ->where('conversations.account_id', $accountIdInt)
+            ->select(
+                'conversations.id',
+                'conversations.display_id',
+                'conversations.inbox_id',
+                'contacts.phone_number',
+                'contacts.identifier'
+            )
+            ->first();
+
+        if (!$conversation) {
+            Log::warning('Conversación no encontrada al enviar mensaje', [
+                'user_id' => $this->userId,
+                'conversation_id' => $id,
+                'account_id' => $accountIdInt,
+            ]);
+            return null;
+        }
+
+        // Validación de seguridad: inbox debe coincidir
+        if ($conversation->inbox_id != $this->inboxId) {
+            Log::warning('Intento de envío no autorizado', [
+                'user_id' => $this->userId,
+                'conversation_inbox_id' => $conversation->inbox_id,
+                'user_inbox_id' => $this->inboxId,
+            ]);
+            return null;
+        }
+
+        return $conversation;
+    }
+
+    /**
+     * Formatear respuesta de Chatwoot API al formato esperado por el frontend.
+     */
+    private function formatPayload(array $chatwootMessage, string $contentFallback): array
+    {
+        return [
+            'id' => $chatwootMessage['id'] ?? ('sent-' . time() . '-' . rand(1000, 9999)),
+            'content' => $chatwootMessage['content'] ?? $contentFallback,
+            'created_at' => $chatwootMessage['created_at'] ?? now()->toISOString(),
+            'message_type' => $chatwootMessage['message_type'] ?? 1,
+            'status' => 'sent',
+            'private' => $chatwootMessage['private'] ?? false,
+            'sender' => $chatwootMessage['sender'] ?? [
+                'id' => $this->userId,
+                'name' => auth()->user()->name ?? 'Agent',
+                'type' => 'user',
+            ],
+            'attachments' => $chatwootMessage['attachments'] ?? [],
+            'conversation_id' => $chatwootMessage['conversation_id'] ?? null,
+            '_fromAgent' => true,
+        ];
+    }
+
+    /**
+     * HUMAN TAKEOVER: Pausar bot cuando agente envía mensaje.
+     * Escribe clave en Redis que n8n verifica antes de responder.
+     */
+    private function activateHumanTakeover(object $conversation): void
+    {
+        $contactPhone = $conversation->phone_number ?? null;
+        $contactIdentifier = $conversation->identifier ?? null;
+
+        if (!$contactPhone && $contactIdentifier) {
+            $contactPhone = preg_replace('/@.*$/', '', $contactIdentifier);
+        }
+
+        if (!$contactPhone) return;
+
+        $phoneNumber = preg_replace('/[^0-9]/', '', $contactPhone);
+        if (!$phoneNumber) return;
+
+        try {
+            $redis = \Illuminate\Support\Facades\Redis::connection('n8n');
+            $user = auth()->user();
+            $botConfig = $this->getBotConfigForUser($user);
+            $blockDuration = (int) ($botConfig['block_duration'] ?? 60);
+
+            $redis->setex($phoneNumber, $blockDuration, 'human-takeover');
+
+            Log::channel('stderr')->info('🛑 [HUMAN_TAKEOVER] Bot PAUSADO', [
+                'phone' => $phoneNumber,
+                'duration_seconds' => $blockDuration,
+            ]);
+        } catch (\Exception $e) {
+            Log::channel('stderr')->error('❌ [HUMAN_TAKEOVER] Error', [
+                'error' => $e->getMessage(),
+                'phone' => $phoneNumber,
+            ]);
+        }
+    }
+
+    /**
+     * Obtener configuración del bot para el usuario (desde n8n workflow).
      */
     private function getBotConfigForUser($user): array
     {
@@ -246,16 +377,14 @@ class ChatwootMessageController extends Controller
             if (!$result['success'] || !isset($result['data']['nodes'])) return $defaults;
 
             $config = $defaults;
-
             foreach ($result['data']['nodes'] as $node) {
                 if (in_array($node['name'], ['Verifica Palabra Clave', 'Verifica Palabra Clave Saliente'])) {
                     $keyword = $node['parameters']['conditions']['conditions'][0]['rightValue'] ?? null;
                     if ($keyword) $config['unlock_keyword'] = strtoupper($keyword);
                 }
-
                 if (in_array($node['name'], ['Bloquea al Agente', 'Block Agent on Outgoing'])) {
                     $ttl = $node['parameters']['ttl'] ?? null;
-                    if ($ttl) $config['block_duration'] = (int)$ttl;
+                    if ($ttl) $config['block_duration'] = (int) $ttl;
                 }
             }
 
@@ -264,178 +393,6 @@ class ChatwootMessageController extends Controller
         } catch (\Exception $e) {
             Log::channel('stderr')->error('🤖 [getBotConfigForUser] Error', ['error' => $e->getMessage()]);
             return $defaults;
-        }
-    }
-
-    /**
-     * Enviar archivo como base64 (evita límites de upload PHP)
-     */
-    private function sendBase64File($base64Data, $fileName, $mimeType, $conversationId, $contactPhone)
-    {
-        try {
-            $isVoiceMessage = str_contains($fileName, 'audio-message');
-
-            if ($isVoiceMessage) {
-                $mediaType = 'audio';
-                $mimeType = 'audio/ogg';
-            } else {
-                $mediaType = $this->getMediaType($mimeType);
-            }
-
-            $user = auth()->user();
-            if (!$user || !$user->company_slug) {
-                throw new \Exception('No hay instancia de WhatsApp configurada. Por favor conecta tu WhatsApp primero.');
-            }
-            $instanceName = $user->company_slug;
-            $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
-
-            if ($isVoiceMessage) {
-                $evolutionResult = $this->evolutionApi->sendWhatsAppAudio($instanceName, $cleanPhone, $base64Data);
-            } else {
-                $evolutionResult = $this->evolutionApi->sendMediaMessage(
-                    $instanceName, $cleanPhone, $base64Data, $mediaType, $mimeType,
-                    null, $mediaType === 'document' ? $fileName : null
-                );
-            }
-
-            if ($evolutionResult && $evolutionResult['success']) {
-                return response()->json([
-                    'success' => true,
-                    'payload' => [
-                        'id' => 'pending-' . time(),
-                        'content' => "📎 {$fileName}",
-                        'created_at' => now()->toISOString(),
-                        'message_type' => 1,
-                        'status' => 'sent',
-                        'attachments' => [['file_type' => $mimeType, 'file_name' => $fileName]],
-                        'sender' => ['name' => auth()->user()->name ?? 'Agent']
-                    ]
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'No se pudo enviar el archivo a WhatsApp',
-                'error' => $evolutionResult['error'] ?? 'Error desconocido'
-            ], 500);
-
-        } catch (\Exception $e) {
-            Log::error('💥 Error enviando archivo base64: ' . $e->getMessage(), [
-                'user_id' => $this->userId, 'conversation_id' => $conversationId
-            ]);
-            return $this->errorResponse($e);
-        }
-    }
-
-    /**
-     * Enviar archivo (imagen, video, audio, documento) vía Evolution API
-     */
-    private function sendFileMessage(Request $request, $conversationId, $contactPhone)
-    {
-        try {
-            $file = $request->file('file') ?? $request->file('attachments') ?? $request->file('attachment');
-
-            if (!$file) {
-                return response()->json(['success' => false, 'message' => 'No se encontró archivo para enviar'], 400);
-            }
-
-            $mimeType = $file->getMimeType();
-            $originalName = $file->getClientOriginalName();
-            $caption = $request->input('content', '');
-            $isVoiceMessage = str_contains($originalName, 'audio-message');
-
-            if ($isVoiceMessage) {
-                $mediaType = 'audio';
-                $mimeType = 'audio/ogg';
-            } else {
-                $mediaType = $this->getMediaType($mimeType);
-            }
-
-            $base64Media = base64_encode(file_get_contents($file->getPathname()));
-
-            $user = auth()->user();
-            if (!$user || !$user->company_slug) {
-                throw new \Exception('No hay instancia de WhatsApp configurada. Por favor conecta tu WhatsApp primero.');
-            }
-            $instanceName = $user->company_slug;
-            $cleanPhone = preg_replace('/[^0-9]/', '', $contactPhone);
-
-            if ($isVoiceMessage) {
-                $evolutionResult = $this->evolutionApi->sendWhatsAppAudio($instanceName, $cleanPhone, $base64Media);
-            } else {
-                $evolutionResult = $this->evolutionApi->sendMediaMessage(
-                    $instanceName, $cleanPhone, $base64Media, $mediaType, $mimeType,
-                    !empty($caption) ? $caption : null,
-                    $mediaType === 'document' ? $originalName : null
-                );
-            }
-
-            if ($evolutionResult && $evolutionResult['success']) {
-                return response()->json([
-                    'success' => true,
-                    'payload' => [
-                        'id' => 'pending-' . time(),
-                        'content' => $caption ?: "📎 {$originalName}",
-                        'created_at' => now()->toISOString(),
-                        'message_type' => 1,
-                        'status' => 'sent',
-                        'attachments' => [['file_type' => $mimeType, 'file_name' => $originalName]],
-                        'sender' => ['name' => auth()->user()->name ?? 'Agent']
-                    ]
-                ]);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'No se pudo enviar el archivo a WhatsApp',
-                'error' => $evolutionResult['error'] ?? 'Error desconocido'
-            ], 500);
-
-        } catch (\Exception $e) {
-            Log::error('💥 Error enviando archivo: ' . $e->getMessage(), [
-                'user_id' => $this->userId, 'conversation_id' => $conversationId
-            ]);
-            return $this->errorResponse($e);
-        }
-    }
-
-    /**
-     * Determinar tipo de media según MIME type
-     */
-    private function getMediaType(string $mimeType): string
-    {
-        if (str_starts_with($mimeType, 'image/')) return 'image';
-        if (str_starts_with($mimeType, 'video/')) return 'video';
-        if (str_starts_with($mimeType, 'audio/')) return 'audio';
-        return 'document';
-    }
-
-    /**
-     * Enviar mensaje a WhatsApp vía Evolution API
-     */
-    private function sendToEvolutionAPI($phone, $message)
-    {
-        try {
-            $user = auth()->user();
-            if (!$user || !$user->company_slug) {
-                Log::error('❌ No se puede enviar mensaje: Usuario sin company_slug configurado');
-                return false;
-            }
-            $instanceName = $user->company_slug;
-            $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
-
-            $result = $this->evolutionApi->sendTextMessage($instanceName, $cleanPhone, $message);
-
-            if ($result['success']) {
-                Log::debug('✅ Mensaje enviado a WhatsApp', ['phone' => $cleanPhone]);
-                return true;
-            }
-
-            Log::error('❌ Error enviando a WhatsApp', ['phone' => $cleanPhone, 'error' => $result['error'] ?? 'Unknown']);
-            return false;
-        } catch (\Exception $e) {
-            Log::error('💥 Exception en sendToEvolutionAPI', ['error' => $e->getMessage()]);
-            return false;
         }
     }
 }

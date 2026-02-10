@@ -98,25 +98,9 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [selectedLabels]);
 
-  const handleClose = async () => {
-    // Guardar cambios si hay diferencias
-    const currentSet = new Set(currentLabels || []);
-    const selectedSet = new Set(selectedLabels);
-    const hasChanges = currentLabels.length !== selectedLabels.length || 
-      selectedLabels.some(l => !currentSet.has(l)) ||
-      currentLabels.some(l => !selectedSet.has(l));
-
-    if (hasChanges) {
-      setLoading(true);
-      try {
-        await onUpdateLabels(selectedLabels);
-      } catch (error) {
-        debugLog.error('Error al actualizar etiquetas:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
+  const handleClose = () => {
+    // toggleLabel ya persiste cada cambio inmediatamente,
+    // no es necesario guardar otra vez al cerrar
     setIsOpen(false);
     setShowCreateForm(false);
     setSearchTerm('');

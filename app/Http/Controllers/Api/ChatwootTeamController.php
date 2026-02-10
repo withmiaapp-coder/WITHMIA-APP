@@ -99,7 +99,7 @@ class ChatwootTeamController extends Controller
 
         } catch (\Exception $e) {
             Log::error('getTeams Error: ' . $e->getMessage());
-            return response()->json(['success' => true, 'data' => []]);
+            return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener equipos'], 500);
         }
     }
 
@@ -259,7 +259,19 @@ class ChatwootTeamController extends Controller
     public function getTeamMembers($teamId)
     {
         try {
-            $chatwootMembers = $this->chatwootDb()->table('team_members')
+            $chatwootDb = $this->chatwootDb();
+
+            // Validar que el equipo pertenece a la cuenta del usuario
+            $team = $chatwootDb->table('teams')
+                ->where('id', $teamId)
+                ->where('account_id', $this->accountId)
+                ->first();
+
+            if (!$team) {
+                return response()->json(['success' => false, 'message' => 'Equipo no encontrado'], 404);
+            }
+
+            $chatwootMembers = $chatwootDb->table('team_members')
                 ->join('users', 'team_members.user_id', '=', 'users.id')
                 ->where('team_members.team_id', $teamId)
                 ->select('users.id', 'users.name', 'users.display_name', 'users.email')
@@ -287,7 +299,7 @@ class ChatwootTeamController extends Controller
 
         } catch (\Exception $e) {
             Log::error('getTeamMembers Error: ' . $e->getMessage());
-            return response()->json(['success' => true, 'data' => []]);
+            return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener miembros'], 500);
         }
     }
 
@@ -314,21 +326,23 @@ class ChatwootTeamController extends Controller
             $addedCount = 0;
             $now = now();
 
-            foreach ($validated['user_ids'] as $userId) {
-                $userExists = $chatwootDb->table('users')->where('id', $userId)->exists();
-                if (!$userExists) continue;
+            $chatwootDb->transaction(function () use ($chatwootDb, $validated, $teamId, $now, &$addedCount) {
+                foreach ($validated['user_ids'] as $userId) {
+                    $userExists = $chatwootDb->table('users')->where('id', $userId)->exists();
+                    if (!$userExists) continue;
 
-                $alreadyMember = $chatwootDb->table('team_members')
-                    ->where('team_id', $teamId)->where('user_id', $userId)->exists();
+                    $alreadyMember = $chatwootDb->table('team_members')
+                        ->where('team_id', $teamId)->where('user_id', $userId)->exists();
 
-                if (!$alreadyMember) {
-                    $chatwootDb->table('team_members')->insert([
-                        'team_id' => $teamId, 'user_id' => $userId,
-                        'created_at' => $now, 'updated_at' => $now
-                    ]);
-                    $addedCount++;
+                    if (!$alreadyMember) {
+                        $chatwootDb->table('team_members')->insert([
+                            'team_id' => $teamId, 'user_id' => $userId,
+                            'created_at' => $now, 'updated_at' => $now
+                        ]);
+                        $addedCount++;
+                    }
                 }
-            }
+            });
 
             return response()->json(['success' => true, 'message' => "Se agregaron $addedCount miembros exitosamente"]);
 

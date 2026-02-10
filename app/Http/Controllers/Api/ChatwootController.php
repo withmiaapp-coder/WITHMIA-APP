@@ -54,7 +54,7 @@ class ChatwootController extends Controller
             return response()->json(['success' => true, 'data' => $labels]);
         } catch (\Exception $e) {
             Log::error('getLabels Error: ' . $e->getMessage());
-            return response()->json(['success' => true, 'data' => []]);
+            return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener etiquetas'], 500);
         }
     }
 
@@ -124,7 +124,7 @@ class ChatwootController extends Controller
             return response()->json(['success' => true, 'labels' => $labels]);
         } catch (\Exception $e) {
             Log::error('getConversationLabels Error: ' . $e->getMessage());
-            return response()->json(['success' => true, 'labels' => []]);
+            return response()->json(['success' => false, 'labels' => [], 'error' => 'Error al obtener etiquetas'], 500);
         }
     }
 
@@ -151,16 +151,19 @@ class ChatwootController extends Controller
                     ->toArray();
             }
 
-            $chatwootDb->table('conversations_labels')
-                ->where('conversation_id', $conversation->id)
-                ->delete();
+            // Transacción atómica para evitar pérdida de labels si falla el insert
+            $chatwootDb->transaction(function () use ($chatwootDb, $conversation, $labelIds) {
+                $chatwootDb->table('conversations_labels')
+                    ->where('conversation_id', $conversation->id)
+                    ->delete();
 
-            foreach ($labelIds as $labelId) {
-                $chatwootDb->table('conversations_labels')->insert([
-                    'conversation_id' => $conversation->id,
-                    'label_id' => $labelId
-                ]);
-            }
+                foreach ($labelIds as $labelId) {
+                    $chatwootDb->table('conversations_labels')->insert([
+                        'conversation_id' => $conversation->id,
+                        'label_id' => $labelId
+                    ]);
+                }
+            });
 
             $updatedLabels = $chatwootDb->table('conversations_labels')
                 ->join('labels', 'conversations_labels.label_id', '=', 'labels.id')
@@ -223,7 +226,7 @@ class ChatwootController extends Controller
             return response()->json(['success' => true, 'data' => $agents]);
         } catch (\Exception $e) {
             Log::error('getAgents Error: ' . $e->getMessage());
-            return response()->json(['success' => true, 'data' => []]);
+            return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener agentes'], 500);
         }
     }
 
@@ -238,20 +241,30 @@ class ChatwootController extends Controller
     {
         try {
             $assigneeId = $request->input('assignee_id');
-            $chatwootDb = $this->chatwootDb();
 
             $conversation = $this->findConversation($conversationId);
             if (!$conversation) {
                 return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
             }
 
-            $chatwootDb->table('conversations')
-                ->where('id', $conversation->id)
-                ->update(['assignee_id' => $assigneeId ?: null, 'updated_at' => now()]);
+            // Usar Chatwoot API para que los eventos internos se disparen correctamente
+            $result = $this->chatwootService->assignConversation(
+                (int) $this->accountId,
+                $this->chatwootToken,
+                $conversation->display_id,
+                $assigneeId ? (int) $assigneeId : null
+            );
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $result['error'] ?? 'Error al asignar conversación'
+                ], $result['status'] ?? 500);
+            }
 
             $assignee = null;
             if ($assigneeId) {
-                $assignee = $chatwootDb->table('users')
+                $assignee = $this->chatwootDb()->table('users')
                     ->where('id', $assigneeId)
                     ->select('id', 'name', 'email', 'avatar_url')
                     ->first();
@@ -270,21 +283,32 @@ class ChatwootController extends Controller
     {
         try {
             $status = $request->input('status');
-            $snoozedUntil = $request->input('snoozed_until');
-            $statusValue = self::STATUS_TO_INT[$status] ?? 0;
-            $chatwootDb = $this->chatwootDb();
 
             $conversation = $this->findConversation($conversationId);
             if (!$conversation) {
                 return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
             }
 
-            $updateData = ['status' => $statusValue, 'updated_at' => now()];
-            $updateData['snoozed_until'] = ($status === 'snoozed' && $snoozedUntil) ? $snoozedUntil : null;
+            // Validar que el status sea válido
+            $validStatuses = ['open', 'resolved', 'pending', 'snoozed'];
+            if (!in_array($status, $validStatuses)) {
+                return response()->json(['success' => false, 'error' => 'Estado no válido. Use: ' . implode(', ', $validStatuses)], 422);
+            }
 
-            $chatwootDb->table('conversations')
-                ->where('id', $conversation->id)
-                ->update($updateData);
+            // Usar Chatwoot API para que los eventos internos se disparen correctamente
+            $result = $this->chatwootService->toggleConversationStatus(
+                (int) $this->accountId,
+                $this->chatwootToken,
+                $conversation->display_id,
+                $status
+            );
+
+            if (!$result['success']) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $result['error'] ?? 'Error al cambiar estado'
+                ], $result['status'] ?? 500);
+            }
 
             return response()->json([
                 'success' => true,

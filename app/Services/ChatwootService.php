@@ -368,7 +368,7 @@ class ChatwootService
 
             return $inbox ? (array) $inbox : null;
         } catch (\Exception $e) {
-            \Illuminate\Support\FacadesLog::error('findInboxByName error', ['error' => $e->getMessage()]);
+            \Illuminate\Support\Facades\Log::error('findInboxByName error', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -522,10 +522,8 @@ class ChatwootService
                 'api_access_token' => $apiKey,
                 'Content-Type' => 'application/json'
             ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/webhooks", [
-                'webhook' => [
-                    'url' => $url,
-                    'subscriptions' => $subscriptions
-                ]
+                'url' => $url,
+                'subscriptions' => $subscriptions
             ]);
 
             return [
@@ -931,6 +929,36 @@ class ChatwootService
     }
 
     /**
+     * Assign conversation to an agent (and optionally a team)
+     */
+    public function assignConversation(int $accountId, string $apiKey, int $conversationId, ?int $assigneeId, ?int $teamId = null): array
+    {
+        try {
+            $payload = [];
+            if ($assigneeId !== null) {
+                $payload['assignee_id'] = $assigneeId;
+            }
+            if ($teamId !== null) {
+                $payload['team_id'] = $teamId;
+            }
+
+            $response = Http::timeout(10)->withHeaders([
+                'api_access_token' => $apiKey,
+            ])->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/assignments", $payload);
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status(),
+                'error' => $response->successful() ? null : $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::assignConversation failed', ['error' => $e->getMessage()]);
+            return ['success' => false, 'error' => 'Failed to assign conversation'];
+        }
+    }
+
+    /**
      * Toggle conversation status (resolve/reopen)
      */
     public function toggleConversationStatus(int $accountId, string $apiKey, int $conversationId, string $status = 'resolved'): array
@@ -951,6 +979,138 @@ class ChatwootService
         } catch (\Exception $e) {
             Log::error('ChatwootService::toggleConversationStatus failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to toggle conversation status'];
+        }
+    }
+
+    // ============================================================
+    // MESSAGE SENDING (Chatwoot API directo)
+    // ============================================================
+
+    /**
+     * Enviar mensaje de texto a una conversación via Chatwoot API.
+     *
+     * Chatwoot enruta automáticamente al canal correcto (WhatsApp, web, email, etc.)
+     * según el inbox asociado a la conversación.
+     */
+    public function sendTextMessage(int $accountId, string $apiKey, int $conversationId, string $content, bool $private = false): array
+    {
+        try {
+            $response = Http::timeout(15)
+                ->withHeaders(['api_access_token' => $apiKey])
+                ->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
+                    'content' => $content,
+                    'message_type' => 'outgoing',
+                    'private' => $private,
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('ChatwootService::sendTextMessage failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'conversation_id' => $conversationId,
+            ]);
+
+            return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::sendTextMessage exception', [
+                'error' => $e->getMessage(),
+                'conversation_id' => $conversationId,
+            ]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Enviar mensaje con attachment (base64) a una conversación via Chatwoot API.
+     *
+     * Convierte base64 a archivo temporal y lo envía como multipart/form-data.
+     * Soporta imágenes, audio, video, documentos.
+     */
+    public function sendAttachmentMessage(int $accountId, string $apiKey, int $conversationId, string $base64Data, string $fileName, string $mimeType, ?string $caption = null, bool $private = false): array
+    {
+        $tempPath = null;
+
+        try {
+            // Decodificar base64 → archivo temporal
+            $tempPath = tempnam(sys_get_temp_dir(), 'cw_att_');
+            file_put_contents($tempPath, base64_decode($base64Data));
+
+            $response = Http::timeout(30)
+                ->withHeaders(['api_access_token' => $apiKey])
+                ->attach('attachments[]', file_get_contents($tempPath), $fileName, ['Content-Type' => $mimeType])
+                ->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
+                    'content' => $caption ?? '',
+                    'message_type' => 'outgoing',
+                    'private' => $private,
+                ]);
+
+            @unlink($tempPath);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('ChatwootService::sendAttachmentMessage failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'conversation_id' => $conversationId,
+                'file_name' => $fileName,
+            ]);
+
+            return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
+        } catch (\Exception $e) {
+            @unlink($tempPath ?? '');
+            Log::error('ChatwootService::sendAttachmentMessage exception', [
+                'error' => $e->getMessage(),
+                'conversation_id' => $conversationId,
+            ]);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Enviar mensaje con archivo subido (UploadedFile) a una conversación via Chatwoot API.
+     *
+     * Para archivos enviados via FormData (upload tradicional).
+     */
+    public function sendUploadMessage(int $accountId, string $apiKey, int $conversationId, $file, ?string $caption = null, bool $private = false): array
+    {
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders(['api_access_token' => $apiKey])
+                ->attach(
+                    'attachments[]',
+                    file_get_contents($file->getPathname()),
+                    $file->getClientOriginalName(),
+                    ['Content-Type' => $file->getMimeType()]
+                )
+                ->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
+                    'content' => $caption ?? '',
+                    'message_type' => 'outgoing',
+                    'private' => $private,
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            Log::error('ChatwootService::sendUploadMessage failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'conversation_id' => $conversationId,
+                'file_name' => $file->getClientOriginalName(),
+            ]);
+
+            return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
+        } catch (\Exception $e) {
+            Log::error('ChatwootService::sendUploadMessage exception', [
+                'error' => $e->getMessage(),
+                'conversation_id' => $conversationId,
+            ]);
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }
