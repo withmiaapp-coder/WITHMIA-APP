@@ -181,13 +181,18 @@ class ChatwootController extends Controller
             ]);
 
             // Chatwoot almacena labels como text[] en la columna label_list
-            // Usar raw SQL con cast ::text[] para evitar problemas de tipo
-            $pgArrayLiteral = '{' . implode(',', $validLabels) . '}';
-
-            $chatwootDb->update(
-                'UPDATE conversations SET label_list = ?::text[], updated_at = NOW() WHERE id = ?',
-                [$pgArrayLiteral, $conversation->id]
-            );
+            if (empty($validLabels)) {
+                $chatwootDb->update(
+                    "UPDATE conversations SET label_list = '{}'::text[], updated_at = NOW() WHERE id = ?",
+                    [$conversation->id]
+                );
+            } else {
+                $placeholders = implode(',', array_fill(0, count($validLabels), '?'));
+                $chatwootDb->update(
+                    "UPDATE conversations SET label_list = ARRAY[{$placeholders}]::text[], updated_at = NOW() WHERE id = ?",
+                    [...$validLabels, $conversation->id]
+                );
+            }
 
             // Retornar labels enriquecidos con metadata
             $updatedLabels = [];
