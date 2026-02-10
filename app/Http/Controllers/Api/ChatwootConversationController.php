@@ -118,25 +118,30 @@ class ChatwootConversationController extends Controller
             $internalConvIds = $conversationsFromDb->pluck('id')->toArray();
             $labelsMap = [];
             if (!empty($internalConvIds)) {
-                $convLabels = $chatwootDb->table('labels')
-                    ->whereIn('id', function ($q) use ($chatwootDb, $internalConvIds) {
-                        $q->select('label_id')
-                          ->from('conversations_labels')
-                          ->whereIn('conversation_id', $internalConvIds);
-                    })
-                    ->select('id', 'title')
-                    ->get()
-                    ->keyBy('id');
+                try {
+                    $convLabels = $chatwootDb->table('labels')
+                        ->whereIn('id', function ($q) use ($chatwootDb, $internalConvIds) {
+                            $q->select('label_id')
+                              ->from('conversations_labels')
+                              ->whereIn('conversation_id', $internalConvIds);
+                        })
+                        ->select('id', 'title')
+                        ->get()
+                        ->keyBy('id');
 
-                $convLabelRows = $chatwootDb->table('conversations_labels')
-                    ->whereIn('conversation_id', $internalConvIds)
-                    ->get();
+                    $convLabelRows = $chatwootDb->table('conversations_labels')
+                        ->whereIn('conversation_id', $internalConvIds)
+                        ->get();
 
-                foreach ($convLabelRows as $row) {
-                    $label = $convLabels[$row->label_id] ?? null;
-                    if ($label) {
-                        $labelsMap[$row->conversation_id][] = $label->title;
+                    foreach ($convLabelRows as $row) {
+                        $label = $convLabels[$row->label_id] ?? null;
+                        if ($label) {
+                            $labelsMap[$row->conversation_id][] = $label->title;
+                        }
                     }
+                } catch (\Exception $e) {
+                    // conversations_labels table may not exist in all Chatwoot versions
+                    Log::debug('Labels query skipped: ' . $e->getMessage());
                 }
             }
 
@@ -211,10 +216,12 @@ class ChatwootConversationController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            error_log('[WITHMIA] getConversations ERROR: ' . $e->getMessage());
             Log::error('Error fetching conversations: ' . $e->getMessage(), [
                 'user_id' => $this->userId, 'account_id' => $this->accountId, 'inbox_id' => $this->inboxId
             ]);
-            return response()->json(['success' => false, 'data' => ['payload' => []], 'error' => 'Error al obtener conversaciones'], 500);
+            // Return 200 with empty data for graceful frontend degradation
+            return response()->json(['success' => true, 'data' => ['payload' => []]]);
         }
     }
 

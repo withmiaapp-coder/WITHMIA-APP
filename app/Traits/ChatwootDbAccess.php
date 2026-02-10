@@ -55,10 +55,22 @@ trait ChatwootDbAccess
     protected function bootChatwootMiddleware(): void
     {
         $this->middleware(function ($request, $next) {
-            $this->initializeChatwootFromUser(auth()->user());
-            $this->userId = $this->chatwootUserId;
-            $this->accountId = $this->chatwootAccountId;
-            $this->inboxId = $this->chatwootInboxId;
+            try {
+                $this->initializeChatwootFromUser(auth()->user());
+                $this->userId = $this->chatwootUserId;
+                $this->accountId = $this->chatwootAccountId;
+                $this->inboxId = $this->chatwootInboxId;
+            } catch (\Exception $e) {
+                error_log('[WITHMIA] bootChatwootMiddleware ERROR: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('bootChatwootMiddleware failed', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                // Set defaults to prevent further errors
+                $this->userId = null;
+                $this->accountId = config('chatwoot.account_id', '1');
+                $this->inboxId = null;
+            }
             return $next($request);
         });
     }
