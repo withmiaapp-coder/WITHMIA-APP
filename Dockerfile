@@ -92,7 +92,9 @@ ARG CACHEBUST=2
 COPY . .
 
 # Run composer scripts now that all files are present
-RUN composer dump-autoload --optimize
+# Use --no-scripts to avoid package:discover failing on dev-only providers (e.g. Tinker)
+RUN composer dump-autoload --optimize --no-scripts \
+    && php artisan package:discover --ansi || true
 
 # Build frontend assets
 RUN npm run build
