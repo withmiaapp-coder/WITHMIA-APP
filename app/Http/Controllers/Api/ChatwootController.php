@@ -52,9 +52,8 @@ class ChatwootController extends Controller
                 ->toArray();
 
             return response()->json(['success' => true, 'data' => $labels]);
-        } catch (\Exception $e) {
-            error_log('[WITHMIA] getLabels ERROR: ' . $e->getMessage());
-            Log::error('getLabels Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[WITHMIA] getLabels ERROR: ' . $e->getMessage() . "\n");
             return response()->json(['success' => true, 'data' => []]);
         }
     }
@@ -123,9 +122,8 @@ class ChatwootController extends Controller
                 ->toArray();
 
             return response()->json(['success' => true, 'labels' => $labels]);
-        } catch (\Exception $e) {
-            error_log('[WITHMIA] getConversationLabels ERROR: ' . $e->getMessage());
-            Log::error('getConversationLabels Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[WITHMIA] getConversationLabels ERROR: ' . $e->getMessage() . "\n");
             return response()->json(['success' => true, 'labels' => []]);
         }
     }
@@ -226,9 +224,8 @@ class ChatwootController extends Controller
             })->toArray();
 
             return response()->json(['success' => true, 'data' => $agents]);
-        } catch (\Exception $e) {
-            error_log('[WITHMIA] getAgents ERROR: ' . $e->getMessage());
-            Log::error('getAgents Error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[WITHMIA] getAgents ERROR: ' . $e->getMessage() . "\n");
             return response()->json(['success' => true, 'data' => []]);
         }
     }
@@ -493,8 +490,8 @@ class ChatwootController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
-            error_log('[WITHMIA] getDashboardStats ERROR: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[WITHMIA] getDashboardStats ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
             Log::error('Chatwoot Stats Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId, 'account_id' => $this->accountId
             ]);

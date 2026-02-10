@@ -38,6 +38,7 @@ class ChatwootConversationController extends Controller
     public function getConversations(Request $request)
     {
         try {
+            fwrite(STDERR, "[WITHMIA] getConversations called - accountId={$this->accountId} inboxId={$this->inboxId}\n");
             if (!$this->inboxId) {
                 return response()->json([
                     'success' => true,
@@ -139,9 +140,8 @@ class ChatwootConversationController extends Controller
                             $labelsMap[$row->conversation_id][] = $label->title;
                         }
                     }
-                } catch (\Exception $e) {
-                    // conversations_labels table may not exist in all Chatwoot versions
-                    Log::debug('Labels query skipped: ' . $e->getMessage());
+                } catch (\Throwable $e) {
+                    fwrite(STDERR, '[WITHMIA] Labels query skipped: ' . $e->getMessage() . "\n");
                 }
             }
 
@@ -215,12 +215,12 @@ class ChatwootConversationController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
-            error_log('[WITHMIA] getConversations ERROR: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[WITHMIA] getConversations ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
             Log::error('Error fetching conversations: ' . $e->getMessage(), [
-                'user_id' => $this->userId, 'account_id' => $this->accountId, 'inbox_id' => $this->inboxId
+                'user_id' => $this->userId, 'account_id' => $this->accountId, 'inbox_id' => $this->inboxId,
+                'file' => $e->getFile(), 'line' => $e->getLine(),
             ]);
-            // Return 200 with empty data for graceful frontend degradation
             return response()->json(['success' => true, 'data' => ['payload' => []]]);
         }
     }

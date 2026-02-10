@@ -47,6 +47,38 @@ Route::get('/health', function () {
 });
 
 // ============================================================================
+// 1b. DIAGNOSTIC: Chatwoot DB connectivity test (no auth)
+// ============================================================================
+Route::get('/chatwoot-diag', function () {
+    $results = [];
+    try {
+        $pdo = DB::connection('chatwoot')->getPdo();
+        $results['chatwoot_db'] = 'connected';
+
+        $tableCheck = DB::connection('chatwoot')->select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('conversations', 'messages', 'labels', 'contacts', 'conversations_labels') ORDER BY tablename");
+        $results['tables'] = array_map(fn($t) => $t->tablename, $tableCheck);
+
+        $convCount = DB::connection('chatwoot')->table('conversations')->count();
+        $results['conversations_count'] = $convCount;
+    } catch (\Throwable $e) {
+        $results['chatwoot_db_error'] = $e->getMessage();
+    }
+
+    try {
+        DB::connection()->getPdo();
+        $results['app_db'] = 'connected';
+    } catch (\Throwable $e) {
+        $results['app_db_error'] = $e->getMessage();
+    }
+
+    $results['php_version'] = PHP_VERSION;
+    $results['laravel_version'] = app()->version();
+    $results['timestamp'] = now()->toIso8601String();
+
+    return response()->json($results);
+});
+
+// ============================================================================
 // 2. ONBOARDING API (throttled, sin auth)
 // ============================================================================
 Route::post('/onboarding', [OnboardingApiController::class, 'store'])

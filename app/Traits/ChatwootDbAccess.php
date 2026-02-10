@@ -60,13 +60,13 @@ trait ChatwootDbAccess
                 $this->userId = $this->chatwootUserId;
                 $this->accountId = $this->chatwootAccountId;
                 $this->inboxId = $this->chatwootInboxId;
-            } catch (\Exception $e) {
-                error_log('[WITHMIA] bootChatwootMiddleware ERROR: ' . $e->getMessage());
+            } catch (\Throwable $e) {
+                fwrite(STDERR, '[WITHMIA] bootChatwootMiddleware ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
                 \Illuminate\Support\Facades\Log::error('bootChatwootMiddleware failed', [
                     'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
-                // Set defaults to prevent further errors
                 $this->userId = null;
                 $this->accountId = config('chatwoot.account_id', '1');
                 $this->inboxId = null;

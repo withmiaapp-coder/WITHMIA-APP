@@ -58,4 +58,15 @@ return Application::configure(basePath: dirname(__DIR__))
             // Retornar login.html directamente sin redirect
             return response()->file(public_path('login.html'));
         });
+
+        // Log ALL unhandled errors to stderr for RoadRunner/Railway visibility
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                fwrite(STDERR, sprintf(
+                    "[WITHMIA] UNHANDLED %s: %s in %s:%d\n",
+                    get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()
+                ));
+            }
+            return null; // Let Laravel handle the response normally
+        });
     })->create();
