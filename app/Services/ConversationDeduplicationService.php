@@ -287,24 +287,32 @@ class ConversationDeduplicationService
     private function moveConversationLabels(int $fromConvId, int $toConvId): void
     {
         try {
-            $this->db()->insert(
-                "INSERT INTO conversation_labels (conversation_id, label_id, created_at, updated_at)
-                 SELECT ?, label_id, NOW(), NOW()
-                 FROM conversation_labels cl
-                 WHERE cl.conversation_id = ?
-                   AND NOT EXISTS (
-                       SELECT 1 FROM conversation_labels cl2
-                       WHERE cl2.conversation_id = ? AND cl2.label_id = cl.label_id
-                   )",
-                [$toConvId, $fromConvId, $toConvId]
-            );
+            // Chatwoot usa label_list (text[]) en conversations, no join table
+            $fromLabels = $this->db()->selectOne('SELECT label_list FROM conversations WHERE id = ?', [$fromConvId]);
+            $toLabels = $this->db()->selectOne('SELECT label_list FROM conversations WHERE id = ?', [$toConvId]);
 
-            $this->db()->delete('DELETE FROM conversation_labels WHERE conversation_id = ?', [$fromConvId]);
+            $fromList = $this->parseLabelList($fromLabels->label_list ?? null);
+            $toList = $this->parseLabelList($toLabels->label_list ?? null);
+
+            $merged = array_unique(array_merge($toList, $fromList));
+
+            if (!empty($merged)) {
+                $pgArray = '{' . implode(',', array_map(fn($l) => '"' . addslashes($l) . '"', $merged)) . '}';
+                $this->db()->update('UPDATE conversations SET label_list = ? WHERE id = ?', [$pgArray, $toConvId]);
+            }
         } catch (\Exception $e) {
             Log::debug('ConversationDeduplication: No se pudieron mover labels', [
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function parseLabelList($labelList): array
+    {
+        if (!$labelList) return [];
+        if (is_array($labelList)) return $labelList;
+        $parsed = trim($labelList, '{}');
+        return $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
     }
 
     private function updateConversationReferences(int $fromConvId, int $toConvId): void
@@ -327,7 +335,8 @@ class ConversationDeduplicationService
 
     private function deleteConversation(int $convId): void
     {
-        $dependencyTables = ['conversation_participants', 'conversation_labels', 'mentions'];
+        // No hay tabla conversation_labels en Chatwoot (usa label_list column)
+        $dependencyTables = ['conversation_participants', 'mentions'];
 
         foreach ($dependencyTables as $table) {
             try {

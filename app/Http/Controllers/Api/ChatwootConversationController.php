@@ -118,33 +118,21 @@ class ChatwootConversationController extends Controller
                 }
             }
 
-            // Obtener labels de todas las conversaciones en una sola query
-            $internalConvIds = $conversationsFromDb->pluck('id')->toArray();
+            // Obtener labels de todas las conversaciones desde label_list (text[] column)
             $labelsMap = [];
-            if (!empty($internalConvIds)) {
-                try {
-                    $convLabels = $chatwootDb->table('labels')
-                        ->whereIn('id', function ($q) use ($chatwootDb, $internalConvIds) {
-                            $q->select('label_id')
-                              ->from('conversations_labels')
-                              ->whereIn('conversation_id', $internalConvIds);
-                        })
-                        ->select('id', 'title')
-                        ->get()
-                        ->keyBy('id');
-
-                    $convLabelRows = $chatwootDb->table('conversations_labels')
-                        ->whereIn('conversation_id', $internalConvIds)
-                        ->get();
-
-                    foreach ($convLabelRows as $row) {
-                        $label = $convLabels[$row->label_id] ?? null;
-                        if ($label) {
-                            $labelsMap[$row->conversation_id][] = $label->title;
-                        }
+            foreach ($conversationsFromDb as $conv) {
+                $labelList = $conv->label_list ?? null;
+                if ($labelList) {
+                    if (is_string($labelList)) {
+                        // PostgreSQL text[] viene como "{a,b,c}"
+                        $parsed = trim($labelList, '{}');
+                        $labels = $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
+                    } else {
+                        $labels = (array) $labelList;
                     }
-                } catch (\Throwable $e) {
-                    Log::debug('[WITHMIA] Labels query skipped', ['error' => $e->getMessage()]);
+                    if (!empty($labels)) {
+                        $labelsMap[$conv->id] = $labels;
+                    }
                 }
             }
 

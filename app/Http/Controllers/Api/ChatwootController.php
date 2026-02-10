@@ -114,10 +114,22 @@ class ChatwootController extends Controller
                 return response()->json(['success' => true, 'labels' => []]);
             }
 
-            $labels = $chatwootDb->table('conversations_labels')
-                ->join('labels', 'conversations_labels.label_id', '=', 'labels.id')
-                ->where('conversations_labels.conversation_id', $conv->id)
-                ->select('labels.id', 'labels.title', 'labels.color')
+            // Chatwoot almacena labels como text[] en la columna label_list
+            $labelTitles = $conv->label_list ?? [];
+            if (is_string($labelTitles)) {
+                // PostgreSQL devuelve arrays como string "{a,b,c}"
+                $labelTitles = $this->parsePostgresArray($labelTitles);
+            }
+
+            if (empty($labelTitles)) {
+                return response()->json(['success' => true, 'labels' => []]);
+            }
+
+            // Enriquecer con metadata de la tabla labels
+            $labels = $chatwootDb->table('labels')
+                ->where('account_id', $this->accountId)
+                ->whereIn('title', $labelTitles)
+                ->select('id', 'title', 'color')
                 ->get()
                 ->toArray();
 
@@ -142,39 +154,38 @@ class ChatwootController extends Controller
                 return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
             }
 
-            $labelIds = [];
+            // Validar que los títulos de labels existen en la cuenta
+            $validLabels = [];
             if (!empty($labels)) {
-                $labelIds = $chatwootDb->table('labels')
+                $validLabels = $chatwootDb->table('labels')
                     ->where('account_id', $this->accountId)
                     ->whereIn('title', $labels)
-                    ->pluck('id')
+                    ->pluck('title')
                     ->toArray();
             }
 
-            // Transacción atómica para evitar pérdida de labels si falla el insert
-            $chatwootDb->transaction(function () use ($chatwootDb, $conversation, $labelIds) {
-                $chatwootDb->table('conversations_labels')
-                    ->where('conversation_id', $conversation->id)
-                    ->delete();
+            // Chatwoot almacena labels como text[] en la columna label_list
+            $pgArray = '{' . implode(',', array_map(fn($l) => '"' . addslashes($l) . '"', $validLabels)) . '}';
 
-                foreach ($labelIds as $labelId) {
-                    $chatwootDb->table('conversations_labels')->insert([
-                        'conversation_id' => $conversation->id,
-                        'label_id' => $labelId
-                    ]);
-                }
-            });
+            $chatwootDb->table('conversations')
+                ->where('id', $conversation->id)
+                ->update([
+                    'label_list' => $pgArray,
+                    'updated_at' => now(),
+                ]);
 
-            $updatedLabels = $chatwootDb->table('conversations_labels')
-                ->join('labels', 'conversations_labels.label_id', '=', 'labels.id')
-                ->where('conversations_labels.conversation_id', $conversation->id)
-                ->select('labels.id', 'labels.title', 'labels.color')
+            // Retornar labels enriquecidos con metadata
+            $updatedLabels = $chatwootDb->table('labels')
+                ->where('account_id', $this->accountId)
+                ->whereIn('title', $validLabels)
+                ->select('id', 'title', 'color')
                 ->get()
                 ->toArray();
 
             return response()->json(['success' => true, 'labels' => $updatedLabels]);
-        } catch (\Exception $e) {
-            return $this->errorResponse($e);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] updateConversationLabels ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
+            return response()->json(['success' => false, 'error' => 'Error al actualizar etiquetas'], 500);
         }
     }
 
@@ -506,5 +517,16 @@ class ChatwootController extends Controller
                 ]
             ]);
         }
+    }
+
+    /**
+     * Parse PostgreSQL text array string "{a,b,c}" to PHP array
+     */
+    private function parsePostgresArray($value): array
+    {
+        if (!$value) return [];
+        if (is_array($value)) return $value;
+        $parsed = trim($value, '{}');
+        return $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
     }
 }

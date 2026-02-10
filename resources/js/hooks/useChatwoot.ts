@@ -1504,16 +1504,11 @@ export const useAgents = () => {
     agentsCache = { data: null, timestamp: 0, promise: null };
   }, []);
 
-  const createAgent = useCallback(async (agentData: any) => {
-    try {
-      const result = await apiCall('/api/chatwoot-proxy/agents', 'POST', agentData);
-      invalidateAgentsCache();
-      await fetchAgents(true);
-      return result;
-    } catch (err) {
-      throw err;
-    }
-  }, [apiCall, fetchAgents, invalidateAgentsCache]);
+  // createAgent placeholder: backend POST /agents route not implemented
+  const createAgent = useCallback(async (_agentData: any) => {
+    console.warn('createAgent: backend route not implemented');
+    return null;
+  }, []);
 
   useEffect(() => {
     fetchAgents();
@@ -1523,51 +1518,21 @@ export const useAgents = () => {
 };
 
 // ============================================================================
-// HOOK: useEnterpriseDashboard - Dashboard empresarial
+// HOOK: useEnterpriseDashboard - Dashboard empresarial (placeholder)
 // ============================================================================
 
 export const useEnterpriseDashboard = () => {
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const { apiCall, loading, error } = useChatwootAPI();
-
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const result = await apiCall('/api/chatwoot-proxy/enterprise/dashboard');
-      setDashboardData(result);
-    } catch (err) {
-      // Error handled silently
-    }
-  }, [apiCall]);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  return { dashboardData, loading, error, fetchDashboardData };
+  // Placeholder: backend route not implemented yet
+  return { dashboardData: null, loading: false, error: null, fetchDashboardData: async () => {} };
 };
 
 // ============================================================================
-// HOOK: useUserStats - Estadísticas de usuario
+// HOOK: useUserStats - Estadísticas de usuario (placeholder)
 // ============================================================================
 
 export const useUserStats = () => {
-  const [stats, setStats] = useState<any>(null);
-  const { apiCall, loading, error } = useChatwootAPI();
-
-  const fetchUserStats = useCallback(async () => {
-    try {
-      const result = await apiCall('/api/chatwoot-proxy/user/stats');
-      setStats(result);
-    } catch (err) {
-      // Error handled silently
-    }
-  }, [apiCall]);
-
-  useEffect(() => {
-    fetchUserStats();
-  }, [fetchUserStats]);
-
-  return { stats, loading, error, fetchUserStats };
+  // Placeholder: backend route not implemented yet
+  return { stats: null, loading: false, error: null, fetchUserStats: async () => {} };
 };
 
 // ============================================================================
