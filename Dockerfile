@@ -1,5 +1,5 @@
 # Dockerfile for WITHMIA-APP
-# Updated: 2026-01-30 - Octane + Roadrunner for concurrent requests
+# Updated: 2026-02-10 - Labels ARRAY[] fix
 FROM php:8.4-cli
 
 # Install system dependencies (including poppler-utils for pdftotext)
