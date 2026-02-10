@@ -433,3 +433,6 @@ class ConversationDeduplicationService
 
         } catch (\Exception $e) {
             return ['success' => false, 'error' => 'Failed to diagnose conversations'];
+        }
+    }
+}
