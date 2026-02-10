@@ -62,10 +62,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Log ALL unhandled errors to stderr for RoadRunner/Railway visibility
         $exceptions->render(function (\Throwable $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                fwrite(STDERR, sprintf(
-                    "[WITHMIA] UNHANDLED %s: %s in %s:%d\n",
-                    get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()
-                ));
+                \Illuminate\Support\Facades\Log::error('[WITHMIA] UNHANDLED EXCEPTION', [
+                    'class' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'path' => $request->path(),
+                    'method' => $request->method(),
+                ]);
             }
             return null; // Let Laravel handle the response normally
         });

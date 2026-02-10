@@ -38,7 +38,10 @@ class ChatwootConversationController extends Controller
     public function getConversations(Request $request)
     {
         try {
-            fwrite(STDERR, "[WITHMIA] getConversations called - accountId={$this->accountId} inboxId={$this->inboxId}\n");
+            Log::info('[WITHMIA] getConversations ENTRY', [
+                'accountId' => $this->accountId, 'inboxId' => $this->inboxId,
+                'user' => auth()->id(),
+            ]);
             if (!$this->inboxId) {
                 return response()->json([
                     'success' => true,
@@ -141,7 +144,7 @@ class ChatwootConversationController extends Controller
                         }
                     }
                 } catch (\Throwable $e) {
-                    fwrite(STDERR, '[WITHMIA] Labels query skipped: ' . $e->getMessage() . "\n");
+                    Log::debug('[WITHMIA] Labels query skipped', ['error' => $e->getMessage()]);
                 }
             }
 
@@ -216,10 +219,14 @@ class ChatwootConversationController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            fwrite(STDERR, '[WITHMIA] getConversations ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
-            Log::error('Error fetching conversations: ' . $e->getMessage(), [
-                'user_id' => $this->userId, 'account_id' => $this->accountId, 'inbox_id' => $this->inboxId,
-                'file' => $e->getFile(), 'line' => $e->getLine(),
+            Log::error('[WITHMIA] getConversations ERROR', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'user_id' => $this->userId,
+                'account_id' => $this->accountId,
+                'inbox_id' => $this->inboxId,
             ]);
             return response()->json(['success' => true, 'data' => ['payload' => []]]);
         }

@@ -55,15 +55,23 @@ trait ChatwootDbAccess
     protected function bootChatwootMiddleware(): void
     {
         $this->middleware(function ($request, $next) {
+            \Illuminate\Support\Facades\Log::info('[WITHMIA] bootChatwootMiddleware ENTRY', [
+                'user' => auth()->id(),
+                'path' => $request->path(),
+            ]);
             try {
                 $this->initializeChatwootFromUser(auth()->user());
                 $this->userId = $this->chatwootUserId;
                 $this->accountId = $this->chatwootAccountId;
                 $this->inboxId = $this->chatwootInboxId;
+                \Illuminate\Support\Facades\Log::info('[WITHMIA] bootChatwootMiddleware OK', [
+                    'accountId' => $this->accountId,
+                    'inboxId' => $this->inboxId,
+                ]);
             } catch (\Throwable $e) {
-                fwrite(STDERR, '[WITHMIA] bootChatwootMiddleware ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
-                \Illuminate\Support\Facades\Log::error('bootChatwootMiddleware failed', [
+                \Illuminate\Support\Facades\Log::error('[WITHMIA] bootChatwootMiddleware FAILED', [
                     'error' => $e->getMessage(),
+                    'class' => get_class($e),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);

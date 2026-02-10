@@ -53,7 +53,7 @@ class ChatwootController extends Controller
 
             return response()->json(['success' => true, 'data' => $labels]);
         } catch (\Throwable $e) {
-            fwrite(STDERR, '[WITHMIA] getLabels ERROR: ' . $e->getMessage() . "\n");
+            Log::error('[WITHMIA] getLabels ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
             return response()->json(['success' => true, 'data' => []]);
         }
     }
@@ -123,7 +123,7 @@ class ChatwootController extends Controller
 
             return response()->json(['success' => true, 'labels' => $labels]);
         } catch (\Throwable $e) {
-            fwrite(STDERR, '[WITHMIA] getConversationLabels ERROR: ' . $e->getMessage() . "\n");
+            Log::error('[WITHMIA] getConversationLabels ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
             return response()->json(['success' => true, 'labels' => []]);
         }
     }
@@ -225,7 +225,7 @@ class ChatwootController extends Controller
 
             return response()->json(['success' => true, 'data' => $agents]);
         } catch (\Throwable $e) {
-            fwrite(STDERR, '[WITHMIA] getAgents ERROR: ' . $e->getMessage() . "\n");
+            Log::error('[WITHMIA] getAgents ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
             return response()->json(['success' => true, 'data' => []]);
         }
     }
@@ -491,9 +491,10 @@ class ChatwootController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            fwrite(STDERR, '[WITHMIA] getDashboardStats ERROR: ' . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n");
-            Log::error('Chatwoot Stats Error: ' . $e->getMessage(), [
-                'user_id' => $this->userId, 'account_id' => $this->accountId
+            Log::error('[WITHMIA] getDashboardStats ERROR', [
+                'error' => $e->getMessage(), 'class' => get_class($e),
+                'file' => $e->getFile(), 'line' => $e->getLine(),
+                'user_id' => $this->userId, 'account_id' => $this->accountId,
             ]);
             // Return 200 with empty stats for graceful frontend degradation
             return response()->json([
