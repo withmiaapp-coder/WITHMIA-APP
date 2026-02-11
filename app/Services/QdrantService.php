@@ -14,8 +14,6 @@ class QdrantService
     {
         $this->baseUrl = config('qdrant.url');
         $this->apiKey = config('qdrant.api_key');
-        
-        Log::debug("QdrantService initialized", ['baseUrl' => $this->baseUrl]);
     }
 
     /**
@@ -32,7 +30,6 @@ class QdrantService
         try {
             // Verificar si la colección ya existe
             if ($this->collectionExists($collectionName)) {
-                Log::debug("Qdrant: Colección ya existe", ['collection' => $collectionName]);
                 return [
                     'success' => true,
                     'collection' => $collectionName,
@@ -54,11 +51,6 @@ class QdrantService
             ]);
 
             if ($response['success']) {
-                Log::debug("Qdrant: Colección creada exitosamente", [
-                    'collection' => $collectionName,
-                    'company_slug' => $companySlug
-                ]);
-                
                 return [
                     'success' => true,
                     'collection' => $collectionName,
@@ -126,8 +118,6 @@ class QdrantService
     {
         try {
             $response = $this->request('DELETE', "/collections/{$collectionName}");
-            
-            Log::debug("Qdrant: Colección eliminada", ['collection' => $collectionName]);
             
             return [
                 'success' => $response['success'],
@@ -235,11 +225,6 @@ class QdrantService
             ]);
             
             if ($response['success']) {
-                Log::debug("Qdrant: Points deleted", [
-                    'collection' => $collectionName,
-                    'count' => count($pointIds)
-                ]);
-                
                 return [
                     'success' => true,
                     'message' => 'Points deleted successfully'
@@ -273,11 +258,6 @@ class QdrantService
             ]);
 
             if ($response['success']) {
-                Log::debug("Qdrant: Points upserted successfully", [
-                    'collection' => $collectionName,
-                    'count' => count($points)
-                ]);
-                
                 return [
                     'success' => true,
                     'message' => 'Points upserted successfully'

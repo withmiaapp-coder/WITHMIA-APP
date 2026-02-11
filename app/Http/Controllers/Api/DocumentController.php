@@ -33,17 +33,13 @@ class DocumentController extends Controller
         try {
             // Check if collection exists using service
             if ($this->qdrantService->collectionExists($collectionName)) {
-                Log::debug("Qdrant collection {$collectionName} already exists");
                 return true;
             }
             
             // Collection doesn't exist, create it using service
-            Log::debug("Creating Qdrant collection: {$collectionName}");
-            
             $result = $this->qdrantService->createCompanyCollection($companySlug);
             
             if ($result['success']) {
-                Log::debug("Successfully created Qdrant collection: {$collectionName}");
                 return true;
             } else {
                 Log::error("Failed to create Qdrant collection: " . ($result['error'] ?? 'Unknown error'));
@@ -103,13 +99,6 @@ class DocumentController extends Controller
     {
         try {
             $user = Auth::user();
-            
-            Log::debug('deleteDocument called', [
-                'documentId' => $documentId,
-                'user' => $user ? $user->id : null,
-                'auth_check' => Auth::check(),
-                'has_token' => $request->header('X-Railway-Auth-Token') ? 'yes' : 'no'
-            ]);
             
             if (!$user) {
                 return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
@@ -288,7 +277,6 @@ class DocumentController extends Controller
                 ]);
 
             if ($updated) {
-                Log::debug("Updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
                 return response()->json([
                     'success' => true,
                     'message' => 'Vector IDs actualizados correctamente'
@@ -336,7 +324,6 @@ class DocumentController extends Controller
                 ]);
 
             if ($updated) {
-                Log::debug("N8N updated vector IDs for document: {$validated['filename']}, IDs count: " . count($validated['vector_ids']));
                 return response()->json([
                     'success' => true,
                     'message' => 'Vector IDs actualizados correctamente'
@@ -677,7 +664,6 @@ class DocumentController extends Controller
                     if ($returnCode === 0 && file_exists($tempTxtPath)) {
                         $extractedText = file_get_contents($tempTxtPath);
                         unlink($tempTxtPath);
-                        Log::debug("pdftotext extraction: " . strlen($extractedText) . " characters");
                     }
                     
                     unlink($tempPdfPath);
@@ -685,7 +671,6 @@ class DocumentController extends Controller
                 
                 // Method 2: Fallback to pdfparser if pdftotext failed or not available
                 if (strlen($extractedText) < 100) {
-                    Log::debug("Falling back to pdfparser...");
                     $parser = new \Smalot\PdfParser\Parser();
                     $pdf = $parser->parseContent($fileContent);
                     
@@ -710,8 +695,6 @@ class DocumentController extends Controller
                     if (strlen($extractedText) < 100) {
                         $extractedText = $pdf->getText();
                     }
-                    
-                    Log::debug("pdfparser extraction: " . count($pages) . " pages, " . strlen($extractedText) . " chars total");
                 }
                 
                 // Fix UTF-8 encoding issues
@@ -720,7 +703,6 @@ class DocumentController extends Controller
                     $detectedEncoding = mb_detect_encoding($extractedText, ['UTF-8', 'ISO-8859-1', 'Windows-1252', 'ASCII'], true);
                     if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
                         $extractedText = mb_convert_encoding($extractedText, 'UTF-8', $detectedEncoding);
-                        Log::debug("Converted PDF text from {$detectedEncoding} to UTF-8");
                     }
                 }
                 
@@ -732,11 +714,8 @@ class DocumentController extends Controller
                 $extractedText = preg_replace('/\s+/', ' ', $extractedText);
                 $extractedText = trim($extractedText);
                 
-                Log::debug("PDF final text: " . strlen($extractedText) . " characters");
-                
                 // If text is too short, it's likely a visual/scanned PDF - use GPT-4 Vision
                 if (strlen($extractedText) < 500) {
-                    Log::debug("PDF has little text (" . strlen($extractedText) . " chars), using GPT-4 Vision for visual content");
                     $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
                 }
                 
@@ -771,7 +750,6 @@ class DocumentController extends Controller
             
             // Fallback to Vision for PDFs
             if ($extension === 'pdf') {
-                Log::debug("Falling back to GPT-4 Vision after extraction error");
                 try {
                     $extractedText = $this->extractWithVision($cleanBase64, $filename, $openaiApiKey, 'pdf');
                 } catch (\Exception $e2) {
@@ -789,12 +767,6 @@ class DocumentController extends Controller
      */
     private function fixUtf8Mojibake($text)
     {
-        $originalLength = strlen($text);
-        $originalSample = mb_substr($text, 0, 100);
-        
-        Log::debug("fixUtf8Mojibake - Input sample (first 100 chars): " . $originalSample);
-        Log::debug("fixUtf8Mojibake - Input bytes: " . bin2hex(substr($text, 0, 50)));
-        
         // Method 1: Direct string replacement for visible mojibake patterns
         // When pdftotext outputs "Ã³" as actual characters (not bytes), we need string replacement
         $visibleMojibake = [
@@ -827,28 +799,22 @@ class DocumentController extends Controller
             $hasSpanishAfter = preg_match('/[áéíóúñüÁÉÍÓÚÑÜ¿¡]/u', $fixed);
             $hadMojibeforeFix = preg_match('/[\xC3][\x80-\xBF][\xC2][\x80-\xBF]/', $text);
             
-            Log::debug("mb_convert_encoding attempt - hasSpanish: {$hasSpanishAfter}, hadMojibake: {$hadMojibeforeFix}");
-            
             if ($hasSpanishAfter || $hadMojibeforeFix) {
                 $text = $fixed;
-                Log::debug("Applied Windows-1252 decode - Output sample: " . mb_substr($text, 0, 100));
             }
         }
         
         // Method 3: Try utf8_decode for double-encoded UTF-8
         if (preg_match('/\xC3\x83/', $text)) {
-            Log::debug("Still detecting C3 83 pattern, trying utf8_decode");
             $decoded = @utf8_decode($text);
             if ($decoded && mb_check_encoding($decoded, 'UTF-8')) {
                 $text = $decoded;
-                Log::debug("Applied utf8_decode");
             }
         }
         
         // Method 4: Clean invalid UTF-8 sequences
         if (!mb_check_encoding($text, 'UTF-8')) {
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
-            Log::debug("Applied iconv UTF-8 cleanup");
         }
         
         // Remove control characters but keep printable chars and newlines
@@ -859,10 +825,6 @@ class DocumentController extends Controller
             Log::warning("JSON encode still failing, applying aggressive cleanup");
             $text = @iconv('UTF-8', 'UTF-8//IGNORE', $text) ?: $text;
         }
-        
-        $finalSample = mb_substr($text, 0, 100);
-        Log::debug("fixUtf8Mojibake - Output sample: " . $finalSample);
-        Log::debug("fixUtf8Mojibake - Length changed: {$originalLength} -> " . strlen($text));
         
         return $text;
     }
@@ -927,7 +889,6 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
         if ($response->successful()) {
             $data = $response->json();
             $text = $data['choices'][0]['message']['content'] ?? '';
-            Log::debug("GPT-4 Vision extracted: " . strlen($text) . " characters");
             return trim($text);
         } else {
             Log::error("GPT-4 Vision API error: " . $response->body());
@@ -1096,12 +1057,9 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $workflowId = $createResult['data']['id'];
 
             // Activate the workflow using N8nService
-            Log::debug("Activating workflow {$workflowId}...");
             $activateResult = $this->n8nService->activateWorkflow($workflowId);
 
-            if ($activateResult['success']) {
-                Log::debug("✅ Workflow {$workflowId} activated successfully");
-            } else {
+            if (!$activateResult['success']) {
                 Log::error("❌ Failed to activate workflow", ['error' => $activateResult['error'] ?? 'Unknown']);
             }
 
@@ -1112,12 +1070,6 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
             $settings['rag_workflow_name'] = $workflowName;
             $company->settings = $settings;
             $company->save();
-
-            Log::debug("Created RAG workflow for company {$companySlug}", [
-                'workflow_id' => $workflowId,
-                'webhook_path' => $webhookPath,
-                'workflow_name' => $workflowName
-            ]);
 
             return [
                 'success' => true,

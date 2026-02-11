@@ -112,13 +112,6 @@ class N8nService
     public function createWorkflow(array $workflowData): array
     {
         try {
-            // Log what we're sending
-            Log::debug('n8n createWorkflow request', [
-                'url' => "{$this->baseUrl}/api/v1/workflows",
-                'workflow_keys' => array_keys($workflowData),
-                'nodes_count' => count($workflowData['nodes'] ?? []),
-            ]);
-            
             $response = $this->client()
                 ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
                 ->post("{$this->baseUrl}/api/v1/workflows", $workflowData);
@@ -150,17 +143,11 @@ class N8nService
     public function updateWorkflow(string $workflowId, array $workflowData): array
     {
         try {
-            Log::debug('n8n updateWorkflow request', [
-                'workflow_id' => $workflowId,
-                'nodes_count' => count($workflowData['nodes'] ?? [])
-            ]);
-            
             $response = $this->client()
                 ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
                 ->put("{$this->baseUrl}/api/v1/workflows/{$workflowId}", $workflowData);
 
             if ($response->successful()) {
-                Log::debug('✅ Workflow actualizado', ['workflow_id' => $workflowId]);
                 return ['success' => true, 'data' => $response->json()];
             }
 
@@ -181,16 +168,11 @@ class N8nService
     public function activateWorkflow(string $workflowId): array
     {
         try {
-            Log::debug('🔄 Intentando activar workflow en n8n', ['workflow_id' => $workflowId]);
-            
-            // n8n API requiere un body JSON object vacío {} en el POST
-            // Usar (object)[] para forzar {} en lugar de []
             $response = $this->client()
                 ->withHeaders(['Content-Type' => 'application/json; charset=utf-8'])
                 ->post("{$this->baseUrl}/api/v1/workflows/{$workflowId}/activate", (object)[]);
 
             if ($response->successful()) {
-                Log::debug('✅ Workflow activado exitosamente', ['workflow_id' => $workflowId]);
                 return ['success' => true];
             }
 
@@ -338,7 +320,7 @@ class N8nService
             unset($templateWorkflow['updatedAt']);
             unset($templateWorkflow['createdAt']);
             
-            Log::debug('Creating training workflow', [
+            Log::info('Creating training workflow', [
                 'company_slug' => $companySlug,
                 'webhook_path' => $webhookPath
             ]);
@@ -352,18 +334,8 @@ class N8nService
 
                 // Activate the workflow
                 if ($workflowId) {
-                    $activateResult = $this->activateWorkflow($workflowId);
-                    Log::debug('Training workflow activation', [
-                        'workflow_id' => $workflowId,
-                        'activated' => $activateResult['success'] ?? false
-                    ]);
+                    $this->activateWorkflow($workflowId);
                 }
-
-                Log::debug('✅ Training workflow created successfully', [
-                    'company_slug' => $companySlug,
-                    'workflow_id' => $workflowId,
-                    'webhook_url' => $webhookUrl
-                ]);
 
                 return [
                     'success' => true,
