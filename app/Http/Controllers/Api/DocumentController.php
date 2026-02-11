@@ -155,7 +155,7 @@ class DocumentController extends Controller
                         if (!$qdrantResponse->successful()) {
                             Log::warning("Failed to delete from Qdrant: " . $qdrantResponse->body());
                         } else {
-                            Log::debug("Deleted " . count($vectorIds) . " vectors from Qdrant for document: " . $document->filename);
+                            Log::info("Deleted " . count($vectorIds) . " vectors from Qdrant for document: " . $document->filename);
                         }
                     }
                 } else {
@@ -368,7 +368,8 @@ class DocumentController extends Controller
 
             if ($document) {
                 // Update existing document - increment chunks and add vector ID
-                $existingVectorIds = is_array($document->qdrant_vector_ids) ? $document->qdrant_vector_ids : [];
+                $rawVectorIds = $document->qdrant_vector_ids;
+                $existingVectorIds = is_string($rawVectorIds) ? (json_decode($rawVectorIds, true) ?? []) : (is_array($rawVectorIds) ? $rawVectorIds : []);
                 $existingVectorIds[] = $validated['chunk_id'];
                 
                 KnowledgeDocument::where('id', $document->id)
@@ -377,7 +378,7 @@ class DocumentController extends Controller
                         'chunks_created' => $validated['chunk_index'] + 1,
                     ]);
                     
-                Log::debug("Chunk stored for document {$validated['filename']}, chunk {$validated['chunk_index']}");
+                Log::info("Chunk stored for document {$validated['filename']}, chunk {$validated['chunk_index']}, total IDs: " . count($existingVectorIds));
             } else {
                 // Document not found - this shouldn't happen normally
                 // Create it anyway to not lose data
@@ -394,7 +395,7 @@ class DocumentController extends Controller
                     'file_path' => "/documents/{$validated['company_slug']}/informacion/{$validated['filename']}",
                 ]);
                 
-                Log::debug("Created new document record for {$validated['filename']}");
+                Log::info("Created new document record for {$validated['filename']}");
             }
 
             return response()->json([
