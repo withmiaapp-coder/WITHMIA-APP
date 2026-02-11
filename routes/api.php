@@ -306,6 +306,14 @@ Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
 });
 
 // ============================================================================
+// WS TRACE (temporary debug from frontend)
+// ============================================================================
+Route::get('/debug/ws-trace', function (\Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Log::warning('🔍 WS-TRACE from frontend', $request->query());
+    return response()->json(['ok' => true]);
+});
+
+// ============================================================================
 // BROADCAST DEBUG (temporary)
 // ============================================================================
 Route::get('/debug/broadcast-check', function () {
