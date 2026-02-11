@@ -329,15 +329,14 @@ Route::get('/debug/broadcast-check', function () {
     // Test broadcast
     $broadcastResult = 'not_attempted';
     try {
-        broadcast(new \App\Events\NewMessageReceived(1, [
-            'id' => 99999,
-            'content' => 'DEBUG TEST - ignore',
-            'message_type' => 0,
-            'source_id' => 'DEBUG-TEST',
-            'created_at' => now()->timestamp,
-            'test' => true,
-        ]));
-        $broadcastResult = 'success';
+        $event = new \App\Events\NewMessageReceived(
+            ['id' => 99999, 'content' => 'DEBUG TEST', 'message_type' => 0, 'source_id' => 'DEBUG-TEST', 'created_at' => now()->timestamp, 'test' => true],
+            7,  // conversationId
+            1,  // inboxId
+            '1' // accountId
+        );
+        broadcast($event);
+        $broadcastResult = 'success - event sent to inbox.1';
     } catch (\Throwable $e) {
         $broadcastResult = 'error: ' . $e->getMessage();
     }
