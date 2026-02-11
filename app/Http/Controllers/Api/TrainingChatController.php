@@ -100,6 +100,7 @@ class TrainingChatController extends Controller
                 'context' => $context,
                 'openai_api_key' => config('services.openai.api_key'),
                 'qdrant_host' => config('qdrant.url'),
+                'qdrant_api_key' => config('qdrant.api_key'),
                 'timestamp' => now()->toIso8601String(),
                 // Agregar información de deduplicación
                 'deduplication' => $deduplicationResult,
