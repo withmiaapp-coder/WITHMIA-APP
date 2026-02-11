@@ -145,7 +145,10 @@ class DocumentController extends Controller
                     
                     if (is_array($vectorIds) && count($vectorIds) > 0) {
                         // Delete points by IDs
-                        $qdrantResponse = Http::post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
+                        $qdrantApiKey = config('qdrant.api_key');
+                        $qdrantResponse = Http::withHeaders([
+                            'api-key' => $qdrantApiKey,
+                        ])->post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
                             'points' => $vectorIds
                         ]);
 
