@@ -419,6 +419,7 @@ class DocumentController extends Controller
      */
     public function proxyToN8n(Request $request)
     {
+        error_log("=== proxyToN8n CALLED ===");
         Log::debug("proxyToN8n called", [
             'has_user' => Auth::check(),
             'request_method' => $request->method(),
@@ -539,6 +540,7 @@ class DocumentController extends Controller
                 'company_slug' => $companySlug,
                 'workflow_id' => $workflowId
             ]);
+            error_log("=== proxyToN8n: extracting text from {$validated['filename']} ===");
 
             // EXTRACT TEXT IN LARAVEL - supports visual PDFs with GPT-4 Vision
             $extractedText = $this->extractTextFromDocument(
@@ -546,6 +548,7 @@ class DocumentController extends Controller
                 $validated['filename'],
                 $openaiApiKey
             );
+            error_log("=== proxyToN8n: extracted " . strlen($extractedText ?? '') . " chars ===");
 
             if (!$extractedText || strlen($extractedText) < 50) {
                 return response()->json([
@@ -593,7 +596,8 @@ class DocumentController extends Controller
                 'error' => 'Datos inválidos',
                 'errors' => $e->errors()
             ], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            error_log("=== proxyToN8n ERROR: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine() . " ===");
             Log::error('Error proxying to n8n: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
