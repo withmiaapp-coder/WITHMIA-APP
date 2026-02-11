@@ -51,6 +51,24 @@ class ForwardToN8nWithEnrichmentJob implements ShouldQueue
             $messageId = $this->data['id'] ?? null;
             $conversationId = $this->data['conversation']['id'] ?? null;
 
+            // 🔧 FIX: Si conversation.id es null, buscar en Chatwoot API usando sender + inbox
+            if (!$conversationId && $this->inboxId) {
+                $conversationId = $this->resolveConversationId();
+                if ($conversationId) {
+                    $this->data['conversation']['id'] = $conversationId;
+                    $this->data['conversation']['inbox_id'] = $this->inboxId;
+                    Log::info('🔧 [Job] conversation.id resuelto desde Chatwoot API', [
+                        'conversation_id' => $conversationId,
+                        'inbox_id' => $this->inboxId,
+                    ]);
+                } else {
+                    Log::warning('⚠️ [Job] No se pudo resolver conversation.id desde Chatwoot API', [
+                        'inbox_id' => $this->inboxId,
+                        'sender' => $this->data['sender']['phone_number'] ?? $this->data['sender']['identifier'] ?? 'unknown',
+                    ]);
+                }
+            }
+
             // Si ya vienen attachments, asegurar que content_type esté seteado
             if (!empty($attachments)) {
                 $fileType = $attachments[0]['file_type'] ?? null;
@@ -153,5 +171,92 @@ class ForwardToN8nWithEnrichmentJob implements ShouldQueue
             'message_id' => $this->data['id'] ?? null,
             'error' => $exception->getMessage(),
         ]);
+    }
+
+    /**
+     * Resolver conversation.id desde Chatwoot API cuando el webhook lo envía como null.
+     * Busca el contacto por teléfono y luego encuentra la conversación abierta en el inbox.
+     */
+    private function resolveConversationId(): ?int
+    {
+        $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
+        $token = config('chatwoot.api_key')
+            ?? config('chatwoot.super_admin_token')
+            ?? config('chatwoot.platform_token');
+
+        if (!$token || !$chatwootUrl) {
+            return null;
+        }
+
+        // Extraer teléfono del sender
+        $phone = $this->data['sender']['phone_number']
+            ?? $this->data['sender']['identifier']
+            ?? null;
+
+        if (!$phone) {
+            return null;
+        }
+
+        $searchPhone = str_replace(['+', ' ', '-', '@s.whatsapp.net'], '', $phone);
+
+        try {
+            // 1. Buscar contacto
+            $response = Http::withHeaders(['api_access_token' => $token])
+                ->timeout(10)
+                ->get("{$chatwootUrl}/api/v1/accounts/{$this->accountId}/contacts/search", [
+                    'q' => $searchPhone,
+                    'page' => 1,
+                ]);
+
+            if (!$response->successful()) {
+                return null;
+            }
+
+            $contacts = $response->json('payload', []);
+            $contactId = null;
+
+            foreach ($contacts as $contact) {
+                $contactPhone = str_replace(['+', ' ', '-'], '', $contact['phone_number'] ?? '');
+                if ($contactPhone === $searchPhone || str_ends_with($contactPhone, $searchPhone) || str_ends_with($searchPhone, $contactPhone)) {
+                    $contactId = $contact['id'];
+                    break;
+                }
+            }
+
+            if (!$contactId) {
+                return null;
+            }
+
+            // 2. Buscar conversaciones del contacto
+            $convResponse = Http::withHeaders(['api_access_token' => $token])
+                ->timeout(10)
+                ->get("{$chatwootUrl}/api/v1/accounts/{$this->accountId}/contacts/{$contactId}/conversations");
+
+            if (!$convResponse->successful()) {
+                return null;
+            }
+
+            $conversations = $convResponse->json('payload', []);
+
+            // Preferir conversación abierta en el inbox correcto
+            $conversation = collect($conversations)
+                ->filter(fn($c) => ($c['inbox_id'] ?? null) == $this->inboxId && ($c['status'] ?? '') !== 'resolved')
+                ->sortByDesc('id')
+                ->first();
+
+            if (!$conversation) {
+                $conversation = collect($conversations)
+                    ->filter(fn($c) => ($c['inbox_id'] ?? null) == $this->inboxId)
+                    ->sortByDesc('id')
+                    ->first();
+            }
+
+            return $conversation['id'] ?? null;
+        } catch (\Throwable $e) {
+            Log::warning('⚠️ [Job] Error resolviendo conversation.id', [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 }
