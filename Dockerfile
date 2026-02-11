@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # PHP extensions - ONLY those NOT already in php:8.4-cli
 # Built-in (skip): pdo, mbstring, xml, curl, fileinfo, iconv
 # JIT disabled via INI (opcache.jit=disable), not at compile time
+# cache-bust: v2
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
        pdo_pgsql pgsql zip gd intl bcmath exif pcntl opcache sockets \
