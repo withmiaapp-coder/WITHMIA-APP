@@ -8,11 +8,11 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:*;">
         <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
         
-        {{-- Reverb WebSocket Configuration - Server-side injection for multi-tenant support --}}
-        <meta name="reverb-host" content="{{ env('REVERB_HOST', 'localhost') }}">
-        <meta name="reverb-key" content="{{ env('REVERB_APP_KEY', '') }}">
-        <meta name="reverb-port" content="{{ env('REVERB_PORT', '443') }}">
-        <meta name="reverb-scheme" content="{{ env('REVERB_SCHEME', 'https') }}">
+        {{-- Reverb WebSocket Configuration - Uses config() so it works after config:cache --}}
+        <meta name="reverb-host" content="{{ config('reverb.servers.reverb.hostname', 'localhost') }}">
+        <meta name="reverb-key" content="{{ config('reverb.apps.apps.0.key', '') }}">
+        <meta name="reverb-port" content="{{ config('reverb.apps.apps.0.options.port', 443) }}">
+        <meta name="reverb-scheme" content="{{ config('reverb.apps.apps.0.options.scheme', 'https') }}">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
