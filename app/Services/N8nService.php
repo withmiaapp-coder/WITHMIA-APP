@@ -253,9 +253,10 @@ class N8nService
      */
     public function getWebhookUrl(string $instanceName): string
     {
-        $publicUrl = config('services.n8n.base_url');
+        // Use internal URL for Railway-to-Railway communication
+        $baseUrl = config('n8n.url') ?: config('n8n.public_url');
         // instanceName ya tiene el formato "withmia-{slug}", usarlo directamente
-        return "{$publicUrl}/webhook/{$instanceName}";
+        return "{$baseUrl}/webhook/{$instanceName}";
     }
 
     /**
