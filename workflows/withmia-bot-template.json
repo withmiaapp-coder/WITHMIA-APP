@@ -394,7 +394,7 @@
                                                                                      "type":  "string",
                                                                                      "name":  "response_text",
                                                                                      "id":  "response_text",
-                                                                                     "value":  "={{ $json.message.content.parte1 || $json.output || \u0027Sin respuesta\u0027 }}"
+                                                                                     "value":  "={{ (($json.message.content.parte1 || '') + ' ' + ($json.message.content.parte2 || '') + ' ' + ($json.message.content.parte3 || '')).trim() || $json.output || \u0027Sin respuesta\u0027 }}"
                                                                                  },
                                                                                  {
                                                                                      "type":  "object",
@@ -1635,7 +1635,7 @@
                                          "messages":  {
                                                           "values":  [
                                                                          {
-                                                                             "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes m?s peque?as de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oraci?n ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"partel\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
+                                                                             "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes m?s peque?as de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oraci?n ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"parte1\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
                                                                          }
                                                                      ]
                                                       },
@@ -3087,7 +3087,7 @@
                                                                                                            "type":  "string",
                                                                                                            "name":  "response_text",
                                                                                                            "id":  "response_text",
-                                                                                                           "value":  "={{ $json.message.content.parte1 || $json.output || \u0027Sin respuesta\u0027 }}"
+                                                                                                           "value":  "={{ (($json.message.content.parte1 || '') + ' ' + ($json.message.content.parte2 || '') + ' ' + ($json.message.content.parte3 || '')).trim() || $json.output || \u0027Sin respuesta\u0027 }}"
                                                                                                        },
                                                                                                        {
                                                                                                            "type":  "object",
@@ -4328,7 +4328,7 @@
                                                                "messages":  {
                                                                                 "values":  [
                                                                                                {
-                                                                                                   "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes m?s peque?as de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oraci?n ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"partel\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
+                                                                                                   "content":  "=Divide el siguiente mensaje separado en 2 o 3 partes m?s peque?as de ser necesario, si los mensajes son cortos, no es necesario que me des una tercera parte eso quita naturalidad, cada una no mayor a 100 caracteres. Haz que cada parte tenga su propio tema, no cortes las partes a la mitad de una oraci?n ni frase. Devolvedme cada parte en un formato JSON como este:\n\n{\n\"parte1\": \"Texto de la primera parte\",\n\"parte2\": \"Texto de la segunda parte\",\n\"parte3\": \"Texto de la tercera parte\"\n}\nMensaje: {{ $json.output }}"
                                                                                                }
                                                                                            ]
                                                                             },
