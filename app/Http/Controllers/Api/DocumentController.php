@@ -594,7 +594,11 @@ class DocumentController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error proxying to n8n: ' . $e->getMessage());
+            Log::error('Error proxying to n8n: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 2000),
+            ]);
             return response()->json([
                 'success' => false,
                 'error' => 'Error sending to n8n: ' . $e->getMessage()
