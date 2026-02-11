@@ -462,13 +462,6 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   // WEBSOCKET CENTRALIZADO
   // ============================================================================
   useEffect(() => {
-    // DEBUG: Log subscription attempt to server
-    fetch('/api/debug/ws-trace?' + new URLSearchParams({
-      inboxId: String(inboxId ?? 'null'),
-      step: 'useEffect-entry',
-      ts: Date.now().toString(),
-    })).catch(() => {});
-
     if (!inboxId) {
       return;
     }
@@ -480,37 +473,17 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
 
         const channelName = `inbox.${inboxId}`;
 
-        // DEBUG: Log before subscribing
-        fetch('/api/debug/ws-trace?' + new URLSearchParams({
-          inboxId: String(inboxId),
-          step: 'before-subscribe',
-          channel: channelName,
-          echoConnected: String(!!echo?.connector?.pusher?.connection?.state),
-          socketId: echo?.socketId() || 'none',
-        })).catch(() => {});
-
         const channel = echo.private(channelName);
         channelRef.current = channel;
 
         // Suscripción exitosa
         channel.subscribed(() => {
-          // DEBUG: Log successful subscription
-          fetch('/api/debug/ws-trace?' + new URLSearchParams({
-            inboxId: String(inboxId),
-            step: 'subscribed-ok',
-            channel: channelName,
-          })).catch(() => {});
+          // Canal suscrito
         });
 
         // Error en canal
         channel.error((error: any) => {
-          // DEBUG: Log subscription error
-          fetch('/api/debug/ws-trace?' + new URLSearchParams({
-            inboxId: String(inboxId),
-            step: 'subscribe-error',
-            channel: channelName,
-            error: String(error?.type || error?.message || JSON.stringify(error)),
-          })).catch(() => {});
+          // Error handled silently
         });
 
         // ========================================

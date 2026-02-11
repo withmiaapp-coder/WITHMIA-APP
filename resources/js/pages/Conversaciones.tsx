@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import ChatwootWidget from '../components/chatwoot/ChatwootWidget';
+import { GlobalNotificationProvider } from '@/contexts/GlobalNotificationContext';
 
 interface Props {
   user: any;
@@ -14,10 +15,11 @@ interface Props {
 
 export default function Conversaciones({ user, company, chatwoot }: Props) {
   const chatwootUrl = chatwoot?.url || '';
+  const inboxId = user?.chatwoot_inbox_id || company?.chatwoot_inbox_id || chatwoot?.inbox_id || null;
   
   if (!chatwootUrl) {
     return (
-      <>
+      <GlobalNotificationProvider inboxId={inboxId}>
         <Head title="Conversaciones - WITHMIA" />
         <div className="flex items-center justify-center h-screen bg-gray-100">
           <div className="text-center p-8">
@@ -25,7 +27,7 @@ export default function Conversaciones({ user, company, chatwoot }: Props) {
             <p className="text-gray-500 mt-2">Contacte al administrador</p>
           </div>
         </div>
-      </>
+      </GlobalNotificationProvider>
     );
   }
   
@@ -34,7 +36,7 @@ export default function Conversaciones({ user, company, chatwoot }: Props) {
   };
 
   return (
-    <>
+    <GlobalNotificationProvider inboxId={inboxId}>
       <Head title="Conversaciones - WITHMIA" />
       
       <div className="min-h-screen bg-gradient-to-br from-gray-50/50 to-white">
@@ -102,6 +104,6 @@ export default function Conversaciones({ user, company, chatwoot }: Props) {
           </div>
         </div>
       </div>
-    </>
+    </GlobalNotificationProvider>
   );
 }
