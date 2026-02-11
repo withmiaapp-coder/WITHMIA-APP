@@ -187,7 +187,7 @@ class EvolutionApiService
                         \Cache::forget("whatsapp_pending_settings_{$instanceName}");
                     }
                 }
-            } catch (\Exception $settingsException) {
+            } catch (\Throwable $settingsException) {
                 // Log warning but don't fail instance creation
                 Log::warning('Exception enabling readMessages, but instance created', [
                     'instance' => $instanceName,
@@ -200,7 +200,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Evolution API createInstance exception', [
                 'message' => $e->getMessage()
             ]);
@@ -274,7 +274,7 @@ class EvolutionApiService
             ];
 
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Evolution API connect exception', [
                 'instance' => $instanceName,
                 'message' => $e->getMessage()
@@ -342,7 +342,7 @@ class EvolutionApiService
                 ];
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Excepción configurando webhook', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -384,7 +384,7 @@ class EvolutionApiService
             $webhookUrl = config('app.url') . '/api/evolution-whatsapp/webhook';
             $this->setWebhook($instanceName, $webhookUrl);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error configuring webhooks", [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -431,7 +431,7 @@ class EvolutionApiService
                 'error' => 'Instance not found'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning("BD Evolution no disponible para getStatus, usando HTTP API", ['error' => $e->getMessage()]);
             
             // Fallback a HTTP API con cache
@@ -445,7 +445,7 @@ class EvolutionApiService
                         return $cachedData;
                     }
                 }
-            } catch (\Exception $cacheE) {
+            } catch (\Throwable $cacheE) {
                 // Ignorar error de cache
             }
 
@@ -475,13 +475,13 @@ class EvolutionApiService
 
                 try {
                     Redis::setex($cacheKey, $this->cacheTtl, json_encode($result));
-                } catch (\Exception $cacheE) {
+                } catch (\Throwable $cacheE) {
                     // Ignorar error de cache
                 }
 
                 return $result;
 
-            } catch (\Exception $httpE) {
+            } catch (\Throwable $httpE) {
                 return [
                     'success' => false,
                     'connected' => false,
@@ -520,7 +520,7 @@ class EvolutionApiService
                 'error' => $response->json()['message'] ?? 'Failed to disconnect'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Si hay error pero la instancia probablemente ya no existe, retornamos éxito
             $this->clearCache($instanceName);
             return [
@@ -553,7 +553,7 @@ class EvolutionApiService
                 'message' => 'Instance deleted successfully'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error' => 'Failed to delete instance'
@@ -589,7 +589,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error' => 'Failed to send text message'
@@ -672,7 +672,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('💥 Exception en sendMediaMessage', [
                 'error' => $e->getMessage()
             ]);
@@ -735,7 +735,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('💥 Exception en sendWhatsAppAudio', [
                 'error' => $e->getMessage()
             ]);
@@ -793,7 +793,7 @@ class EvolutionApiService
                 'instances' => $instances
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning("BD Evolution no disponible, usando HTTP API", ['error' => $e->getMessage()]);
             
             // Fallback a HTTP API con cache corto (30 segundos)
@@ -815,7 +815,7 @@ class EvolutionApiService
                         'instances' => $response->json()
                     ];
 
-                } catch (\Exception $httpE) {
+                } catch (\Throwable $httpE) {
                     return [
                         'success' => false,
                         'error' => 'Failed to list instances'
@@ -844,10 +844,15 @@ class EvolutionApiService
         string $url,
         bool $signMsg = true,
         bool $reopenConversation = true,
-        bool $conversationPending = false
+        bool $conversationPending = false,
+        ?string $nameInbox = null
     ): array
     {
         try {
+            // El nameInbox debe coincidir con el nombre real del inbox en Chatwoot
+            // Por defecto usamos "WhatsApp {instanceName}" que es el formato estándar
+            $inboxName = $nameInbox ?? "WhatsApp {$instanceName}";
+            
             $response = $this->client()->post("{$this->baseUrl}/chatwoot/set/{$instanceName}", [
                 'enabled' => true,
                 'accountId' => $accountId,
@@ -856,7 +861,7 @@ class EvolutionApiService
                 'signMsg' => $signMsg,
                 'reopenConversation' => $reopenConversation,
                 'conversationPending' => $conversationPending,
-                'nameInbox' => $instanceName,
+                'nameInbox' => $inboxName,
                 'mergeBrazilContacts' => false,
                 'importContacts' => true,
                 'importMessages' => true,
@@ -882,7 +887,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('setChatwootIntegration exception', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -906,7 +911,7 @@ class EvolutionApiService
             $cacheKey = "whatsapp:status:{$instanceName}";
             Redis::del($cacheKey);
             Log::debug("WhatsApp cache cleared", ['instance' => $instanceName]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning("Failed to clear WhatsApp cache", ['error' => $e->getMessage()]);
         }
     }
@@ -970,7 +975,7 @@ class EvolutionApiService
                 'error' => "Inbox '{$expectedInboxName}' not found in Chatwoot"
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception finding Chatwoot inbox', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -1053,7 +1058,7 @@ class EvolutionApiService
                 'error' => null
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to update inbox_id in database', [
                 'user_id' => $user->id,
                 'inbox_id' => $inboxId,
@@ -1092,7 +1097,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error' => 'Failed to get Chatwoot configuration'
@@ -1178,7 +1183,7 @@ class EvolutionApiService
                 'message' => 'Chatwoot integration reconfigured successfully'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception reconfiguring Chatwoot', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -1215,7 +1220,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception getting instance settings', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -1253,7 +1258,7 @@ class EvolutionApiService
                 'data' => $response->json()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception updating instance settings', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -1289,7 +1294,7 @@ class EvolutionApiService
             ]);
 
             return [];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception finding contacts', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage(),

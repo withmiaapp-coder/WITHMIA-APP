@@ -105,7 +105,7 @@ class UserDeletionService
 
             return ['success' => true, 'message' => 'Usuario eliminado correctamente'];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('UserDeletionService: Failed to delete user', [
                 'user_id' => $userId,
                 'error'   => $e->getMessage(),
@@ -152,7 +152,7 @@ class UserDeletionService
                     'status'   => $response->status(),
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('UserDeletionService: Exception deleting Chatwoot agent', [
                 'error' => $e->getMessage(),
             ]);
@@ -175,7 +175,7 @@ class UserDeletionService
             Log::debug('UserDeletionService: Evolution instance ' . ($result['success'] ? 'deleted' : 'failed'), [
                 'instance' => $user->whatsapp_instance_id,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('UserDeletionService: Exception deleting Evolution instance', [
                 'instance' => $user->whatsapp_instance_id,
                 'error'    => $e->getMessage(),
@@ -211,7 +211,7 @@ class UserDeletionService
                     'count'   => $deleted,
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('UserDeletionService: Exception deleting Excel files', [
                 'error' => $e->getMessage(),
             ]);
@@ -244,7 +244,7 @@ class UserDeletionService
             Log::debug('UserDeletionService: Qdrant collection ' . ($result['success'] ? 'deleted' : 'failed'), [
                 'collection' => $collectionName,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('UserDeletionService: Exception deleting Qdrant collection', [
                 'error' => $e->getMessage(),
             ]);

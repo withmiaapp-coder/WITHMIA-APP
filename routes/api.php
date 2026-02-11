@@ -47,52 +47,6 @@ Route::get('/health', function () {
 });
 
 // ============================================================================
-// 1b. DIAGNOSTIC: Chatwoot DB connectivity test (no auth)
-// ============================================================================
-Route::get('/chatwoot-diag', function () {
-    $results = [];
-    try {
-        $pdo = DB::connection('chatwoot')->getPdo();
-        $results['chatwoot_db'] = 'connected';
-
-        $tableCheck = DB::connection('chatwoot')->select("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('conversations', 'messages', 'labels', 'contacts', 'conversations_labels') ORDER BY tablename");
-        $results['tables'] = array_map(fn($t) => $t->tablename, $tableCheck);
-
-        $convCount = DB::connection('chatwoot')->table('conversations')->count();
-        $results['conversations_count'] = $convCount;
-    } catch (\Throwable $e) {
-        $results['chatwoot_db_error'] = $e->getMessage();
-    }
-
-    try {
-        DB::connection()->getPdo();
-        $results['app_db'] = 'connected';
-    } catch (\Throwable $e) {
-        $results['app_db_error'] = $e->getMessage();
-    }
-
-    $results['php_version'] = PHP_VERSION;
-    $results['laravel_version'] = app()->version();
-    $results['log_channel'] = config('logging.default');
-    $results['log_stack_channels'] = config('logging.channels.stack.channels');
-    $results['timestamp'] = now()->toIso8601String();
-
-    // Test: try to instantiate ChatwootConversationController
-    try {
-        $controller = app(\App\Http\Controllers\Api\ChatwootConversationController::class);
-        $results['controller_instantiation'] = 'OK';
-    } catch (\Throwable $e) {
-        $results['controller_error'] = get_class($e) . ': ' . $e->getMessage();
-        $results['controller_error_file'] = $e->getFile() . ':' . $e->getLine();
-    }
-
-    // Test Log to stderr
-    \Illuminate\Support\Facades\Log::info('[WITHMIA-DIAG] diagnostic route called');
-
-    return response()->json($results);
-});
-
-// ============================================================================
 // 2. ONBOARDING API (throttled, sin auth)
 // ============================================================================
 Route::post('/onboarding', [OnboardingApiController::class, 'store'])
@@ -105,6 +59,10 @@ Route::post('/onboarding', [OnboardingApiController::class, 'store'])
 
 // Evolution API webhook
 Route::post('/evolution-whatsapp/webhook', [EvolutionApiController::class, 'webhook'])
+    ->middleware(['throttle:120,1', 'webhook.hmac:evolution']);
+
+// Evolution API webhook (alias - Evolution sometimes sends to this URL)
+Route::post('/evolution/webhook', [EvolutionApiController::class, 'webhook'])
     ->middleware(['throttle:120,1', 'webhook.hmac:evolution']);
 
 // Chatwoot webhooks (con y sin instance param)

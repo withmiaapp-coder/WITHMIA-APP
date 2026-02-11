@@ -15,7 +15,7 @@ abstract class Controller extends BaseController
     /**
      * Return a safe error response that hides internal details in production.
      */
-    protected function errorResponse(\Exception $e, int $status = 500): JsonResponse
+    protected function errorResponse(\Throwable $e, int $status = 500): JsonResponse
     {
         Log::error($e->getMessage(), ['exception' => get_class($e), 'file' => $e->getFile(), 'line' => $e->getLine()]);
 

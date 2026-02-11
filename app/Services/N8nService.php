@@ -49,7 +49,7 @@ class N8nService
             ]);
 
             return ['success' => false, 'error' => 'Error al obtener workflows'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n getWorkflows exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get workflows'];
         }
@@ -100,7 +100,7 @@ class N8nService
             }
 
             return ['success' => false, 'error' => 'Workflow no encontrado'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n getWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get workflow'];
         }
@@ -138,7 +138,7 @@ class N8nService
             ]);
 
             return ['success' => false, 'error' => 'Error al crear workflow'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n createWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to create workflow'];
         }
@@ -169,7 +169,7 @@ class N8nService
                 'body' => substr($response->body(), 0, 500)
             ]);
             return ['success' => false, 'error' => 'Error al actualizar workflow: ' . $response->status()];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n updateWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to update workflow'];
         }
@@ -200,7 +200,7 @@ class N8nService
                 'body' => substr($response->body(), 0, 500)
             ]);
             return ['success' => false, 'error' => 'Error al activar workflow: ' . $response->status()];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n activateWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to activate workflow'];
         }
@@ -222,7 +222,7 @@ class N8nService
             }
 
             return ['success' => false, 'error' => 'Error al desactivar workflow'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n deactivateWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to deactivate workflow'];
         }
@@ -241,7 +241,7 @@ class N8nService
             }
 
             return ['success' => false, 'error' => 'Error al eliminar workflow'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n deleteWorkflow exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to delete workflow'];
         }
@@ -275,7 +275,7 @@ class N8nService
                 'status' => $response->status(),
                 'data' => $response->json()
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('n8n webhook timeout/error (non-blocking)', [
                 'webhook' => $webhookPath,
                 'error' => $e->getMessage()
@@ -374,7 +374,7 @@ class N8nService
 
             return ['success' => false, 'error' => $result['error'] ?? 'Error desconocido al crear workflow'];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception creating training workflow', [
                 'company_slug' => $companySlug,
                 'error' => $e->getMessage()
@@ -404,7 +404,7 @@ class N8nService
             ]);
 
             return ['success' => false, 'error' => 'Error al obtener credentials'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('n8n getCredentials exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get credentials'];
         }
@@ -586,7 +586,7 @@ class N8nService
 
             return ['success' => false, 'error' => $result['error'] ?? 'Error desconocido'];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception creating bot workflow', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()

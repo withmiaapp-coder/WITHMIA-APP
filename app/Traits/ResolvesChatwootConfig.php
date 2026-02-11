@@ -70,7 +70,9 @@ trait ResolvesChatwootConfig
                 ? $company->chatwoot_account_id
                 : config('chatwoot.account_id', '1');
 
-            $inboxId = $user->chatwoot_inbox_id ?: null;
+            $inboxId = $user->chatwoot_inbox_id 
+                ?: ($company ? $company->chatwoot_inbox_id : null) 
+                ?: null;
 
             // PRIORIDAD: 1. Token de company, 2. Token de usuario, 3. Token platform
             if ($company && $company->chatwoot_api_key) {

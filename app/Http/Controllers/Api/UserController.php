@@ -12,21 +12,38 @@ class UserController extends Controller
 {
     public function profile(): JsonResponse
     {
-        $userId = auth()->id();
-        $cacheKey = "user:profile:{$userId}";
+        try {
+            $user = auth()->user();
 
-        $data = Cache::remember($cacheKey, 300, function () {
-            $user = auth()->user()->load('company');
-            $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No autenticado',
+                ], 401);
+            }
 
-            return [
-                'success' => true,
-                'user' => $user,
-                'chatwoot_inbox_id' => $inboxId,
-            ];
-        });
+            $cacheKey = "user:profile:{$user->id}";
 
-        return response()->json($data);
+            $data = Cache::remember($cacheKey, 300, function () use ($user) {
+                $user->load('company');
+                $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
+
+                return [
+                    'success' => true,
+                    'user' => $user,
+                    'chatwoot_inbox_id' => $inboxId,
+                ];
+            });
+
+            return response()->json($data);
+        } catch (\Throwable $e) {
+            Log::error('Error fetching user profile', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error obteniendo perfil de usuario',
+            ], 500);
+        }
     }
 
     public function permissions(Request $request): JsonResponse
@@ -52,7 +69,7 @@ class UserController extends Controller
                 'is_agent' => $user->isAgent(),
                 'permissions' => $user->getPermissions(),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error fetching user permissions', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -84,7 +101,7 @@ class UserController extends Controller
                 'permission' => $permission,
                 'has_permission' => $user->hasPermission($permission),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error checking permission', ['permission' => $permission, 'error' => $e->getMessage()]);
 
             return response()->json([

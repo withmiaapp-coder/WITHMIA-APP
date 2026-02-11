@@ -66,12 +66,14 @@ Route::get('/check-session', [GoogleAuthController::class, 'checkSession'])->nam
 Route::get('/logout', function () {
     try {
         Auth::guard('web')->logout();
-        request()->session()->flush();
-        request()->session()->regenerateToken();
-    } catch (\Exception $e) {
+        if (request()->hasSession()) {
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
+    } catch (\Throwable $e) {
         Log::error('Logout error: ' . $e->getMessage());
     }
-    return view('auth-loading', ['redirect' => '/login']);
+    return redirect('/login');
 })->name('logout.get');
 
 // ============================================================================

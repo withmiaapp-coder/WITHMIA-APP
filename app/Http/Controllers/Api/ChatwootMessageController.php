@@ -106,7 +106,7 @@ class ChatwootMessageController extends Controller
 
             return $this->handleTextMessage($messageContent, $conversationDisplayId, $isPrivate, $conversation);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('💥 SendMessage Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId,
                 'conversation_id' => $id,
@@ -342,7 +342,7 @@ class ChatwootMessageController extends Controller
                 'phone' => $phoneNumber,
                 'duration_seconds' => $blockDuration,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::channel('stderr')->error('❌ [HUMAN_TAKEOVER] Error', [
                 'error' => $e->getMessage(),
                 'phone' => $phoneNumber,
@@ -390,7 +390,7 @@ class ChatwootMessageController extends Controller
 
             \Illuminate\Support\Facades\Cache::put($cacheKey, $config, 300);
             return $config;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::channel('stderr')->error('🤖 [getBotConfigForUser] Error', ['error' => $e->getMessage()]);
             return $defaults;
         }

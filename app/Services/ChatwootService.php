@@ -50,7 +50,7 @@ class ChatwootService
             }
 
             throw new \Exception('Failed to create Chatwoot account: ' . $response->body());
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot account creation failed', [
                 'error' => $e->getMessage(),
                 'name' => $name
@@ -74,7 +74,7 @@ class ChatwootService
             }
 
             throw new \Exception('Failed to create Chatwoot user: ' . $response->body());
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot user creation failed', [
                 'error' => $e->getMessage(),
                 'account_id' => $accountId,
@@ -106,7 +106,7 @@ class ChatwootService
             $result = $this->createWebhookSubscription($n8nWebhookUrl, $inboxId);
             
             return $result;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService: Error configurando webhook', [
                 'inbox_id' => $inboxId,
                 'error' => $e->getMessage(),
@@ -319,7 +319,7 @@ class ChatwootService
                 'success' => false,
                 'error' => 'Inbox not found',
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -345,7 +345,7 @@ class ChatwootService
                 'success' => true,
                 'inboxes' => $inboxes,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -367,7 +367,7 @@ class ChatwootService
                 ->first();
 
             return $inbox ? (array) $inbox : null;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('findInboxByName error', ['error' => $e->getMessage()]);
             return null;
         }
@@ -410,7 +410,7 @@ class ChatwootService
                 'data' => $response->json()['data'] ?? [],
                 'meta' => $response->json()['meta'] ?? [],
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getConversations failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get conversations', 'data' => []];
         }
@@ -431,7 +431,7 @@ class ChatwootService
                 'data' => $response->json()['payload'] ?? [],
                 'meta' => $response->json()['meta'] ?? [],
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getContacts failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get contacts', 'data' => []];
         }
@@ -451,7 +451,7 @@ class ChatwootService
                 'success' => $response->successful(),
                 'data' => $response->json() ?? [],
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getAgents failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get agents', 'data' => []];
         }
@@ -471,7 +471,7 @@ class ChatwootService
                 'success' => $response->successful(),
                 'data' => $response->json() ?? [],
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getTeams failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get teams', 'data' => []];
         }
@@ -496,7 +496,7 @@ class ChatwootService
                 'data' => $response->json(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::createTeam failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to create team', 'data' => null];
         }
@@ -532,7 +532,7 @@ class ChatwootService
                 'error' => $response->successful() ? null : $response->body(),
                 'status' => $response->status(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::createAccountWebhook failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to create webhook', 'data' => null];
         }
@@ -552,7 +552,7 @@ class ChatwootService
                 'success' => $response->successful(),
                 'data' => $response->json()['payload'] ?? $response->json(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::listAccountWebhooks failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to list webhooks', 'data' => []];
         }
@@ -572,7 +572,7 @@ class ChatwootService
                 'success' => $response->successful(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::deleteAccountWebhook failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to delete webhook'];
         }
@@ -596,7 +596,7 @@ class ChatwootService
                 'data' => $response->json(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::createAccountUser failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to create account user', 'data' => null];
         }
@@ -631,7 +631,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::createApiInbox failed', [
                 'account_id' => $accountId,
                 'inbox_name' => $inboxName,
@@ -670,7 +670,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::createAgent failed', [
                 'account_id' => $accountId,
                 'error' => $e->getMessage()
@@ -702,7 +702,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::updateAgent failed', [
                 'account_id' => $accountId,
                 'agent_id' => $agentId,
@@ -737,7 +737,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::addAgentsToTeam failed', [
                 'account_id' => $accountId,
                 'team_id' => $teamId,
@@ -764,7 +764,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::updateTeam failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to update team', 'data' => null];
         }
@@ -785,7 +785,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => ($response->successful() || $response->status() === 204) ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::deleteTeam failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to delete team'];
         }
@@ -808,7 +808,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getConversation failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get conversation', 'data' => null];
         }
@@ -830,7 +830,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::deleteConversation failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to delete conversation'];
         }
@@ -853,7 +853,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::getConversationMessages failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to get conversation messages', 'data' => null];
         }
@@ -876,7 +876,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::updateContact failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to update contact', 'data' => null];
         }
@@ -901,7 +901,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::updateAgentRole failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to update agent role'];
         }
@@ -922,7 +922,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::deleteAgent failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to delete agent'];
         }
@@ -935,9 +935,8 @@ class ChatwootService
     {
         try {
             $payload = [];
-            if ($assigneeId !== null) {
-                $payload['assignee_id'] = $assigneeId;
-            }
+            // Siempre incluir assignee_id en el payload, incluso si es null (para desasignar)
+            $payload['assignee_id'] = $assigneeId;
             if ($teamId !== null) {
                 $payload['team_id'] = $teamId;
             }
@@ -952,7 +951,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::assignConversation failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to assign conversation'];
         }
@@ -976,7 +975,7 @@ class ChatwootService
                 'status' => $response->status(),
                 'error' => $response->successful() ? null : $response->body(),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::toggleConversationStatus failed', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to toggle conversation status'];
         }
@@ -1014,7 +1013,7 @@ class ChatwootService
             ]);
 
             return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::sendTextMessage exception', [
                 'error' => $e->getMessage(),
                 'conversation_id' => $conversationId,
@@ -1061,7 +1060,7 @@ class ChatwootService
             ]);
 
             return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             @unlink($tempPath ?? '');
             Log::error('ChatwootService::sendAttachmentMessage exception', [
                 'error' => $e->getMessage(),
@@ -1105,7 +1104,7 @@ class ChatwootService
             ]);
 
             return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ChatwootService::sendUploadMessage exception', [
                 'error' => $e->getMessage(),
                 'conversation_id' => $conversationId,

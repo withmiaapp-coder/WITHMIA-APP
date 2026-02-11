@@ -1,5 +1,5 @@
 <?php
-// Build: 2026-02-10T14:17 - ARRAY[] constructor for label_list
+// Build: 2026-02-11T07:55 - DB fallback for assign/status/contact + entry logging
 
 namespace App\Http\Controllers\Api;
 
@@ -97,7 +97,7 @@ class ChatwootController extends Controller
                     'show_on_sidebar' => $showOnSidebar
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
     }
@@ -115,12 +115,9 @@ class ChatwootController extends Controller
                 return response()->json(['success' => true, 'labels' => []]);
             }
 
-            // Chatwoot almacena labels como text[] en la columna label_list
-            $labelTitles = $conv->label_list ?? [];
-            if (is_string($labelTitles)) {
-                // PostgreSQL devuelve arrays como string "{a,b,c}"
-                $labelTitles = $this->parsePostgresArray($labelTitles);
-            }
+            // Chatwoot almacena labels como texto en cached_label_list (comma-separated)
+            $cachedLabels = $conv->cached_label_list ?? '';
+            $labelTitles = $this->parseCachedLabelList($cachedLabels);
 
             if (empty($labelTitles)) {
                 return response()->json(['success' => true, 'labels' => []]);
@@ -136,7 +133,15 @@ class ChatwootController extends Controller
 
             return response()->json(['success' => true, 'labels' => $labels]);
         } catch (\Throwable $e) {
-            Log::error('[WITHMIA] getConversationLabels ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
+            Log::error('[WITHMIA] getConversationLabels ERROR', [
+                'error' => $e->getMessage(), 
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'conversationId' => $conversationId ?? null,
+                'accountId' => $this->accountId ?? null,
+                'inboxId' => $this->inboxId ?? null,
+            ]);
             return response()->json(['success' => true, 'labels' => []]);
         }
     }
@@ -181,19 +186,14 @@ class ChatwootController extends Controller
                 'conv_id' => $conversation->id,
             ]);
 
-            // Chatwoot almacena labels como text[] en la columna label_list
-            if (empty($validLabels)) {
-                $chatwootDb->update(
-                    "UPDATE conversations SET label_list = '{}'::text[], updated_at = NOW() WHERE id = ?",
-                    [$conversation->id]
-                );
-            } else {
-                $placeholders = implode(',', array_fill(0, count($validLabels), '?'));
-                $chatwootDb->update(
-                    "UPDATE conversations SET label_list = ARRAY[{$placeholders}]::text[], updated_at = NOW() WHERE id = ?",
-                    [...$validLabels, $conversation->id]
-                );
-            }
+            // Chatwoot almacena labels como texto en cached_label_list (comma-separated, con \n)
+            $cachedValue = !empty($validLabels) ? implode("\n", $validLabels) . "\n" : '';
+            $chatwootDb->table('conversations')
+                ->where('id', $conversation->id)
+                ->update([
+                    'cached_label_list' => $cachedValue,
+                    'updated_at' => now(),
+                ]);
 
             // Retornar labels enriquecidos con metadata
             $updatedLabels = [];
@@ -213,8 +213,20 @@ class ChatwootController extends Controller
 
             return response()->json(['success' => true, 'labels' => $updatedLabels]);
         } catch (\Throwable $e) {
-            Log::error('[WITHMIA] updateConversationLabels ERROR', ['error' => $e->getMessage(), 'class' => get_class($e)]);
-            return response()->json(['success' => false, 'error' => 'Error al actualizar etiquetas'], 500);
+            Log::error('[WITHMIA] updateConversationLabels ERROR', [
+                'error' => $e->getMessage(), 
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'conversationId' => $conversationId ?? null,
+                'accountId' => $this->accountId ?? null,
+                'inboxId' => $this->inboxId ?? null,
+            ]);
+            return response()->json([
+                'success' => false, 
+                'error' => 'Error al actualizar etiquetas: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -282,37 +294,81 @@ class ChatwootController extends Controller
         try {
             $assigneeId = $request->input('assignee_id');
 
+            Log::info('[WITHMIA] assignConversation ENTRY', [
+                'conversationId' => $conversationId,
+                'assigneeId' => $assigneeId,
+                'accountId' => $this->accountId,
+                'inboxId' => $this->inboxId,
+                'hasToken' => !empty($this->chatwootToken),
+            ]);
+
             $conversation = $this->findConversation($conversationId);
             if (!$conversation) {
                 return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
             }
 
-            // Usar Chatwoot API para que los eventos internos se disparen correctamente
-            $result = $this->chatwootService->assignConversation(
-                (int) $this->accountId,
-                $this->chatwootToken,
-                $conversation->display_id,
-                $assigneeId ? (int) $assigneeId : null
-            );
+            $assigned = false;
 
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => $result['error'] ?? 'Error al asignar conversación'
-                ], $result['status'] ?? 500);
+            // Intentar via Chatwoot API primero (dispara eventos internos)
+            if ($this->chatwootToken) {
+                try {
+                    $result = $this->chatwootService->assignConversation(
+                        (int) $this->accountId,
+                        $this->chatwootToken,
+                        $conversation->display_id,
+                        $assigneeId ? (int) $assigneeId : null
+                    );
+                    $assigned = $result['success'] ?? false;
+                    if (!$assigned) {
+                        Log::warning('[WITHMIA] assignConversation API failed, falling back to DB', [
+                            'api_error' => $result['error'] ?? 'unknown',
+                            'status' => $result['status'] ?? null,
+                        ]);
+                    }
+                } catch (\Throwable $apiError) {
+                    Log::warning('[WITHMIA] assignConversation API exception, falling back to DB', [
+                        'error' => $apiError->getMessage(),
+                    ]);
+                }
+            }
+
+            // Fallback: actualizar directamente en la BD de Chatwoot
+            if (!$assigned) {
+                $this->chatwootDb()->table('conversations')
+                    ->where('id', $conversation->id)
+                    ->update([
+                        'assignee_id' => $assigneeId ? (int) $assigneeId : null,
+                        'updated_at' => now(),
+                    ]);
             }
 
             $assignee = null;
             if ($assigneeId) {
-                $assignee = $this->chatwootDb()->table('users')
+                $assigneeRow = $this->chatwootDb()->table('users')
                     ->where('id', $assigneeId)
-                    ->select('id', 'name', 'email', 'avatar_url')
                     ->first();
+                if ($assigneeRow) {
+                    $assignee = [
+                        'id' => $assigneeRow->id,
+                        'name' => $assigneeRow->name ?? null,
+                        'email' => $assigneeRow->email ?? null,
+                        'avatar_url' => $assigneeRow->avatar_url ?? null,
+                    ];
+                }
             }
 
             return response()->json(['success' => true, 'assignee' => $assignee]);
-        } catch (\Exception $e) {
-            return $this->errorResponse($e);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] assignConversation ERROR', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'conversationId' => $conversationId,
+                'accountId' => $this->accountId ?? null,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al asignar conversación: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -335,27 +391,55 @@ class ChatwootController extends Controller
                 return response()->json(['success' => false, 'error' => 'Estado no válido. Use: ' . implode(', ', $validStatuses)], 422);
             }
 
-            // Usar Chatwoot API para que los eventos internos se disparen correctamente
-            $result = $this->chatwootService->toggleConversationStatus(
-                (int) $this->accountId,
-                $this->chatwootToken,
-                $conversation->display_id,
-                $status
-            );
+            $statusChanged = false;
 
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'error' => $result['error'] ?? 'Error al cambiar estado'
-                ], $result['status'] ?? 500);
+            // Intentar via Chatwoot API primero
+            if ($this->chatwootToken) {
+                try {
+                    $result = $this->chatwootService->toggleConversationStatus(
+                        (int) $this->accountId,
+                        $this->chatwootToken,
+                        $conversation->display_id,
+                        $status
+                    );
+                    $statusChanged = $result['success'] ?? false;
+                    if (!$statusChanged) {
+                        Log::warning('[WITHMIA] changeConversationStatus API failed, falling back to DB', [
+                            'api_error' => $result['error'] ?? 'unknown',
+                        ]);
+                    }
+                } catch (\Throwable $apiError) {
+                    Log::warning('[WITHMIA] changeConversationStatus API exception, falling back to DB', [
+                        'error' => $apiError->getMessage(),
+                    ]);
+                }
+            }
+
+            // Fallback: actualizar directamente en la BD de Chatwoot
+            if (!$statusChanged) {
+                $statusInt = self::STATUS_TO_INT[$status] ?? 0;
+                $this->chatwootDb()->table('conversations')
+                    ->where('id', $conversation->id)
+                    ->update([
+                        'status' => $statusInt,
+                        'updated_at' => now(),
+                    ]);
             }
 
             return response()->json([
                 'success' => true,
                 'data' => ['id' => $conversation->id, 'status' => $status, 'current_status' => $status]
             ]);
-        } catch (\Exception $e) {
-            return $this->errorResponse($e);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] changeConversationStatus ERROR', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'conversationId' => $conversationId,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al cambiar estado: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -384,6 +468,20 @@ class ChatwootController extends Controller
             if ($email !== null) $updateData['email'] = $email;
             if (!empty($validated['phone_number'])) $updateData['phone_number'] = $validated['phone_number'];
 
+            if (!$this->chatwootToken) {
+                // Fallback: actualizar directamente en BD
+                $this->chatwootDb()->table('contacts')
+                    ->where('id', (int) $contactId)
+                    ->where('account_id', $this->accountId)
+                    ->update(array_merge($updateData, ['updated_at' => now()]));
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Contacto actualizado exitosamente',
+                    'data' => $updateData
+                ]);
+            }
+
             $result = $this->chatwootService->updateContact(
                 $this->accountId, $this->chatwootToken, (int) $contactId, $updateData
             );
@@ -403,7 +501,7 @@ class ChatwootController extends Controller
                 'error' => $result['error'] ?? 'Unknown'
             ], $result['status'] ?? 500);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error al actualizar contacto: ' . $e->getMessage(), ['contact_id' => $contactId]);
             return $this->errorResponse($e);
         }
@@ -431,7 +529,7 @@ class ChatwootController extends Controller
                     'company_name' => $company ? $company->name : null
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error getting Chatwoot config', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'error' => 'Error al obtener configuración'], 500);
         }
@@ -513,7 +611,7 @@ class ChatwootController extends Controller
                     }
                     $avgResponseTime = $minutes < 60 ? "{$minutes} min" : round($minutes / 60, 1) . " hrs";
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::debug('No se pudo calcular avg response time', ['error' => $e->getMessage()]);
             }
 
@@ -557,5 +655,16 @@ class ChatwootController extends Controller
         if (is_array($value)) return $value;
         $parsed = trim($value, '{}');
         return $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
+    }
+
+    /**
+     * Parse Chatwoot cached_label_list (newline or comma separated text) to array
+     */
+    private function parseCachedLabelList($value): array
+    {
+        if (!$value || !is_string($value)) return [];
+        // Chatwoot uses newline-separated values in cached_label_list
+        $labels = preg_split('/[\n,]+/', trim($value));
+        return array_values(array_filter(array_map('trim', $labels)));
     }
 }

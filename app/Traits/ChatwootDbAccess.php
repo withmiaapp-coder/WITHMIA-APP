@@ -31,13 +31,18 @@ trait ChatwootDbAccess
      */
     protected function findConversation($conversationId): ?object
     {
-        return $this->chatwootDb()->table('conversations')
+        $query = $this->chatwootDb()->table('conversations')
             ->where('account_id', $this->accountId)
-            ->where('inbox_id', $this->inboxId)
             ->where(function ($q) use ($conversationId) {
                 $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
-            })
-            ->first();
+            });
+
+        // Filter by inbox_id only if available
+        if ($this->inboxId) {
+            $query->where('inbox_id', $this->inboxId);
+        }
+
+        return $query->first();
     }
 
     /**

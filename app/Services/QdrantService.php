@@ -72,7 +72,7 @@ class QdrantService
                 'error' => $response['error'] ?? 'Unknown error'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Qdrant: Error creando colección", [
                 'collection' => $collectionName,
                 'error' => $e->getMessage()
@@ -93,7 +93,7 @@ class QdrantService
         try {
             $response = $this->request('GET', "/collections/{$collectionName}");
             return $response['success'] && isset($response['data']['result']);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -114,7 +114,7 @@ class QdrantService
             }
 
             return ['success' => false, 'error' => $response['error'] ?? 'Unknown error'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to list collections'];
         }
     }
@@ -133,7 +133,7 @@ class QdrantService
                 'success' => $response['success'],
                 'message' => $response['success'] ? 'Collection deleted' : ($response['error'] ?? 'Error')
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to delete collection'];
         }
     }
@@ -165,7 +165,7 @@ class QdrantService
             }
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error fetching points'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to get points'];
         }
     }
@@ -190,7 +190,7 @@ class QdrantService
             }
 
             return ['success' => false, 'error' => 'Point not found'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to get point'];
         }
     }
@@ -219,7 +219,7 @@ class QdrantService
             }
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error updating point'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to update point'];
         }
     }
@@ -247,7 +247,7 @@ class QdrantService
             }
 
             return ['success' => false, 'error' => $response['error'] ?? 'Error deleting points'];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to delete points'];
         }
     }
@@ -289,7 +289,7 @@ class QdrantService
                 'error' => $response['error'] ?? 'Unknown error'
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Qdrant: Error upserting points", [
                 'collection' => $collectionName,
                 'error' => $e->getMessage()
@@ -329,7 +329,7 @@ class QdrantService
 
             throw new \Exception("OpenAI API error: " . $response->body());
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error generating embedding", ['error' => $e->getMessage()]);
             throw $e;
         }
@@ -382,7 +382,7 @@ class QdrantService
                 'error' => "HTTP {$response->status()}: " . $response->body()
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Qdrant request exception", [
                 'method' => $method,
                 'endpoint' => $endpoint,

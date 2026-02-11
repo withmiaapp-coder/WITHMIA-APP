@@ -146,7 +146,7 @@ class DynamicContactsExcelManager
                 'file_info' => $fileInfo
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error agregando contacto al Excel: " . $e->getMessage());
             return ['success' => false, 'error' => 'Failed to add contact to Excel'];
         }
@@ -199,7 +199,7 @@ class DynamicContactsExcelManager
                 'file_info' => $fileInfo
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error en importación masiva: " . $e->getMessage());
             return ['success' => false, 'error' => 'Failed to import contacts to Excel'];
         }
@@ -265,7 +265,7 @@ class DynamicContactsExcelManager
                 'contact_name' => $contact['pushName'] ?? $contact['name'] ?? 'Sin nombre',
                 'file_info' => $fileInfo,
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error actualizando contacto en Excel: " . $e->getMessage());
             return ['success' => false, 'error' => 'Failed to update contact in Excel'];
         }
@@ -433,7 +433,7 @@ class DynamicContactsExcelManager
                 'file_info' => $fileInfo
             ];
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error("Error obteniendo estadísticas del Excel: " . $e->getMessage());
             return null;
         }

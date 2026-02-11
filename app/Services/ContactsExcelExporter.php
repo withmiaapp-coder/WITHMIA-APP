@@ -256,7 +256,7 @@ class ContactsExcelExporter
                 'created_at' => Storage::lastModified($filePath),
                 'file_name' => basename($filePath)
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error leyendo estadísticas de Excel: ' . $e->getMessage());
             return null;
         }

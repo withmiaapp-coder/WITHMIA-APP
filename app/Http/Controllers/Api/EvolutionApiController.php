@@ -184,7 +184,7 @@ class EvolutionApiController extends Controller
             
             return null;
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error obteniendo Channel Token', [
                 'error' => $e->getMessage(),
                 'inbox_name' => $inboxName
@@ -198,78 +198,100 @@ class EvolutionApiController extends Controller
      */
     public function connect(Request $request, ?string $instanceName = null): JsonResponse
     {
-        $instanceName = $instanceName ?? $this->getInstanceName($request);
+        try {
+            $user = $request->user();
 
-        Log::debug('🔗 Connect request received', ['instance' => $instanceName]);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No autenticado',
+                ], 401);
+            }
 
-        // 🧹 LIMPIEZA PREVIA: Verificar si la instancia existe y no está conectada
-        // Si existe pero no está conectada, eliminarla primero para generar QR limpio
-        $this->cleanupIfNotConnected($instanceName);
+            $instanceName = $instanceName ?? $this->getInstanceName($request);
 
-        // Obtener configuración de Chatwoot de la empresa del usuario
-        $chatwootConfig = $this->getChatwootConfigForUser($request->user());
+            Log::debug('🔗 Connect request received', ['instance' => $instanceName]);
 
-        // Paso 1: Crear la instancia (con Chatwoot específico de la empresa)
-        $createResult = $this->evolutionApi->createInstance($instanceName, null, $chatwootConfig);
+            // 🧹 LIMPIEZA PREVIA: Verificar si la instancia existe y no está conectada
+            // Si existe pero no está conectada, eliminarla primero para generar QR limpio
+            $this->cleanupIfNotConnected($instanceName);
 
-        Log::debug('📦 Create instance result', [
-            'instance' => $instanceName,
-            'success' => $createResult['success'] ?? false,
-            'error' => $createResult['error'] ?? null,
-            'details' => $createResult['details'] ?? null
-        ]);
+            // Obtener configuración de Chatwoot de la empresa del usuario
+            $chatwootConfig = $this->getChatwootConfigForUser($user);
 
-        // Si la creación falló y NO es porque ya existe, devolver error
-        $alreadyExists = str_contains($createResult['error'] ?? '', 'already in use') || 
-                         str_contains($createResult['error'] ?? '', 'already exists');
-        
-        if (!$createResult['success'] && !$alreadyExists) {
-            Log::error('Failed to create instance', ['instance' => $instanceName, 'error' => $createResult]);
+            // Paso 1: Crear la instancia (con Chatwoot específico de la empresa)
+            $createResult = $this->evolutionApi->createInstance($instanceName, null, $chatwootConfig);
+
+            Log::debug('📦 Create instance result', [
+                'instance' => $instanceName,
+                'success' => $createResult['success'] ?? false,
+                'error' => $createResult['error'] ?? null,
+                'details' => $createResult['details'] ?? null
+            ]);
+
+            // Si la creación falló y NO es porque ya existe, devolver error
+            $alreadyExists = str_contains($createResult['error'] ?? '', 'already in use') || 
+                             str_contains($createResult['error'] ?? '', 'already exists');
             
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to create Evolution instance: ' . ($createResult['error'] ?? 'Unknown error'),
-                'details' => $createResult['details'] ?? null,
-                'debug' => [
+            if (!$createResult['success'] && !$alreadyExists) {
+                Log::error('Failed to create instance', ['instance' => $instanceName, 'error' => $createResult]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to create Evolution instance: ' . ($createResult['error'] ?? 'Unknown error'),
+                    'details' => $createResult['details'] ?? null,
+                    'debug' => [
+                        'instance_name' => $instanceName,
+                        'evolution_url' => config('evolution.api_url'),
+                        'create_result' => $createResult,
+                        'timestamp' => now()->toIso8601String()
+                    ]
+                ], 400);
+            }
+
+            // Pequeña pausa para asegurar que la instancia está lista
+            if ($createResult['success']) {
+                usleep(500000); // 0.5 segundos
+            }
+
+            // Paso 2: Conectar y obtener QR
+            $result = $this->evolutionApi->connect($instanceName);
+
+            Log::debug('🔌 Connect result', [
+                'instance' => $instanceName,
+                'success' => $result['success'] ?? false,
+                'has_qr' => isset($result['qr']),
+                'error' => $result['error'] ?? null,
+                'details' => $result['details'] ?? null
+            ]);
+
+            // Devolver 200 si tenemos QR, aunque success sea false
+            $hasQr = isset($result['qr']) && !empty($result['qr']);
+            $statusCode = ($result['success'] || $hasQr) ? 200 : 400;
+
+            // Incluir más información en caso de error
+            if ($statusCode === 400) {
+                $result['debug'] = [
                     'instance_name' => $instanceName,
                     'evolution_url' => config('evolution.api_url'),
-                    'create_result' => $createResult,
+                    'create_success' => $createResult['success'] ?? false,
                     'timestamp' => now()->toIso8601String()
-                ]
-            ], 400);
+                ];
+            }
+
+            return response()->json($result, $statusCode);
+        } catch (\Throwable $e) {
+            Log::error('Evolution connect exception', [
+                'instance' => $instanceName ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Error interno al conectar WhatsApp: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Pequeña pausa para asegurar que la instancia está lista
-        if ($createResult['success']) {
-            usleep(500000); // 0.5 segundos
-        }
-
-        // Paso 2: Conectar y obtener QR
-        $result = $this->evolutionApi->connect($instanceName);
-
-        Log::debug('🔌 Connect result', [
-            'instance' => $instanceName,
-            'success' => $result['success'] ?? false,
-            'has_qr' => isset($result['qr']),
-            'error' => $result['error'] ?? null,
-            'details' => $result['details'] ?? null
-        ]);
-
-        // Devolver 200 si tenemos QR, aunque success sea false
-        $hasQr = isset($result['qr']) && !empty($result['qr']);
-        $statusCode = ($result['success'] || $hasQr) ? 200 : 400;
-
-        // Incluir más información en caso de error
-        if ($statusCode === 400) {
-            $result['debug'] = [
-                'instance_name' => $instanceName,
-                'evolution_url' => config('evolution.api_url'),
-                'create_success' => $createResult['success'] ?? false,
-                'timestamp' => now()->toIso8601String()
-            ];
-        }
-
-        return response()->json($result, $statusCode);
     }
 
     /**
@@ -319,7 +341,7 @@ class EvolutionApiController extends Controller
             // Pausa más larga para asegurar que Evolution API procesó la eliminación
             sleep(2); // 2 segundos
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('🧹 Error en cleanup (no crítico)', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -376,7 +398,7 @@ class EvolutionApiController extends Controller
                     // 🚀 AUTO-CREAR WORKFLOW: Cuando la instancia está conectada, asegurar que existe workflow
                     $this->ensureN8nWorkflowExists($instanceName);
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::error('Error broadcasting status check', ['error' => $e->getMessage()]);
             }
         }
@@ -440,7 +462,7 @@ class EvolutionApiController extends Controller
                     }
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Exception syncing Chatwoot inbox_id', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -492,7 +514,7 @@ class EvolutionApiController extends Controller
                 Log::debug('✅ Workflow eliminado de n8n exitosamente', [
                     'workflow_id' => $instance->n8n_workflow_id
                 ]);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::warning('⚠️ Error eliminando workflow de n8n (puede que ya no exista)', [
                     'workflow_id' => $instance->n8n_workflow_id,
                     'error' => $e->getMessage()
@@ -510,7 +532,7 @@ class EvolutionApiController extends Controller
                 'instance' => $instanceName
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Error eliminando workflow de n8n', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -628,7 +650,7 @@ class EvolutionApiController extends Controller
                 ],
                 'instanceExists' => true
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error getting WhatsApp settings', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
@@ -684,7 +706,7 @@ class EvolutionApiController extends Controller
                 'instanceExists' => false
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error updating WhatsApp settings', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
@@ -858,22 +880,169 @@ class EvolutionApiController extends Controller
                 $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
             }
             
-            // 📨 NO reenviar a n8n directamente desde aquí
-            // El flujo correcto es: Evolution → Chatwoot (integración nativa) → n8n (webhook de Chatwoot)
-            // Esto evita duplicados y asegura que n8n reciba el formato correcto de Chatwoot
+            // 📨 REENVÍO A N8N desde Evolution webhook (bypass de Chatwoot webhooks)
+            // Los webhooks de Chatwoot no disparan consistentemente para mensajes
+            // creados por la integración de Evolution API, así que reenviamos directamente.
+            // SYNC: Enviamos directo a n8n sin pasar por la cola (Horizon puede no procesar Jobs)
             $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT'];
             
             if (in_array($event, $eventsToForward)) {
-                // Solo log para debug, NO reenviamos a n8n
-                Log::debug('📨 Mensaje recibido de Evolution (Chatwoot lo reenviará a n8n)', [
-                    'instance' => $instanceName,
-                    'event' => $event,
-                    'fromMe' => $data['key']['fromMe'] ?? false
-                ]);
+                $fromMe = $data['key']['fromMe'] ?? false;
+                $msgContent = $data['message']['conversation'] 
+                    ?? $data['message']['extendedTextMessage']['text'] 
+                    ?? $data['message']['imageMessage']['caption'] 
+                    ?? '';
+                    
+                if (!$fromMe && $instance) {
+                    $cleanPhone = str_replace('@s.whatsapp.net', '', $data['key']['remoteJid'] ?? '');
+                    $whatsappMsgId = $data['key']['id'] ?? null;
+                    
+                    // Dedup: prevent double-forwarding 
+                    $dedupKey = "n8n_evo_fwd_{$whatsappMsgId}";
+                    if ($whatsappMsgId && Cache::has($dedupKey)) {
+                        Log::debug('⏭️ n8n forward already sent (dedup)', ['msg_id' => $whatsappMsgId]);
+                    } else {
+                        if ($whatsappMsgId) {
+                            Cache::put($dedupKey, true, 120);
+                        }
+                        
+                        $company = Company::find($instance->company_id);
+                        $chatwootAccountId = $company->chatwoot_account_id ?? 1;
+                        $chatwootInboxId = $instance->chatwoot_inbox_id ?? ($company->chatwoot_inbox_id ?? null);
+                        $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
+                        // Use company api_key (user_access_token) for Chatwoot account API
+                        // Same fallback chain as N8nConfigController
+                        $chatwootToken = $company->chatwoot_api_key
+                            ?? ($company->settings['chatwoot_api_token'] ?? null)
+                            ?? config('chatwoot.api_key')
+                            ?? config('chatwoot.super_admin_token')
+                            ?? config('chatwoot.platform_token');
+                        
+                        Log::debug('🔑 Chatwoot lookup token', [
+                            'token_preview' => substr($chatwootToken ?? '', 0, 8) . '...',
+                            'account_id' => $chatwootAccountId,
+                            'inbox_id' => $chatwootInboxId,
+                        ]);
+                        
+                        // Wait for Chatwoot to process message from Evolution integration
+                        usleep(2500000); // 2.5 seconds
+                        
+                        // Look up conversation in Chatwoot by phone number
+                        $conversationData = null;
+                        $senderData = null;
+                        try {
+                            // Search contact by phone
+                            $searchResp = \Illuminate\Support\Facades\Http::withHeaders(['api_access_token' => $chatwootToken])
+                                ->timeout(8)
+                                ->get("{$chatwootUrl}/api/v1/accounts/{$chatwootAccountId}/contacts/search", ['q' => $cleanPhone]);
+                            
+                            if ($searchResp->successful()) {
+                                $contacts = $searchResp->json('payload', []);
+                                $contactId = null;
+                                foreach ($contacts as $contact) {
+                                    $cp = str_replace(['+', ' ', '-'], '', $contact['phone_number'] ?? '');
+                                    $sp = str_replace(['+', ' ', '-'], '', $cleanPhone);
+                                    if ($cp === $sp || str_ends_with($cp, $sp) || str_ends_with($sp, $cp)) {
+                                        $contactId = $contact['id'];
+                                        $senderData = $contact;
+                                        break;
+                                    }
+                                }
+                                
+                                if ($contactId) {
+                                    // Get conversations for this contact
+                                    $convResp = \Illuminate\Support\Facades\Http::withHeaders(['api_access_token' => $chatwootToken])
+                                        ->timeout(8)
+                                        ->get("{$chatwootUrl}/api/v1/accounts/{$chatwootAccountId}/contacts/{$contactId}/conversations");
+                                    
+                                    if ($convResp->successful()) {
+                                        $convs = $convResp->json('payload', []);
+                                        // Prefer open conversation in our inbox
+                                        $conversationData = collect($convs)
+                                            ->filter(fn($c) => ($c['inbox_id'] ?? null) == $chatwootInboxId && ($c['status'] ?? '') !== 'resolved')
+                                            ->sortByDesc('id')
+                                            ->first();
+                                        
+                                        if (!$conversationData) {
+                                            $conversationData = collect($convs)
+                                                ->filter(fn($c) => ($c['inbox_id'] ?? null) == $chatwootInboxId)
+                                                ->sortByDesc('id')
+                                                ->first();
+                                        }
+                                        if (!$conversationData) {
+                                            $conversationData = collect($convs)->sortByDesc('id')->first();
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (\Throwable $lookupErr) {
+                            Log::warning('⚠️ Chatwoot conversation lookup failed', ['error' => $lookupErr->getMessage()]);
+                        }
+                        
+                        $conversationId = $conversationData['id'] ?? null;
+                        
+                        // Build Chatwoot-compatible payload for n8n
+                        $n8nPayload = [
+                            'event' => 'message_created',
+                            'message_type' => 'incoming',
+                            'content' => $msgContent,
+                            'content_type' => 'text',
+                            'private' => false,
+                            'source_id' => $whatsappMsgId,
+                            'conversation' => $conversationData ?? [
+                                'id' => $conversationId,
+                                'inbox_id' => $chatwootInboxId,
+                                'account_id' => $chatwootAccountId,
+                                'status' => 'open',
+                            ],
+                            'inbox' => [
+                                'id' => $chatwootInboxId ?? 1,
+                                'name' => 'WhatsApp ' . $instanceName,
+                            ],
+                            'account' => ['id' => $chatwootAccountId],
+                            'sender' => $senderData ? [
+                                'id' => $senderData['id'] ?? null,
+                                'identifier' => $senderData['identifier'] ?? ($cleanPhone . '@s.whatsapp.net'),
+                                'name' => $senderData['name'] ?? ($data['pushName'] ?? $cleanPhone),
+                                'phone_number' => $senderData['phone_number'] ?? ('+' . ltrim($cleanPhone, '+')),
+                                'email' => $senderData['email'] ?? null,
+                            ] : [
+                                'identifier' => $cleanPhone . '@s.whatsapp.net',
+                                'name' => $data['pushName'] ?? $cleanPhone,
+                                'phone_number' => '+' . ltrim($cleanPhone, '+'),
+                            ],
+                        ];
+                        
+                        // Send directly to n8n (synchronous, no queue)
+                        $n8nUrl = rtrim(config('n8n.url', ''), '/') . '/webhook/' . $instanceName;
+                        
+                        Log::info('📨 Enviando mensaje directo a n8n', [
+                            'url' => $n8nUrl,
+                            'phone' => $cleanPhone,
+                            'conversation_id' => $conversationId,
+                            'content_preview' => substr($msgContent, 0, 50),
+                        ]);
+                        
+                        try {
+                            $n8nResponse = \Illuminate\Support\Facades\Http::timeout(15)->post($n8nUrl, $n8nPayload);
+                            
+                            Log::info('✅ n8n forward completado', [
+                                'status' => $n8nResponse->status(),
+                                'instance' => $instanceName,
+                                'conversation_id' => $conversationId,
+                            ]);
+                        } catch (\Throwable $n8nErr) {
+                            Log::error('❌ n8n forward falló', [
+                                'url' => $n8nUrl,
+                                'error' => $n8nErr->getMessage(),
+                            ]);
+                        }
+                    }
+                }
             } else {
                 Log::debug('🔇 Evento ignorado', ['event' => $event]);
             }
-        } catch (\Exception $e) { 
+        } catch (\Throwable $e) { 
             Log::warning('Error n8n (non-blocking)', ['e' => $e->getMessage()]); 
         }
 
@@ -899,7 +1068,7 @@ class EvolutionApiController extends Controller
                     Log::debug('Unhandled webhook event', ['event' => $event]);
                     break;
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error processing webhook', [
                 'event' => $event,
                 'error' => $e->getMessage()
@@ -1066,18 +1235,19 @@ class EvolutionApiController extends Controller
                 ]);
                 return; // No procesar mensaje de instancia desconocida
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error obteniendo company/account_id', ['error' => $e->getMessage()]);
             return; // No procesar en caso de error
         }
 
-        // 📡 BROADCAST DESHABILITADO
-        // El webhook de Chatwoot ya maneja el broadcast de mensajes entrantes.
-        // Evolution API envía el mensaje a Chatwoot (integración nativa),
-        // y luego Chatwoot dispara su webhook que hace el broadcast.
-        // Si hacemos broadcast aquí, el mensaje aparece DUPLICADO en el frontend.
+        // 📡 BROADCAST para mensajes entrantes (real-time frontend via Reverb)
+        // Antes estaba deshabilitado porque dependíamos del webhook de Chatwoot,
+        // pero ese webhook no dispara consistentemente. Ahora notificamos directamente.
+        // El broadcast completo (con datos de conversación de Chatwoot) se hace 
+        // desde el ChatwootWebhookController si/cuando funcione. Aquí solo enviamos
+        // una notificación ligera para que el frontend refresque.
         
-        Log::debug('📡 Mensaje recibido de Evolution - Chatwoot webhook hará el broadcast', [
+        Log::debug('📡 Mensaje procesado - n8n job despachado si era incoming', [
             'account_id' => $accountId,
             'inbox_id' => $inboxId,
             'phone' => $cleanPhone,
@@ -1134,7 +1304,7 @@ class EvolutionApiController extends Controller
                 Log::warning('⚠️ Instancia no encontrada para update', ['instance' => $instanceName]);
                 return; // No procesar instancia desconocida
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error obteniendo account_id para update', ['error' => $e->getMessage()]);
             return;
         }
@@ -1150,7 +1320,7 @@ class EvolutionApiController extends Controller
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error broadcasting update event', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
@@ -1248,7 +1418,7 @@ class EvolutionApiController extends Controller
                     'instance' => $instanceName
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error broadcasting connection event', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
@@ -1295,7 +1465,7 @@ class EvolutionApiController extends Controller
                     'instance' => $instance->instance_name
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error creando workflow de n8n', [
                 'error' => $e->getMessage(),
                 'instance' => $instance->instance_name
@@ -1351,7 +1521,7 @@ class EvolutionApiController extends Controller
             // Crear workflow
             $this->createN8nWorkflowForInstance($instance);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error en ensureN8nWorkflowExists', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()
@@ -1425,7 +1595,7 @@ class EvolutionApiController extends Controller
                 ]);
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error configurando webhook de Chatwoot', [
                 'instance' => $instance->instance_name,
                 'error' => $e->getMessage()
@@ -1534,7 +1704,7 @@ class EvolutionApiController extends Controller
                 ]);
             }
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error en ensureCorrectChatwootToken', [
                 'instance' => $instanceName,
                 'error' => $e->getMessage()

@@ -140,46 +140,60 @@ class ChatwootWebhookController extends Controller
                 ]);
                 
                 // Broadcast para TODOS los mensajes (entrantes y del bot)
-                $messageEvent = new NewMessageReceived(
-                    $data,
-                    $conversationId,
-                    $inboxId,
-                    $accountId
-                );
-                broadcast($messageEvent);
+                // Wrapped in try-catch: si Reverb no responde, no debe bloquear el webhook
+                try {
+                    $messageEvent = new NewMessageReceived(
+                        $data,
+                        $conversationId,
+                        $inboxId,
+                        $accountId
+                    );
+                    broadcast($messageEvent);
 
-                // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
-                $convEvent = new ConversationUpdated(
-                    $data['conversation'] ?? $data,
-                    $inboxId,
-                    $accountId
-                );
-                broadcast($convEvent);
+                    // 2️⃣ TAMBIÉN actualizar la lista de conversaciones (sincronizado)
+                    $convEvent = new ConversationUpdated(
+                        $data['conversation'] ?? $data,
+                        $inboxId,
+                        $accountId
+                    );
+                    broadcast($convEvent);
 
-                Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
-                    'inbox_id' => $inboxId,
-                    'conversation_id' => $conversationId,
-                    'message_content' => substr($data['content'] ?? '', 0, 50)
-                ]);
+                    Log::debug('📤 NewMessageReceived + ConversationUpdated broadcasted SYNC', [
+                        'inbox_id' => $inboxId,
+                        'conversation_id' => $conversationId,
+                        'message_content' => substr($data['content'] ?? '', 0, 50)
+                    ]);
+                } catch (\Throwable $broadcastError) {
+                    Log::warning('⚠️ Broadcast failed (Reverb unreachable?), continuing webhook processing', [
+                        'error' => $broadcastError->getMessage(),
+                        'conversation_id' => $conversationId,
+                    ]);
+                }
             }
 
             // Solo para eventos que NO son message_created (evitar duplicado)
             if (in_array($event, ['conversation_updated', 'conversation_status_changed', 'conversation_created']) && $inboxId && $accountId) {
-                // Broadcast actualización de conversación
-                $convEvent = new ConversationUpdated(
-                    $data['conversation'] ?? $data,
-                    $inboxId,
-                    $accountId
-                );
-                broadcast($convEvent);
+                try {
+                    $convEvent = new ConversationUpdated(
+                        $data['conversation'] ?? $data,
+                        $inboxId,
+                        $accountId
+                    );
+                    broadcast($convEvent);
 
-                Log::debug('📤 ConversationUpdated event broadcasted', [
-                    'event' => $event,
-                    'inbox_id' => $inboxId,
-                    'conversation_id' => $data['conversation']['id'] ?? null
-                ]);
+                    Log::debug('📤 ConversationUpdated event broadcasted', [
+                        'event' => $event,
+                        'inbox_id' => $inboxId,
+                        'conversation_id' => $data['conversation']['id'] ?? null
+                    ]);
+                } catch (\Throwable $broadcastError) {
+                    Log::warning('⚠️ ConversationUpdated broadcast failed', [
+                        'error' => $broadcastError->getMessage(),
+                        'event' => $event,
+                    ]);
+                }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Error broadcasting event', [
                 'event' => $event,
                 'error' => $e->getMessage()
@@ -204,7 +218,7 @@ class ChatwootWebhookController extends Controller
         Cache::put($cacheKey, $events, now()->addMinutes(5));
 
         // 🔊 ENRIQUECER Y REENVIAR A N8N para mensajes entrantes
-        // Si el mensaje es incoming, enriquecer con attachments si es necesario y reenviar a n8n
+        // PRIORIDAD: Despachar a n8n ANTES del broadcast (broadcast puede bloquear si Reverb no responde)
         if ($event === 'message_created') {
             $this->forwardToN8nWithEnrichment($data, $inboxId, $accountId);
         }
@@ -232,6 +246,20 @@ class ChatwootWebhookController extends Controller
                 return;
             }
             
+            // Dedup: si el Evolution webhook ya despachó el forward, no duplicar
+            $sourceId = $data['source_id'] ?? null;
+            if ($sourceId) {
+                $dedupKey = "n8n_evo_fwd_{$sourceId}";
+                if (\Cache::has($dedupKey)) {
+                    Log::debug('⏭️ n8n forward ya enviado desde Evolution webhook (dedup)', [
+                        'source_id' => $sourceId,
+                    ]);
+                    return;
+                }
+                // Mark as sent so Evolution job also won't duplicate
+                \Cache::put($dedupKey, true, 120);
+            }
+            
             // Resolver company slug desde inbox_id (DB lookup con cache, fallback inbox name)
             $companySlug = $this->resolveCompanySlugFromInbox($inboxId, $data);
             
@@ -255,7 +283,7 @@ class ChatwootWebhookController extends Controller
                 $companySlug,
             );
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Error al despachar ForwardToN8nWithEnrichmentJob', [
                 'error' => $e->getMessage()
             ]);
@@ -459,7 +487,7 @@ class ChatwootWebhookController extends Controller
 
             return true; // Permitir que continúe
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Error en preventDuplicateConversationWithRedis', [
                 'error' => $e->getMessage()
             ]);
@@ -494,7 +522,7 @@ class ChatwootWebhookController extends Controller
                 ]);
                 return false;
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ Excepción archivando conversación', [
                 'conversation_id' => $conversationId,
                 'error' => $e->getMessage()
@@ -552,7 +580,7 @@ class ChatwootWebhookController extends Controller
                     ]);
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('⚠️ [HUMAN_TAKEOVER_WEBHOOK] Error procesando unlock keyword', [
                 'error' => $e->getMessage()
             ]);
@@ -606,7 +634,7 @@ class ChatwootWebhookController extends Controller
             }
             
             return 'BOTA'; // Default
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning('⚠️ Error obteniendo unlock_keyword, usando default BOTA', [
                 'inbox_id' => $inboxId,
                 'error' => $e->getMessage()

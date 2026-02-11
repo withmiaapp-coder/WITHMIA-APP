@@ -30,16 +30,13 @@ class ValidateWebhookSignature
             default => env(strtoupper($source) . '_WEBHOOK_SECRET'),
         };
 
-        // No secret configured → reject in production, allow in dev
+        // No secret configured → allow through (graceful degradation)
+        // Evolution API doesn't send HMAC signatures by default,
+        // so we can't reject requests without a secret configured.
         if (empty($secret)) {
-            if (app()->environment('production')) {
-                Log::warning('Webhook rejected: no secret configured for source', [
-                    'source' => $source,
-                    'ip' => $request->ip(),
-                ]);
-                return response()->json(['error' => 'Webhook secret not configured'], 500);
-            }
-            // In local/staging, allow through for development convenience
+            Log::debug('Webhook allowed: no secret configured for source (skipping HMAC)', [
+                'source' => $source,
+            ]);
             return $next($request);
         }
 

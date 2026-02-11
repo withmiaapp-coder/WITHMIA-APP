@@ -118,18 +118,13 @@ class ChatwootConversationController extends Controller
                 }
             }
 
-            // Obtener labels de todas las conversaciones desde label_list (text[] column)
+            // Obtener labels de todas las conversaciones desde cached_label_list (text column)
             $labelsMap = [];
             foreach ($conversationsFromDb as $conv) {
-                $labelList = $conv->label_list ?? null;
-                if ($labelList) {
-                    if (is_string($labelList)) {
-                        // PostgreSQL text[] viene como "{a,b,c}"
-                        $parsed = trim($labelList, '{}');
-                        $labels = $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
-                    } else {
-                        $labels = (array) $labelList;
-                    }
+                $cachedLabels = $conv->cached_label_list ?? null;
+                if ($cachedLabels && is_string($cachedLabels)) {
+                    // cached_label_list uses newline-separated values
+                    $labels = array_values(array_filter(array_map('trim', preg_split('/[\n,]+/', trim($cachedLabels)))));
                     if (!empty($labels)) {
                         $labelsMap[$conv->id] = $labels;
                     }
@@ -278,7 +273,7 @@ class ChatwootConversationController extends Controller
 
             return response()->json(['success' => true, 'payload' => $conversation]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error getConversation: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al obtener conversación'], 500);
         }
@@ -412,7 +407,7 @@ class ChatwootConversationController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot Get Messages Error: ' . $e->getMessage(), [
                 'user_id' => $this->userId, 'conversation_id' => $id
             ]);
@@ -451,7 +446,7 @@ class ChatwootConversationController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Conversación marcada como leída']);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error marking conversation as read: ' . $e->getMessage(), [
                 'user_id' => $this->userId, 'conversation_id' => $id
             ]);
@@ -523,7 +518,7 @@ class ChatwootConversationController extends Controller
                     }
                     $conversationsWithMessages[] = $conversation;
                     usleep(100000);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $conversation['messages'] = [];
                     $conversationsWithMessages[] = $conversation;
                     $errorCount++;
@@ -540,7 +535,7 @@ class ChatwootConversationController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error en exportación: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al exportar conversaciones', 'data' => []], 500);
         }
@@ -580,7 +575,7 @@ class ChatwootConversationController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Error al eliminar la conversación en Chatwoot'], 500);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Excepción al eliminar conversación', [
                 'conversation_id' => $conversationId, 'error' => $e->getMessage()
             ]);
@@ -605,7 +600,7 @@ class ChatwootConversationController extends Controller
             return response()->json(
                 $this->deduplicationService->getDuplicatesDiagnosis($this->inboxId, $this->accountId)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
     }
@@ -623,7 +618,7 @@ class ChatwootConversationController extends Controller
             return response()->json(
                 $this->deduplicationService->autoMergeDuplicates($this->inboxId, $this->accountId)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
     }

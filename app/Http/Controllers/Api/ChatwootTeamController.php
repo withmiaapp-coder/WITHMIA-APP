@@ -97,7 +97,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => true, 'data' => $teamsWithMembers]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('getTeams Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener equipos'], 500);
         }
@@ -153,7 +153,7 @@ class ChatwootTeamController extends Controller
                 ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('getTeam Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al obtener equipo'], 500);
         }
@@ -198,7 +198,7 @@ class ChatwootTeamController extends Controller
                 'message' => 'Error al crear equipo: ' . ($result['data']['message'] ?? $result['error'] ?? 'Error desconocido'),
             ], 400);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
     }
@@ -225,7 +225,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Error al actualizar equipo'], 400);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot Update Team Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al actualizar equipo'], 500);
         }
@@ -247,7 +247,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Error al eliminar equipo'], 400);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot Delete Team Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al eliminar equipo'], 500);
         }
@@ -297,7 +297,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => true, 'data' => $members]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('getTeamMembers Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'data' => [], 'error' => 'Error al obtener miembros'], 500);
         }
@@ -346,7 +346,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => true, 'message' => "Se agregaron $addedCount miembros exitosamente"]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
     }
@@ -387,14 +387,14 @@ class ChatwootTeamController extends Controller
                 }
 
                 $chatwootDb->commit();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $chatwootDb->rollBack();
                 throw $e;
             }
 
             return response()->json(['success' => true, 'message' => 'Miembros actualizados exitosamente']);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot Update Team Members Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al actualizar miembros'], 500);
         }
@@ -427,7 +427,7 @@ class ChatwootTeamController extends Controller
 
             return response()->json(['success' => true, 'message' => "Se removieron $deletedCount miembros exitosamente"]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Chatwoot Remove Team Member Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al remover miembro'], 500);
         }

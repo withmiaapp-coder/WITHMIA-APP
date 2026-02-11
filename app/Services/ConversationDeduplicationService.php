@@ -36,7 +36,7 @@ class ConversationDeduplicationService
         try {
             // Verificar conectividad
             $this->db()->getPdo();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ ConversationDeduplication: No se pudo conectar a Chatwoot DB', [
                 'error' => $e->getMessage(),
             ]);
@@ -79,7 +79,7 @@ class ConversationDeduplicationService
                     } else {
                         $errors[] = "Phone {$phoneNumber}: " . ($result['error'] ?? 'Unknown error');
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     Log::error('❌ ConversationDeduplication: Error fusionando', [
                         'phone' => $phoneNumber,
                         'error' => $e->getMessage(),
@@ -97,7 +97,7 @@ class ConversationDeduplicationService
                 'message' => "Fusionadas {$mergedCount} conversaciones duplicadas",
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('❌ ConversationDeduplication: Error general', ['error' => $e->getMessage()]);
             return ['success' => false, 'error' => 'Failed to deduplicate conversations'];
         }
@@ -250,7 +250,7 @@ class ConversationDeduplicationService
                 'messages_moved' => $totalMessagesMoved,
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $db->rollBack();
             Log::error('❌ ConversationDeduplication: Error en transacción', [
                 'phone_key' => $phoneKey,
@@ -279,7 +279,7 @@ class ConversationDeduplicationService
                 "UPDATE attachments SET record_id = ? WHERE record_type = 'Conversation' AND record_id = ?",
                 [$toConvId, $fromConvId]
             );
-        } catch (\Exception) {
+        } catch (\Throwable) {
             // Tabla puede no existir, ignorar
         }
     }
@@ -287,20 +287,20 @@ class ConversationDeduplicationService
     private function moveConversationLabels(int $fromConvId, int $toConvId): void
     {
         try {
-            // Chatwoot usa label_list (text[]) en conversations, no join table
-            $fromLabels = $this->db()->selectOne('SELECT label_list FROM conversations WHERE id = ?', [$fromConvId]);
-            $toLabels = $this->db()->selectOne('SELECT label_list FROM conversations WHERE id = ?', [$toConvId]);
+            // Chatwoot usa cached_label_list (text) en conversations
+            $fromLabels = $this->db()->selectOne('SELECT cached_label_list FROM conversations WHERE id = ?', [$fromConvId]);
+            $toLabels = $this->db()->selectOne('SELECT cached_label_list FROM conversations WHERE id = ?', [$toConvId]);
 
-            $fromList = $this->parseLabelList($fromLabels->label_list ?? null);
-            $toList = $this->parseLabelList($toLabels->label_list ?? null);
+            $fromList = $this->parseLabelList($fromLabels->cached_label_list ?? null);
+            $toList = $this->parseLabelList($toLabels->cached_label_list ?? null);
 
             $merged = array_unique(array_merge($toList, $fromList));
 
             if (!empty($merged)) {
-                $pgArray = '{' . implode(',', array_map(fn($l) => '"' . addslashes($l) . '"', $merged)) . '}';
-                $this->db()->update('UPDATE conversations SET label_list = ? WHERE id = ?', [$pgArray, $toConvId]);
+                $cachedValue = implode("\n", $merged) . "\n";
+                $this->db()->update('UPDATE conversations SET cached_label_list = ? WHERE id = ?', [$cachedValue, $toConvId]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::debug('ConversationDeduplication: No se pudieron mover labels', [
                 'error' => $e->getMessage(),
             ]);
@@ -311,8 +311,10 @@ class ConversationDeduplicationService
     {
         if (!$labelList) return [];
         if (is_array($labelList)) return $labelList;
-        $parsed = trim($labelList, '{}');
-        return $parsed !== '' ? array_map(fn($l) => trim($l, '"'), explode(',', $parsed)) : [];
+        // Handle both newline-separated and {a,b,c} formats
+        $cleaned = trim($labelList, '{}');
+        $labels = preg_split('/[\n,]+/', $cleaned);
+        return array_values(array_filter(array_map(fn($l) => trim($l, '" '), $labels)));
     }
 
     private function updateConversationReferences(int $fromConvId, int $toConvId): void
@@ -327,7 +329,7 @@ class ConversationDeduplicationService
             try {
                 $sql = "UPDATE {$ref['table']} SET {$ref['column']} = ? WHERE {$ref['column']} = ? {$ref['condition']}";
                 $this->db()->update($sql, [$toConvId, $fromConvId]);
-            } catch (\Exception) {
+            } catch (\Throwable) {
                 // Tabla puede no existir, ignorar
             }
         }
@@ -341,7 +343,7 @@ class ConversationDeduplicationService
         foreach ($dependencyTables as $table) {
             try {
                 $this->db()->delete("DELETE FROM {$table} WHERE conversation_id = ?", [$convId]);
-            } catch (\Exception) {
+            } catch (\Throwable) {
                 // Tabla puede no existir
             }
         }
@@ -367,7 +369,7 @@ class ConversationDeduplicationService
             Log::debug('🗑️ ConversationDeduplication: Contacto huérfano eliminado', [
                 'contact_id' => $contactId,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::debug('ConversationDeduplication: No se pudo eliminar contacto huérfano', [
                 'contact_id' => $contactId,
                 'error' => $e->getMessage(),
@@ -408,7 +410,7 @@ class ConversationDeduplicationService
     {
         try {
             $this->db()->getPdo(); // Verificar conexión
-        } catch (\Exception) {
+        } catch (\Throwable) {
             return ['success' => false, 'error' => 'Database connection failed'];
         }
 
@@ -440,7 +442,7 @@ class ConversationDeduplicationService
                 'details' => $diagnosis,
             ];
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ['success' => false, 'error' => 'Failed to diagnose conversations'];
         }
     }
