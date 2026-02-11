@@ -212,7 +212,8 @@ class TrainingChatController extends Controller
             
             // 3. Si no hay resultados similares, crear nuevo punto
             if (empty($results)) {
-                $newPointId = 'training_' . time() . '_' . bin2hex(random_bytes(4));
+                // Qdrant requires integer or UUID point IDs
+                $newPointId = intval(microtime(true) * 10000) + random_int(1, 9999);
                 
                 Log::debug('No similar content found - creating new point', [
                     'point_id' => $newPointId,
