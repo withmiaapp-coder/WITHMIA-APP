@@ -133,39 +133,58 @@ class DocumentController extends Controller
                 ], 404);
             }
 
-            // Delete vectors from Qdrant using stored vector IDs
+            // Delete vectors from Qdrant using payload filter (robust - doesn't depend on stored IDs)
             try {
                 $companySlug = $company->slug ?? 'company_' . $company->id;
                 $collectionName = $document->qdrant_collection ?? "company_{$companySlug}_knowledge";
                 $qdrantUrl = rtrim(config('qdrant.url'), '/');
+                $qdrantApiKey = config('qdrant.api_key');
 
-                // Get vector IDs from qdrant_vector_ids column (JSON array)
-                if (!empty($document->qdrant_vector_ids)) {
-                    $vectorIds = json_decode($document->qdrant_vector_ids, true);
+                // Delete by payload filter: filename + company_slug
+                // This is more robust than relying on stored vector IDs
+                $qdrantResponse = Http::withHeaders([
+                    'api-key' => $qdrantApiKey,
+                ])->post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
+                    'filter' => [
+                        'must' => [
+                            ['key' => 'filename', 'match' => ['value' => $document->filename]],
+                            ['key' => 'company_slug', 'match' => ['value' => $companySlug]],
+                        ]
+                    ]
+                ]);
+
+                if (!$qdrantResponse->successful()) {
+                    Log::warning("Failed to delete from Qdrant by filter: " . $qdrantResponse->body());
                     
-                    if (is_array($vectorIds) && count($vectorIds) > 0) {
-                        // Delete points by IDs
-                        $qdrantApiKey = config('qdrant.api_key');
-                        $qdrantResponse = Http::withHeaders([
-                            'api-key' => $qdrantApiKey,
-                        ])->post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
-                            'points' => $vectorIds
-                        ]);
-
-                        if (!$qdrantResponse->successful()) {
-                            Log::warning("Failed to delete from Qdrant: " . $qdrantResponse->body());
-                        } else {
-                            Log::info("Deleted " . count($vectorIds) . " vectors from Qdrant for document: " . $document->filename);
+                    // Fallback: try deleting by stored vector IDs
+                    if (!empty($document->qdrant_vector_ids)) {
+                        $vectorIds = json_decode($document->qdrant_vector_ids, true);
+                        if (is_array($vectorIds) && count($vectorIds) > 0) {
+                            $fallbackResponse = Http::withHeaders([
+                                'api-key' => $qdrantApiKey,
+                            ])->post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
+                                'points' => $vectorIds
+                            ]);
+                            Log::info("Qdrant fallback delete by IDs: " . ($fallbackResponse->successful() ? 'success' : 'failed'));
                         }
                     }
                 } else {
-                    Log::warning("No vector IDs stored for document: " . $document->filename);
+                    Log::info("Deleted vectors from Qdrant by filter for document: {$document->filename}", [
+                        'collection' => $collectionName,
+                        'response' => $qdrantResponse->json(),
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::warning('Error deleting from Qdrant: ' . $e->getMessage());
                 // Continue even if Qdrant deletion fails
-            }            // Delete from database
-            $document->delete();
+            }            // Delete ALL DB records with same filename for this company (cleanup duplicates)
+            $deletedCount = KnowledgeDocument::where('company_id', $company->id)
+                ->where('filename', $document->filename)
+                ->delete();
+            
+            if ($deletedCount > 1) {
+                Log::info("Cleaned up {$deletedCount} duplicate records for {$document->filename}");
+            }
 
             return response()->json([
                 'success' => true,
@@ -207,15 +226,19 @@ class DocumentController extends Controller
                 'qdrant_collection' => 'nullable|string'
             ]);
 
-            $document = KnowledgeDocument::create([
-                'company_id' => $company->id,
-                'title' => pathinfo($validated['filename'], PATHINFO_FILENAME),
-                'filename' => $validated['filename'],
-                'category' => $validated['category'],
-                'chunks_created' => $validated['chunks_created'] ?? 0,
-                'qdrant_collection' => $validated['qdrant_collection'] ?? "company_{$companySlug}_knowledge",
-                'file_path' => "/documents/{$companySlug}/{$validated['category']}/{$validated['filename']}",
-            ]);
+            $document = KnowledgeDocument::updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'filename' => $validated['filename'],
+                ],
+                [
+                    'title' => pathinfo($validated['filename'], PATHINFO_FILENAME),
+                    'category' => $validated['category'],
+                    'chunks_created' => $validated['chunks_created'] ?? 0,
+                    'qdrant_collection' => $validated['qdrant_collection'] ?? "company_{$companySlug}_knowledge",
+                    'file_path' => "/documents/{$companySlug}/{$validated['category']}/{$validated['filename']}",
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -361,9 +384,10 @@ class DocumentController extends Controller
                 return response()->json(['success' => false, 'error' => 'Company not found'], 404);
             }
 
-            // Find or create document record
+            // Find the LATEST document record (in case of duplicates)
             $document = KnowledgeDocument::where('company_id', $company->id)
                 ->where('filename', $validated['filename'])
+                ->orderBy('id', 'desc')
                 ->first();
 
             if ($document) {
