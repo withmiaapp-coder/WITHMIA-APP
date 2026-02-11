@@ -12,9 +12,9 @@ interface AppLayoutProps {
 export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
     const { component, props: pageProps } = usePage<any>();
 
-    // Obtener inbox_id del usuario autenticado
+    // Obtener inbox_id del usuario autenticado o de su company
     const user = pageProps?.auth?.user;
-    const inboxId = user?.chatwoot_inbox_id || null;
+    const inboxId = user?.chatwoot_inbox_id || user?.company?.chatwoot_inbox_id || (pageProps as any)?.chatwoot?.inbox_id || null;
 
     // Si es MainDashboard (antes llamado Dashboard), renderizar sin layout de sidebar pero CON notificaciones
     if (component === 'MainDashboard') {
