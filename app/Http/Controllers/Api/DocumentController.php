@@ -419,23 +419,20 @@ class DocumentController extends Controller
      */
     public function proxyToN8n(Request $request)
     {
-        error_log("=== proxyToN8n CALLED ===");
-        Log::debug("proxyToN8n called", [
-            'has_user' => Auth::check(),
-            'request_method' => $request->method(),
-            'has_file' => $request->has('file'),
+        Log::info('proxyToN8n called', [
             'filename' => $request->input('filename'),
+            'has_file' => $request->has('file'),
         ]);
         
         try {
             $user = Auth::user();
             
             if (!$user) {
-                Log::error("proxyToN8n: User not authenticated");
+                Log::error('proxyToN8n: User not authenticated');
                 return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
             }
             
-            Log::debug("proxyToN8n: User authenticated", ['user_id' => $user->id, 'email' => $user->email]);
+            Log::info('proxyToN8n: User authenticated', ['user_id' => $user->id]);
             
             $company = $user->company;
             
@@ -468,7 +465,7 @@ class DocumentController extends Controller
             if ($workflowId) {
                 if (!$this->n8nService->workflowExists($workflowId)) {
                     // Workflow was deleted, clear settings
-                    Log::debug("Workflow {$workflowId} not found in n8n, will create new one");
+                    Log::info("Workflow {$workflowId} not found in n8n, will create new one");
                     $settings = $company->settings ?? [];
                     unset($settings['rag_workflow_id']);
                     unset($settings['rag_webhook_path']);
@@ -486,7 +483,7 @@ class DocumentController extends Controller
                 $existingWorkflow = $this->n8nService->findWorkflowByName("RAG Documents - {$companySlug}");
                 
                 if ($existingWorkflow) {
-                    Log::debug("Workflow RAG existente encontrado en N8N: {$existingWorkflow['id']} - {$existingWorkflow['name']}");
+                    Log::info("Workflow RAG existente encontrado en N8N: {$existingWorkflow['id']} - {$existingWorkflow['name']}");
                     
                     // Extract webhook path from workflow nodes
                     $existingWebhookPath = null;
@@ -513,7 +510,7 @@ class DocumentController extends Controller
             // Solo crear si definitivamente no existe
             if (!$webhookPath || !$workflowId) {
                 // Create company-specific workflow
-                Log::debug("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
+                Log::info("Creando nuevo workflow RAG para {$companySlug} - no se encontró existente");
                 $result = $this->createCompanyWorkflow($company, $companySlug, $companyName);
                 
                 if (!$result['success']) {
@@ -536,11 +533,11 @@ class DocumentController extends Controller
                 'file' => 'required|string', // base64 content
             ]);
 
-            Log::debug("Processing RAG request for {$validated['filename']}", [
+            Log::info("Processing RAG request for {$validated['filename']}", [
                 'company_slug' => $companySlug,
-                'workflow_id' => $workflowId
+                'workflow_id' => $workflowId,
+                'webhook_url' => $webhookUrl,
             ]);
-            error_log("=== proxyToN8n: extracting text from {$validated['filename']} ===");
 
             // EXTRACT TEXT IN LARAVEL - supports visual PDFs with GPT-4 Vision
             $extractedText = $this->extractTextFromDocument(
@@ -548,7 +545,7 @@ class DocumentController extends Controller
                 $validated['filename'],
                 $openaiApiKey
             );
-            error_log("=== proxyToN8n: extracted " . strlen($extractedText ?? '') . " chars ===");
+            Log::info('proxyToN8n: extracted ' . strlen($extractedText ?? '') . ' chars from ' . $validated['filename']);
 
             if (!$extractedText || strlen($extractedText) < 50) {
                 return response()->json([
@@ -557,7 +554,7 @@ class DocumentController extends Controller
                 ], 400);
             }
 
-            Log::debug('RAG: Text extracted', ['characters' => strlen($extractedText)]);
+            Log::info('RAG: Text extracted', ['characters' => strlen($extractedText), 'filename' => $validated['filename']]);
 
             // Prepare payload for n8n
             $payload = [
@@ -570,26 +567,19 @@ class DocumentController extends Controller
                 'qdrant_api_key' => $qdrantApiKey,
             ];
 
-            Log::debug('RAG: Sending to n8n', ['text_length' => strlen($payload['text'])]);
+            // Dispatch to queue - avoids Octane max_execution_time timeout
+            \App\Jobs\ProcessRagDocumentJob::dispatch($webhookUrl, $payload, $validated['filename'])
+                ->onQueue('high');
 
-            // Send EXTRACTED TEXT to n8n (not the binary file)
-            $response = Http::timeout(config('services.timeouts.n8n', 120))->post($webhookUrl, $payload);
+            Log::info("RAG: Dispatched ProcessRagDocumentJob for {$validated['filename']}", [
+                'webhook_url' => $webhookUrl,
+                'text_length' => strlen($extractedText),
+            ]);
 
-            if ($response->successful()) {
-                Log::debug("n8n RAG webhook responded successfully for {$validated['filename']}");
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Document sent to n8n for AI processing',
-                    'n8n_response' => $response->json()
-                ]);
-            } else {
-                Log::error("n8n RAG webhook failed: " . $response->body());
-                return response()->json([
-                    'success' => false,
-                    'error' => 'n8n webhook failed',
-                    'details' => $response->body()
-                ], 500);
-            }
+            return response()->json([
+                'success' => true,
+                'message' => 'Document queued for AI processing',
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -597,15 +587,14 @@ class DocumentController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Throwable $e) {
-            error_log("=== proxyToN8n ERROR: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine() . " ===");
-            Log::error('Error proxying to n8n: ' . $e->getMessage(), [
+            Log::error('proxyToN8n ERROR: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => substr($e->getTraceAsString(), 0, 2000),
             ]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error sending to n8n: ' . $e->getMessage()
+                'error' => 'Error processing document: ' . $e->getMessage()
             ], 500);
         }
     }

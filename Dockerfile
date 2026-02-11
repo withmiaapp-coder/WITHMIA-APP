@@ -38,7 +38,7 @@ RUN curl -sSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-sta
     && rm -rf roadrunner-2024.3.5-linux-amd64
 
 # PHP runtime config
-RUN printf 'default_charset=UTF-8\nopcache.enable=1\nopcache.memory_consumption=64\nopcache.interned_strings_buffer=16\nopcache.max_accelerated_files=10000\nopcache.validate_timestamps=0\nopcache.jit=disable\nrealpath_cache_size=2048K\nrealpath_cache_ttl=600\nmemory_limit=128M\n' > /usr/local/etc/php/conf.d/app.ini
+RUN printf 'default_charset=UTF-8\nopcache.enable=1\nopcache.memory_consumption=64\nopcache.interned_strings_buffer=16\nopcache.max_accelerated_files=10000\nopcache.validate_timestamps=0\nopcache.jit=disable\nrealpath_cache_size=2048K\nrealpath_cache_ttl=600\nmemory_limit=256M\npost_max_size=55M\nupload_max_filesize=50M\n' > /usr/local/etc/php/conf.d/app.ini
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -76,7 +76,7 @@ php artisan view:clear\n\
 php artisan config:cache\n\
 php artisan route:cache\n\
 php artisan queue:work redis --sleep=3 --tries=3 --max-jobs=500 --memory=64 --queue=high,default,low &\n\
-exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=2 --max-requests=500\n\
+exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=2 --max-requests=500 --log-level=info\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8080
