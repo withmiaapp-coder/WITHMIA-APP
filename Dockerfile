@@ -75,7 +75,7 @@ php artisan route:clear\n\
 php artisan view:clear\n\
 php artisan config:cache\n\
 php artisan route:cache\n\
-php artisan queue:work redis --sleep=3 --tries=3 --max-jobs=500 --memory=64 --queue=high,default,low &\n\
+php artisan queue:work --sleep=3 --tries=3 --max-jobs=500 --memory=64 --queue=high,default,low &\n\
 exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8080} --workers=2 --max-requests=500 --log-level=info\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 

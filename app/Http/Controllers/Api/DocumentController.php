@@ -567,19 +567,33 @@ class DocumentController extends Controller
                 'qdrant_api_key' => $qdrantApiKey,
             ];
 
-            // Dispatch to queue - avoids Octane max_execution_time timeout
-            \App\Jobs\ProcessRagDocumentJob::dispatch($webhookUrl, $payload, $validated['filename'])
-                ->onQueue('high');
-
-            Log::info("RAG: Dispatched ProcessRagDocumentJob for {$validated['filename']}", [
+            Log::info("RAG: Sending to n8n webhook", [
                 'webhook_url' => $webhookUrl,
                 'text_length' => strlen($extractedText),
+                'filename' => $validated['filename'],
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Document queued for AI processing',
-            ]);
+            // Send extracted text to n8n (synchronous - Octane allows 120s)
+            $response = Http::timeout(90)->post($webhookUrl, $payload);
+
+            if ($response->successful()) {
+                Log::info("RAG: n8n responded successfully for {$validated['filename']}");
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Document sent to n8n for AI processing',
+                    'n8n_response' => $response->json()
+                ]);
+            } else {
+                Log::error("RAG: n8n webhook failed for {$validated['filename']}", [
+                    'status' => $response->status(),
+                    'body' => substr($response->body(), 0, 500),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'n8n webhook failed: ' . $response->status(),
+                    'details' => substr($response->body(), 0, 200)
+                ], 500);
+            }
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
