@@ -191,7 +191,7 @@ class TrainingChatController extends Controller
     {
         try {
             $qdrantService = app(QdrantService::class);
-            $collectionName = 'knowledge_' . $companySlug;
+            $collectionName = 'company_' . $companySlug . '_knowledge';
             
             // 1. Generar embedding del mensaje nuevo
             $embedding = $qdrantService->generateEmbedding($message);
@@ -200,11 +200,12 @@ class TrainingChatController extends Controller
             $qdrantHost = config('qdrant.url');
             
             $searchResponse = Http::timeout(config('services.timeouts.default', 10))
+                ->withHeaders(['api-key' => config('qdrant.api_key')])
                 ->post("{$qdrantHost}/collections/{$collectionName}/points/search", [
                     'vector' => $embedding,
                     'limit' => 3,
                     'with_payload' => true,
-                    'score_threshold' => 0.75,
+                    'score_threshold' => 0.60,
                 ]);
             
             $searchResults = $searchResponse->json();
@@ -234,8 +235,8 @@ class TrainingChatController extends Controller
             $existingId = $mostSimilar['id'];
             $existingPayload = $mostSimilar['payload'] ?? [];
             
-            // 5. Umbral de decisión: 0.85 (85% de similitud)
-            if ($similarity >= 0.85) {
+            // 5. Umbral de decisión: 0.70 (70% de similitud = mismo tema)
+            if ($similarity >= 0.70) {
                 // ES UN DUPLICADO O CORRECCIÓN - Actualizar el punto existente
                 Log::debug('Similar content detected - updating existing point', [
                     'point_id' => $existingId,
