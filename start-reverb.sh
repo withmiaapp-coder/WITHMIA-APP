@@ -37,5 +37,6 @@ php artisan route:clear 2>&1 || echo "route:clear failed, continuing..."
 export REVERB_SERVER_PORT="$REVERB_PORT"
 echo "Set REVERB_SERVER_PORT=$REVERB_SERVER_PORT"
 
-echo "Starting Laravel Reverb on 0.0.0.0:$REVERB_PORT..."
-exec php artisan reverb:start --host=0.0.0.0 --port="$REVERB_PORT" --debug
+echo "Starting Laravel Reverb on [::]:$REVERB_PORT (dual-stack IPv4+IPv6)..."
+# Use :: to listen on both IPv4 and IPv6 - required for Railway private networking
+exec php artisan reverb:start --host=:: --port="$REVERB_PORT" --debug
