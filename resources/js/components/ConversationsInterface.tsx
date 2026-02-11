@@ -615,11 +615,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, []);
   
-  // � Escuchar evento para refrescar conversaciones cuando hay mensajes pendientes
+  // ✅ Escuchar evento para refrescar conversaciones cuando hay mensajes pendientes (polling fallback)
   useEffect(() => {
     const handleRefreshConversations = () => {
       if (fetchUpdatedConversations) {
         fetchUpdatedConversations();
+      }
+      // También refrescar mensajes de la conversación activa
+      if (activeConversationRef.current?.id && loadConversationMessages) {
+        loadConversationMessages(activeConversationRef.current.id);
       }
     };
     
@@ -627,7 +631,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     return () => {
       window.removeEventListener('refreshConversations', handleRefreshConversations);
     };
-  }, [fetchUpdatedConversations]);
+  }, [fetchUpdatedConversations, loadConversationMessages]);
   
   // �🔔 Escuchar evento selectConversation desde NotificationBell y query params
   const pendingConversationRef = useRef<number | null>(null);

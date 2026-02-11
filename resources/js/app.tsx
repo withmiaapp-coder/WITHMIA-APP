@@ -6,9 +6,8 @@ import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import axios from 'axios';
 
-// Inicializar Laravel Echo para WebSocket en tiempo real
-// DESHABILITADO: No hay servidor WebSocket en Railway por ahora
-// import './echo-config';
+// Inicializar Laravel Echo para WebSocket en tiempo real con Reverb
+import './echo-config';
 
 const appName = import.meta.env.VITE_APP_NAME || 'WITHMIA';
 

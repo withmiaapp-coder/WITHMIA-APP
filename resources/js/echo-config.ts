@@ -11,7 +11,7 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import debugLog from '@/utils/debugLogger';
 
-// Pusher-js es requerido por Laravel Echo para conectarse a WebSockets
+// pusher-js es requerido internamente por Laravel Echo para el protocolo WebSocket de Reverb
 declare global {
   interface Window {
     Pusher: typeof Pusher;

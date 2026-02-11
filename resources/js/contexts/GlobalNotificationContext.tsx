@@ -731,19 +731,59 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        // Reconectar WebSocket si está desconectado
         if (window.Echo?.connector?.pusher?.connection) {
           const connection = window.Echo.connector.pusher.connection;
           if (connection.state !== 'connected') {
-            // Reconectando
             connection.connect();
           }
         }
+        // Emitir refresh para que ConversationsInterface recargue
+        window.dispatchEvent(new CustomEvent('refreshConversations'));
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  // ============================================================================
+  // POLLING FALLBACK: Si WebSocket no conecta, hacer polling cada 15s
+  // ============================================================================
+  useEffect(() => {
+    if (!inboxId) return;
+
+    let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (pollingInterval) return; // Ya está corriendo
+      pollingInterval = setInterval(() => {
+        // Solo hacer polling si WebSocket NO está conectado
+        if (!isWebSocketConnected) {
+          window.dispatchEvent(new CustomEvent('refreshConversations'));
+        }
+      }, 15000); // cada 15 segundos
+    };
+
+    const stopPolling = () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+    };
+
+    // Iniciar polling después de un delay para dar tiempo al WebSocket
+    const startDelay = setTimeout(() => {
+      if (!isWebSocketConnected) {
+        startPolling();
+      }
+    }, 5000);
+
+    return () => {
+      clearTimeout(startDelay);
+      stopPolling();
+    };
+  }, [inboxId, isWebSocketConnected]);
 
   // ============================================================================
   // ACTUALIZAR BADGE DEL TÍTULO

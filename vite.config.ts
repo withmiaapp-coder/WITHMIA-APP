@@ -33,7 +33,7 @@ export default defineConfig({
                     // Separar vendor de la app
                     'vendor-react': ['react', 'react-dom'],
                     'vendor-ui': ['lucide-react', '@headlessui/react'],
-                    'vendor-pusher': ['pusher-js', 'laravel-echo'],
+                    'vendor-websocket': ['pusher-js', 'laravel-echo'],
                 },
             },
         },

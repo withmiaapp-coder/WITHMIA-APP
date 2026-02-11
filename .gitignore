@@ -66,6 +66,19 @@ cookies.txt
 create_instance.json
 instance_create.json
 
+# Logs y dumps temporales
+app-logs*.txt
+app-vars*.txt
+railway-logs*.txt
+railway-vars*.txt
+railway-app-logs*.txt
+reverb-vars*.txt
+reverb-all-vars*.txt
+*_AUDIT*.md
+*AUDIT_REPORT*.md
+PERFORMANCE_AUDIT*.md
+n8n-wf-check.json
+
 # Scripts de deployment duplicados
 commit-railway.sh
 rr
