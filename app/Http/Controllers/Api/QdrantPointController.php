@@ -27,6 +27,22 @@ class QdrantPointController extends Controller
 
             $collectionName = $this->qdrantService->getCollectionName($company->slug);
             
+            // Auto-crear colección si no existe
+            if (!$this->qdrantService->collectionExists($collectionName)) {
+                Log::info("Qdrant: Auto-creating collection for {$company->slug}");
+                $createResult = $this->qdrantService->createCompanyCollection($company->slug);
+                if ($createResult['success']) {
+                    // Guardar en settings de la empresa
+                    $company->update([
+                        'settings' => array_merge($company->settings ?? [], [
+                            'qdrant_collection' => $collectionName
+                        ])
+                    ]);
+                } else {
+                    Log::error("Qdrant: Failed to auto-create collection", ['error' => $createResult['error'] ?? 'unknown']);
+                }
+            }
+            
             $limit = $request->get('limit', 50);
             $offset = $request->get('offset');
             
