@@ -24,9 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # PHP extensions - ONLY those NOT already in php:8.4-cli
 # Built-in (skip): pdo, mbstring, xml, curl, fileinfo, iconv
-# Disable JIT compile (saves ~40s) since opcache.jit=disable at runtime
+# JIT disabled via INI (opcache.jit=disable), not at compile time
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-configure opcache --disable-opcache-jit \
     && docker-php-ext-install -j$(nproc) \
        pdo_pgsql pgsql zip gd intl bcmath exif pcntl opcache sockets \
     && pecl install redis && docker-php-ext-enable redis
