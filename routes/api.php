@@ -311,3 +311,36 @@ Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
 if (app()->environment('local')) {
     require __DIR__ . '/debug.php';
 }
+
+// TEMP: Qdrant debug - remove after fixing onboarding point
+Route::get('/temp-qdrant-check', function (\Illuminate\Http\Request $request) {
+    $key = $request->query('key');
+    if ($key !== config('app.debug_key')) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    
+    $qdrantService = app(\App\Services\QdrantService::class);
+    $collection = 'company_withmia-evp7rj_knowledge';
+    
+    $result = $qdrantService->getPoints($collection, 100);
+    if (!$result['success']) {
+        return response()->json(['error' => $result['error'] ?? 'Failed']);
+    }
+    
+    $points = collect($result['points'])->map(function ($p) {
+        $text = $p['payload']['text'] ?? $p['payload']['content'] ?? '';
+        return [
+            'id' => $p['id'],
+            'type' => $p['payload']['type'] ?? $p['payload']['metadata']['type'] ?? 'unknown',
+            'source' => $p['payload']['source'] ?? $p['payload']['metadata']['source'] ?? 'unknown',
+            'has_vania' => stripos($text, 'vania') !== false,
+            'has_angel' => stripos($text, 'angel') !== false,
+            'has_nombre' => stripos($text, 'nombre') !== false,
+            'text_preview' => mb_substr($text, 0, 200),
+        ];
+    })->filter(function ($p) {
+        return $p['has_vania'] || $p['has_nombre'] || $p['type'] === 'company_information' || $p['type'] === 'company_onboarding';
+    })->values();
+    
+    return response()->json(['total_points' => count($result['points']), 'relevant' => $points]);
+});
