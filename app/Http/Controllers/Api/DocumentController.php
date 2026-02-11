@@ -365,7 +365,7 @@ class DocumentController extends Controller
 
             if ($document) {
                 // Update existing document - increment chunks and add vector ID
-                $existingVectorIds = $document->qdrant_vector_ids ? json_decode($document->qdrant_vector_ids, true) : [];
+                $existingVectorIds = is_array($document->qdrant_vector_ids) ? $document->qdrant_vector_ids : [];
                 $existingVectorIds[] = $validated['chunk_id'];
                 
                 KnowledgeDocument::where('id', $document->id)
@@ -994,7 +994,8 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                             'sendHeaders' => true,
                             'headerParameters' => [
                                 'parameters' => [
-                                    ['name' => 'Content-Type', 'value' => 'application/json']
+                                    ['name' => 'Content-Type', 'value' => 'application/json'],
+                                    ['name' => 'api-key', 'value' => '={{ $json.qdrant_api_key }}']
                                 ]
                             ],
                             'sendBody' => true,
@@ -1015,7 +1016,8 @@ Responde SOLO con el texto extraído, organizado de forma clara. No agregues com
                             'sendHeaders' => true,
                             'headerParameters' => [
                                 'parameters' => [
-                                    ['name' => 'Content-Type', 'value' => 'application/json']
+                                    ['name' => 'Content-Type', 'value' => 'application/json'],
+                                    ['name' => 'X-N8N-Secret', 'value' => config('n8n.webhook_secret', '')]
                                 ]
                             ],
                             'sendBody' => true,
@@ -1120,7 +1122,8 @@ return {
     text: text,
     text_length: text.length,
     openai_api_key: openaiApiKey,
-    qdrant_host: qdrantHost
+    qdrant_host: qdrantHost,
+    qdrant_api_key: body.qdrant_api_key || ''
   }
 };
 JS;
@@ -1201,7 +1204,8 @@ return chunks.map((chunk, index) => ({
     category: category,
     collection_name: collectionName,
     openai_api_key: openaiApiKey,
-    qdrant_host: qdrantHost
+    qdrant_host: qdrantHost,
+    qdrant_api_key: input.qdrant_api_key || ''
   }
 }));
 JS;
@@ -1240,6 +1244,7 @@ for (let i = 0; i < items.length; i++) {
       },
       collection_name: prevData.collection_name,
       qdrant_host: prevData.qdrant_host,
+      qdrant_api_key: prevData.qdrant_api_key || '',
       // Add these for easy access in Notify Laravel
       company_slug: prevData.company_slug,
       filename: prevData.filename,
