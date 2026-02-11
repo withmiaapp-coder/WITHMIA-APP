@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Events\ConversationUpdated;
+use App\Events\NewMessageReceived;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
 use App\Traits\ResolvesChatwootConfig;
@@ -1241,18 +1242,41 @@ class EvolutionApiController extends Controller
         }
 
         // 📡 BROADCAST para mensajes entrantes (real-time frontend via Reverb)
-        // Antes estaba deshabilitado porque dependíamos del webhook de Chatwoot,
-        // pero ese webhook no dispara consistentemente. Ahora notificamos directamente.
-        // El broadcast completo (con datos de conversación de Chatwoot) se hace 
-        // desde el ChatwootWebhookController si/cuando funcione. Aquí solo enviamos
-        // una notificación ligera para que el frontend refresque.
-        
-        Log::debug('📡 Mensaje procesado - n8n job despachado si era incoming', [
-            'account_id' => $accountId,
-            'inbox_id' => $inboxId,
-            'phone' => $cleanPhone,
-            'message_preview' => substr($messageText, 0, 50)
-        ]);
+        // Notificamos directamente porque el webhook de Chatwoot no dispara consistentemente.
+        if ($accountId && $inboxId) {
+            try {
+                $phoneSuffix = substr($cleanPhone, -10);
+                $conversation = DB::connection('chatwoot')
+                    ->table('conversations')
+                    ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
+                    ->where('conversations.account_id', $accountId)
+                    ->where('conversations.inbox_id', $inboxId)
+                    ->where(function ($q) use ($cleanPhone, $phoneSuffix) {
+                        $q->where('contacts.phone_number', 'like', '%' . $phoneSuffix)
+                          ->orWhere('contacts.phone_number', $cleanPhone)
+                          ->orWhere('contacts.phone_number', '+' . $cleanPhone);
+                    })
+                    ->orderByDesc('conversations.last_activity_at')
+                    ->select('conversations.id', 'conversations.display_id')
+                    ->first();
+
+                if ($conversation) {
+                    event(new NewMessageReceived(
+                        [
+                            'content' => $messageText,
+                            'message_type' => 'incoming',
+                            'sender' => ['name' => $cleanPhone, 'type' => 'contact'],
+                            'created_at' => now()->toIso8601String(),
+                        ],
+                        $conversation->id,
+                        $inboxId,
+                        $accountId
+                    ));
+                }
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo broadcast mensaje entrante', ['error' => $e->getMessage()]);
+            }
+        }
     }
 
     /**
