@@ -453,11 +453,8 @@ class TrainingChatController extends Controller
         // Actualizar en la base de datos
         $company->update(['assistant_name' => $newName]);
         
-        Log::debug('Assistant name changed via chat', [
-            'company_id' => $company->id,
-            'old_name' => $oldName,
-            'new_name' => $newName
-        ]);
+        // Actualizar punto company_onboarding en Qdrant con el nuevo nombre
+        $this->updateCompanyOnboardingInQdrant($company, $newName);
         
         // Respuestas variadas para el cambio de nombre
         $responses = [
@@ -499,5 +496,62 @@ class TrainingChatController extends Controller
         }
         
         return $responses[array_rand($responses)];
+    }
+
+    /**
+     * Update the company_onboarding point in Qdrant with current company info
+     */
+    private function updateCompanyOnboardingInQdrant($company, string $assistantName): void
+    {
+        try {
+            $collectionName = $company->settings['qdrant_collection'] ?? null;
+
+            if (!$collectionName) {
+                $companySlug = $company->slug ?? 'company_' . $company->id;
+                $collectionName = $this->qdrantService->getCollectionName($companySlug);
+            }
+
+            $companyInfoParts = [];
+            $companyInfoParts[] = "IDENTIDAD DEL ASISTENTE:\n- Mi nombre es {$assistantName}\n- Cuando me pregunten cómo me llamo, debo responder que me llamo {$assistantName}\n- Soy el asistente virtual de {$company->name}";
+
+            if (!empty($company->name)) {
+                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
+            }
+            if (!empty($company->website)) {
+                $companyInfoParts[] = "Sitio Web: {$company->website}";
+            }
+            if (!empty($company->description)) {
+                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
+            }
+            if (!empty($company->client_type)) {
+                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
+                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
+            }
+
+            $companyInfoText = implode("\n\n", $companyInfoParts);
+
+            // Upsert with same point ID (company->id) to overwrite the existing onboarding point
+            $result = $this->qdrantService->upsertPoints($collectionName, [
+                [
+                    'id' => $company->id,
+                    'vector' => $this->qdrantService->generateEmbedding($companyInfoText),
+                    'payload' => [
+                        'text' => $companyInfoText,
+                        'source' => 'company_onboarding',
+                        'type' => 'company_information',
+                        'company_id' => $company->id,
+                        'updated_at' => now()->toIso8601String(),
+                    ]
+                ]
+            ]);
+
+            if (!$result['success']) {
+                Log::error("Failed to update company_onboarding in Qdrant after name change", [
+                    'error' => $result['error'] ?? 'Unknown'
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error("Error updating Qdrant onboarding after name change: " . $e->getMessage());
+        }
     }
 }
