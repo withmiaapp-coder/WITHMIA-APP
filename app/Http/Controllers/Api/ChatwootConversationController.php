@@ -412,12 +412,6 @@ class ChatwootConversationController extends Controller
                             })->toArray();
                         })
                         ->toArray();
-
-                    \Log::debug('🖼️ Attachments resolved', [
-                        'total_db_attachments' => $rawAttachments->count(),
-                        'api_matches' => count($apiAttachmentMap),
-                        'final_map_keys' => array_keys($attachmentsFromDb),
-                    ]);
                 }
             }
 

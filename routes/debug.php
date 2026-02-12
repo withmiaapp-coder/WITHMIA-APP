@@ -106,47 +106,4 @@ Route::prefix('debug')->group(function () {
         return response()->json($diagnosis);
     });
 
-    // 🔍 DIAGNÓSTICO: Ver datos reales de attachments en Chatwoot DB
-    Route::get('/debug/chatwoot-attachments', function (Request $request) {
-        $chatwootDb = DB::connection('chatwoot');
-        
-        // 1. Schema: todas las columnas de la tabla attachments
-        $columns = $chatwootDb->select("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'attachments' ORDER BY ordinal_position");
-        
-        // 2. Últimos 10 attachments con file_type image (0)
-        $recentAttachments = $chatwootDb->table('attachments')
-            ->where('file_type', 0) // images
-            ->orderByDesc('id')
-            ->limit(10)
-            ->get();
-        
-        // 3. Active storage: verificar si hay blobs asociados
-        $attIds = $recentAttachments->pluck('id')->toArray();
-        $activeStorageLinks = [];
-        if (!empty($attIds)) {
-            $activeStorageLinks = $chatwootDb->table('active_storage_attachments')
-                ->where('record_type', 'Attachment')
-                ->whereIn('record_id', $attIds)
-                ->get()
-                ->toArray();
-        }
-        
-        // 4. Blobs asociados
-        $blobIds = collect($activeStorageLinks)->pluck('blob_id')->unique()->toArray();
-        $blobs = [];
-        if (!empty($blobIds)) {
-            $blobs = $chatwootDb->table('active_storage_blobs')
-                ->whereIn('id', $blobIds)
-                ->get()
-                ->toArray();
-        }
-        
-        return response()->json([
-            'schema_columns' => $columns,
-            'recent_image_attachments' => $recentAttachments,
-            'active_storage_attachments' => $activeStorageLinks,
-            'active_storage_blobs' => $blobs,
-        ]);
-    });
-
 }); // End debug middleware group
