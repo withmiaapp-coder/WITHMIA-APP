@@ -3926,6 +3926,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+              onClick={(e) => {
+                // Cerrar menú contextual al hacer click en el chat (si no se clickeó el botón del menú)
+                if (messageMenuOpen !== null && !(e.target as HTMLElement).closest('[data-menu-trigger]') && !(e.target as HTMLElement).closest('[data-context-menu]')) {
+                  setMessageMenuOpen(null);
+                }
+              }}
             >
               {/*  MENSAJE FIJADO */}
               {pinnedMessage && (
@@ -4033,6 +4039,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Bot??n ANTES de la burbuja (para mensajes del contacto) */}
                       {message.sender === 'contact' && (
                         <button
+                          data-menu-trigger
                           onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
                           className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -4269,6 +4276,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Bot??n DESPU?S de la burbuja (para mensajes propios) */}
                       {message.sender === 'agent' && (
                         <button
+                          data-menu-trigger
                           onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
                           className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -4278,7 +4286,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
                       {/* Menú Contextual */}
                       {messageMenuOpen === message.id && (
-                        <div className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
+                        <div data-context-menu className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
                           <button
                             onClick={() => handleReplyToMessage(message)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
