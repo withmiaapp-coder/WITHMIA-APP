@@ -269,6 +269,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   // 5. Message Actions (Menu contextual)
   const [messageMenuOpen, setMessageMenuOpen] = useState<number | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+
   
   // 6. Pinned Messages (Mensajes fijados)
   const [pinnedMessage, setPinnedMessage] = useState<any | null>(null);
@@ -455,8 +457,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const [editEmail, setEditEmail] = useState('');
   
   // Estado para toast notification
-  const [showToast, setShowToast] = useState(false);
+  const [showToastNotif, setShowToastNotif] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning'>('success');
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    setToastType(type);
+    setShowToastNotif(true);
+    toastTimerRef.current = setTimeout(() => setShowToastNotif(false), 3500);
+  };
   
   // 📜 NUEVO: Ref para auto-scroll de mensajes
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1755,7 +1766,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     navigator.clipboard.writeText(content);
     setMessageMenuOpen(null);
     // Mostrar notificaci??n temporal
-    alert('Mensaje copiado al portapapeles');
+    triggerToast('Mensaje copiado al portapapeles');
   };
 
   // 4 FORWARD - Copiar texto del mensaje
@@ -2099,7 +2110,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // Validar tamaño máximo (16MB para WhatsApp)
     const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
     if (file.size > MAX_FILE_SIZE) {
-      alert(`El archivo es demasiado grande. Máximo 16MB.\nTamaño actual: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      triggerToast(`Archivo demasiado grande. Máximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
       return;
     }
     
@@ -2244,7 +2255,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             messages: prev.messages?.filter(msg => msg.id !== tempId) || []
           };
         });
-        alert(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`);
+        triggerToast(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`, 'error');
       }
     } catch (error) {
       debugLog.error('💥 Error enviando archivo:', error);
@@ -2256,7 +2267,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           messages: prev.messages?.filter(msg => msg.id !== tempId) || []
         };
       });
-      alert('Error de conexión al enviar archivo');
+      triggerToast('Error de conexión al enviar archivo', 'error');
     } finally {
       setIsUploadingFile(false);
       setUploadProgress('');
@@ -2295,7 +2306,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
     } catch (error) {
       debugLog.error('🎤 Error al iniciar grabación:', error);
-      alert('No se pudo acceder al micrófono');
+      triggerToast('No se pudo acceder al micrófono', 'error');
     }
   };
 
@@ -2373,7 +2384,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           if (!prev) return prev;
           return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
         });
-        alert(`Error al enviar audio: ${data.message || 'Error desconocido'}`);
+        triggerToast(`Error al enviar audio: ${data.message || 'Error desconocido'}`, 'error');
       }
     } catch (error) {
       debugLog.error('💥 Error enviando audio:', error);
@@ -2381,7 +2392,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         if (!prev) return prev;
         return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
       });
-      alert('Error de conexión al enviar audio');
+      triggerToast('Error de conexión al enviar audio', 'error');
     } finally {
       setIsSendingAudio(false);
     }
@@ -2790,8 +2801,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         'meta': activeConversation?.meta,
         'contact_inbox': activeConversation?.contact_inbox
       });
-      setToastMessage('Error: No hay contacto activo');
-      setShowToast(true);
+      triggerToast('Error: No hay contacto activo', 'error');
       return;
     }
 
@@ -2854,37 +2864,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       fetchUpdatedConversations();
       
       // Mostrar toast de exito
-      setToastMessage('Contacto actualizado exitosamente');
-      setShowToast(true);
+      triggerToast('Contacto actualizado exitosamente');
       
       // Cerrar modal
       setIsEditModalOpen(false);
     } catch (error) {
       debugLog.error('Error guardando contacto:', error);
-      setToastMessage('Error al actualizar el contacto');
-      setShowToast(true);
-      
-      // Ocultar toast de error despu??s de 3 segundos
-      setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
+      triggerToast('Error al actualizar el contacto', 'error');
     }
   };
-
-  // Auto-hide toast
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
 
   // Handlers para opciones del men??
   const handleDownloadChat = () => {
     if (!activeConversation) {
-      alert('Por favor selecciona una conversación primero');
+      triggerToast('Selecciona una conversación primero', 'warning');
       return;
     }
     
@@ -3012,7 +3005,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
     } catch (error) {
       debugLog.error('❌ Error al descargar chat:', error);
-      alert('Error al generar el archivo Excel. Por favor intenta de nuevo.');
+      triggerToast('Error al generar el archivo Excel', 'error');
     }
   };
 
@@ -5352,11 +5345,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       )}
 
       {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 border border-green-400/20">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium">{toastMessage}</span>
+      {showToastNotif && (
+        <div className="fixed bottom-6 right-6 z-[9999] animate-in slide-in-from-bottom-5 duration-300">
+          <div className={`px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 backdrop-blur-sm border ${
+            toastType === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 border-green-400/30 text-white' :
+            toastType === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-400/30 text-white' :
+            'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-400/30 text-white'
+          }`}>
+            {toastType === 'success' && <CheckCircle2 className="w-5 h-5 flex-shrink-0" />}
+            {toastType === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            {toastType === 'warning' && <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
+            <span className="font-medium text-sm">{toastMessage}</span>
+            <button onClick={() => setShowToastNotif(false)} className="ml-2 opacity-70 hover:opacity-100 transition-opacity">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
