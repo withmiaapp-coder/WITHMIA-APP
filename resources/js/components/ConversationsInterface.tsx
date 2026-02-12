@@ -853,15 +853,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
     loadConversationMessages(activeConversation.id, true)
       .then(() => {
+        // Doble rAF para asegurar que React ha renderizado y el browser hizo layout
         requestAnimationFrame(() => {
-          const newScrollHeight = container.scrollHeight;
-          const addedHeight = newScrollHeight - prevScrollHeight;
-          if (addedHeight > 0) {
-            // Mantener la posición visual: sumar la altura agregada al scrollTop previo
-            container.scrollTop = prevScrollTop + addedHeight;
-          }
-          isLoadingMoreRef.current = false;
-          console.log(`📜 [LoadMore] Completado: +${addedHeight}px de contenido nuevo, scrollTop=${container.scrollTop}`);
+          requestAnimationFrame(() => {
+            const newScrollHeight = container.scrollHeight;
+            const addedHeight = newScrollHeight - prevScrollHeight;
+            if (addedHeight > 0) {
+              container.scrollTop = prevScrollTop + addedHeight;
+            }
+            console.log(`📜 [LoadMore] Completado: +${addedHeight}px, scrollTop=${container.scrollTop}`);
+            // Mantener el flag activo 500ms más para bloquear cualquier scroll-to-bottom async
+            setTimeout(() => {
+              isLoadingMoreRef.current = false;
+              console.log('📜 [LoadMore] Flag liberado');
+            }, 500);
+          });
         });
       })
       .catch((err) => {
@@ -2548,22 +2554,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   // ?? NUEVO: Función para hacer scroll al final de los mensajes
   const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'auto') => {
+    // 🚫 NUNCA hacer scroll al fondo mientras se cargan mensajes anteriores
+    if (isLoadingMoreRef.current) {
+      console.log('🛑 [scrollToBottom] Bloqueado: loadMore en progreso');
+      return;
+    }
     const container = messagesContainerRef.current;
-    debugLog.log('?? scrollToBottom llamado - behavior:', behavior, 'container existe:', !!container);
+    debugLog.log('scrollToBottom llamado - behavior:', behavior, 'container existe:', !!container);
     if (container) {
-      debugLog.log(' Container scrollHeight:', container.scrollHeight, 'scrollTop actual:', container.scrollTop);
       if (behavior === 'smooth') {
         container.scrollTo({
           top: container.scrollHeight,
           behavior: 'smooth'
         });
       } else {
-        // Scroll instant??neo m??s confiable
         container.scrollTop = container.scrollHeight;
       }
-      debugLog.log('??? Scroll ejecutado - nuevo scrollTop:', container.scrollTop);
-    } else {
-      debugLog.error('??? messagesContainerRef.current es null!');
     }
   }, []);
 
@@ -2598,14 +2604,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         }
         
         // ✅ NUEVO: Solo hacer scroll si el usuario está cerca del fondo O si es su propio mensaje
-        if (container) {
+        if (container && !isLoadingMoreRef.current) {
           const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom < 150; // Menos de 150px del fondo
           
           // Hacer scroll si: está cerca del fondo O si es su propio mensaje
           if (isNearBottom || esOutgoing) {
             requestAnimationFrame(() => {
-              if (messagesContainerRef.current) {
+              if (messagesContainerRef.current && !isLoadingMoreRef.current) {
                 messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
               }
             });
@@ -2637,16 +2643,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       if ((searchResults || []).length > 0) {
         return; // No hacer scroll si hay búsqueda activa
       }
+      if (isLoadingMoreRef.current) {
+        return; // No hacer scroll durante loadMore
+      }
       
       requestAnimationFrame(() => {
-        if (messagesContainerRef.current) {
+        if (messagesContainerRef.current && !isLoadingMoreRef.current) {
           messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         }
       });
     };
 
-    // Solo hacer scroll inicial al cambiar de conversación
-    scrollToBottomOnce();
+    // Solo hacer scroll inicial al cambiar de conversación (no durante loadMore)
+    if (!isLoadingMoreRef.current) {
+      scrollToBottomOnce();
+    }
     
   }, [activeConversation?.id]); // Solo cuando cambia la conversación, NO en cada mensaje
 
