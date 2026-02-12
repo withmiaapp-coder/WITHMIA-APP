@@ -849,18 +849,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     console.log(`📜 [LoadMore] Cargando más mensajes para conv ${activeConversation.id}, mensajes actuales: ${activeConversation.messages.length}, hasMore: ${activeConversation._hasMoreMessages}`);
 
     const prevScrollHeight = container.scrollHeight;
+    const prevScrollTop = container.scrollTop;
 
     loadConversationMessages(activeConversation.id, true)
       .then(() => {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           const newScrollHeight = container.scrollHeight;
           const addedHeight = newScrollHeight - prevScrollHeight;
           if (addedHeight > 0) {
-            container.scrollTop = addedHeight + 50;
+            // Mantener la posición visual: sumar la altura agregada al scrollTop previo
+            container.scrollTop = prevScrollTop + addedHeight;
           }
           isLoadingMoreRef.current = false;
-          console.log(`📜 [LoadMore] Completado: +${addedHeight}px de contenido nuevo`);
-        }, 200);
+          console.log(`📜 [LoadMore] Completado: +${addedHeight}px de contenido nuevo, scrollTop=${container.scrollTop}`);
+        });
       })
       .catch((err) => {
         console.error('❌ [LoadMore] Error:', err);
