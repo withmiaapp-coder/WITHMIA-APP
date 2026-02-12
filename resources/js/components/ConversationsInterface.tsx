@@ -59,7 +59,8 @@ import {
   Music,
   FileType,
   // Nuevos iconos para Fase 3
-  Filter
+  Filter,
+  Ban
 } from 'lucide-react';
 import { useConversations, useLabels, labelsGlobalCache } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
@@ -4058,9 +4059,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         )}
                         
                         {/* Contenido del mensaje */}
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {searchQuery ? highlightSearchTerm(message.content, searchQuery, index) : message.content}
-                        </p>
+                        {message.content === 'This message was deleted' ? (
+                          <p className="text-sm whitespace-pre-wrap break-words italic text-gray-400 flex items-center gap-1.5">
+                            <Ban className="w-3.5 h-3.5" />
+                            Se eliminó este mensaje
+                          </p>
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {searchQuery ? highlightSearchTerm(message.content, searchQuery, index) : message.content}
+                          </p>
+                        )}
                         
                         {/* 🔗 Link Previews estilo WhatsApp */}
                         {(() => {

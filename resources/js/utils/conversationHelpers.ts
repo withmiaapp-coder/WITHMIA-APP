@@ -26,6 +26,9 @@ export const formatLastMessagePreview = (message: string | null | undefined, att
   
   if (!message) return "";
   
+  // Translate Chatwoot's deleted message text
+  if (message === 'This message was deleted') return '🚫 Se eliminó este mensaje';
+  
   let cleanMessage = message;
   
   // Remove quotes/replies (> text)
