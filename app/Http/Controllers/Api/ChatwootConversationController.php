@@ -442,9 +442,9 @@ class ChatwootConversationController extends Controller
                 }
 
                 $allMessages[] = [
-                    'id' => $msg->id,
+                    'id' => (int)$msg->id,
                     'content' => $msg->content,
-                    'message_type' => $msg->message_type,
+                    'message_type' => (int)$msg->message_type,
                     'created_at' => $this->utcToTimestamp($msg->created_at),
                     'sender' => $sender,
                     'attachments' => $attachmentsFromDb[$msg->id] ?? [],

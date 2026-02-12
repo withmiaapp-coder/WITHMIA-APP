@@ -693,14 +693,21 @@ export const useConversations = () => {
         const currentMessages = cached?.messages || activeConversationRef.current?.messages || [];
         if (currentMessages.length > 0) {
           // Filtrar solo mensajes con IDs numéricos (excluir temp/pending)
-          const realMessages = currentMessages.filter((m: any) => typeof m.id === 'number' && !isNaN(m.id));
+          // Aceptar tanto number como string numérico (PostgreSQL puede devolver strings)
+          const realMessages = currentMessages.filter((m: any) => {
+            if (typeof m.id === 'number') return !isNaN(m.id) && m.id > 0;
+            if (typeof m.id === 'string') return /^\d+$/.test(m.id);
+            return false;
+          });
           if (realMessages.length > 0) {
-            const sortedMessages = [...realMessages].sort((a: any, b: any) => a.id - b.id);
+            const sortedMessages = [...realMessages].sort((a: any, b: any) => Number(a.id) - Number(b.id));
             const oldestId = sortedMessages[0]?.id;
             if (oldestId) {
               url += `&before=${oldestId}`;
-              debugLog.log(`📜 LoadMore: before=${oldestId}, total real messages=${realMessages.length}`);
+              console.log(`📜 [LoadMore] URL: ${url}, oldestId=${oldestId}, realMessages=${realMessages.length}, types: id[0]=${typeof realMessages[0].id}`);
             }
+          } else {
+            console.warn(`⚠️ [LoadMore] No hay mensajes con IDs válidos! Total msgs=${currentMessages.length}, sample IDs:`, currentMessages.slice(0, 3).map((m: any) => ({ id: m.id, type: typeof m.id })));
           }
         }
       }
@@ -782,9 +789,10 @@ export const useConversations = () => {
         if (loadMore) {
           const existingMessages = cached?.messages || activeConversationRef.current?.messages || [];
           if (existingMessages.length > 0) {
-            const existingIds = new Set(existingMessages.map((m: any) => m.id));
-            const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(m.id));
-            debugLog.log(`📜 LoadMore: ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes`);
+            // Normalizar IDs a números para comparación consistente
+            const existingIds = new Set(existingMessages.map((m: any) => Number(m.id)));
+            const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(Number(m.id)));
+            console.log(`📜 [Merge] ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes, uniqueMessages=${uniqueMessages.length}`);
             
             // ⚠️ Si no hay mensajes nuevos, significa que no hay más mensajes anteriores
             if (newOlderMessages.length === 0) {
