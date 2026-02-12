@@ -290,7 +290,7 @@ class ChatwootConversationController extends Controller
     public function getConversationMessages($id, Request $request = null)
     {
         try {
-            $limit = min((int)($request?->query('limit', 20) ?? 20), 100);
+            $messagesPerBatch = min((int)($request?->query('limit', 50) ?? 50), 100);
             $before = $request?->query('before');
 
             if (!$this->inboxId) {
@@ -317,15 +317,14 @@ class ChatwootConversationController extends Controller
             }
 
             // Obtener mensajes de BD
-            $messagesPerBatch = 50;
             $query = $chatwootDb->table('messages')
                 ->where('conversation_id', $dbConversationId)
                 ->whereIn('message_type', [0, 1])
                 ->orderBy('id', 'desc')
                 ->limit($messagesPerBatch + 1);
 
-            if ($before) {
-                $query->where('id', '<', $before);
+            if ($before && is_numeric($before)) {
+                $query->where('id', '<', (int)$before);
             }
 
             $messagesFromDb = $query->get();
@@ -353,25 +352,30 @@ class ChatwootConversationController extends Controller
                     ->get();
 
                 if ($rawAttachments->isNotEmpty()) {
-                    // Fetch messages with attachments via Chatwoot API (returns properly signed URLs)
-                    try {
-                        $apiResponse = Http::timeout(10)->withHeaders([
-                            'api_access_token' => $this->chatwootToken,
-                            'Content-Type' => 'application/json'
-                        ])->get("{$chatwootUrl}/api/v1/accounts/{$this->accountId}/conversations/{$apiConversationId}/messages");
+                    // For paginated (loadMore) requests, skip the slow Chatwoot API call
+                    // since it only returns the latest page of messages, not older ones.
+                    // Use DB external_url as fallback instead.
+                    $apiAttachmentMap = [];
+                    if (!$before) {
+                        // Initial load: fetch attachment URLs via Chatwoot API (signed Active Storage URLs)
+                        try {
+                            $apiResponse = Http::timeout(10)->withHeaders([
+                                'api_access_token' => $this->chatwootToken,
+                                'Content-Type' => 'application/json'
+                            ])->get("{$chatwootUrl}/api/v1/accounts/{$this->accountId}/conversations/{$apiConversationId}/messages");
 
-                        $apiAttachmentMap = []; // message_id => attachments array
-                        if ($apiResponse->successful()) {
-                            $apiMessages = $apiResponse->json()['payload'] ?? [];
-                            foreach ($apiMessages as $apiMsg) {
-                                if (!empty($apiMsg['attachments'])) {
-                                    $apiAttachmentMap[$apiMsg['id']] = $apiMsg['attachments'];
+                            if ($apiResponse->successful()) {
+                                $apiMessages = $apiResponse->json()['payload'] ?? [];
+                                foreach ($apiMessages as $apiMsg) {
+                                    if (!empty($apiMsg['attachments'])) {
+                                        $apiAttachmentMap[$apiMsg['id']] = $apiMsg['attachments'];
+                                    }
                                 }
                             }
+                        } catch (\Throwable $e) {
+                            Log::warning('Failed to fetch Chatwoot API for attachments', ['error' => $e->getMessage()]);
+                            $apiAttachmentMap = [];
                         }
-                    } catch (\Throwable $e) {
-                        Log::warning('Failed to fetch Chatwoot API for attachments', ['error' => $e->getMessage()]);
-                        $apiAttachmentMap = [];
                     }
 
                     // Build final attachment map: prefer API data, fallback to DB external_url

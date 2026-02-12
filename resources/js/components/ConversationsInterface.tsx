@@ -838,14 +838,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     if (!container) return;
     
     const handleScroll = () => {
-      // Debounce: no cargar si ya cargamos hace menos de 2 segundos
+      // Debounce: no cargar si ya cargamos hace menos de 1.5 segundos
       const now = Date.now();
-      if (now - lastLoadTimeRef.current < 2000) return;
+      if (now - lastLoadTimeRef.current < 1500) return;
       
-      // Si el usuario está cerca del tope (menos de 50px del inicio)
-      const isNearTop = container.scrollTop < 50;
+      // Si el usuario está cerca del tope (menos de 100px del inicio)
+      const isNearTop = container.scrollTop < 100;
       
-      // Cargar si: está cerca del tope, no está cargando, y tiene mensajes (asumimos que siempre hay más si no sabemos)
+      // Cargar si: está cerca del tope, no está cargando, y tiene mensajes
       const hasMore = activeConversation?._hasMoreMessages !== false; // true o undefined = intentar cargar
       
       if (isNearTop && 
@@ -856,6 +856,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         
         isLoadingMoreRef.current = true;
         lastLoadTimeRef.current = now;
+        
+        debugLog.log(`📜 Scroll: cargando más mensajes para conversación ${activeConversation.id}, mensajes actuales: ${activeConversation.messages.length}, hasMore: ${activeConversation._hasMoreMessages}`);
         
         // Guardar altura actual antes de cargar
         const prevScrollHeight = container.scrollHeight;
@@ -871,7 +873,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 container.scrollTop = addedHeight + 50; // +50 para no re-disparar inmediatamente
               }
               isLoadingMoreRef.current = false;
-            }, 150);
+              debugLog.log(`📜 LoadMore completado: +${addedHeight}px de contenido nuevo`);
+            }, 200);
           })
           .catch((err) => {
             debugLog.error('❌ Error cargando mensajes:', err);

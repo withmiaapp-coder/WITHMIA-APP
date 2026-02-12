@@ -687,16 +687,20 @@ export const useConversations = () => {
     
     try {
       // 🚀 PAGINACIÓN: Si loadMore, enviar el ID más antiguo (20 mensajes para no saturar)
-      let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=20`;
+      let url = `/api/chatwoot-proxy/conversations/${conversationId}/messages?limit=50`;
       if (loadMore) {
         // Buscar mensajes en cache o en la conversación activa
         const currentMessages = cached?.messages || activeConversationRef.current?.messages || [];
         if (currentMessages.length > 0) {
-          // Ordenar por ID ascendente y obtener el más antiguo (menor ID)
-          const sortedMessages = [...currentMessages].sort((a, b) => a.id - b.id);
-          const oldestId = sortedMessages[0]?.id;
-          if (oldestId) {
-            url += `&before=${oldestId}`;
+          // Filtrar solo mensajes con IDs numéricos (excluir temp/pending)
+          const realMessages = currentMessages.filter((m: any) => typeof m.id === 'number' && !isNaN(m.id));
+          if (realMessages.length > 0) {
+            const sortedMessages = [...realMessages].sort((a: any, b: any) => a.id - b.id);
+            const oldestId = sortedMessages[0]?.id;
+            if (oldestId) {
+              url += `&before=${oldestId}`;
+              debugLog.log(`📜 LoadMore: before=${oldestId}, total real messages=${realMessages.length}`);
+            }
           }
         }
       }
