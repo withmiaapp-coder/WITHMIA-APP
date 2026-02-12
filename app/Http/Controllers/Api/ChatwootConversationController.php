@@ -316,11 +316,12 @@ class ChatwootConversationController extends Controller
     /**
      * Obtener mensajes de una conversación específica
      */
-    public function getConversationMessages($id, Request $request = null)
+    public function getConversationMessages($id)
     {
         try {
-            $messagesPerBatch = min((int)($request?->query('limit', 50) ?? 50), 100);
-            $before = $request?->query('before');
+            // Usar request() helper en vez de inyección para compatibilidad con Octane/RoadRunner
+            $messagesPerBatch = min((int) request()->query('limit', 50), 100);
+            $before = request()->query('before');
 
             if (!$this->inboxId) {
                 return response()->json(['success' => false, 'message' => 'No tienes un inbox asignado'], 403);
