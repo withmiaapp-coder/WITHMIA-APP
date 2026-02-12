@@ -2575,6 +2575,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       // Detectar si hay nuevos mensajes (no es el primer load)
       if (previousMessageCount > 0 && currentMessageCount > previousMessageCount) {
+        // 🚫 Si estamos cargando mensajes más antiguos (loadMore), NO hacer scroll al fondo
+        if (isLoadingMoreRef.current) {
+          debugLog.log('🛑 LoadMore en progreso - NO hacer scroll automático al fondo');
+          setPreviousMessageCount(currentMessageCount);
+          return;
+        }
+        
         // ✅ VERIFICAR: Solo mostrar separador si el último mensaje NO es tuyo
         const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
         const esIncoming = lastMessage?.message_type === 0 || lastMessage?.message_type === 'incoming';
