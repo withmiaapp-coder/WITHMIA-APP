@@ -270,20 +270,24 @@ export const useConversations = () => {
   
   // 🚀 Cache local de mensajes con persistencia en sessionStorage
   const messagesLocalCache = useRef<Map<number, { messages: any[], timestamp: number, hasMore: boolean }>>(new Map());
-  const LOCAL_CACHE_TTL = 5 * 60 * 1000; // 5 minutos en ms
+  const LOCAL_CACHE_TTL = 3 * 60 * 1000; // 3 minutos en ms (reducido para evitar cache stale)
   
   // ✅ NUEVO: Cargar caché desde sessionStorage al iniciar
   useEffect(() => {
     try {
-      const savedCache = sessionStorage.getItem('chatwoot_messages_cache');
+      // Invalidar cache viejo sin versión
+      sessionStorage.removeItem('chatwoot_messages_cache');
+      const savedCache = sessionStorage.getItem('chatwoot_messages_cache_v2');
       if (savedCache) {
         const parsed = JSON.parse(savedCache);
         const now = Date.now();
         // Solo restaurar mensajes que no hayan expirado
         Object.entries(parsed).forEach(([convId, data]: [string, any]) => {
           if (now - data.timestamp < LOCAL_CACHE_TTL) {
-            messagesLocalCache.current.set(parseInt(convId), data);
-            debugLog.log(`📥 Restaurada caché de conversación ${convId} desde sessionStorage`);
+            // FIX: No confiar en hasMore=false del cache persistido si tiene pocos mensajes
+            const fixedHasMore = data.hasMore === false && (data.messages?.length ?? 0) < 50 ? true : data.hasMore;
+            messagesLocalCache.current.set(parseInt(convId), { ...data, hasMore: fixedHasMore });
+            debugLog.log(`📥 Restaurada caché de conversación ${convId} desde sessionStorage (hasMore=${fixedHasMore})`);
           }
         });
       }
@@ -299,7 +303,7 @@ export const useConversations = () => {
       messagesLocalCache.current.forEach((value, key) => {
         cacheObj[key] = value;
       });
-      sessionStorage.setItem('chatwoot_messages_cache', JSON.stringify(cacheObj));
+      sessionStorage.setItem('chatwoot_messages_cache_v2', JSON.stringify(cacheObj));
     } catch (e) {
       debugLog.warn('Error guardando caché de mensajes:', e);
     }
@@ -651,9 +655,11 @@ export const useConversations = () => {
     const cached = messagesLocalCache.current.get(conversationId);
     const now = Date.now();
     
-    // 🔧 FIX: Si el caché tiene hasMore=false pero pocos mensajes (< 25), 
-    // asumir que puede haber más (el backend anterior tenía un bug)
-    const cachedHasMore = cached?.hasMore ?? (cached?.messages?.length >= 20);
+    // 🔧 FIX: No confiar en hasMore=false del caché si tiene menos mensajes que el limit (50)
+    // El backend anterior tenía bugs que seteaban has_more=false incorrectamente
+    const cachedHasMore = cached?.hasMore === false && (cached?.messages?.length ?? 0) < 50
+      ? true  // Forzar true: si hay pocos mensajes cacheados, probablemente hay más en el servidor
+      : (cached?.hasMore ?? true);
     
     // 🔧 FIX: No usar cache si tiene 0 mensajes (cache corrupto)
     const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
@@ -667,7 +673,7 @@ export const useConversations = () => {
           ...conversation,
           messages: cached.messages,
           _isLoading: false,
-          _hasMoreMessages: cachedHasMore  // Usar el valor corregido
+          _hasMoreMessages: cachedHasMore  // Siempre permitir cargar más si hay pocos mensajes
         });
         
         // Actualizar unread_count local
