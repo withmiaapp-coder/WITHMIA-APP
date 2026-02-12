@@ -322,7 +322,9 @@ Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
 });
 
 // ============================================================================
-// DEBUG ROUTES (protegidas con X-Debug-Key en producción)
+// DEBUG ROUTES (local + staging con X-Debug-Key)
 // ============================================================================
-require __DIR__ . '/debug.php';
+if (app()->environment('local', 'staging')) {
+    require __DIR__ . '/debug.php';
+}
 

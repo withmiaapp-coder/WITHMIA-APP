@@ -15,17 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
-Route::middleware(function ($request, $next) {
-    if (app()->environment('local')) {
-        return $next($request);
-    }
-    $debugKey = config('app.debug_key');
-    $providedKey = $request->header('X-Debug-Key');
-    if (!$debugKey || $providedKey !== $debugKey) {
-        return response()->json(['error' => 'Unauthorized - Debug key required'], 401);
-    }
-    return $next($request);
-})->group(function () {
+Route::prefix('debug')->group(function () {
 
     Route::get('/debug-chatwoot-config', function () {
         $companies = \App\Models\Company::select('id', 'name', 'slug', 'chatwoot_account_id')
