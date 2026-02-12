@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\WhatsAppInstance;
 use App\Services\ChatwootService;
+use App\Services\ConversationMemoryService;
 use App\Services\EvolutionApiService;
 use App\Services\N8nService;
 use App\Services\QdrantService;
@@ -614,8 +615,44 @@ class AdminToolsController extends Controller
             ]);
 
             $company = Company::findOrFail($companyId);
+            $oldName = $company->assistant_name;
             $name = $validated['name'];
             $company->update(['assistant_name' => $name]);
+
+            // 🧹 Flush memoria + actualizar Qdrant + fortalecer prompt
+            $flushResult = null;
+            $promptStrengthened = false;
+            $qdrantUpdated = false;
+
+            if ($oldName !== $name) {
+                $memoryService = app(ConversationMemoryService::class);
+                $qdrantService = app(QdrantService::class);
+
+                // 1. Flush memoria de conversación (Redis + reset n8n workflow)
+                try {
+                    $flushResult = $memoryService->flushOnIdentityChange(
+                        $company, $oldName, $name, 'assistant_name'
+                    );
+                    Log::info('✅ Memoria limpiada tras cambio de nombre (admin)', $flushResult);
+                } catch (\Exception $e) {
+                    Log::error('Error al limpiar memoria (admin)', ['error' => $e->getMessage()]);
+                }
+
+                // 2. Actualizar identidad en Qdrant
+                try {
+                    $this->updateCompanyOnboardingInQdrant($company, $name, $qdrantService);
+                    $qdrantUpdated = true;
+                } catch (\Exception $e) {
+                    Log::error('Error al actualizar Qdrant (admin)', ['error' => $e->getMessage()]);
+                }
+
+                // 3. Fortalecer system prompt en n8n
+                try {
+                    $promptStrengthened = $memoryService->strengthenSystemPrompt($company);
+                } catch (\Exception $e) {
+                    Log::error('Error al fortalecer prompt (admin)', ['error' => $e->getMessage()]);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -624,10 +661,55 @@ class AdminToolsController extends Controller
                     'id' => $company->id,
                     'name' => $company->name,
                     'assistant_name' => $company->assistant_name
-                ]
+                ],
+                'memory_flushed' => $flushResult !== null,
+                'qdrant_updated' => $qdrantUpdated,
+                'prompt_strengthened' => $promptStrengthened,
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * Helper: actualizar punto de identidad en Qdrant tras cambio de nombre.
+     */
+    private function updateCompanyOnboardingInQdrant(Company $company, string $assistantName, QdrantService $qdrantService): void
+    {
+        $collectionName = $company->settings['qdrant_collection'] ?? null;
+        if (!$collectionName) {
+            Log::warning('No Qdrant collection found for company (admin)', ['company_id' => $company->id]);
+            return;
+        }
+
+        $companyInfoParts = [];
+        $companyInfoParts[] = "IDENTIDAD DEL ASISTENTE:\n- Mi nombre es {$assistantName}\n- Cuando me pregunten cómo me llamo, debo responder que me llamo {$assistantName}\n- Soy el asistente virtual de {$company->name}";
+        if (!empty($company->name)) $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
+        if (!empty($company->website)) $companyInfoParts[] = "Sitio Web: {$company->website}";
+        if (!empty($company->description)) $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
+        if (!empty($company->client_type)) {
+            $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
+            $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
+        }
+
+        $companyInfoText = implode("\n\n", $companyInfoParts);
+
+        $result = $qdrantService->upsertPoints($collectionName, [
+            [
+                'id' => $company->id,
+                'vector' => $qdrantService->generateEmbedding($companyInfoText),
+                'payload' => [
+                    'text' => $companyInfoText,
+                    'source' => 'company_onboarding',
+                    'type' => 'company_information',
+                    'company_id' => $company->id,
+                    'updated_at' => now()->toIso8601String(),
+                ]
+            ]
+        ]);
+
+        if (!($result['success'] ?? false)) {
+            Log::error('Failed to update company_onboarding in Qdrant (admin)', ['error' => $result['error'] ?? 'Unknown']);
         }
     }
 
@@ -1019,5 +1101,200 @@ class AdminToolsController extends Controller
         }
 
         return $template;
+    }
+
+    /**
+     * 🧹 Flush de memoria de conversación del bot para una empresa.
+     * Útil cuando cambia el nombre del asistente u otros datos de identidad.
+     * POST /api/flush-conversation-memory/{companySlug}
+     */
+    public function flushConversationMemory(string $companySlug, Request $request): JsonResponse
+    {
+        $company = Company::where('slug', $companySlug)->first();
+        
+        if (!$company) {
+            return response()->json(['error' => 'Company not found'], 404);
+        }
+
+        $memoryService = app(ConversationMemoryService::class);
+
+        // Diagnóstico antes del flush
+        $diagnosticsBefore = $memoryService->getDiagnostics($company);
+
+        // Ejecutar flush
+        $result = $memoryService->flushOnIdentityChange(
+            $company,
+            $request->input('old_value', $company->assistant_name),
+            $request->input('new_value', $company->assistant_name),
+            $request->input('field', 'assistant_name')
+        );
+
+        // Opcionalmente, fortalecer el system prompt
+        $promptStrengthened = false;
+        if ($request->boolean('strengthen_prompt', true)) {
+            $promptStrengthened = $memoryService->strengthenSystemPrompt($company);
+        }
+
+        // Diagnóstico después del flush
+        $diagnosticsAfter = $memoryService->getDiagnostics($company);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Flush de memoria de conversación completado',
+            'result' => $result,
+            'prompt_strengthened' => $promptStrengthened,
+            'diagnostics' => [
+                'before' => $diagnosticsBefore,
+                'after' => $diagnosticsAfter,
+            ],
+        ]);
+    }
+
+    /**
+     * 🔍 Diagnóstico de memoria de conversación del bot.
+     * GET /api/conversation-memory-diagnostics/{companySlug}
+     */
+    public function conversationMemoryDiagnostics(string $companySlug): JsonResponse
+    {
+        $company = Company::where('slug', $companySlug)->first();
+        
+        if (!$company) {
+            return response()->json(['error' => 'Company not found'], 404);
+        }
+
+        $memoryService = app(ConversationMemoryService::class);
+        $diagnostics = $memoryService->getDiagnostics($company);
+
+        return response()->json([
+            'success' => true,
+            'company' => $companySlug,
+            'assistant_name' => $company->assistant_name,
+            'diagnostics' => $diagnostics,
+        ]);
+    }
+
+    /**
+     * Patch ALL active WITHMIA Bot workflows in n8n with targeted fixes:
+     * 1. Get Imagen/Get Audio: message.message_id → message.source_id
+     * 2. pregunta_usuario: response → chat_input + include:none (fix 3-keys memory error)
+     */
+    public function patchAllBotWorkflows(): JsonResponse
+    {
+        try {
+            $n8nService = app(N8nService::class);
+            $workflows = $n8nService->getWorkflows();
+
+            if (!$workflows['success']) {
+                return response()->json(['error' => 'Failed to list n8n workflows'], 500);
+            }
+
+            $results = [];
+            $botWorkflows = collect($workflows['data'])
+                ->filter(fn($wf) => str_starts_with($wf['name'] ?? '', 'WITHMIA Bot'));
+
+            foreach ($botWorkflows as $wf) {
+                $workflowId = $wf['id'];
+                $workflowName = $wf['name'];
+                $patches = [];
+
+                try {
+                    $detail = $n8nService->getWorkflow($workflowId);
+                    if (!$detail['success']) {
+                        $results[$workflowName] = ['success' => false, 'error' => 'Could not fetch workflow'];
+                        continue;
+                    }
+
+                    $workflow = $detail['data'];
+                    $modified = false;
+
+                    foreach ($workflow['nodes'] as &$node) {
+                        // Fix 1: Get Imagen / Get Audio — message.message_id → message.source_id
+                        if (in_array($node['name'], ['Get Imagen', 'Get Audio'])) {
+                            $body = $node['parameters']['body'] ?? '';
+                            if (is_string($body) && str_contains($body, 'message.message_id')) {
+                                $node['parameters']['body'] = str_replace('message.message_id', 'message.source_id', $body);
+                                $patches[] = "{$node['name']}: message_id→source_id";
+                                $modified = true;
+                            }
+
+                            // Also check sendBody/bodyParameters for structured format
+                            if (isset($node['parameters']['bodyParameters']['parameters'])) {
+                                foreach ($node['parameters']['bodyParameters']['parameters'] as &$param) {
+                                    if (isset($param['value']) && is_string($param['value']) && str_contains($param['value'], 'message.message_id')) {
+                                        $param['value'] = str_replace('message.message_id', 'message.source_id', $param['value']);
+                                        $patches[] = "{$node['name']}: bodyParam message_id→source_id";
+                                        $modified = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Fix 2: pregunta_usuario — response → chat_input + include:none
+                        if ($node['name'] === 'pregunta_usuario') {
+                            $assignments = $node['parameters']['assignments']['assignments'] ?? [];
+                            foreach ($assignments as &$assignment) {
+                                if (($assignment['name'] ?? '') === 'response') {
+                                    $assignment['name'] = 'chat_input';
+                                    $patches[] = 'pregunta_usuario: response→chat_input';
+                                    $modified = true;
+                                }
+                            }
+                            $node['parameters']['assignments']['assignments'] = $assignments;
+
+                            // Add include:none to strip extra keys
+                            $options = $node['parameters']['options'] ?? [];
+                            if (is_array($options) && !isset($options['include'])) {
+                                $node['parameters']['options'] = ['include' => 'none'];
+                                $patches[] = 'pregunta_usuario: added include:none';
+                                $modified = true;
+                            }
+                        }
+                    }
+
+                    if ($modified) {
+                        // Clean and push back
+                        $cleanNodes = [];
+                        foreach ($workflow['nodes'] as $n) {
+                            if (!isset($n['parameters']) || $n['parameters'] === null ||
+                                (is_array($n['parameters']) && empty($n['parameters']) && array_keys($n['parameters']) === [])) {
+                                $n['parameters'] = new \stdClass();
+                            }
+                            $cleanNodes[] = $n;
+                        }
+
+                        $updatePayload = [
+                            'name' => $workflow['name'],
+                            'nodes' => $cleanNodes,
+                            'connections' => $workflow['connections'],
+                            'settings' => $workflow['settings'] ?? new \stdClass(),
+                        ];
+
+                        $result = $n8nService->updateWorkflow($workflowId, $updatePayload);
+
+                        if ($result['success']) {
+                            // Re-activate
+                            if ($wf['active'] ?? false) {
+                                $n8nService->activateWorkflow($workflowId);
+                            }
+                            $results[$workflowName] = ['success' => true, 'patches' => $patches];
+                        } else {
+                            $results[$workflowName] = ['success' => false, 'error' => $result['error'] ?? 'Update failed', 'patches_attempted' => $patches];
+                        }
+                    } else {
+                        $results[$workflowName] = ['success' => true, 'patches' => [], 'message' => 'Already up to date'];
+                    }
+                } catch (\Exception $e) {
+                    $results[$workflowName] = ['success' => false, 'error' => $e->getMessage()];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'total_bot_workflows' => $botWorkflows->count(),
+                'results' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e);
+        }
     }
 }

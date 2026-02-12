@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import axios from 'axios';
@@ -28,7 +29,6 @@ import {
   // Iconos para funciones de WhatsApp
   Reply,
   Copy,
-  Forward,
   Trash2,
   Pin,
   PinOff,
@@ -61,7 +61,7 @@ import {
   // Nuevos iconos para Fase 3
   Filter
 } from 'lucide-react';
-import { useConversations } from '../hooks/useChatwoot';
+import { useConversations, useLabels, labelsGlobalCache } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
 // NOTA: useNotifications eliminado - ahora usamos el sistema unificado GlobalNotificationContext
 import NotificationToast from './NotificationToast.tsx';
@@ -116,6 +116,13 @@ interface ConversationsInterfaceProps {
 }
 
 const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ currentAgentId }) => {
+  // 🏷️ Labels con colores reales (cache global compartido)
+  useLabels(); // Solo para inicializar la carga de labels al montar
+  const getLabelColor = (labelTitle: string): string => {
+    const found = labelsGlobalCache.data.find((l: any) => l.title === labelTitle);
+    return found?.color || '#6b7280';
+  };
+
   // 🔔 SISTEMA UNIFICADO: Usamos el contexto global para notificaciones
   // (ya no usamos useNotifications() - todo está en GlobalNotificationContext)
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,40 +138,53 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const lastReloadTimestampRef = useRef<number>(0);
   const isPendingReloadRef = useRef<boolean>(false);
 
-  // Función para resaltar t??rminos de búsqueda con estilo profesional
-  const highlightSearchTerm = (text: string, searchTerm: string, messageIndex: number) => {
-    if (!searchTerm || !text) return text;
+  // Función para normalizar texto (quitar acentos/diacríticos)
+  const normalizeText = (text: string) => 
+    text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
-    const parts = text.split(regex);
+  // Función para resaltar términos de búsqueda con estilo profesional
+  const highlightSearchTerm = (text: string, term: string, messageIndex: number) => {
+    if (!term || !text) return text;
+
+    // Buscar posiciones usando texto normalizado (sin acentos)
+    const normalizedText = normalizeText(text);
+    const normalizedTerm = normalizeText(term);
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
     let matchCounter = 0;
+    let searchFrom = 0;
 
-    return parts.map((part, index) => {
-      if (part.toLowerCase() === searchTerm.toLowerCase()) {
-        const globalMatchIndex = matchCounter;
-        matchCounter++;
-        
-        // Estilo diferente para la coincidencia actual
-        const isCurrentMatch = globalMatchIndex === currentMatchIndex;
-        
-        return (
-          <mark 
-            key={index}
-            data-match-index={globalMatchIndex}
-            className={`
-              ${isCurrentMatch 
-                ? 'bg-blue-500 text-white ring-2 ring-blue-300 ring-offset-1' 
-                : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
-              }
-              px-1.5 py-0.5 rounded font-medium transition-all duration-200
-            `}
-          >
-            {part}
-          </mark>
-        );
+    while (searchFrom < normalizedText.length) {
+      const matchPos = normalizedText.indexOf(normalizedTerm, searchFrom);
+      if (matchPos === -1) break;
+
+      // Agregar texto antes del match (del texto original con acentos)
+      if (matchPos > lastIndex) {
+        parts.push(text.substring(lastIndex, matchPos));
       }
-      return part;
-    });
+
+      // Agregar el match resaltado (del texto original)
+      const matchEnd = matchPos + normalizedTerm.length;
+      parts.push(
+        <mark
+          key={`match-${matchCounter}`}
+          data-match-index={matchCounter}
+          className="bg-yellow-300 text-gray-900 px-0.5 rounded font-medium"
+        >
+          {text.substring(matchPos, matchEnd)}
+        </mark>
+      );
+      matchCounter++;
+      lastIndex = matchEnd;
+      searchFrom = matchEnd;
+    }
+
+    // Agregar el resto del texto
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
   };
 
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -191,12 +211,26 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     totalConversations,
     setConversations,
     currentPage,
-    updateMessagesCache, // ✅ NUEVO: Para actualizar caché de mensajes
-    addMessageToCache, // ✅ NUEVO: Para agregar mensaje a caché
-    // 🏷️ NUEVOS: Funciones de asignación y estado
+    updateMessagesCache,
+    addMessageToCache,
+    // Funciones de gestión
     assignConversation,
     changeConversationStatus,
-    updateConversationLabels
+    updateConversationLabels,
+    deleteConversation,
+    deleteMessage,
+    updateConversationPriority,
+    // Respuestas rápidas
+    getCannedResponses,
+    createCannedResponse,
+    deleteCannedResponse,
+    // Notas de contacto
+    getContactNotes,
+    createContactNote,
+    deleteContactNote,
+    // Duplicados
+    getDuplicatesDiagnosis,
+    forceMergeDuplicates
   } = useConversations();
   
   // Estados locales
@@ -259,6 +293,31 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   
+  //  FASE 4 - NUEVAS FEATURES CHATWOOT
+  // 0. Prioridad dropdown
+  const [showPriorityMenu, setShowPriorityMenu] = useState(false);
+  const [priorityMenuPos, setPriorityMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0});
+  const priorityBtnRef = useRef<HTMLButtonElement>(null);
+
+  // 1. Respuestas rápidas (Canned Responses)
+  const [cannedResponses, setCannedResponses] = useState<any[]>([]);
+  const [showCannedResponses, setShowCannedResponses] = useState(false);
+  const [cannedFilter, setCannedFilter] = useState('');
+  
+  // 2. Notas de contacto
+  const [contactNotes, setContactNotes] = useState<any[]>([]);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [showNotes, setShowNotes] = useState(false);
+  
+  // 3. Diálogos de confirmación
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({ show: false, title: '', message: '', onConfirm: () => {} });
+
   // 2. Multimedia Gallery (Galer??a multimedia)
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [mediaFilter, setMediaFilter] = useState<'all' | 'images' | 'files' | 'links'>('all');
@@ -297,8 +356,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       activeConversation.messages.forEach((msg: any) => {
         if (msg.attachments) {
           msg.attachments.forEach((att: any) => {
-            const rawUrl = att.file_url || att.data_url || att.url || '';
-            const fileType = att.file_type || att.content_type || '';
+            const rawUrl = att.data_url || att.file_url || att.url || att.thumb_url || '';
+            // file_type puede ser int (0=image,1=audio,2=video) o string
+            const rawFileType = att.file_type ?? att.content_type ?? '';
+            const fileType = String(rawFileType).toLowerCase();
             
             if (!rawUrl) return;
             
@@ -306,9 +367,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
               : rawUrl;
             
-            if (fileType.includes('image')) {
+            if (fileType === 'image' || fileType.includes('image/') || fileType === '0') {
               allMedia.push({ url: attachmentUrl, type: 'image' });
-            } else if (fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl)) {
+            } else if (fileType === 'video' || fileType.includes('video/') || fileType === '2' || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl)) {
               allMedia.push({ url: attachmentUrl, type: 'video' });
             }
           });
@@ -635,7 +696,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   
   // �🔔 Escuchar evento selectConversation desde NotificationBell y query params
   const pendingConversationRef = useRef<number | null>(null);
+  const activeConversationIdRef = useRef<number | null>(null);
   const hasCheckedQueryParamRef = useRef(false);
+  
+  // Mantener ref de activeConversation.id actualizada para evitar stale closures
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversation?.id ?? null;
+  }, [activeConversation?.id]);
   
   // Efecto separado para manejar query params - se ejecuta solo una vez al montar
   useEffect(() => {
@@ -658,32 +725,55 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   useEffect(() => {
     // Función para seleccionar conversación por ID
     const selectConversationById = (conversationId: number) => {
-      // selectConversationById llamado
       
       if (!conversations || conversations.length === 0) {
         // Guardar para intentar después cuando se carguen las conversaciones
         pendingConversationRef.current = conversationId;
-        // Guardando conversación pendiente
         return false;
       }
       
       const conversation = conversations.find((c: any) => c.id === conversationId);
       if (conversation) {
-        // Seleccionando conversación
         pendingConversationRef.current = null; // Limpiar pendiente
+        localStorage.removeItem('pendingConversationId');
+        
+        // ✅ FIX: Si esta conversación ya está activa (o cargándose), no resetear
+        // Esto evita que retries del evento sobreescriban mensajes ya cargados
+        const currentActiveId = activeConversation?.id ?? activeConversationIdRef.current;
+        if (currentActiveId === conversationId) {
+          // Ya está seleccionada, solo limpiar badges
+          if (clearBadge) clearBadge(conversationId);
+          return true;
+        }
+        
         _setActiveConversation({
           ...conversation,
           messages: [],
           unread_count: 0,
           _isLoading: true
         });
+        // ✅ Limpiar TODAS las notificaciones: badges + campana + toasts
+        if (clearBadge) {
+          clearBadge(conversationId);
+        }
+        // Actualizar unread_count en la lista local
+        setConversations((prev: Conversation[]) => 
+          prev.map((conv: Conversation) => 
+            conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+          )
+        );
         loadConversationMessages(conversationId);
         if (markConversationAsRead) {
           markConversationAsRead(conversationId);
         }
         return true;
       } else {
-        // Conversación no encontrada en lista
+        // 🔧 FIX: Conversación no encontrada en lista actual.
+        // Guardar como pendiente y refrescar lista de conversaciones.
+        pendingConversationRef.current = conversationId;
+        if (fetchUpdatedConversations) {
+          fetchUpdatedConversations();
+        }
       }
       return false;
     };
@@ -691,6 +781,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // Si hay una conversación pendiente y ahora tenemos conversaciones, seleccionarla
     if (pendingConversationRef.current && conversations && conversations.length > 0) {
       selectConversationById(pendingConversationRef.current);
+    }
+    
+    // 🔧 FIX: Revisar localStorage al montar (backup del setTimeout)
+    const storedPending = localStorage.getItem('pendingConversationId');
+    if (storedPending && conversations && conversations.length > 0) {
+      const pendingId = parseInt(storedPending, 10);
+      if (!isNaN(pendingId) && !pendingConversationRef.current) {
+        selectConversationById(pendingId);
+      }
     }
 
     // Escuchar evento personalizado
@@ -705,7 +804,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     return () => {
       window.removeEventListener('selectConversation', handleSelectEvent as EventListener);
     };
-  }, [conversations, _setActiveConversation, loadConversationMessages, markConversationAsRead]);
+  }, [conversations, _setActiveConversation, loadConversationMessages, markConversationAsRead, fetchUpdatedConversations]);
   
   //  Auto-focus del input cuando se abre una conversación (como WhatsApp)
   useEffect(() => {
@@ -798,7 +897,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const updateMessagesCacheRef = useRef(updateMessagesCache);
   const addMessageToCacheRef = useRef(addMessageToCache);
   const globalNotificationsRef = useRef(globalNotifications);
-  const hasSubscribedRef = useRef(false);
   
   useEffect(() => {
     debouncedFetchConversationsRef.current = debouncedFetchConversations;
@@ -814,19 +912,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       return;
     }
     
-    // Evitar suscripciones duplicadas - solo suscribirse una vez
-    if (hasSubscribedRef.current) {
-      return;
-    }
-    hasSubscribedRef.current = true;
-    
     const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
       setLastEventTime(new Date());
       
       if (wsEvent.type === 'conversation_updated') {
-        // ✅ FIX: No recargar del servidor inmediatamente para evitar parpadeo de badges
-        // Solo actualizar si es un cambio de estado (open/resolved/pending)
-        const newStatus = wsEvent.event?.status;
+        // Actualizar estado si viene incluido
+        const newStatus = wsEvent.event?.status || wsEvent.conversation?.status;
         if (newStatus) {
           setConversations((prev: any[]) => 
             prev.map(conv => 
@@ -835,9 +926,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 : conv
             )
           );
+        } else {
+          // Si no hay status, refrescar la lista de conversaciones
+          // (puede ser nueva conversación, cambio de asignación, etc.)
+          debouncedFetchConversationsRef.current?.();
         }
-        // Ya no llamamos a debouncedFetchConversationsRef.current() aquí
-        // porque causa parpadeo de los badges al sobrescribir con datos del servidor
         return;
       }
       
@@ -869,20 +962,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const event = wsEvent.event;
         const conversationId = wsEvent.conversationId;
         
-        // 🔒 DEDUPLICACIÓN MEJORADA - múltiples estrategias
+        // 🔒 DEDUPLICACIÓN - solo por IDs (sin hash de contenido para evitar falsos positivos)
         const messageId = wsEvent.message?.id || event?.message?.id;
         const sourceId = wsEvent.message?.source_id || event?.message?.source_id;
-        const content = wsEvent.message?.content || event?.message?.content || '';
         
-        // Generar múltiples claves de deduplicación
+        // Generar claves de deduplicación solo por IDs únicos
         const dedupKeys = [
-          `msg-${conversationId}-${messageId}`,
+          messageId ? `msg-${conversationId}-${messageId}` : null,
           sourceId ? `src-${sourceId}` : null,
-          `content-${conversationId}-${content.substring(0, 50)}-${Math.floor(Date.now() / 5000)}` // 5 segundos ventana
         ].filter(Boolean);
         
         // Verificar si alguna clave ya existe
-        const isDuplicate = dedupKeys.some(key => processedEventsRef.current.has(key));
+        const isDuplicate = dedupKeys.length > 0 && dedupKeys.some(key => processedEventsRef.current.has(key));
         if (isDuplicate) {
           return;
         }
@@ -1060,7 +1151,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     });
     
     return () => {
-      hasSubscribedRef.current = false;
       unsubscribe();
     };
   }, [globalNotifications, realtimeEnabled, userInboxId]);
@@ -1188,62 +1278,40 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, [isResizing]);
 
-  //  B??SQUEDA GLOBAL EN BACKEND
+  //  BÚSQUEDA GLOBAL EN BACKEND - busca en TODOS los mensajes de la BD
   useEffect(() => {
-    // Si no hay t??rmino de búsqueda, limpiar resultados
     if (!searchTerm || searchTerm.length < 2) {
       setSearchResults(null);
       setIsSearching(false);
       return;
     }
 
-    // Debounce: esperar 500ms despu??s de que el usuario deje de escribir
     setIsSearching(true);
     const timeoutId = setTimeout(async () => {
       try {
         debugLog.log(' Buscando en backend:', searchTerm);
         
-        const response = await axios.get('/api/chatwoot/conversations/search', {
+        const response = await axios.get('/api/chatwoot-proxy/conversations/search', {
           params: { q: searchTerm }
         });
 
-        debugLog.log('??? Resultados de búsqueda:', response.data);
+        debugLog.log('✅ Resultados de búsqueda:', response.data);
         
-        if (response.data.success) {
-          // Mapear resultados para incluir avatarUrl en el objeto contact
-          const mappedResults = response.data.data.map((conv: any) => {
-            // Buscar avatarUrl en m??ltiples ubicaciones posibles
-            const avatarUrl = conv.meta?.sender?.thumbnail || 
-                             conv.meta?.sender?.avatar_url || 
-                             conv.contact?.avatar_url ||
-                             conv.contact?.avatarUrl ||
-                             null;
-            
-            return {
-              ...conv,
-              contact: {
-                ...conv.contact,
-                avatarUrl: avatarUrl,
-                // Asegurar que avatar sea solo iniciales si hay URL
-                avatar: avatarUrl ? conv.contact?.name?.substring(0, 2).toUpperCase() : conv.contact?.avatar
-              }
-            };
-          });
-          setSearchResults(mappedResults);
-          debugLog.log(` Encontradas ${mappedResults.length} conversaciones con avatarUrl mapeado`);
+        if (response.data.success && Array.isArray(response.data.data)) {
+          // El backend retorna { conversation_id, matching_message } por cada conversación que matchea
+          setSearchResults(response.data.data);
+          debugLog.log(` Encontradas ${response.data.data.length} conversaciones con mensajes que matchean`);
         } else {
           setSearchResults([]);
-          debugLog.warn('?? B??squeda sin resultados');
         }
       } catch (error: any) {
-        debugLog.error('??? Error en búsqueda:', error.response?.data || error.message);
-        setSearchResults([]);
+        debugLog.error('❌ Error en búsqueda:', error.response?.data || error.message);
+        setSearchResults(null); // null = usar filtrado local como fallback
       } finally {
         setIsSearching(false);
       }
-    }, 500); // Esperar 500ms (debounce)
+    }, 500);
 
-    // Cleanup: cancelar búsqueda si el usuario sigue escribiendo
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
@@ -1256,78 +1324,84 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       searchResultsCount: searchResults?.length || 0
     });
     
-    // Si hay resultados de búsqueda del backend, usarlos
-    if (searchResults !== null) {
-      debugLog.log('??? Usando resultados de búsqueda backend:', searchResults.length);
-      
-      // Aplicar filtro de pestaña sobre los resultados de búsqueda
-      const result = searchResults.filter((conversation: any) => {
-        if (selectedFilter === 'all') return true;
-        if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
-        if (selectedFilter === 'unassigned') return !conversation.assignee_id;
-        return true;
-      });
-      
-      debugLog.log(' Resultados después de filtro de pestaña:', result.length);
-      return result;
-    }
-    
     if (!searchTerm) {
-      // Sin busqueda, aplicar solo filtro de pestana
+      // Sin búsqueda, aplicar solo filtro de pestaña
       const result = (conversations || []).filter(conversation => {
         if (selectedFilter === 'all') return true;
         if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
         if (selectedFilter === 'unassigned') return !conversation.assignee_id;
         return true;
       });
-      debugLog.log('??? Sin búsqueda, resultados:', result.length);
+      debugLog.log('✅ Sin búsqueda, resultados:', result.length);
       return result;
     }
     
-    // Con busqueda, filtrar por texto Y pestana
-    let result = (conversations || []).filter(conversation => {
-      const searchLower = searchTerm.toLowerCase();
+    // Con búsqueda activa: combinar resultados del backend + búsqueda local
+    const searchNorm = normalizeText(searchTerm);
+    
+    // Crear mapa de matching_message del backend (conversation_id => matching_message)
+    const backendMatchMap = new Map<number, any>();
+    if (searchResults && Array.isArray(searchResults)) {
+      searchResults.forEach((r: any) => {
+        backendMatchMap.set(r.conversation_id, r.matching_message || null);
+      });
+    }
+    
+    let result = (conversations || []).map(conversation => {
       
-      // 1. Buscar en nombre del contacto
-      const nameMatch = conversation.contact?.name?.toLowerCase()?.includes(searchLower);
+      // 1. Buscar en nombre del contacto (sin acentos)
+      const nameMatch = conversation.contact?.name ? normalizeText(conversation.contact.name).includes(searchNorm) : false;
       
-      // 2. Buscar en el ultimo mensaje
-      const lastMessageMatch = conversation.last_message?.content?.toLowerCase()?.includes(searchLower);
+      // 2. Buscar en el último mensaje (sin acentos)
+      const lastMessageMatch = conversation.last_message?.content ? normalizeText(conversation.last_message.content).includes(searchNorm) : false;
       
-      // 3. Buscar en TODOS los mensajes cargados en memoria (si existen)
-      const allMessagesMatch = conversation.messages?.some((msg: any) => 
-        msg.content?.toLowerCase()?.includes(searchLower)
-      );
+      // 3. Buscar en mensajes cargados en memoria
+      let matchingMessage: any = null;
+      const allMessagesMatch = conversation.messages?.some((msg: any) => {
+        if (msg.content && normalizeText(msg.content).includes(searchNorm)) {
+          matchingMessage = msg;
+          return true;
+        }
+        return false;
+      });
       
-      // 4. Buscar en etiquetas
-      const labelMatch = conversation.labels?.some((label: any) => 
-        label.title?.toLowerCase()?.includes(searchLower)
-      );
+      // 4. Si el backend encontró un match en mensajes para esta conversación, usarlo
+      const hasBackendMatch = backendMatchMap.has(conversation.id);
+      const backendMatchMsg = backendMatchMap.get(conversation.id);
       
-      // 5. Buscar en email o telefono
-      const contactMatch = conversation.contact?.email?.toLowerCase()?.includes(searchLower) ||
-                           conversation.contact?.phone_number?.includes(searchTerm);
-      
-      const matchesSearch = nameMatch || lastMessageMatch || allMessagesMatch || labelMatch || contactMatch;
-      
-      if (matchesSearch) {
-        debugLog.log('??? Match encontrado:', {
-          name: conversation.contact?.name,
-          nameMatch,
-          lastMessageMatch,
-          allMessagesMatch: allMessagesMatch ? 'SI (en historial)' : 'no',
-          labelMatch,
-          contactMatch,
-          totalMessages: conversation.messages?.length || 0
-        });
+      // Prioridad: mensaje local encontrado > mensaje del backend > last_message match
+      if (!matchingMessage && backendMatchMsg) {
+        matchingMessage = backendMatchMsg;
+      }
+      if (!matchingMessage && lastMessageMatch) {
+        matchingMessage = conversation.last_message;
       }
       
-      // Aplicar filtro de pestana
-      if (selectedFilter === 'all') return matchesSearch;
-      if (selectedFilter === 'mine') return matchesSearch && (currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id);
-      if (selectedFilter === 'unassigned') return matchesSearch && !conversation.assignee_id;
-      return matchesSearch;
-    });
+      // 5. Buscar en etiquetas (sin acentos)
+      const labelMatch = conversation.labels?.some((label: any) => {
+        const labelTitle = typeof label === 'string' ? label : label.title;
+        return labelTitle ? normalizeText(labelTitle).includes(searchNorm) : false;
+      });
+      
+      // 6. Buscar en email o teléfono
+      const contactMatch = (conversation.contact?.email ? normalizeText(conversation.contact.email).includes(searchNorm) : false) ||
+                           conversation.contact?.phone_number?.includes(searchTerm);
+      
+      // Combinar: match local O match del backend
+      const matchesSearch = nameMatch || lastMessageMatch || allMessagesMatch || hasBackendMatch || labelMatch || contactMatch;
+      
+      // Aplicar filtro de pestaña
+      let passesFilter = false;
+      if (selectedFilter === 'all') passesFilter = matchesSearch;
+      else if (selectedFilter === 'mine') passesFilter = matchesSearch && (currentAgentId ? conversation.assignee_id === currentAgentId : !!conversation.assignee_id);
+      else if (selectedFilter === 'unassigned') passesFilter = matchesSearch && !conversation.assignee_id;
+      else passesFilter = matchesSearch;
+      
+      if (!passesFilter) return null;
+      
+      // Adjuntar mensaje que matcheó para mostrar como preview y scroll
+      return { ...conversation, _matchingMessage: matchingMessage };
+    }).filter(Boolean) as any[];
     
     debugLog.log(' Con búsqueda, resultados:', result.length);
 
@@ -1454,7 +1528,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       _isLoading: true
     });
     
-    // ✅ Limpiar badge en el SISTEMA UNIFICADO
+    // ✅ Limpiar badge en el SISTEMA UNIFICADO (limpia badges + campana + toasts)
     if (clearBadge) {
       clearBadge(conversation.id);
     }
@@ -1466,13 +1540,51 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       )
     );
     
-    // Limpiar notificaciones de esta conversación
-    window.dispatchEvent(new CustomEvent('clearNotifications', {
-      detail: { conversationId: conversation.id }
-    }));
-    
     // Cargar mensajes en background
     loadConversationMessages(conversation.id);
+    
+    // Si hay búsqueda activa, scroll al mensaje que coincide después de cargar
+    if (searchTerm && (conversation as any)._matchingMessage) {
+      const matchMsg = (conversation as any)._matchingMessage;
+      const matchId = matchMsg.id;
+      const matchContent = matchMsg.content || '';
+      const searchNorm = normalizeText(searchTerm);
+      
+      const tryScroll = (attempts: number) => {
+        if (attempts <= 0) return;
+        setTimeout(() => {
+          // Intento 1: buscar por ID exacto del mensaje
+          let el = document.getElementById(`message-${matchId}`);
+          
+          // Intento 2: si no encontró por ID, buscar entre los mensajes renderizados por contenido
+          if (!el && matchContent) {
+            const allMsgEls = document.querySelectorAll('[id^="message-"]');
+            for (const msgEl of allMsgEls) {
+              const contentEl = msgEl.querySelector('.message-content, .whitespace-pre-wrap, p');
+              if (contentEl && normalizeText(contentEl.textContent || '').includes(searchNorm)) {
+                el = msgEl as HTMLElement;
+                break;
+              }
+            }
+          }
+          
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Flash highlight amarillo
+            el.style.transition = 'box-shadow 0.3s, background-color 0.3s';
+            el.style.boxShadow = '0 0 0 2px #facc15';
+            el.style.backgroundColor = 'rgba(250, 204, 21, 0.15)';
+            setTimeout(() => {
+              el!.style.boxShadow = '';
+              el!.style.backgroundColor = '';
+            }, 2500);
+          } else {
+            tryScroll(attempts - 1);
+          }
+        }, 600);
+      };
+      tryScroll(8); // Intentar hasta ~5 segundos
+    }
     
     // Marcar como leída en backend
     if (markConversationAsRead) {
@@ -1645,23 +1757,37 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     alert('Mensaje copiado al portapapeles');
   };
 
-  // 4 FORWARD - Reenviar mensaje (simplificado - copiar al portapapeles)
+  // 4 FORWARD - Copiar texto del mensaje
   const handleForwardMessage = (content: string) => {
     navigator.clipboard.writeText(content);
     setMessageMenuOpen(null);
-    alert('Mensaje copiado. Pégalo en otra conversación.');
   };
 
-  // 5 DELETE - Eliminar mensaje (solo visual)
+  // 5 DELETE - Eliminar mensaje (con confirmación y API real)
   const handleDeleteMessage = (messageId: number) => {
-    if (activeConversation) {
-      const updatedMessages = activeConversation.messages.filter((m: any) => m.id !== messageId);
-      _setActiveConversation({
-        ...activeConversation,
-        messages: updatedMessages
-      });
-    }
     setMessageMenuOpen(null);
+    if (!activeConversation) return;
+    
+    setConfirmDialog({
+      show: true,
+      title: 'Eliminar mensaje',
+      message: '¿Estás seguro de que quieres eliminar este mensaje? Esta acción no se puede deshacer.',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteMessage(activeConversation.id, messageId);
+          // Actualizar UI local
+          const updatedMessages = activeConversation.messages.filter((m: any) => m.id !== messageId);
+          _setActiveConversation({
+            ...activeConversation,
+            messages: updatedMessages
+          });
+        } catch (error) {
+          debugLog.error('Error eliminando mensaje:', error);
+        }
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+      }
+    });
   };
 
   // 6 PIN - Fijar mensaje
@@ -1679,10 +1805,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       return;
     }
 
-    // Filtrar mensajes que contienen el query y guardar sus IDs
+    // Filtrar mensajes que contienen el query y guardar sus IDs (sin acentos)
+    const queryNorm = normalizeText(query);
     const results = activeConversation.messages
       .filter((msg: any) => 
-        msg.content && msg.content.toLowerCase().includes(query.toLowerCase())
+        msg.content && normalizeText(msg.content).includes(queryNorm)
       )
       .map((msg: any) => msg.id);
 
@@ -1770,7 +1897,130 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       debugLog.error('Error actualizando etiquetas:', error);
     }
   };
-  
+
+  // Eliminar conversación completa
+  const handleDeleteConversation = () => {
+    if (!activeConversation) return;
+    setConfirmDialog({
+      show: true,
+      title: 'Eliminar conversación',
+      message: `¿Estás seguro de que quieres eliminar la conversación con ${activeConversation.contact?.name}? Esta acción eliminará todos los mensajes y no se puede deshacer.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteConversation(activeConversation.id);
+          _setActiveConversation(null);
+        } catch (error) {
+          debugLog.error('Error eliminando conversación:', error);
+        }
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  // Actualizar prioridad
+  const handleUpdatePriority = async (priority: string | null) => {
+    if (!activeConversation) return;
+    try {
+      await updateConversationPriority(activeConversation.id, priority);
+      _setActiveConversation((prev: any) => prev ? { ...prev, priority } : null);
+    } catch (error) {
+      debugLog.error('Error actualizando prioridad:', error);
+    }
+  };
+
+  // Cargar respuestas rápidas
+  const loadCannedResponses = useCallback(async () => {
+    const responses = await getCannedResponses();
+    setCannedResponses(responses);
+  }, [getCannedResponses]);
+
+  // Detectar "/" en el input para mostrar respuestas rápidas
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+    
+    // Detectar si el usuario está escribiendo un shortcode "/"
+    if (value.startsWith('/')) {
+      const filter = value.slice(1).toLowerCase();
+      setCannedFilter(filter);
+      if (!showCannedResponses) {
+        loadCannedResponses();
+        setShowCannedResponses(true);
+      }
+    } else {
+      setShowCannedResponses(false);
+      setCannedFilter('');
+    }
+  };
+
+  // Seleccionar respuesta rápida
+  const handleSelectCannedResponse = (response: any) => {
+    setNewMessage(response.content);
+    setShowCannedResponses(false);
+    setCannedFilter('');
+    document.getElementById('message-input')?.focus();
+  };
+
+  // Cargar notas del contacto activo
+  const loadContactNotes = useCallback(async () => {
+    if (!activeConversation?.contact?.id) return;
+    const notes = await getContactNotes(activeConversation.contact.id);
+    setContactNotes(notes);
+  }, [activeConversation?.contact?.id, getContactNotes]);
+
+  // Crear nota
+  const handleCreateNote = async () => {
+    if (!newNoteText.trim() || !activeConversation?.contact?.id) return;
+    try {
+      const note = await createContactNote(activeConversation.contact.id, newNoteText.trim());
+      if (note) {
+        setContactNotes(prev => [note, ...prev]);
+      }
+      setNewNoteText('');
+    } catch (error) {
+      debugLog.error('Error creando nota:', error);
+    }
+  };
+
+  // Eliminar nota
+  const handleDeleteNote = async (noteId: number) => {
+    if (!activeConversation?.contact?.id) return;
+    try {
+      await deleteContactNote(activeConversation.contact.id, noteId);
+      setContactNotes(prev => prev.filter(n => n.id !== noteId));
+    } catch (error) {
+      debugLog.error('Error eliminando nota:', error);
+    }
+  };
+
+  // Cargar notas cuando cambie la conversación activa
+  useEffect(() => {
+    if (activeConversation?.contact?.id && showNotes) {
+      loadContactNotes();
+    }
+  }, [activeConversation?.contact?.id, showNotes]);
+
+  // Merge duplicados
+  const handleMergeDuplicates = () => {
+    setConfirmDialog({
+      show: true,
+      title: 'Fusionar duplicados',
+      message: '¿Deseas fusionar automáticamente las conversaciones duplicadas? Se mantendrá la más reciente.',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          await forceMergeDuplicates();
+          // Recargar conversaciones
+          window.location.reload();
+        } catch (error) {
+          debugLog.error('Error fusionando duplicados:', error);
+        }
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
   // Exponer mutedConversations globalmente al montar
   React.useEffect(() => {
     (window as any).__mutedConversations = mutedConversations;
@@ -2064,6 +2314,29 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     setIsSendingAudio(true);
     
+    // UI Optimista: mostrar mensaje inmediatamente
+    const tempId = `temp-audio-${Date.now()}-${Math.random()}`;
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    const optimisticMessage = {
+      id: tempId,
+      content: '🎤 Mensaje de voz',
+      created_at: new Date().toISOString(),
+      timestamp: nowTimestamp,
+      message_type: 'outgoing',
+      sender: 'agent',
+      conversation_id: activeConversation.id,
+      status: 'sending',
+      _isOptimistic: true,
+      attachments: [{ file_type: 'audio', file_name: 'audio-message.webm', data_url: URL.createObjectURL(audioBlob) }]
+    };
+    
+    if (activeConversation.messages) {
+      _setActiveConversation({ ...activeConversation, messages: [...activeConversation.messages, optimisticMessage] });
+      setConversations((prev: any[]) => prev.map((conv: any) => 
+        conv.id === activeConversation.id ? { ...conv, last_message: { content: '🎤 Mensaje de voz', created_at: new Date().toISOString(), timestamp: nowTimestamp, message_type: 1, sender: { name: 'Yo' } }, updated_at: new Date().toISOString(), last_activity_at: nowTimestamp } : conv
+      ).sort((a: any, b: any) => (b.last_activity_at || b.timestamp || 0) - (a.last_activity_at || a.timestamp || 0)));
+    }
+    
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio-message.webm');
     formData.append('conversation_id', activeConversation.id.toString());
@@ -2073,7 +2346,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     try {
       debugLog.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
       
-      // Obtener CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
@@ -2090,16 +2362,24 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       if (response.ok && data.success) {
         debugLog.log('✅ Audio enviado');
-        // Refrescar la conversación para ver el mensaje
-        if (typeof fetchConversations === 'function') {
-          await fetchConversations();
-        }
+        _setActiveConversation(prev => {
+          if (!prev) return prev;
+          return { ...prev, messages: prev.messages?.map((msg: any) => msg.id === tempId ? { ...msg, status: 'sent', id: data.payload?.id || tempId } : msg) || [] };
+        });
       } else {
         debugLog.error('❌ Error del servidor:', data);
+        _setActiveConversation(prev => {
+          if (!prev) return prev;
+          return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
+        });
         alert(`Error al enviar audio: ${data.message || 'Error desconocido'}`);
       }
     } catch (error) {
       debugLog.error('💥 Error enviando audio:', error);
+      _setActiveConversation(prev => {
+        if (!prev) return prev;
+        return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
+      });
       alert('Error de conexión al enviar audio');
     } finally {
       setIsSendingAudio(false);
@@ -2116,11 +2396,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     // Helper para detectar si es imagen
     const isImage = (att: any): boolean => {
-      // Verificar por file_type o content_type
-      const mimeType = att.file_type || att.content_type || '';
-      if (mimeType.startsWith('image/')) return true;
+      // Verificar por file_type o content_type (puede ser int: 0=image, o string)
+      const rawType = att.file_type ?? att.content_type ?? '';
+      const mimeType = String(rawType).toLowerCase();
+      if (mimeType === 'image' || mimeType === '0' || mimeType.startsWith('image/')) return true;
       
-      // Verificar por extensión en la URL
+      // Verificar por extensión en la URL (data_url primero, es lo que devuelve el backend)
       const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
       const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i;
       if (imageExtensions.test(url)) return true;
@@ -2134,16 +2415,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     // Helper para detectar tipo de archivo (video, audio, pdf, etc.)
     const getFileCategory = (att: any, fileName: string): string => {
-      const mimeType = (att.file_type || att.content_type || '').toLowerCase();
+      // file_type puede ser int (0=image,1=audio,2=video,3=file) o string
+      const rawType = att.file_type ?? att.content_type ?? '';
+      const mimeType = String(rawType).toLowerCase();
       const nameLower = fileName.toLowerCase();
       
       // Video
-      if (mimeType.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(nameLower)) {
+      if (mimeType === 'video' || mimeType === '2' || mimeType.startsWith('video/') || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(nameLower)) {
         return 'video';
       }
       
       // Audio
-      if (mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|oga|m4a|aac|flac|wma)$/i.test(nameLower)) {
+      if (mimeType === 'audio' || mimeType === '1' || mimeType.startsWith('audio/') || /\.(mp3|wav|ogg|oga|m4a|aac|flac|wma)$/i.test(nameLower)) {
         return 'audio';
       }
       
@@ -2168,11 +2451,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // Helper para obtener nombre de archivo
     const getFileName = (att: any): string => {
       // Prioridad: file_name > name > extraer de URL
-      if (att.file_name) return att.file_name;
+      if (att.file_name && att.file_name !== 'Archivo') return att.file_name;
       if (att.name) return att.name;
       
-      // Intentar extraer de la URL
-      const url = att.data_url || att.file_url || att.url || '';
+      // Intentar extraer de la URL (data_url primero, es lo que devuelve el backend)
+      const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
       if (url) {
         try {
           const urlPath = new URL(url).pathname;
@@ -2327,10 +2610,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     if (searchTerm && searchResults && activeConversation?.messages) {
       // Esperar a que los mensajes se rendericen
       setTimeout(() => {
-        // Buscar el primer mensaje que contiene el t??rmino
+        // Buscar el primer mensaje que contiene el t??rmino (sin acentos)
         const messages = activeConversation.messages;
+        const searchNorm = normalizeText(searchTerm);
         const firstMatchIndex = messages.findIndex((msg: any) => 
-          msg.content?.toLowerCase().includes(searchTerm.toLowerCase())
+          msg.content ? normalizeText(msg.content).includes(searchNorm) : false
         );
 
         if (firstMatchIndex !== -1) {
@@ -2352,12 +2636,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   useEffect(() => {
     if (searchTerm && searchResults && activeConversation?.messages) {
       let count = 0;
+      const searchNorm = normalizeText(searchTerm);
       activeConversation.messages.forEach((msg: any) => {
         if (msg.content) {
-          const regex = new RegExp(searchTerm, 'gi');
-          const matches = msg.content.match(regex);
-          if (matches) {
-            count += matches.length;
+          const contentNorm = normalizeText(msg.content);
+          let pos = 0;
+          while ((pos = contentNorm.indexOf(searchNorm, pos)) !== -1) {
+            count++;
+            pos += searchNorm.length;
           }
         }
       });
@@ -2425,14 +2711,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   // FASE 3: Scroll automatico al navegar resultados de busqueda
   useEffect(() => {
-    if ((searchResults || []).length > 0 && currentSearchIndex < (searchResults || []).length) {
+    if (messageSearchResults.length > 0 && currentSearchIndex < messageSearchResults.length) {
       const messageId = messageSearchResults[currentSearchIndex];
       setTimeout(() => {
         const element = document.getElementById(`message-${messageId}`);
         element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
-  }, [currentSearchIndex, searchResults?.length ?? 0]);
+  }, [currentSearchIndex, messageSearchResults]);
 
   // Funciones para el modal de editar contacto
   const handleOpenEditModal = () => {
@@ -3083,7 +3369,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             <input
               type="text"
               placeholder="Buscar en todas las conversaciones"
-              className="w-full pl-10 pr-10 py-2 bg-white/30 border border-white/30 rounded-xl text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50 backdrop-blur-xl transition-all duration-300"
+              className="w-full pl-10 pr-10 py-2 bg-white/70 border border-gray-200/50 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 focus:bg-white backdrop-blur-xl transition-all duration-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -3102,12 +3388,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           </div>
           
           {/* Indicador de resultados de búsqueda */}
-          {searchResults !== null && !isSearching && (
+          {searchTerm && searchTerm.length >= 2 && !isSearching && (
             <div className="mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-xl text-xs font-semibold text-blue-800 shadow-md backdrop-blur-sm">
-              {searchResults.length === 0 ? (
+              {(filteredConversations || []).length === 0 ? (
                 <span>🔍 No se encontraron resultados para "{searchTerm}"</span>
               ) : (
-                <span>🔍 {searchResults.length} conversación{searchResults.length !== 1 ? 'es' : ''} encontrada{searchResults.length !== 1 ? 's' : ''}</span>
+                <span>🔍 {(filteredConversations || []).length} conversación{(filteredConversations || []).length !== 1 ? 'es' : ''} encontrada{(filteredConversations || []).length !== 1 ? 's' : ''}</span>
               )}
             </div>
           )}
@@ -3206,8 +3492,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`p-4 border-b border-white/10 cursor-pointer transition-all duration-300 hover:bg-white/20 ${
-                      activeConversation?.id === conversation.id ? 'bg-white/30 border-r-4 border-r-blue-500' : ''
+                    className={`p-4 border-b border-gray-100/40 cursor-pointer transition-all duration-300 hover:bg-blue-50/60 ${
+                      activeConversation?.id === conversation.id ? 'bg-blue-50/80 border-r-4 border-r-blue-500 shadow-inner' : ''
                     }`}
                   >
                     <div className="flex items-start space-x-3">
@@ -3243,19 +3529,57 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-gray-800 truncate">{conversation.contact.name}</h4>
+                          <h4 className="font-semibold text-gray-800 truncate">
+                            {searchTerm && conversation.contact?.name ? (() => {
+                              const normName = normalizeText(conversation.contact.name);
+                              const normSearch = normalizeText(searchTerm);
+                              const pos = normName.indexOf(normSearch);
+                              if (pos === -1) return conversation.contact.name;
+                              const before = conversation.contact.name.substring(0, pos);
+                              const match = conversation.contact.name.substring(pos, pos + normSearch.length);
+                              const after = conversation.contact.name.substring(pos + normSearch.length);
+                              return <>{before}<span className="bg-yellow-200 text-yellow-900 rounded px-0.5">{match}</span>{after}</>;
+                            })() : conversation.contact.name}
+                          </h4>
                           <span className="text-xs text-gray-500">{formatTimestamp(conversation.last_message.timestamp)}</span>
                         </div>
                         
-                        <p className="text-sm text-gray-600 truncate mb-2">{formatLastMessagePreview(conversation.last_message.content, conversation.last_message.attachments)}</p>
+                        <p className="text-sm text-gray-600 truncate mb-2">
+                          {searchTerm && conversation._matchingMessage?.content ? (
+                            // Mostrar mensaje que coincide con la búsqueda (estilo WhatsApp)
+                            (() => {
+                              const content = conversation._matchingMessage.content;
+                              const normContent = normalizeText(content);
+                              const normSearch = normalizeText(searchTerm);
+                              const matchPos = normContent.indexOf(normSearch);
+                              if (matchPos === -1) return formatLastMessagePreview(content, conversation._matchingMessage.attachments);
+                              
+                              // Mostrar contexto alrededor del match
+                              const start = Math.max(0, matchPos - 20);
+                              const prefix = start > 0 ? '...' : '';
+                              const before = content.substring(start, matchPos);
+                              const match = content.substring(matchPos, matchPos + normSearch.length);
+                              const after = content.substring(matchPos + normSearch.length, matchPos + normSearch.length + 30);
+                              const suffix = matchPos + normSearch.length + 30 < content.length ? '...' : '';
+                              
+                              return (
+                                <>
+                                  🔍 {prefix}{before}<span className="bg-yellow-200 text-yellow-900 font-semibold rounded px-0.5">{match}</span>{after}{suffix}
+                                </>
+                              );
+                            })()
+                          ) : (
+                            formatLastMessagePreview(conversation.last_message.content, conversation.last_message.attachments)
+                          )}
+                        </p>
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(conversation.priority)}`}>
-                              {conversation.priority}
+                              {{ urgent: 'Urgente', high: 'Alta', medium: 'Media', low: 'Baja', none: 'Sin' }[conversation.priority] || conversation.priority}
                             </span>
                             <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(conversation.status)}`}>
-                              {conversation.status}
+                              {{ open: 'Abierta', resolved: 'Resuelta', pending: 'Pendiente', snoozed: 'Pospuesta' }[conversation.status] || conversation.status}
                             </span>
                           </div>
                           
@@ -3272,14 +3596,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         
                         {(conversation?.labels || []).length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {conversation.labels.slice(0, 2).map((label, index) => (
-                              <span key={index} className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">
+                            {conversation.labels.map((label, index) => (
+                              <span 
+                                key={index} 
+                                className="px-2 py-0.5 text-xs rounded-full text-white"
+                                style={{ backgroundColor: getLabelColor(label) }}
+                              >
                                 #{label}
                               </span>
                             ))}
-                            {(conversation?.labels || []).length > 2 && (
-                              <span className="text-xs text-gray-500">+{(conversation?.labels || []).length - 2}</span>
-                            )}
                           </div>
                         )}
                       </div>
@@ -3337,7 +3662,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           <>
             {/* Header del Chat */}
             <div 
-              className="p-4 bg-white/20 backdrop-blur-xl cursor-pointer hover:bg-white/25 transition-all duration-300"
+              className="p-4 bg-white/50 backdrop-blur-xl cursor-pointer hover:bg-white/60 transition-all duration-300 border-b border-gray-200/30"
               onClick={toggleRightPanel}
             >
               <div className="flex items-center justify-between">
@@ -3407,10 +3732,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           autoFocus
                         />
                         
-                        {(searchResults || []).length > 0 && (
+                        {messageSearchResults.length > 0 && (
                           <>
                             <span className="text-xs text-gray-500 whitespace-nowrap ml-2 mr-1">
-                              {currentSearchIndex + 1}/{(searchResults || []).length}
+                              {currentSearchIndex + 1}/{messageSearchResults.length}
                             </span>
                             <button
                               onClick={() => setCurrentSearchIndex(Math.max(0, currentSearchIndex - 1))}
@@ -3420,8 +3745,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               <ChevronUp className="w-3 h-3 text-gray-600" />
                             </button>
                             <button
-                              onClick={() => setCurrentSearchIndex(Math.min((searchResults || []).length - 1, currentSearchIndex + 1))}
-                              disabled={currentSearchIndex === (searchResults || []).length - 1}
+                              onClick={() => setCurrentSearchIndex(Math.min(messageSearchResults.length - 1, currentSearchIndex + 1))}
+                              disabled={currentSearchIndex === messageSearchResults.length - 1}
                               className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-30 mr-1"
                             >
                               <ChevronDown className="w-3 h-3 text-gray-600" />
@@ -3443,39 +3768,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       </>
                     )}
 
-                  {/*  Controles de navegaci??n entre coincidencias */}
-                  {searchTerm && searchResults && totalMatches > 0 && (
-                    <div className="flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1.5 ml-2">
-                      <span className="text-xs text-gray-700 font-semibold">
-                        {currentMatchIndex + 1}/{totalMatches}
-                      </span>
-                      <div className="w-px h-4 bg-gray-400 mx-1"></div>
-                      <button
-                        onClick={() => {
-                          const newIndex = currentMatchIndex > 0 ? currentMatchIndex - 1 : totalMatches - 1;
-                          setCurrentMatchIndex(newIndex);
-                          const marks = document.querySelectorAll('[data-match-index]');
-                          marks[newIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }}
-                        className="p-1 hover:bg-white/40 rounded transition-all"
-                        title="Anterior (???)"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5 text-gray-700" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const newIndex = currentMatchIndex < totalMatches - 1 ? currentMatchIndex + 1 : 0;
-                          setCurrentMatchIndex(newIndex);
-                          const marks = document.querySelectorAll('[data-match-index]');
-                          marks[newIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }}
-                        className="p-1 hover:bg-white/40 rounded transition-all"
-                        title="Siguiente (???)"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5 text-gray-700" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Controles de navegación duplicados eliminados - ya están arriba */}
 
                   </div>
                   
@@ -3535,22 +3828,90 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   onUpdateLabels={handleUpdateLabels}
                 />
 
-                {/* Etiquetas actuales (badges) */}
+                {/* Prioridad */}
+                <div className="relative">
+                  <button
+                    ref={priorityBtnRef}
+                    onClick={(e) => {
+                      if (!showPriorityMenu) {
+                        const btn = e.currentTarget;
+                        const rect = btn.getBoundingClientRect();
+                        const menuWidth = 150;
+                        const left = Math.min(rect.left, window.innerWidth - menuWidth - 8);
+                        setPriorityMenuPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+                      }
+                      setShowPriorityMenu(!showPriorityMenu);
+                    }}
+                    className={`px-2 py-1 text-xs rounded-lg border transition-all duration-200 flex items-center gap-1 ${
+                      activeConversation.priority 
+                        ? {
+                            urgent: 'bg-red-100 border-red-300 text-red-700',
+                            high: 'bg-orange-100 border-orange-300 text-orange-700',
+                            medium: 'bg-yellow-100 border-yellow-300 text-yellow-700',
+                            low: 'bg-blue-100 border-blue-300 text-blue-700'
+                          }[activeConversation.priority] || 'bg-gray-100 border-gray-200 text-gray-600'
+                        : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                    }`}
+                    title="Prioridad"
+                  >
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>{activeConversation.priority 
+                      ? { urgent: 'Urgente', high: 'Alta', medium: 'Media', low: 'Baja' }[activeConversation.priority] 
+                      : 'Prioridad'}</span>
+                  </button>
+                  {showPriorityMenu && createPortal(
+                    <>
+                      <div className="fixed inset-0" style={{ zIndex: 99998 }} onClick={() => setShowPriorityMenu(false)} />
+                      <div 
+                        className="bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[130px]"
+                        style={{ position: 'fixed', zIndex: 99999, top: priorityMenuPos.top, left: priorityMenuPos.left }}
+                      >
+                        {[
+                          { value: 'urgent', label: 'Urgente', color: 'text-red-600' },
+                          { value: 'high', label: 'Alta', color: 'text-orange-600' },
+                          { value: 'medium', label: 'Media', color: 'text-yellow-600' },
+                          { value: 'low', label: 'Baja', color: 'text-blue-600' },
+                          { value: null, label: 'Sin prioridad', color: 'text-gray-500' },
+                        ].map(opt => (
+                          <button
+                            key={opt.value || 'none'}
+                            onClick={() => { handleUpdatePriority(opt.value); setShowPriorityMenu(false); }}
+                            className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center gap-2 ${opt.color} ${
+                              activeConversation.priority === opt.value ? 'bg-gray-100 font-medium' : ''
+                            }`}
+                          >
+                            <AlertTriangle className="w-3 h-3" />
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+
+                {/* Etiquetas actuales (badges con X para eliminar) */}
                 {activeConversation.labels && activeConversation.labels.length > 0 && (
                   <div className="flex flex-wrap gap-1 ml-2">
-                    {activeConversation.labels.slice(0, 3).map((label: string) => (
+                    {activeConversation.labels.map((label: string) => (
                       <span 
                         key={label}
-                        className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full"
+                        className="inline-flex items-center px-2 py-0.5 text-xs rounded-full text-white group"
+                        style={{ backgroundColor: getLabelColor(label) }}
                       >
                         {label}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateLabels(activeConversation.labels.filter((l: string) => l !== label));
+                          }}
+                          className="ml-1 hover:bg-white/30 rounded-full p-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                          title="Eliminar etiqueta"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </span>
                     ))}
-                    {activeConversation.labels.length > 3 && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                        +{activeConversation.labels.length - 3}
-                      </span>
-                    )}
                   </div>
                 )}
               </div>
@@ -3681,13 +4042,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Burbuja del mensaje */}
                       <div 
                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl relative ${
-                          searchResults && Array.isArray(searchResults) && searchResults.includes(message.id)
+                          messageSearchResults.length > 0 && messageSearchResults.includes(message.id)
                             ? messageSearchResults[currentSearchIndex] === message.id
                               ? 'ring-4 ring-yellow-400 !bg-yellow-200 !text-gray-900 shadow-lg'
                               : 'ring-2 ring-yellow-200 !bg-yellow-50 !text-gray-900 shadow-md'
                             : message.sender === 'agent'
                             ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                            : 'bg-white/30 text-gray-800 backdrop-blur-xl border border-white/20 shadow-md shadow-gray-400/20'
+                            : 'bg-white/80 text-gray-900 backdrop-blur-xl border border-gray-200/40 shadow-md shadow-gray-300/20'
                         }`}
                         id={`message-${message.id}`}
                       >
@@ -3698,7 +4059,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         
                         {/* Contenido del mensaje */}
                         <p className="text-sm whitespace-pre-wrap break-words">
-                          {searchTerm && searchResults ? highlightSearchTerm(message.content, searchTerm, index) : message.content}
+                          {searchQuery ? highlightSearchTerm(message.content, searchQuery, index) : message.content}
                         </p>
                         
                         {/* 🔗 Link Previews estilo WhatsApp */}
@@ -3732,17 +4093,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         {/* ✅ Filtrar attachments vacíos o inválidos */}
                         {message.attachments && message.attachments.filter((att: any) => {
                           // Solo mostrar attachments que tengan URL válida
-                          const url = att.file_url || att.data_url || att.url || '';
+                          const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
                           return url && url.length > 0;
                         }).length > 0 && (
                           <div className="mt-2 space-y-2">
                             {message.attachments.filter((att: any) => {
-                              const url = att.file_url || att.data_url || att.url || '';
+                              const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
                               return url && url.length > 0;
                             }).map((att: any, idx: number) => {
-                              // ✅ Chatwoot usa file_url, también soportar data_url como fallback
-                              const rawUrl = att.file_url || att.data_url || att.url || '';
-                              const fileType = att.file_type || att.content_type || '';
+                              // ✅ Backend devuelve data_url, Chatwoot webhooks envían file_url, thumb_url como fallback
+                              const rawUrl = att.data_url || att.file_url || att.url || att.thumb_url || '';
+                              // file_type puede ser int (0=image,1=audio,2=video,3=file) o string
+                              const rawFileType = att.file_type ?? att.content_type ?? '';
+                              const fileType = String(rawFileType).toLowerCase();
                               
                               // ✅ Usar proxy para URLs de Chatwoot (evitar CORS)
                               const attachmentUrl = rawUrl && rawUrl.includes('chatwoot') 
@@ -3751,7 +4114,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               
                               return (
                               <div key={idx}>
-                                {fileType.includes('image') ? (
+                                {(fileType === 'image' || fileType.includes('image/') || fileType === '0') ? (
                                   <div 
                                     className="relative cursor-pointer"
                                     onClick={() => openMediaViewer(attachmentUrl, 'image')}
@@ -3782,7 +4145,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                       </div>
                                     </div>
                                   </div>
-                                ) : fileType.includes('video') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
+                                ) : (fileType === 'video' || fileType.includes('video/') || fileType === '2') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
                                   /* 🎬 VIDEO: Thumbnail real generado por el servidor */
                                   <div 
                                     className="relative rounded-xl overflow-hidden shadow-lg max-w-[280px] h-40 cursor-pointer group"
@@ -3825,7 +4188,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                       <span>Video</span>
                                     </div>
                                   </div>
-                                ) : fileType.includes('audio') || /\.(mp3|wav|ogg|oga|m4a|aac|webm)$/i.test(rawUrl) ? (
+                                ) : (fileType === 'audio' || fileType.includes('audio/') || fileType === '1') || /\.(mp3|wav|ogg|oga|m4a|aac|webm)$/i.test(rawUrl) ? (
                                   /* 🎵 AUDIO: Reproductor estilo WhatsApp */
                                   <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-3 rounded-xl max-w-[280px] border border-emerald-200/50">
                                     {/* Icono de audio/micrófono */}
@@ -3905,7 +4268,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         </button>
                       )}
 
-                      {/* Men?? Contextual */}
+                      {/* Menú Contextual */}
                       {messageMenuOpen === message.id && (
                         <div className={`absolute top-12 ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in`}>
                           <button
@@ -3933,8 +4296,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             onClick={() => handleForwardMessage(message.content)}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
                           >
-                            <Forward className="w-4 h-4" />
-                            <span>Reenviar</span>
+                            <Copy className="w-4 h-4" />
+                            <span>Copiar texto</span>
                           </button>
                           <button
                             onClick={() => handlePinMessage(message)}
@@ -3981,7 +4344,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             </div>
 
             {/* Input de Mensaje */}
-            <div className="border-t border-white/20 bg-white/20 backdrop-blur-xl">
+            <div className="border-t border-gray-200/50 bg-white/60 backdrop-blur-xl">
               {/*  BARRA DE RESPUESTA */}
               {replyingTo && (
                 <div className="px-4 pt-3 pb-2 border-b border-white/20 bg-blue-50/50">
@@ -4049,7 +4412,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div className="p-4">
                 <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
                   {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS */}
-                  <label className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300 cursor-pointer">
+                  <label className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300 cursor-pointer">
                     <Paperclip className="w-4 h-4 text-gray-600" />
                     <input
                       type="file"
@@ -4074,11 +4437,39 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       id="message-input"
                       type="text"
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje..."}
-                      className="w-full px-4 py-3 bg-white/40 rounded-xl text-gray-800 placeholder-gray-400 outline-none focus:bg-white/50 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+                      onChange={handleMessageInputChange}
+                      placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rápidas)"}
+                      className="w-full px-4 py-3 bg-white/80 border border-gray-200/60 rounded-xl text-gray-900 placeholder-gray-500 outline-none focus:bg-white focus:border-blue-300 focus:ring-2 focus:ring-blue-100 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
                       disabled={isTyping || isUploadingFile}
                     />
+                    
+                    {/* Popup de Respuestas Rápidas */}
+                    {showCannedResponses && cannedResponses.length > 0 && (
+                      <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto z-50">
+                        <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500 sticky top-0 bg-white">
+                          Respuestas rápidas — escribe / para filtrar
+                        </div>
+                        {cannedResponses
+                          .filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter))
+                          .map(response => (
+                            <button
+                              key={response.id}
+                              type="button"
+                              onClick={() => handleSelectCannedResponse(response)}
+                              className="w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">/{response.short_code}</span>
+                                <span className="text-sm text-gray-700 truncate">{response.content}</span>
+                              </div>
+                            </button>
+                          ))
+                        }
+                        {cannedResponses.filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter)).length === 0 && (
+                          <div className="px-3 py-2 text-xs text-gray-400 text-center">No hay coincidencias</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   
                   {/*  BOT?N DE AUDIO */}
@@ -4086,7 +4477,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     <button 
                       type="button"
                       onMouseDown={handleStartRecording}
-                      className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300"
+                      className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300"
                       title="Mant??n presionado para grabar"
                     >
                       <Mic className="w-5 h-5 text-gray-600" />
@@ -4109,7 +4500,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   <button 
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-300"
+                    className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300"
                   >
                     <Smile className="w-4 h-4 text-gray-600" />
                   </button>
@@ -4159,7 +4550,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       {/*  GALERÍA MULTIMEDIA MODAL */}
       {showMediaGallery && activeConversation && (
         <div 
-          className="fixed inset-0 bg-gray-100 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowMediaGallery(false); }}
         >
           <div 
@@ -4236,7 +4627,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         {images.length > 0 ? (
                           <div className="grid grid-cols-4 gap-3">
                             {images.map((img, idx) => {
-                              const rawUrl = img.file_url || img.data_url || img.url || img.thumb_url || '';
+                              const rawUrl = img.data_url || img.file_url || img.url || img.thumb_url || '';
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
@@ -4265,7 +4656,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {videos.map((file, idx) => {
-                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
                                 const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                   ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                   : rawUrl;
@@ -4298,7 +4689,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
                             <div className="space-y-3">
                               {audios.map((file, idx) => {
-                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
                                 const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                   ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                   : rawUrl;
@@ -4331,7 +4722,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {pdfs.map((file, idx) => {
-                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
                                 const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                   ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                   : rawUrl;
@@ -4370,7 +4761,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Otros archivos ({otherFiles.length})</h4>
                             <div className="space-y-2">
                               {otherFiles.map((file, idx) => {
-                                const rawUrl = file.file_url || file.data_url || file.url || '';
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
                                 const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                   ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                   : rawUrl;
@@ -4451,7 +4842,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3">
                         {images.map((img, idx) => {
-                          const rawUrl = img.file_url || img.data_url || img.url || img.thumb_url || '';
+                          const rawUrl = img.data_url || img.file_url || img.url || img.thumb_url || '';
                           const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                             ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                             : rawUrl;
@@ -4485,7 +4876,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {videos.map((file, idx) => {
-                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
@@ -4508,7 +4899,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
                           <div className="space-y-3">
                             {audios.map((file, idx) => {
-                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
@@ -4529,7 +4920,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {pdfs.map((file, idx) => {
-                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
@@ -4557,7 +4948,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Otros ({otherFiles.length})</h4>
                           <div className="space-y-2">
                             {otherFiles.map((file, idx) => {
-                              const rawUrl = file.file_url || file.data_url || file.url || '';
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
                               const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
                                 ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
                                 : rawUrl;
@@ -4669,8 +5060,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {activeConversation.labels.map((label: string, index: number) => (
-                    <span key={index} className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">
+                    <span 
+                      key={index} 
+                      className="inline-flex items-center px-2 py-1 text-xs rounded-full text-white group"
+                      style={{ backgroundColor: getLabelColor(label) }}
+                    >
                       #{label}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateLabels(activeConversation.labels.filter((l: string) => l !== label));
+                        }}
+                        className="ml-1 hover:bg-white/30 rounded-full p-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                        title="Eliminar etiqueta"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </span>
                   ))}
                   <LabelsManager
@@ -4682,7 +5087,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               </div>
 
-              {/*  GALER?A MULTIMEDIA */}
+              {/*  GALERÍA MULTIMEDIA */}
               <div>
                 <button 
                   onClick={() => setShowMediaGallery(!showMediaGallery)}
@@ -4694,6 +5099,82 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 >
                   <Grid className="w-4 h-4 mr-2" />
                   {showMediaGallery ? 'Ocultar Multimedia' : 'Ver Multimedia Compartida'}
+                </button>
+              </div>
+
+              {/* 📝 NOTAS DEL CONTACTO */}
+              <div>
+                <button 
+                  onClick={() => {
+                    setShowNotes(!showNotes);
+                    if (!showNotes) loadContactNotes();
+                  }}
+                  className={`w-full p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center ${
+                    showNotes 
+                      ? 'bg-gray-700 text-white shadow-md' 
+                      : 'bg-white/20 hover:bg-white/30 text-gray-700'
+                  }`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {showNotes ? 'Ocultar Notas' : 'Notas del contacto'}
+                </button>
+
+                {showNotes && (
+                  <div className="mt-3 space-y-3">
+                    {/* Crear nota */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newNoteText}
+                        onChange={(e) => setNewNoteText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateNote()}
+                        placeholder="Escribir nota..."
+                        className="flex-1 px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-400 text-gray-800 placeholder-gray-400"
+                      />
+                      <button
+                        onClick={handleCreateNote}
+                        disabled={!newNoteText.trim()}
+                        className="px-3 py-2 bg-gray-700 text-white rounded-lg text-xs disabled:opacity-50 hover:bg-gray-800 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Lista de notas */}
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {contactNotes.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-2">Sin notas</p>
+                      ) : (
+                        contactNotes.map(note => (
+                          <div key={note.id} className="bg-white/70 border border-gray-200/60 rounded-lg p-2.5 group/note">
+                            <p className="text-xs text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                            <div className="flex items-center justify-between mt-1.5">
+                              <span className="text-[10px] text-gray-400">
+                                {note.user?.name || 'Agente'} · {note.created_at ? new Date(note.created_at * 1000).toLocaleDateString() : ''}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                className="opacity-0 group-hover/note:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 🔀 HERRAMIENTAS ADMIN */}
+              <div className="pt-2 border-t border-gray-200/30">
+                <button
+                  onClick={handleDeleteConversation}
+                  className="w-full p-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar conversación
                 </button>
               </div>
 
@@ -5119,6 +5600,57 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de confirmación genérico */}
+      {confirmDialog.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]"
+          onClick={() => setConfirmDialog(prev => ({ ...prev, show: false }))}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                confirmDialog.variant === 'danger' ? 'bg-red-100' : 'bg-amber-100'
+              }`}>
+                {confirmDialog.variant === 'danger' ? (
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                ) : (
+                  <AlertCircle className="w-6 h-6 text-amber-600" />
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                {confirmDialog.title}
+              </h3>
+              <p className="text-sm text-gray-600 text-center">
+                {confirmDialog.message}
+              </p>
+            </div>
+            <div className="flex border-t border-gray-200">
+              <button
+                onClick={() => setConfirmDialog(prev => ({ ...prev, show: false }))}
+                className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                  setConfirmDialog(prev => ({ ...prev, show: false }));
+                }}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors border-l border-gray-200 ${
+                  confirmDialog.variant === 'danger'
+                    ? 'text-red-600 hover:bg-red-50'
+                    : 'text-amber-600 hover:bg-amber-50'
+                }`}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

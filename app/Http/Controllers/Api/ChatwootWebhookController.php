@@ -247,9 +247,11 @@ class ChatwootWebhookController extends Controller
             }
             
             // Dedup: si el Evolution webhook ya despachó el forward, no duplicar
+            // Normalize: strip WAID: prefix so both sides use the same key
             $sourceId = $data['source_id'] ?? null;
-            if ($sourceId) {
-                $dedupKey = "n8n_evo_fwd_{$sourceId}";
+            $normalizedSourceId = $sourceId ? str_replace('WAID:', '', $sourceId) : null;
+            if ($normalizedSourceId) {
+                $dedupKey = "n8n_fwd_{$normalizedSourceId}";
                 if (\Cache::has($dedupKey)) {
                     Log::debug('⏭️ n8n forward ya enviado desde Evolution webhook (dedup)', [
                         'source_id' => $sourceId,

@@ -26,6 +26,7 @@ export const NotificationBell: React.FC = () => {
     markAsRead,
     markAllAsRead,
     clearAll,
+    clearBadge,
   } = globalNotifications;
 
   const formatTimestamp = (date: Date) => {
@@ -43,26 +44,14 @@ export const NotificationBell: React.FC = () => {
   };
 
   const handleNotificationClick = (conversationId: number, notificationId: string, read: boolean) => {
-    if (!read) {
-      markAsRead(notificationId);
+    // ✅ Limpiar TODO para esta conversación: badges + notificaciones + toasts
+    if (clearBadge) {
+      clearBadge(conversationId);
     }
+    
     setIsOpen(false);
     
-    // Verificar la ruta actual
-    const currentPath = window.location.pathname;
-    // Extraer el companySlug de la URL actual (ej: /dashboard/withmia-nfudrg -> withmia-nfudrg)
-    const pathParts = currentPath.split('/').filter(Boolean);
-    const companySlug = pathParts.length > 1 ? pathParts[1] : pathParts[0];
-    
-    // Estamos en conversaciones si el path incluye /dashboard/
-    const isInDashboard = currentPath.startsWith('/dashboard');
-    
-    // Click en notificación
-    
-    // Cerrar el dropdown
-    setIsOpen(false);
-    
-    // Usar evento para navegar sin recargar (igual que el toast)
+    // Navegar a la conversación sin recargar
     window.dispatchEvent(new CustomEvent('navigateToConversation', {
       detail: { conversationId }
     }));

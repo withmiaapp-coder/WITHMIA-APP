@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Events\ConversationUpdated;
 use App\Events\NewMessageReceived;
+use App\Events\MessageUpdated;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
 use App\Traits\ResolvesChatwootConfig;
@@ -889,21 +890,48 @@ class EvolutionApiController extends Controller
             
             if (in_array($event, $eventsToForward)) {
                 $fromMe = $data['key']['fromMe'] ?? false;
+                // Extraer contenido de TODOS los tipos de mensaje de WhatsApp
                 $msgContent = $data['message']['conversation'] 
                     ?? $data['message']['extendedTextMessage']['text'] 
                     ?? $data['message']['imageMessage']['caption'] 
+                    ?? $data['message']['videoMessage']['caption'] 
+                    ?? $data['message']['documentMessage']['caption'] 
+                    ?? $data['message']['documentMessage']['title'] 
                     ?? '';
+                // Detectar tipo de media para mensajes sin texto
+                $mediaType = null;
+                if (isset($data['message']['imageMessage'])) $mediaType = 'image';
+                elseif (isset($data['message']['audioMessage'])) { $mediaType = 'audio'; if (!$msgContent) $msgContent = '🎵 Audio'; }
+                elseif (isset($data['message']['videoMessage'])) { $mediaType = 'video'; if (!$msgContent) $msgContent = '🎥 Video'; }
+                elseif (isset($data['message']['documentMessage'])) { $mediaType = 'document'; if (!$msgContent) $msgContent = '📄 ' . ($data['message']['documentMessage']['fileName'] ?? 'Documento'); }
+                elseif (isset($data['message']['stickerMessage'])) { $mediaType = 'sticker'; if (!$msgContent) $msgContent = '🏷️ Sticker'; }
+                elseif (isset($data['message']['contactMessage'])) { $mediaType = 'contact'; if (!$msgContent) $msgContent = '👤 Contacto'; }
+                elseif (isset($data['message']['locationMessage'])) { $mediaType = 'location'; if (!$msgContent) $msgContent = '📍 Ubicación'; }
                     
                 if (!$fromMe && $instance) {
                     $cleanPhone = str_replace('@s.whatsapp.net', '', $data['key']['remoteJid'] ?? '');
                     $whatsappMsgId = $data['key']['id'] ?? null;
                     
-                    // Dedup: prevent double-forwarding 
-                    $dedupKey = "n8n_evo_fwd_{$whatsappMsgId}";
-                    if ($whatsappMsgId && Cache::has($dedupKey)) {
+                    // 📎 MEDIA: No reenviar mensajes multimedia a n8n desde aquí.
+                    // Evolution no tiene los attachments procesados (URLs de Chatwoot).
+                    // El ForwardToN8nWithEnrichmentJob (vía Chatwoot webhook) espera a que
+                    // Chatwoot guarde el attachment y envía el payload enriquecido.
+                    if ($mediaType) {
+                        Log::info('📎 Mensaje multimedia detectado - delegando a Chatwoot enrichment job', [
+                            'type' => $mediaType,
+                            'phone' => $cleanPhone,
+                            'has_caption' => !empty($msgContent),
+                        ]);
+                        // NO poner n8n_fwd_ key para que el job de Chatwoot pueda ejecutarse
+                    } else {
+                    // Dedup: prevent double-forwarding (Evolution + Chatwoot both forward to n8n)
+                    // Normalize: strip WAID: prefix so both sides use the same key
+                    $normalizedMsgId = $whatsappMsgId ? str_replace('WAID:', '', $whatsappMsgId) : null;
+                    $dedupKey = "n8n_fwd_{$normalizedMsgId}";
+                    if ($normalizedMsgId && Cache::has($dedupKey)) {
                         Log::debug('⏭️ n8n forward already sent (dedup)', ['msg_id' => $whatsappMsgId]);
                     } else {
-                        if ($whatsappMsgId) {
+                        if ($normalizedMsgId) {
                             Cache::put($dedupKey, true, 120);
                         }
                         
@@ -1039,6 +1067,7 @@ class EvolutionApiController extends Controller
                             ]);
                         }
                     }
+                    } // cierre del else (solo texto se envía por Evolution)
                 }
             } else {
                 Log::debug('🔇 Evento ignorado', ['event' => $event]);
@@ -1144,10 +1173,24 @@ class EvolutionApiController extends Controller
         $phoneNumber = $data['key']['remoteJid'] ?? null;
         $fromMe = $data['key']['fromMe'] ?? false;
         $messageId = $data['key']['id'] ?? null;
+        // Extraer contenido de todos los tipos de mensaje WhatsApp
         $messageText = $data['message']['conversation'] 
             ?? $data['message']['extendedTextMessage']['text'] 
             ?? $data['message']['imageMessage']['caption'] 
+            ?? $data['message']['videoMessage']['caption'] 
+            ?? $data['message']['documentMessage']['caption'] 
+            ?? $data['message']['documentMessage']['title'] 
             ?? '';
+        // Generar preview descriptivo para media sin caption
+        if (!$messageText) {
+            if (isset($data['message']['audioMessage'])) $messageText = '🎵 Audio';
+            elseif (isset($data['message']['videoMessage'])) $messageText = '🎥 Video';
+            elseif (isset($data['message']['imageMessage'])) $messageText = '📷 Imagen';
+            elseif (isset($data['message']['documentMessage'])) $messageText = '📄 ' . ($data['message']['documentMessage']['fileName'] ?? 'Documento');
+            elseif (isset($data['message']['stickerMessage'])) $messageText = '🏷️ Sticker';
+            elseif (isset($data['message']['contactMessage'])) $messageText = '👤 Contacto';
+            elseif (isset($data['message']['locationMessage'])) $messageText = '📍 Ubicación';
+        }
 
         if (!$phoneNumber) {
             Log::warning('Mensaje sin número de teléfono', ['data' => $data]);
@@ -1242,7 +1285,38 @@ class EvolutionApiController extends Controller
         }
 
         // 📡 BROADCAST para mensajes entrantes (real-time frontend via Reverb)
-        // Notificamos directamente porque el webhook de Chatwoot no dispara consistentemente.
+        // 📎 Para MULTIMEDIA: NO broadcast desde Evolution (no tiene attachments procesados).
+        // El webhook de Chatwoot enviará el broadcast con los attachments reales (data_url, file_type, etc.)
+        $hasMedia = isset($data['message']['imageMessage'])
+            || isset($data['message']['audioMessage'])
+            || isset($data['message']['videoMessage'])
+            || isset($data['message']['documentMessage'])
+            || isset($data['message']['stickerMessage']);
+        
+        if ($hasMedia) {
+            Log::debug('📎 Multimedia: broadcast delegado a Chatwoot webhook (tiene attachments reales)', [
+                'phone' => $cleanPhone,
+            ]);
+            return;
+        }
+        
+        // Dedup broadcast: marcar con cache key compartido con ChatwootWebhookController
+        // para que si Chatwoot webhook llega primero, este no duplique el broadcast.
+        $whatsappMsgId = $data['key']['id'] ?? null;
+        if ($whatsappMsgId) {
+            // source_id en Chatwoot se guarda como el WhatsApp message ID
+            $broadcastKey = "msg_src_{$whatsappMsgId}";
+            if (\Cache::has($broadcastKey)) {
+                Log::debug('⏭️ Broadcast ya enviado por Chatwoot webhook, omitiendo', [
+                    'message_id' => $whatsappMsgId
+                ]);
+                // No hacer broadcast, pero sí continuar (el mensaje ya fue procesado)
+                return;
+            }
+            // Marcar como broadcast enviado (60s TTL, compartido con Chatwoot webhook)
+            \Cache::put($broadcastKey, true, 60);
+        }
+
         if ($accountId && $inboxId) {
             try {
                 $phoneSuffix = substr($cleanPhone, -10);
@@ -1261,7 +1335,7 @@ class EvolutionApiController extends Controller
                     ->first();
 
                 if ($conversation) {
-                    event(new NewMessageReceived(
+                    broadcast(new NewMessageReceived(
                         [
                             'content' => $messageText,
                             'message_type' => 'incoming',
@@ -1334,13 +1408,14 @@ class EvolutionApiController extends Controller
         }
 
         try {
-            broadcast(new ConversationUpdated(
+            broadcast(new MessageUpdated(
                 $data,
+                null,
                 $inboxId,
                 $accountId
-            ))->toOthers();
+            ));
 
-            Log::debug('✅ Evento ConversationUpdated broadcasted', [
+            Log::debug('✅ Evento MessageUpdated broadcasted', [
                 'account_id' => $accountId,
                 'inbox_id' => $inboxId
             ]);
@@ -1430,7 +1505,7 @@ class EvolutionApiController extends Controller
                         ['state' => $state, 'instance' => $instanceName],
                         $inboxId,
                         $accountId
-                    ))->toOthers();
+                    ));
                     
                     Log::debug('✅ Evento de conexión broadcasted', [
                         'account_id' => $accountId,

@@ -48,8 +48,8 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 # Copy application files
 COPY . .
 
-# Run post-install scripts
-RUN composer dump-autoload --optimize
+# Run post-install scripts (--no-scripts to avoid artisan during build where env vars are unavailable)
+RUN composer dump-autoload --optimize --no-scripts
 
 # Copy the startup script and set permissions (before USER switch)
 COPY start-reverb.sh /app/start-reverb.sh

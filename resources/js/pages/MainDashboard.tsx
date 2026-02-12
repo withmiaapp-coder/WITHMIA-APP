@@ -808,16 +808,24 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         detail: { conversationId }
       }));
       
-      // 1. Cambiar sección a chats (sin recargar)
+      // 1. Guardar en localStorage como backup (si el evento se pierde por timing)
+      localStorage.setItem('pendingConversationId', String(conversationId));
+      
+      // 2. Cambiar sección a chats (sin recargar)
       localStorage.setItem('dashboardActiveSection', 'chats');
       setActiveSection('chats');
       
-      // 2. Emitir evento para que ConversationsInterface seleccione la conversación
-      setTimeout(() => {
+      // 3. Emitir evento con retry progresivo para que ConversationsInterface seleccione la conversación
+      const tryDispatch = (attempt: number) => {
         window.dispatchEvent(new CustomEvent('selectConversation', {
           detail: { conversationId }
         }));
-      }, 100);
+        // Si aún estamos pendientes y no hemos superado intentos, reintentar
+        if (attempt < 5 && localStorage.getItem('pendingConversationId') === String(conversationId)) {
+          setTimeout(() => tryDispatch(attempt + 1), 200 * (attempt + 1));
+        }
+      };
+      setTimeout(() => tryDispatch(0), 150);
     };
     
     window.addEventListener('navigateToConversation', handleNavigateToConversation as EventListener);
@@ -1046,7 +1054,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   };
 
   return (
-    <>
+    <GlobalNotificationProvider inboxId={inboxId}>
       <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
         {/* Sidebar Premium - MEJORADO: Mejor contraste */}
         <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200/80 flex-shrink-0 shadow-xl shadow-slate-300/40 transition-all duration-150 ease-out relative`}>
@@ -1415,7 +1423,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       
       {/* Global Notification Toast - Navegaci�n a conversaciones */}
       <GlobalNotificationToast activeSection={activeSection} companySlug={companySlug} />
-    </>
+    </GlobalNotificationProvider>
   );
 }
 
@@ -1424,13 +1432,12 @@ function GlobalNotificationToast({ activeSection, companySlug }: { activeSection
   const globalNotifications = useGlobalNotifications();
   
   const handleToastClick = (conversationId: number) => {
-    // Toast click
+    // ✅ Limpiar TODO para esta conversación: badges + notificaciones + toasts
+    if (globalNotifications?.clearBadge) {
+      globalNotifications.clearBadge(conversationId);
+    }
     
-    // Dismiss the toast
-    globalNotifications?.dismissToast(conversationId);
-    
-    // Siempre emitir evento para navegar a la conversación sin recargar
-    // El evento cambiará la sección a 'chats' y seleccionará la conversación
+    // Navegar a la conversación sin recargar
     window.dispatchEvent(new CustomEvent('navigateToConversation', {
       detail: { conversationId }
     }));

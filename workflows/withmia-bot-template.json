@@ -1,4 +1,4 @@
-﻿{
+{
     "updatedAt":  "2026-02-05T20:32:18.383Z",
     "createdAt":  "2026-01-28T01:57:04.485Z",
     "id":  "C1mhxAWt67pfg3BC",
@@ -316,16 +316,23 @@
                       "parameters":  {
                                          "sessionIdType":  "customKey",
                                          "sessionKey":  "=company_withmia-evp7rj_{{ $(\u0027Normalize Data\u0027).item.json.message.chat_id }}",
-                                         "contextWindowLength":  100
+                                         "contextWindowLength":  100,
+                                         "sessionTTL":  0
                                      },
-                      "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+                      "type":  "@n8n/n8n-nodes-langchain.memoryRedisChat",
                       "typeVersion":  1.3,
                       "position":  [
                                        1392,
                                        896
                                    ],
                       "id":  "memory-buffer",
-                      "name":  "Window Memory"
+                      "name":  "Redis Chat Memory",
+                      "credentials":  {
+                                           "redis":  {
+                                                         "id":  "CPupX2mFsjZmNBpb",
+                                                         "name":  "Redis Railway"
+                                                     }
+                                       }
                   },
                   {
                       "parameters":  {
@@ -502,7 +509,7 @@
                                                                                  },
                                                                                  {
                                                                                      "id":  "f0616fdf-40bf-44f7-869f-f4f9696ddfae",
-                                                                                     "name":  "message.message_id",
+                                                                                     "name":  "message.source_id",
                                                                                      "value":  "={{ $(\u0027Normalize Data\u0027).item.json.conversation.id }}",
                                                                                      "type":  "string"
                                                                                  },
@@ -766,7 +773,7 @@
                                                                 "parameters":  [
                                                                                    {
                                                                                        "name":  "message.key.id",
-                                                                                       "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.message_id }}"
+                                                                                       "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.source_id }}"
                                                                                    },
                                                                                    {
                                                                                        "name":  "convertToMp4",
@@ -1167,15 +1174,15 @@
                                                              "assignments":  [
                                                                                  {
                                                                                      "id":  "326e303f-6bdb-47d8-aa0e-3f87a8c7302e",
-                                                                                     "name":  "response",
+                                                                                     "name":  "chat_input",
                                                                                      "value":  "={{ $(\u0027Redis1\u0027).item.json.message.join() }}",
                                                                                      "type":  "string"
                                                                                  }
                                                                              ]
                                                          },
-                                         "options":  [
-
-                                                     ]
+                                         "options":  {
+                                                         "include": "none"
+                                                     }
                                      },
                       "type":  "n8n-nodes-base.set",
                       "typeVersion":  3.4,
@@ -2126,7 +2133,7 @@
                                                                            ]
                                                                        ]
                                               },
-                        "Window Memory":  {
+                        "Redis Chat Memory":  {
                                               "ai_memory":  [
                                                                 [
                                                                     {
@@ -3009,16 +3016,23 @@
                                             "parameters":  {
                                                                "sessionIdType":  "customKey",
                                                                "sessionKey":  "=company_withmia-evp7rj_{{ $(\u0027Normalize Data\u0027).item.json.message.chat_id }}",
-                                                               "contextWindowLength":  100
+                                                               "contextWindowLength":  100,
+                                                               "sessionTTL":  0
                                                            },
-                                            "type":  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+                                            "type":  "@n8n/n8n-nodes-langchain.memoryRedisChat",
                                             "typeVersion":  1.3,
                                             "position":  [
                                                              1392,
                                                              896
                                                          ],
                                             "id":  "memory-buffer",
-                                            "name":  "Window Memory"
+                                            "name":  "Redis Chat Memory",
+                                            "credentials":  {
+                                                                 "redis":  {
+                                                                               "id":  "CPupX2mFsjZmNBpb",
+                                                                               "name":  "Redis Railway"
+                                                                           }
+                                                             }
                                         },
                                         {
                                             "parameters":  {
@@ -3195,7 +3209,7 @@
                                                                                                        },
                                                                                                        {
                                                                                                            "id":  "f0616fdf-40bf-44f7-869f-f4f9696ddfae",
-                                                                                                           "name":  "message.message_id",
+                                                                                                           "name":  "message.source_id",
                                                                                                            "value":  "={{ $(\u0027Normalize Data\u0027).item.json.conversation.id }}",
                                                                                                            "type":  "string"
                                                                                                        },
@@ -3459,7 +3473,7 @@
                                                                                       "parameters":  [
                                                                                                          {
                                                                                                              "name":  "message.key.id",
-                                                                                                             "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.message_id }}"
+                                                                                                             "value":  "={{ $(\u0027Normalize Data\u0027).item.json.message.source_id }}"
                                                                                                          },
                                                                                                          {
                                                                                                              "name":  "convertToMp4",
@@ -3860,15 +3874,15 @@
                                                                                    "assignments":  [
                                                                                                        {
                                                                                                            "id":  "326e303f-6bdb-47d8-aa0e-3f87a8c7302e",
-                                                                                                           "name":  "response",
+                                                                                                           "name":  "chat_input",
                                                                                                            "value":  "={{ $(\u0027Redis1\u0027).item.json.message.join() }}",
                                                                                                            "type":  "string"
                                                                                                        }
                                                                                                    ]
                                                                                },
-                                                               "options":  [
-
-                                                                           ]
+                                                               "options":  {
+                                                                               "include": "none"
+                                                                           }
                                                            },
                                             "type":  "n8n-nodes-base.set",
                                             "typeVersion":  3.4,
@@ -4819,7 +4833,7 @@
                                                                                                  ]
                                                                                              ]
                                                                     },
-                                              "Window Memory":  {
+                                              "Redis Chat Memory":  {
                                                                     "ai_memory":  [
                                                                                       [
                                                                                           {

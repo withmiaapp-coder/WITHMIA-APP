@@ -103,6 +103,61 @@ class ChatwootController extends Controller
     }
 
     /**
+     * Eliminar una etiqueta del sistema
+     */
+    public function deleteLabel($labelId)
+    {
+        try {
+            $label = $this->chatwootDb()->table('labels')
+                ->where('id', $labelId)
+                ->where('account_id', $this->accountId)
+                ->first();
+
+            if (!$label) {
+                return response()->json(['success' => false, 'error' => 'Etiqueta no encontrada'], 404);
+            }
+
+            // Remover la etiqueta de todas las conversaciones que la tengan
+            $conversations = $this->chatwootDb()->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->get();
+
+            foreach ($conversations as $conv) {
+                // cached_label_list es un string separado por comas o un campo de texto
+                if (!empty($conv->cached_label_list) && str_contains($conv->cached_label_list, $label->title)) {
+                    $currentLabels = array_filter(array_map('trim', explode(',', $conv->cached_label_list)));
+                    $currentLabels = array_values(array_diff($currentLabels, [$label->title]));
+                    $this->chatwootDb()->table('conversations')
+                        ->where('id', $conv->id)
+                        ->update(['cached_label_list' => implode(',', $currentLabels)]);
+                }
+            }
+
+            // Eliminar registros de label_taggings (si la tabla existe)
+            try {
+                $this->chatwootDb()->table('label_taggings')
+                    ->where('label_id', $labelId)
+                    ->where('account_id', $this->accountId)
+                    ->delete();
+            } catch (\Throwable $e) {
+                // La tabla puede no existir en algunas versiones de Chatwoot
+                Log::debug('[WITHMIA] label_taggings cleanup skipped', ['error' => $e->getMessage()]);
+            }
+
+            // Eliminar la etiqueta
+            $this->chatwootDb()->table('labels')
+                ->where('id', $labelId)
+                ->where('account_id', $this->accountId)
+                ->delete();
+
+            return response()->json(['success' => true, 'message' => 'Etiqueta eliminada correctamente']);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] deleteLabel ERROR', ['error' => $e->getMessage(), 'labelId' => $labelId]);
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
      * Obtener etiquetas de una conversación
      */
     public function getConversationLabels($conversationId)
@@ -645,6 +700,231 @@ class ChatwootController extends Controller
             ]);
         }
     }
+
+    // =========================================================================
+    // RESPUESTAS RÁPIDAS (Canned Responses)
+    // =========================================================================
+
+    /**
+     * Obtener respuestas rápidas de la cuenta
+     */
+    public function getCannedResponses()
+    {
+        try {
+            $responses = $this->chatwootDb()->table('canned_responses')
+                ->where('account_id', $this->accountId)
+                ->select('id', 'short_code', 'content')
+                ->orderBy('short_code')
+                ->get()
+                ->toArray();
+
+            return response()->json(['success' => true, 'data' => $responses]);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] getCannedResponses ERROR', ['error' => $e->getMessage()]);
+            return response()->json(['success' => true, 'data' => []]);
+        }
+    }
+
+    /**
+     * Crear respuesta rápida
+     */
+    public function createCannedResponse(Request $request)
+    {
+        try {
+            $shortCode = $request->input('short_code');
+            $content = $request->input('content');
+
+            if (!$shortCode || !$content) {
+                return response()->json(['success' => false, 'error' => 'short_code y content son requeridos'], 422);
+            }
+
+            $existing = $this->chatwootDb()->table('canned_responses')
+                ->where('account_id', $this->accountId)
+                ->where('short_code', $shortCode)
+                ->first();
+
+            if ($existing) {
+                return response()->json(['success' => false, 'error' => 'Ya existe una respuesta con ese atajo'], 422);
+            }
+
+            $id = $this->chatwootDb()->table('canned_responses')->insertGetId([
+                'account_id' => $this->accountId,
+                'short_code' => $shortCode,
+                'content' => $content,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['id' => $id, 'short_code' => $shortCode, 'content' => $content]
+            ]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * Eliminar respuesta rápida
+     */
+    public function deleteCannedResponse($id)
+    {
+        try {
+            $deleted = $this->chatwootDb()->table('canned_responses')
+                ->where('id', $id)
+                ->where('account_id', $this->accountId)
+                ->delete();
+
+            if (!$deleted) {
+                return response()->json(['success' => false, 'error' => 'Respuesta no encontrada'], 404);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Respuesta eliminada']);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    // =========================================================================
+    // NOTAS DE CONTACTO (Contact Notes)
+    // =========================================================================
+
+    /**
+     * Obtener notas de un contacto
+     */
+    public function getContactNotes($contactId)
+    {
+        try {
+            $notes = $this->chatwootDb()->table('notes')
+                ->where('account_id', $this->accountId)
+                ->where('contact_id', (int) $contactId)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($note) {
+                    $user = null;
+                    if ($note->user_id) {
+                        $user = $this->chatwootDb()->table('users')
+                            ->where('id', $note->user_id)
+                            ->select('id', 'name', 'email')
+                            ->first();
+                    }
+                    return [
+                        'id' => $note->id,
+                        'content' => $note->content,
+                        'user' => $user ? ['id' => $user->id, 'name' => $user->name] : null,
+                        'created_at' => $this->utcToTimestamp($note->created_at),
+                    ];
+                })
+                ->toArray();
+
+            return response()->json(['success' => true, 'data' => $notes]);
+        } catch (\Throwable $e) {
+            // Table may not exist in all Chatwoot versions
+            Log::debug('[WITHMIA] getContactNotes: table may not exist', ['error' => $e->getMessage()]);
+            return response()->json(['success' => true, 'data' => []]);
+        }
+    }
+
+    /**
+     * Crear nota para un contacto
+     */
+    public function createContactNote(Request $request, $contactId)
+    {
+        try {
+            $content = $request->input('content');
+            if (!$content) {
+                return response()->json(['success' => false, 'error' => 'El contenido es requerido'], 422);
+            }
+
+            // Get Chatwoot user ID for the current user
+            $chatwootUser = $this->chatwootDb()->table('users')
+                ->where('email', auth()->user()->email)
+                ->first();
+
+            $id = $this->chatwootDb()->table('notes')->insertGetId([
+                'account_id' => $this->accountId,
+                'contact_id' => (int) $contactId,
+                'content' => $content,
+                'user_id' => $chatwootUser->id ?? null,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $id,
+                    'content' => $content,
+                    'user' => $chatwootUser ? ['id' => $chatwootUser->id, 'name' => $chatwootUser->name] : null,
+                    'created_at' => now()->timestamp,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] createContactNote ERROR', ['error' => $e->getMessage()]);
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * Eliminar nota de un contacto
+     */
+    public function deleteContactNote($contactId, $noteId)
+    {
+        try {
+            $deleted = $this->chatwootDb()->table('notes')
+                ->where('id', $noteId)
+                ->where('contact_id', (int) $contactId)
+                ->where('account_id', $this->accountId)
+                ->delete();
+
+            if (!$deleted) {
+                return response()->json(['success' => false, 'error' => 'Nota no encontrada'], 404);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Nota eliminada']);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    // =========================================================================
+    // PRIORIDAD DE CONVERSACIÓN
+    // =========================================================================
+
+    /**
+     * Actualizar prioridad de una conversación
+     */
+    public function updateConversationPriority(Request $request, $conversationId)
+    {
+        try {
+            $priority = $request->input('priority'); // null, 'urgent', 'high', 'medium', 'low'
+
+            $conversation = $this->findConversation($conversationId);
+            if (!$conversation) {
+                return response()->json(['success' => false, 'error' => 'Conversación no encontrada'], 404);
+            }
+
+            // Chatwoot stores priority as integer: null=none, 0=none, 1=low, 2=medium, 3=high, 4=urgent
+            $priorityMap = ['low' => 1, 'medium' => 2, 'high' => 3, 'urgent' => 4];
+            $priorityInt = $priority ? ($priorityMap[$priority] ?? null) : null;
+
+            $this->chatwootDb()->table('conversations')
+                ->where('id', $conversation->id)
+                ->update([
+                    'priority' => $priorityInt,
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['success' => true, 'priority' => $priority]);
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] updateConversationPriority ERROR', ['error' => $e->getMessage()]);
+            return $this->errorResponse($e);
+        }
+    }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
 
     /**
      * Parse PostgreSQL text array string "{a,b,c}" to PHP array

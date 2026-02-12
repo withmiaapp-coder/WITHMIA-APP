@@ -351,6 +351,68 @@ class ChatwootMessageController extends Controller
     }
 
     /**
+     * Eliminar un mensaje de una conversación
+     */
+    public function deleteMessage($conversationId, $messageId)
+    {
+        try {
+            if (!$this->inboxId) {
+                return response()->json(['success' => false, 'message' => 'No tienes un inbox asignado'], 403);
+            }
+
+            // Validate conversation belongs to this inbox
+            $conversation = $this->findAndValidateConversation($conversationId);
+            if (!$conversation) {
+                return response()->json(['success' => false, 'message' => 'Conversación no encontrada o sin permisos'], 404);
+            }
+
+            // Try Chatwoot API first
+            if ($this->chatwootToken) {
+                try {
+                    $response = \Illuminate\Support\Facades\Http::timeout(10)
+                        ->withHeaders(['api_access_token' => $this->chatwootToken])
+                        ->delete("{$this->chatwootBaseUrl}/api/v1/accounts/{$this->accountId}/conversations/{$conversation->display_id}/messages/{$messageId}");
+
+                    if ($response->successful() || $response->status() === 204) {
+                        return response()->json(['success' => true, 'message' => 'Mensaje eliminado']);
+                    }
+                } catch (\Throwable $apiError) {
+                    Log::warning('[WITHMIA] deleteMessage API failed, trying DB', ['error' => $apiError->getMessage()]);
+                }
+            }
+
+            // Fallback: soft-delete via DB (set content to empty)
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+            $message = $chatwootDb->table('messages')
+                ->where('id', $messageId)
+                ->where('conversation_id', $conversation->id)
+                ->first();
+
+            if (!$message) {
+                return response()->json(['success' => false, 'message' => 'Mensaje no encontrado'], 404);
+            }
+
+            $chatwootDb->table('messages')
+                ->where('id', $messageId)
+                ->update([
+                    'content' => '🗑️ Este mensaje fue eliminado',
+                    'content_attributes' => json_encode(['deleted' => true]),
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['success' => true, 'message' => 'Mensaje eliminado']);
+
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] deleteMessage ERROR', [
+                'error' => $e->getMessage(),
+                'conversation_id' => $conversationId,
+                'message_id' => $messageId,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Error al eliminar mensaje'], 500);
+        }
+    }
+
+    /**
      * Obtener configuración del bot para el usuario (desde n8n workflow).
      */
     private function getBotConfigForUser($user): array

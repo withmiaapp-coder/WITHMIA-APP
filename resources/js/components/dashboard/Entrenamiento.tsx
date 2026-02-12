@@ -671,7 +671,7 @@ export default function Entrenamiento({
               {editingOnboarding ? (
                 <input
                   type="text"
-                  value={onboardingData.assistant_name || 'WITHMIA'}
+                  value={onboardingData.assistant_name ?? ''}
                   onChange={(e) =>
                     setOnboardingData((prev) => ({
                       ...prev,

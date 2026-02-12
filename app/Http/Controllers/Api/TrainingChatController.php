@@ -8,15 +8,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Services\QdrantService;
+use App\Services\ConversationMemoryService;
 use App\Helpers\Utf8Helper;
 
 class TrainingChatController extends Controller
 {
     private QdrantService $qdrantService;
+    private ConversationMemoryService $memoryService;
 
-    public function __construct(QdrantService $qdrantService)
+    public function __construct(QdrantService $qdrantService, ConversationMemoryService $memoryService)
     {
         $this->qdrantService = $qdrantService;
+        $this->memoryService = $memoryService;
     }
 
     public function trainingChat(Request $request)
@@ -455,6 +458,30 @@ class TrainingChatController extends Controller
         
         // Actualizar punto company_onboarding en Qdrant con el nuevo nombre
         $this->updateCompanyOnboardingInQdrant($company, $newName);
+
+        // 🧹 Flush memoria de conversación para que el bot use el nuevo nombre
+        try {
+            $flushResult = $this->memoryService->flushOnIdentityChange(
+                $company, $oldName, $newName, 'assistant_name'
+            );
+            Log::info('✅ Memoria de conversación limpiada tras cambio de nombre', $flushResult);
+        } catch (\Exception $e) {
+            Log::error('Error al limpiar memoria tras cambio de nombre', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Fortalecer system prompt en n8n para que ignore nombres antiguos en historial
+        try {
+            $strengthened = $this->memoryService->strengthenSystemPrompt($company);
+            Log::info('✅ System prompt fortalecido tras cambio de nombre en training', [
+                'strengthened' => $strengthened,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al fortalecer prompt tras cambio de nombre', [
+                'error' => $e->getMessage(),
+            ]);
+        }
         
         // Respuestas variadas para el cambio de nombre
         $responses = [

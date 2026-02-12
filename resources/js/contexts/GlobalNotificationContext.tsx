@@ -78,6 +78,7 @@ interface GlobalNotificationContextType {
   // Toasts (notificaciones efímeras)
   toasts: Toast[];
   dismissToast: (id: number) => void;
+  dismissToastsByConversation: (conversationId: number) => void;
   
   // Acciones de notificaciones
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
@@ -167,7 +168,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   
   // Rate limits
   const RATE_LIMIT_MS = 1000;
-  const CONVERSATION_RATE_LIMIT_MS = 3000;
+  const CONVERSATION_RATE_LIMIT_MS = 1000;
 
   // ============================================================================
   // UTILIDADES (definidas antes de usarlas)
@@ -316,6 +317,11 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // Dismiss ALL toasts for a specific conversation
+  const dismissToastsByConversation = useCallback((conversationId: number) => {
+    setToasts(prev => prev.filter(t => t.conversationId !== conversationId));
+  }, []);
+
   // ============================================================================
   // BADGES POR CONVERSACIÓN - FUENTE ÚNICA DE VERDAD
   // ============================================================================
@@ -340,20 +346,20 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   }, []);
 
   const clearBadge = useCallback((conversationId: number) => {
-    // ✅ Limpiar badge del Map
+    // ✅ 1. Limpiar badge del Map (sidebar badges)
     setConversationBadges(prev => {
       const newMap = new Map(prev);
       const current = newMap.get(conversationId) || 0;
       newMap.set(conversationId, 0);
       setTotalUnreadMessages(total => Math.max(0, total - current));
       
-      // ✅ Persistir en sessionStorage inmediatamente
+      // Persistir en sessionStorage inmediatamente
       sessionStorage.setItem('conversationBadges', JSON.stringify(Array.from(newMap.entries())));
       
       return newMap;
     });
     
-    // ✅ TAMBIÉN limpiar notificaciones de la campana para esta conversación
+    // ✅ 2. Limpiar notificaciones de la campana para esta conversación
     setNotifications(prev => {
       const removedUnread = prev.filter(n => n.conversationId === conversationId && !n.read).length;
       if (removedUnread > 0) {
@@ -361,7 +367,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       }
       const filtered = prev.filter(n => n.conversationId !== conversationId);
       
-      // ✅ PERSISTIR en localStorage inmediatamente
+      // Persistir en localStorage inmediatamente
       if (filtered.length > 0) {
         localStorage.setItem('globalNotifications', JSON.stringify(filtered.slice(0, 50)));
       } else {
@@ -370,6 +376,9 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
       
       return filtered;
     });
+    
+    // ✅ 3. Limpiar toasts de esta conversación
+    setToasts(prev => prev.filter(t => t.conversationId !== conversationId));
   }, []);
 
   // Inicializar badges desde conversaciones (llamado al cargar)
@@ -476,14 +485,10 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         const channel = echo.private(channelName);
         channelRef.current = channel;
 
-        // Suscripción exitosa
         channel.subscribed(() => {
-          // Canal suscrito
         });
 
-        // Error en canal
         channel.error((error: any) => {
-          // Error handled silently
         });
 
         // ========================================
@@ -896,13 +901,14 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     const handleClearNotifications = (event: CustomEvent) => {
       const { conversationId } = event.detail;
       if (conversationId) {
-        removeNotificationsByConversation(conversationId);
+        // ✅ Usar clearBadge que limpia TODO: badges + notificaciones + toasts
+        clearBadge(conversationId);
       }
     };
 
     window.addEventListener('clearNotifications', handleClearNotifications as EventListener);
     return () => window.removeEventListener('clearNotifications', handleClearNotifications as EventListener);
-  }, [removeNotificationsByConversation]);
+  }, [clearBadge]);
 
   // ============================================================================
   // PROVIDER VALUE
@@ -922,6 +928,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     // Toasts
     toasts,
     dismissToast,
+    dismissToastsByConversation,
     addNotification,
     markAsRead,
     markAllAsRead,
@@ -945,6 +952,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     initializeBadges,
     toasts,
     dismissToast,
+    dismissToastsByConversation,
     addNotification,
     markAsRead,
     markAllAsRead,

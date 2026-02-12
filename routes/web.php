@@ -22,13 +22,10 @@ Route::get('/img-proxy', [ImageProxyController::class, 'proxy'])
     ->middleware('throttle:120,1')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
-Route::get('/chatwoot-image-proxy', [AttachmentProxyController::class, 'proxy'])
-    ->middleware('throttle:120,1');
-
 // ============================================================================
 // 2. BROADCASTING
 // ============================================================================
-Broadcast::routes(['middleware' => ['web', 'auth']]);
+Broadcast::routes(['middleware' => ['web', 'railway.auth']]);
 
 // ============================================================================
 // 3. AUTENTICACIÓN (Google OAuth, sesión, logout)

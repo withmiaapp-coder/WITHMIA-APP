@@ -115,6 +115,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     });
     // --- Conversaciones ---
     Route::get('/conversations', [ChatwootConversationController::class, 'getConversations']);
+    Route::get('/conversations/search', [ChatwootConversationController::class, 'searchMessages']);
     Route::get('/conversations/export-all', [ChatwootConversationController::class, 'exportAllConversationsWithMessages']);
     Route::get('/conversations/{id}', [ChatwootConversationController::class, 'getConversation']);
     Route::get('/conversations/{id}/messages', [ChatwootConversationController::class, 'getConversationMessages']);
@@ -123,6 +124,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
 
     // --- Mensajes ---
     Route::post('/conversations/{id}/messages', [ChatwootMessageController::class, 'sendMessage']);
+    Route::delete('/conversations/{id}/messages/{messageId}', [ChatwootMessageController::class, 'deleteMessage']);
 
     // --- Deduplicación ---
     Route::get('/duplicates/diagnosis', [ChatwootConversationController::class, 'getDuplicatesDiagnosis']);
@@ -133,6 +135,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     Route::post('/conversations/{id}/status', [ChatwootController::class, 'changeConversationStatus']);
     Route::post('/conversations/{id}/labels', [ChatwootController::class, 'updateConversationLabels']);
     Route::get('/conversations/{id}/labels', [ChatwootController::class, 'getConversationLabels']);
+    Route::post('/conversations/{id}/priority', [ChatwootController::class, 'updateConversationPriority']);
 
     // --- Equipos ---
     Route::get('/teams', [ChatwootTeamController::class, 'getTeams']);
@@ -148,6 +151,17 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     // --- Etiquetas ---
     Route::get('/labels', [ChatwootController::class, 'getLabels']);
     Route::post('/labels', [ChatwootController::class, 'createLabel']);
+    Route::delete('/labels/{id}', [ChatwootController::class, 'deleteLabel']);
+
+    // --- Respuestas rápidas (Canned Responses) ---
+    Route::get('/canned-responses', [ChatwootController::class, 'getCannedResponses']);
+    Route::post('/canned-responses', [ChatwootController::class, 'createCannedResponse']);
+    Route::delete('/canned-responses/{id}', [ChatwootController::class, 'deleteCannedResponse']);
+
+    // --- Notas de contacto ---
+    Route::get('/contacts/{contactId}/notes', [ChatwootController::class, 'getContactNotes']);
+    Route::post('/contacts/{contactId}/notes', [ChatwootController::class, 'createContactNote']);
+    Route::delete('/contacts/{contactId}/notes/{noteId}', [ChatwootController::class, 'deleteContactNote']);
 
     // --- Agentes ---
     Route::get('/agents', [ChatwootController::class, 'getAgents']);
@@ -173,9 +187,6 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     Route::delete('/invitations/{id}', [TeamInvitationController::class, 'cancel']);
     Route::post('/invitations/sync-chatwoot', [TeamInvitationController::class, 'syncUsersWithChatwoot']);
 
-    // --- Attachment proxy ---
-    Route::get('/attachment-proxy', [AttachmentProxyController::class, 'proxy'])
-        ->middleware('throttle:120,1');
 });
 
 // ============================================================================
@@ -263,6 +274,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/clear-all-cache', [AdminToolsController::class, 'clearAllCache']);
     Route::post('/activate-workflow/{workflowId}', [AdminToolsController::class, 'activateWorkflow']);
     Route::post('/create-minimal-workflow/{instanceName}', [AdminToolsController::class, 'createMinimalWorkflow']);
+    Route::post('/patch-all-bot-workflows', [AdminToolsController::class, 'patchAllBotWorkflows']);
 
     // Qdrant
     Route::post('/admin/recreate-qdrant/{companySlug}', [AdminToolsController::class, 'recreateQdrant']);
@@ -288,6 +300,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/migrate-chatwoot-webhooks', [AdminToolsController::class, 'migrateChatwootWebhooks']);
     Route::get('/chatwoot-debug', [AdminToolsController::class, 'chatwootDebug']);
 
+    // Conversation memory management
+    Route::post('/flush-conversation-memory/{companySlug}', [AdminToolsController::class, 'flushConversationMemory']);
+    Route::get('/conversation-memory-diagnostics/{companySlug}', [AdminToolsController::class, 'conversationMemoryDiagnostics']);
+
     // Admin invitation diagnostics
     Route::get('/admin/diagnostic-agents', [TeamInvitationController::class, 'diagnosticAgents']);
     Route::post('/admin/fix-company-chatwoot', [TeamInvitationController::class, 'fixCompanyChatwoot']);
@@ -306,41 +322,7 @@ Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
 });
 
 // ============================================================================
-// DEBUG ROUTES (solo en desarrollo local)
+// DEBUG ROUTES (protegidas con X-Debug-Key en producción)
 // ============================================================================
-if (app()->environment('local')) {
-    require __DIR__ . '/debug.php';
-}
+require __DIR__ . '/debug.php';
 
-// TEMP: Qdrant debug - remove after fixing onboarding point
-Route::get('/temp-qdrant-check', function (\Illuminate\Http\Request $request) {
-    $key = $request->query('key');
-    if ($key !== config('app.debug_key')) {
-        return response()->json(['error' => 'Unauthorized'], 401);
-    }
-    
-    $qdrantService = app(\App\Services\QdrantService::class);
-    $collection = 'company_withmia-evp7rj_knowledge';
-    
-    $result = $qdrantService->getPoints($collection, 100);
-    if (!$result['success']) {
-        return response()->json(['error' => $result['error'] ?? 'Failed']);
-    }
-    
-    $points = collect($result['points'])->map(function ($p) {
-        $text = $p['payload']['text'] ?? $p['payload']['content'] ?? '';
-        return [
-            'id' => $p['id'],
-            'type' => $p['payload']['type'] ?? $p['payload']['metadata']['type'] ?? 'unknown',
-            'source' => $p['payload']['source'] ?? $p['payload']['metadata']['source'] ?? 'unknown',
-            'has_vania' => stripos($text, 'vania') !== false,
-            'has_angel' => stripos($text, 'angel') !== false,
-            'has_nombre' => stripos($text, 'nombre') !== false,
-            'text_preview' => mb_substr($text, 0, 200),
-        ];
-    })->filter(function ($p) {
-        return $p['has_vania'] || $p['has_nombre'] || $p['type'] === 'company_information' || $p['type'] === 'company_onboarding';
-    })->values();
-    
-    return response()->json(['total_points' => count($result['points']), 'relevant' => $points]);
-});

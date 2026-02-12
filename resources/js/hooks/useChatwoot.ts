@@ -236,12 +236,14 @@ export const useConversations = () => {
     let displayContent = content;
     if ((!content || content.trim() === '') && attachments.length > 0) {
       const attachment = attachments[0];
-      const fileType = attachment.file_type || attachment.content_type || '';
+      // file_type puede ser string ("image", "audio") o int (0,1,2,3) desde Chatwoot DB
+      const rawFileType = attachment.file_type ?? attachment.content_type ?? '';
+      const fileType = String(rawFileType).toLowerCase();
       const fileName = attachment.data_url?.split('/').pop() || attachment.file_name || 'archivo';
       
-      if (fileType.startsWith('image/')) displayContent = '📷 Imagen';
-      else if (fileType.startsWith('video/')) displayContent = '🎥 Video';
-      else if (fileType.startsWith('audio/')) displayContent = '🎵 Audio';
+      if (fileType === 'image' || fileType.startsWith('image/') || fileType === '0') displayContent = '📷 Imagen';
+      else if (fileType === 'video' || fileType.startsWith('video/') || fileType === '2') displayContent = '🎥 Video';
+      else if (fileType === 'audio' || fileType.startsWith('audio/') || fileType === '1') displayContent = '🎵 Audio';
       else if (fileType.includes('pdf')) displayContent = '📄 PDF';
       else displayContent = `📎 ${fileName}`;
     } else if (!content || content.trim() === '') {
@@ -658,8 +660,9 @@ export const useConversations = () => {
     
     if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
       debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
-      const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
-      if (conversation) {
+      const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
+        || activeConversationRef.current;
+      if (conversation && conversation.id === conversationId) {
         setActiveConversationState({
           ...conversation,
           messages: cached.messages,
@@ -822,24 +825,22 @@ export const useConversations = () => {
         });
         persistMessagesCache(); // ✅ Persistir en sessionStorage
 
-        const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
+        const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
+          || activeConversationRef.current;
         
-        if (conversation) {
+        if (conversation && conversation.id === conversationId) {
           setActiveConversationState({
             ...conversation,
             messages: uniqueMessages,
             _isLoading: false,
-            _hasMoreMessages: meta.has_more ?? false
+            _hasMoreMessages: meta.has_more ?? false,
+            unread_count: 0
           });
 
           setConversations(prev =>
             prev.map(conv =>
               conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
             )
-          );
-
-          setActiveConversationState(prev =>
-            prev ? { ...prev, unread_count: 0 } : prev
           );
 
           setTimeout(() => {
@@ -1141,6 +1142,234 @@ export const useConversations = () => {
   }, [apiCall]);
 
   // ========================================
+  // ✅ NUEVO: Eliminar conversación completa
+  // ========================================
+  const deleteConversation = useCallback(async (conversationId: number) => {
+    try {
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}`,
+        'DELETE'
+      );
+      
+      // Remover localmente
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      
+      // Si era la activa, limpiar
+      if (activeConversationRef.current?.id === conversationId) {
+        setActiveConversationState(null);
+      }
+      
+      debugLog.log(`✅ Conversación ${conversationId} eliminada`);
+      return result;
+    } catch (err) {
+      debugLog.error('Error eliminando conversación:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Eliminar mensaje de una conversación
+  // ========================================
+  const deleteMessage = useCallback(async (conversationId: number, messageId: number) => {
+    try {
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/messages/${messageId}`,
+        'DELETE'
+      );
+      
+      debugLog.log(`✅ Mensaje ${messageId} eliminado de conversación ${conversationId}`);
+      return result;
+    } catch (err) {
+      debugLog.error('Error eliminando mensaje:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Actualizar prioridad de conversación
+  // ========================================
+  const updateConversationPriority = useCallback(async (conversationId: number, priority: string | null) => {
+    try {
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/priority`,
+        'POST',
+        { priority }
+      );
+      
+      // Actualizar localmente
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, priority }
+            : conv
+        )
+      );
+      
+      debugLog.log(`✅ Prioridad de conversación ${conversationId} actualizada a ${priority}`);
+      return result;
+    } catch (err) {
+      debugLog.error('Error actualizando prioridad:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Respuestas rápidas (Canned Responses)
+  // ========================================
+  const getCannedResponses = useCallback(async () => {
+    try {
+      const result = await apiCall('/api/chatwoot-proxy/canned-responses');
+      return result?.data || [];
+    } catch (err) {
+      debugLog.error('Error obteniendo respuestas rápidas:', err);
+      return [];
+    }
+  }, [apiCall]);
+
+  const createCannedResponse = useCallback(async (shortCode: string, content: string) => {
+    try {
+      const result = await apiCall('/api/chatwoot-proxy/canned-responses', 'POST', { short_code: shortCode, content });
+      return result;
+    } catch (err) {
+      debugLog.error('Error creando respuesta rápida:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  const deleteCannedResponse = useCallback(async (id: number) => {
+    try {
+      await apiCall(`/api/chatwoot-proxy/canned-responses/${id}`, 'DELETE');
+    } catch (err) {
+      debugLog.error('Error eliminando respuesta rápida:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ NUEVO: Notas de contacto
+  // ========================================
+  const getContactNotes = useCallback(async (contactId: number) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/contacts/${contactId}/notes`);
+      return result?.data || [];
+    } catch (err) {
+      debugLog.error('Error obteniendo notas:', err);
+      return [];
+    }
+  }, [apiCall]);
+
+  const createContactNote = useCallback(async (contactId: number, content: string) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/contacts/${contactId}/notes`, 'POST', { content });
+      return result?.data;
+    } catch (err) {
+      debugLog.error('Error creando nota:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  const deleteContactNote = useCallback(async (contactId: number, noteId: number) => {
+    try {
+      await apiCall(`/api/chatwoot-proxy/contacts/${contactId}/notes/${noteId}`, 'DELETE');
+    } catch (err) {
+      debugLog.error('Error eliminando nota:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
+  // ✅ Envío de archivos/audio (multimedia)
+  // ========================================
+  const sendAttachment = useCallback(async (conversationId: number, file: File, caption?: string) => {
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const result = await apiCall(
+        `/api/chatwoot-proxy/conversations/${conversationId}/messages`,
+        'POST',
+        {
+          content: caption || '',
+          message_type: 'outgoing',
+          private: false,
+          attachments: [{
+            data: base64,
+            filename: file.name,
+            content_type: file.type
+          }]
+        }
+      );
+
+      if (result?.payload) {
+        debugLog.log('✅ Archivo enviado', { id: result.payload.id, name: file.name });
+        return result.payload;
+      }
+      throw new Error('No se pudo enviar el archivo');
+    } catch (err) {
+      debugLog.error('Error enviando archivo:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  const sendAudioMessage = useCallback(async (conversationId: number, audioBlob: Blob) => {
+    try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const formData = new FormData();
+      formData.append('file', audioBlob, 'audio-message.webm');
+      formData.append('conversation_id', conversationId.toString());
+      formData.append('message_type', 'outgoing');
+      formData.append('content', '🎤 Mensaje de voz');
+
+      const response = await fetch(`/api/chatwoot-proxy/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        debugLog.log('✅ Audio enviado via hook', { id: data.payload?.id });
+        return data.payload;
+      }
+      throw new Error(data.message || 'Error enviando audio');
+    } catch (err) {
+      debugLog.error('Error enviando audio:', err);
+      throw err;
+    }
+  }, []);
+
+  // ========================================
+  // ✅ NUEVO: Diagnóstico y merge de duplicados
+  // ========================================
+  const getDuplicatesDiagnosis = useCallback(async () => {
+    try {
+      const result = await apiCall('/api/chatwoot-proxy/duplicates/diagnosis');
+      return result;
+    } catch (err) {
+      debugLog.error('Error en diagnóstico de duplicados:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  const forceMergeDuplicates = useCallback(async () => {
+    try {
+      const result = await apiCall('/api/chatwoot-proxy/duplicates/merge', 'POST');
+      return result;
+    } catch (err) {
+      debugLog.error('Error fusionando duplicados:', err);
+      throw err;
+    }
+  }, [apiCall]);
+
+  // ========================================
   // ✅ NUEVO: Cargar TODAS las conversaciones inicialmente
   // ========================================
   useEffect(() => {
@@ -1154,25 +1383,41 @@ export const useConversations = () => {
     loading,
     error,
     fetchConversations,
-    fetchAllConversations, // ✅ NUEVO: Función para cargar TODAS las conversaciones
+    fetchAllConversations,
     fetchUpdatedConversations,
     loadMoreConversations,
     sendMessage,
+    sendAttachment,
+    sendAudioMessage,
     loadConversationMessages,
-    markConversationAsRead, // ✅ Función para marcar como leída
+    markConversationAsRead,
     setActiveConversation: setActiveConversationState,
-    updateMessagesCache, // ✅ NUEVO: Función para actualizar caché de mensajes
-    addMessageToCache, // ✅ NUEVO: Función para agregar mensaje a caché
-    invalidateMessagesCache, // ✅ NUEVO: Función para invalidar caché y forzar reload
-    // ✅ NUEVO: Funciones de asignación y estado
+    updateMessagesCache,
+    addMessageToCache,
+    invalidateMessagesCache,
+    // Funciones de gestión
     assignConversation,
     changeConversationStatus,
     updateConversationLabels,
-    // ✅ NUEVO: Metadatos de paginación
+    deleteConversation,
+    deleteMessage,
+    updateConversationPriority,
+    // Respuestas rápidas
+    getCannedResponses,
+    createCannedResponse,
+    deleteCannedResponse,
+    // Notas de contacto
+    getContactNotes,
+    createContactNote,
+    deleteContactNote,
+    // Duplicados
+    getDuplicatesDiagnosis,
+    forceMergeDuplicates,
+    // Metadatos de paginación
     currentPage,
     hasMorePages,
     totalConversations,
-    setConversations, //  NUEVO: Función para actualizar conversaciones directamente
+    setConversations,
     perPage
   };
 };
@@ -1402,27 +1647,50 @@ export const useTeams = () => {
 };
 
 // ============================================================================
-// HOOK: useLabels - Gestión de etiquetas
+// HOOK: useLabels - Gestión de etiquetas (con cache global compartido)
 // ============================================================================
 
+// Cache global para que todas las instancias de useLabels compartan datos
+export let labelsGlobalCache: { data: any[]; timestamp: number } = { data: [], timestamp: 0 };
+const LABELS_CACHE_TTL = 15000; // 15 segundos
+
 export const useLabels = () => {
-  const [labels, setLabels] = useState<any[]>([]);
+  const [labels, setLabels] = useState<any[]>(labelsGlobalCache.data);
   const { apiCall, loading, error } = useChatwootAPI();
 
-  const fetchLabels = useCallback(async () => {
+  const fetchLabels = useCallback(async (forceRefresh = false) => {
+    // Si hay cache válido y no es forzado, retornar cache
+    const now = Date.now();
+    if (!forceRefresh && labelsGlobalCache.data.length > 0 && (now - labelsGlobalCache.timestamp) < LABELS_CACHE_TTL) {
+      setLabels(labelsGlobalCache.data);
+      return labelsGlobalCache.data;
+    }
     try {
       const result = await apiCall('/api/chatwoot-proxy/labels');
-      // Asegurar que siempre sea un array
-      setLabels(Array.isArray(result) ? result : (result?.data || result?.payload || []));
+      const labelsData = Array.isArray(result) ? result : (result?.data || result?.payload || []);
+      labelsGlobalCache = { data: labelsData, timestamp: Date.now() };
+      setLabels(labelsData);
+      return labelsData;
     } catch (err) {
-      setLabels([]); // Reset to empty array on error
+      setLabels(labelsGlobalCache.data.length > 0 ? labelsGlobalCache.data : []);
+      return [];
     }
   }, [apiCall]);
 
   const createLabel = useCallback(async (labelData: any) => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/labels', 'POST', labelData);
-      await fetchLabels();
+      await fetchLabels(true);
+      return result;
+    } catch (err) {
+      throw err;
+    }
+  }, [apiCall, fetchLabels]);
+
+  const deleteLabel = useCallback(async (labelId: number) => {
+    try {
+      const result = await apiCall(`/api/chatwoot-proxy/labels/${labelId}`, 'DELETE');
+      await fetchLabels(true);
       return result;
     } catch (err) {
       throw err;
@@ -1433,7 +1701,7 @@ export const useLabels = () => {
     fetchLabels();
   }, [fetchLabels]);
 
-  return { labels, loading, error, fetchLabels, createLabel };
+  return { labels, loading, error, fetchLabels, createLabel, deleteLabel };
 };
 
 // ============================================================================

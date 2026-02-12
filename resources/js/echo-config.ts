@@ -24,6 +24,22 @@ window.Pusher = Pusher;
 // Obtener CSRF token
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+// Obtener auth_token de la URL o de los shared props de Inertia
+const getAuthToken = (): string | null => {
+  // 1) Desde la URL actual
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromUrl = urlParams.get('auth_token');
+  if (fromUrl) return fromUrl;
+  // 2) Desde un meta tag (inyectado por el servidor)
+  const meta = document.querySelector('meta[name="auth-token"]');
+  if (meta?.getAttribute('content')) return meta.getAttribute('content');
+  // 3) Desde las props de Inertia (si están disponibles)
+  const inertiaPage = (window as any).__page;
+  if (inertiaPage?.props?.railwayAuthToken) return inertiaPage.props.railwayAuthToken;
+  return null;
+};
+const authToken = getAuthToken();
+
 // Configuración de Reverb - Obtener del meta tag del servidor (inyectado por Laravel)
 // Esto permite que cada empresa tenga su propia configuración sin hardcodes
 const getMetaContent = (name: string): string | null => {
@@ -64,12 +80,18 @@ const echoConfig: any = {
   authorizer: (channel: any) => {
     return {
       authorize: (socketId: string, callback: Function) => {
-        fetch('/broadcasting/auth', {
+        // Construir URL con auth_token si está disponible
+        const authUrl = authToken 
+          ? `/broadcasting/auth?auth_token=${encodeURIComponent(authToken)}`
+          : '/broadcasting/auth';
+        
+        fetch(authUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': csrfToken,
             'Accept': 'application/json',
+            ...(authToken ? { 'X-Railway-Auth-Token': authToken } : {}),
           },
           credentials: 'include', // ⚡ ESTO ES CLAVE - envía cookies
           body: JSON.stringify({
@@ -97,30 +119,7 @@ const echoConfig: any = {
   },
 };
 
-debugLog.log('🔧 Conectando a Reverb en:', reverbHost);
-
 const echo = new Echo(echoConfig);
-
-// Eventos de conexión para debugging
-echo.connector.pusher.connection.bind('connected', () => {
-  debugLog.log('✅ WebSocket conectado exitosamente');
-});
-
-echo.connector.pusher.connection.bind('disconnected', () => {
-  debugLog.log('❌ WebSocket desconectado');
-});
-
-echo.connector.pusher.connection.bind('error', (err: any) => {
-  debugLog.error('❌ Error en WebSocket:', err);
-  debugLog.error('Error type:', err?.type);
-  debugLog.error('Error code:', err?.code);
-  debugLog.error('Error data:', err?.data);
-  debugLog.error('Full error:', JSON.stringify(err, null, 2));
-});
-
-echo.connector.pusher.connection.bind('state_change', (states: any) => {
-  // State change handled silently
-});
 
 // Exportar para uso global
 window.Echo = echo;

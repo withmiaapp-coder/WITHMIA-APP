@@ -144,11 +144,16 @@ class ChatwootConversationController extends Controller
 
                 $statusString = self::INT_TO_STATUS[$conv->status] ?? 'open';
 
-                $allConversations[] = [
-                    'id' => $conv->display_id,
-                    'account_id' => $conv->account_id,
-                    'inbox_id' => $conv->inbox_id,
-                    'status' => $statusString,
+                  // Map priority integer to string
+                  $priorityIntToString = [1 => 'low', 2 => 'medium', 3 => 'high', 4 => 'urgent'];
+                  $priorityString = isset($conv->priority) ? ($priorityIntToString[$conv->priority] ?? null) : null;
+
+                  $allConversations[] = [
+                      'id' => $conv->display_id,
+                      'account_id' => $conv->account_id,
+                      'inbox_id' => $conv->inbox_id,
+                      'status' => $statusString,
+                      'priority' => $priorityString,
                     'assignee' => $assignee ? [
                         'id' => $assignee->id,
                         'name' => $assignee->name ?? $assignee->display_name ?? 'Agente',
@@ -332,19 +337,88 @@ class ChatwootConversationController extends Controller
             // Obtener attachments
             $messageIds = $messagesFromDb->pluck('id')->toArray();
             $attachmentsFromDb = [];
+            // Chatwoot DB guarda file_type como integer enum
+            $fileTypeIntToString = [
+                0 => 'image', 1 => 'audio', 2 => 'video', 3 => 'file',
+                4 => 'location', 5 => 'fallback', 6 => 'share', 7 => 'story', 8 => 'contact'
+            ];
             if (!empty($messageIds)) {
-                $attachmentsFromDb = $chatwootDb->table('attachments')
+                $chatwootUrl = rtrim($this->chatwootBaseUrl ?? config('chatwoot.url', ''), '/');
+
+                // Chatwoot DB attachments table has: id, file_type, external_url, fallback_title, extension, meta
+                // It does NOT have data_url or thumb_url columns — those are computed by Rails via Active Storage
+                // Strategy: check DB for which messages have attachments, then use Chatwoot API to get resolved URLs
+                $rawAttachments = $chatwootDb->table('attachments')
                     ->whereIn('message_id', $messageIds)
-                    ->get()
-                    ->groupBy('message_id')
-                    ->map(fn($items) => $items->map(fn($att) => [
-                        'id' => $att->id,
-                        'file_type' => $att->file_type,
-                        'data_url' => $att->data_url ?? null,
-                        'file_name' => $att->extension ? "archivo.{$att->extension}" : null,
-                        'thumb_url' => null,
-                    ])->toArray())
-                    ->toArray();
+                    ->get();
+
+                if ($rawAttachments->isNotEmpty()) {
+                    // Fetch messages with attachments via Chatwoot API (returns properly signed URLs)
+                    try {
+                        $apiResponse = Http::timeout(10)->withHeaders([
+                            'api_access_token' => $this->chatwootToken,
+                            'Content-Type' => 'application/json'
+                        ])->get("{$chatwootUrl}/api/v1/accounts/{$this->accountId}/conversations/{$apiConversationId}/messages");
+
+                        $apiAttachmentMap = []; // message_id => attachments array
+                        if ($apiResponse->successful()) {
+                            $apiMessages = $apiResponse->json()['payload'] ?? [];
+                            foreach ($apiMessages as $apiMsg) {
+                                if (!empty($apiMsg['attachments'])) {
+                                    $apiAttachmentMap[$apiMsg['id']] = $apiMsg['attachments'];
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to fetch Chatwoot API for attachments', ['error' => $e->getMessage()]);
+                        $apiAttachmentMap = [];
+                    }
+
+                    // Build final attachment map: prefer API data, fallback to DB external_url
+                    $attachmentsFromDb = $rawAttachments
+                        ->groupBy('message_id')
+                        ->map(function($items, $msgId) use ($fileTypeIntToString, $apiAttachmentMap) {
+                            // If we have API data for this message, use it (has signed Active Storage URLs)
+                            if (isset($apiAttachmentMap[$msgId])) {
+                                return collect($apiAttachmentMap[$msgId])->map(function($apiAtt) use ($fileTypeIntToString) {
+                                    $ft = $apiAtt['file_type'] ?? 'file';
+                                    // API returns file_type as string already
+                                    $url = $apiAtt['data_url'] ?? $apiAtt['file_url'] ?? $apiAtt['external_url'] ?? $apiAtt['thumb_url'] ?? null;
+                                    return [
+                                        'id' => $apiAtt['id'] ?? 0,
+                                        'file_type' => $ft,
+                                        'data_url' => $url,
+                                        'file_url' => $url,
+                                        'file_name' => $apiAtt['file_name'] ?? $apiAtt['fallback_title'] ?? basename($url ?? 'file'),
+                                        'thumb_url' => $apiAtt['thumb_url'] ?? $url,
+                                    ];
+                                })->toArray();
+                            }
+
+                            // Fallback: use DB data (only external_url available)
+                            return $items->map(function($att) use ($fileTypeIntToString) {
+                                $fileTypeStr = $fileTypeIntToString[$att->file_type] ?? 'file';
+                                $externalUrl = !empty($att->external_url) ? $att->external_url : null;
+                                $fileName = $att->fallback_title ?? ($att->extension ? "archivo.{$att->extension}" : null);
+
+                                return [
+                                    'id' => $att->id,
+                                    'file_type' => $fileTypeStr,
+                                    'data_url' => $externalUrl,
+                                    'file_url' => $externalUrl,
+                                    'file_name' => $fileName,
+                                    'thumb_url' => $externalUrl,
+                                ];
+                            })->toArray();
+                        })
+                        ->toArray();
+
+                    \Log::debug('🖼️ Attachments resolved', [
+                        'total_db_attachments' => $rawAttachments->count(),
+                        'api_matches' => count($apiAttachmentMap),
+                        'final_map_keys' => array_keys($attachmentsFromDb),
+                    ]);
+                }
             }
 
             // Obtener info del contacto y usuarios
@@ -671,5 +745,111 @@ class ChatwootConversationController extends Controller
         );
 
         return $result;
+    }
+
+    /**
+     * Buscar mensajes en todas las conversaciones del inbox
+     * Retorna las conversaciones que tienen mensajes que coinciden con la búsqueda,
+     * junto con el primer mensaje que matchea para previsualización
+     */
+    public function searchMessages(Request $request)
+    {
+        try {
+            $query = $request->input('q', '');
+            if (strlen($query) < 2) {
+                return response()->json(['success' => true, 'data' => []]);
+            }
+
+            if (!$this->inboxId) {
+                return response()->json(['success' => true, 'data' => []]);
+            }
+
+            $chatwootDb = $this->chatwootDb();
+
+            // 1. Obtener IDs de conversaciones de este inbox
+            $conversationRows = $chatwootDb->table('conversations')
+                ->where('account_id', $this->accountId)
+                ->where('inbox_id', $this->inboxId)
+                ->select('id', 'display_id', 'contact_id')
+                ->get();
+
+            $convMap = []; // db_id => display_id
+            $convContactMap = []; // db_id => contact_id
+            foreach ($conversationRows as $row) {
+                $convMap[$row->id] = $row->display_id;
+                $convContactMap[$row->id] = $row->contact_id;
+            }
+
+            $dbConvIds = array_keys($convMap);
+            if (empty($dbConvIds)) {
+                return response()->json(['success' => true, 'data' => []]);
+            }
+
+            // 2. Buscar mensajes que contengan el término (case-insensitive)
+            // Usar ILIKE para PostgreSQL (Chatwoot usa PostgreSQL)
+            $searchTerm = '%' . str_replace(['%', '_'], ['\%', '\_'], $query) . '%';
+            
+            $matchingMessages = $chatwootDb->table('messages')
+                ->whereIn('conversation_id', $dbConvIds)
+                ->whereIn('message_type', [0, 1]) // incoming + outgoing only
+                ->whereNotNull('content')
+                ->where('content', '!=', '')
+                ->whereRaw('LOWER(content) LIKE LOWER(?)', [$searchTerm])
+                ->orderBy('created_at', 'desc')
+                ->limit(200)
+                ->get();
+
+            // 3. Agrupar por conversación: primer (más reciente) mensaje que matchea
+            $results = [];
+            foreach ($matchingMessages as $msg) {
+                $displayId = $convMap[$msg->conversation_id] ?? null;
+                if (!$displayId) continue;
+
+                // Solo guardar el primer match por conversación (el más reciente)
+                if (!isset($results[$displayId])) {
+                    $results[$displayId] = [
+                        'conversation_id' => $displayId,
+                        'matching_message' => [
+                            'id' => $msg->id,
+                            'content' => $msg->content,
+                            'message_type' => $msg->message_type,
+                            'created_at' => $this->utcToTimestamp($msg->created_at),
+                        ]
+                    ];
+                }
+            }
+
+            // 4. También buscar por nombre de contacto
+            $contactIds = array_unique(array_values($convContactMap));
+            $matchingContacts = $chatwootDb->table('contacts')
+                ->whereIn('id', $contactIds)
+                ->whereRaw('LOWER(name) LIKE LOWER(?)', [$searchTerm])
+                ->pluck('id')
+                ->toArray();
+
+            // Agregar conversaciones que matchean por nombre (sin mensaje específico)
+            foreach ($conversationRows as $row) {
+                $displayId = $row->display_id;
+                if (!isset($results[$displayId]) && in_array($row->contact_id, $matchingContacts)) {
+                    $results[$displayId] = [
+                        'conversation_id' => $displayId,
+                        'matching_message' => null, // Match por nombre, no por mensaje
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => array_values($results)
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('[WITHMIA] searchMessages ERROR', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['success' => false, 'data' => [], 'error' => $e->getMessage()], 500);
+        }
     }
 }

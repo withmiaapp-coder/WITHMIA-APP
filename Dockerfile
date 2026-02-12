@@ -55,8 +55,8 @@ COPY . .
 # Copy frontend build from stage 1
 COPY --from=frontend /app/public/build public/build
 
-# Finalize
-RUN composer dump-autoload --optimize \
+# Finalize (BROADCAST_DRIVER=null prevents broadcaster init during build where env vars are unavailable)
+RUN BROADCAST_DRIVER=null composer dump-autoload --optimize \
     && (php artisan storage:link || true) \
     && chmod -R 775 storage bootstrap/cache
 

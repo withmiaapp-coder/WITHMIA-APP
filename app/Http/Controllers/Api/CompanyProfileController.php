@@ -8,15 +8,18 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\QdrantService;
+use App\Services\ConversationMemoryService;
 use App\Models\Company;
 
 class CompanyProfileController extends Controller
 {
     private QdrantService $qdrantService;
+    private ConversationMemoryService $memoryService;
 
-    public function __construct(QdrantService $qdrantService)
+    public function __construct(QdrantService $qdrantService, ConversationMemoryService $memoryService)
     {
         $this->qdrantService = $qdrantService;
+        $this->memoryService = $memoryService;
     }
 
     /**
@@ -109,10 +112,40 @@ class CompanyProfileController extends Controller
             if (isset($validated['client_type'])) $updateData['client_type'] = $validated['client_type'];
             if (isset($validated['assistant_name'])) $updateData['assistant_name'] = $validated['assistant_name'];
 
+            // Detectar si el nombre del asistente cambió para flush de memoria
+            $oldAssistantName = $company->assistant_name;
+            $nameChanged = isset($validated['assistant_name']) && $validated['assistant_name'] !== $oldAssistantName;
+
             $company->update($updateData);
 
             // Actualizar información de la empresa en Qdrant
             $this->updateCompanyInfoInQdrant($company);
+
+            // 🧹 Si cambió el nombre del asistente, flush memoria de conversación + fortalecer prompt
+            if ($nameChanged) {
+                try {
+                    $flushResult = $this->memoryService->flushOnIdentityChange(
+                        $company, $oldAssistantName, $validated['assistant_name'], 'assistant_name'
+                    );
+                    Log::info('✅ Memoria limpiada tras cambio de nombre en onboarding', $flushResult);
+                } catch (\Exception $e) {
+                    Log::error('Error al limpiar memoria en onboarding', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                // Fortalecer system prompt en n8n para que ignore nombres antiguos en historial
+                try {
+                    $strengthened = $this->memoryService->strengthenSystemPrompt($company);
+                    Log::info('✅ System prompt fortalecido tras cambio de nombre en onboarding', [
+                        'strengthened' => $strengthened,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error al fortalecer prompt en onboarding', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             return response()->json([
                 'success' => true,

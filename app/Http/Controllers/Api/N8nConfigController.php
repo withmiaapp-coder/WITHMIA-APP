@@ -166,7 +166,7 @@ class N8nConfigController extends Controller
             }
 
             if ($conversationId > 0 && $inboxId > 0 && $accountId > 0) {
-                event(new \App\Events\NewMessageReceived(
+                broadcast(new \App\Events\NewMessageReceived(
                     [
                         'content' => $message,
                         'message_type' => 'outgoing',
