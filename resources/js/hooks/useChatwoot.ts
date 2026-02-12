@@ -421,8 +421,8 @@ export const useConversations = () => {
       const meta = result?.data?.meta || result?.meta || {};
       
       // Actualizar metadatos de paginación
-      setTotalConversations(meta.count || payload.length);
-      setHasMorePages(meta.current_page < meta.total_pages);
+      setTotalConversations(meta.total || meta.count || payload.length);
+      setHasMorePages((meta.current_page || 1) < (meta.total_pages || 1));
       setCurrentPage(page);
       
       if (Array.isArray(payload)) {
@@ -1398,8 +1398,8 @@ export const useConversations = () => {
   // ✅ NUEVO: Cargar TODAS las conversaciones inicialmente
   // ========================================
   useEffect(() => {
-    fetchAllConversations();
-  }, [fetchAllConversations]);
+    fetchConversations(1, false);
+  }, [fetchConversations]);
 
   return {
     conversations: conversations || [],

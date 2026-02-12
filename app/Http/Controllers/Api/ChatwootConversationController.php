@@ -79,10 +79,30 @@ class ChatwootConversationController extends Controller
                 }
             }
 
-            $conversationsFromDb = $query
-                ->orderBy('last_activity_at', 'desc')
-                ->limit(200)
-                ->get();
+            // Filtro de updated_since (para polling incremental)
+            if ($request->has('updated_since')) {
+                $updatedSince = (int) $request->input('updated_since');
+                $query->where('last_activity_at', '>=', date('Y-m-d H:i:s', $updatedSince));
+                // Para polling incremental, devolver todo sin paginar (máx 200)
+                $conversationsFromDb = $query
+                    ->orderBy('last_activity_at', 'desc')
+                    ->limit(200)
+                    ->get();
+                $isPollRequest = true;
+            } else {
+                // Paginación real
+                $page = max(1, (int) $request->input('page', 1));
+                $perPage = min(50, max(10, (int) $request->input('per_page', 25)));
+                $totalCount = (clone $query)->count();
+                $totalPages = (int) ceil($totalCount / $perPage);
+
+                $conversationsFromDb = $query
+                    ->orderBy('last_activity_at', 'desc')
+                    ->offset(($page - 1) * $perPage)
+                    ->limit($perPage)
+                    ->get();
+                $isPollRequest = false;
+            }
 
             // Obtener contactos en una sola query
             $contactIds = $conversationsFromDb->pluck('contact_id')->unique()->filter()->toArray();
@@ -202,7 +222,16 @@ class ChatwootConversationController extends Controller
                 'success' => true,
                 'data' => [
                     'payload' => $allConversations,
-                    'meta' => ['total' => count($allConversations), 'from_db' => true]
+                    'meta' => $isPollRequest
+                        ? ['total' => count($allConversations), 'from_db' => true]
+                        : [
+                            'total' => $totalCount,
+                            'count' => count($allConversations),
+                            'current_page' => $page,
+                            'per_page' => $perPage,
+                            'total_pages' => $totalPages,
+                            'from_db' => true,
+                        ]
                 ]
             ]);
 
