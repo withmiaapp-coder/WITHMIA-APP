@@ -4278,7 +4278,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
                       {/* Menú Contextual */}
                       {messageMenuOpen === message.id && (
-                        <div className={`absolute top-12 ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
+                        <div className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
                           <button
                             onClick={() => handleReplyToMessage(message)}
                             className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
