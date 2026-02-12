@@ -4270,38 +4270,38 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
                       {/* Menú Contextual */}
                       {messageMenuOpen === message.id && (
-                        <div className={`absolute top-12 ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in`}>
+                        <div className={`absolute top-12 ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
                           <button
                             onClick={() => handleReplyToMessage(message)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Reply className="w-4 h-4" />
                             <span>Responder</span>
                           </button>
                           <button
                             onClick={() => handleStarMessage(message.id)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Star className={`w-4 h-4 ${starredMessages.has(message.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                             <span>{starredMessages.has(message.id) ? 'Quitar destacado' : 'Destacar'}</span>
                           </button>
                           <button
                             onClick={() => handleCopyMessage(message.content)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Copy className="w-4 h-4" />
                             <span>Copiar</span>
                           </button>
                           <button
                             onClick={() => handleForwardMessage(message.content)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Copy className="w-4 h-4" />
                             <span>Copiar texto</span>
                           </button>
                           <button
                             onClick={() => handlePinMessage(message)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Pin className="w-4 h-4" />
                             <span>Fijar</span>
