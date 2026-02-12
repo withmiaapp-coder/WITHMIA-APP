@@ -832,6 +832,42 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const isLoadingMoreRef = useRef(false);
   const lastLoadTimeRef = useRef(0);
 
+  // 🔄 Función reutilizable para cargar más mensajes
+  const triggerLoadMore = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !activeConversation) return;
+
+    const hasMore = activeConversation?._hasMoreMessages !== false;
+    if (!hasMore || activeConversation?._isLoading || isLoadingMoreRef.current || !activeConversation?.messages?.length) {
+      console.log(`📜 [LoadMore] Bloqueado: hasMore=${hasMore}, isLoading=${activeConversation?._isLoading}, isLoadingMoreRef=${isLoadingMoreRef.current}, msgs=${activeConversation?.messages?.length}`);
+      return;
+    }
+
+    isLoadingMoreRef.current = true;
+    lastLoadTimeRef.current = Date.now();
+
+    console.log(`📜 [LoadMore] Cargando más mensajes para conv ${activeConversation.id}, mensajes actuales: ${activeConversation.messages.length}, hasMore: ${activeConversation._hasMoreMessages}`);
+
+    const prevScrollHeight = container.scrollHeight;
+
+    loadConversationMessages(activeConversation.id, true)
+      .then(() => {
+        setTimeout(() => {
+          const newScrollHeight = container.scrollHeight;
+          const addedHeight = newScrollHeight - prevScrollHeight;
+          if (addedHeight > 0) {
+            container.scrollTop = addedHeight + 50;
+          }
+          isLoadingMoreRef.current = false;
+          console.log(`📜 [LoadMore] Completado: +${addedHeight}px de contenido nuevo`);
+        }, 200);
+      })
+      .catch((err) => {
+        console.error('❌ [LoadMore] Error:', err);
+        isLoadingMoreRef.current = false;
+      });
+  }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
+
   // 🔄 Infinite scroll para cargar más mensajes al llegar al tope (usando scroll event)
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -845,48 +881,33 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Si el usuario está cerca del tope (menos de 100px del inicio)
       const isNearTop = container.scrollTop < 100;
       
-      // Cargar si: está cerca del tope, no está cargando, y tiene mensajes
-      const hasMore = activeConversation?._hasMoreMessages !== false; // true o undefined = intentar cargar
-      
-      if (isNearTop && 
-          hasMore && 
-          !activeConversation?._isLoading && 
-          !isLoadingMoreRef.current &&
-          activeConversation?.messages?.length > 0) {
-        
-        isLoadingMoreRef.current = true;
-        lastLoadTimeRef.current = now;
-        
-        debugLog.log(`📜 Scroll: cargando más mensajes para conversación ${activeConversation.id}, mensajes actuales: ${activeConversation.messages.length}, hasMore: ${activeConversation._hasMoreMessages}`);
-        
-        // Guardar altura actual antes de cargar
-        const prevScrollHeight = container.scrollHeight;
-        
-        loadConversationMessages(activeConversation.id, true)
-          .then(() => {
-            // Esperar a que React renderice los nuevos mensajes
-            setTimeout(() => {
-              const newScrollHeight = container.scrollHeight;
-              const addedHeight = newScrollHeight - prevScrollHeight;
-              // Mover el scroll hacia abajo por la cantidad de contenido nuevo
-              if (addedHeight > 0) {
-                container.scrollTop = addedHeight + 50; // +50 para no re-disparar inmediatamente
-              }
-              isLoadingMoreRef.current = false;
-              debugLog.log(`📜 LoadMore completado: +${addedHeight}px de contenido nuevo`);
-            }, 200);
-          })
-          .catch((err) => {
-            debugLog.error('❌ Error cargando mensajes:', err);
-            isLoadingMoreRef.current = false;
-          });
+      if (isNearTop) {
+        triggerLoadMore();
       }
     };
     
     container.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
+  }, [triggerLoadMore]);
+
+  // 🔄 Auto-check: si los mensajes no llenan el container, auto-cargar más
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !activeConversation?.messages?.length) return;
+    if (activeConversation?._isLoading) return;
+
+    // Esperar a que el DOM renderice
+    const timer = setTimeout(() => {
+      // Si el contenido no llena el container (no hay scrollbar), intentar cargar más
+      if (container.scrollHeight <= container.clientHeight && activeConversation?._hasMoreMessages !== false) {
+        console.log(`📜 [AutoLoad] Container no lleno (scrollH=${container.scrollHeight}, clientH=${container.clientHeight}), cargando más...`);
+        triggerLoadMore();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [activeConversation?.id, activeConversation?.messages?.length, activeConversation?._isLoading, activeConversation?._hasMoreMessages, triggerLoadMore]);
   
   // 🎯 SISTEMA UNIFICADO DE NOTIFICACIONES
   const globalNotifications = useGlobalNotifications();
@@ -4001,11 +4022,25 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
               
-              {/* Indicador de que hay más mensajes por cargar */}
+              {/* Botón para cargar más mensajes anteriores */}
               {activeConversation?._hasMoreMessages && !activeConversation?._isLoading && filteredMessages.length > 0 && (
-                <div className="flex justify-center py-2">
-                  <div className="text-xs text-gray-400 italic">
-                    ↑ Scroll arriba para cargar más
+                <div className="flex justify-center py-3">
+                  <button
+                    onClick={() => triggerLoadMore()}
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition-colors border border-blue-200"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+                    Cargar mensajes anteriores
+                  </button>
+                </div>
+              )}
+              
+              {/* Indicador de inicio de conversación */}
+              {activeConversation?._hasMoreMessages === false && !activeConversation?._isLoading && filteredMessages.length > 0 && (
+                <div className="flex justify-center py-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 italic">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Inicio de la conversación
                   </div>
                 </div>
               )}

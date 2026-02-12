@@ -659,7 +659,7 @@ export const useConversations = () => {
     const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
     
     if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
-      debugLog.log(`⚡ Mensajes de conversación ${conversationId} desde cache local`);
+      console.log(`⚡ [Cache] conv=${conversationId}, msgs=${cached.messages.length}, hasMore=${cached.hasMore}, cachedHasMore=${cachedHasMore}`);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
         || activeConversationRef.current;
       if (conversation && conversation.id === conversationId) {
@@ -708,6 +708,8 @@ export const useConversations = () => {
       const result = await apiCall(url);
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
+
+      console.log(`📜 [API Response] conv=${conversationId}, loadMore=${loadMore}, messagesCount=${messagesArray?.length}, has_more=${meta.has_more}, meta=`, meta);
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
@@ -878,14 +880,25 @@ export const useConversations = () => {
       }
     } catch (err) {
       debugLog.error('Error cargando mensajes:', err);
-      const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
-      if (conversation) {
-        setActiveConversationState({
-          ...conversation,
-          messages: cached?.messages || [],
-          _isLoading: false
-        });
-      }
+      // ✅ FIX: Preservar _hasMoreMessages del estado anterior
+      setActiveConversationState(prev => {
+        if (prev && prev.id === conversationId) {
+          return {
+            ...prev,
+            _isLoading: false
+          };
+        }
+        const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
+        if (conversation) {
+          return {
+            ...conversation,
+            messages: cached?.messages || [],
+            _isLoading: false,
+            _hasMoreMessages: cached?.hasMore ?? undefined
+          };
+        }
+        return prev;
+      });
     } finally {
       debugLog.log(`✅ Liberando loading key: ${loadingKey}`);
       isLoadingMessagesRef.current.delete(loadingKey);

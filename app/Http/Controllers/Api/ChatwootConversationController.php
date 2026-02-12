@@ -466,6 +466,8 @@ class ChatwootConversationController extends Controller
             $oldestMessageId = !empty($filteredMessages) ? $filteredMessages[0]['id'] : null;
             $newestMessageId = !empty($filteredMessages) ? $filteredMessages[count($filteredMessages) - 1]['id'] : null;
 
+            \Log::info("[Messages] conv={$id} dbId={$dbConversationId} before={$before} limit={$messagesPerBatch} rawCount=" . count($messagesFromDb) . " filteredCount=" . count($filteredMessages) . " hasMore={$hasMore}");
+
             return response()->json([
                 'success' => true,
                 'payload' => ['payload' => $filteredMessages],
@@ -475,7 +477,9 @@ class ChatwootConversationController extends Controller
                     'has_more' => $hasMore,
                     'oldest_id' => $oldestMessageId,
                     'newest_id' => $newestMessageId,
-                    '_debug' => config('app.debug') ? ['before_param' => $before, 'raw_count' => count($allMessages)] : null
+                    'limit' => $messagesPerBatch,
+                    'before' => $before,
+                    '_debug' => config('app.debug') ? ['before_param' => $before, 'raw_count' => count($allMessages), 'db_count' => count($messagesFromDb)] : null
                 ]
             ]);
 
