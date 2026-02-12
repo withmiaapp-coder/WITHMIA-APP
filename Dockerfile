@@ -31,9 +31,15 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
        pdo_pgsql pgsql zip gd intl bcmath exif pcntl opcache sockets \
     && pecl install redis && docker-php-ext-enable redis
 
-# Static binaries: ffmpeg + roadrunner
-RUN curl -sSL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -xJ --strip-components=1 -C /usr/local/bin/ --wildcards '*/ffmpeg' '*/ffprobe' \
-    && curl -sSL https://github.com/roadrunner-server/roadrunner/releases/download/v2024.3.5/roadrunner-2024.3.5-linux-amd64.tar.gz | tar -xz \
+# Static binaries: ffmpeg (BtbN GitHub mirror) + roadrunner
+# Split into separate RUN for better caching; --retry for transient failures
+RUN curl -sSL --retry 3 --retry-delay 5 \
+    https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
+    | tar -xJ --strip-components=2 -C /usr/local/bin/ --wildcards '*/bin/ffmpeg' '*/bin/ffprobe'
+
+RUN curl -sSL --retry 3 --retry-delay 5 \
+    https://github.com/roadrunner-server/roadrunner/releases/download/v2024.3.5/roadrunner-2024.3.5-linux-amd64.tar.gz \
+    | tar -xz \
     && mv roadrunner-2024.3.5-linux-amd64/rr /usr/local/bin/rr && chmod +x /usr/local/bin/rr \
     && rm -rf roadrunner-2024.3.5-linux-amd64
 
