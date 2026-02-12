@@ -348,13 +348,16 @@ class ChatwootConversationController extends Controller
             // Obtener mensajes de BD
             $query = $chatwootDb->table('messages')
                 ->where('conversation_id', $dbConversationId)
-                ->whereIn('message_type', [0, 1])
-                ->orderBy('id', 'desc')
-                ->limit($messagesPerBatch + 1);
+                ->whereIn('message_type', [0, 1]);
 
             if ($before && is_numeric($before)) {
                 $query->where('id', '<', (int)$before);
             }
+
+            $query->orderBy('id', 'desc')
+                ->limit($messagesPerBatch + 1);
+
+            \Log::info("[Messages] QUERY conv_display={$id} dbId={$dbConversationId} before={$before} limit={$messagesPerBatch}");
 
             $messagesFromDb = $query->get();
             $hasMore = count($messagesFromDb) > $messagesPerBatch;
@@ -495,7 +498,7 @@ class ChatwootConversationController extends Controller
             $oldestMessageId = !empty($filteredMessages) ? $filteredMessages[0]['id'] : null;
             $newestMessageId = !empty($filteredMessages) ? $filteredMessages[count($filteredMessages) - 1]['id'] : null;
 
-            \Log::info("[Messages] conv={$id} dbId={$dbConversationId} before={$before} limit={$messagesPerBatch} rawCount=" . count($messagesFromDb) . " filteredCount=" . count($filteredMessages) . " hasMore=" . ($hasMore ? 'true' : 'false'));
+            \Log::info("[Messages] conv={$id} dbId={$dbConversationId} before={$before} limit={$messagesPerBatch} rawCount=" . count($messagesFromDb) . " filteredCount=" . count($filteredMessages) . " hasMore=" . ($hasMore ? 'true' : 'false') . " idRange=" . ($oldestMessageId ?? 'null') . "-" . ($newestMessageId ?? 'null'));
 
             return response()->json([
                 'success' => true,
