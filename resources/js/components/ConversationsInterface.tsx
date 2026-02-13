@@ -1084,14 +1084,32 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 // ✅ Obtener badge del contexto global
                 const globalBadge = globalNotificationsRef.current?.conversationBadges?.get(conversationId) || 0;
                 
+                // ✅ Construir contenido: si viene vacío pero hay attachments, generar preview
+                const msgContent = event?.message?.content || '';
+                const msgAttachments = event?.message?.attachments || [];
+                let displayContent = msgContent;
+                if ((!msgContent || msgContent.trim() === '') && msgAttachments.length > 0) {
+                  const att = msgAttachments[0];
+                  const ft = String(att.file_type || att.content_type || '').toLowerCase();
+                  const fn = att.file_name || att.data_url?.split('/').pop() || 'archivo';
+                  if (ft.startsWith('image') || ft === '0') displayContent = '📷 Imagen';
+                  else if (ft.startsWith('video') || ft === '2') displayContent = '🎥 Video';
+                  else if (ft.startsWith('audio') || ft === '1') displayContent = '🎵 Audio';
+                  else if (ft.includes('pdf')) displayContent = '📄 PDF';
+                  else if (ft.includes('document') || ft.includes('word')) displayContent = '📄 Documento';
+                  else if (ft.includes('sheet') || ft.includes('excel')) displayContent = '📊 Hoja de cálculo';
+                  else displayContent = `📎 ${fn}`;
+                }
+                
                 return {
                   ...conv,
                   last_message: {
-                    content: event?.message?.content || '',
+                    content: displayContent,
                     created_at: event?.message?.created_at || newTimestamp,
                     timestamp: new Date(newTimestamp).getTime() / 1000,
                     message_type: event?.message?.message_type || 0,
-                    sender: event?.sender || event?.message?.sender
+                    sender: event?.sender || event?.message?.sender,
+                    attachments: msgAttachments
                   },
                   unread_count: globalBadge,
                   updated_at: newTimestamp,
@@ -1104,6 +1122,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           } else {
             // Nueva conversación
             const sender = event?.sender || event?.message?.sender || { name: 'Nuevo contacto' };
+            // ✅ Construir contenido para nueva conversación con soporte attachments
+            const newMsgContent = event?.message?.content || '';
+            const newMsgAttachments = event?.message?.attachments || [];
+            let newDisplayContent = newMsgContent;
+            if ((!newMsgContent || newMsgContent.trim() === '') && newMsgAttachments.length > 0) {
+              const att = newMsgAttachments[0];
+              const ft = String(att.file_type || att.content_type || '').toLowerCase();
+              const fn = att.file_name || att.data_url?.split('/').pop() || 'archivo';
+              if (ft.startsWith('image') || ft === '0') newDisplayContent = '📷 Imagen';
+              else if (ft.startsWith('video') || ft === '2') newDisplayContent = '🎥 Video';
+              else if (ft.startsWith('audio') || ft === '1') newDisplayContent = '🎵 Audio';
+              else if (ft.includes('pdf')) newDisplayContent = '📄 PDF';
+              else newDisplayContent = `📎 ${fn}`;
+            }
+            
             const newConv = {
               id: conversationId,
               inbox_id: event?.inbox_id,
@@ -1118,11 +1151,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 avatarUrl: sender.thumbnail || sender.avatar || null
               },
               last_message: {
-                content: event?.message?.content || '',
+                content: newDisplayContent,
                 created_at: event?.message?.created_at || newTimestamp,
                 timestamp: new Date(newTimestamp).getTime() / 1000,
                 message_type: event?.message?.message_type || 0,
-                sender
+                sender,
+                attachments: newMsgAttachments
               },
               labels: [],
               timestamp: new Date(newTimestamp).getTime() / 1000,
