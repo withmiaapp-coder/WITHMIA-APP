@@ -311,6 +311,15 @@
     background: oklch(0.50 0.24 280);
 }
 
+/* Ocultar scrollbar en miniaturas del lightbox */
+.hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
 /* ============================================ */
 /* 🎬 ANIMACIONES ULTRA OPTIMIZADAS - MÁS RÁPIDAS */
 /* ============================================ */

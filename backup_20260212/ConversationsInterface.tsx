@@ -111,30 +111,6 @@ interface Conversation {
 // MessageStatus component extracted to ./conversations/MessageStatus.tsx
 // Utility functions extracted to ../utils/conversationHelpers.ts
 
-/**
- * Resuelve la URL de un attachment.
- * Si tiene ID numérico > 0 y NO es un blob local, usa el proxy que cachea y
- * obtiene URLs frescas de Chatwoot Active Storage (resolviendo expiración).
- * Para blob: URLs (previews locales/optimistas) las devuelve tal cual.
- */
-const resolveAttachmentUrl = (att: any): string => {
-  const rawUrl = att?.data_url || att?.file_url || att?.url || att?.thumb_url || '';
-  // URLs locales de preview (blob:, data:) se usan directo
-  if (!rawUrl || rawUrl.startsWith('blob:') || rawUrl.startsWith('data:')) {
-    return rawUrl;
-  }
-  // Si tiene ID numérico válido, usar proxy (URLs permanentes que no expiran)
-  const attId = Number(att?.id);
-  if (attId > 0) {
-    return `/api/chatwoot-proxy/attachment/${attId}?v=2`;
-  }
-  // Fallback: proxy CORS para URLs de Chatwoot, o URL directa
-  if (rawUrl.includes('chatwoot')) {
-    return `/img-proxy?url=${encodeURIComponent(rawUrl)}`;
-  }
-  return rawUrl;
-};
-
 // Props del componente
 interface ConversationsInterfaceProps {
   currentAgentId?: number;
@@ -388,10 +364,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             const rawFileType = att.file_type ?? att.content_type ?? '';
             const fileType = String(rawFileType).toLowerCase();
             
-            if (!rawUrl && !(Number(att?.id) > 0)) return;
+            if (!rawUrl) return;
             
-            // ✅ Usar proxy inteligente
-            const attachmentUrl = resolveAttachmentUrl(att);
+            const attachmentUrl = rawUrl.includes('chatwoot') 
+              ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+              : rawUrl;
             
             if (fileType === 'image' || fileType.includes('image/') || fileType === '0') {
               allMedia.push({ url: attachmentUrl, type: 'image' });
@@ -3982,16 +3959,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div className="absolute inset-x-0 -top-1 -bottom-1" />
             </div>
 
-            {/* Wrapper con fondo que cubre mensajes + input (estilo WhatsApp) */}
-            <div 
-              className="flex-1 flex flex-col min-h-0 relative"
-              style={{
-                backgroundImage: 'linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(/fondo.webp)',
-                backgroundSize: 'auto, 600px auto',
-                backgroundPosition: 'center, center top',
-                backgroundRepeat: 'repeat, repeat',
-              }}
-            >
             {/* Mensajes */}
             <div 
               ref={messagesContainerRef}
@@ -4191,23 +4158,25 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         {/* Renderizar archivos adjuntos (imágenes, audios, documentos) */}
                         {/* ✅ Filtrar attachments vacíos o inválidos */}
                         {message.attachments && message.attachments.filter((att: any) => {
-                          // Solo mostrar attachments que tengan URL o ID válido
+                          // Solo mostrar attachments que tengan URL válida
                           const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
-                          return (url && url.length > 0) || (Number(att?.id) > 0);
+                          return url && url.length > 0;
                         }).length > 0 && (
                           <div className="mt-2 space-y-2">
                             {message.attachments.filter((att: any) => {
                               const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
-                              return (url && url.length > 0) || (Number(att?.id) > 0);
+                              return url && url.length > 0;
                             }).map((att: any, idx: number) => {
-                              // ✅ Usar proxy inteligente que cachea y renueva URLs
+                              // ✅ Backend devuelve data_url, Chatwoot webhooks envían file_url, thumb_url como fallback
                               const rawUrl = att.data_url || att.file_url || att.url || att.thumb_url || '';
                               // file_type puede ser int (0=image,1=audio,2=video,3=file) o string
                               const rawFileType = att.file_type ?? att.content_type ?? '';
                               const fileType = String(rawFileType).toLowerCase();
                               
-                              // ✅ Usar resolveAttachmentUrl para URLs permanentes
-                              const attachmentUrl = resolveAttachmentUrl(att);
+                              // ✅ Usar proxy para URLs de Chatwoot (evitar CORS)
+                              const attachmentUrl = rawUrl && rawUrl.includes('chatwoot') 
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               
                               return (
                               <div key={idx}>
@@ -4295,7 +4264,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     {/* Reproductor de audio nativo mejorado */}
                                     <audio 
                                       controls 
-                                      preload="auto"
                                       className="flex-1 h-8"
                                       style={{ 
                                         minWidth: '150px',
@@ -4442,8 +4410,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div ref={messagesEndRef} className="h-0" />
             </div>
 
-            {/* Input de Mensaje - estilo WhatsApp (sin fondo, integrado al chat) */}
-            <div className="bg-transparent">
+            {/* Input de Mensaje */}
+            <div className="border-t border-gray-200/50 bg-white/60 backdrop-blur-xl">
               {/*  BARRA DE RESPUESTA */}
               {replyingTo && (
                 <div className="px-4 pt-3 pb-2 border-b border-white/20 bg-blue-50/50">
@@ -4508,116 +4476,108 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              <div className="px-3 py-2">
-                <form onSubmit={handleSendMessage} className="relative">
-                  {/* Contenedor único estilo WhatsApp */}
-                  <div className="flex items-center bg-white/90 border border-gray-200/40 rounded-full px-2 py-1 focus-within:bg-white focus-within:border-gray-300 transition-all">
-                    
-                    {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS (dentro del input) */}
-                    <label className="p-2 hover:bg-gray-100 rounded-full transition-all cursor-pointer flex-shrink-0">
-                      <Paperclip className="w-5 h-5 text-gray-500" />
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                        onChange={async (e) => {
-                          const files = e.target.files;
-                          if (files && files.length > 0) {
-                            for (const file of Array.from(files)) {
-                              await handleSendAttachment(file);
-                            }
-                            e.target.value = '';
+              <div className="p-4">
+                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                  {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS */}
+                  <label className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300 cursor-pointer">
+                    <Paperclip className="w-4 h-4 text-gray-600" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          for (const file of Array.from(files)) {
+                            await handleSendAttachment(file);
                           }
-                        }}
-                        disabled={isUploadingFile}
-                      />
-                    </label>
-
-                    {/* 😊 BOTÓN EMOJI (dentro del input) */}
+                          e.target.value = ''; // Reset input
+                        }
+                      }}
+                      disabled={isUploadingFile}
+                    />
+                  </label>
+                  
+                  <div className="flex-1 relative">
+                    <input
+                      ref={messageInputRef}
+                      id="message-input"
+                      type="text"
+                      value={newMessage}
+                      onChange={handleMessageInputChange}
+                      placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rápidas)"}
+                      className="w-full px-4 py-3 bg-white/80 border border-gray-200/60 rounded-xl text-gray-900 placeholder-gray-500 outline-none focus:bg-white focus:border-blue-300 focus:ring-2 focus:ring-blue-100 backdrop-blur-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+                      disabled={isTyping || isUploadingFile}
+                    />
+                    
+                    {/* Popup de Respuestas Rápidas */}
+                    {showCannedResponses && cannedResponses.length > 0 && (
+                      <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto z-50">
+                        <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500 sticky top-0 bg-white">
+                          Respuestas rápidas — escribe / para filtrar
+                        </div>
+                        {cannedResponses
+                          .filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter))
+                          .map(response => (
+                            <button
+                              key={response.id}
+                              type="button"
+                              onClick={() => handleSelectCannedResponse(response)}
+                              className="w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">/{response.short_code}</span>
+                                <span className="text-sm text-gray-700 truncate">{response.content}</span>
+                              </div>
+                            </button>
+                          ))
+                        }
+                        {cannedResponses.filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter)).length === 0 && (
+                          <div className="px-3 py-2 text-xs text-gray-400 text-center">No hay coincidencias</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/*  BOT?N DE AUDIO */}
+                  {!isRecording ? (
                     <button 
                       type="button"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
+                      onMouseDown={handleStartRecording}
+                      className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300"
+                      title="Mant??n presionado para grabar"
                     >
-                      <Smile className="w-5 h-5 text-gray-500" />
+                      <Mic className="w-5 h-5 text-gray-600" />
                     </button>
-
-                    {/* INPUT DE TEXTO */}
-                    <div className="flex-1 relative">
-                      <input
-                        ref={messageInputRef}
-                        id="message-input"
-                        type="text"
-                        value={newMessage}
-                        onChange={handleMessageInputChange}
-                        placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rápidas)"}
-                        className="w-full px-3 py-2 bg-transparent text-gray-900 placeholder-gray-400 outline-none"
-                        disabled={isTyping || isUploadingFile}
-                      />
-                      
-                      {/* Popup de Respuestas Rápidas */}
-                      {showCannedResponses && cannedResponses.length > 0 && (
-                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto z-50">
-                          <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500 sticky top-0 bg-white">
-                            Respuestas rápidas — escribe / para filtrar
-                          </div>
-                          {cannedResponses
-                            .filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter))
-                            .map(response => (
-                              <button
-                                key={response.id}
-                                type="button"
-                                onClick={() => handleSelectCannedResponse(response)}
-                                className="w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">/{response.short_code}</span>
-                                  <span className="text-sm text-gray-700 truncate">{response.content}</span>
-                                </div>
-                              </button>
-                            ))
-                          }
-                          {cannedResponses.filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter)).length === 0 && (
-                            <div className="px-3 py-2 text-xs text-gray-400 text-center">No hay coincidencias</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 🎤 BOTÓN DE AUDIO (dentro del input) */}
-                    {!isRecording ? (
-                      <button 
-                        type="button"
-                        onMouseDown={handleStartRecording}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
-                        title="Mantén presionado para grabar"
-                      >
-                        <Mic className="w-5 h-5 text-gray-500" />
-                      </button>
-                    ) : (
-                      <button 
-                        type="button"
-                        onMouseUp={handleStopRecording}
-                        onClick={handleStopRecording}
-                        className="p-2 bg-red-500 rounded-full animate-pulse flex-shrink-0"
-                        title="Suelta para enviar"
-                      >
-                        <div className="flex items-center space-x-1">
-                          <StopCircle className="w-4 h-4 text-white" />
-                          <span className="text-white text-xs font-mono">{recordingDuration}s</span>
-                        </div>
-                      </button>
-                    )}
-
-                    {/* ✈️ BOTÓN ENVIAR (dentro del input) */}
+                  ) : (
                     <button 
-                      type="submit" 
-                      disabled={!newMessage.trim() || isTyping}
-                      className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 ml-1"
+                      type="button"
+                      onMouseUp={handleStopRecording}
+                      onClick={handleStopRecording}
+                      className="p-3 bg-red-500 rounded-xl animate-pulse"
+                      title="Suelta para enviar"
                     >
-                      <Send className="w-4 h-4 text-white" />
+                      <div className="flex items-center space-x-2">
+                        <StopCircle className="w-4 h-4 text-white" />
+                        <span className="text-white text-sm font-mono">{recordingDuration}s</span>
+                      </div>
                     </button>
-                  </div>
+                  )}
+                  
+                  <button 
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="p-2 bg-white/60 hover:bg-white/80 border border-gray-200/40 rounded-lg transition-all duration-300"
+                  >
+                    <Smile className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={!newMessage.trim() || isTyping}
+                    className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4 text-white" />
+                  </button>
                 </form>
 
                 {/*  EMOJI PICKER SIMPLE */}
@@ -4636,7 +4596,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 )}
               </div>
             </div>
-            </div>{/* cierre wrapper fondo WhatsApp */}
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -4735,38 +4694,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         {images.length > 0 ? (
                           <div className="grid grid-cols-4 gap-3">
                             {images.map((img, idx) => {
-                              const proxyUrl = resolveAttachmentUrl(img);
+                              const rawUrl = img.data_url || img.file_url || img.url || img.thumb_url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               return (
-                                <div key={idx} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
+                                <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
                                   <img 
                                     src={proxyUrl} 
                                     alt={img.file_name || 'Imagen'}
                                     className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                      const placeholder = target.nextElementSibling as HTMLElement;
-                                      if (placeholder) placeholder.style.display = 'flex';
-                                    }}
+                                    onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                                   />
-                                  {/* Placeholder para imagen no disponible en galería */}
-                                  <div className="hidden items-center justify-center bg-gray-200 rounded-lg w-full h-full absolute inset-0" style={{ display: 'none' }}>
-                                    <div className="text-center text-gray-400">
-                                      <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                      </svg>
-                                      <span className="text-xs">No disponible</span>
-                                    </div>
-                                  </div>
-                                  {img.message_id && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteMessage(img.message_id); }}
-                                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
-                                      title="Eliminar mensaje con esta imagen"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  )}
                                 </div>
                               );
                             })}
@@ -4784,7 +4723,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {videos.map((file, idx) => {
-                                const proxyUrl = resolveAttachmentUrl(file);
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
                                 return (
                                   <div key={idx} className="bg-black rounded-lg overflow-hidden">
                                     <video 
@@ -4814,7 +4756,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
                             <div className="space-y-3">
                               {audios.map((file, idx) => {
-                                const proxyUrl = resolveAttachmentUrl(file);
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
                                 return (
                                   <div key={idx} className="bg-gray-50 rounded-lg p-3">
                                     <div className="flex items-center space-x-3 mb-2">
@@ -4826,7 +4771,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                       src={proxyUrl}
                                       controls
                                       className="w-full h-10"
-                                      preload="auto"
+                                      preload="metadata"
                                     />
                                   </div>
                                 );
@@ -4844,7 +4789,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {pdfs.map((file, idx) => {
-                                const proxyUrl = resolveAttachmentUrl(file);
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
                                 return (
                                   <div key={idx} className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                                     <div className="h-32 bg-red-50 flex items-center justify-center">
@@ -4880,7 +4828,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <h4 className="font-semibold text-gray-700 mb-3">Otros archivos ({otherFiles.length})</h4>
                             <div className="space-y-2">
                               {otherFiles.map((file, idx) => {
-                                const proxyUrl = resolveAttachmentUrl(file);
+                                const rawUrl = file.data_url || file.file_url || file.url || '';
+                                const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                  ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                  : rawUrl;
                                 
                                 const renderFileIcon = () => {
                                   switch (file.file_category) {
@@ -4958,38 +4909,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3">
                         {images.map((img, idx) => {
-                          const proxyUrl = resolveAttachmentUrl(img);
+                          const rawUrl = img.data_url || img.file_url || img.url || img.thumb_url || '';
+                          const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                            ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                            : rawUrl;
                           return (
-                            <div key={idx} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
+                            <div key={idx} className="aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer">
                               <img 
                                 src={proxyUrl} 
                                 alt={img.file_name || 'Imagen'}
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  const placeholder = target.nextElementSibling as HTMLElement;
-                                  if (placeholder) placeholder.style.display = 'flex';
-                                }}
+                                onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                               />
-                              {/* Placeholder para imagen no disponible */}
-                              <div className="hidden items-center justify-center bg-gray-200 rounded-lg w-full h-full absolute inset-0" style={{ display: 'none' }}>
-                                <div className="text-center text-gray-400">
-                                  <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  <span className="text-xs">No disponible</span>
-                                </div>
-                              </div>
-                              {img.message_id && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteMessage(img.message_id); }}
-                                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
-                                  title="Eliminar mensaje con esta imagen"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
                             </div>
                           );
                         })}
@@ -5012,7 +4943,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {videos.map((file, idx) => {
-                              const proxyUrl = resolveAttachmentUrl(file);
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               return (
                                 <div key={idx} className="bg-black rounded-lg overflow-hidden">
                                   <video src={proxyUrl} controls className="w-full aspect-video object-contain bg-black" preload="metadata" poster="" />
@@ -5032,11 +4966,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
                           <div className="space-y-3">
                             {audios.map((file, idx) => {
-                              const proxyUrl = resolveAttachmentUrl(file);
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               return (
                                 <div key={idx} className="bg-gray-50 rounded-lg p-3">
                                   <p className="font-medium text-gray-700 truncate mb-2">{file.file_name}</p>
-                                  <audio src={proxyUrl} controls className="w-full h-10" preload="auto" />
+                                  <audio src={proxyUrl} controls className="w-full h-10" preload="metadata" />
                                 </div>
                               );
                             })}
@@ -5050,7 +4987,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {pdfs.map((file, idx) => {
-                              const proxyUrl = resolveAttachmentUrl(file);
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               return (
                                 <div key={idx} className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
                                   <div className="h-24 bg-red-50 flex items-center justify-center">
@@ -5075,7 +5015,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <h4 className="font-semibold text-gray-700 mb-3">Otros ({otherFiles.length})</h4>
                           <div className="space-y-2">
                             {otherFiles.map((file, idx) => {
-                              const proxyUrl = resolveAttachmentUrl(file);
+                              const rawUrl = file.data_url || file.file_url || file.url || '';
+                              const proxyUrl = rawUrl && rawUrl.includes('chatwoot')
+                                ? `/img-proxy?url=${encodeURIComponent(rawUrl)}`
+                                : rawUrl;
                               return (
                                 <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                                   <File className="w-8 h-8 text-gray-500" />
@@ -5586,7 +5529,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo Claro */}
       {mediaViewerOpen && mediaGallery.length > 0 && (
         <div 
-          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-md flex flex-col"
+          className="fixed inset-0 z-[9999] bg-gray-100/95 backdrop-blur-sm flex flex-col"
           onClick={() => setMediaViewerOpen(false)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowLeft') goToPreviousMedia();
@@ -5596,13 +5539,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           tabIndex={0}
         >
           {/* Header con contador, descargar y botón de cerrar */}
-          <div className="flex-shrink-0 p-4 flex justify-between items-center bg-white/60 backdrop-blur-xl border-b border-gray-200/50 z-10">
+          <div className="flex-shrink-0 p-4 flex justify-between items-center bg-white/90 backdrop-blur-sm border-b border-gray-200 z-10">
             <div className="text-gray-700 flex items-center space-x-3">
               <span className="text-sm font-medium">
                 {mediaGallery[currentMediaIndex]?.type === 'video' ? '🎬 Video' : '🖼️ Imagen'}
               </span>
               {mediaGallery.length > 1 && (
-                <span className="text-xs text-gray-600 bg-gray-200/60 px-2 py-1 rounded-full">
+                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
                   {currentMediaIndex + 1} / {mediaGallery.length}
                 </span>
               )}
@@ -5628,7 +5571,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               {/* Botón Cerrar */}
               <button
                 onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
-                className="p-2 rounded-lg bg-gray-200/60 hover:bg-gray-300/80 transition-colors"
+                className="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
               >
                 <X className="w-6 h-6 text-gray-700" />
               </button>
@@ -5703,23 +5646,23 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             </div>
           </div>
 
-          {/* Footer solo con miniaturas (compacto) */}
+          {/* Footer solo con miniaturas (más compacto) */}
           {mediaGallery.length > 1 && (
-            <div className="flex-shrink-0 py-2 px-4 bg-white/90 backdrop-blur-sm border-t border-gray-200">
-              <div className="flex justify-center space-x-1.5 overflow-x-auto hide-scrollbar">
+            <div className="flex-shrink-0 py-3 px-4 bg-white/90 backdrop-blur-sm border-t border-gray-200">
+              <div className="flex justify-center space-x-2 overflow-x-auto">
                 {mediaGallery.map((media, idx) => (
                   <button
                     key={idx}
                     onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(idx); setMediaZoom(1); setMediaPan({ x: 0, y: 0 }); }}
-                    className={`flex-shrink-0 w-9 h-9 rounded-md overflow-hidden border-2 transition-all ${
+                    className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shadow-sm ${
                       idx === currentMediaIndex 
                         ? 'border-blue-500 scale-110 shadow-md' 
-                        : 'border-gray-300/60 opacity-60 hover:opacity-100 hover:border-gray-400'
+                        : 'border-gray-300 opacity-70 hover:opacity-100 hover:border-gray-400'
                     }`}
                   >
                     {media.type === 'video' ? (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Play className="w-3 h-3 text-gray-600" />
+                        <Play className="w-4 h-4 text-gray-600" />
                       </div>
                     ) : (
                       <img 

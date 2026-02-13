@@ -1003,28 +1003,32 @@ export const useConversations = () => {
         );
       }
 
-      // Refetch conversación para obtener datos actualizados (mensajes nuevos, etc.)
+      // ✅ NUEVO: Refetch la conversación después de marcar como leída
+      // para obtener el unread_count actualizado desde Chatwoot
       setTimeout(async () => {
         try {
-          const response = await apiCall(`/api/chatwoot-proxy/conversations/${conversationId}`, 'GET');
-          if (response?.data) {
-            const updatedConv = response.data;
+          const response = await apiCall(`/api/chatwoot-proxy/conversations/${conversationId}`);
+          if (response?.payload) {
+            // Actualizar en la lista de conversaciones
             setConversations(prev =>
               prev.map(conv =>
-                conv.id === conversationId ? { ...conv, ...updatedConv, unread_count: 0 } : conv
+                conv.id === conversationId ? { ...conv, unread_count: response.payload.unread_count || 0 } : conv
               )
             );
+            
+            // Actualizar conversación activa también
             if (activeConversationRef.current?.id === conversationId) {
               setActiveConversationState(prev =>
-                prev ? { ...prev, ...updatedConv, unread_count: 0 } : prev
+                prev ? { ...prev, unread_count: response.payload.unread_count || 0 } : prev
               );
             }
-            debugLog.log('✅ Conversación refetcheada después de marcar como leída');
+            
+            debugLog.log('✅ Conversación refetcheada después de marcar como leída - unread_count:', response.payload.unread_count);
           }
-        } catch (refetchErr) {
-          debugLog.error('Error en refetch post-read:', refetchErr);
+        } catch (err) {
+          debugLog.warn('No se pudo refetch la conversación:', err);
         }
-      }, 800);
+      }, 800); // 800ms de delay para que Chatwoot procese
 
     } catch (err) {
       debugLog.error('Error marcando como leída:', err);
