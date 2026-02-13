@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\WhatsAppInstance;
+use App\Services\QdrantService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -204,6 +205,56 @@ class N8nConfigController extends Controller
             Log::error('Error notifying response: ' . $e->getMessage(), ['data' => $request->all()]);
 
             return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * Semantic search endpoint for n8n — replaces broken Qdrant Vector Store tool.
+     * n8n sends the query text; we generate the embedding and search Qdrant server-side.
+     */
+    public function qdrantSearch(Request $request): JsonResponse
+    {
+        try {
+            $query = $request->input('query') ?? $request->input('input') ?? '';
+            $collection = $request->input('collection', '');
+            $topK = (int) $request->input('top_k', 10);
+
+            if (empty($query) || empty($collection)) {
+                return response()->json([
+                    'results' => [],
+                    'error' => 'Missing query or collection parameter',
+                ], 400);
+            }
+
+            $qdrantService = app(QdrantService::class);
+            $searchResult = $qdrantService->semanticSearch($collection, $query, $topK);
+
+            if ($searchResult['success']) {
+                // Return as plain text blocks that the AI Agent can read
+                $texts = array_map(fn($r) => $r['text'], $searchResult['results']);
+                return response()->json([
+                    'results' => $searchResult['results'],
+                    'context' => implode("\n\n---\n\n", $texts),
+                    'count' => count($searchResult['results']),
+                ]);
+            }
+
+            Log::warning('Qdrant search failed', ['error' => $searchResult['error'] ?? 'Unknown']);
+            return response()->json([
+                'results' => [],
+                'context' => '',
+                'count' => 0,
+                'error' => $searchResult['error'] ?? 'Search failed',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Qdrant search endpoint error: ' . $e->getMessage());
+            return response()->json([
+                'results' => [],
+                'context' => '',
+                'count' => 0,
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

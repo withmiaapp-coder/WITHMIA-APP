@@ -248,6 +248,52 @@ class QdrantService
     }
 
     /**
+     * Semantic search: generate embedding for query and search Qdrant
+     */
+    public function semanticSearch(string $collectionName, string $query, int $topK = 10, float $scoreThreshold = 0.0): array
+    {
+        try {
+            $vector = $this->generateEmbedding($query);
+
+            $body = [
+                'vector' => $vector,
+                'limit' => $topK,
+                'with_payload' => true,
+                'with_vector' => false,
+            ];
+
+            if ($scoreThreshold > 0) {
+                $body['score_threshold'] = $scoreThreshold;
+            }
+
+            $response = $this->request('POST', "/collections/{$collectionName}/points/search", $body);
+
+            if ($response['success']) {
+                $results = [];
+                foreach ($response['data']['result'] ?? [] as $point) {
+                    $results[] = [
+                        'text' => $point['payload']['text'] ?? '',
+                        'score' => $point['score'] ?? 0,
+                        'source' => $point['payload']['source'] ?? '',
+                        'id' => $point['id'] ?? null,
+                    ];
+                }
+                return ['success' => true, 'results' => $results];
+            }
+
+            return ['success' => false, 'results' => [], 'error' => $response['error'] ?? 'Unknown'];
+
+        } catch (\Throwable $e) {
+            Log::error("Qdrant: Error in semantic search", [
+                'collection' => $collectionName,
+                'query' => $query,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'results' => [], 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Insertar/actualizar puntos en una colección
      */
     public function upsertPoints(string $collectionName, array $points): array

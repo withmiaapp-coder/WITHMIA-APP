@@ -79,6 +79,7 @@ Route::middleware('n8n.secret')->group(function () {
     Route::get('/n8n/company-config/{companySlug}', [N8nConfigController::class, 'companyConfig']);
     Route::get('/n8n/company-config-by-inbox/{inboxName}', [N8nConfigController::class, 'companyConfigByInbox']);
     Route::post('/n8n/notify-response', [N8nConfigController::class, 'notifyResponse']);
+    Route::post('/n8n/qdrant-search', [N8nConfigController::class, 'qdrantSearch']);
 });
 
 // ============================================================================
