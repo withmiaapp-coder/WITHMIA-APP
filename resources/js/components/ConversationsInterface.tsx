@@ -4622,16 +4622,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
                 {/*  EMOJI PICKER SIMPLE */}
                 {showEmojiPicker && (
-                  <div className="absolute bottom-20 right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 grid grid-cols-8 gap-2 z-50">
-                    {['', '', '', '', '', '', '??', '', '', '', '', '', '', '??', '??', ''].map(emoji => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleAddEmoji(emoji)}
-                        className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                  <div className="mb-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-50">
+                    <div className="grid grid-cols-8 gap-1">
+                      {['😀', '😂', '😍', '🥰', '😎', '🤩', '😊', '🙌', '👍', '❤️', '🔥', '🎉', '✅', '👋', '🙏', '💪', '😢', '😡', '🤔', '👀', '💯', '⭐', '🚀', '💬', '📎', '🎤', '📸', '✨', '🤝', '💡', '⏰', '🎯'].map((emoji, i) => (
+                        <button
+                          key={`${emoji}-${i}`}
+                          type="button"
+                          onClick={() => handleAddEmoji(emoji)}
+                          className="text-2xl hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
