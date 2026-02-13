@@ -3987,7 +3987,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             <div 
               className="flex-1 flex flex-col min-h-0 relative"
               style={{
-                backgroundImage: 'linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url(/fondo.webp)',
+                backgroundImage: 'linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(/fondo.webp)',
                 backgroundSize: 'cover, cover',
                 backgroundPosition: 'center, center',
                 backgroundRepeat: 'no-repeat, no-repeat',
