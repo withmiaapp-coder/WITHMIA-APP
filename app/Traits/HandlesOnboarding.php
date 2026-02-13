@@ -23,10 +23,38 @@ trait HandlesOnboarding
     {
         Log::debug("processOnboardingCompletion for user: {$user->id} - {$user->email}");
 
+        // ── Guard: If user already completed onboarding with a valid company, reuse it ──
+        if ($user->onboarding_completed && $user->company_slug) {
+            $existingCompany = Company::where('slug', $user->company_slug)->first();
+            if ($existingCompany) {
+                Log::debug("Onboarding already completed for user {$user->id}, reusing company {$existingCompany->id}");
+                $user->update(['role' => 'admin']);
+                $dashboardUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
+                return [
+                    'completed' => true,
+                    'company_slug' => $user->company_slug,
+                    'dashboard_url' => $dashboardUrl
+                ];
+            }
+        }
+
         $companyName = $request->input('company_name') ?? $user->full_name ?? $user->name ?? 'empresa';
-        $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
-        
-        Log::debug("Generated slug: {$uniqueSlug}");
+
+        // ── Reuse existing company if user already has one, otherwise create new ──
+        $existingCompany = Company::where('user_id', $user->id)->latest()->first();
+        if ($existingCompany) {
+            $uniqueSlug = $existingCompany->slug;
+            Log::debug("Reusing existing company {$existingCompany->id} with slug: {$uniqueSlug}");
+            $company = $existingCompany;
+            // Update company name if provided
+            if ($request->input('company_name')) {
+                $company->update(['name' => $companyName]);
+            }
+        } else {
+            $uniqueSlug = $this->generateUniqueCompanySlug($companyName);
+            Log::debug("Generated new slug: {$uniqueSlug}");
+            $company = $this->getOrCreateCompany($user, $uniqueSlug);
+        }
 
         $user->update([
             'company_slug' => $uniqueSlug,
@@ -112,8 +140,14 @@ trait HandlesOnboarding
      */
     protected function getOrCreateCompany(User $user, ?string $slug = null): Company
     {
+        // First try by relationship (company_slug -> slug)
         $company = $user->company;
         
+        // Fallback: search by user_id (covers slug mismatch scenarios)
+        if (!$company) {
+            $company = Company::where('user_id', $user->id)->latest()->first();
+        }
+
         if (!$company) {
             $company = Company::create([
                 'user_id' => $user->id,

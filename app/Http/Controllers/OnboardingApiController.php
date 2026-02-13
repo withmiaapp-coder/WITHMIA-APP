@@ -160,9 +160,11 @@ class OnboardingApiController extends Controller
             $company->update($updates);
         }
         
-        // Pre-crear colección Qdrant si tenemos nombre de empresa
-        if (!empty($data['company_name'])) {
-            $tempSlug = Str::slug($data['company_name']) . '-' . strtolower(Str::random(6));
+        // Pre-crear colección Qdrant solo si NO tiene una ya
+        if (!empty($data['company_name']) && empty($company->settings['qdrant_collection'])) {
+            $tempSlug = $company->slug && strlen($company->slug) > 5 
+                ? $company->slug 
+                : Str::slug($data['company_name']) . '-' . strtolower(Str::random(6));
             
             try {
                 Log::debug("📦 Dispatching Qdrant collection creation in step 2 for: {$tempSlug}");
