@@ -151,6 +151,27 @@ class ChatwootConversationController extends Controller
                 }
             }
 
+            // Obtener attachments del último mensaje de cada conversación
+            $lastMessageIds = array_values(array_filter(array_map(fn($m) => $m->id ?? null, $lastMessages)));
+            $lastMsgAttachmentsMap = [];
+            $fileTypeIntToString = [
+                0 => 'image', 1 => 'audio', 2 => 'video', 3 => 'file',
+                4 => 'location', 5 => 'fallback', 6 => 'share', 7 => 'story', 8 => 'contact'
+            ];
+            if (!empty($lastMessageIds)) {
+                $rawAtts = $chatwootDb->table('attachments')
+                    ->whereIn('message_id', $lastMessageIds)
+                    ->get();
+                foreach ($rawAtts as $att) {
+                    $lastMsgAttachmentsMap[$att->message_id][] = [
+                        'id' => $att->id,
+                        'file_type' => $fileTypeIntToString[$att->file_type] ?? 'file',
+                        'file_name' => $att->fallback_title ?? ($att->extension ? "archivo.{$att->extension}" : 'archivo'),
+                        'data_url' => $att->external_url ?? null,
+                    ];
+                }
+            }
+
             // Construir array de conversaciones
             $allConversations = [];
             foreach ($conversationsFromDb as $conv) {
@@ -193,7 +214,8 @@ class ChatwootConversationController extends Controller
                         'id' => $lastMessage->id,
                         'content' => $lastMessage->content,
                         'message_type' => $lastMessage->message_type,
-                        'created_at' => $this->utcToTimestamp($lastMessage->created_at)
+                        'created_at' => $this->utcToTimestamp($lastMessage->created_at),
+                        'attachments' => $lastMsgAttachmentsMap[$lastMessage->id] ?? []
                     ]] : [],
                     'labels' => $labelsMap[$conv->id] ?? [],
                     'unread_count' => $conv->unread_count ?? 0,
