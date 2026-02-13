@@ -4354,17 +4354,81 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     </audio>
                                   </div>
                                 ) : attachmentUrl ? (
-                                  <a 
-                                    href={attachmentUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center space-x-2 p-2 bg-white/50 rounded-lg hover:bg-white/70 transition-colors"
-                                  >
-                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <span className="text-xs font-medium text-gray-700">{att.file_name || att.name || 'Archivo adjunto'}</span>
-                                  </a>
+                                  /* 📄 DOCUMENTO: Card profesional estilo WhatsApp */
+                                  (() => {
+                                    const docName = att.file_name || att.name || 'Archivo adjunto';
+                                    const ext = docName.split('.').pop()?.toLowerCase() || '';
+                                    const isOutgoing = message.sender === 'agent';
+                                    
+                                    // Colores e iconos por tipo de archivo
+                                    const fileConfig: Record<string, { color: string; bg: string; icon: string; label: string }> = {
+                                      pdf: { color: 'text-red-600', bg: 'bg-red-100', icon: '📄', label: 'PDF' },
+                                      doc: { color: 'text-blue-600', bg: 'bg-blue-100', icon: '📝', label: 'DOC' },
+                                      docx: { color: 'text-blue-600', bg: 'bg-blue-100', icon: '📝', label: 'DOCX' },
+                                      xls: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'XLS' },
+                                      xlsx: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'XLSX' },
+                                      csv: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'CSV' },
+                                      ppt: { color: 'text-orange-600', bg: 'bg-orange-100', icon: '📑', label: 'PPT' },
+                                      pptx: { color: 'text-orange-600', bg: 'bg-orange-100', icon: '📑', label: 'PPTX' },
+                                      txt: { color: 'text-gray-600', bg: 'bg-gray-100', icon: '📃', label: 'TXT' },
+                                      zip: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '🗜️', label: 'ZIP' },
+                                      rar: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '🗜️', label: 'RAR' },
+                                    };
+                                    const config = fileConfig[ext] || { color: 'text-gray-600', bg: 'bg-gray-100', icon: '📎', label: ext.toUpperCase() || 'FILE' };
+                                    
+                                    // Tamaño del archivo si está disponible
+                                    const fileSize = att.file_size ? (
+                                      att.file_size > 1048576 
+                                        ? `${(att.file_size / 1048576).toFixed(1)} MB`
+                                        : att.file_size > 1024
+                                          ? `${Math.round(att.file_size / 1024)} KB`
+                                          : `${att.file_size} B`
+                                    ) : null;
+                                    
+                                    return (
+                                      <a 
+                                        href={attachmentUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-3 p-3 rounded-xl max-w-[320px] border transition-all hover:shadow-md ${
+                                          isOutgoing 
+                                            ? 'bg-blue-400/20 border-blue-300/40 hover:bg-blue-400/30' 
+                                            : 'bg-white/80 border-gray-200/60 hover:bg-white'
+                                        }`}
+                                      >
+                                        {/* Icono del tipo de archivo */}
+                                        <div className={`flex-shrink-0 w-11 h-11 rounded-lg ${config.bg} flex items-center justify-center`}>
+                                          <span className="text-xl">{config.icon}</span>
+                                        </div>
+                                        
+                                        {/* Info del archivo */}
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-sm font-medium truncate ${isOutgoing ? 'text-white' : 'text-gray-800'}`}>
+                                            {docName}
+                                          </p>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-xs font-semibold ${config.color} ${config.bg} px-1.5 py-0.5 rounded`}>
+                                              {config.label}
+                                            </span>
+                                            {fileSize && (
+                                              <span className={`text-xs ${isOutgoing ? 'text-blue-100' : 'text-gray-400'}`}>
+                                                {fileSize}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Icono de descarga */}
+                                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                                          isOutgoing ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
+                                        } transition-colors`}>
+                                          <svg className={`w-4 h-4 ${isOutgoing ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                          </svg>
+                                        </div>
+                                      </a>
+                                    );
+                                  })()
                                 ) : null}
                               </div>
                               );
