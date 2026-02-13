@@ -526,7 +526,7 @@ class TrainingChatController extends Controller
     }
 
     /**
-     * Update the company_onboarding point in Qdrant with current company info
+     * Update the company_onboarding point in Qdrant with current company info (granular chunks)
      */
     private function updateCompanyOnboardingInQdrant($company, string $assistantName): void
     {
@@ -538,39 +538,7 @@ class TrainingChatController extends Controller
                 $collectionName = $this->qdrantService->getCollectionName($companySlug);
             }
 
-            $companyInfoParts = [];
-            $companyInfoParts[] = "IDENTIDAD DEL ASISTENTE:\n- Mi nombre es {$assistantName}\n- Cuando me pregunten cómo me llamo, debo responder que me llamo {$assistantName}\n- Soy el asistente virtual de {$company->name}";
-
-            if (!empty($company->name)) {
-                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
-            }
-            if (!empty($company->website)) {
-                $companyInfoParts[] = "Sitio Web: {$company->website}";
-            }
-            if (!empty($company->description)) {
-                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
-            }
-            if (!empty($company->client_type)) {
-                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
-                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
-            }
-
-            $companyInfoText = implode("\n\n", $companyInfoParts);
-
-            // Upsert with same point ID (company->id) to overwrite the existing onboarding point
-            $result = $this->qdrantService->upsertPoints($collectionName, [
-                [
-                    'id' => $company->id,
-                    'vector' => $this->qdrantService->generateEmbedding($companyInfoText),
-                    'payload' => [
-                        'text' => $companyInfoText,
-                        'source' => 'company_onboarding',
-                        'type' => 'company_information',
-                        'company_id' => $company->id,
-                        'updated_at' => now()->toIso8601String(),
-                    ]
-                ]
-            ]);
+            $result = $this->qdrantService->upsertCompanyKnowledge($collectionName, $company, $assistantName);
 
             if (!$result['success']) {
                 Log::error("Failed to update company_onboarding in Qdrant after name change", [

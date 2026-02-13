@@ -316,6 +316,137 @@ class QdrantService
     }
 
     /**
+     * Upsert company knowledge as GRANULAR chunks for better semantic search.
+     *
+     * Instead of one monolithic point, creates separate points for:
+     * - Identity (assistant name, company name)
+     * - Website / contact info
+     * - Company description / what the company does
+     * - Client type / schedule info
+     *
+     * This ensures each chunk's embedding closely matches specific user queries.
+     * Works for ANY company, not hardcoded.
+     *
+     * @param string $collectionName Qdrant collection name
+     * @param \App\Models\Company $company The company model
+     * @param string|null $assistantName Override assistant name (or null to use company->assistant_name)
+     * @return array{success: bool, points_created: int, error?: string}
+     */
+    public function upsertCompanyKnowledge(string $collectionName, $company, ?string $assistantName = null): array
+    {
+        try {
+            $name = $assistantName ?? $company->assistant_name ?? 'MIA';
+            $companyName = $company->name ?? 'la empresa';
+            $baseId = $company->id * 100; // Reserve a range of IDs per company (100, 101, 102...)
+
+            // Delete the old monolithic point (company->id) if it exists
+            try {
+                $this->deletePoints($collectionName, [$company->id]);
+            } catch (\Throwable $e) {
+                // Ignore — might not exist
+            }
+
+            // Also delete any previous granular points from this method
+            $oldGranularIds = [];
+            for ($i = 0; $i < 10; $i++) {
+                $oldGranularIds[] = $baseId + $i;
+            }
+            try {
+                $this->deletePoints($collectionName, $oldGranularIds);
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+
+            // Build granular chunks
+            $chunks = [];
+
+            // Chunk 1: Identity
+            $chunks[] = [
+                'id' => $baseId + 1,
+                'text' => "El nombre de la empresa es {$companyName}. El asistente virtual se llama {$name} y es el asistente de {$companyName}. Cuando me pregunten cómo me llamo, debo responder que me llamo {$name}.",
+            ];
+
+            // Chunk 2: Website
+            if (!empty($company->website)) {
+                $chunks[] = [
+                    'id' => $baseId + 2,
+                    'text' => "La página web de {$companyName} es {$company->website} - Este es el sitio web oficial de la empresa donde se puede encontrar información sobre servicios, planes y contacto.",
+                ];
+            }
+
+            // Chunk 3: Description / What the company does
+            if (!empty($company->description)) {
+                $chunks[] = [
+                    'id' => $baseId + 3,
+                    'text' => "{$companyName}: {$company->description}",
+                ];
+            }
+
+            // Chunk 4: Client type
+            if (!empty($company->client_type)) {
+                $clientTypeText = $company->client_type === 'interno'
+                    ? "Atendemos clientes internos, es decir, miembros del equipo de {$companyName}."
+                    : "Atendemos clientes externos, es decir, los clientes finales de {$companyName}.";
+                $chunks[] = [
+                    'id' => $baseId + 4,
+                    'text' => $clientTypeText,
+                ];
+            }
+
+            // Chunk 5: Full combined info (lower weight but useful for general questions)
+            $fullParts = [];
+            $fullParts[] = "Información general de {$companyName}:";
+            $fullParts[] = "Asistente: {$name}";
+            if (!empty($company->website)) $fullParts[] = "Web: {$company->website}";
+            if (!empty($company->description)) $fullParts[] = "Descripción: {$company->description}";
+            if (!empty($company->client_type)) {
+                $fullParts[] = "Tipo de cliente: " . ($company->client_type === 'interno' ? 'Interno' : 'Externo');
+            }
+            $chunks[] = [
+                'id' => $baseId + 5,
+                'text' => implode("\n", $fullParts),
+            ];
+
+            // Generate embeddings and build points
+            $points = [];
+            foreach ($chunks as $chunk) {
+                $points[] = [
+                    'id' => $chunk['id'],
+                    'vector' => $this->generateEmbedding($chunk['text']),
+                    'payload' => [
+                        'text' => $chunk['text'],
+                        'source' => 'company_onboarding',
+                        'type' => 'company_information',
+                        'company_id' => $company->id,
+                        'updated_at' => now()->toIso8601String(),
+                    ],
+                ];
+            }
+
+            // Upsert all points
+            $result = $this->upsertPoints($collectionName, $points);
+
+            if ($result['success']) {
+                Log::info("✅ Company knowledge upserted as " . count($points) . " granular chunks", [
+                    'company_id' => $company->id,
+                    'collection' => $collectionName,
+                    'chunks' => count($points),
+                ]);
+                return ['success' => true, 'points_created' => count($points)];
+            }
+
+            return ['success' => false, 'points_created' => 0, 'error' => $result['error'] ?? 'Unknown'];
+
+        } catch (\Throwable $e) {
+            Log::error("❌ Error upserting company knowledge", [
+                'company_id' => $company->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'points_created' => 0, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Hacer una petición HTTP a Qdrant
      */
     private function request(string $method, string $endpoint, array $data = []): array

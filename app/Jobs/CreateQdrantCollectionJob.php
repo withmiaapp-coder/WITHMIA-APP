@@ -72,62 +72,17 @@ class CreateQdrantCollectionJob implements ShouldQueue
     }
 
     /**
-     * Inserta la información de la empresa como punto #1 en Qdrant
+     * Inserta la información de la empresa como chunks granulares en Qdrant
      */
     private function insertCompanyInfo(QdrantService $qdrantService, string $collectionName, Company $company): void
     {
         try {
-            // Construir el texto con toda la información de la empresa
-            $companyInfoParts = [];
-            
-            // Nombre de la empresa (campo: name)
-            if (!empty($company->name)) {
-                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
-            }
-            
-            // Descripción de la empresa (campo: description)
-            if (!empty($company->description)) {
-                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
-            }
-            
-            // Sitio web
-            if (!empty($company->website)) {
-                $companyInfoParts[] = "Sitio Web: {$company->website}";
-            }
-            
-            // Nombre del asistente (si existe)
-            if (!empty($company->assistant_name)) {
-                $companyInfoParts[] = "Nombre del Asistente: {$company->assistant_name}";
-            }
-            
-            if (empty($companyInfoParts)) {
-                Log::debug("No company info to insert for: {$this->companySlug}");
-                return;
-            }
+            $result = $qdrantService->upsertCompanyKnowledge($collectionName, $company);
 
-            $companyInfoText = implode("\n\n", $companyInfoParts);
-            
-            // Insertar en Qdrant (usar entero como ID, Qdrant no acepta strings)
-            $pointId = $company->id; // Usar el ID numérico de la company
-            
-            $insertResult = $qdrantService->upsertPoints($collectionName, [
-                [
-                    'id' => $pointId,
-                    'vector' => $qdrantService->generateEmbedding($companyInfoText),
-                    'payload' => [
-                        'text' => $companyInfoText,
-                        'source' => 'company_onboarding',
-                        'type' => 'company_information',
-                        'company_id' => $company->id,
-                        'created_at' => now()->toIso8601String(),
-                    ]
-                ]
-            ]);
-
-            if ($insertResult['success']) {
-                Log::debug("✅ Company information inserted as point #1 in Qdrant for: {$this->companySlug}");
+            if ($result['success']) {
+                Log::debug("✅ Company information inserted as {$result['points_created']} granular chunks in Qdrant for: {$this->companySlug}");
             } else {
-                Log::error("❌ Failed to insert company info: " . ($insertResult['error'] ?? 'Unknown'));
+                Log::error("❌ Failed to insert company info: " . ($result['error'] ?? 'Unknown'));
             }
         } catch (\Exception $e) {
             Log::error("❌ Exception inserting company info to Qdrant: " . $e->getMessage());

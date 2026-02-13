@@ -232,14 +232,13 @@ class CompanyProfileController extends Controller
     }
 
     /**
-     * Actualizar información de la empresa directamente en Qdrant (sobrescribe, no duplica)
+     * Actualizar información de la empresa directamente en Qdrant (chunks granulares)
      */
     private function updateCompanyInfoInQdrant($company)
     {
         try {
             $qdrantService = app(QdrantService::class);
             
-            // Obtener el nombre de la colección
             $collectionName = $company->settings['qdrant_collection'] ?? null;
             
             if (!$collectionName) {
@@ -247,63 +246,15 @@ class CompanyProfileController extends Controller
                 return;
             }
 
-            // Construir el texto con toda la información de la empresa
-            $companyInfoParts = [];
-            
-            $assistantName = $company->assistant_name ?? 'MIA';
-            
-            // Información explícita sobre la identidad del asistente
-            $companyInfoParts[] = "IDENTIDAD DEL ASISTENTE:\n- Mi nombre es {$assistantName}\n- Cuando me pregunten cómo me llamo, debo responder que me llamo {$assistantName}\n- Soy el asistente virtual de {$company->name}";
-            
-            if (!empty($company->name)) {
-                $companyInfoParts[] = "Nombre de la Empresa: {$company->name}";
-            }
-            
-            if (!empty($company->website)) {
-                $companyInfoParts[] = "Sitio Web: {$company->website}";
-            }
-            
-            if (!empty($company->description)) {
-                $companyInfoParts[] = "Descripción de la Empresa: {$company->description}";
-            }
+            $result = $qdrantService->upsertCompanyKnowledge($collectionName, $company);
 
-            if (!empty($company->client_type)) {
-                $clientTypeText = $company->client_type === 'interno' ? 'Interno - Para tus clientes finales' : 'Externo - Para tus clientes finales';
-                $companyInfoParts[] = "Tipo de Cliente: {$clientTypeText}";
-            }
-            
-            if (empty($companyInfoParts)) {
-                Log::debug("No company info to update in Qdrant for company {$company->id}");
-                return;
-            }
-
-            $companyInfoText = implode("\n\n", $companyInfoParts);
-            
-            // UPSERT en Qdrant (mismo ID = sobrescribe, no duplica)
-            // Usar ID numérico porque Qdrant no acepta strings como ID
-            $pointId = $company->id;
-            
-            $insertResult = $qdrantService->upsertPoints($collectionName, [
-                [
-                    'id' => $pointId,
-                    'vector' => $qdrantService->generateEmbedding($companyInfoText),
-                    'payload' => [
-                        'text' => $companyInfoText,
-                        'source' => 'company_onboarding',
-                        'type' => 'company_information',
-                        'company_id' => $company->id,
-                        'updated_at' => now()->toIso8601String(),
-                    ]
-                ]
-            ]);
-
-            if ($insertResult['success']) {
-                Log::debug("✅ Company information updated in Qdrant (upsert with same ID)", [
+            if ($result['success']) {
+                Log::debug("✅ Company information updated in Qdrant as {$result['points_created']} granular chunks", [
                     'company_id' => $company->id,
                     'collection' => $collectionName
                 ]);
             } else {
-                Log::error("❌ Failed to update company info in Qdrant: " . ($insertResult['error'] ?? 'Unknown'));
+                Log::error("❌ Failed to update company info in Qdrant: " . ($result['error'] ?? 'Unknown'));
             }
         } catch (\Exception $e) {
             Log::error("❌ Exception updating company info in Qdrant: " . $e->getMessage());
