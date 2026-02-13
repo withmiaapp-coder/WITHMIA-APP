@@ -355,6 +355,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const [isUploadingFile, setIsUploadingFile] = useState(false); // 📤 Estado de carga de archivo
   const [uploadProgress, setUploadProgress] = useState<string>(''); // Nombre del archivo subiendo
   
+  // 📎 STAGED FILE: archivo preparado para enviar (preview antes de enviar)
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
+  const [stagedFilePreviewUrl, setStagedFilePreviewUrl] = useState<string | null>(null);
+  const [fileCaption, setFileCaption] = useState<string>('');
+  const fileCaptionInputRef = useRef<HTMLInputElement>(null);
+  
   // 4. Audio Messages (Mensajes de voz)
   const [isRecording, setIsRecording] = useState(false);
   const [isSendingAudio, setIsSendingAudio] = useState(false); // 🎤 Estado de envío de audio
@@ -1622,7 +1628,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       updateMessagesCache(activeConversation.id, activeConversation.messages);
     }
     
-    // 🚀 Mostrar conversación inmediatamente
+    // � Limpiar archivo stageado al cambiar de conversación
+    cancelStagedFile();
+    
+    // �🚀 Mostrar conversación inmediatamente
     _setActiveConversation({
       ...conversation,
       messages: [],
@@ -2186,15 +2195,47 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     const files = Array.from(e.dataTransfer.files);
     if ((files || []).length > 0 && activeConversation) {
       setDraggedFiles(files);
-      // Enviar archivos al backend
-      for (const file of files) {
-        await handleSendAttachment(file);
-      }
+      // Stagear el primer archivo para preview (solo 1 a la vez)
+      stageFile(files[0]);
       setDraggedFiles([]);
     }
   };
 
-  const handleSendAttachment = async (file: File) => {
+  // 📎 Stagear archivo para preview antes de enviar
+  const stageFile = (file: File) => {
+    // Validar tamaño máximo (16MB para WhatsApp)
+    const MAX_FILE_SIZE = 16 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      triggerToast(`Archivo demasiado grande. Máximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
+      return;
+    }
+    // Limpiar preview anterior
+    if (stagedFilePreviewUrl) URL.revokeObjectURL(stagedFilePreviewUrl);
+    setStagedFile(file);
+    setStagedFilePreviewUrl(URL.createObjectURL(file));
+    setFileCaption('');
+    // Focus en el input de caption después de renderizar
+    setTimeout(() => fileCaptionInputRef.current?.focus(), 100);
+  };
+
+  // 📎 Cancelar archivo stageado
+  const cancelStagedFile = () => {
+    if (stagedFilePreviewUrl) URL.revokeObjectURL(stagedFilePreviewUrl);
+    setStagedFile(null);
+    setStagedFilePreviewUrl(null);
+    setFileCaption('');
+  };
+
+  // 📎 Enviar archivo stageado con caption opcional
+  const sendStagedFile = async () => {
+    if (!stagedFile) return;
+    const caption = fileCaption.trim() || undefined;
+    const file = stagedFile;
+    cancelStagedFile(); // Limpiar preview inmediatamente
+    await handleSendAttachment(file, caption);
+  };
+
+  const handleSendAttachment = async (file: File, caption?: string) => {
     if (!activeConversation) return;
     
     // Validar tamaño máximo (16MB para WhatsApp)
@@ -2210,9 +2251,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // 🚀 Crear mensaje optimista para mostrar inmediatamente en el chat
     const tempId = `temp-file-${Date.now()}-${Math.random()}`;
     const nowTimestamp = Math.floor(Date.now() / 1000);
+    const displayContent = caption ? `📎 ${file.name}\n${caption}` : `📎 ${file.name}`;
     const optimisticMessage = {
       id: tempId,
-      content: `📎 ${file.name}`,
+      content: displayContent,
       created_at: new Date().toISOString(),
       timestamp: nowTimestamp,
       message_type: 'outgoing',
@@ -2242,7 +2284,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             return {
               ...conv,
               last_message: {
-                content: `📎 ${file.name}`,
+                content: displayContent,
                 created_at: new Date().toISOString(),
                 timestamp: nowTimestamp,
                 message_type: 1,
@@ -2293,7 +2335,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           file_base64: base64,
           file_name: file.name,
           file_type: file.type,
-          conversation_id: activeConversation.id
+          conversation_id: activeConversation.id,
+          ...(caption ? { content: caption } : {})
         })
       });
       
@@ -2322,7 +2365,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               return {
                 ...conv,
                 last_message: {
-                  content: `📎 ${file.name}`,
+                  content: displayContent,
                   created_at: new Date().toISOString(),
                   timestamp: nowTimestamp,
                   message_type: 1,
@@ -4594,6 +4637,61 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
+              {/* 📎 PREVIEW DE ARCHIVO STAGEADO (antes de enviar) */}
+              {stagedFile && !isUploadingFile && (
+                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center gap-3">
+                    {/* Thumbnail / icono */}
+                    <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+                      {stagedFile.type.startsWith('image/') && stagedFilePreviewUrl ? (
+                        <img src={stagedFilePreviewUrl} alt={stagedFile.name} className="w-full h-full object-cover" />
+                      ) : stagedFile.type.startsWith('video/') ? (
+                        <Film className="w-6 h-6 text-purple-500" />
+                      ) : stagedFile.type.startsWith('audio/') ? (
+                        <Music className="w-6 h-6 text-green-500" />
+                      ) : stagedFile.type.includes('pdf') ? (
+                        <FileText className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <File className="w-6 h-6 text-blue-500" />
+                      )}
+                    </div>
+                    {/* Info + caption input */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{stagedFile.name}</p>
+                      <p className="text-xs text-gray-500">{(stagedFile.size / 1024).toFixed(0)} KB</p>
+                      <input
+                        ref={fileCaptionInputRef}
+                        type="text"
+                        value={fileCaption}
+                        onChange={(e) => setFileCaption(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendStagedFile(); } }}
+                        placeholder="Escribe un mensaje..."
+                        className="mt-1.5 w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-all bg-white"
+                      />
+                    </div>
+                    {/* Botones */}
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={cancelStagedFile}
+                        className="p-1.5 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Cancelar"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendStagedFile}
+                        className="p-1.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                        title="Enviar archivo"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 🎤 INDICADOR DE ENVÍO DE AUDIO */}
               {isSendingAudio && (
                 <div className="px-4 py-3 bg-green-50 border-b border-green-100">
@@ -4619,16 +4717,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         type="file"
                         className="hidden"
                         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                        onChange={async (e) => {
+                        onChange={(e) => {
                           const files = e.target.files;
                           if (files && files.length > 0) {
-                            for (const file of Array.from(files)) {
-                              await handleSendAttachment(file);
-                            }
+                            stageFile(files[0]);
                             e.target.value = '';
                           }
                         }}
-                        disabled={isUploadingFile}
+                        disabled={isUploadingFile || !!stagedFile}
                       />
                     </label>
 
