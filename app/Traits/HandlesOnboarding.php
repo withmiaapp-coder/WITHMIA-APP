@@ -31,7 +31,8 @@ trait HandlesOnboarding
         $user->update([
             'company_slug' => $uniqueSlug,
             'onboarding_completed' => true,
-            'onboarding_completed_at' => now()
+            'onboarding_completed_at' => now(),
+            'role' => 'admin', // Company owner always gets admin role
         ]);
 
         $company = $this->getOrCreateCompany($user, $uniqueSlug);

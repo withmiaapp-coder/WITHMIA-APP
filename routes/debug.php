@@ -106,4 +106,19 @@ Route::prefix('debug')->group(function () {
         return response()->json($diagnosis);
     });
 
+    // Fix company owners with wrong role (should be 'admin', not 'user')
+    Route::post('/fix-owner-roles', function () {
+        $fixed = DB::table('users')
+            ->where('role', 'user')
+            ->whereNotNull('company_slug')
+            ->where('onboarding_completed', true)
+            ->whereIn('id', DB::table('companies')->select('user_id'))
+            ->update(['role' => 'admin']);
+
+        return response()->json([
+            'fixed' => $fixed,
+            'message' => "Updated {$fixed} company owners from 'user' to 'admin' role"
+        ]);
+    });
+
 }); // End debug middleware group

@@ -68,6 +68,7 @@ class GoogleAuthController extends Controller
                     'password' => Hash::make(Str::random(32)),
                     'email_verified_at' => now(),
                     'phone_country' => 'CL',
+                    'role' => 'admin', // New registrants are company owners
                 ]);
 
             } else {

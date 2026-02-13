@@ -80,6 +80,15 @@ Route::middleware('n8n.secret')->group(function () {
     Route::get('/n8n/company-config-by-inbox/{inboxName}', [N8nConfigController::class, 'companyConfigByInbox']);
     Route::post('/n8n/notify-response', [N8nConfigController::class, 'notifyResponse']);
     Route::post('/n8n/qdrant-search', [N8nConfigController::class, 'qdrantSearch']);
+    Route::post('/n8n/fix-owner-roles', function () {
+        $fixed = \Illuminate\Support\Facades\DB::table('users')
+            ->whereIn('role', ['user', 'agent'])
+            ->whereNotNull('company_slug')
+            ->where('onboarding_completed', true)
+            ->whereIn('id', \Illuminate\Support\Facades\DB::table('companies')->select('user_id'))
+            ->update(['role' => 'admin']);
+        return response()->json(['fixed' => $fixed]);
+    });
 });
 
 // ============================================================================

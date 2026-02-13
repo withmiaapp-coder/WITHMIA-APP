@@ -85,6 +85,7 @@ class User extends Authenticatable
         'password',
         'full_name',
         'phone',
+        'role',
         'onboarding_step',
         'onboarding_completed',
         'company_slug',
