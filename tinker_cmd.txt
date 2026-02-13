@@ -1,0 +1,1 @@
+foreach(App\Models\Company::all() as $c) { echo $c->id . " - " . $c->name . " - " . ($c->settings["qdrant_collection"] ?? "NONE") . "\n"; }
