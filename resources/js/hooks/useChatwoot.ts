@@ -275,9 +275,10 @@ export const useConversations = () => {
   // ✅ NUEVO: Cargar caché desde sessionStorage al iniciar
   useEffect(() => {
     try {
-      // Invalidar cache viejo sin versión
+      // Invalidar cache viejo sin versión y v2 (potencialmente corrupto por bug de display_id)
       sessionStorage.removeItem('chatwoot_messages_cache');
-      const savedCache = sessionStorage.getItem('chatwoot_messages_cache_v2');
+      sessionStorage.removeItem('chatwoot_messages_cache_v2');
+      const savedCache = sessionStorage.getItem('chatwoot_messages_cache_v3');
       if (savedCache) {
         const parsed = JSON.parse(savedCache);
         const now = Date.now();
@@ -303,7 +304,7 @@ export const useConversations = () => {
       messagesLocalCache.current.forEach((value, key) => {
         cacheObj[key] = value;
       });
-      sessionStorage.setItem('chatwoot_messages_cache_v2', JSON.stringify(cacheObj));
+      sessionStorage.setItem('chatwoot_messages_cache_v3', JSON.stringify(cacheObj));
     } catch (e) {
       debugLog.warn('Error guardando caché de mensajes:', e);
     }

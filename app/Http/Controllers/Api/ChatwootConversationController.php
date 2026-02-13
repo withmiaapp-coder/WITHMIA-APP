@@ -283,12 +283,19 @@ class ChatwootConversationController extends Controller
 
             $chatwootDb = $this->chatwootDb();
 
+            // ✅ FIX: Priorizar display_id para evitar colisión con internal id
             $conv = $chatwootDb->table('conversations')
                 ->where('account_id', $this->accountId)
-                ->where(function ($q) use ($id) {
-                    $q->where('id', $id)->orWhere('display_id', $id);
-                })
+                ->where('display_id', $id)
                 ->first();
+
+            if (!$conv) {
+                // Fallback: buscar por internal id
+                $conv = $chatwootDb->table('conversations')
+                    ->where('account_id', $this->accountId)
+                    ->where('id', $id)
+                    ->first();
+            }
 
             if (!$conv) {
                 return response()->json(['success' => false, 'message' => 'Conversación no encontrada'], 404);
@@ -350,12 +357,19 @@ class ChatwootConversationController extends Controller
             }
 
             $chatwootDb = $this->chatwootDb();
+            // ✅ FIX: Priorizar display_id para evitar colisión con internal id
             $conversationFromDb = $chatwootDb->table('conversations')
                 ->where('account_id', $this->accountId)
-                ->where(function ($query) use ($id) {
-                    $query->where('id', $id)->orWhere('display_id', $id);
-                })
+                ->where('display_id', $id)
                 ->first();
+
+            if (!$conversationFromDb) {
+                // Fallback: buscar por internal id
+                $conversationFromDb = $chatwootDb->table('conversations')
+                    ->where('account_id', $this->accountId)
+                    ->where('id', $id)
+                    ->first();
+            }
 
             if (!$conversationFromDb) {
                 return response()->json(['success' => false, 'message' => 'Conversación no encontrada'], 404);
@@ -558,13 +572,20 @@ class ChatwootConversationController extends Controller
 
             $chatwootDb = $this->chatwootDb();
 
+            // ✅ FIX: Priorizar display_id para evitar colisión con internal id
             $conversation = $chatwootDb->table('conversations')
                 ->where('account_id', $this->accountId)
                 ->where('inbox_id', $this->inboxId)
-                ->where(function ($q) use ($id) {
-                    $q->where('id', $id)->orWhere('display_id', $id);
-                })
+                ->where('display_id', $id)
                 ->first();
+
+            if (!$conversation) {
+                $conversation = $chatwootDb->table('conversations')
+                    ->where('account_id', $this->accountId)
+                    ->where('inbox_id', $this->inboxId)
+                    ->where('id', $id)
+                    ->first();
+            }
 
             if (!$conversation) {
                 return response()->json(['success' => false, 'message' => 'Conversación no encontrada'], 404);

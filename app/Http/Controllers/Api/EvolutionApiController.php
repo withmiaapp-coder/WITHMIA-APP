@@ -1335,6 +1335,7 @@ class EvolutionApiController extends Controller
                     ->first();
 
                 if ($conversation) {
+                    // ✅ FIX: Usar display_id (no internal id) para que coincida con el frontend
                     broadcast(new NewMessageReceived(
                         [
                             'content' => $messageText,
@@ -1342,7 +1343,7 @@ class EvolutionApiController extends Controller
                             'sender' => ['name' => $cleanPhone, 'type' => 'contact'],
                             'created_at' => now()->toIso8601String(),
                         ],
-                        $conversation->id,
+                        $conversation->display_id,
                         $inboxId,
                         $accountId
                     ));

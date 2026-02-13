@@ -28,21 +28,24 @@ trait ChatwootDbAccess
 
     /**
      * Buscar conversación por ID o display_id con filtro de seguridad
+     * ✅ FIX: Priorizar display_id (el que usa el frontend) para evitar colisiones con internal id
      */
     protected function findConversation($conversationId): ?object
     {
-        $query = $this->chatwootDb()->table('conversations')
-            ->where('account_id', $this->accountId)
-            ->where(function ($q) use ($conversationId) {
-                $q->where('id', $conversationId)->orWhere('display_id', $conversationId);
-            });
+        $baseQuery = $this->chatwootDb()->table('conversations')
+            ->where('account_id', $this->accountId);
 
         // Filter by inbox_id only if available
         if ($this->inboxId) {
-            $query->where('inbox_id', $this->inboxId);
+            $baseQuery->where('inbox_id', $this->inboxId);
         }
 
-        return $query->first();
+        // Priorizar display_id (ID que usa el frontend)
+        $result = (clone $baseQuery)->where('display_id', $conversationId)->first();
+        if ($result) return $result;
+
+        // Fallback: buscar por internal id
+        return (clone $baseQuery)->where('id', $conversationId)->first();
     }
 
     /**

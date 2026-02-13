@@ -277,12 +277,11 @@ class ChatwootMessageController extends Controller
     {
         $accountIdInt = (int) $this->accountId;
 
+        // ✅ FIX: Priorizar display_id para evitar colisión con internal id
         $conversation = $this->chatwootDb()
             ->table('conversations')
             ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
-            ->where(function ($q) use ($id) {
-                $q->where('conversations.id', $id)->orWhere('conversations.display_id', $id);
-            })
+            ->where('conversations.display_id', $id)
             ->where('conversations.account_id', $accountIdInt)
             ->select(
                 'conversations.id',
@@ -292,6 +291,23 @@ class ChatwootMessageController extends Controller
                 'contacts.identifier'
             )
             ->first();
+
+        if (!$conversation) {
+            // Fallback: buscar por internal id
+            $conversation = $this->chatwootDb()
+                ->table('conversations')
+                ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
+                ->where('conversations.id', $id)
+                ->where('conversations.account_id', $accountIdInt)
+                ->select(
+                    'conversations.id',
+                    'conversations.display_id',
+                    'conversations.inbox_id',
+                    'contacts.phone_number',
+                    'contacts.identifier'
+                )
+                ->first();
+        }
 
         if (!$conversation) {
             Log::warning('Conversación no encontrada al enviar mensaje', [
