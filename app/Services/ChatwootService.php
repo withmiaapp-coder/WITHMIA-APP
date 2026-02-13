@@ -1037,13 +1037,24 @@ class ChatwootService
             $tempPath = tempnam(sys_get_temp_dir(), 'cw_att_');
             file_put_contents($tempPath, base64_decode($base64Data));
 
-            $response = Http::timeout(30)
+            $fileContents = file_get_contents($tempPath);
+            $fileSize = strlen($fileContents);
+
+            Log::debug('ChatwootService::sendAttachmentMessage preparing', [
+                'conversation_id' => $conversationId,
+                'file_name' => $fileName,
+                'mime_type' => $mimeType,
+                'file_size' => $fileSize,
+                'url' => "{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages",
+            ]);
+
+            $response = Http::timeout(60)
                 ->withHeaders(['api_access_token' => $apiKey])
-                ->attach('attachments[]', file_get_contents($tempPath), $fileName, ['Content-Type' => $mimeType])
+                ->attach('attachments[]', $fileContents, $fileName, ['Content-Type' => $mimeType])
                 ->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
                     'content' => $caption ?? '',
                     'message_type' => 'outgoing',
-                    'private' => $private,
+                    'private' => $private ? 'true' : 'false',
                 ]);
 
             @unlink($tempPath);
@@ -1055,8 +1066,11 @@ class ChatwootService
             Log::error('ChatwootService::sendAttachmentMessage failed', [
                 'status' => $response->status(),
                 'body' => $response->body(),
+                'headers' => $response->headers(),
                 'conversation_id' => $conversationId,
                 'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'mime_type' => $mimeType,
             ]);
 
             return ['success' => false, 'error' => $response->body(), 'status' => $response->status()];
@@ -1078,7 +1092,7 @@ class ChatwootService
     public function sendUploadMessage(int $accountId, string $apiKey, int $conversationId, $file, ?string $caption = null, bool $private = false): array
     {
         try {
-            $response = Http::timeout(30)
+            $response = Http::timeout(60)
                 ->withHeaders(['api_access_token' => $apiKey])
                 ->attach(
                     'attachments[]',
@@ -1089,7 +1103,7 @@ class ChatwootService
                 ->post("{$this->baseUrl}/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages", [
                     'content' => $caption ?? '',
                     'message_type' => 'outgoing',
-                    'private' => $private,
+                    'private' => $private ? 'true' : 'false',
                 ]);
 
             if ($response->successful()) {
