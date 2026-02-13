@@ -4511,18 +4511,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div className="px-3 py-2">
                 {/*  EMOJI PICKER - compacto, arriba del input */}
                 {showEmojiPicker && (
-                  <div className="mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50">
+                  <div className="mb-2 mx-auto max-w-xs bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50">
                     <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-gray-100">
                       <span className="text-xs font-medium text-gray-500">Emoticonos</span>
                       <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
                     </div>
-                    <div className="grid grid-cols-8 gap-0.5">
-                      {['😀', '😂', '😍', '🥰', '😎', '🤩', '😊', '😉', '😘', '😋', '😜', '🤔', '😏', '🤗', '🥳', '😤', '😡', '😢', '👍', '❤️', '🔥', '✨', '🎉', '💯', '✅', '🚀', '👋', '🙌', '👏', '🤝', '🙏', '💪'].map((emoji, i) => (
+                    <div className="grid grid-cols-8 gap-0 max-h-44 overflow-y-auto">
+                      {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
                         <button
                           key={`${emoji}-${i}`}
                           type="button"
                           onClick={() => handleAddEmoji(emoji)}
-                          className="text-xl hover:bg-gray-100 rounded p-1 transition-colors text-center"
+                          className="text-lg hover:bg-gray-100 rounded p-0.5 transition-colors text-center leading-none"
                         >
                           {emoji}
                         </button>
