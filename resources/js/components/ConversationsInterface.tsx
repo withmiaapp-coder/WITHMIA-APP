@@ -4637,60 +4637,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              {/* 📎 PREVIEW DE ARCHIVO STAGEADO (antes de enviar) */}
-              {stagedFile && !isUploadingFile && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                  <div className="flex items-center gap-3">
-                    {/* Thumbnail / icono */}
-                    <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                      {stagedFile.type.startsWith('image/') && stagedFilePreviewUrl ? (
-                        <img src={stagedFilePreviewUrl} alt={stagedFile.name} className="w-full h-full object-cover" />
-                      ) : stagedFile.type.startsWith('video/') ? (
-                        <Film className="w-6 h-6 text-purple-500" />
-                      ) : stagedFile.type.startsWith('audio/') ? (
-                        <Music className="w-6 h-6 text-green-500" />
-                      ) : stagedFile.type.includes('pdf') ? (
-                        <FileText className="w-6 h-6 text-red-500" />
-                      ) : (
-                        <File className="w-6 h-6 text-blue-500" />
-                      )}
-                    </div>
-                    {/* Info + caption input */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{stagedFile.name}</p>
-                      <p className="text-xs text-gray-500">{(stagedFile.size / 1024).toFixed(0)} KB</p>
-                      <input
-                        ref={fileCaptionInputRef}
-                        type="text"
-                        value={fileCaption}
-                        onChange={(e) => setFileCaption(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendStagedFile(); } }}
-                        placeholder="Escribe un mensaje..."
-                        className="mt-1.5 w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-all bg-white"
-                      />
-                    </div>
-                    {/* Botones */}
-                    <div className="flex flex-col gap-1.5 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={cancelStagedFile}
-                        className="p-1.5 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-                        title="Cancelar"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={sendStagedFile}
-                        className="p-1.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-                        title="Enviar archivo"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               {/* 🎤 INDICADOR DE ENVÍO DE AUDIO */}
               {isSendingAudio && (
@@ -5938,6 +5885,94 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 📎 MODAL PREVIEW DE ARCHIVO — estilo WhatsApp (sin herramientas de edición) */}
+      {stagedFile && !isUploadingFile && (
+        <div className="fixed inset-0 bg-[#1b2129] z-[9998] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-[#1e2a35]">
+            <button
+              type="button"
+              onClick={cancelStagedFile}
+              className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+              title="Cancelar"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="text-center flex-1 min-w-0 px-4">
+              <p className="text-sm text-gray-300 truncate">{stagedFile.name}</p>
+              <p className="text-xs text-gray-500">{(stagedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+            <div className="w-10" /> {/* Spacer para centrar */}
+          </div>
+
+          {/* Preview area */}
+          <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
+            {stagedFile.type.startsWith('image/') && stagedFilePreviewUrl ? (
+              <img
+                src={stagedFilePreviewUrl}
+                alt={stagedFile.name}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+            ) : stagedFile.type.startsWith('video/') && stagedFilePreviewUrl ? (
+              <video
+                src={stagedFilePreviewUrl}
+                controls
+                className="max-w-full max-h-full rounded-lg shadow-2xl"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/5">
+                <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${
+                  stagedFile.type.includes('pdf') ? 'bg-red-500/20' :
+                  stagedFile.type.startsWith('audio/') ? 'bg-green-500/20' :
+                  stagedFile.type.includes('word') || stagedFile.type.includes('document') ? 'bg-blue-500/20' :
+                  stagedFile.type.includes('sheet') || stagedFile.type.includes('excel') ? 'bg-emerald-500/20' :
+                  'bg-gray-500/20'
+                }`}>
+                  {stagedFile.type.includes('pdf') ? (
+                    <FileText className="w-12 h-12 text-red-400" />
+                  ) : stagedFile.type.startsWith('audio/') ? (
+                    <Music className="w-12 h-12 text-green-400" />
+                  ) : stagedFile.type.includes('word') || stagedFile.type.includes('document') ? (
+                    <FileText className="w-12 h-12 text-blue-400" />
+                  ) : stagedFile.type.includes('sheet') || stagedFile.type.includes('excel') ? (
+                    <FileText className="w-12 h-12 text-emerald-400" />
+                  ) : (
+                    <File className="w-12 h-12 text-gray-400" />
+                  )}
+                </div>
+                <p className="text-lg text-gray-300 font-medium text-center max-w-xs truncate">{stagedFile.name}</p>
+                <p className="text-sm text-gray-500">
+                  {stagedFile.type.split('/').pop()?.toUpperCase() || 'Archivo'} · {(stagedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer: caption + send */}
+          <div className="px-4 py-3 bg-[#1e2a35] flex items-center gap-3">
+            <div className="flex-1">
+              <input
+                ref={fileCaptionInputRef}
+                type="text"
+                value={fileCaption}
+                onChange={(e) => setFileCaption(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendStagedFile(); } }}
+                placeholder="Escribe un mensaje..."
+                className="w-full px-4 py-2.5 bg-[#2a3942] text-gray-100 placeholder-gray-500 rounded-full outline-none focus:ring-1 focus:ring-teal-500 text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={sendStagedFile}
+              className="p-3 bg-teal-600 hover:bg-teal-500 rounded-full text-white transition-colors shadow-lg flex-shrink-0"
+              title="Enviar"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 
