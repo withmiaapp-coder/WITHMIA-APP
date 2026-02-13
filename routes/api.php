@@ -81,13 +81,22 @@ Route::middleware('n8n.secret')->group(function () {
     Route::post('/n8n/notify-response', [N8nConfigController::class, 'notifyResponse']);
     Route::post('/n8n/qdrant-search', [N8nConfigController::class, 'qdrantSearch']);
     Route::post('/n8n/fix-owner-roles', function () {
+        $db = \Illuminate\Support\Facades\DB::class;
+        // Diagnose all users with companies
+        $users = \Illuminate\Support\Facades\DB::table('users')
+            ->select('users.id', 'users.name', 'users.email', 'users.role', 'users.company_slug', 'users.onboarding_completed', 'companies.id as company_id')
+            ->leftJoin('companies', 'companies.user_id', '=', 'users.id')
+            ->whereNotNull('users.company_slug')
+            ->get();
+        
+        // Fix: any user who owns a company but isn't admin
         $fixed = \Illuminate\Support\Facades\DB::table('users')
-            ->whereIn('role', ['user', 'agent'])
+            ->where('role', '!=', 'admin')
             ->whereNotNull('company_slug')
-            ->where('onboarding_completed', true)
             ->whereIn('id', \Illuminate\Support\Facades\DB::table('companies')->select('user_id'))
             ->update(['role' => 'admin']);
-        return response()->json(['fixed' => $fixed]);
+        
+        return response()->json(['fixed' => $fixed, 'users' => $users]);
     });
 });
 
