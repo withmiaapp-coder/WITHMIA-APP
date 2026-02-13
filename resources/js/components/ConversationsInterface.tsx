@@ -4508,29 +4508,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              <div className="relative px-3 py-2">
-                {/*  EMOJI PICKER - flotante arriba del input */}
-                {showEmojiPicker && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-2 z-50">
-                    <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-gray-100">
-                      <span className="text-xs font-medium text-gray-500">Emoticonos</span>
-                      <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
-                    </div>
-                    <div className="grid grid-cols-8 gap-0 max-h-40 overflow-y-auto">
-                      {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
-                        <button
-                          key={`${emoji}-${i}`}
-                          type="button"
-                          onClick={() => handleAddEmoji(emoji)}
-                          className="text-lg hover:bg-gray-100 rounded p-0.5 transition-colors text-center leading-none"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
+              <div className="px-3 py-2">
                 <form onSubmit={handleSendMessage} className="relative">
                   {/* Contenedor único estilo WhatsApp */}
                   <div className="flex items-center bg-white/90 border border-gray-200/40 rounded-full px-2 py-1 focus-within:bg-white focus-within:border-gray-300 transition-all">
@@ -4556,13 +4534,35 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     </label>
 
                     {/* 😊 BOTÓN EMOJI (dentro del input) */}
-                    <button 
-                      type="button"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
-                    >
-                      <Smile className="w-5 h-5 text-gray-500" />
-                    </button>
+                    <div className="relative flex-shrink-0">
+                      <button 
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-all"
+                      >
+                        <Smile className="w-5 h-5 text-gray-500" />
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-2 z-50">
+                          <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-gray-100">
+                            <span className="text-xs font-medium text-gray-500">Emoticonos</span>
+                            <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
+                          </div>
+                          <div className="grid grid-cols-8 gap-0 max-h-40 overflow-y-auto">
+                            {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
+                              <button
+                                key={`${emoji}-${i}`}
+                                type="button"
+                                onClick={() => handleAddEmoji(emoji)}
+                                className="text-lg hover:bg-gray-100 rounded p-0.5 transition-colors text-center leading-none"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* INPUT DE TEXTO */}
                     <div className="flex-1 relative">
