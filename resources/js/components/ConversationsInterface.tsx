@@ -4508,7 +4508,29 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 relative">
+                {/*  EMOJI PICKER - abre ARRIBA del input como WhatsApp */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 mx-3 bg-white rounded-xl shadow-2xl border border-gray-200 p-3 z-50 max-h-72 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+                      <span className="text-xs font-medium text-gray-500">Emoticonos</span>
+                      <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+                    </div>
+                    <div className="grid grid-cols-8 gap-1">
+                      {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
+                        <button
+                          key={`${emoji}-${i}`}
+                          type="button"
+                          onClick={() => handleAddEmoji(emoji)}
+                          className="text-2xl hover:bg-gray-100 rounded-lg p-1.5 transition-colors text-center"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleSendMessage} className="relative">
                   {/* Contenedor único estilo WhatsApp */}
                   <div className="flex items-center bg-white/90 border border-gray-200/40 rounded-full px-2 py-1 focus-within:bg-white focus-within:border-gray-300 transition-all">
@@ -4619,24 +4641,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     </button>
                   </div>
                 </form>
-
-                {/*  EMOJI PICKER SIMPLE */}
-                {showEmojiPicker && (
-                  <div className="mb-2 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-50">
-                    <div className="grid grid-cols-8 gap-1">
-                      {['😀', '😂', '😍', '🥰', '😎', '🤩', '😊', '🙌', '👍', '❤️', '🔥', '🎉', '✅', '👋', '🙏', '💪', '😢', '😡', '🤔', '👀', '💯', '⭐', '🚀', '💬', '📎', '🎤', '📸', '✨', '🤝', '💡', '⏰', '🎯'].map((emoji, i) => (
-                        <button
-                          key={`${emoji}-${i}`}
-                          type="button"
-                          onClick={() => handleAddEmoji(emoji)}
-                          className="text-2xl hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             </div>{/* cierre wrapper fondo WhatsApp */}
