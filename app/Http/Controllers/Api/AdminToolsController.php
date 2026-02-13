@@ -1297,4 +1297,137 @@ class AdminToolsController extends Controller
             return $this->errorResponse($e);
         }
     }
+
+    /**
+     * Patch all WITHMIA Bot workflows to enforce strict RAG-only responses.
+     * Updates: system prompt (strict), tool description (mandatory), topK (5→10).
+     */
+    public function patchBotStrictRag(): JsonResponse
+    {
+        try {
+            $n8nService = app(N8nService::class);
+            $workflows = $n8nService->getWorkflows();
+
+            if (!$workflows['success']) {
+                return response()->json(['error' => 'Failed to list n8n workflows'], 500);
+            }
+
+            $results = [];
+            $botWorkflows = collect($workflows['data'])
+                ->filter(fn($wf) => str_starts_with($wf['name'] ?? '', 'WITHMIA Bot'));
+
+            // New strict system prompt
+            $newPromptText = "=Eres {{ \$('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ \$('Normalize Data').item.json.config.company_name }}.\n\n"
+                . "TU IDENTIDAD:\n"
+                . "- Tu nombre es {{ \$('Normalize Data').item.json.config.assistant_name }}\n"
+                . "- Cuando te pregunten como te llamas, responde que te llamas {{ \$('Normalize Data').item.json.config.assistant_name }}\n"
+                . "- Eres el asistente de {{ \$('Normalize Data').item.json.config.company_name }}\n\n"
+                . "REGLA FUNDAMENTAL (OBLIGATORIO):\n"
+                . "- SIEMPRE debes usar la herramienta \"Buscar en Base de Conocimientos\" ANTES de responder CUALQUIER pregunta del usuario, sin excepcion\n"
+                . "- UNICAMENTE puedes responder con informacion que encuentres en los resultados de esa busqueda\n"
+                . "- JAMAS inventes, supongas, improvises o uses conocimiento general de tu entrenamiento\n"
+                . "- Si la busqueda NO devuelve informacion relevante sobre lo que pregunta el usuario, responde EXACTAMENTE: \"No tengo esa informacion disponible. Te gustaria que te conecte con alguien del equipo para ayudarte?\"\n"
+                . "- No mezcles informacion de la base de conocimientos con informacion que imagines o sepas por entrenamiento general\n"
+                . "- Cada respuesta tuya DEBE estar respaldada por informacion encontrada en la busqueda\n\n"
+                . "ESTILO DE RESPUESTA:\n"
+                . "- Respondes como si respondieras por redes sociales: natural, cercano y directo\n"
+                . "- Maximo 2-3 oraciones por respuesta\n"
+                . "- Amigable y profesional\n\n"
+                . "PROHIBICIONES ABSOLUTAS:\n"
+                . "- PROHIBIDO responder con informacion que NO provenga de tu base de conocimientos\n"
+                . "- PROHIBIDO inventar datos sobre la empresa, productos, servicios, precios, horarios o cualquier otro dato\n"
+                . "- NO te presentes dos veces en la conversacion\n"
+                . "- NO uses markdown ni formato especial\n"
+                . "- NO respondas en bloques largos\n"
+                . "- NO uses puntos suspensivos (...)\n"
+                . "- NO uses asteriscos ni negritas\n\n"
+                . "Fecha: {{ \$now.format('dd MMM. yyyy', 'es') }}\n"
+                . "Nombre del usuario: {{ \$('Normalize Data').item.json.user.name }}\n"
+                . "Numero: {{ \$('Normalize Data').item.json.message.chat_id }}\n"
+                . "Tipo de mensaje: {{ \$('Normalize Data').item.json.message.content_type }}\n\n"
+                . "Mensaje:\n={{ \$json.chat_input }}";
+
+            // New mandatory tool description
+            $newToolDesc = "=HERRAMIENTA OBLIGATORIA. Debes usar esta herramienta SIEMPRE para CADA pregunta del usuario, ANTES de formular tu respuesta. "
+                . "Busca informacion en la base de conocimientos de {{ \$('Normalize Data').item.json.config.company_name }}. "
+                . "Contiene TODA la informacion oficial sobre productos, servicios, horarios, precios y datos de la empresa. "
+                . "Si esta herramienta no devuelve resultados relevantes, indica que no tienes esa informacion disponible. "
+                . "NUNCA respondas sin consultar esta herramienta primero.";
+
+            foreach ($botWorkflows as $wf) {
+                $workflowId = $wf['id'];
+                $workflowName = $wf['name'];
+                $patches = [];
+
+                try {
+                    $detail = $n8nService->getWorkflow($workflowId);
+                    if (!$detail['success']) {
+                        $results[$workflowName] = ['success' => false, 'error' => 'Could not fetch workflow'];
+                        continue;
+                    }
+
+                    $workflow = $detail['data'];
+                    $modified = false;
+
+                    foreach ($workflow['nodes'] as &$node) {
+                        // Patch 1: AI Agent — update system prompt
+                        if ($node['name'] === 'AI Agent' && ($node['type'] ?? '') === '@n8n/n8n-nodes-langchain.agent') {
+                            $node['parameters']['text'] = $newPromptText;
+                            $patches[] = 'AI Agent: strict RAG-only prompt';
+                            $modified = true;
+                        }
+
+                        // Patch 2: Qdrant tool — update description + topK
+                        if ($node['name'] === 'Buscar en Base de Conocimientos' && ($node['type'] ?? '') === '@n8n/n8n-nodes-langchain.vectorStoreQdrant') {
+                            $node['parameters']['toolDescription'] = $newToolDesc;
+                            $node['parameters']['topK'] = 10;
+                            $patches[] = 'Qdrant tool: mandatory description + topK=10';
+                            $modified = true;
+                        }
+                    }
+
+                    if ($modified) {
+                        $cleanNodes = [];
+                        foreach ($workflow['nodes'] as $n) {
+                            if (!isset($n['parameters']) || $n['parameters'] === null ||
+                                (is_array($n['parameters']) && empty($n['parameters']))) {
+                                $n['parameters'] = new \stdClass();
+                            }
+                            $cleanNodes[] = $n;
+                        }
+
+                        $updatePayload = [
+                            'name' => $workflow['name'],
+                            'nodes' => $cleanNodes,
+                            'connections' => $workflow['connections'],
+                            'settings' => $workflow['settings'] ?? new \stdClass(),
+                        ];
+
+                        $result = $n8nService->updateWorkflow($workflowId, $updatePayload);
+
+                        if ($result['success']) {
+                            if ($wf['active'] ?? false) {
+                                $n8nService->activateWorkflow($workflowId);
+                            }
+                            $results[$workflowName] = ['success' => true, 'patches' => $patches];
+                        } else {
+                            $results[$workflowName] = ['success' => false, 'error' => $result['error'] ?? 'Update failed', 'patches_attempted' => $patches];
+                        }
+                    } else {
+                        $results[$workflowName] = ['success' => true, 'patches' => [], 'message' => 'No AI Agent / Qdrant nodes found'];
+                    }
+                } catch (\Exception $e) {
+                    $results[$workflowName] = ['success' => false, 'error' => $e->getMessage()];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'total_bot_workflows' => $botWorkflows->count(),
+                'results' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e);
+        }
+    }
 }

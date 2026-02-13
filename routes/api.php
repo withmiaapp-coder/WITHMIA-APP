@@ -281,6 +281,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/activate-workflow/{workflowId}', [AdminToolsController::class, 'activateWorkflow']);
     Route::post('/create-minimal-workflow/{instanceName}', [AdminToolsController::class, 'createMinimalWorkflow']);
     Route::post('/patch-all-bot-workflows', [AdminToolsController::class, 'patchAllBotWorkflows']);
+    Route::post('/patch-bot-strict-rag', [AdminToolsController::class, 'patchBotStrictRag']);
 
     // Qdrant
     Route::post('/admin/recreate-qdrant/{companySlug}', [AdminToolsController::class, 'recreateQdrant']);
