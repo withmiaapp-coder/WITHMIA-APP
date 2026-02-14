@@ -399,7 +399,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             // ✅ Usar proxy inteligente
             const attachmentUrl = resolveAttachmentUrl(att);
             
-            if (fileType === 'image' || fileType.includes('image/') || fileType === '0') {
+            // ✅ Detectar imágenes enviadas como documento
+            const attContentType = String(att.content_type || '').toLowerCase();
+            const attFileName = String(att.file_name || att.name || '').toLowerCase();
+            const attIsImage = fileType === 'image' || fileType.includes('image/') || fileType === '0'
+              || attContentType.startsWith('image/')
+              || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(attFileName);
+            
+            if (attIsImage) {
               allMedia.push({ url: attachmentUrl, type: 'image' });
             } else if (fileType === 'video' || fileType.includes('video/') || fileType === '2' || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl)) {
               allMedia.push({ url: attachmentUrl, type: 'video' });
@@ -1097,8 +1104,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 if ((!msgContent || msgContent.trim() === '') && msgAttachments.length > 0) {
                   const att = msgAttachments[0];
                   const ft = String(att.file_type || att.content_type || '').toLowerCase();
-                  const fn = att.file_name || att.data_url?.split('/').pop() || 'archivo';
-                  if (ft.startsWith('image') || ft === '0') displayContent = '📷 Imagen';
+                  const fn = decodeURIComponent(att.file_name || att.data_url?.split('/').pop() || 'archivo');
+                  const attFn = String(att.file_name || att.name || '').toLowerCase();
+                  if (ft.startsWith('image') || ft === '0' || /\.(jpg|jpeg|png|gif|webp)$/i.test(attFn)) displayContent = '📷 Imagen';
                   else if (ft.startsWith('video') || ft === '2') displayContent = '🎥 Video';
                   else if (ft.startsWith('audio') || ft === '1') displayContent = '🎵 Audio';
                   else if (ft.includes('pdf')) displayContent = '📄 PDF';
@@ -2545,6 +2553,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const rawType = att.file_type ?? att.content_type ?? '';
       const mimeType = String(rawType).toLowerCase();
       if (mimeType === 'image' || mimeType === '0' || mimeType.startsWith('image/')) return true;
+      
+      // ✅ Verificar content_type por separado (imágenes enviadas como documento)
+      const contentType = String(att.content_type || '').toLowerCase();
+      if (contentType.startsWith('image/')) return true;
       
       // Verificar por extensión en la URL (data_url primero, es lo que devuelve el backend)
       const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
@@ -4376,9 +4388,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               // ✅ Usar resolveAttachmentUrl para URLs permanentes
                               const attachmentUrl = resolveAttachmentUrl(att);
                               
+                              // ✅ Detectar imágenes enviadas como documento (content_type o extensión)
+                              const contentType = String(att.content_type || '').toLowerCase();
+                              const fileName = String(att.file_name || att.name || '').toLowerCase();
+                              const isImage = fileType === 'image' || fileType.includes('image/') || fileType === '0'
+                                || contentType.startsWith('image/')
+                                || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(fileName);
+                              
                               return (
                               <div key={idx}>
-                                {(fileType === 'image' || fileType.includes('image/') || fileType === '0') ? (
+                                {isImage ? (
                                   <div 
                                     className="relative cursor-pointer"
                                     onClick={() => openMediaViewer(attachmentUrl, 'image')}
@@ -5138,12 +5157,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                   <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                     {renderFileIcon()}
                                     <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-gray-800 truncate">{file.file_name}</p>
+                                      <p className="font-medium text-gray-800 truncate">{decodeURIComponent(file.file_name || '')}</p>
                                       <p className="text-sm text-gray-500">{file.file_size ? (file.file_size / 1024).toFixed(2) + ' KB' : ''}</p>
                                     </div>
                                     <a 
                                       href={proxyUrl} 
-                                      download={file.file_name}
+                                      download={decodeURIComponent(file.file_name || '')}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
@@ -5320,8 +5339,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               return (
                                 <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                                   <File className="w-8 h-8 text-gray-500" />
-                                  <p className="font-medium text-gray-800 truncate flex-1">{file.file_name}</p>
-                                  <a href={proxyUrl} download={file.file_name} target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
+                                  <p className="font-medium text-gray-800 truncate flex-1">{decodeURIComponent(file.file_name || '')}</p>
+                                  <a href={proxyUrl} download={decodeURIComponent(file.file_name || '')} target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
                                     <Download className="w-4 h-4" />
                                   </a>
                                 </div>
