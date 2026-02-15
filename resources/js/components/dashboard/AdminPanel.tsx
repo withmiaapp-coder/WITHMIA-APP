@@ -15,7 +15,10 @@ import {
     Server,
     MessageSquare,
     Zap,
-    ArrowLeft
+    ArrowLeft,
+    AlertTriangle,
+    HelpCircle,
+    Clock
 } from 'lucide-react';
 
 interface User {
@@ -42,6 +45,23 @@ interface AdminStats {
     total_companies: number;
     users: User[];
     companies: Company[];
+}
+
+interface ServiceHealth {
+    name: string;
+    status: 'healthy' | 'warning' | 'down' | 'unknown';
+    latency_ms: number;
+    details: string;
+}
+
+interface HealthData {
+    services: ServiceHealth[];
+    summary: {
+        healthy: number;
+        total: number;
+        total_latency_ms: number;
+        checked_at: string;
+    };
 }
 
 type AdminView = 'dashboard' | 'users' | 'companies';
@@ -78,7 +98,9 @@ const SkeletonTable = () => (
 export default function AdminPanel() {
     const [view, setView] = useState<AdminView>('dashboard');
     const [stats, setStats] = useState<AdminStats | null>(null);
+    const [health, setHealth] = useState<HealthData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [healthLoading, setHealthLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
@@ -96,8 +118,22 @@ export default function AdminPanel() {
         }
     };
 
+    const fetchHealth = async () => {
+        setHealthLoading(true);
+        try {
+            const response = await fetch('/admin/api/health');
+            const data = await response.json();
+            setHealth(data);
+        } catch (error) {
+            debugLog.error('Error fetching health:', error);
+        } finally {
+            setHealthLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchStats();
+        fetchHealth();
     }, []);
 
     const updateUserRole = async (userId: number, newRole: string) => {
@@ -138,14 +174,41 @@ export default function AdminPanel() {
         });
     };
 
-    const services = [
-        { name: 'PostgreSQL', icon: Database, status: 'healthy', color: 'from-blue-500 to-indigo-500' },
-        { name: 'Redis', icon: Server, status: 'healthy', color: 'from-red-500 to-rose-500' },
-        { name: 'n8n', icon: Zap, status: 'healthy', color: 'from-orange-500 to-amber-500' },
-        { name: 'Qdrant', icon: Database, status: 'healthy', color: 'from-purple-500 to-violet-500' },
-        { name: 'Chatwoot', icon: MessageSquare, status: 'healthy', color: 'from-cyan-500 to-blue-500' },
-        { name: 'Evolution API', icon: MessageSquare, status: 'warning', color: 'from-green-500 to-emerald-500' },
-    ];
+    const serviceIcons: Record<string, { icon: any; color: string }> = {
+        'PostgreSQL': { icon: Database, color: 'from-blue-500 to-indigo-500' },
+        'Redis': { icon: Server, color: 'from-red-500 to-rose-500' },
+        'n8n': { icon: Zap, color: 'from-orange-500 to-amber-500' },
+        'Qdrant': { icon: Database, color: 'from-purple-500 to-violet-500' },
+        'Chatwoot': { icon: MessageSquare, color: 'from-cyan-500 to-blue-500' },
+        'Evolution API': { icon: MessageSquare, color: 'from-green-500 to-emerald-500' },
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'healthy': return 'bg-green-500';
+            case 'warning': return 'bg-yellow-500';
+            case 'down': return 'bg-red-500 animate-pulse';
+            default: return 'bg-gray-400';
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'healthy': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+            case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+            case 'down': return <XCircle className="h-4 w-4 text-red-600" />;
+            default: return <HelpCircle className="h-4 w-4 text-gray-400" />;
+        }
+    };
+
+    const getStatusBg = (status: string) => {
+        switch (status) {
+            case 'healthy': return 'bg-green-50 border-green-200';
+            case 'warning': return 'bg-yellow-50 border-yellow-200';
+            case 'down': return 'bg-red-50 border-red-200';
+            default: return 'bg-gray-50 border-gray-200';
+        }
+    };
 
     const filteredUsers = stats?.users.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,8 +261,10 @@ export default function AdminPanel() {
                             <Activity className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <p className="text-3xl font-bold text-neutral-800">{services.length}</p>
-                            <p className="text-sm text-neutral-500">Servicios activos</p>
+                            <p className="text-3xl font-bold text-neutral-800">
+                                {health ? `${health.summary.healthy}/${health.summary.total}` : '...'}
+                            </p>
+                            <p className="text-sm text-neutral-500">Servicios sanos</p>
                         </div>
                     </div>
                 </div>
@@ -240,7 +305,7 @@ export default function AdminPanel() {
                             <span className="font-medium text-neutral-700">Gestionar Empresas</span>
                         </button>
                         <button
-                            onClick={fetchStats}
+                            onClick={() => { fetchStats(); fetchHealth(); }}
                             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors text-left"
                         >
                             <RefreshCw className="h-5 w-5 text-purple-500" />
@@ -249,23 +314,63 @@ export default function AdminPanel() {
                     </div>
                 </div>
 
-                {/* Services Status */}
+                {/* Services Status — Real Health Checks */}
                 <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-neutral-800 mb-4">Estado de Servicios</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {services.map((service) => (
-                            <div key={service.name} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                                <div className={`p-2 bg-gradient-to-r ${service.color} rounded-lg`}>
-                                    <service.icon className="h-4 w-4 text-white" />
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-neutral-800">Estado de Servicios</h3>
+                        <button
+                            onClick={fetchHealth}
+                            disabled={healthLoading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                        >
+                            <RefreshCw className={`h-3 w-3 ${healthLoading ? 'animate-spin' : ''}`} />
+                            {healthLoading ? 'Verificando...' : 'Verificar'}
+                        </button>
+                    </div>
+
+                    {health?.summary && (
+                        <div className="flex items-center gap-2 mb-4 text-xs text-neutral-500">
+                            <Clock className="h-3 w-3" />
+                            <span>Verificado: {new Date(health.summary.checked_at).toLocaleTimeString('es-CL')}</span>
+                            <span className="text-neutral-300">|</span>
+                            <span>{health.summary.total_latency_ms}ms total</span>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-2">
+                        {health?.services ? health.services.map((service) => {
+                            const meta = serviceIcons[service.name] || { icon: Server, color: 'from-gray-500 to-gray-600' };
+                            const IconComp = meta.icon;
+                            return (
+                                <div key={service.name} className={`flex items-center gap-3 p-3 rounded-lg border ${getStatusBg(service.status)}`}>
+                                    <div className={`p-2 bg-gradient-to-r ${meta.color} rounded-lg`}>
+                                        <IconComp className="h-4 w-4 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium text-neutral-700">{service.name}</p>
+                                            {getStatusIcon(service.status)}
+                                        </div>
+                                        <p className="text-xs text-neutral-500 truncate">{service.details}</p>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(service.status)} mb-1 ml-auto`} />
+                                        <p className="text-xs text-neutral-400">{service.latency_ms}ms</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-neutral-700">{service.name}</p>
-                                </div>
-                                <div className={`w-2 h-2 rounded-full ${
-                                    service.status === 'healthy' ? 'bg-green-500' : 'bg-yellow-500'
-                                }`} />
+                            );
+                        }) : (
+                            <div className="flex items-center justify-center p-6 text-neutral-400 text-sm">
+                                {healthLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        Verificando servicios...
+                                    </div>
+                                ) : (
+                                    'Haz click en "Verificar" para comprobar'
+                                )}
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>
@@ -287,11 +392,12 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
+                                    user.role === 'superadmin' ? 'bg-amber-100 text-amber-700' :
                                     user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                    user.role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                                    user.role === 'agent' ? 'bg-blue-100 text-blue-700' :
                                     'bg-gray-100 text-gray-700'
                                 }`}>
-                                    {user.role}
+                                    {user.role === 'superadmin' ? 'Super Admin' : user.role}
                                 </span>
                             </div>
                         ))}
@@ -349,16 +455,16 @@ export default function AdminPanel() {
                     <p className="text-sm text-neutral-500">Total</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                    <p className="text-2xl font-bold text-amber-600">{stats?.users.filter(u => u.role === 'superadmin').length || 0}</p>
+                    <p className="text-sm text-neutral-500">Super Admins</p>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
                     <p className="text-2xl font-bold text-purple-600">{stats?.users.filter(u => u.role === 'admin').length || 0}</p>
                     <p className="text-sm text-neutral-500">Admins</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <p className="text-2xl font-bold text-blue-600">{stats?.users.filter(u => u.role === 'manager').length || 0}</p>
-                    <p className="text-sm text-neutral-500">Managers</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <p className="text-2xl font-bold text-gray-600">{stats?.users.filter(u => u.role === 'user').length || 0}</p>
-                    <p className="text-sm text-neutral-500">Usuarios</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats?.users.filter(u => u.role === 'agent').length || 0}</p>
+                    <p className="text-sm text-neutral-500">Agentes</p>
                 </div>
             </div>
 
@@ -402,11 +508,12 @@ export default function AdminPanel() {
                                     <td className="px-6 py-4 text-neutral-600">{user.email}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            user.role === 'superadmin' ? 'bg-amber-100 text-amber-700' :
                                             user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                                            user.role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                                            user.role === 'agent' ? 'bg-blue-100 text-blue-700' :
                                             'bg-gray-100 text-gray-700'
                                         }`}>
-                                            {user.role}
+                                            {user.role === 'superadmin' ? 'Super Admin' : user.role}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-neutral-600">{user.company_slug || '-'}</td>
@@ -450,9 +557,9 @@ export default function AdminPanel() {
                             onChange={(e) => setSelectedRole(e.target.value)}
                             className="w-full p-3 rounded-lg border border-slate-200 mb-4"
                         >
-                            <option value="user">Usuario</option>
-                            <option value="manager">Manager</option>
+                            <option value="agent">Agente</option>
                             <option value="admin">Admin</option>
+                            <option value="superadmin">Super Admin</option>
                         </select>
                         <div className="flex gap-3">
                             <button
@@ -611,11 +718,11 @@ export default function AdminPanel() {
                                 </div>
                             </div>
                             <button
-                                onClick={fetchStats}
-                                disabled={loading}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                                onClick={() => { fetchStats(); fetchHealth(); }}
+                                disabled={loading || healthLoading}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors"
                             >
-                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                <RefreshCw className={`h-4 w-4 ${(loading || healthLoading) ? 'animate-spin' : ''}`} />
                                 Actualizar
                             </button>
                         </div>
