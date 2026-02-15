@@ -3470,6 +3470,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               >
                 <Filter className="w-4 h-4 text-gray-700" />
                 {appliedFilters && (
+                  appliedFilters.dateRange !== 'all' ||
+                  (appliedFilters.status && appliedFilters.status.length > 0) ||
+                  (appliedFilters.priority && appliedFilters.priority.length > 0) ||
+                  (appliedFilters.labels && appliedFilters.labels.length > 0) ||
+                  appliedFilters.unreadOnly ||
+                  (appliedFilters.assignedTo && appliedFilters.assignedTo !== 'all')
+                ) && (
                   <span className='absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold'>
                     !
                   </span>
