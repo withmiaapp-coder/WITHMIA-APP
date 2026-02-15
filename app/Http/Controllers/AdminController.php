@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\UserDeletionService;
+use App\Services\QdrantService;
+use App\Jobs\CreateQdrantCollectionJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -344,6 +346,67 @@ class AdminController extends Controller
                 'total_latency_ms' => $totalMs,
                 'checked_at' => now()->toIso8601String(),
             ],
+        ]);
+    }
+
+    /**
+     * Reparar colecciones Qdrant faltantes
+     * Verifica que cada empresa activa tenga su colección en Qdrant y la recrea si falta
+     */
+    public function repairQdrantCollections(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $qdrantService = app(QdrantService::class);
+        $companies = Company::where('is_active', true)->get();
+        $results = [];
+
+        foreach ($companies as $company) {
+            $collectionName = $company->settings['qdrant_collection'] 
+                ?? $qdrantService->getCollectionName($company->slug);
+
+            $exists = $qdrantService->collectionExists($collectionName);
+
+            if ($exists) {
+                $results[] = [
+                    'company' => $company->name,
+                    'slug' => $company->slug,
+                    'collection' => $collectionName,
+                    'status' => 'ok',
+                    'action' => 'none',
+                ];
+                continue;
+            }
+
+            // Colección falta → despachar job para recrearla
+            Log::warning("🔧 Repairing missing Qdrant collection for {$company->name}", [
+                'company_id' => $company->id,
+                'slug' => $company->slug,
+                'collection' => $collectionName,
+            ]);
+
+            // Limpiar el setting para que el job no haga skip
+            $settings = $company->settings ?? [];
+            unset($settings['qdrant_collection']);
+            $company->update(['settings' => $settings]);
+
+            // Despachar job de creación
+            CreateQdrantCollectionJob::dispatch($company->id, $company->slug);
+
+            $results[] = [
+                'company' => $company->name,
+                'slug' => $company->slug,
+                'collection' => $collectionName,
+                'status' => 'missing',
+                'action' => 'repair_dispatched',
+            ];
+        }
+
+        $repaired = count(array_filter($results, fn($r) => $r['action'] === 'repair_dispatched'));
+
+        return response()->json([
+            'success' => true,
+            'total_companies' => count($results),
+            'repaired' => $repaired,
+            'results' => $results,
         ]);
     }
 }

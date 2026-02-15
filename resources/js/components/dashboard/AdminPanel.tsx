@@ -101,6 +101,7 @@ export default function AdminPanel() {
     const [health, setHealth] = useState<HealthData | null>(null);
     const [loading, setLoading] = useState(true);
     const [healthLoading, setHealthLoading] = useState(false);
+    const [repairing, setRepairing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
@@ -128,6 +129,29 @@ export default function AdminPanel() {
             debugLog.error('Error fetching health:', error);
         } finally {
             setHealthLoading(false);
+        }
+    };
+
+    const repairQdrant = async () => {
+        setRepairing(true);
+        try {
+            const response = await fetch('/admin/api/repair-qdrant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+            const data = await response.json();
+            if (data.success) {
+                debugLog.info(`Qdrant repair: ${data.repaired} collections repaired`);
+                // Re-check health after repair
+                setTimeout(() => fetchHealth(), 3000);
+            }
+        } catch (error) {
+            debugLog.error('Error repairing Qdrant:', error);
+        } finally {
+            setRepairing(false);
         }
     };
 
@@ -353,9 +377,20 @@ export default function AdminPanel() {
                                         </div>
                                         <p className="text-xs text-neutral-500 truncate">{service.details}</p>
                                     </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(service.status)} mb-1 ml-auto`} />
-                                        <p className="text-xs text-neutral-400">{service.latency_ms}ms</p>
+                                    <div className="text-right flex-shrink-0 flex items-center gap-2">
+                                        {service.name === 'Qdrant' && service.status === 'warning' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); repairQdrant(); }}
+                                                disabled={repairing}
+                                                className="text-xs px-2 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+                                            >
+                                                {repairing ? 'Reparando...' : 'Reparar'}
+                                            </button>
+                                        )}
+                                        <div>
+                                            <div className={`w-2.5 h-2.5 rounded-full ${getStatusColor(service.status)} mb-1 ml-auto`} />
+                                            <p className="text-xs text-neutral-400">{service.latency_ms}ms</p>
+                                        </div>
                                     </div>
                                 </div>
                             );

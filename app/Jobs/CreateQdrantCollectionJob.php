@@ -40,10 +40,19 @@ class CreateQdrantCollectionJob implements ShouldQueue
             return;
         }
 
-        // Si ya tiene colección, no crear otra
-        if (!empty($company->settings['qdrant_collection'])) {
-            Log::debug("Qdrant collection already exists for: {$this->companySlug}");
-            return;
+        $existingCollectionName = $company->settings['qdrant_collection'] ?? null;
+
+        // Si ya tiene colección en settings, verificar que REALMENTE existe en Qdrant
+        if (!empty($existingCollectionName)) {
+            if ($qdrantService->collectionExists($existingCollectionName)) {
+                Log::debug("Qdrant collection verified in Qdrant for: {$this->companySlug}");
+                return;
+            }
+            // La colección está en settings pero NO existe en Qdrant → recrear
+            Log::warning("⚠️ Qdrant collection '{$existingCollectionName}' in settings but NOT in Qdrant. Recreating...", [
+                'company_id' => $this->companyId,
+                'slug' => $this->companySlug,
+            ]);
         }
 
         try {
@@ -65,9 +74,11 @@ class CreateQdrantCollectionJob implements ShouldQueue
                 $this->insertCompanyInfo($qdrantService, $collectionName, $company);
             } else {
                 Log::error("❌ Failed to create Qdrant collection: " . ($result['error'] ?? 'Unknown'));
+                throw new \RuntimeException("Failed to create Qdrant collection: " . ($result['error'] ?? 'Unknown'));
             }
         } catch (\Exception $e) {
             Log::error("❌ Exception creating Qdrant collection: " . $e->getMessage());
+            throw $e; // Re-throw so Laravel retries the job
         }
     }
 

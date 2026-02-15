@@ -202,6 +202,8 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::patch('/api/users/{id}/role', [AdminController::class, 'updateUserRole'])->name('admin.api.users.role');
     Route::delete('/api/users/{id}', [AdminController::class, 'deleteUser'])->name('admin.api.users.delete');
     Route::get('/api/stats', [AdminController::class, 'stats'])->name('admin.api.stats');
+    Route::get('/api/health', [AdminController::class, 'health'])->name('admin.api.health');
+    Route::post('/api/repair-qdrant', [AdminController::class, 'repairQdrantCollections'])->name('admin.api.repair-qdrant');
 });
 
 // ============================================================================
