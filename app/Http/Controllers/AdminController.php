@@ -240,6 +240,16 @@ class AdminController extends Controller
                     'status' => $qdrantStatus,
                     'latency_ms' => round((microtime(true) - $start) * 1000),
                     'details' => $response->successful() ? $detailText : "HTTP {$response->status()}",
+                    'diagnostics' => [
+                        'existing_collections' => $collectionNames,
+                        'expected_collections' => $expectedCollections,
+                        'missing_collections' => array_values($missing),
+                        'companies' => \App\Models\Company::where('is_active', true)->get()->map(fn($c) => [
+                            'slug' => $c->slug,
+                            'qdrant_setting' => $c->settings['qdrant_collection'] ?? null,
+                            'expected' => 'company_' . preg_replace('/[^a-z0-9_-]/', '_', strtolower($c->slug)) . '_knowledge',
+                        ])->toArray(),
+                    ],
                 ];
             } catch (\Throwable $e) {
                 $services['qdrant'] = [
