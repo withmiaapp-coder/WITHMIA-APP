@@ -1440,30 +1440,31 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       searchResultsCount: searchResults?.length || 0
     });
     
+    let result: any[];
+
     if (!searchTerm) {
       // Sin búsqueda, aplicar solo filtro de pestaña
-      const result = (conversations || []).filter(conversation => {
+      result = (conversations || []).filter(conversation => {
         if (selectedFilter === 'all') return true;
         if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
         if (selectedFilter === 'unassigned') return !conversation.assignee_id;
         return true;
       });
       debugLog.log('✅ Sin búsqueda, resultados:', result.length);
-      return result;
-    }
+    } else {
     
-    // Con búsqueda activa: combinar resultados del backend + búsqueda local
-    const searchNorm = normalizeText(searchTerm);
-    
-    // Crear mapa de matching_message del backend (conversation_id => matching_message)
-    const backendMatchMap = new Map<number, any>();
-    if (searchResults && Array.isArray(searchResults)) {
-      searchResults.forEach((r: any) => {
-        backendMatchMap.set(r.conversation_id, r.matching_message || null);
-      });
-    }
-    
-    let result = (conversations || []).map(conversation => {
+      // Con búsqueda activa: combinar resultados del backend + búsqueda local
+      const searchNorm = normalizeText(searchTerm);
+      
+      // Crear mapa de matching_message del backend (conversation_id => matching_message)
+      const backendMatchMap = new Map<number, any>();
+      if (searchResults && Array.isArray(searchResults)) {
+        searchResults.forEach((r: any) => {
+          backendMatchMap.set(r.conversation_id, r.matching_message || null);
+        });
+      }
+      
+      result = (conversations || []).map(conversation => {
       
       // 1. Buscar en nombre del contacto (sin acentos)
       const nameMatch = conversation.contact?.name ? normalizeText(conversation.contact.name).includes(searchNorm) : false;
@@ -1517,9 +1518,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       // Adjuntar mensaje que matcheó para mostrar como preview y scroll
       return { ...conversation, _matchingMessage: matchingMessage };
-    }).filter(Boolean) as any[];
-    
-    debugLog.log(' Con búsqueda, resultados:', result.length);
+      }).filter(Boolean) as any[];
+      
+      debugLog.log(' Con búsqueda, resultados:', result.length);
+    } // end else (searchTerm)
 
     window.DEBUG_CONVS = result.slice(0, 5).map(c => ({ id: c.id, name: c.contact?.name, updated_at: c.updated_at, lastMsg: c.last_message?.timestamp }));
     if (appliedFilters) {
