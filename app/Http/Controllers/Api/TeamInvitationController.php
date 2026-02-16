@@ -424,7 +424,7 @@ class TeamInvitationController extends Controller
                 ], 403);
             }
             
-            if ($user && $user->role !== 'admin') {
+            if ($user && !in_array($user->role, ['admin', 'superadmin'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -472,7 +472,7 @@ class TeamInvitationController extends Controller
                             ->post("{$baseUrl}/api/v1/accounts/{$company->chatwoot_account_id}/agents", [
                                 'name' => $syncUser->name ?: $syncUser->full_name ?: 'Usuario',
                                 'email' => $syncUser->email,
-                                'role' => $syncUser->role === 'admin' ? 'administrator' : 'agent',
+                                'role' => in_array($syncUser->role, ['admin', 'superadmin']) ? 'administrator' : 'agent',
                                 'auto_offline' => true,
                             ]);
                     }
@@ -742,7 +742,7 @@ class TeamInvitationController extends Controller
                         ];
                     } else {
                         // Crear nuevo agente en Chatwoot usando el servicio
-                        $role = $user->role === 'admin' ? 'administrator' : 'agent';
+                        $role = in_array($user->role, ['admin', 'superadmin']) ? 'administrator' : 'agent';
                         $result = $this->chatwootService->createAgent(
                             $accountId,
                             $apiKey,
@@ -855,7 +855,7 @@ class TeamInvitationController extends Controller
                         $accountId,
                         $company->chatwoot_api_key,
                         (int) $user->chatwoot_agent_id,
-                        ['role' => $newRole === 'admin' ? 'administrator' : 'agent']
+                        ['role' => in_array($newRole, ['admin', 'superadmin']) ? 'administrator' : 'agent']
                     );
                 }
             }

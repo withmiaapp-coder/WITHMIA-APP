@@ -33,8 +33,8 @@ class MembersController extends Controller
                 ], 401);
             }
             
-            // Verificar que sea admin
-            if ($user->role !== 'admin') {
+            // Verificar que sea admin o superadmin
+            if (!in_array($user->role, ['admin', 'superadmin'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -70,7 +70,7 @@ class MembersController extends Controller
         try {
             $user = auth()->user();
             
-            if (!$user || $user->role !== 'admin') {
+            if (!$user || !in_array($user->role, ['admin', 'superadmin'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
@@ -158,7 +158,7 @@ class MembersController extends Controller
         try {
             $user = auth()->user();
 
-            if (!$user || $user->role !== 'admin') {
+            if (!$user || !in_array($user->role, ['admin', 'superadmin'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No autorizado'
