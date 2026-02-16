@@ -105,7 +105,7 @@ Route::middleware('n8n.secret')->group(function () {
 // ============================================================================
 Route::middleware('throttle:20,1')->prefix('invitation')->group(function () {
     Route::get('/validate/{token}', [TeamInvitationController::class, 'validateToken']);
-    Route::post('/accept/{token}', [TeamInvitationController::class, 'accept']);
+    // Password-based accept removed: only Google Sign-In is supported
 });
 
 // ============================================================================

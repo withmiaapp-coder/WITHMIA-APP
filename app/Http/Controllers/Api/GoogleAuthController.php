@@ -225,6 +225,7 @@ class GoogleAuthController extends Controller
                 // User exists but for different company - update to new company
                 $user->company_slug = $invitation->company->slug;
                 $user->role = $invitation->role === 'administrator' ? 'admin' : 'agent';
+                $user->onboarding_completed = true;
                 $user->save();
 
             } else {
@@ -289,15 +290,13 @@ class GoogleAuthController extends Controller
             }
 
             // Crear agente usando el servicio
+            $role = $invitation->role === 'administrator' ? 'administrator' : 'agent';
             $result = $this->chatwootService->createAgent(
                 $company->chatwoot_account_id,
                 $company->chatwoot_api_key,
-                [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $invitation->role === 'administrator' ? 'administrator' : 'agent',
-                    'auto_offline' => true,
-                ]
+                $user->name ?: 'Usuario',
+                $user->email,
+                $role
             );
 
             Log::debug('Chatwoot: Agent creation response', ['success' => $result['success']]);
