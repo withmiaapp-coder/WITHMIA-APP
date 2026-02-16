@@ -53,7 +53,7 @@ interface NotificationSettings {
 
 // Eventos que el contexto emite para que otros componentes puedan reaccionar
 export interface WebSocketMessageEvent {
-  type: 'new_message' | 'message_updated' | 'conversation_updated';
+  type: 'new_message' | 'message_updated' | 'conversation_updated' | 'conversation_assigned';
   conversationId: number;
   message?: any;
   conversation?: any;
@@ -680,6 +680,49 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         });
 
         // ========================================
+        // LISTENER: Conversación asignada
+        // ========================================
+        channel.listen('.conversation.assigned', (event: any) => {
+          const convId = event?.conversation_id;
+          if (!convId) return;
+
+          const assignee = event?.assignee;
+          const assignedBy = event?.assigned_by;
+          const contactName = event?.contact_name;
+
+          // Notificar a todos los suscriptores para actualizar la lista
+          const wsEvent: WebSocketMessageEvent = {
+            type: 'conversation_assigned',
+            conversationId: convId,
+            conversation: { assignee, assignee_id: assignee?.id || null },
+            event,
+          };
+
+          messageSubscribers.current.forEach(callback => {
+            try {
+              callback(wsEvent);
+            } catch (err) {
+              // Error handled silently
+            }
+          });
+
+          // Crear notificación visual y sonora
+          if (assignee && addNotificationRef.current) {
+            const assigneeName = assignee.name || assignee.email || 'Agente';
+            const assignerName = assignedBy?.name || 'Sistema';
+            const contact = contactName || `#${convId}`;
+
+            addNotificationRef.current({
+              conversationId: convId,
+              name: 'Asignación',
+              message: `${assignerName} asignó la conversación de ${contact} a ${assigneeName}`,
+              priority: 'high',
+              avatar: '📋',
+            });
+          }
+        });
+
+        // ========================================
         // ESTADO DE CONEXIÓN
         // ========================================
         const connector = echo.connector as any;
@@ -719,6 +762,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
           channelRef.current.stopListening('.message.received');
           channelRef.current.stopListening('.message.updated');
           channelRef.current.stopListening('.conversation.updated');
+          channelRef.current.stopListening('.conversation.assigned');
           if (echoRef.current) {
             echoRef.current.leave(`inbox.${inboxId}`);
           }

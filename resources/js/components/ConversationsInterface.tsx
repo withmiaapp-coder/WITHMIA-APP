@@ -996,6 +996,29 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     const unsubscribe = globalNotifications.subscribeToMessages((wsEvent: WebSocketMessageEvent) => {
       setLastEventTime(new Date());
       
+      if (wsEvent.type === 'conversation_assigned') {
+        // Actualizar asignación en la lista de conversaciones en tiempo real
+        const assignee = wsEvent.conversation?.assignee || null;
+        const assigneeId = wsEvent.conversation?.assignee_id ?? assignee?.id ?? null;
+        
+        setConversations((prev: any[]) =>
+          prev.map(conv =>
+            conv.id === wsEvent.conversationId
+              ? { ...conv, assignee_id: assigneeId, assignee }
+              : conv
+          )
+        );
+
+        // Si la conversación activa es la asignada, actualizar también
+        _setActiveConversation((prev: any) => {
+          if (prev && prev.id === wsEvent.conversationId) {
+            return { ...prev, assignee_id: assigneeId, assignee };
+          }
+          return prev;
+        });
+        return;
+      }
+
       if (wsEvent.type === 'conversation_updated') {
         // Actualizar estado si viene incluido
         const newStatus = wsEvent.event?.status || wsEvent.conversation?.status;

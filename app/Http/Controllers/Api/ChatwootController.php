@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\ConversationAssigned;
 use App\Http\Controllers\Controller;
 use App\Services\ChatwootService;
 use App\Traits\ChatwootDbAccess;
@@ -410,6 +411,44 @@ class ChatwootController extends Controller
                         'avatar_url' => $assigneeRow->avatar_url ?? null,
                     ];
                 }
+            }
+
+            // Broadcast en tiempo real a todos los agentes del inbox
+            try {
+                $contactName = null;
+                if ($conversation->contact_id ?? null) {
+                    $contact = $this->chatwootDb()->table('contacts')
+                        ->where('id', $conversation->contact_id)
+                        ->first();
+                    $contactName = $contact->name ?? $contact->phone_number ?? null;
+                }
+
+                $currentUser = auth()->user();
+                $assignedBy = $currentUser ? [
+                    'id' => $currentUser->id,
+                    'name' => $currentUser->name ?? $currentUser->full_name ?? 'Sistema',
+                ] : null;
+
+                broadcast(new ConversationAssigned(
+                    $conversationId,
+                    $this->inboxId,
+                    $this->accountId,
+                    $assignee,
+                    $assignedBy,
+                    $contactName
+                ));
+
+                Log::info('[WITHMIA] ConversationAssigned broadcast sent', [
+                    'conversationId' => $conversationId,
+                    'assigneeId' => $assigneeId,
+                    'inboxId' => $this->inboxId,
+                ]);
+            } catch (\Throwable $broadcastError) {
+                // No bloquear la asignación si el broadcast falla
+                Log::warning('[WITHMIA] ConversationAssigned broadcast failed', [
+                    'error' => $broadcastError->getMessage(),
+                    'conversationId' => $conversationId,
+                ]);
             }
 
             return response()->json(['success' => true, 'assignee' => $assignee]);
