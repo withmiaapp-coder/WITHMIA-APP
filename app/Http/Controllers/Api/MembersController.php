@@ -50,7 +50,8 @@ class MembersController extends Controller
             
             return response()->json([
                 'success' => true,
-                'data' => $members
+                'data' => $members,
+                'current_user_id' => $user->id
             ]);
             
         } catch (\Exception $e) {

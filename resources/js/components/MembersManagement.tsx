@@ -24,7 +24,7 @@ interface Member {
   id: number;
   name: string;
   email: string;
-  role: 'admin' | 'agent';
+  role: 'admin' | 'agent' | 'superadmin';
   chatwoot_agent_id?: number;
   permissions?: Record<string, boolean>;
   created_at?: string;
@@ -81,6 +81,7 @@ const DEFAULT_AGENT_PERMISSIONS: Record<string, boolean> = {
 
 const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }) => {
   const [members, setMembers] = useState<Member[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -98,6 +99,9 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
       const response = await axios.get('/api/chatwoot-proxy/members');
       if (response.data.success) {
         setMembers(response.data.data || []);
+        if (response.data.current_user_id) {
+          setCurrentUserId(response.data.current_user_id);
+        }
       }
     } catch (err) {
       debugLog.error('Error fetching members:', err);
@@ -115,7 +119,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
 
   // Obtener permisos efectivos de un miembro
   const getEffectivePermissions = (member: Member): Record<string, boolean> => {
-    if (member.role === 'admin') {
+    if (member.role === 'admin' || member.role === 'superadmin') {
       // Admins tienen todos los permisos
       const allTrue: Record<string, boolean> = {};
       Object.values(PERMISSION_GROUPS).flat().forEach(p => {
@@ -278,21 +282,25 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
             <div className="space-y-4">
               {members.map(member => {
                 const isExpanded = expandedMember === member.id;
+                const isSelf = member.id === currentUserId;
+                const isSuperAdmin = member.role === 'superadmin';
                 const effectiveRole = editedRoles[member.id] || member.role;
                 const effectivePermissions = editedPermissions[member.id] || getEffectivePermissions(member);
-                const isCurrentAdmin = effectiveRole === 'admin';
+                const isCurrentAdmin = effectiveRole === 'admin' || effectiveRole === 'superadmin';
+                const isEditable = !isSelf && !isSuperAdmin;
                 
                 return (
-                  <div key={member.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div key={member.id} className={`border rounded-xl overflow-hidden ${isSelf ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200'}`}>
                     {/* Member Header */}
                     <div 
-                      className={`p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`p-4 flex items-center justify-between ${isEditable ? 'cursor-pointer hover:bg-gray-50' : ''} transition-colors ${
                         isExpanded ? 'bg-gray-50' : ''
                       }`}
-                      onClick={() => setExpandedMember(isExpanded ? null : member.id)}
+                      onClick={() => isEditable && setExpandedMember(isExpanded ? null : member.id)}
                     >
                       <div className="flex items-center space-x-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-medium ${
+                          isSuperAdmin ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
                           isCurrentAdmin ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-green-500'
                         }`}>
                           {member.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -300,34 +308,40 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                         <div>
                           <div className="flex items-center space-x-2">
                             <p className="font-medium text-gray-800">{member.name}</p>
-                            {isCurrentAdmin && <Crown className="w-4 h-4 text-amber-500" />}
+                            {isSuperAdmin && <Crown className="w-4 h-4 text-amber-500" />}
+                            {isCurrentAdmin && !isSuperAdmin && <Crown className="w-4 h-4 text-purple-500" />}
+                            {isSelf && <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">Tú</span>}
                           </div>
                           <p className="text-sm text-gray-500">{member.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          isCurrentAdmin 
-                            ? 'bg-purple-100 text-purple-700' 
-                            : 'bg-emerald-100 text-emerald-700'
+                          isSuperAdmin
+                            ? 'bg-amber-100 text-amber-700'
+                            : isCurrentAdmin 
+                              ? 'bg-purple-100 text-purple-700' 
+                              : 'bg-emerald-100 text-emerald-700'
                         }`}>
-                          {isCurrentAdmin ? 'Administrador' : 'Agente'}
+                          {isSuperAdmin ? 'Super Admin' : isCurrentAdmin ? 'Administrador' : 'Agente'}
                         </span>
                         {hasChanges(member.id) && (
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs">
                             Sin guardar
                           </span>
                         )}
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        {isEditable && (
+                          isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          )
                         )}
                       </div>
                     </div>
 
                     {/* Expanded Content */}
-                    {isExpanded && (
+                    {isExpanded && isEditable && (
                       <div className="p-4 border-t border-gray-200 bg-gray-50/50">
                         {/* Role Toggle */}
                         <div className="mb-6">
