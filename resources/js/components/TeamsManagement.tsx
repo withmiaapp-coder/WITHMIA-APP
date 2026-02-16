@@ -19,7 +19,9 @@ import {
   Send,
   Clock,
   RefreshCw,
-  UserCog
+  UserCog,
+  ShieldCheck,
+  Info
 } from 'lucide-react';
 import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
 import { usePermissions } from '../hooks/usePermissions';
@@ -271,6 +273,16 @@ const AddMembersModal: React.FC<{
 };
 
 // Modal para invitar nuevo miembro por correo
+// Icono de Google
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
 const InviteMemberModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -325,17 +337,21 @@ const InviteMemberModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
-                <Mail className="w-5 h-5 text-white" />
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+                <UserPlus className="w-5 h-5 text-white" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">Invitar por Correo</h2>
+              <div>
+                <h2 className="text-lg font-bold text-white">Invitar Miembro</h2>
+                <p className="text-blue-100 text-xs">Añade un nuevo integrante a tu equipo</p>
+              </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
+            <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-white" />
             </button>
           </div>
         </div>
@@ -346,92 +362,118 @@ const InviteMemberModal: React.FC<{
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">¡Invitación Enviada!</h3>
-            <p className="text-gray-600">Se ha enviado un correo a {email} con las instrucciones para unirse.</p>
+            <p className="text-gray-600 text-sm">Se ha enviado un correo a <strong>{email}</strong> con las instrucciones para unirse.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2 text-red-700">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
             )}
+
+            {/* Gmail security notice */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-100 flex-shrink-0">
+                <GoogleIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-800">Solo cuentas de Google</p>
+                <p className="text-xs text-gray-500">Por seguridad, el acceso es exclusivamente mediante Google Sign-In.</p>
+              </div>
+              <ShieldCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+            </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Email *
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Correo de Google <span className="text-red-500">*</span>
               </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="correo@ejemplo.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
-                required
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="usuario@gmail.com"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 bg-white text-sm"
+                  required
+                />
+              </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Nombre (opcional)
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Nombre <span className="text-gray-400 text-xs font-normal">(opcional)</span>
               </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nombre del invitado"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="w-4 h-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nombre del invitado"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 bg-white text-sm"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Rol
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
-              >
-                <option value="agent">Agente</option>
-                <option value="administrator">Administrador</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Rol
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white text-sm"
+                >
+                  <option value="agent">Agente</option>
+                  <option value="administrator">Administrador</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Equipo <span className="text-gray-400 text-xs font-normal">(opc.)</span>
+                </label>
+                <select
+                  value={teamId || ''}
+                  onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white text-sm"
+                >
+                  <option value="">Sin equipo</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>{team.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Agregar a equipo (opcional)
-              </label>
-              <select
-                value={teamId || ''}
-                onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white"
-              >
-                <option value="">Sin equipo asignado</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id}>{team.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-700">
-                <strong>📧 El invitado recibirá un correo</strong> con un enlace para crear su cuenta y unirse a tu empresa.
-              </p>
+            {/* Info box */}
+            <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+              <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-blue-700 leading-relaxed">
+                <p>El invitado recibirá un <strong>correo con un enlace</strong> para unirse. Deberá iniciar sesión con su cuenta de Google para aceptar la invitación.</p>
+              </div>
             </div>
             
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex justify-end space-x-3 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2.5 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving || !email.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium shadow-lg shadow-blue-500/25"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
