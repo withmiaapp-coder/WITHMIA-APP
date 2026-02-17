@@ -37,7 +37,7 @@ class TeamInvitationMail extends Mailable
                 'invitation' => $this->invitation,
                 'acceptUrl' => $this->invitation->getAcceptUrl(),
                 'companyName' => $this->invitation->company->name ?? 'la empresa',
-                'inviterName' => $this->invitation->invitedBy->name ?? 'Un administrador',
+                'inviterName' => $this->invitation->invitedBy->full_name ?? $this->invitation->invitedBy->name ?? 'Un administrador',
                 'roleName' => $this->invitation->role === 'administrator' ? 'Administrador' : 'Agente',
             ],
         );
