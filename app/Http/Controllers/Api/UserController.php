@@ -22,26 +22,122 @@ class UserController extends Controller
                 ], 401);
             }
 
-            $cacheKey = "user:profile:{$user->id}";
+            $user->load('company');
+            $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
 
-            $data = Cache::remember($cacheKey, 300, function () use ($user) {
-                $user->load('company');
-                $inboxId = $user->chatwoot_inbox_id ?? $user->company?->chatwoot_inbox_id ?? null;
-
-                return [
-                    'success' => true,
-                    'user' => $user,
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'phone_country' => $user->phone_country ?? 'CL',
+                    'avatar' => $user->avatar,
+                    'role' => $user->role ?? 'user',
+                    'company_slug' => $user->company_slug,
+                    'company' => $user->company ? [
+                        'id' => $user->company->id,
+                        'name' => $user->company->name,
+                    ] : null,
                     'chatwoot_inbox_id' => $inboxId,
-                ];
-            });
-
-            return response()->json($data);
+                    'created_at' => $user->created_at?->toISOString(),
+                    'last_login_at' => $user->last_login_at,
+                ],
+                // Keep backward compat
+                'user' => $user,
+                'chatwoot_inbox_id' => $inboxId,
+            ]);
         } catch (\Throwable $e) {
             Log::error('Error fetching user profile', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'error' => 'Error obteniendo perfil de usuario',
+            ], 500);
+        }
+    }
+
+    public function updateProfile(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'No autenticado'], 401);
+            }
+
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'full_name' => 'sometimes|nullable|string|max:255',
+                'phone' => 'sometimes|nullable|string|max:20',
+            ]);
+
+            $user->fill($validated);
+            $user->save();
+
+            // Clear profile cache
+            Cache::forget("user:profile:{$user->id}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Perfil actualizado exitosamente',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'full_name' => $user->full_name,
+                    'phone' => $user->phone,
+                ],
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Error updating user profile', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el perfil',
+            ], 500);
+        }
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'No autenticado'], 401);
+            }
+
+            $request->validate([
+                'avatar' => 'required|image|max:5120', // 5MB
+            ]);
+
+            $file = $request->file('avatar');
+            $path = $file->store("avatars/{$user->id}", 'public');
+            $url = asset("storage/{$path}");
+
+            $user->avatar = $url;
+            $user->save();
+
+            Cache::forget("user:profile:{$user->id}");
+
+            return response()->json([
+                'success' => true,
+                'data' => ['avatar_url' => $url],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error uploading avatar', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir la imagen',
             ], 500);
         }
     }

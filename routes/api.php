@@ -113,6 +113,8 @@ Route::middleware('throttle:20,1')->prefix('invitation')->group(function () {
 // ============================================================================
 Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
+    Route::put('/profile', [UserController::class, 'updateProfile']);
+    Route::post('/avatar', [UserController::class, 'uploadAvatar']);
 });
 
 Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
