@@ -318,7 +318,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                       type="text"
                       value={profile.name}
                       onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                      className="flex-1 px-3 py-2 text-sm border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                      className="flex-1 px-3 py-2 text-sm text-gray-900 bg-white border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                       autoFocus
                     />
                     <button onClick={() => setEditingField(null)} className="p-2 text-gray-400 hover:text-gray-600">
