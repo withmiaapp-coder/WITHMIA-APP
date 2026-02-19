@@ -68,36 +68,6 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
-        {{-- Splash screen mientras carga el bundle de React/Vite --}}
-        <div id="app-splash" style="position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;background-image:radial-gradient(76vw 76vw at 12% 18%,rgba(230,184,255,.1) 0%,rgba(230,184,255,0) 70%),radial-gradient(40vw 40vw at 8% 65%,rgba(125,77,255,.35) 0%,rgba(125,77,255,0) 55%),radial-gradient(40vw 40vw at 85% 82%,rgba(59,195,255,.3) 0%,rgba(59,195,255,0) 55%),radial-gradient(28vw 28vw at 72% 15%,rgba(244,226,166,.44) 0%,rgba(244,226,166,0) 60%);transition:opacity 0.4s ease-out;font-family:'Segoe UI','Roboto','Helvetica Neue',Arial,sans-serif;">
-            <video autoplay loop muted playsinline style="width:160px;height:160px;object-fit:contain;">
-                <source src="/logo-animated.webm" type="video/webm">
-                <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA" style="width:160px;height:160px;">
-            </video>
-            <div style="margin-top:1.2rem;font-size:1.3rem;font-weight:300;color:#1a1a1a;letter-spacing:0.5px;">WITH YOU, WITH<strong style="font-weight:600;">MIA</strong><sup style="font-size:0.6em;">®</sup></div>
-        </div>
-        <script>
-            // Remover splash cuando React monte el app
-            (function() {
-                var observer = new MutationObserver(function(mutations) {
-                    var app = document.getElementById('app');
-                    if (app && app.children.length > 0) {
-                        observer.disconnect();
-                        var splash = document.getElementById('app-splash');
-                        if (splash) {
-                            splash.style.opacity = '0';
-                            setTimeout(function() { splash.remove(); }, 500);
-                        }
-                    }
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
-                // Fallback: quitar después de 8 segundos
-                setTimeout(function() {
-                    var splash = document.getElementById('app-splash');
-                    if (splash) { splash.style.opacity = '0'; setTimeout(function() { splash.remove(); }, 500); }
-                }, 8000);
-            })();
-        </script>
         @inertia
  </body>
 </html>
