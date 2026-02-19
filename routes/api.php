@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\EvolutionApiController;
 use App\Http\Controllers\Api\ChatwootWebhookController;
 use App\Http\Controllers\Api\WhatsAppInstanceController;
 use App\Http\Controllers\AttachmentProxyController;
+use App\Http\Controllers\Api\SubscriptionController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -116,6 +117,20 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/avatar', [UserController::class, 'uploadAvatar']);
 });
+
+// ============================================================================
+// 5b. SUBSCRIPTION / BILLING (sesión web)
+// ============================================================================
+Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
+    Route::get('/', [SubscriptionController::class, 'index']);
+    Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+    Route::get('/callback', [SubscriptionController::class, 'callback']);
+    Route::post('/portal', [SubscriptionController::class, 'portal']);
+    Route::post('/referral', [SubscriptionController::class, 'applyReferral']);
+});
+
+// dLocal GO Webhook (no auth - external callback)
+Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhook']);
 
 Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
     Route::get('/user/permissions', [UserController::class, 'permissions']);

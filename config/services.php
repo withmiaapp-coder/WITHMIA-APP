@@ -54,4 +54,10 @@ return [
         "openai" => (int) env("HTTP_TIMEOUT_OPENAI", 180),
         "training" => (int) env("HTTP_TIMEOUT_TRAINING", 30),
     ],
+
+    "dlocal" => [
+        "api_key" => env("DLOCAL_API_KEY"),
+        "secret_key" => env("DLOCAL_SECRET_KEY"),
+        "api_url" => env("DLOCAL_API_URL", "https://api.dlocalgo.com"),
+    ],
 ];

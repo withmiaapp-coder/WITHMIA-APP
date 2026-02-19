@@ -1,0 +1,594 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  CreditCard,
+  Check,
+  Users,
+  Zap,
+  Crown,
+  Shield,
+  Clock,
+  AlertTriangle,
+  ExternalLink,
+  RefreshCw,
+  ChevronRight,
+  Sparkles,
+  MessageCircle,
+  Bot,
+  Globe,
+  Headphones,
+  BarChart3,
+  FileText,
+  Loader,
+  X,
+  Copy,
+  Gift,
+} from 'lucide-react';
+
+/* ═══════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════ */
+interface Subscription {
+  id: number;
+  plan_name: string;
+  price: number;
+  billing_cycle: 'monthly' | 'annual';
+  max_agents: number;
+  status: 'active' | 'cancelled' | 'expired' | 'suspended' | 'trialing';
+  starts_at: string;
+  ends_at: string | null;
+  trial_ends_at: string | null;
+  features: Record<string, any> | null;
+  payment_info: {
+    payment_method?: string;
+    last_four?: string;
+    card_brand?: string;
+  } | null;
+}
+
+interface BillingInfo {
+  subscription: Subscription | null;
+  team_count: number;
+  base_price: number;
+  per_member_price: number;
+  total_price: number;
+  trial_days_remaining: number | null;
+  is_trial: boolean;
+}
+
+/* ═══════════════════════════════════════════
+   PLAN DATA
+   ═══════════════════════════════════════════ */
+const PLAN_FEATURES = [
+  { icon: Bot, text: 'Asistente IA ilimitado 24/7' },
+  { icon: MessageCircle, text: 'Conversaciones ilimitadas' },
+  { icon: Users, text: '1 miembro incluido' },
+  { icon: Globe, text: 'WhatsApp, Instagram, Facebook, Web' },
+  { icon: Sparkles, text: 'Modelos IA avanzados (GPT-4o, Claude)' },
+  { icon: FileText, text: 'Base de conocimiento (RAG)' },
+  { icon: BarChart3, text: 'Analíticas y métricas completas' },
+  { icon: Headphones, text: 'Soporte prioritario' },
+  { icon: Shield, text: 'Seguridad empresarial' },
+];
+
+/* ═══════════════════════════════════════════
+   SUBSCRIPTION PAGE
+   ═══════════════════════════════════════════ */
+export default function SubscriptionPage() {
+  const [billing, setBilling] = useState<BillingInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [subscribing, setSubscribing] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [applyingReferral, setApplyingReferral] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Pricing
+  const BASE_PRICE_MONTHLY = 18;
+  const BASE_PRICE_ANNUAL = 15; // Discount for annual
+  const PER_MEMBER_MONTHLY = 10;
+  const PER_MEMBER_ANNUAL = 8;
+
+  const basePrice = billingCycle === 'monthly' ? BASE_PRICE_MONTHLY : BASE_PRICE_ANNUAL;
+  const perMemberPrice = billingCycle === 'monthly' ? PER_MEMBER_MONTHLY : PER_MEMBER_ANNUAL;
+
+  const fetchBilling = useCallback(async () => {
+    try {
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const res = await fetch('/api/subscription', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBilling(data);
+        if (data.subscription?.billing_cycle) {
+          setBillingCycle(data.subscription.billing_cycle);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching billing:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBilling();
+  }, [fetchBilling]);
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    try {
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const res = await fetch('/api/subscription/checkout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
+        },
+        body: JSON.stringify({ billing_cycle: billingCycle }),
+      });
+
+      const data = await res.json();
+
+      if (data.checkout_url) {
+        // Redirect to dLocal GO checkout
+        window.open(data.checkout_url, '_blank');
+      } else if (data.message) {
+        showNotification('error', data.message);
+      }
+    } catch (err) {
+      showNotification('error', 'Error al procesar. Intenta de nuevo.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleApplyReferral = async () => {
+    if (!referralCode.trim()) return;
+    setApplyingReferral(true);
+    try {
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const res = await fetch('/api/subscription/referral', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
+        },
+        body: JSON.stringify({ code: referralCode }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showNotification('success', data.message || 'Código aplicado correctamente');
+        setReferralCode('');
+        fetchBilling();
+      } else {
+        showNotification('error', data.message || 'Código inválido');
+      }
+    } catch {
+      showNotification('error', 'Error al aplicar código');
+    } finally {
+      setApplyingReferral(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const res = await fetch('/api/subscription/portal', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
+        },
+      });
+      const data = await res.json();
+      if (data.portal_url) {
+        window.open(data.portal_url, '_blank');
+      }
+    } catch {
+      showNotification('error', 'Error al abrir el portal de pagos');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  const sub = billing?.subscription;
+  const isActive = sub?.status === 'active';
+  const isTrial = billing?.is_trial || sub?.status === 'trialing';
+  const teamCount = billing?.team_count || 1;
+  const additionalMembers = Math.max(0, teamCount - 1);
+  const computedTotal = basePrice + (additionalMembers * perMemberPrice);
+
+  return (
+    <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+      <div className="max-w-5xl mx-auto space-y-8">
+
+        {/* Header */}
+        <div className="flex items-center space-x-4 mb-2">
+          <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <CreditCard className="w-10 h-10 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-800">Suscripción</h1>
+            <p className="text-sm text-neutral-500">Gestiona tu plan y método de pago</p>
+          </div>
+        </div>
+
+        {/* ────── Current Plan Status ────── */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-neutral-800 mb-4">Detalles de la suscripción</h2>
+
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                {/* Plan badge */}
+                <div className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${
+                  isActive 
+                    ? 'bg-emerald-100 text-emerald-700' 
+                    : isTrial 
+                      ? 'bg-amber-100 text-amber-700' 
+                      : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {isActive ? 'Activo' : isTrial ? 'Prueba Gratuita' : 'Sin Plan'}
+                </div>
+
+                <div>
+                  <p className="text-xl font-bold text-neutral-800">
+                    {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba Gratuita' : 'Plan Gratuito'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {isActive && sub ? (
+                      <>
+                        <span className="text-2xl font-bold text-neutral-800">
+                          ${sub.price} USD
+                        </span>
+                        <span className="text-sm text-neutral-500">
+                          /{sub.billing_cycle === 'monthly' ? 'mes' : 'año'}
+                        </span>
+                      </>
+                    ) : isTrial && billing?.trial_days_remaining != null ? (
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <Clock className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          {billing.trial_days_remaining} días restantes de la prueba gratuita
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-lg font-bold text-neutral-400">$0 USD</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment method */}
+              {isActive && sub?.payment_info?.last_four && (
+                <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+                  <CreditCard className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-xs text-slate-500">Método de pago</p>
+                    <p className="text-sm font-medium text-neutral-700">
+                      {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Team pricing breakdown */}
+            {isActive && additionalMembers > 0 && (
+              <div className="mt-4 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <div className="flex items-center gap-2 text-sm text-indigo-700">
+                  <Users className="w-4 h-4" />
+                  <span>
+                    Plan base ${basePrice}/mes + {additionalMembers} miembro{additionalMembers > 1 ? 's' : ''} adicional{additionalMembers > 1 ? 'es' : ''} (${additionalMembers * perMemberPrice}/mes) = <strong>${computedTotal}/mes</strong>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            {isActive && (
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={handleManageSubscription}
+                  className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                >
+                  Gestionar suscripción <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ────── Referral Code ────── */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Gift className="w-5 h-5 text-indigo-500" />
+            <p className="text-sm font-medium text-neutral-700">
+              ¿Tienes un código de referido?
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              placeholder="Código de referido"
+              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+            />
+            <button
+              onClick={handleApplyReferral}
+              disabled={applyingReferral || !referralCode.trim()}
+              className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {applyingReferral ? <Loader className="w-4 h-4 animate-spin" /> : null}
+              Aplicar
+            </button>
+          </div>
+        </div>
+
+        {/* ────── Plan Selection ────── */}
+        {!isActive && (
+          <>
+            {/* Title */}
+            <div className="text-center space-y-2 pt-4">
+              <h2 className="text-2xl font-bold text-neutral-800">
+                Escoge el plan perfecto
+              </h2>
+              <p className="text-neutral-500 text-sm max-w-lg mx-auto">
+                Descubre el plan perfecto para el tamaño y necesidad de tu negocio, te ayudamos en el proceso.
+              </p>
+            </div>
+
+            {/* Billing cycle toggle */}
+            <div className="flex justify-center">
+              <div className="bg-slate-100 rounded-full p-1 flex">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingCycle === 'monthly'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-neutral-600 hover:text-neutral-800'
+                  }`}
+                >
+                  Mensual
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                    billingCycle === 'annual'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-neutral-600 hover:text-neutral-800'
+                  }`}
+                >
+                  Anual
+                  <span className="ml-1.5 text-xs opacity-80">-17%</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Plan Card */}
+            <div className="max-w-lg mx-auto">
+              <div className="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl p-[2px] shadow-xl shadow-indigo-200">
+                {/* Popular badge */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <div className="px-4 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full shadow-md">
+                    RECOMENDADO
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-[14px] p-8">
+                  {/* Plan header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <p className="text-xs font-medium text-indigo-500 uppercase tracking-wider">Plan Único</p>
+                      <h3 className="text-2xl font-bold text-neutral-800 mt-1">WITHMIA Pro</h3>
+                    </div>
+                    <div className="p-3 bg-indigo-100 rounded-xl">
+                      <Crown className="w-6 h-6 text-indigo-600" />
+                    </div>
+                  </div>
+
+                  {/* Pricing */}
+                  <div className="mb-6">
+                    <div className="flex items-end gap-1">
+                      <span className="text-4xl font-bold text-neutral-800">${basePrice}</span>
+                      <span className="text-lg text-neutral-500 mb-1">USD/{billingCycle === 'monthly' ? 'mes' : 'mes'}</span>
+                    </div>
+                    {billingCycle === 'annual' && (
+                      <p className="text-sm text-emerald-600 mt-1 font-medium">
+                        Ahorras ${(BASE_PRICE_MONTHLY - BASE_PRICE_ANNUAL) * 12} USD/año
+                      </p>
+                    )}
+                    <div className="mt-2 px-3 py-2 bg-indigo-50 rounded-lg">
+                      <p className="text-xs text-indigo-700">
+                        <Users className="w-3.5 h-3.5 inline mr-1" />
+                        +${perMemberPrice} USD/{billingCycle === 'monthly' ? 'mes' : 'mes'} por cada miembro adicional del equipo
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Team calc */}
+                  {teamCount > 1 && (
+                    <div className="mb-6 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <p className="text-xs text-slate-500 mb-1">Tu equipo actual ({teamCount} miembros)</p>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <span className="text-sm text-neutral-600">Base + {additionalMembers} extra</span>
+                        </div>
+                        <span className="text-xl font-bold text-neutral-800">${computedTotal}/mes</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Features */}
+                  <div className="space-y-3 mb-8">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Todo incluido</p>
+                    {PLAN_FEATURES.map((feature, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-indigo-600" />
+                        </div>
+                        <span className="text-sm text-neutral-700">{feature.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Subscribe button */}
+                  <button
+                    onClick={handleSubscribe}
+                    disabled={subscribing}
+                    className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {subscribing ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Suscribirse ahora
+                      </>
+                    )}
+                  </button>
+
+                  {/* Extra costs */}
+                  <div className="mt-4 text-center">
+                    <p className="text-xs text-neutral-400">
+                      USD ${basePrice}.00/{billingCycle === 'monthly' ? 'mes' : 'mes'} por el plan base
+                    </p>
+                    <p className="text-xs text-neutral-400">
+                      USD ${perMemberPrice}.00/{billingCycle === 'monthly' ? 'mes' : 'mes'} por miembro adicional
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ────── Active Subscription Management ────── */}
+        {isActive && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Current Plan Card */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <Crown className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h3 className="font-semibold text-neutral-800">Tu Plan</h3>
+              </div>
+
+              <div className="space-y-3">
+                {PLAN_FEATURES.slice(0, 5).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span className="text-sm text-neutral-600">{f.text}</span>
+                  </div>
+                ))}
+                <p className="text-xs text-indigo-500 font-medium pt-1">
+                  + {PLAN_FEATURES.length - 5} beneficios más incluidos
+                </p>
+              </div>
+            </div>
+
+            {/* Payment Method Card */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-slate-100 rounded-lg">
+                  <CreditCard className="w-5 h-5 text-slate-600" />
+                </div>
+                <h3 className="font-semibold text-neutral-800">Método de Pago</h3>
+              </div>
+
+              {sub?.payment_info?.last_four ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                    <div className="w-10 h-7 bg-gradient-to-r from-indigo-500 to-purple-500 rounded flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-neutral-700">
+                        {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleManageSubscription}
+                    className="w-full py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-neutral-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    Cambiar método de pago
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-neutral-500 mb-3">
+                    No hay método de pago registrado
+                  </p>
+                  <button
+                    onClick={handleSubscribe}
+                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 mx-auto"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Agregar Método de Pago
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ────── Need Help ────── */}
+        <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-2xl border border-slate-200 p-6 text-center">
+          <p className="text-sm text-neutral-600">
+            ¿Tienes dudas sobre tu suscripción? Escríbenos a{' '}
+            <a href="mailto:soporte@withmia.com" className="text-indigo-600 font-medium hover:underline">
+              soporte@withmia.com
+            </a>
+          </p>
+        </div>
+
+      </div>
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+          <div className={`px-6 py-4 rounded-lg shadow-2xl backdrop-blur-md border flex items-center gap-3 ${
+            notification.type === 'success'
+              ? 'bg-green-50/95 border-green-200 text-green-800'
+              : 'bg-red-50/95 border-red-200 text-red-800'
+          }`}>
+            <p className="font-medium text-sm">{notification.message}</p>
+            <button onClick={() => setNotification(null)}>
+              <X className="w-4 h-4 opacity-60 hover:opacity-100" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

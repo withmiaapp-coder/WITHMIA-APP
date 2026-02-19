@@ -10,6 +10,7 @@ import Entrenamiento from '../components/dashboard/Entrenamiento';
 import AdminPanel from '../components/dashboard/AdminPanel';
 import SettingsPage from './settings/SettingsPage';
 import ProfilePage from './profile/ProfilePage';
+import SubscriptionPage from './subscription/SubscriptionPage';
 import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
@@ -63,7 +64,8 @@ import {
   Facebook,
   Settings,
   Package,
-  GraduationCap
+  GraduationCap,
+  CreditCard
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -145,9 +147,10 @@ interface UserMenuDropdownProps {
   onToggleCollapse: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToSettings?: () => void;
+  onNavigateToSubscription?: () => void;
 }
 
-function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToProfile, onNavigateToSettings }: UserMenuDropdownProps) {
+function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToProfile, onNavigateToSettings, onNavigateToSubscription }: UserMenuDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -235,6 +238,18 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       onClick: () => {
         if (onNavigateToSettings) {
           onNavigateToSettings();
+          setIsOpen(false);
+        }
+      },
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
+    },
+    {
+      icon: CreditCard,
+      label: 'Suscripción',
+      onClick: () => {
+        if (onNavigateToSubscription) {
+          onNavigateToSubscription();
           setIsOpen(false);
         }
       },
@@ -565,11 +580,17 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Si hay query param 'conversation', forzar a 'chats'
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== 'undefined') {
-      // Si hay query param conversation, ir directamente a chats
       const urlParams = new URLSearchParams(window.location.search);
+      // Si hay query param conversation, ir directamente a chats
       if (urlParams.get('conversation')) {
         localStorage.setItem('dashboardActiveSection', 'chats');
         return 'chats';
+      }
+      // Si hay query param section (e.g., from payment callback)
+      const sectionParam = urlParams.get('section');
+      if (sectionParam) {
+        localStorage.setItem('dashboardActiveSection', sectionParam);
+        return sectionParam;
       }
       return localStorage.getItem('dashboardActiveSection') || 'dashboard';
     }
@@ -1154,6 +1175,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               onToggleCollapse={() => setSidebarCollapsed(false)}
               onNavigateToProfile={() => handleNavigation('profile')}
               onNavigateToSettings={() => handleNavigation('settings')}
+              onNavigateToSubscription={() => handleNavigation('subscription')}
             />
           </div>
 
@@ -1326,6 +1348,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               <AdminPanel />
             ) : activeSection === 'profile' ? (
               <ProfilePage user={user} />
+            ) : activeSection === 'subscription' ? (
+              <SubscriptionPage />
             ) : (
               <div className="h-full overflow-y-auto">
                 {/* Dashboard Principal con Metricas Completas - FASE 3 */}
