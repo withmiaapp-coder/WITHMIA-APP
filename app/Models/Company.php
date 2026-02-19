@@ -122,6 +122,61 @@ class Company extends Model
         return $this->hasMany(TeamInvitation::class);
     }
 
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * Get the active subscription (active or trialing).
+     */
+    public function activeSubscription()
+    {
+        return $this->hasOne(Subscription::class)
+            ->where(function ($q) {
+                $q->where('status', 'active')
+                  ->orWhere(function ($q2) {
+                      $q2->where('status', 'trialing')
+                         ->where('trial_ends_at', '>', now());
+                  });
+            })
+            ->latest('created_at');
+    }
+
+    /**
+     * Get the current plan info for display.
+     */
+    public function getPlanInfoAttribute(): array
+    {
+        $sub = $this->activeSubscription;
+
+        if (!$sub) {
+            return [
+                'name' => 'Gratis',
+                'status' => 'free',
+                'badge_color' => 'gray',
+                'trial_days' => null,
+            ];
+        }
+
+        $isTrialing = $sub->isTrialing();
+
+        return [
+            'name' => $sub->plan_name ?? 'Pro',
+            'status' => $isTrialing ? 'trialing' : $sub->status,
+            'badge_color' => match ($sub->status) {
+                'active' => 'green',
+                'trialing' => 'amber',
+                'past_due' => 'red',
+                'cancelled' => 'gray',
+                default => 'gray',
+            },
+            'trial_days' => $isTrialing ? $sub->trialDaysRemaining() : null,
+            'billing_cycle' => $sub->billing_cycle,
+            'ends_at' => $sub->ends_at?->toISOString(),
+        ];
+    }
+
     // ==========================================
     // SCOPES
     // ==========================================

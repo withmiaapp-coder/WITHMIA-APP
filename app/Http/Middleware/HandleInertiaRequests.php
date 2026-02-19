@@ -47,9 +47,11 @@ class HandleInertiaRequests extends Middleware
 
         // Get company timezone — eager load company for serialization to frontend
         $companyTimezone = 'UTC';
+        $planInfo = ['name' => 'Gratis', 'status' => 'free', 'badge_color' => 'gray', 'trial_days' => null];
         if ($request->user()) {
-            $request->user()->load('company');
+            $request->user()->load('company.activeSubscription');
             $companyTimezone = $request->user()->company?->timezone ?? 'UTC';
+            $planInfo = $request->user()->company?->plan_info ?? $planInfo;
         }
 
         return [
@@ -61,6 +63,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'isSuperAdmin' => $request->user()?->isSuperAdmin() ?? false,
             'companyTimezone' => $companyTimezone,
+            'planInfo' => $planInfo,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

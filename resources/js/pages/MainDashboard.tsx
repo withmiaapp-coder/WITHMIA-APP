@@ -122,6 +122,15 @@ interface Stats {
   active_tools: number;
 }
 
+interface PlanInfo {
+  name: string;
+  status: string;
+  badge_color: string;
+  trial_days?: number | null;
+  billing_cycle?: string;
+  ends_at?: string | null;
+}
+
 interface Props {
   user: User;
   company?: Company;
@@ -132,6 +141,7 @@ interface Props {
   prefetchedTeams?: any[];
   prefetchedAgents?: any[];
   isSuperAdmin?: boolean;
+  planInfo?: PlanInfo;
 }
 
 // ====== COMPONENTE: MENo� DESPLEGABLE DE USUARIO ======
@@ -140,6 +150,9 @@ interface UserMenuDropdownProps {
     firstName: string;
     email: string;
     plan?: string;
+    planBadgeColor?: string;
+    planStatus?: string;
+    trialDays?: number | null;
     logo_url?: string;
     company?: string;
   };
@@ -439,8 +452,21 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                   {user.company}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-neutral-500 font-medium">
+                  <span className={`text-xs font-medium inline-flex items-center gap-1 ${
+                    user.planBadgeColor === 'green' ? 'text-emerald-600' :
+                    user.planBadgeColor === 'amber' ? 'text-amber-600' :
+                    user.planBadgeColor === 'red' ? 'text-red-500' :
+                    'text-neutral-500'
+                  }`}>
+                    {user.planBadgeColor === 'green' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                    )}
                     {user.plan || 'Gratis'}
+                    {user.planStatus === 'trialing' && user.trialDays != null && (
+                      <span className="text-[10px] text-amber-500 font-normal">
+                        ({user.trialDays}d)
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -516,7 +542,7 @@ function ClockDisplay({ firstName }: { firstName: string }) {
   );
 }
 
-export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents, isSuperAdmin }: Props) {
+export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents, isSuperAdmin, planInfo }: Props) {
   
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
@@ -1167,7 +1193,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               user={{
                 firstName: safeUser.firstName,
                 email: safeUser.email,
-                plan: 'Gratis',
+                plan: planInfo?.name || 'Gratis',
+                planBadgeColor: planInfo?.badge_color || 'gray',
+                planStatus: planInfo?.status || 'free',
+                trialDays: planInfo?.trial_days ?? null,
                 logo_url: onboardingData?.logo_url,
                 company: safeUser.company
               }}
