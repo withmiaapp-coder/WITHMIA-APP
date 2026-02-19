@@ -75,12 +75,6 @@
                 <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA" style="width:160px;height:160px;">
             </video>
             <div style="margin-top:1.2rem;font-size:1.3rem;font-weight:300;color:#1a1a1a;letter-spacing:0.5px;">WITH YOU, WITH<strong style="font-weight:600;">MIA</strong><sup style="font-size:0.6em;">®</sup></div>
-            <div style="margin-top:1.2rem;display:flex;gap:6px;">
-                <span style="width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.2);animation:sp 1.4s ease-in-out infinite;"></span>
-                <span style="width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.2);animation:sp 1.4s ease-in-out 0.2s infinite;"></span>
-                <span style="width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.2);animation:sp 1.4s ease-in-out 0.4s infinite;"></span>
-            </div>
-            <style>@keyframes sp{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}</style>
         </div>
         <script>
             // Remover splash cuando React monte el app
