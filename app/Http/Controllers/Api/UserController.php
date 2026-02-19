@@ -67,6 +67,7 @@ class UserController extends Controller
                 'role' => $user->role ?? 'admin',
                 'is_admin' => $user->isAdmin(),
                 'is_agent' => $user->isAgent(),
+                'is_super_admin' => $user->isSuperAdmin(),
                 'permissions' => $user->getPermissions(),
             ]);
         } catch (\Throwable $e) {

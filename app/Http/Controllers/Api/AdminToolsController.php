@@ -27,13 +27,7 @@ class AdminToolsController extends Controller
     {
         $this->middleware(function ($request, $next) {
             $user = $request->user();
-            if (!$user || $user->role !== 'admin') {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-            // Only super-admins can access admin tools
-            $superAdminEmails = config('app.super_admin_emails', []);
-            if (!empty($superAdminEmails) && !in_array($user->email, $superAdminEmails)) {
+            if (!$user || !$user->isSuperAdmin()) {
                 return response()->json(['error' => 'Super admin access required'], 403);
             }
 

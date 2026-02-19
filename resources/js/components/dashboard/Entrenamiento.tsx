@@ -92,6 +92,7 @@ export default function Entrenamiento({
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const nameJustChanged = useRef(false); // Prevenir que fetchOnboardingData sobrescriba un cambio de nombre reciente
   
   // Bot config state
   const [showBotConfig, setShowBotConfig] = useState(false);
@@ -199,7 +200,16 @@ export default function Entrenamiento({
       const response = await fetch("/api/onboarding-data");
       const data = await response.json();
       if (data.success && data.data) {
-        setOnboardingData(data.data);
+        if (nameJustChanged.current) {
+          // Si el nombre acaba de cambiar, preservarlo y mergear el resto
+          setOnboardingData((prev) => ({
+            ...data.data,
+            assistant_name: prev.assistant_name,
+          }));
+          nameJustChanged.current = false;
+        } else {
+          setOnboardingData(data.data);
+        }
       }
       setDataLoaded(true);
     } catch (error) {
@@ -352,12 +362,15 @@ export default function Entrenamiento({
         setShouldAutoScroll(true); // Scroll cuando llega respuesta
         setMessages((prev) => [...prev, assistantMessage]);
         
-        // 📍„ Si se cambió el nombre del asistente, actualizar el estado local
+        // 📍 Si se cambió el nombre del asistente, actualizar el estado local y re-fetch
         if (data.name_changed && data.new_name) {
+          nameJustChanged.current = true;
           setOnboardingData((prev) => ({
             ...prev,
             assistant_name: data.new_name,
           }));
+          // Re-fetch para asegurar que el panel derecho tenga los datos sincronizados
+          fetchOnboardingData();
         }
         
         // Mostrar indicador si se guardó en Qdrant

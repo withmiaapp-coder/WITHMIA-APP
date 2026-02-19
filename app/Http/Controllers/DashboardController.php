@@ -185,7 +185,8 @@ class DashboardController extends Controller
             'stats' => $stats,
             'chatwoot' => $chatwootStatus,
             'prefetchedTeams' => $prefetchedTeams,
-            'prefetchedAgents' => $prefetchedAgents
+            'prefetchedAgents' => $prefetchedAgents,
+            'isSuperAdmin' => $user->isSuperAdmin(),
         ]);
     }
 

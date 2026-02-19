@@ -23,16 +23,10 @@ class ChatwootEnterpriseController extends Controller
         $this->provisioningService = $provisioningService;
         $this->chatwootService = $chatwootService;
 
-        // Only admin users can access enterprise endpoints
+        // Only super-admin users can access enterprise endpoints
         $this->middleware(function ($request, $next) {
             $user = $request->user();
-            if ($user?->role !== 'admin') {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
-
-            // Super-admin required for enterprise operations
-            $superAdminEmails = config('app.super_admin_emails', []);
-            if (!empty($superAdminEmails) && !in_array($user->email, $superAdminEmails)) {
+            if (!$user || !$user->isSuperAdmin()) {
                 return response()->json(['error' => 'Super admin access required'], 403);
             }
 

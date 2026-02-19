@@ -8,6 +8,7 @@ import MetricsDashboard from '../components/MetricsDashboard';
 import Conocimientos from '../components/dashboard/Conocimientos';
 import Entrenamiento from '../components/dashboard/Entrenamiento';
 import AdminPanel from '../components/dashboard/AdminPanel';
+import GeneralSettings from './settings/general';
 import IntegrationSection from '../components/IntegrationSection';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
@@ -145,7 +146,7 @@ interface UserMenuDropdownProps {
   onNavigateToSettings?: () => void;
 }
 
-function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropdownProps) {
+function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToProfile, onNavigateToSettings }: UserMenuDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -223,15 +224,18 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse }: UserMenuDropd
     {
       icon: Coffee,
       label: 'Perfil',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      onClick: onNavigateToProfile || null,
+      className: onNavigateToProfile ? 'text-neutral-700 hover:bg-neutral-50' : 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
+      isDisabled: !onNavigateToProfile
     },
     {
       icon: Settings,
       label: 'Configuración',
       onClick: () => {
-        window.location.href = '/settings/general';
+        if (onNavigateToSettings) {
+          onNavigateToSettings();
+          setIsOpen(false);
+        }
       },
       className: 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
@@ -502,7 +506,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   const { subscribe, leave } = useReverb();
   
   // ====== PERMISOS DEL USUARIO ======
-  const { isAdmin, isAgent, hasPermission, loading: permissionsLoading } = usePermissions();
+  const { isAdmin, isAgent, isSuperAdmin: isSuperAdminFromPerms, hasPermission, loading: permissionsLoading } = usePermissions();
+  
+  // Super admin: puede venir de la prop Inertia O del hook de permisos
+  const isSuperAdminResolved = isSuperAdmin || isSuperAdminFromPerms || user?.role === 'superadmin';
   
   // ====== INBOX ID ======
   const inboxId = chatwoot?.inbox_id || user.chatwoot_inbox_id || null;
@@ -1014,21 +1021,19 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       permission: 'sidebar.products'
     },
     // Admin Panel - SOLO para super-admin (controlado desde el servidor)
-    ...(isSuperAdmin ? [{
+    ...(isSuperAdminResolved ? [{
       id: 'admin',
       label: 'Admin',
       icon: Shield,
       count: null,
       gradient: 'from-purple-600 to-indigo-600',
-      isExternal: true,
-      href: '/admin/dashboard',
       permission: 'superadmin'
     }] : [])
   ];
 
   // Filtrar items según permisos
   const sidebarItems = allSidebarItems.filter(item => 
-    item.permission === 'superadmin' ? !!isSuperAdmin : 
+    item.permission === 'superadmin' ? !!isSuperAdminResolved : 
     item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
   );
 
@@ -1072,7 +1077,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               {!sidebarCollapsed && (
                 <div className="flex-1">
                   <h1 className="font-bold text-neutral-800 tracking-tight leading-tight" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
-                  <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>{user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
+                  <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>{user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
                   <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
                 </div>
               )}
@@ -1236,11 +1241,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                     settings: company?.settings
                   }}
                   onboardingData={{
-                    company_name: user.company_name || '',
-                    company_description: user.company_description || '',
-                    has_website: user.has_website || false,
-                    website: user.website || '',
-                    client_type: (user.client_type as "interno" | "externo") || null
+                    company_name: onboardingData?.company_name || user.company_name || '',
+                    company_description: onboardingData?.company_description || user.company_description || '',
+                    has_website: onboardingData?.has_website || user.has_website || false,
+                    website: onboardingData?.website || user.website || '',
+                    client_type: (onboardingData?.client_type || user.client_type) as "interno" | "externo" | null,
+                    logo_url: onboardingData?.logo_url,
+                    assistant_name: onboardingData?.assistant_name || 'WITHMIA'
                   }}
                 />
               </div>
@@ -1311,6 +1318,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                     </div>
                   </div>
                 </div>
+              </div>
+            ) : activeSection === 'settings' ? (
+              <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+                <GeneralSettings />
               </div>
             ) : activeSection === 'admin' ? (
               <AdminPanel />

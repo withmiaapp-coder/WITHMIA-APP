@@ -32,8 +32,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
                 return false;
             }
 
-            $superAdminEmails = array_filter(explode(',', config('app.super_admin_emails', '')));
-            return !empty($superAdminEmails) && in_array($user->email, $superAdminEmails);
+            return $user->isSuperAdmin();
         });
     }
 }

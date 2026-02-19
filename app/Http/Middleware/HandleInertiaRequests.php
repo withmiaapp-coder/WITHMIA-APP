@@ -59,7 +59,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'isSuperAdmin' => $request->user() && in_array($request->user()->email, explode(',', config('app.super_admin_emails', ''))),
+            'isSuperAdmin' => $request->user()?->isSuperAdmin() ?? false,
             'companyTimezone' => $companyTimezone,
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),

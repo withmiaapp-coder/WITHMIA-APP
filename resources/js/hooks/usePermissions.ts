@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 export interface UserPermissions {
-  role: 'admin' | 'agent';
+  role: 'superadmin' | 'admin' | 'agent';
   is_admin: boolean;
   is_agent: boolean;
+  is_super_admin: boolean;
   permissions: Record<string, boolean>;
 }
 
@@ -13,6 +14,7 @@ const DEFAULT_PERMISSIONS: UserPermissions = {
   role: 'agent',
   is_admin: false,
   is_agent: true,
+  is_super_admin: false,
   permissions: {
     'dashboard.view': true,
     'chats.view_all': false,
@@ -67,6 +69,7 @@ export function usePermissions() {
           role: response.data.role || 'admin',
           is_admin: response.data.is_admin ?? true,
           is_agent: response.data.is_agent ?? false,
+          is_super_admin: response.data.is_super_admin ?? false,
           permissions: response.data.permissions || DEFAULT_PERMISSIONS.permissions,
         };
         
@@ -127,6 +130,7 @@ export function usePermissions() {
     error,
     isAdmin: permissions.is_admin,
     isAgent: permissions.is_agent,
+    isSuperAdmin: permissions.is_super_admin,
     role: permissions.role,
     hasPermission,
     hasPermissions,

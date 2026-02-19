@@ -28,7 +28,10 @@ trait HandlesOnboarding
             $existingCompany = Company::where('slug', $user->company_slug)->first();
             if ($existingCompany) {
                 Log::debug("Onboarding already completed for user {$user->id}, reusing company {$existingCompany->id}");
-                $user->update(['role' => 'admin']);
+                // Only promote to admin if not already superadmin
+                if ($user->role !== 'superadmin') {
+                    $user->update(['role' => 'admin']);
+                }
                 $dashboardUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
                 return [
                     'completed' => true,
@@ -60,7 +63,7 @@ trait HandlesOnboarding
             'company_slug' => $uniqueSlug,
             'onboarding_completed' => true,
             'onboarding_completed_at' => now(),
-            'role' => 'admin', // Company owner always gets admin role
+            'role' => $user->role === 'superadmin' ? 'superadmin' : 'admin', // Preserve superadmin, promote others to admin
         ]);
 
         $company = $this->getOrCreateCompany($user, $uniqueSlug);

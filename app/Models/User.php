@@ -13,6 +13,44 @@ class User extends Authenticatable
 
     // Permisos por defecto según rol
     const DEFAULT_PERMISSIONS = [
+        'superadmin' => [
+            // Vistas del sidebar — todas
+            'sidebar.dashboard' => true,
+            'sidebar.chats' => true,
+            'sidebar.teams' => true,
+            'sidebar.integrations' => true,
+            'sidebar.knowledge' => true,
+            'sidebar.training' => true,
+            'sidebar.calendar' => true,
+            'sidebar.products' => true,
+            'sidebar.admin' => true,
+            // Acciones en chats
+            'chats.view_all' => true,
+            'chats.view_assigned' => true,
+            'chats.respond' => true,
+            'chats.assign' => true,
+            'chats.transfer' => true,
+            // Equipos
+            'teams.manage' => true,
+            'teams.view' => true,
+            'teams.create' => true,
+            'teams.delete' => true,
+            // Configuración
+            'settings.view' => true,
+            'settings.edit' => true,
+            // Otras funciones
+            'training.manage' => true,
+            'integrations.manage' => true,
+            'reports.view' => true,
+            'members.invite' => true,
+            'members.manage' => true,
+            'members.delete' => true,
+            // Super admin exclusivo
+            'admin.panel' => true,
+            'admin.users' => true,
+            'admin.companies' => true,
+            'admin.tools' => true,
+        ],
         'admin' => [
             // Vistas del sidebar
             'sidebar.dashboard' => true,
@@ -141,11 +179,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si el usuario es admin
+     * Verificar si el usuario es super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'superadmin';
+    }
+
+    /**
+     * Verificar si el usuario es admin (superadmin también cuenta)
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'superadmin']);
     }
 
     /**

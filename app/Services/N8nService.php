@@ -494,6 +494,11 @@ class N8nService
                 $params = $node['parameters'] ?? [];
                 if (empty($params) || (is_array($params) && count($params) === 0)) {
                     $params = new \stdClass();
+                } else {
+                    // Fix: n8n requires "options": {} not "options": []
+                    if (is_array($params) && isset($params['options']) && is_array($params['options']) && empty($params['options'])) {
+                        $params['options'] = new \stdClass();
+                    }
                 }
 
                 $cleanNode = [
