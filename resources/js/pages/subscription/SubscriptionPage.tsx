@@ -335,7 +335,7 @@ export default function SubscriptionPage() {
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value)}
               placeholder="Código de referido"
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
             />
             <button
               onClick={handleApplyReferral}
@@ -537,7 +537,7 @@ export default function SubscriptionPage() {
                   </div>
                   <button
                     onClick={handleManageSubscription}
-                    className="w-full py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-neutral-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                   >
                     Cambiar método de pago
                     <ExternalLink className="w-3.5 h-3.5" />

@@ -239,7 +239,7 @@ function GeneralTab() {
             type="text"
             value={settings.company_name || ''}
             disabled
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed text-sm"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-700 cursor-not-allowed text-sm"
           />
           <p className="text-xs text-gray-400 mt-2">
             El nombre de la empresa se configura desde el asistente de entrenamiento
@@ -261,7 +261,7 @@ function GeneralTab() {
             <select
               value={settings.timezone}
               onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm text-gray-900"
+              className="w-full px-4 py-3 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm text-gray-900"
             >
               {TIMEZONES.map(tz => (
                 <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -299,7 +299,7 @@ function GeneralTab() {
           <select
             value="es"
             disabled
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed text-sm"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-700 cursor-not-allowed text-sm"
           >
             <option value="es">🇪🇸 Español</option>
           </select>
