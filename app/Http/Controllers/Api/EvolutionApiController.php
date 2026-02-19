@@ -19,6 +19,9 @@ use App\Events\MessageUpdated;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
 use App\Jobs\ForwardTextMessageToN8nJob;
+use App\Mail\WhatsAppStatusNotificationMail;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use App\Traits\ResolvesChatwootConfig;
 
 class EvolutionApiController extends Controller
@@ -1425,6 +1428,16 @@ class EvolutionApiController extends Controller
                         'inbox_id' => $inboxId
                     ]);
                 }
+                
+                // 📧 ENVIAR EMAIL AL ADMIN cuando cambia el estado de conexión
+                // Solo en transiciones significativas: conectado↔desconectado
+                $isSignificantChange = 
+                    (in_array($state, ['open', 'connected']) && !in_array($lastState, ['open', 'connected'])) ||
+                    ($state === 'close' && in_array($lastState, ['open', 'connected']));
+                
+                if ($isSignificantChange && $company) {
+                    $this->sendStatusEmailToAdmins($company, $instance, $state, $lastState, $data);
+                }
             } else {
                 Log::warning('⚠️ Instancia no encontrada en BD para connection update', [
                     'instance' => $instanceName
@@ -1434,6 +1447,66 @@ class EvolutionApiController extends Controller
             Log::error('Error broadcasting connection event', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
+            ]);
+        }
+    }
+
+    /**
+     * 📧 Enviar email de notificación de estado WhatsApp a admins de la empresa
+     * Rate-limited: máximo 1 email por instancia cada 30 minutos
+     */
+    private function sendStatusEmailToAdmins(Company $company, WhatsAppInstance $instance, string $state, ?string $lastState, array $data): void
+    {
+        try {
+            // Rate limit: máx 1 email por instancia cada 30 min
+            $emailKey = "whatsapp_email_{$instance->instance_name}";
+            if (Cache::has($emailKey)) {
+                Log::debug('⏭️ Email de estado WhatsApp rate-limited', [
+                    'instance' => $instance->instance_name,
+                ]);
+                return;
+            }
+            Cache::put($emailKey, true, 1800); // 30 minutos
+            
+            // Buscar admins de la empresa
+            $admins = User::where('company_slug', $company->slug)
+                ->whereIn('role', ['admin', 'superadmin', 'administrator'])
+                ->get();
+            
+            if ($admins->isEmpty()) {
+                Log::debug('📧 No hay admins para notificar', ['company' => $company->slug]);
+                return;
+            }
+            
+            $profileName = $data['profileInfo']['profileName'] ?? $data['profileName'] ?? null;
+            $phoneNumber = null;
+            if (isset($data['profileInfo']['owner'])) {
+                $phoneNumber = str_replace('@s.whatsapp.net', '', $data['profileInfo']['owner']);
+            }
+            
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->queue(
+                    new WhatsAppStatusNotificationMail(
+                        instanceName: $instance->instance_name,
+                        companyName: $company->name ?? $instance->instance_name,
+                        state: $state,
+                        previousState: $lastState,
+                        profileName: $profileName,
+                        phoneNumber: $phoneNumber,
+                    )
+                );
+            }
+            
+            Log::info('📧 Email de estado WhatsApp enviado a admins', [
+                'instance' => $instance->instance_name,
+                'state' => $state,
+                'admins_count' => $admins->count(),
+                'emails' => $admins->pluck('email')->toArray(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('⚠️ Error enviando email de estado WhatsApp', [
+                'error' => $e->getMessage(),
+                'instance' => $instance->instance_name,
             ]);
         }
     }
