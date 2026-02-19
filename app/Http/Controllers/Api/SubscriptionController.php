@@ -19,6 +19,9 @@ class SubscriptionController extends Controller
     private const PER_MEMBER_ANNUAL = 8;
     private const TRIAL_DAYS = 14;
 
+    // dLocal GO subscription checkout URL (pre-configured plan)
+    private const DLOCAL_CHECKOUT_URL = 'https://checkout.dlocalgo.com/validate/subscription/ZdwgZ40KegihK2EB3uJolVekTbWzi264';
+
     /**
      * GET /api/subscription
      * Return current subscription status & billing info
@@ -75,7 +78,7 @@ class SubscriptionController extends Controller
 
     /**
      * POST /api/subscription/checkout
-     * Create a dLocal GO checkout session and return the redirect URL
+     * Return the dLocal GO subscription checkout URL
      */
     public function checkout(Request $request)
     {
@@ -90,79 +93,10 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'No se encontró la empresa'], 404);
         }
 
-        $billingCycle = $request->billing_cycle;
-        $teamCount = $company->users()->count();
-        $additionalMembers = max(0, $teamCount - 1);
-
-        $basePrice = $billingCycle === 'annual' ? self::BASE_PRICE_ANNUAL : self::BASE_PRICE_MONTHLY;
-        $perMemberPrice = $billingCycle === 'annual' ? self::PER_MEMBER_ANNUAL : self::PER_MEMBER_MONTHLY;
-        $totalPrice = $basePrice + ($additionalMembers * $perMemberPrice);
-
-        // For annual billing, multiply by 12
-        $chargeAmount = $billingCycle === 'annual' ? $totalPrice * 12 : $totalPrice;
-
-        $apiKey = config('services.dlocal.api_key');
-        $secretKey = config('services.dlocal.secret_key');
-        $apiUrl = config('services.dlocal.api_url', 'https://api.dlocalgo.com');
-
-        if (!$apiKey || !$secretKey) {
-            Log::warning('dLocal GO keys not configured');
-            return response()->json([
-                'message' => 'El sistema de pagos no está configurado. Contacta a soporte@withmia.com',
-            ], 503);
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => "Bearer {$apiKey}:{$secretKey}",
-                'Content-Type' => 'application/json',
-            ])->post("{$apiUrl}/v1/payments", [
-                'amount' => $chargeAmount,
-                'currency' => 'USD',
-                'country' => 'CL',
-                'description' => "WITHMIA Pro - " . ($billingCycle === 'annual' ? 'Anual' : 'Mensual'),
-                'payer' => [
-                    'name' => $user->name,
-                    'email' => $user->email,
-                ],
-                'notification_url' => url('/api/webhooks/dlocal'),
-                'redirect_url' => url('/api/subscription/callback?company_id=' . $company->id . '&cycle=' . $billingCycle),
-                'metadata' => [
-                    'company_id' => $company->id,
-                    'user_id' => $user->id,
-                    'billing_cycle' => $billingCycle,
-                    'base_price' => $basePrice,
-                    'per_member_price' => $perMemberPrice,
-                    'team_count' => $teamCount,
-                ],
-            ]);
-
-            $data = $response->json();
-
-            if ($response->successful() && isset($data['redirect_url'])) {
-                return response()->json([
-                    'checkout_url' => $data['redirect_url'],
-                ]);
-            }
-
-            // If dLocal GO returns a checkout URL in a different field
-            if ($response->successful() && isset($data['checkout_url'])) {
-                return response()->json([
-                    'checkout_url' => $data['checkout_url'],
-                ]);
-            }
-
-            Log::error('dLocal GO checkout error', ['response' => $data]);
-            return response()->json([
-                'message' => 'No se pudo crear la sesión de pago. Intenta de nuevo.',
-            ], 500);
-
-        } catch (\Exception $e) {
-            Log::error('dLocal GO checkout exception', ['error' => $e->getMessage()]);
-            return response()->json([
-                'message' => 'Error al conectar con el sistema de pagos.',
-            ], 500);
-        }
+        // Return the pre-configured dLocal GO subscription checkout URL
+        return response()->json([
+            'checkout_url' => self::DLOCAL_CHECKOUT_URL,
+        ]);
     }
 
     /**
