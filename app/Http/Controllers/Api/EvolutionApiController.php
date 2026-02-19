@@ -18,6 +18,7 @@ use App\Events\NewMessageReceived;
 use App\Events\MessageUpdated;
 use App\Events\WhatsAppStatusChanged;
 use App\Helpers\SystemMessagePatterns;
+use App\Jobs\ForwardTextMessageToN8nJob;
 use App\Traits\ResolvesChatwootConfig;
 
 class EvolutionApiController extends Controller
@@ -807,17 +808,35 @@ class EvolutionApiController extends Controller
             return response()->json(['status' => 'ignored']);
         }
 
-        // 🔒 RATE LIMIT GLOBAL: Máximo 1 webhook por instancia cada 2 segundos
-        // Esto previene que el servidor se sature con webhooks repetidos
-        $rateLimitKey = "webhook_rate_{$instanceName}_{$event}";
-        if (Cache::has($rateLimitKey)) {
-            return response()->json(['status' => 'rate_limited']);
+        // 🔒 RATE LIMIT INTELIGENTE: Por mensaje ID para MESSAGES_UPSERT, por instancia para otros
+        // Esto evita descartar mensajes reales que llegan rápido (ej: respuestas automáticas)
+        if (in_array($event, ['messages.upsert', 'MESSAGES_UPSERT'])) {
+            // Para mensajes: dedup por message ID (no por tiempo)
+            $messageId = $data['key']['id'] ?? null;
+            if ($messageId) {
+                $msgDedupKey = "webhook_msg_{$instanceName}_{$messageId}";
+                if (Cache::has($msgDedupKey)) {
+                    Log::debug('⏭️ Webhook mensaje duplicado ignorado', [
+                        'instance' => $instanceName,
+                        'message_id' => $messageId,
+                    ]);
+                    return response()->json(['status' => 'dedup']);
+                }
+                Cache::put($msgDedupKey, true, 60); // 60s dedup por msg ID
+            }
+        } else {
+            // Para otros eventos (connection.update, etc): rate limit suave por instancia
+            $rateLimitKey = "webhook_rate_{$instanceName}_{$event}";
+            if (Cache::has($rateLimitKey)) {
+                return response()->json(['status' => 'rate_limited']);
+            }
+            Cache::put($rateLimitKey, true, 2);
         }
-        Cache::put($rateLimitKey, true, 2); // 2 segundos
 
         Log::debug('Evolution API Webhook received', [
             'event' => $event,
-            'instance' => $instanceName
+            'instance' => $instanceName,
+            'message_id' => $data['key']['id'] ?? null,
         ]);
 
         // REENVIO A N8N (usando red interna de Railway)
@@ -924,149 +943,36 @@ class EvolutionApiController extends Controller
                         ]);
                         // NO poner n8n_fwd_ key para que el job de Chatwoot pueda ejecutarse
                     } else {
-                    // Dedup: prevent double-forwarding (Evolution + Chatwoot both forward to n8n)
-                    // Normalize: strip WAID: prefix so both sides use the same key
-                    $normalizedMsgId = $whatsappMsgId ? str_replace('WAID:', '', $whatsappMsgId) : null;
-                    $dedupKey = "n8n_fwd_{$normalizedMsgId}";
-                    if ($normalizedMsgId && Cache::has($dedupKey)) {
-                        Log::debug('⏭️ n8n forward already sent (dedup)', ['msg_id' => $whatsappMsgId]);
-                    } else {
-                        if ($normalizedMsgId) {
-                            Cache::put($dedupKey, true, 120);
-                        }
-                        
-                        $company = Company::find($instance->company_id);
-                        $chatwootAccountId = $company->chatwoot_account_id ?? 1;
-                        $chatwootInboxId = $instance->chatwoot_inbox_id ?? ($company->chatwoot_inbox_id ?? null);
-                        $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
-                        // Use company api_key (user_access_token) for Chatwoot account API
-                        // Same fallback chain as N8nConfigController
-                        $chatwootToken = $company->chatwoot_api_key
-                            ?? ($company->settings['chatwoot_api_token'] ?? null)
-                            ?? config('chatwoot.api_key')
-                            ?? config('chatwoot.super_admin_token')
-                            ?? config('chatwoot.platform_token');
-                        
-                        Log::debug('🔑 Chatwoot lookup token', [
-                            'token_preview' => substr($chatwootToken ?? '', 0, 8) . '...',
-                            'account_id' => $chatwootAccountId,
-                            'inbox_id' => $chatwootInboxId,
-                        ]);
-                        
-                        // Wait for Chatwoot to process message from Evolution integration
-                        usleep(2500000); // 2.5 seconds
-                        
-                        // Look up conversation in Chatwoot by phone number
-                        $conversationData = null;
-                        $senderData = null;
-                        try {
-                            // Search contact by phone
-                            $searchResp = \Illuminate\Support\Facades\Http::withHeaders(['api_access_token' => $chatwootToken])
-                                ->timeout(8)
-                                ->get("{$chatwootUrl}/api/v1/accounts/{$chatwootAccountId}/contacts/search", ['q' => $cleanPhone]);
-                            
-                            if ($searchResp->successful()) {
-                                $contacts = $searchResp->json('payload', []);
-                                $contactId = null;
-                                foreach ($contacts as $contact) {
-                                    $cp = str_replace(['+', ' ', '-'], '', $contact['phone_number'] ?? '');
-                                    $sp = str_replace(['+', ' ', '-'], '', $cleanPhone);
-                                    if ($cp === $sp || str_ends_with($cp, $sp) || str_ends_with($sp, $cp)) {
-                                        $contactId = $contact['id'];
-                                        $senderData = $contact;
-                                        break;
-                                    }
-                                }
-                                
-                                if ($contactId) {
-                                    // Get conversations for this contact
-                                    $convResp = \Illuminate\Support\Facades\Http::withHeaders(['api_access_token' => $chatwootToken])
-                                        ->timeout(8)
-                                        ->get("{$chatwootUrl}/api/v1/accounts/{$chatwootAccountId}/contacts/{$contactId}/conversations");
-                                    
-                                    if ($convResp->successful()) {
-                                        $convs = $convResp->json('payload', []);
-                                        // Prefer open conversation in our inbox
-                                        $conversationData = collect($convs)
-                                            ->filter(fn($c) => ($c['inbox_id'] ?? null) == $chatwootInboxId && ($c['status'] ?? '') !== 'resolved')
-                                            ->sortByDesc('id')
-                                            ->first();
-                                        
-                                        if (!$conversationData) {
-                                            $conversationData = collect($convs)
-                                                ->filter(fn($c) => ($c['inbox_id'] ?? null) == $chatwootInboxId)
-                                                ->sortByDesc('id')
-                                                ->first();
-                                        }
-                                        if (!$conversationData) {
-                                            $conversationData = collect($convs)->sortByDesc('id')->first();
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (\Throwable $lookupErr) {
-                            Log::warning('⚠️ Chatwoot conversation lookup failed', ['error' => $lookupErr->getMessage()]);
-                        }
-                        
-                        $conversationId = $conversationData['id'] ?? null;
-                        
-                        // Build Chatwoot-compatible payload for n8n
-                        $n8nPayload = [
-                            'event' => 'message_created',
-                            'message_type' => 'incoming',
-                            'content' => $msgContent,
-                            'content_type' => 'text',
-                            'private' => false,
-                            'source_id' => $whatsappMsgId,
-                            'conversation' => $conversationData ?? [
-                                'id' => $conversationId,
-                                'inbox_id' => $chatwootInboxId,
-                                'account_id' => $chatwootAccountId,
-                                'status' => 'open',
-                            ],
-                            'inbox' => [
-                                'id' => $chatwootInboxId ?? 1,
-                                'name' => 'WhatsApp ' . $instanceName,
-                            ],
-                            'account' => ['id' => $chatwootAccountId],
-                            'sender' => $senderData ? [
-                                'id' => $senderData['id'] ?? null,
-                                'identifier' => $senderData['identifier'] ?? ($cleanPhone . '@s.whatsapp.net'),
-                                'name' => $senderData['name'] ?? ($data['pushName'] ?? $cleanPhone),
-                                'phone_number' => $senderData['phone_number'] ?? ('+' . ltrim($cleanPhone, '+')),
-                                'email' => $senderData['email'] ?? null,
-                            ] : [
-                                'identifier' => $cleanPhone . '@s.whatsapp.net',
-                                'name' => $data['pushName'] ?? $cleanPhone,
-                                'phone_number' => '+' . ltrim($cleanPhone, '+'),
-                            ],
-                        ];
-                        
-                        // Send directly to n8n (synchronous, no queue)
-                        $n8nUrl = rtrim(config('n8n.url', ''), '/') . '/webhook/' . $instanceName;
-                        
-                        Log::info('📨 Enviando mensaje directo a n8n', [
-                            'url' => $n8nUrl,
-                            'phone' => $cleanPhone,
-                            'conversation_id' => $conversationId,
-                            'content_preview' => substr($msgContent, 0, 50),
-                        ]);
-                        
-                        try {
-                            $n8nResponse = \Illuminate\Support\Facades\Http::timeout(15)->post($n8nUrl, $n8nPayload);
-                            
-                            Log::info('✅ n8n forward completado', [
-                                'status' => $n8nResponse->status(),
-                                'instance' => $instanceName,
-                                'conversation_id' => $conversationId,
-                            ]);
-                        } catch (\Throwable $n8nErr) {
-                            Log::error('❌ n8n forward falló', [
-                                'url' => $n8nUrl,
-                                'error' => $n8nErr->getMessage(),
-                            ]);
-                        }
-                    }
+                    // 🚀 ASYNC: Despachar job para buscar en Chatwoot y enviar a n8n
+                    // Ya no bloqueamos el webhook con usleep(2.5s) + HTTP calls síncronos
+                    $company = Company::find($instance->company_id);
+                    $chatwootAccountId = $company->chatwoot_account_id ?? 1;
+                    $chatwootInboxId = $instance->chatwoot_inbox_id ?? ($company->chatwoot_inbox_id ?? null);
+                    $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
+                    $chatwootToken = $company->chatwoot_api_key
+                        ?? ($company->settings['chatwoot_api_token'] ?? null)
+                        ?? config('chatwoot.api_key')
+                        ?? config('chatwoot.super_admin_token')
+                        ?? config('chatwoot.platform_token');
+                    
+                    Log::info('📨 Despachando ForwardTextMessageToN8nJob (async)', [
+                        'phone' => $cleanPhone,
+                        'instance' => $instanceName,
+                        'msg_id' => $whatsappMsgId,
+                        'content_preview' => substr($msgContent, 0, 50),
+                    ]);
+                    
+                    ForwardTextMessageToN8nJob::dispatch(
+                        $cleanPhone,
+                        $msgContent,
+                        $instanceName,
+                        $chatwootAccountId,
+                        $chatwootInboxId,
+                        $whatsappMsgId,
+                        $data['pushName'] ?? null,
+                        $chatwootToken,
+                        $chatwootUrl,
+                    );
                     } // cierre del else (solo texto se envía por Evolution)
                 }
             } else {
@@ -1459,6 +1365,12 @@ class EvolutionApiController extends Controller
             'data' => $data
         ]);
 
+        // 🔄 AUTO-RECONEXIÓN: Si la instancia se desconectó inesperadamente, intentar reconectar
+        // Esto maneja el caso donde el cliente desvincula desde su teléfono
+        if ($state === 'close' && $lastState === 'open') {
+            $this->attemptAutoReconnect($instanceName);
+        }
+
         try {
             // Obtener company_slug y account_id desde la instancia
             $instance = WhatsAppInstance::where('instance_name', $instanceName)
@@ -1522,6 +1434,91 @@ class EvolutionApiController extends Controller
             Log::error('Error broadcasting connection event', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
+            ]);
+        }
+    }
+
+    /**
+     * 🔄 Intentar reconexión automática cuando una instancia se desconecta
+     * 
+     * Si la desconexión fue por el cliente (desvinculó desde su teléfono),
+     * la reconexión fallará y se notificará al frontend.
+     * Si fue una caída temporal de la conexión, la reconexión restaurará el servicio.
+     * 
+     * Rate-limited: máximo 1 intento cada 5 minutos por instancia.
+     */
+    private function attemptAutoReconnect(string $instanceName): void
+    {
+        $reconnectKey = "auto_reconnect_{$instanceName}";
+        
+        // Rate limit: solo 1 intento cada 5 minutos
+        if (Cache::has($reconnectKey)) {
+            Log::debug('⏭️ Auto-reconexión ya intentada recientemente', [
+                'instance' => $instanceName,
+            ]);
+            return;
+        }
+        Cache::put($reconnectKey, true, 300); // 5 minutos
+        
+        Log::warning('🔄 Instancia desconectada - intentando reconexión automática', [
+            'instance' => $instanceName,
+        ]);
+        
+        try {
+            // Verificar si la instancia aún existe en Evolution API
+            $statusResult = $this->evolutionApi->getStatus($instanceName);
+            $currentState = $statusResult['data']['instance']['state'] 
+                ?? $statusResult['data']['state'] 
+                ?? $statusResult['state'] 
+                ?? 'close';
+            
+            if ($currentState === 'open' || $currentState === 'connected') {
+                Log::info('✅ Instancia ya reconectada', [
+                    'instance' => $instanceName,
+                    'state' => $currentState,
+                ]);
+                Cache::forget($reconnectKey);
+                return;
+            }
+            
+            // Intentar reconectar (obtener nuevo QR / restaurar sesión)
+            $connectResult = $this->evolutionApi->connect($instanceName);
+            
+            if ($connectResult['success'] ?? false) {
+                Log::info('✅ Reconexión automática exitosa', [
+                    'instance' => $instanceName,
+                    'has_qr' => isset($connectResult['qrcode']),
+                ]);
+                
+                // Si devolvió QR, significa que necesita re-escanear (desvinculación del teléfono)
+                if (isset($connectResult['qrcode'])) {
+                    Log::warning('📱 Reconexión requiere re-escanear QR (cliente desvinculó desde teléfono)', [
+                        'instance' => $instanceName,
+                    ]);
+                    
+                    // Notificar al frontend que necesita reconectar
+                    $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
+                    if ($instance) {
+                        $companySlug = $instance->company_slug ?? $instance->company_id;
+                        broadcast(new WhatsAppStatusChanged(
+                            $companySlug,
+                            $instanceName,
+                            'requires_action',
+                            $connectResult['qrcode'] ?? null,
+                            null
+                        ));
+                    }
+                }
+            } else {
+                Log::error('❌ Reconexión automática falló', [
+                    'instance' => $instanceName,
+                    'error' => $connectResult['error'] ?? 'Unknown',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('❌ Error en auto-reconexión', [
+                'instance' => $instanceName,
+                'error' => $e->getMessage(),
             ]);
         }
     }
