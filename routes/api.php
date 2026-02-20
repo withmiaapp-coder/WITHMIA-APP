@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\ChatwootWebhookController;
 use App\Http\Controllers\Api\WhatsAppInstanceController;
 use App\Http\Controllers\AttachmentProxyController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\CalendarController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -272,6 +273,35 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(
     Route::get('/company/settings', [CompanySettingsController::class, 'getSettings']);
     Route::put('/company/settings', [CompanySettingsController::class, 'updateSettings']);
 });
+
+// ============================================================================
+// 8b. CALENDAR / GOOGLE CALENDAR INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('calendar')->group(function () {
+    // OAuth flow
+    Route::get('/google/auth-url', [CalendarController::class, 'getAuthUrl']);
+    Route::post('/google/callback', [CalendarController::class, 'handleCallback']);
+    Route::post('/google/disconnect', [CalendarController::class, 'disconnect']);
+
+    // Integration status & settings
+    Route::get('/status', [CalendarController::class, 'status']);
+    Route::put('/settings', [CalendarController::class, 'updateSettings']);
+
+    // Calendar data
+    Route::get('/calendars', [CalendarController::class, 'listCalendars']);
+    Route::get('/events', [CalendarController::class, 'getEvents']);
+    Route::post('/events', [CalendarController::class, 'createEvent']);
+    Route::delete('/events/{eventId}', [CalendarController::class, 'deleteEvent']);
+});
+
+// Calendar Bot Access (para n8n workflows - auth via API key/webhook secret)
+Route::prefix('calendar/bot')->group(function () {
+    Route::get('/availability', [CalendarController::class, 'botGetAvailability']);
+    Route::post('/create-event', [CalendarController::class, 'botCreateEvent']);
+});
+
+// Google OAuth GET callback (sin auth - Google redirige directamente aquí)
+Route::get('/calendar/google/callback', [CalendarController::class, 'handleCallbackGet']);
 
 // ============================================================================
 // 9. EVOLUTION API (WhatsApp multi-tenant)

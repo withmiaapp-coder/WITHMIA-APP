@@ -40,6 +40,8 @@ return [
 
     "google" => [
         "client_id" => env("GOOGLE_CLIENT_ID"),
+        "client_secret" => env("GOOGLE_CLIENT_SECRET"),
+        "calendar_redirect_uri" => env("GOOGLE_CALENDAR_REDIRECT_URI"),
         "cse_api_key" => env("GOOGLE_CSE_API_KEY"),
         "cse_engine_id" => env("GOOGLE_CSE_ENGINE_ID"),
     ],
