@@ -110,33 +110,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [productIntegrations, setProductIntegrations] = useState<Record<string, any>>({});
   const [productIntegrationsLoading, setProductIntegrationsLoading] = useState(true);
 
-  // WooCommerce state
-  const [wooStoreUrl, setWooStoreUrl] = useState('');
-  const [wooConsumerKey, setWooConsumerKey] = useState('');
-  const [wooConsumerSecret, setWooConsumerSecret] = useState('');
-  const [wooConnecting, setWooConnecting] = useState(false);
-  const [wooError, setWooError] = useState('');
-
-  // Shopify state
-  const [shopifyStoreUrl, setShopifyStoreUrl] = useState('');
-  const [shopifyAccessToken, setShopifyAccessToken] = useState('');
-  const [shopifyConnecting, setShopifyConnecting] = useState(false);
-  const [shopifyError, setShopifyError] = useState('');
-
-  // MercadoLibre state
-  const [mlUserId, setMlUserId] = useState('');
-  const [mlAccessToken, setMlAccessToken] = useState('');
-  const [mlConnecting, setMlConnecting] = useState(false);
-  const [mlError, setMlError] = useState('');
-
-  // Custom API / MySQL state
-  const [customApiUrl, setCustomApiUrl] = useState('');
-  const [customApiKey, setCustomApiKey] = useState('');
-  const [customApiConnecting, setCustomApiConnecting] = useState(false);
-  const [customApiError, setCustomApiError] = useState('');
-
-  // Product sync state
+  // Unified product provider state: { [providerId]: { fields: {fieldKey: value}, connecting: bool, error: string } }
+  const [providerForms, setProviderForms] = useState<Record<string, { fields: Record<string, string>; connecting: boolean; error: string }>>({});
   const [syncingProductProvider, setSyncingProductProvider] = useState<string | null>(null);
+
+  const getProviderForm = (id: string) => providerForms[id] || { fields: {}, connecting: false, error: '' };
+  const setProviderField = (id: string, key: string, value: string) => setProviderForms(prev => ({ ...prev, [id]: { ...getProviderForm(id), ...prev[id], fields: { ...(prev[id]?.fields || {}), [key]: value } } }));
+  const setProviderConnecting = (id: string, v: boolean) => setProviderForms(prev => ({ ...prev, [id]: { ...(prev[id] || { fields: {}, connecting: false, error: '' }), connecting: v } }));
+  const setProviderError = (id: string, v: string) => setProviderForms(prev => ({ ...prev, [id]: { ...(prev[id] || { fields: {}, connecting: false, error: '' }), error: v } }));
+  const resetProviderFields = (id: string) => setProviderForms(prev => ({ ...prev, [id]: { fields: {}, connecting: false, error: '' } }));
 
   // API helper
   const gcalApiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -529,87 +511,29 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     } catch (err) { console.error('Error toggling product bot access:', err); }
   }, [gcalApiFetch, loadProductIntegrations]);
 
-  // WooCommerce connect
-  const connectWooCommerce = useCallback(async () => {
-    if (!wooStoreUrl || !wooConsumerKey || !wooConsumerSecret) {
-      setWooError('Completa todos los campos');
+  // Generic connect function for any product provider
+  const connectProvider = useCallback(async (providerId: string, credentialMap: Record<string, string>, requiredFields: string[]) => {
+    const form = getProviderForm(providerId);
+    const missing = requiredFields.filter(f => !form.fields[f]?.trim());
+    if (missing.length > 0) {
+      setProviderError(providerId, 'Completa todos los campos requeridos');
       return;
     }
-    setWooConnecting(true);
-    setWooError('');
+    setProviderConnecting(providerId, true);
+    setProviderError(providerId, '');
     try {
-      await connectProductProvider('woocommerce', {
-        store_url: wooStoreUrl,
-        consumer_key: wooConsumerKey,
-        consumer_secret: wooConsumerSecret,
-      });
-      setWooStoreUrl('');
-      setWooConsumerKey('');
-      setWooConsumerSecret('');
+      const creds: Record<string, string> = {};
+      for (const [apiKey, formKey] of Object.entries(credentialMap)) {
+        creds[apiKey] = form.fields[formKey] || '';
+      }
+      await connectProductProvider(providerId, creds);
+      resetProviderFields(providerId);
     } catch (err: any) {
-      setWooError('No se pudo conectar. Verifica tus credenciales y URL.');
-    } finally { setWooConnecting(false); }
-  }, [wooStoreUrl, wooConsumerKey, wooConsumerSecret, connectProductProvider]);
-
-  // Shopify connect
-  const connectShopify = useCallback(async () => {
-    if (!shopifyStoreUrl || !shopifyAccessToken) {
-      setShopifyError('Completa todos los campos');
-      return;
+      setProviderError(providerId, 'No se pudo conectar. Verifica tus credenciales.');
+    } finally {
+      setProviderConnecting(providerId, false);
     }
-    setShopifyConnecting(true);
-    setShopifyError('');
-    try {
-      await connectProductProvider('shopify', {
-        store_url: shopifyStoreUrl,
-        access_token: shopifyAccessToken,
-      });
-      setShopifyStoreUrl('');
-      setShopifyAccessToken('');
-    } catch (err: any) {
-      setShopifyError('No se pudo conectar. Verifica tu Store URL y Access Token.');
-    } finally { setShopifyConnecting(false); }
-  }, [shopifyStoreUrl, shopifyAccessToken, connectProductProvider]);
-
-  // MercadoLibre connect
-  const connectMercadoLibre = useCallback(async () => {
-    if (!mlUserId || !mlAccessToken) {
-      setMlError('Completa todos los campos');
-      return;
-    }
-    setMlConnecting(true);
-    setMlError('');
-    try {
-      await connectProductProvider('mercadolibre', {
-        user_id: mlUserId,
-        access_token: mlAccessToken,
-      });
-      setMlUserId('');
-      setMlAccessToken('');
-    } catch (err: any) {
-      setMlError('No se pudo conectar. Verifica tu User ID y Access Token.');
-    } finally { setMlConnecting(false); }
-  }, [mlUserId, mlAccessToken, connectProductProvider]);
-
-  // Custom API / MySQL connect
-  const connectCustomApi = useCallback(async () => {
-    if (!customApiUrl) {
-      setCustomApiError('Ingresa la URL del endpoint');
-      return;
-    }
-    setCustomApiConnecting(true);
-    setCustomApiError('');
-    try {
-      await connectProductProvider('custom_api', {
-        api_url: customApiUrl,
-        api_key: customApiKey,
-      });
-      setCustomApiUrl('');
-      setCustomApiKey('');
-    } catch (err: any) {
-      setCustomApiError('No se pudo conectar. Verifica la URL del endpoint.');
-    } finally { setCustomApiConnecting(false); }
-  }, [customApiUrl, customApiKey, connectProductProvider]);
+  }, [connectProductProvider]);
 
   useEffect(() => {
     loadGcalStatus();
@@ -1564,406 +1488,194 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               )}
             </div>
 
-{/* ==================== WOOCOMMERCE ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
-              expandedTool === 'woocommerce' ? 'border-purple-300 shadow-lg ring-1 ring-purple-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
-              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'woocommerce' ? null : 'woocommerce')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #96588A, #96588ADD)' }}>
-                    <ShoppingCart className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-800">WooCommerce</h3>
-                    <p className="text-sm text-neutral-500">{productIntegrations.woocommerce?.connected ? `${productIntegrations.woocommerce.products_count || 0} productos sincronizados` : 'Conecta tu tienda WooCommerce'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : productIntegrations.woocommerce?.connected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
-                  )}
-                  {expandedTool === 'woocommerce' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
-                </div>
-              </div>
-              {expandedTool === 'woocommerce' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
-                  {productIntegrations.woocommerce?.connected ? (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">WooCommerce conectado</span></div>
-                          <div className="flex items-center gap-2">
-                            {productIntegrations.woocommerce.store_url && <span className="text-xs text-green-600">{productIntegrations.woocommerce.store_url}</span>}
-                            <span className="text-xs text-green-600 font-medium">{productIntegrations.woocommerce.products_count || 0} productos</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${productIntegrations.woocommerce?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
-                          <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{productIntegrations.woocommerce?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
-                          </div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" checked={productIntegrations.woocommerce?.bot_access_enabled || false} onChange={() => toggleProductBotAccess('woocommerce')} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <button onClick={() => syncProductProvider('woocommerce')} disabled={syncingProductProvider === 'woocommerce'}
-                          className="px-4 py-2 bg-white border border-slate-200 hover:border-purple-300 text-neutral-700 hover:text-purple-600 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
-                          <RefreshCw className={`w-4 h-4 ${syncingProductProvider === 'woocommerce' ? 'animate-spin' : ''}`} />
-                          {syncingProductProvider === 'woocommerce' ? 'Sincronizando...' : 'Sincronizar'}
-                        </button>
-                        <button onClick={() => disconnectProductProvider('woocommerce')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 bg-purple-50 rounded-lg flex-shrink-0">
-                            <ShoppingCart className="w-8 h-8 text-purple-600" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu WooCommerce</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu catálogo de productos de WooCommerce para que WITHMIA los conozca.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sincronización automática de productos</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Precios, stock y categorías</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> WITHMIA recomienda productos por WhatsApp</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">URL de tu tienda</label>
-                          <input type="text" value={wooStoreUrl} onChange={(e) => setWooStoreUrl(e.target.value)} placeholder="https://mitienda.com"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Consumer Key</label>
-                          <input type="password" value={wooConsumerKey} onChange={(e) => setWooConsumerKey(e.target.value)} placeholder="ck_..."
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Consumer Secret</label>
-                          <input type="password" value={wooConsumerSecret} onChange={(e) => setWooConsumerSecret(e.target.value)} placeholder="cs_..."
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
-                        </div>
-                        <p className="text-xs text-neutral-400">Ve a WooCommerce → Ajustes → API → Claves para generar tus credenciales.</p>
-                        {wooError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {wooError}</p>}
-                        <button onClick={connectWooCommerce} disabled={wooConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-purple-300 text-neutral-700 hover:text-purple-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                          {wooConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar WooCommerce</>)}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+{/* ==================== PRODUCT PROVIDERS (unified) ==================== */}
+            {(() => {
+              const providers = [
+                {
+                  id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart,
+                  gradient: 'linear-gradient(135deg, #96588A, #96588ADD)', color: 'purple',
+                  subtitle: 'Conecta tu tienda WooCommerce',
+                  description: 'Sincroniza tu catálogo de productos de WooCommerce para que WITHMIA los conozca.',
+                  features: ['Sincronización automática de productos', 'Precios, stock y categorías', 'WITHMIA recomienda productos por WhatsApp'],
+                  fields: [
+                    { key: 'store_url', label: 'URL de tu tienda', placeholder: 'https://mitienda.com', type: 'text' },
+                    { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_...', type: 'password' },
+                    { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_...', type: 'password' },
+                  ],
+                  requiredFields: ['store_url', 'consumer_key', 'consumer_secret'],
+                  credentialMap: { store_url: 'store_url', consumer_key: 'consumer_key', consumer_secret: 'consumer_secret' },
+                  helpText: 'Ve a WooCommerce → Ajustes → API → Claves para generar tus credenciales.',
+                },
+                {
+                  id: 'shopify', name: 'Shopify', icon: ShoppingBag,
+                  gradient: 'linear-gradient(135deg, #96BF48, #96BF48DD)', color: 'green',
+                  subtitle: 'Sincroniza con tu tienda Shopify',
+                  description: 'Sincroniza tu catálogo de Shopify para que WITHMIA conozca tus productos.',
+                  features: ['Importar productos automáticamente', 'Variantes, precios y stock', 'WITHMIA recomienda productos por WhatsApp'],
+                  fields: [
+                    { key: 'store_url', label: 'Nombre de tu tienda', placeholder: 'mi-tienda (sin .myshopify.com)', type: 'text' },
+                    { key: 'access_token', label: 'Access Token', placeholder: 'shpat_...', type: 'password' },
+                  ],
+                  requiredFields: ['store_url', 'access_token'],
+                  credentialMap: { store_url: 'store_url', access_token: 'access_token' },
+                  helpText: 'Ve a Shopify Admin → Apps → Develop apps → Create an app → Admin API access token.',
+                },
+                {
+                  id: 'mercadolibre', name: 'MercadoLibre', icon: Store,
+                  gradient: 'linear-gradient(135deg, #FFE600, #FFE600DD)', color: 'yellow',
+                  subtitle: 'Conecta tu tienda MercadoLibre',
+                  description: 'Importa tus publicaciones de MercadoLibre para que WITHMIA las conozca.',
+                  features: ['Importar publicaciones activas', 'Precios y stock actualizados', 'WITHMIA recomienda productos por WhatsApp'],
+                  fields: [
+                    { key: 'user_id', label: 'User ID de MercadoLibre', placeholder: '123456789', type: 'text' },
+                    { key: 'access_token', label: 'Access Token', placeholder: 'APP_USR-...', type: 'password' },
+                  ],
+                  requiredFields: ['user_id', 'access_token'],
+                  credentialMap: { user_id: 'user_id', access_token: 'access_token' },
+                  helpText: 'Obtén tus credenciales en developers.mercadolibre.com → Mis aplicaciones.',
+                },
+                {
+                  id: 'custom_api', name: 'API Personalizada / MySQL', icon: Database,
+                  gradient: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)', color: 'cyan',
+                  subtitle: 'Base de datos propia o endpoint REST',
+                  description: 'Conecta tu MySQL via phpMyAdmin, cPanel u otro endpoint REST que devuelva tus productos en JSON.',
+                  features: ['Cualquier endpoint que devuelva JSON', 'Compatible con PHP + MySQL / phpMyAdmin', 'API Key opcional para autenticación'],
+                  fields: [
+                    { key: 'api_url', label: 'URL del endpoint JSON', placeholder: 'https://misite.com/api/products.php', type: 'text' },
+                    { key: 'api_key', label: 'API Key (opcional)', placeholder: 'Bearer token o API Key', type: 'password' },
+                  ],
+                  requiredFields: ['api_url'],
+                  credentialMap: { api_url: 'api_url', api_key: 'api_key' },
+                  helpText: 'El endpoint debe devolver un JSON con un array de productos.',
+                  extraNote: 'Campos soportados: name/nombre, price/precio, description/descripcion, stock/cantidad, category/categoria, image/images, sku, url.',
+                },
+              ];
 
-            {/* ==================== SHOPIFY ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
-              expandedTool === 'shopify' ? 'border-green-300 shadow-lg ring-1 ring-green-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
-              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'shopify' ? null : 'shopify')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #96BF48, #96BF48DD)' }}>
-                    <ShoppingBag className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-800">Shopify</h3>
-                    <p className="text-sm text-neutral-500">{productIntegrations.shopify?.connected ? `${productIntegrations.shopify.products_count || 0} productos sincronizados` : 'Sincroniza con tu tienda Shopify'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : productIntegrations.shopify?.connected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
-                  )}
-                  {expandedTool === 'shopify' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
-                </div>
-              </div>
-              {expandedTool === 'shopify' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
-                  {productIntegrations.shopify?.connected ? (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Shopify conectado</span></div>
-                          <span className="text-xs text-green-600 font-medium">{productIntegrations.shopify.products_count || 0} productos</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${productIntegrations.shopify?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
-                          <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{productIntegrations.shopify?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
-                          </div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" checked={productIntegrations.shopify?.bot_access_enabled || false} onChange={() => toggleProductBotAccess('shopify')} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <button onClick={() => syncProductProvider('shopify')} disabled={syncingProductProvider === 'shopify'}
-                          className="px-4 py-2 bg-white border border-slate-200 hover:border-green-300 text-neutral-700 hover:text-green-600 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
-                          <RefreshCw className={`w-4 h-4 ${syncingProductProvider === 'shopify' ? 'animate-spin' : ''}`} />
-                          {syncingProductProvider === 'shopify' ? 'Sincronizando...' : 'Sincronizar'}
-                        </button>
-                        <button onClick={() => disconnectProductProvider('shopify')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 bg-green-50 rounded-lg flex-shrink-0">
-                            <ShoppingBag className="w-8 h-8 text-green-600" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Shopify</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu catálogo de Shopify para que WITHMIA conozca tus productos.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Importar productos automáticamente</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Variantes, precios y stock</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> WITHMIA recomienda productos por WhatsApp</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre de tu tienda</label>
-                          <input type="text" value={shopifyStoreUrl} onChange={(e) => setShopifyStoreUrl(e.target.value)} placeholder="mi-tienda (sin .myshopify.com)"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Access Token</label>
-                          <input type="password" value={shopifyAccessToken} onChange={(e) => setShopifyAccessToken(e.target.value)} placeholder="shpat_..."
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                        </div>
-                        <p className="text-xs text-neutral-400">Ve a Shopify Admin → Apps → Develop apps → Create an app → Admin API access token.</p>
-                        {shopifyError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {shopifyError}</p>}
-                        <button onClick={connectShopify} disabled={shopifyConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-green-300 text-neutral-700 hover:text-green-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                          {shopifyConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Shopify</>)}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              return providers.map(prov => {
+                const integration = productIntegrations[prov.id];
+                const isConnected = integration?.connected;
+                const isExpanded = expandedTool === prov.id;
+                const form = getProviderForm(prov.id);
+                const ProvIcon = prov.icon;
+                const iconTextColor = prov.id === 'mercadolibre' ? 'text-neutral-800' : 'text-white';
 
-            {/* ==================== MERCADOLIBRE ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
-              expandedTool === 'mercadolibre' ? 'border-yellow-300 shadow-lg ring-1 ring-yellow-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
-              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'mercadolibre' ? null : 'mercadolibre')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #FFE600, #FFE600DD)' }}>
-                    <Store className="w-5 h-5 text-neutral-800" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-800">MercadoLibre</h3>
-                    <p className="text-sm text-neutral-500">{productIntegrations.mercadolibre?.connected ? `${productIntegrations.mercadolibre.products_count || 0} productos sincronizados` : 'Conecta tu tienda MercadoLibre'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : productIntegrations.mercadolibre?.connected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
-                  )}
-                  {expandedTool === 'mercadolibre' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
-                </div>
-              </div>
-              {expandedTool === 'mercadolibre' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
-                  {productIntegrations.mercadolibre?.connected ? (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">MercadoLibre conectado</span></div>
-                          <span className="text-xs text-green-600 font-medium">{productIntegrations.mercadolibre.products_count || 0} productos</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${productIntegrations.mercadolibre?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
-                          <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{productIntegrations.mercadolibre?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
-                          </div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" checked={productIntegrations.mercadolibre?.bot_access_enabled || false} onChange={() => toggleProductBotAccess('mercadolibre')} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <button onClick={() => syncProductProvider('mercadolibre')} disabled={syncingProductProvider === 'mercadolibre'}
-                          className="px-4 py-2 bg-white border border-slate-200 hover:border-yellow-300 text-neutral-700 hover:text-yellow-600 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
-                          <RefreshCw className={`w-4 h-4 ${syncingProductProvider === 'mercadolibre' ? 'animate-spin' : ''}`} />
-                          {syncingProductProvider === 'mercadolibre' ? 'Sincronizando...' : 'Sincronizar'}
-                        </button>
-                        <button onClick={() => disconnectProductProvider('mercadolibre')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 bg-yellow-50 rounded-lg flex-shrink-0">
-                            <Store className="w-8 h-8 text-yellow-600" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu MercadoLibre</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Importa tus publicaciones de MercadoLibre para que WITHMIA las conozca.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Importar publicaciones activas</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Precios y stock actualizados</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> WITHMIA recomienda productos por WhatsApp</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">User ID de MercadoLibre</label>
-                          <input type="text" value={mlUserId} onChange={(e) => setMlUserId(e.target.value)} placeholder="123456789"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                return (
+                  <div key={prov.id} className={`bg-white rounded-xl border transition-all duration-200 ${
+                    isExpanded ? `border-${prov.color}-300 shadow-lg ring-1 ring-${prov.color}-100` : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+                  }`}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(isExpanded ? null : prov.id)}>
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl shadow-md" style={{ background: prov.gradient }}>
+                          <ProvIcon className={`w-5 h-5 ${iconTextColor}`} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Access Token</label>
-                          <input type="password" value={mlAccessToken} onChange={(e) => setMlAccessToken(e.target.value)} placeholder="APP_USR-..."
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                          <h3 className="font-semibold text-neutral-800">{prov.name}</h3>
+                          <p className="text-sm text-neutral-500">{isConnected ? `${integration.products_count || 0} productos sincronizados` : prov.subtitle}</p>
                         </div>
-                        <p className="text-xs text-neutral-400">Obtén tus credenciales en developers.mercadolibre.com → Mis aplicaciones.</p>
-                        {mlError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {mlError}</p>}
-                        <button onClick={connectMercadoLibre} disabled={mlConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-yellow-300 text-neutral-700 hover:text-yellow-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                          {mlConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar MercadoLibre</>)}
-                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : isConnected ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />Conectado</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full" />Desconectado</span>
+                        )}
+                        {isExpanded ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
 
-            {/* ==================== API PERSONALIZADA / MySQL ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
-              expandedTool === 'custom_api' ? 'border-cyan-300 shadow-lg ring-1 ring-cyan-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
-              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'custom_api' ? null : 'custom_api')}>
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)' }}>
-                    <Database className="w-5 h-5 text-white" />
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                        {isConnected ? (
+                          <div className="space-y-4">
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">{prov.name} conectado</span></div>
+                                <div className="flex items-center gap-2">
+                                  {integration.store_url && <span className="text-xs text-green-600">{integration.store_url}</span>}
+                                  <span className="text-xs text-green-600 font-medium">{integration.products_count || 0} productos</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-center gap-3">
+                                <Bot className={`w-5 h-5 ${integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                                <div>
+                                  <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                                  <p className="text-sm text-neutral-500">{integration?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
+                                </div>
+                              </div>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked={integration?.bot_access_enabled || false} onChange={() => toggleProductBotAccess(prov.id)} className="sr-only peer" />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600" />
+                              </label>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <button onClick={() => syncProductProvider(prov.id)} disabled={syncingProductProvider === prov.id}
+                                className="px-4 py-2 bg-white border border-slate-200 hover:border-slate-400 text-neutral-700 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
+                                <RefreshCw className={`w-4 h-4 ${syncingProductProvider === prov.id ? 'animate-spin' : ''}`} />
+                                {syncingProductProvider === prov.id ? 'Sincronizando...' : 'Sincronizar'}
+                              </button>
+                              <button onClick={() => disconnectProductProvider(prov.id)} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-start gap-4">
+                                <div className="p-2 bg-slate-50 rounded-lg flex-shrink-0">
+                                  <ProvIcon className="w-8 h-8 text-neutral-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-neutral-800 mb-1">Conecta tu {prov.name}</h4>
+                                  <p className="text-sm text-neutral-500 mb-3">{prov.description}</p>
+                                  <ul className="text-xs text-neutral-500 space-y-1">
+                                    {prov.features.map((f, i) => (
+                                      <li key={i} className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> {f}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              {prov.fields.map(field => (
+                                <div key={field.key}>
+                                  <label className="block text-sm font-medium text-neutral-700 mb-1">{field.label}</label>
+                                  <input
+                                    type={field.type}
+                                    value={form.fields[field.key] || ''}
+                                    onChange={e => setProviderField(prov.id, field.key, e.target.value)}
+                                    placeholder={field.placeholder}
+                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                </div>
+                              ))}
+                              <p className="text-xs text-neutral-400">{prov.helpText}</p>
+                              {prov.extraNote && (
+                                <div className="p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg">
+                                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                                    <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5" />{prov.extraNote}
+                                  </p>
+                                </div>
+                              )}
+                              {form.error && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {form.error}</p>}
+                              <button
+                                onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
+                                disabled={form.connecting}
+                                className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-300 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                {form.connecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar {prov.name}</>)}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-800">API Personalizada / MySQL</h3>
-                    <p className="text-sm text-neutral-500">{productIntegrations.custom_api?.connected ? `${productIntegrations.custom_api.products_count || 0} productos sincronizados` : 'Base de datos propia o endpoint REST'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : productIntegrations.custom_api?.connected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
-                  )}
-                  {expandedTool === 'custom_api' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
-                </div>
-              </div>
-              {expandedTool === 'custom_api' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
-                  {productIntegrations.custom_api?.connected ? (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">API conectada</span></div>
-                          <div className="flex items-center gap-2">
-                            {productIntegrations.custom_api.store_url && <span className="text-xs text-green-600">{productIntegrations.custom_api.store_url}</span>}
-                            <span className="text-xs text-green-600 font-medium">{productIntegrations.custom_api.products_count || 0} productos</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${productIntegrations.custom_api?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
-                          <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{productIntegrations.custom_api?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
-                          </div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" checked={productIntegrations.custom_api?.bot_access_enabled || false} onChange={() => toggleProductBotAccess('custom_api')} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <button onClick={() => syncProductProvider('custom_api')} disabled={syncingProductProvider === 'custom_api'}
-                          className="px-4 py-2 bg-white border border-slate-200 hover:border-cyan-300 text-neutral-700 hover:text-cyan-600 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
-                          <RefreshCw className={`w-4 h-4 ${syncingProductProvider === 'custom_api' ? 'animate-spin' : ''}`} />
-                          {syncingProductProvider === 'custom_api' ? 'Sincronizando...' : 'Sincronizar'}
-                        </button>
-                        <button onClick={() => disconnectProductProvider('custom_api')} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-start gap-4">
-                          <div className="p-2 bg-cyan-50 rounded-lg flex-shrink-0">
-                            <Database className="w-8 h-8 text-cyan-600" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Base de Datos / API</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Conecta tu MySQL via phpMyAdmin, cPanel u otro endpoint REST que devuelva tus productos en JSON.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Cualquier endpoint que devuelva JSON</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Compatible con PHP + MySQL / phpMyAdmin</li>
-                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> API Key opcional para autenticación</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">URL del endpoint JSON</label>
-                          <input type="text" value={customApiUrl} onChange={(e) => setCustomApiUrl(e.target.value)} placeholder="https://misite.com/api/products.php"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" />
-                          <p className="text-xs text-neutral-400 mt-1">El endpoint debe devolver un JSON con un array de productos.</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Key (opcional)</label>
-                          <input type="password" value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)} placeholder="Bearer token o API Key"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent" />
-                        </div>
-                        <div className="p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg">
-                          <p className="text-[11px] text-amber-700 leading-relaxed">
-                            <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5" />
-                            Campos soportados: name/nombre, price/precio, description/descripcion, stock/cantidad, category/categoria, image/images, sku, url.
-                          </p>
-                        </div>
-                        {customApiError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {customApiError}</p>}
-                        <button onClick={connectCustomApi} disabled={customApiConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-cyan-300 text-neutral-700 hover:text-cyan-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
-                          {customApiConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar API</>)}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                );
+              });
+            })()}
 
           </div>
         </div>
