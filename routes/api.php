@@ -221,6 +221,9 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     // --- Dashboard stats ---
     Route::get('/dashboard-stats', [ChatwootController::class, 'getDashboardStats']);
 
+    // --- Daily inspirational quote (OpenAI powered) ---
+    Route::get('/daily-quote', \App\Http\Controllers\Api\DailyQuoteController::class);
+
     // --- Contactos ---
     Route::put('/contacts/{contactId}', [ChatwootController::class, 'updateContact']);
 

@@ -1,420 +1,134 @@
 /**
- * Daily Inspirational Quotes
- * Each quote is tied to a date via the person's birthday or a famous event.
- * Key: "MM-DD" → { quote, author, context }
+ * Daily Inspirational Quotes — Dynamic System
+ * 
+ * Fetches quotes from the backend API (OpenAI-powered).
+ * The API generates quotes about notable people born/died on today's date.
+ * Each API call returns a different person, so every page load is unique.
+ * 
+ * Uses sessionStorage to keep the same quote during a browser session,
+ * and refreshes on new sessions/tabs.
  */
 
-interface DailyQuote {
+export interface DailyQuote {
   quote: string;
   author: string;
-  context: string; // Why this person is on this date
+  context: string;
+  who?: string;
 }
 
-const quotes: Record<string, DailyQuote> = {
-  // ── ENERO ──
-  '01-01': { quote: 'El secreto de salir adelante es empezar.', author: 'Mark Twain', context: 'Año nuevo, inicio de nuevos caminos' },
-  '01-02': { quote: 'La ciencia es el alma de la prosperidad de las naciones.', author: 'Isaac Asimov', context: 'Nacido el 2 de enero de 1920' },
-  '01-03': { quote: 'La mente lo es todo. En lo que piensas, te conviertes.', author: 'Buda', context: 'Reflexión para iniciar el año' },
-  '01-04': { quote: 'La vida es lo que pasa mientras estás ocupado haciendo otros planes.', author: 'Louis Braille', context: 'Nacido el 4 de enero de 1809' },
-  '01-05': { quote: 'Sé el cambio que deseas ver en el mundo.', author: 'Umberto Eco', context: 'Nacido el 5 de enero de 1932' },
-  '01-06': { quote: 'La imaginación es el comienzo de la creación.', author: 'Juana de Arco', context: 'Nacida el 6 de enero de 1412' },
-  '01-07': { quote: 'La única manera de hacer un gran trabajo es amar lo que haces.', author: 'Nikola Tesla', context: 'Nacido el 7 de enero de 1943 (calendario gregoriano)' },
-  '01-08': { quote: 'La educación es el arma más poderosa para cambiar el mundo.', author: 'Stephen Hawking', context: 'Nacido el 8 de enero de 1942' },
-  '01-09': { quote: 'La libertad no es nada sin la igualdad.', author: 'Simone de Beauvoir', context: 'Nacida el 9 de enero de 1908' },
-  '01-10': { quote: 'Piensa diferente.', author: 'Rod Stewart', context: 'Reflexión del día' },
-  '01-11': { quote: 'El conocimiento habla, la sabiduría escucha.', author: 'William James', context: 'Nacido el 11 de enero de 1842' },
-  '01-12': { quote: 'No cuentes los días, haz que los días cuenten.', author: 'Jack London', context: 'Nacido el 12 de enero de 1876' },
-  '01-13': { quote: 'La perseverancia no es una carrera larga; son muchas carreras cortas una tras otra.', author: 'Walter Elliot', context: 'Reflexión del día' },
-  '01-14': { quote: 'El universo no solo es más extraño de lo que suponemos, es más extraño de lo que podemos suponer.', author: 'Albert Schweitzer', context: 'Nacido el 14 de enero de 1875' },
-  '01-15': { quote: 'Tengo un sueño.', author: 'Martin Luther King Jr.', context: 'Nacido el 15 de enero de 1929' },
-  '01-16': { quote: 'Si he visto más lejos es porque estoy parado sobre hombros de gigantes.', author: 'Dian Fossey', context: 'Nacida el 16 de enero de 1932' },
-  '01-17': { quote: 'No te preocupes por los fracasos, preocúpate por las oportunidades que pierdes al no intentar.', author: 'Benjamin Franklin', context: 'Nacido el 17 de enero de 1706' },
-  '01-18': { quote: 'Lo que sabemos es una gota, lo que ignoramos un océano.', author: 'Isaac Newton', context: 'Bautizado el 1 de enero de 1643' },
-  '01-19': { quote: 'Nunca dejes de ser curioso.', author: 'Edgar Allan Poe', context: 'Nacido el 19 de enero de 1809' },
-  '01-20': { quote: 'El futuro tiene muchos nombres. Para los débiles es inalcanzable. Para los temerosos, desconocido. Para los valientes es la oportunidad.', author: 'Victor Hugo', context: 'Reflexión del día' },
-  '01-21': { quote: 'La lógica te llevará de A a B. La imaginación te llevará a todas partes.', author: 'Thomas Jonathan "Stonewall" Jackson', context: 'Nacido el 21 de enero de 1824' },
-  '01-22': { quote: 'La verdadera sabiduría está en reconocer la propia ignorancia.', author: 'Francis Bacon', context: 'Nacido el 22 de enero de 1561' },
-  '01-23': { quote: 'La medida de la inteligencia es la capacidad de cambiar.', author: 'Stendhal', context: 'Nacido el 23 de enero de 1783' },
-  '01-24': { quote: 'No hay hechos, solo interpretaciones.', author: 'Friedrich Nietzsche', context: 'Reflexión del día' },
-  '01-25': { quote: 'El mundo solo avanza gracias a aquellos que se oponen a él.', author: 'Virginia Woolf', context: 'Nacida el 25 de enero de 1882' },
-  '01-26': { quote: 'Vivir es la cosa más rara del mundo. La mayoría de la gente simplemente existe.', author: 'Oscar Wilde', context: 'Reflexión del día' },
-  '01-27': { quote: 'En medio de la dificultad reside la oportunidad.', author: 'Wolfgang Amadeus Mozart', context: 'Nacido el 27 de enero de 1756' },
-  '01-28': { quote: 'El hombre que mueve montañas comienza cargando pequeñas piedras.', author: 'José Martí', context: 'Nacido el 28 de enero de 1853' },
-  '01-29': { quote: 'La mejor manera de predecir el futuro es inventarlo.', author: 'Anton Chéjov', context: 'Nacido el 29 de enero de 1860' },
-  '01-30': { quote: 'La no violencia es la mayor fuerza a disposición de la humanidad.', author: 'Mahatma Gandhi', context: 'Fallecido el 30 de enero de 1948' },
-  '01-31': { quote: 'Cada fracaso enseña al hombre algo que necesitaba aprender.', author: 'Franz Schubert', context: 'Nacido el 31 de enero de 1797' },
+const STORAGE_KEY = 'withmia_daily_quote';
+const STORAGE_DATE_KEY = 'withmia_daily_quote_date';
 
-  // ── FEBRERO ──
-  '02-01': { quote: 'La vida no se mide por las veces que respiras, sino por los momentos que te dejan sin aliento.', author: 'Langston Hughes', context: 'Nacido el 1 de febrero de 1901' },
-  '02-02': { quote: 'La creatividad es la inteligencia divirtiéndose.', author: 'Ayn Rand', context: 'Nacida el 2 de febrero de 1905' },
-  '02-03': { quote: 'Somos lo que hacemos repetidamente. La excelencia no es un acto, sino un hábito.', author: 'Aristóteles', context: 'Reflexión del día' },
-  '02-04': { quote: 'La pregunta no es quién me va a dejar, sino quién me va a detener.', author: 'Rosa Parks', context: 'Nacida el 4 de febrero de 1913' },
-  '02-05': { quote: 'El sentido común no es tan común.', author: 'Voltaire', context: 'Reflexión del día' },
-  '02-06': { quote: 'Sé tú mismo; todos los demás ya están cogidos.', author: 'Bob Marley', context: 'Nacido el 6 de febrero de 1945' },
-  '02-07': { quote: 'Nada en la vida es para ser temido, solo para ser comprendido.', author: 'Charles Dickens', context: 'Nacido el 7 de febrero de 1812' },
-  '02-08': { quote: 'La ciencia sin religión está coja, la religión sin ciencia está ciega.', author: 'Jules Verne', context: 'Nacido el 8 de febrero de 1828' },
-  '02-09': { quote: 'El hombre es la medida de todas las cosas.', author: 'Protágoras', context: 'Reflexión del día' },
-  '02-10': { quote: 'La única verdadera sabiduría es saber que no sabes nada.', author: 'Bertolt Brecht', context: 'Nacido el 10 de febrero de 1898' },
-  '02-11': { quote: 'Los grandes espíritus siempre han encontrado oposición violenta de las mentes mediocres.', author: 'Thomas Edison', context: 'Nacido el 11 de febrero de 1847' },
-  '02-12': { quote: 'Si pudiera decirlo con palabras, no habría razón para pintar.', author: 'Abraham Lincoln', context: 'Nacido el 12 de febrero de 1809' },
-  '02-13': { quote: 'El éxito es ir de fracaso en fracaso sin perder el entusiasmo.', author: 'Chuck Yeager', context: 'Nacido el 13 de febrero de 1923' },
-  '02-14': { quote: 'El amor no domina; cultiva.', author: 'Galileo Galilei', context: 'Nacido el 15 de febrero de 1564 — Día de San Valentín' },
-  '02-15': { quote: 'Y sin embargo, se mueve.', author: 'Galileo Galilei', context: 'Nacido el 15 de febrero de 1564' },
-  '02-16': { quote: 'El que tiene imaginación sin instrucción tiene alas pero no tiene pies.', author: 'Giordano Bruno', context: 'Ejecutado el 17 de febrero de 1600' },
-  '02-17': { quote: 'La duda es uno de los nombres de la inteligencia.', author: 'Jorge Luis Borges', context: 'Reflexión del día' },
-  '02-18': { quote: 'El hombre es libre en el momento en que quiere serlo.', author: 'Alessandro Volta', context: 'Nacido el 18 de febrero de 1745' },
-  '02-19': { quote: 'La revolución no es una manzana que cae cuando está madura. Tienes que hacerla caer.', author: 'Nicolás Copérnico', context: 'Nacido el 19 de febrero de 1473' },
-  '02-20': { quote: 'La educación no es preparación para la vida; la educación es la vida misma.', author: 'John Dewey', context: 'Reflexión del día' },
-  '02-21': { quote: 'Nadie puede hacerte sentir inferior sin tu consentimiento.', author: 'Eleanor Roosevelt', context: 'Reflexión del día' },
-  '02-22': { quote: 'Pienso, luego existo.', author: 'Arthur Schopenhauer', context: 'Nacido el 22 de febrero de 1788' },
-  '02-23': { quote: 'La música es una revelación más alta que toda sabiduría y filosofía.', author: 'Georg Friedrich Händel', context: 'Nacido el 23 de febrero de 1685' },
-  '02-24': { quote: 'El destino no es cuestión de azar, sino de elección.', author: 'Steve Jobs', context: 'Nacido el 24 de febrero de 1955' },
-  '02-25': { quote: 'Cada artista fue primero un aficionado.', author: 'Pierre-Auguste Renoir', context: 'Nacido el 25 de febrero de 1841' },
-  '02-26': { quote: 'Solo hay dos fuerzas que unen a los hombres: el miedo y el interés.', author: 'Victor Hugo', context: 'Nacido el 26 de febrero de 1802' },
-  '02-27': { quote: 'La recompensa de una cosa bien hecha es haberla hecho.', author: 'Henry Wadsworth Longfellow', context: 'Nacido el 27 de febrero de 1807' },
-  '02-28': { quote: 'La ciencia es amor organizado.', author: 'Linus Pauling', context: 'Nacido el 28 de febrero de 1901' },
-  '02-29': { quote: 'El azar favorece a la mente preparada.', author: 'Gioacchino Rossini', context: 'Nacido el 29 de febrero de 1792' },
-
-  // ── MARZO ──
-  '03-01': { quote: 'El que no arriesga no gana.', author: 'Frédéric Chopin', context: 'Nacido el 1 de marzo de 1810' },
-  '03-02': { quote: 'La ignorancia es la noche de la mente, una noche sin luna ni estrellas.', author: 'Confucio', context: 'Reflexión del día' },
-  '03-03': { quote: 'La comunicación humana es la clave para el éxito personal y profesional.', author: 'Alexander Graham Bell', context: 'Nacido el 3 de marzo de 1847' },
-  '03-04': { quote: 'Donde hay una voluntad, hay un camino.', author: 'Antonio Vivaldi', context: 'Nacido el 4 de marzo de 1678' },
-  '03-05': { quote: 'Todo es posible si tienes suficiente valor.', author: 'Rosa Luxemburgo', context: 'Nacida el 5 de marzo de 1871' },
-  '03-06': { quote: 'La verdad se corrompe tanto con la mentira como con el silencio.', author: 'Miguel Ángel', context: 'Nacido el 6 de marzo de 1475' },
-  '03-07': { quote: 'El genio se hace con un 1% de talento y un 99% de trabajo.', author: 'Albert Einstein', context: 'Reflexión del día' },
-  '03-08': { quote: 'Nadie puede hacerte sentir inferior sin tu consentimiento.', author: 'Eleanor Roosevelt', context: 'Día Internacional de la Mujer' },
-  '03-09': { quote: 'El primer paso para lograr algo es creer que puedes hacerlo.', author: 'Yuri Gagarin', context: 'Nacido el 9 de marzo de 1934' },
-  '03-10': { quote: 'La ciencia moderna aún no ha producido un medicamento tranquilizador tan eficaz como unas pocas palabras bondadosas.', author: 'Sigmund Freud', context: 'Reflexión del día' },
-  '03-11': { quote: 'La vida es como montar en bicicleta. Para mantener el equilibrio hay que seguir pedaleando.', author: 'Douglas Adams', context: 'Nacido el 11 de marzo de 1952' },
-  '03-12': { quote: 'Hay una fuerza motriz más poderosa que el vapor, la electricidad y la energía atómica: la voluntad.', author: 'Albert Einstein', context: 'Reflexión del día' },
-  '03-13': { quote: 'No puedo enseñar nada a nadie; solo puedo hacerles pensar.', author: 'Sócrates', context: 'Reflexión del día' },
-  '03-14': { quote: 'La imaginación es más importante que el conocimiento.', author: 'Albert Einstein', context: 'Nacido el 14 de marzo de 1879' },
-  '03-15': { quote: 'Tu también, Bruto.', author: 'Julio César', context: 'Asesinado el 15 de marzo del 44 a.C.' },
-  '03-16': { quote: 'Si al principio no tienes éxito, inténtalo de nuevo.', author: 'Georg Ohm', context: 'Nacido el 16 de marzo de 1789' },
-  '03-17': { quote: 'El éxito no es definitivo, el fracaso no es fatal: lo que cuenta es el valor de continuar.', author: 'Winston Churchill', context: 'Reflexión del día' },
-  '03-18': { quote: 'El placer en el trabajo pone la perfección en la obra.', author: 'Rudolf Diesel', context: 'Nacido el 18 de marzo de 1858' },
-  '03-19': { quote: 'La ciencia es simplificar y esa simplificación es la verdadera ciencia.', author: 'Max Planck', context: 'Reflexión del día' },
-  '03-20': { quote: 'Veni, vidi, vici.', author: 'Julio César', context: 'Inicio de la primavera en el hemisferio norte' },
-  '03-21': { quote: 'La música expresa lo que no puede decirse y sobre lo cual es imposible permanecer en silencio.', author: 'Johann Sebastian Bach', context: 'Nacido el 21 de marzo de 1685' },
-  '03-22': { quote: 'Lo esencial es invisible a los ojos.', author: 'Antoine de Saint-Exupéry', context: 'Reflexión del día' },
-  '03-23': { quote: 'Solo sé que no sé nada.', author: 'Emmy Noether', context: 'Nacida el 23 de marzo de 1882' },
-  '03-24': { quote: 'Aquel que tiene un porqué para vivir puede soportar casi cualquier cómo.', author: 'William Morris', context: 'Nacido el 24 de marzo de 1834' },
-  '03-25': { quote: 'Dos caminos se bifurcaban en un bosque y yo tomé el menos transitado.', author: 'Béla Bartók', context: 'Nacido el 25 de marzo de 1881' },
-  '03-26': { quote: 'La comprensión humana no es de razón pura sino que recibe infusión de la voluntad y de los afectos.', author: 'Robert Frost', context: 'Nacido el 26 de marzo de 1874' },
-  '03-27': { quote: 'El arte de vivir es el más distinguido y más raro de todos los artes.', author: 'Ludwig Mies van der Rohe', context: 'Nacido el 27 de marzo de 1886' },
-  '03-28': { quote: 'El tiempo es lo más valioso que un hombre puede gastar.', author: 'Máximo Gorki', context: 'Nacido el 28 de marzo de 1868' },
-  '03-29': { quote: 'Conocerse a sí mismo es el comienzo de toda sabiduría.', author: 'Aristóteles', context: 'Reflexión del día' },
-  '03-30': { quote: 'La pintura es poesía que se ve en lugar de sentirse.', author: 'Vincent van Gogh', context: 'Nacido el 30 de marzo de 1853' },
-  '03-31': { quote: 'Donde la razón no alcanza, la imaginación vuela.', author: 'René Descartes', context: 'Nacido el 31 de marzo de 1596' },
-
-  // ── ABRIL ──
-  '04-01': { quote: 'La risa es el sol que ahuyenta el invierno del rostro humano.', author: 'Otto von Bismarck', context: 'Nacido el 1 de abril de 1815' },
-  '04-02': { quote: 'Cada niño es un artista. El problema es cómo seguir siendo artista una vez que creces.', author: 'Hans Christian Andersen', context: 'Nacido el 2 de abril de 1805' },
-  '04-03': { quote: 'Todo gran sueño comienza con un soñador.', author: 'Washington Irving', context: 'Nacido el 3 de abril de 1783' },
-  '04-04': { quote: 'La felicidad no es algo ya hecho. Proviene de tus propias acciones.', author: 'Maya Angelou', context: 'Nacida el 4 de abril de 1928' },
-  '04-05': { quote: 'Lo que no te mata te hace más fuerte.', author: 'Thomas Hobbes', context: 'Nacido el 5 de abril de 1588' },
-  '04-06': { quote: 'Explora, sueña, descubre.', author: 'Rafael', context: 'Nacido el 6 de abril de 1483' },
-  '04-07': { quote: 'La salud es la mayor riqueza.', author: 'OMS', context: 'Día Mundial de la Salud' },
-  '04-08': { quote: 'El genio es paciencia eterna.', author: 'Miguel Ángel', context: 'Reflexión del día' },
-  '04-09': { quote: 'La poesía es el eco de la melodía del universo en el corazón de los humanos.', author: 'Charles Baudelaire', context: 'Nacido el 9 de abril de 1821' },
-  '04-10': { quote: 'La verdad siempre prevalece.', author: 'Joseph Pulitzer', context: 'Nacido el 10 de abril de 1847' },
-  '04-11': { quote: 'No hay que ver para creer, hay que creer para ver.', author: 'James Parkinson', context: 'Nacido el 11 de abril de 1755' },
-  '04-12': { quote: 'Un pequeño paso para el hombre, un gran salto para la humanidad.', author: 'Yuri Gagarin', context: 'Primer vuelo espacial el 12 de abril de 1961' },
-  '04-13': { quote: 'El camino hacia el éxito y el camino hacia el fracaso son casi exactamente iguales.', author: 'Thomas Jefferson', context: 'Nacido el 13 de abril de 1743' },
-  '04-14': { quote: 'Solo aquellos que se arriesgan a ir demasiado lejos pueden descubrir hasta dónde se puede llegar.', author: 'Christian Huygens', context: 'Nacido el 14 de abril de 1629' },
-  '04-15': { quote: 'La única forma de tratar con un mundo sin libertad es volverse tan absolutamente libre que tu existencia misma sea un acto de rebelión.', author: 'Leonardo da Vinci', context: 'Nacido el 15 de abril de 1452' },
-  '04-16': { quote: 'El verdadero viaje de descubrimiento no consiste en buscar nuevos paisajes, sino en tener nuevos ojos.', author: 'Charles Chaplin', context: 'Nacido el 16 de abril de 1889' },
-  '04-17': { quote: 'La simplicidad es la sofisticación máxima.', author: 'Leonardo da Vinci', context: 'Reflexión del día' },
-  '04-18': { quote: 'Hay que ser duro sin perder jamás la ternura.', author: 'Albert Einstein', context: 'Fallecido el 18 de abril de 1955' },
-  '04-19': { quote: 'La libertad está en ser dueños de nuestra propia vida.', author: 'Charles Darwin', context: 'Fallecido el 19 de abril de 1882' },
-  '04-20': { quote: 'El progreso es imposible sin cambio, y aquellos que no pueden cambiar de opinión no pueden cambiar nada.', author: 'Joan Miró', context: 'Nacido el 20 de abril de 1893' },
-  '04-21': { quote: 'Ama y haz lo que quieras.', author: 'Charlotte Brontë', context: 'Nacida el 21 de abril de 1816' },
-  '04-22': { quote: 'La tierra no nos pertenece, la tomamos prestada de nuestros hijos.', author: 'Proverbio nativo americano', context: 'Día de la Tierra' },
-  '04-23': { quote: 'Ser o no ser, esa es la cuestión.', author: 'William Shakespeare', context: 'Nacido el 23 de abril de 1564' },
-  '04-24': { quote: 'El mundo es un libro y aquellos que no viajan solo leen una página.', author: 'San Agustín', context: 'Reflexión del día' },
-  '04-25': { quote: 'Cada momento es un nuevo comienzo.', author: 'Guglielmo Marconi', context: 'Nacido el 25 de abril de 1874' },
-  '04-26': { quote: 'La mejor venganza es un éxito masivo.', author: 'Ludwig Wittgenstein', context: 'Nacido el 26 de abril de 1889' },
-  '04-27': { quote: 'La libertad comienza donde termina la ignorancia.', author: 'Ulysses S. Grant', context: 'Nacido el 27 de abril de 1822' },
-  '04-28': { quote: 'La verdadera nobleza es ser superior a tu yo anterior.', author: 'Kurt Gödel', context: 'Nacido el 28 de abril de 1906' },
-  '04-29': { quote: 'No basta con adquirir sabiduría; es necesario usarla.', author: 'Henri Poincaré', context: 'Nacido el 29 de abril de 1854' },
-  '04-30': { quote: 'El conocimiento es poder.', author: 'Carl Friedrich Gauss', context: 'Nacido el 30 de abril de 1777' },
-
-  // ── MAYO ──
-  '05-01': { quote: 'El trabajo es el refugio de los que no tienen nada que hacer.', author: 'Día del Trabajador', context: 'Celebración mundial' },
-  '05-02': { quote: 'Solo se ve bien con el corazón. Lo esencial es invisible a los ojos.', author: 'Novalis', context: 'Nacido el 2 de mayo de 1772' },
-  '05-03': { quote: 'La verdad es hija del tiempo, no de la autoridad.', author: 'Niccolò Machiavelli', context: 'Nacido el 3 de mayo de 1469' },
-  '05-04': { quote: 'Que la fuerza te acompañe.', author: 'Audrey Hepburn', context: 'Nacida el 4 de mayo de 1929' },
-  '05-05': { quote: 'He aprendido que la gente olvidará lo que dijiste, lo que hiciste, pero nunca olvidará cómo los hiciste sentir.', author: 'Karl Marx', context: 'Nacido el 5 de mayo de 1818' },
-  '05-06': { quote: 'El que siente la alegría de vivir morirá sin quejarse.', author: 'Sigmund Freud', context: 'Nacido el 6 de mayo de 1856' },
-  '05-07': { quote: 'La música puede cambiar el mundo porque puede cambiar a las personas.', author: 'Pyotr Ilyich Tchaikovsky', context: 'Nacido el 7 de mayo de 1840' },
-  '05-08': { quote: 'Nunca es demasiado tarde para ser lo que podrías haber sido.', author: 'Harry Truman', context: 'Nacido el 8 de mayo de 1884' },
-  '05-09': { quote: 'La verdad no necesita defensa.', author: 'J.M. Barrie', context: 'Nacido el 9 de mayo de 1860' },
-  '05-10': { quote: 'El único deber que tenemos con la historia es reescribirla.', author: 'Oscar Wilde', context: 'Reflexión del día' },
-  '05-11': { quote: 'La creatividad requiere el coraje de dejar ir las certezas.', author: 'Salvador Dalí', context: 'Nacido el 11 de mayo de 1904' },
-  '05-12': { quote: 'Donde hay amor y cuidado, hay milagros.', author: 'Florence Nightingale', context: 'Nacida el 12 de mayo de 1820' },
-  '05-13': { quote: 'La risa es intemporal, la imaginación no tiene edad y los sueños son para siempre.', author: 'Stevie Wonder', context: 'Nacido el 13 de mayo de 1950' },
-  '05-14': { quote: 'Todo lo que puedas imaginar es real.', author: 'Pablo Picasso', context: 'Reflexión del día' },
-  '05-15': { quote: 'Lo que hoy es ciencia ficción, mañana será realidad.', author: 'Pierre Curie', context: 'Nacido el 15 de mayo de 1859' },
-  '05-16': { quote: 'En la naturaleza nada se crea, nada se destruye, todo se transforma.', author: 'Antoine Lavoisier', context: 'Reflexión del día' },
-  '05-17': { quote: 'La humanidad está unida no tanto por intereses comunes como por lágrimas compartidas.', author: 'Erik Satie', context: 'Nacido el 17 de mayo de 1866' },
-  '05-18': { quote: 'El poder de la imaginación nos hace infinitos.', author: 'Bertrand Russell', context: 'Nacido el 18 de mayo de 1872' },
-  '05-19': { quote: 'El éxito generalmente viene a quien está demasiado ocupado para buscarlo.', author: 'Malcolm X', context: 'Nacido el 19 de mayo de 1925' },
-  '05-20': { quote: 'Lo bello es siempre raro.', author: 'John Stuart Mill', context: 'Nacido el 20 de mayo de 1806' },
-  '05-21': { quote: 'La fuerza no proviene de la capacidad física. Proviene de una voluntad indomable.', author: 'Mahatma Gandhi', context: 'Reflexión del día' },
-  '05-22': { quote: 'La imaginación gobierna el mundo.', author: 'Arthur Conan Doyle', context: 'Nacido el 22 de mayo de 1859' },
-  '05-23': { quote: 'Una vida sin examen no merece la pena ser vivida.', author: 'Carolus Linnaeus', context: 'Nacido el 23 de mayo de 1707' },
-  '05-24': { quote: 'La curiosidad es una de las características más permanentes y seguras de un intelecto vigoroso.', author: 'Nicolaus Copernicus', context: 'Fallecido el 24 de mayo de 1543' },
-  '05-25': { quote: 'En las profundidades del invierno finalmente aprendí que dentro de mí yacía un verano invencible.', author: 'Ralph Waldo Emerson', context: 'Nacido el 25 de mayo de 1803' },
-  '05-26': { quote: 'La moral es la base de las cosas y la verdad es la sustancia de toda moral.', author: 'Mahatma Gandhi', context: 'Reflexión del día' },
-  '05-27': { quote: 'Si he hecho descubrimientos invaluables, ha sido más por tener paciencia que cualquier otro talento.', author: 'Rachel Carson', context: 'Nacida el 27 de mayo de 1907' },
-  '05-28': { quote: 'El mayor descubrimiento de mi generación es que un ser humano puede alterar su vida cambiando sus actitudes.', author: 'Ian Fleming', context: 'Nacido el 28 de mayo de 1908' },
-  '05-29': { quote: 'La constancia es complemento indispensable de todas las demás virtudes humanas.', author: 'John F. Kennedy', context: 'Nacido el 29 de mayo de 1917' },
-  '05-30': { quote: 'Pensar es fácil, actuar es difícil. Actuar como uno piensa es lo más difícil del mundo.', author: 'Voltaire', context: 'Fallecido el 30 de mayo de 1778' },
-  '05-31': { quote: 'No hay viento favorable para el que no sabe a dónde va.', author: 'Walt Whitman', context: 'Nacido el 31 de mayo de 1819' },
-
-  // ── JUNIO ──
-  '06-01': { quote: 'Los niños son el recurso más importante del mundo y la mejor esperanza para el futuro.', author: 'John F. Kennedy', context: 'Día Internacional de los Niños' },
-  '06-02': { quote: 'El arte es una mentira que nos hace ver la verdad.', author: 'Marqués de Sade', context: 'Nacido el 2 de junio de 1740' },
-  '06-03': { quote: 'El universo no tiene límites. Nosotros sí. La ciencia nos ayuda a superar algunos.', author: 'James Hutton', context: 'Nacido el 3 de junio de 1726' },
-  '06-04': { quote: 'Nunca dejes que los miedos se interpongan en tu camino.', author: 'Babe Ruth', context: 'Reflexión del día' },
-  '06-05': { quote: 'La naturaleza no hace nada en vano.', author: 'John Maynard Keynes', context: 'Nacido el 5 de junio de 1883' },
-  '06-06': { quote: 'Si quieres entender el universo, piensa en energía, frecuencia y vibración.', author: 'Aleksandr Pushkin', context: 'Nacido el 6 de junio de 1799' },
-  '06-07': { quote: 'La creatividad es contagiosa, pásala.', author: 'Alan Turing', context: 'Nacido el 7 de junio de 1912' },  // Fecha corregida a junio 23 en realidad, pero mantenemos
-  '06-08': { quote: 'Cuanto más estudio la naturaleza, más me maravillo de la obra del Creador.', author: 'Frank Lloyd Wright', context: 'Nacido el 8 de junio de 1867' },
-  '06-09': { quote: 'La naturaleza nos ha dado las semillas del conocimiento, no el conocimiento mismo.', author: 'Séneca', context: 'Reflexión del día' },
-  '06-10': { quote: 'La determinación es el motor del éxito.', author: 'Gustave Courbet', context: 'Nacido el 10 de junio de 1819' },
-  '06-11': { quote: 'El progreso humano no es automático ni inevitable.', author: 'Jacques Cousteau', context: 'Nacido el 11 de junio de 1910' },
-  '06-12': { quote: 'Un viaje de mil millas comienza con un solo paso.', author: 'Anne Frank', context: 'Nacida el 12 de junio de 1929' },
-  '06-13': { quote: 'Aquellos que no recuerdan el pasado están condenados a repetirlo.', author: 'James Clerk Maxwell', context: 'Nacido el 13 de junio de 1831' },
-  '06-14': { quote: 'Las revoluciones no se hacen con guantes de seda.', author: 'Ernesto Che Guevara', context: 'Nacido el 14 de junio de 1928' },
-  '06-15': { quote: 'Si he visto más lejos, es poniéndome sobre los hombros de gigantes.', author: 'Isaac Newton', context: 'Reflexión del día' },
-  '06-16': { quote: 'El genio es un uno por ciento de inspiración y un noventa y nueve por ciento de transpiración.', author: 'Thomas Edison', context: 'Reflexión del día' },
-  '06-17': { quote: 'Haz de tu vida un sueño, y de un sueño, una realidad.', author: 'M.C. Escher', context: 'Nacido el 17 de junio de 1898' },
-  '06-18': { quote: 'El todo es mayor que la suma de las partes.', author: 'Aristóteles', context: 'Reflexión del día' },
-  '06-19': { quote: 'Solo aquel que construye el futuro tiene derecho a juzgar el pasado.', author: 'Blaise Pascal', context: 'Nacido el 19 de junio de 1623' },
-  '06-20': { quote: 'La ciencia y el arte pertenecen al mundo entero.', author: 'Goethe', context: 'Reflexión del día' },
-  '06-21': { quote: 'El presente es lo único que no tiene fin.', author: 'Jean-Paul Sartre', context: 'Nacido el 21 de junio de 1905' },
-  '06-22': { quote: 'El descubrimiento consiste en ver lo que todo el mundo ha visto y pensar lo que nadie ha pensado.', author: 'Alan Turing', context: 'Nacido el 23 de junio de 1912' },
-  '06-23': { quote: 'Las máquinas pueden pensar.', author: 'Alan Turing', context: 'Nacido el 23 de junio de 1912' },
-  '06-24': { quote: 'Aquel que tiene coraje y fe nunca perecerá en la miseria.', author: 'Lionel Messi', context: 'Nacido el 24 de junio de 1987' },
-  '06-25': { quote: 'La arquitectura es música congelada.', author: 'Antoni Gaudí', context: 'Nacido el 25 de junio de 1852' },
-  '06-26': { quote: 'El secreto de la vida es la honestidad y el trato justo. Si puedes fingir eso, lo has logrado.', author: 'Pearl S. Buck', context: 'Nacida el 26 de junio de 1892' },
-  '06-27': { quote: 'El optimismo es la fe que conduce al logro.', author: 'Helen Keller', context: 'Nacida el 27 de junio de 1880' },
-  '06-28': { quote: 'La razón por la cual preocuparse es inútil es que no es la solución.', author: 'Jean-Jacques Rousseau', context: 'Nacido el 28 de junio de 1712' },
-  '06-29': { quote: 'La grandeza del hombre está en que es un puente y no un fin.', author: 'Antoine de Saint-Exupéry', context: 'Nacido el 29 de junio de 1900' },
-  '06-30': { quote: 'La paz no es ausencia de conflicto, es la capacidad de manejar el conflicto por medios pacíficos.', author: 'Ronald Reagan', context: 'Reflexión del día' },
-
-  // ── JULIO ──
-  '07-01': { quote: 'La creatividad requiere el coraje de dejar ir certezas.', author: 'Gottfried Leibniz', context: 'Nacido el 1 de julio de 1646' },
-  '07-02': { quote: 'Las metas no son necesariamente para alcanzarlas, sino para tener una dirección.', author: 'Hermann Hesse', context: 'Nacido el 2 de julio de 1877' },
-  '07-03': { quote: 'El verdadero descubrimiento no consiste en buscar nuevas tierras, sino en mirar con nuevos ojos.', author: 'Franz Kafka', context: 'Nacido el 3 de julio de 1883' },
-  '07-04': { quote: 'La libertad no es más que la oportunidad de mejorar.', author: 'Marie Curie', context: 'Nacida el 7 de noviembre — Día de la independencia' },
-  '07-05': { quote: 'Escoge un trabajo que ames y no tendrás que trabajar ni un día de tu vida.', author: 'Confucio', context: 'Reflexión del día' },
-  '07-06': { quote: 'Todo acto de creación es antes que nada un acto de destrucción.', author: 'Frida Kahlo', context: 'Nacida el 6 de julio de 1907' },
-  '07-07': { quote: 'La constancia es la virtud por la cual todas las demás dan su fruto.', author: 'Gustav Mahler', context: 'Nacido el 7 de julio de 1860' },
-  '07-08': { quote: 'No sueñes tu vida, vive tu sueño.', author: 'John D. Rockefeller', context: 'Nacido el 8 de julio de 1839' },
-  '07-09': { quote: 'La verdadera libertad es la capacidad de crear.', author: 'Nikola Tesla', context: 'Nacido el 10 de julio de 1856' },
-  '07-10': { quote: 'El presente es la eternidad.', author: 'Nikola Tesla', context: 'Nacido el 10 de julio de 1856' },
-  '07-11': { quote: 'El tiempo que se disfruta perdiéndose no está perdido.', author: 'John Quincy Adams', context: 'Nacido el 11 de julio de 1767' },
-  '07-12': { quote: 'La paciencia es amarga, pero su fruto es dulce.', author: 'Pablo Neruda', context: 'Nacido el 12 de julio de 1904' },
-  '07-13': { quote: 'Lo que no se define no se puede medir. Lo que no se mide, no se puede mejorar.', author: 'Lord Kelvin', context: 'Reflexión del día' },
-  '07-14': { quote: 'La libertad, la igualdad, la fraternidad.', author: 'La Revolución Francesa', context: 'Toma de la Bastilla, 14 de julio de 1789' },
-  '07-15': { quote: 'El arte de la vida es hacer de la vida un arte.', author: 'Rembrandt', context: 'Nacido el 15 de julio de 1606' },
-  '07-16': { quote: 'Si la oportunidad no llama, construye una puerta.', author: 'Roald Amundsen', context: 'Nacido el 16 de julio de 1872' },
-  '07-17': { quote: 'El hombre razonable se adapta al mundo; el irrazonable persiste en intentar adaptar el mundo a sí mismo.', author: 'Adam Smith', context: 'Reflexión del día' },
-  '07-18': { quote: 'La educación es el pasaporte hacia el futuro.', author: 'Nelson Mandela', context: 'Nacido el 18 de julio de 1918' },
-  '07-19': { quote: 'La historia enseña que la guerra comienza cuando los gobiernos creen que el precio de la agresión es barato.', author: 'Edgar Degas', context: 'Nacido el 19 de julio de 1834' },
-  '07-20': { quote: 'Es un pequeño paso para el hombre, pero un gran salto para la humanidad.', author: 'Neil Armstrong', context: 'Llegada a la Luna, 20 de julio de 1969' },
-  '07-21': { quote: 'El mayor peligro en tiempos de turbulencia no es la turbulencia; es actuar con la lógica de ayer.', author: 'Ernest Hemingway', context: 'Nacido el 21 de julio de 1899' },
-  '07-22': { quote: 'La duda es la madre de la invención.', author: 'Gregor Mendel', context: 'Nacido el 22 de julio de 1822' },
-  '07-23': { quote: 'La mente es como una paracaídas: solo funciona si se abre.', author: 'Albert Einstein', context: 'Reflexión del día' },
-  '07-24': { quote: 'La perseverancia todo lo alcanza.', author: 'Simón Bolívar', context: 'Nacido el 24 de julio de 1783' },
-  '07-25': { quote: 'La vida es una obra de teatro que no permite ensayos.', author: 'Charlie Chaplin', context: 'Reflexión del día' },
-  '07-26': { quote: 'El secreto de vivir bien es morir joven, pero lo más tarde posible.', author: 'Carl Jung', context: 'Nacido el 26 de julio de 1875' },
-  '07-27': { quote: 'Quien controla el pasado controla el futuro. Quien controla el presente controla el pasado.', author: 'Alexandre Dumas', context: 'Nacido el 27 de julio de 1824' },
-  '07-28': { quote: 'La mejor forma de aprender es enseñar.', author: 'Beatrix Potter', context: 'Nacida el 28 de julio de 1866' },
-  '07-29': { quote: 'La simplicidad es prerrequisito de la confiabilidad.', author: 'Alexis de Tocqueville', context: 'Nacido el 29 de julio de 1805' },
-  '07-30': { quote: 'Un hombre que se atreve a desperdiciar una hora de su tiempo no ha descubierto el valor de la vida.', author: 'Henry Ford', context: 'Nacido el 30 de julio de 1863' },
-  '07-31': { quote: 'El verdadero descubrimiento no consiste en hallar nuevos territorios, sino en verlos con nuevos ojos.', author: 'Milton Friedman', context: 'Nacido el 31 de julio de 1912' },
-
-  // ── AGOSTO ──
-  '08-01': { quote: 'Cada día trae nuevas opciones.', author: 'Herman Melville', context: 'Nacido el 1 de agosto de 1819' },
-  '08-02': { quote: 'Sé curioso, no prejuicioso.', author: 'Alexander Graham Bell', context: 'Fallecido el 2 de agosto de 1922' },
-  '08-03': { quote: 'La acción es la clave fundamental de todo éxito.', author: 'Pablo Picasso', context: 'Reflexión del día' },
-  '08-04': { quote: 'En la lucha entre el arroyo y la roca, siempre gana el arroyo, no por su fuerza sino por su perseverancia.', author: 'Barack Obama', context: 'Nacido el 4 de agosto de 1961' },
-  '08-05': { quote: 'La ciencia de hoy es la tecnología de mañana.', author: 'Neil Armstrong', context: 'Nacido el 5 de agosto de 1930' },
-  '08-06': { quote: 'La paz no puede mantenerse por la fuerza; solo puede lograrse por la comprensión.', author: 'Albert Einstein', context: 'Bomba de Hiroshima, 6 de agosto de 1945' },
-  '08-07': { quote: 'Todo lo que necesitamos es amor.', author: 'Mata Hari', context: 'Nacida el 7 de agosto de 1876' },
-  '08-08': { quote: 'El que pregunta es un tonto por cinco minutos. El que no pregunta es un tonto para siempre.', author: 'Proverbio chino', context: 'Reflexión del día' },
-  '08-09': { quote: 'La voluntad puede transformar todas las cosas.', author: 'Jean Piaget', context: 'Nacido el 9 de agosto de 1896' },
-  '08-10': { quote: 'Aquel que pierde dinero, pierde mucho. Aquel que pierde un amigo, pierde más. Aquel que pierde la fe, lo pierde todo.', author: 'Anónimo', context: 'Reflexión del día' },
-  '08-11': { quote: 'No hay secretos para el éxito. Es el resultado de la preparación, el trabajo duro y el aprender de los fracasos.', author: 'Enid Blyton', context: 'Nacida el 11 de agosto de 1897' },
-  '08-12': { quote: 'La creatividad es ver lo que otros ven y pensar lo que nadie ha pensado.', author: 'Erwin Schrödinger', context: 'Nacido el 12 de agosto de 1887' },
-  '08-13': { quote: 'El único lugar donde el éxito viene antes que el trabajo es en el diccionario.', author: 'Alfred Hitchcock', context: 'Nacido el 13 de agosto de 1899' },
-  '08-14': { quote: 'Si buscas resultados distintos, no hagas siempre lo mismo.', author: 'Albert Einstein', context: 'Reflexión del día' },
-  '08-15': { quote: 'No dejes que el miedo a golpear apague el brillo del bate.', author: 'Napoleón Bonaparte', context: 'Nacido el 15 de agosto de 1769' },
-  '08-16': { quote: 'Nada grande se ha logrado alguna vez sin entusiasmo.', author: 'Lawrence de Arabia', context: 'Nacido el 16 de agosto de 1888' },
-  '08-17': { quote: 'La única manera de tener un amigo es ser uno.', author: 'Mae West', context: 'Nacida el 17 de agosto de 1893' },
-  '08-18': { quote: 'Todo tiene belleza, pero no todos pueden verla.', author: 'Confucio', context: 'Reflexión del día' },
-  '08-19': { quote: 'Las cosas no cambian; nosotros cambiamos.', author: 'Coco Chanel', context: 'Nacida el 19 de agosto de 1883' },
-  '08-20': { quote: 'La naturaleza es un templo donde pilares vivientes dejan escapar a veces palabras confusas.', author: 'H.P. Lovecraft', context: 'Nacido el 20 de agosto de 1890' },
-  '08-21': { quote: 'El mundo pertenece a los audaces.', author: 'Count Basie', context: 'Nacido el 21 de agosto de 1904' },
-  '08-22': { quote: 'Aquellos que sueñan de día son conscientes de muchas cosas que escapan a los que sueñan solo de noche.', author: 'Claude Debussy', context: 'Nacido el 22 de agosto de 1862' },
-  '08-23': { quote: 'La simplicidad es la gloria de la expresión.', author: 'Walt Whitman', context: 'Reflexión del día' },
-  '08-24': { quote: 'Para mí, lo más importante es el movimiento. Un baile es un poema.', author: 'Jorge Luis Borges', context: 'Nacido el 24 de agosto de 1899' },
-  '08-25': { quote: 'El que busca un amigo sin defectos se queda solo.', author: 'Leonard Bernstein', context: 'Nacido el 25 de agosto de 1918' },
-  '08-26': { quote: 'Los limitados son los que no limitan su vida.', author: 'Antoine Lavoisier', context: 'Nacido el 26 de agosto de 1743' },
-  '08-27': { quote: 'La sabiduría comienza en la reflexión.', author: 'Georg Wilhelm Friedrich Hegel', context: 'Nacido el 27 de agosto de 1770' },
-  '08-28': { quote: 'Si no puedes volar entonces corre, si no puedes correr entonces camina.', author: 'Johann Wolfgang von Goethe', context: 'Nacido el 28 de agosto de 1749' },
-  '08-29': { quote: 'Un individuo que rompe una ley que la conciencia le dice que es injusta, está expresando la mayor reverencia por la ley.', author: 'John Locke', context: 'Nacido el 29 de agosto de 1632' },
-  '08-30': { quote: 'Lo que la mente del hombre puede concebir y creer, puede lograrlo.', author: 'Mary Shelley', context: 'Nacida el 30 de agosto de 1797' },
-  '08-31': { quote: 'El mayor bien que puedes hacer por otro no es mostrarle tus riquezas sino revelarle las suyas.', author: 'Maria Montessori', context: 'Nacida el 31 de agosto de 1870' },
-
-  // ── SEPTIEMBRE ──
-  '09-01': { quote: 'La vida se encoge o se expande en proporción al propio coraje.', author: 'Anaïs Nin', context: 'Reflexión del día' },
-  '09-02': { quote: 'El hombre es la única criatura que rehúsa ser lo que es.', author: 'Albert Camus', context: 'Reflexión del día' },
-  '09-03': { quote: 'La humanidad tiene la capacidad de crear un mundo de paz.', author: 'Mahatma Gandhi', context: 'Reflexión del día' },
-  '09-04': { quote: 'La medida del hombre es lo que hace con el poder.', author: 'Plutarco', context: 'Reflexión del día' },
-  '09-05': { quote: 'Estar preparado es importante, saber esperar lo es aún más, pero aprovechar el momento adecuado es la clave de la vida.', author: 'Arthur C. Koestler', context: 'Reflexión del día' },
-  '09-06': { quote: 'Solo podemos ver un poco del futuro, pero lo suficiente para darnos cuenta de que hay mucho que hacer.', author: 'John Dalton', context: 'Nacido el 6 de septiembre de 1766' },
-  '09-07': { quote: 'La ciencia es el gran antídoto contra el veneno del entusiasmo y la superstición.', author: 'Reina Isabel I', context: 'Nacida el 7 de septiembre de 1533' },
-  '09-08': { quote: 'Si yo pudiera explicar, no tendría que bailar.', author: 'Antonín Dvořák', context: 'Nacido el 8 de septiembre de 1841' },
-  '09-09': { quote: 'El secreto de la felicidad no es hacer siempre lo que se quiere, sino querer siempre lo que se hace.', author: 'León Tolstói', context: 'Nacido el 9 de septiembre de 1828' },
-  '09-10': { quote: 'La vida es 10% lo que me sucede y 90% cómo reacciono a ello.', author: 'Charles Swindoll', context: 'Reflexión del día' },
-  '09-11': { quote: 'De las cenizas nos levantamos más fuertes.', author: 'O. Henry', context: 'Nacido el 11 de septiembre de 1862' },
-  '09-12': { quote: 'No hay que apagar la luz del otro para que brille la nuestra.', author: 'Mahatma Gandhi', context: 'Reflexión del día' },
-  '09-13': { quote: 'La letra con sangre entra solo deja marcas, no conocimiento.', author: 'Roald Dahl', context: 'Nacido el 13 de septiembre de 1916' },
-  '09-14': { quote: 'El respeto es el aprecio de la alteridad del otro.', author: 'Alexander von Humboldt', context: 'Nacido el 14 de septiembre de 1769' },
-  '09-15': { quote: 'El éxito es más actitud que aptitud.', author: 'Agatha Christie', context: 'Nacida el 15 de septiembre de 1890' },
-  '09-16': { quote: 'Solo el desarrollo de la compasión y la comprensión puede traer la tranquilidad y la felicidad a la humanidad.', author: 'B.B. King', context: 'Nacido el 16 de septiembre de 1925' },
-  '09-17': { quote: 'Todo lo que un hombre puede imaginar, otros hombres pueden hacerlo realidad.', author: 'Constantino el Grande', context: 'Reflexión del día' },
-  '09-18': { quote: 'Ser honesto puede que no te dé muchos amigos, pero siempre te dará los correctos.', author: 'Samuel Johnson', context: 'Nacido el 18 de septiembre de 1709' },
-  '09-19': { quote: 'El camino más corto entre dos personas es una sonrisa.', author: 'Émile Zola', context: 'Reflexión del día' },
-  '09-20': { quote: 'Aprender sin pensar es inútil. Pensar sin aprender es peligroso.', author: 'Confucio', context: 'Reflexión del día' },
-  '09-21': { quote: 'La paz es el camino.', author: 'H.G. Wells', context: 'Nacido el 21 de septiembre de 1866 — Día de la Paz' },
-  '09-22': { quote: 'Dos cosas contribuyen a avanzar: ir más deprisa que los otros, o ir por el buen camino.', author: 'Michael Faraday', context: 'Nacido el 22 de septiembre de 1791' },
-  '09-23': { quote: 'La educación es lo que queda cuando se ha olvidado todo lo aprendido en la escuela.', author: 'Albert Einstein', context: 'Reflexión del día — Equinoccio de otoño' },
-  '09-24': { quote: 'La verdad es como un león; no necesitas defenderla. Déjala libre; ella se defenderá sola.', author: 'F. Scott Fitzgerald', context: 'Nacido el 24 de septiembre de 1896' },
-  '09-25': { quote: 'La ciencia es la poesía de la realidad.', author: 'Richard Dawkins', context: 'Reflexión del día' },
-  '09-26': { quote: 'Para mejorar es necesario cambiar; para ser perfecto es necesario cambiar frecuentemente.', author: 'T.S. Eliot', context: 'Nacido el 26 de septiembre de 1888' },
-  '09-27': { quote: 'Los que están locos por vivir, locos por hablar, locos por ser salvados, que desean todo al mismo tiempo.', author: 'Google', context: 'Fundado el 27 de septiembre de 1998' },
-  '09-28': { quote: 'La vida es breve, el arte largo, la experiencia fugaz, el juicio difícil.', author: 'Confucio', context: 'Nacido el 28 de septiembre de 551 a.C.' },
-  '09-29': { quote: 'El comportamiento es el espejo en el que cada uno muestra su imagen.', author: 'Enrico Fermi', context: 'Nacido el 29 de septiembre de 1901' },
-  '09-30': { quote: 'La mejor forma de servir a Dios es servir al hombre.', author: 'Truman Capote', context: 'Nacido el 30 de septiembre de 1924' },
-
-  // ── OCTUBRE ──
-  '10-01': { quote: 'La compasión y la tolerancia no son signo de debilidad, sino de fortaleza.', author: 'Mahatma Gandhi', context: 'Nacido el 2 de octubre de 1869' },
-  '10-02': { quote: 'Sé el cambio que deseas ver en el mundo.', author: 'Mahatma Gandhi', context: 'Nacido el 2 de octubre de 1869' },
-  '10-03': { quote: 'Nunca serás demasiado viejo para fijar otra meta o para soñar un nuevo sueño.', author: 'Gore Vidal', context: 'Nacido el 3 de octubre de 1925' },
-  '10-04': { quote: 'Busca dentro de ti mismo y encontrarás todo.', author: 'Buster Keaton', context: 'Nacido el 4 de octubre de 1895' },
-  '10-05': { quote: 'El objeto de una nueva idea no es ser correcta sino provocar.', author: 'Denis Diderot', context: 'Nacido el 5 de octubre de 1713' },
-  '10-06': { quote: 'Solo hay una cosa imposible: no intentarlo.', author: 'Le Corbusier', context: 'Nacido el 6 de octubre de 1887' },
-  '10-07': { quote: 'La suerte es lo que ocurre cuando la preparación se encuentra con la oportunidad.', author: 'Niels Bohr', context: 'Nacido el 7 de octubre de 1885' },
-  '10-08': { quote: 'Conócete a ti mismo y conocerás el universo y a los dioses.', author: 'Sócrates', context: 'Reflexión del día' },
-  '10-09': { quote: 'El modo de dar una vez en el clavo es dar cien veces en la herradura.', author: 'Camille Saint-Saëns', context: 'Nacido el 9 de octubre de 1835' },
-  '10-10': { quote: 'Lo importante no es lo que hacen de nosotros, sino lo que hacemos nosotros mismos de lo que hacen de nosotros.', author: 'Giuseppe Verdi', context: 'Nacido el 10 de octubre de 1813' },
-  '10-11': { quote: 'La historia del mundo es la historia de un hombre privilegiado.', author: 'Eleanor Roosevelt', context: 'Nacida el 11 de octubre de 1884' },
-  '10-12': { quote: 'El mundo se abre para quien sabe mirar.', author: 'Cristóbal Colón', context: 'Llegada a América, 12 de octubre de 1492' },
-  '10-13': { quote: 'Dale un pez a un hombre y comerá un día. Enséñale a pescar y comerá toda la vida.', author: 'Proverbio chino', context: 'Reflexión del día' },
-  '10-14': { quote: 'Todo poder es un fideicomiso: somos responsables de su ejercicio.', author: 'Dwight D. Eisenhower', context: 'Nacido el 14 de octubre de 1890' },
-  '10-15': { quote: 'No puedes esperar a que la tormenta pase. Debes aprender a bailar bajo la lluvia.', author: 'Friedrich Nietzsche', context: 'Nacido el 15 de octubre de 1844' },
-  '10-16': { quote: 'El que busca la verdad corre el riesgo de encontrarla.', author: 'Oscar Wilde', context: 'Nacido el 16 de octubre de 1854' },
-  '10-17': { quote: 'El hombre sabio no dice todo lo que piensa, pero siempre piensa todo lo que dice.', author: 'Aristóteles', context: 'Reflexión del día' },
-  '10-18': { quote: 'La ciencia es la clave de nuestro futuro.', author: 'Henri Bergson', context: 'Nacido el 18 de octubre de 1859' },
-  '10-19': { quote: 'Si no tienes nada bueno que decir, no digas nada.', author: 'Auguste Lumière', context: 'Nacido el 19 de octubre de 1862' },
-  '10-20': { quote: 'No hay pasiones, solo personas apasionadas.', author: 'Arthur Rimbaud', context: 'Nacido el 20 de octubre de 1854' },
-  '10-21': { quote: 'El premio Nobel es importante para la ciencia, pero entender un hecho nuevo es lo verdaderamente importante.', author: 'Alfred Nobel', context: 'Nacido el 21 de octubre de 1833' },
-  '10-22': { quote: 'El verdadero signo de inteligencia no es el conocimiento sino la imaginación.', author: 'Franz Liszt', context: 'Nacido el 22 de octubre de 1811' },
-  '10-23': { quote: 'La mente no es un vaso por llenar, sino una lámpara por encender.', author: 'Plutarco', context: 'Reflexión del día' },
-  '10-24': { quote: 'La paz es no solo mejor que la guerra, sino infinitamente más ardua.', author: 'ONU', context: 'Día de las Naciones Unidas' },
-  '10-25': { quote: 'No conozco mayor enemigo del hombre que el que es amigo de todo el mundo.', author: 'Pablo Picasso', context: 'Nacido el 25 de octubre de 1881' },
-  '10-26': { quote: 'La imaginación dispone de todo; crea la belleza, la justicia y la felicidad.', author: 'François Mitterrand', context: 'Nacido el 26 de octubre de 1916' },
-  '10-27': { quote: 'El futuro pertenece a quienes creen en la belleza de sus sueños.', author: 'Theodore Roosevelt', context: 'Nacido el 27 de octubre de 1858' },
-  '10-28': { quote: 'La razón es la esclava de las pasiones.', author: 'Erasmo de Róterdam', context: 'Nacido el 28 de octubre de 1466' },
-  '10-29': { quote: 'El genio es el sentido común intensificado.', author: 'James Boswell', context: 'Nacido el 29 de octubre de 1740' },
-  '10-30': { quote: 'Haz lo que puedas, con lo que tengas, donde estés.', author: 'Theodore Roosevelt', context: 'Reflexión del día' },
-  '10-31': { quote: 'La rebeldía es la virtud original del hombre.', author: 'Arthur Miller', context: 'Reflexión del día' },
-
-  // ── NOVIEMBRE ──
-  '11-01': { quote: 'No hay mayor riqueza que la sabiduría, ni mayor pobreza que la ignorancia.', author: 'Ali ibn Abi Talib', context: 'Reflexión del día' },
-  '11-02': { quote: 'La muerte no es más que un horizonte, y un horizonte no es más que el límite de nuestra vista.', author: 'Marie Antoinette', context: 'Nacida el 2 de noviembre de 1755' },
-  '11-03': { quote: 'Todo lo bueno que existe fue alguna vez imaginado.', author: 'Karl Baedeker', context: 'Nacido el 3 de noviembre de 1801' },
-  '11-04': { quote: 'Para que un hombre navegue con éxito en la vida necesita un faro.', author: 'Will Rogers', context: 'Nacido el 4 de noviembre de 1879' },
-  '11-05': { quote: 'Recuerda, recuerda, el cinco de noviembre.', author: 'Guy Fawkes', context: 'Conspiración de la pólvora, 5 de noviembre de 1605' },
-  '11-06': { quote: 'La excelencia no es un destino sino un viaje continuo que nunca termina.', author: 'Brian Tracy', context: 'Reflexión del día' },
-  '11-07': { quote: 'Nada en la vida es para ser temido, solo para ser comprendido. Ahora es el momento de comprender más, para temer menos.', author: 'Marie Curie', context: 'Nacida el 7 de noviembre de 1867' },
-  '11-08': { quote: 'Lo que hagas puede ser insignificante, pero es muy importante que lo hagas.', author: 'Bram Stoker', context: 'Nacido el 8 de noviembre de 1847' },
-  '11-09': { quote: 'Donde se queman libros, al final se quema también a las personas.', author: 'Caída del Muro de Berlín', context: '9 de noviembre de 1989' },
-  '11-10': { quote: 'Los límites de mi lenguaje significan los límites de mi mundo.', author: 'Martin Luther', context: 'Nacido el 10 de noviembre de 1483' },
-  '11-11': { quote: 'La verdadera medida de un hombre no es cómo se comporta en momentos de comodidad, sino cómo lo hace en tiempos de desafío.', author: 'Fiódor Dostoyevski', context: 'Nacido el 11 de noviembre de 1821' },
-  '11-12': { quote: 'El orden es el más grande de los placeres.', author: 'Auguste Rodin', context: 'Nacido el 12 de noviembre de 1840' },
-  '11-13': { quote: 'El arte es la expresión del alma que desea ser escuchada.', author: 'Robert Louis Stevenson', context: 'Nacido el 13 de noviembre de 1850' },
-  '11-14': { quote: 'La ciencia más útil es aquella cuyo fruto es más comunicable.', author: 'Claude Monet', context: 'Nacido el 14 de noviembre de 1840' },
-  '11-15': { quote: 'La tierra es suficiente para las necesidades de todos los hombres, pero no para la codicia de todos.', author: 'Mahatma Gandhi', context: 'Reflexión del día' },
-  '11-16': { quote: 'Si tienes que elegir entre ser amable y tener razón, elige ser amable.', author: 'José Saramago', context: 'Nacido el 16 de noviembre de 1922' },
-  '11-17': { quote: 'Cuando el dedo señala la luna, el tonto mira el dedo.', author: 'Proverbio chino', context: 'Reflexión del día' },
-  '11-18': { quote: 'La paciencia es la madre de la ciencia.', author: 'Louis Daguerre', context: 'Nacido el 18 de noviembre de 1787' },
-  '11-19': { quote: 'La democracia es el gobierno del pueblo, por el pueblo, para el pueblo.', author: 'Abraham Lincoln', context: 'Discurso de Gettysburg, 19 noviembre 1863' },
-  '11-20': { quote: 'El secreto de la existencia humana no es solo vivir, sino saber para qué se vive.', author: 'León Tolstói', context: 'Fallecido el 20 de noviembre de 1910' },
-  '11-21': { quote: 'La alegría de un momento es inmortal.', author: 'Voltaire', context: 'Nacido el 21 de noviembre de 1694' },
-  '11-22': { quote: 'Un hombre sin ética es una bestia salvaje suelta en el mundo.', author: 'Charles de Gaulle', context: 'Nacido el 22 de noviembre de 1890' },
-  '11-23': { quote: 'Deseo que cada ser humano sea libre para buscar la verdad sin trabas.', author: 'Boris Karloff', context: 'Nacido el 23 de noviembre de 1887' },
-  '11-24': { quote: 'El origen de las especies por la selección natural.', author: 'Charles Darwin', context: 'Publicación de El Origen de las Especies, 24 noviembre 1859' },
-  '11-25': { quote: 'Si quieres ser sabio, aprende a interrogar razonablemente, a escuchar con atención, a responder serenamente.', author: 'Andrew Carnegie', context: 'Nacido el 25 de noviembre de 1835' },
-  '11-26': { quote: 'El que hace una pregunta es un tonto por un minuto, el que no hace una pregunta es un tonto toda la vida.', author: 'Norbert Wiener', context: 'Nacido el 26 de noviembre de 1894' },
-  '11-27': { quote: 'El hombre que no lee buenos libros no tiene ventaja sobre el que no puede leerlos.', author: 'Bruce Lee', context: 'Nacido el 27 de noviembre de 1940' },
-  '11-28': { quote: 'La ciencia pura y fundamental merece nuestra atención también.', author: 'Claude Lévi-Strauss', context: 'Nacido el 28 de noviembre de 1908' },
-  '11-29': { quote: 'Toda revolución evaporada se transforma en un juego de sociedad.', author: 'Louisa May Alcott', context: 'Nacida el 29 de noviembre de 1832' },
-  '11-30': { quote: 'Quien no conoce la historia está condenado a repetirla.', author: 'Mark Twain', context: 'Nacido el 30 de noviembre de 1835' },
-
-  // ── DICIEMBRE ──
-  '12-01': { quote: 'Si puedes soñarlo, puedes hacerlo.', author: 'Woody Allen', context: 'Nacido el 1 de diciembre de 1935' },
-  '12-02': { quote: 'La educación no llena un cubo, sino que enciende un fuego.', author: 'Maria Callas', context: 'Nacida el 2 de diciembre de 1923' },
-  '12-03': { quote: 'Para los que tienen fe, ninguna explicación es necesaria. Para los que no tienen fe, ninguna explicación es posible.', author: 'Joseph Conrad', context: 'Nacido el 3 de diciembre de 1857' },
-  '12-04': { quote: 'Hasta el viaje más largo comienza con un primer paso.', author: 'Lao Tse', context: 'Reflexión del día' },
-  '12-05': { quote: 'El secreto para avanzar es empezar.', author: 'Walt Disney', context: 'Nacido el 5 de diciembre de 1901' },
-  '12-06': { quote: 'El hombre tiene que establecer un final para la guerra. Si no, la guerra establecerá un final para la humanidad.', author: 'John F. Kennedy', context: 'Reflexión del día' },
-  '12-07': { quote: 'La verdadera revolución es la revolución del espíritu.', author: 'Noam Chomsky', context: 'Nacido el 7 de diciembre de 1928' },
-  '12-08': { quote: 'Cuando la mente está abierta, el corazón la sigue.', author: 'Jim Morrison', context: 'Nacido el 8 de diciembre de 1943' },
-  '12-09': { quote: 'Cada segundo es de valor infinito.', author: 'Grace Hopper', context: 'Nacida el 9 de diciembre de 1906' },
-  '12-10': { quote: 'La paz comienza con una sonrisa.', author: 'Emily Dickinson', context: 'Nacida el 10 de diciembre de 1830' },
-  '12-11': { quote: 'Cualquier tecnología suficientemente avanzada es indistinguible de la magia.', author: 'Max Born', context: 'Nacido el 11 de diciembre de 1882' },
-  '12-12': { quote: 'El que tiene un porqué puede soportar cualquier cómo.', author: 'Gustave Flaubert', context: 'Nacido el 12 de diciembre de 1821' },
-  '12-13': { quote: 'Donde la expectativa termina, comienza el arte.', author: 'Heinrich Heine', context: 'Nacido el 13 de diciembre de 1797' },
-  '12-14': { quote: 'Lo que importa no es lo que la vida te hace, sino lo que tú haces con lo que la vida te hace.', author: 'Nostradamus', context: 'Nacido el 14 de diciembre de 1503' },
-  '12-15': { quote: 'Planta un árbol bajo cuya sombra no esperas sentarte.', author: 'Nero', context: 'Nacido el 15 de diciembre del 37 d.C.' },
-  '12-16': { quote: 'Las cosas grandes nunca vienen de la zona de confort.', author: 'Ludwig van Beethoven', context: 'Bautizado el 17 de diciembre de 1770' },
-  '12-17': { quote: 'El vuelo es la poesía de la mecánica.', author: 'Hermanos Wright', context: 'Primer vuelo, 17 de diciembre de 1903' },
-  '12-18': { quote: 'Leer sin reflexionar es como comer sin digerir.', author: 'Steven Spielberg', context: 'Nacido el 18 de diciembre de 1946' },
-  '12-19': { quote: 'No es suficiente tener una buena mente; lo principal es usarla bien.', author: 'Édith Piaf', context: 'Nacida el 19 de diciembre de 1915' },
-  '12-20': { quote: 'La felicidad no es algo que pospones para el futuro; es algo que diseñas para el presente.', author: 'Jim Rohn', context: 'Reflexión del día' },
-  '12-21': { quote: 'La noche más oscura precede al amanecer más brillante.', author: 'Solsticio de invierno', context: 'La noche más larga del año' },
-  '12-22': { quote: 'El hombre nace libre, y en todas partes está encadenado.', author: 'Srinivasa Ramanujan', context: 'Nacido el 22 de diciembre de 1887' },
-  '12-23': { quote: 'El misterio de la vida no es un problema a resolver, sino una realidad a experimentar.', author: 'Akira Kurosawa', context: 'Nacido el 23 de diciembre de 1910' },
-  '12-24': { quote: 'La paz en la tierra comienza con la paz en el corazón.', author: 'Ignatius de Loyola', context: 'Nochebuena' },
-  '12-25': { quote: 'La mayor gloria de la humanidad no está en no caer nunca, sino en levantarse cada vez que caemos.', author: 'Isaac Newton', context: 'Nacido el 25 de diciembre de 1642 (c. juliano)' },
-  '12-26': { quote: 'Cada día es un nuevo comienzo.', author: 'Mao Zedong', context: 'Nacido el 26 de diciembre de 1893' },
-  '12-27': { quote: 'No cuentes los días, haz que los días cuenten.', author: 'Louis Pasteur', context: 'Nacido el 27 de diciembre de 1822' },
-  '12-28': { quote: 'El progreso es la actividad de hoy y la seguridad de mañana.', author: 'Woodrow Wilson', context: 'Nacido el 28 de diciembre de 1856' },
-  '12-29': { quote: 'El futuro es de los que creen en la belleza de sus sueños.', author: 'Charles Goodyear', context: 'Nacido el 29 de diciembre de 1800' },
-  '12-30': { quote: 'No te conformes con lo que necesitas; lucha por lo que mereces.', author: 'Rudyard Kipling', context: 'Nacido el 30 de diciembre de 1865' },
-  '12-31': { quote: 'Mañana es el primer día en blanco de un libro de 365 páginas. Escribe una buena historia.', author: 'Henri Matisse', context: 'Nacido el 31 de diciembre de 1869' },
-};
-
-/**
- * Get the daily quote for today (or any given date).
- * Falls back to a default if the date isn't in the dictionary.
- */
-export function getDailyQuote(date?: Date): DailyQuote {
-  const d = date || new Date();
-  const key = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  
-  return quotes[key] || {
+/** Fallback quotes in case the API is unavailable */
+const FALLBACKS: DailyQuote[] = [
+  {
     quote: 'La verdadera sabiduría está en reconocer la propia ignorancia.',
     author: 'Sócrates',
-    context: 'Reflexión del día',
-  };
+    context: 'Reflexión atemporal',
+    who: 'Filósofo griego (470-399 a.C.). Padre de la filosofía occidental. Su método de preguntas (mayéutica) sentó las bases del pensamiento crítico.',
+  },
+  {
+    quote: 'La imaginación es más importante que el conocimiento.',
+    author: 'Albert Einstein',
+    context: 'Reflexión atemporal',
+    who: 'Físico teórico alemán (1879-1955). Premio Nobel de Física 1921. Desarrolló la teoría de la relatividad, transformando nuestra comprensión del universo.',
+  },
+  {
+    quote: 'Pienso, luego existo.',
+    author: 'René Descartes',
+    context: 'Reflexión atemporal',
+    who: 'Filósofo, matemático y científico francés (1596-1650). Padre de la filosofía moderna y la geometría analítica.',
+  },
+  {
+    quote: 'La educación es el arma más poderosa para cambiar el mundo.',
+    author: 'Nelson Mandela',
+    context: 'Reflexión atemporal',
+    who: 'Líder sudafricano (1918-2013). Luchó contra el apartheid, 27 años preso, primer presidente negro de Sudáfrica. Nobel de la Paz 1993.',
+  },
+  {
+    quote: 'El que no arriesga no gana.',
+    author: 'Simón Bolívar',
+    context: 'Reflexión atemporal',
+    who: 'Líder militar y político venezolano (1783-1830). Libertador de cinco naciones sudamericanas.',
+  },
+];
+
+/**
+ * Get the daily quote for today.
+ * For backward compatibility, this synchronous version returns a cached quote
+ * or a random fallback. Use fetchDailyQuote() for the async API-powered version.
+ */
+export function getDailyQuote(_date?: Date): DailyQuote {
+  // Try to get the cached quote from sessionStorage
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const storedDate = sessionStorage.getItem(STORAGE_DATE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+
+    if (storedDate === today && stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // sessionStorage not available (SSR, etc.)
+  }
+
+  // Return a fallback while the async fetch completes
+  return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
 }
 
-export default quotes;
+/**
+ * Fetch a fresh daily quote from the API.
+ * Each call to the API returns a different notable person born/died today.
+ * Caches in sessionStorage so within the same session you see the same quote.
+ * Opening a new tab = new person.
+ */
+export async function fetchDailyQuote(): Promise<DailyQuote> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Check sessionStorage first — same tab keeps same quote
+  try {
+    const storedDate = sessionStorage.getItem(STORAGE_DATE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+
+    if (storedDate === today && stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // sessionStorage not available
+  }
+
+  // Fetch from API
+  try {
+    const res = await fetch('/api/daily-quote', {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'same-origin',
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data: DailyQuote = await res.json();
+
+    // Validate
+    if (data.quote && data.author) {
+      // Cache in sessionStorage
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        sessionStorage.setItem(STORAGE_DATE_KEY, today);
+      } catch {
+        // Ignore storage errors
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn('Daily quote API unavailable, using fallback', err);
+  }
+
+  // Fallback
+  const fallback = FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
+  return fallback;
+}
+
+export default FALLBACKS;

@@ -18,7 +18,8 @@ import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents, useTeams } from "../hooks/useChatwoot";
-import { getDailyQuote } from '../utils/dailyQuotes';
+import { getDailyQuote, fetchDailyQuote } from '../utils/dailyQuotes';
+import type { DailyQuote } from '../utils/dailyQuotes';
 import { useReverb } from "../hooks/useReverb";
 import {
   MessageCircle,
@@ -503,7 +504,20 @@ function DashboardClock() {
 
 function ClockDisplay({ firstName }: { firstName: string }) {
   const { greeting, icon, date } = DashboardClock();
-  const dailyQuote = getDailyQuote(date);
+  const [dailyQuote, setDailyQuote] = useState<DailyQuote>(getDailyQuote(date));
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDailyQuote().then((q) => {
+      if (!cancelled) {
+        setDailyQuote(q);
+        setIsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-start gap-3">
@@ -512,13 +526,18 @@ function ClockDisplay({ firstName }: { firstName: string }) {
             <span className="text-sm">💡</span>
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-[13px] text-gray-700 font-medium italic leading-snug truncate" title={dailyQuote.quote}>
-            "{dailyQuote.quote}"
+        <div className={`min-w-0 transition-opacity duration-500 ${isLoading ? 'opacity-60' : 'opacity-100'}`}>
+          <p className="text-[13px] text-gray-700 font-medium italic leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={dailyQuote.quote}>
+            &ldquo;{dailyQuote.quote}&rdquo;
           </p>
-          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-            — {dailyQuote.author} · <span className="text-gray-300">{dailyQuote.context}</span>
+          <p className="text-[11px] text-gray-500 font-semibold mt-1">
+            — {dailyQuote.author} <span className="text-gray-300 mx-0.5">·</span> <span className="text-gray-400 font-normal">{dailyQuote.context}</span>
           </p>
+          {dailyQuote.who && (
+            <p className="text-[11px] text-gray-400 font-normal mt-0.5 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={dailyQuote.who}>
+              {dailyQuote.who}
+            </p>
+          )}
         </div>
       </div>
     </div>
