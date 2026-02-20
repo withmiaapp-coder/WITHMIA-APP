@@ -613,7 +613,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       )}
 
       {/* ══════════════════ VENTAS ══════════════════ */}
-      {salesStats && (salesStats.metrics.links_generated > 0 || salesStats.all_time.total_sales > 0) && (
+      {!loadingSales && (
         <>
           {/* Header de Ventas */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
@@ -621,12 +621,40 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               <ShoppingCart className="w-5 h-5 text-emerald-500" />
               <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
             </div>
-            {salesStats.all_time.total_sales > 0 && (
+            {salesStats?.all_time?.total_sales > 0 && (
               <span className="text-sm text-gray-500">
                 Total histórico: {salesStats.all_time.total_sales} ventas
               </span>
             )}
           </div>
+
+          {/* Empty state when no sales data */}
+          {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+                <ShoppingCart className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Aún no hay ventas registradas</h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">
+                Cuando tus clientes usen los enlaces de pago generados por WITHMIA, las ventas aparecerán aquí automáticamente con métricas en tiempo real.
+              </p>
+              <div className="flex items-center justify-center gap-6 text-sm text-gray-400">
+                <div className="flex items-center gap-1.5">
+                  <Link2 className="w-4 h-4" />
+                  <span>Enlaces de pago</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Conversión</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4" />
+                  <span>Ingresos</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+          <>
 
           {/* Métricas de Ventas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -779,6 +807,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 })}
               </div>
             </div>
+          )}
+        </>
           )}
         </>
       )}

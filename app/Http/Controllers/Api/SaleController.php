@@ -31,6 +31,13 @@ class SaleController extends Controller
             return response()->json(['error' => 'Empresa no encontrada'], 404);
         }
 
+        // If sales table doesn't exist yet (migration pending), return empty data
+        try {
+            \Illuminate\Support\Facades\DB::select('SELECT 1 FROM sales LIMIT 1');
+        } catch (\Exception $e) {
+            return response()->json($this->emptySalesResponse($request->input('period', 'month')));
+        }
+
         $period = $request->input('period', 'month');
 
         $baseQuery = Sale::forCompany($company->id);
@@ -325,5 +332,34 @@ class SaleController extends Controller
             'status' => $sale->status,
             'message' => "Venta actualizada a: {$sale->status_label}",
         ]);
+    }
+
+    /**
+     * Returns an empty sales response (used when table doesn't exist yet)
+     */
+    private function emptySalesResponse(string $period = 'month'): array
+    {
+        return [
+            'period' => $period,
+            'currency' => 'USD',
+            'metrics' => [
+                'total_sales' => 0,
+                'total_revenue' => 0,
+                'pending_count' => 0,
+                'pending_value' => 0,
+                'links_generated' => 0,
+                'conversion_rate' => 0,
+                'avg_ticket' => 0,
+            ],
+            'all_time' => [
+                'total_sales' => 0,
+                'total_revenue' => 0,
+            ],
+            'by_status' => [],
+            'by_provider' => [],
+            'top_products' => [],
+            'daily_sales' => [],
+            'recent_sales' => [],
+        ];
     }
 }
