@@ -615,46 +615,78 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {/* ══════════════════ VENTAS ══════════════════ */}
       {!loadingSales && (
         <>
-          {/* Header de Ventas */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <ShoppingCart className="w-5 h-5 text-emerald-500" />
-              <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
-            </div>
-            {salesStats?.all_time?.total_sales > 0 && (
-              <span className="text-sm text-gray-500">
-                Total histórico: {salesStats.all_time.total_sales} ventas
-              </span>
-            )}
-          </div>
-
           {/* Empty state when no sales data */}
           {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
-            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-              <div className="mx-auto w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="w-8 h-8 text-emerald-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Aún no hay ventas registradas</h3>
-              <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">
-                Cuando tus clientes usen los enlaces de pago generados por WITHMIA, las ventas aparecerán aquí automáticamente con métricas en tiempo real.
-              </p>
-              <div className="flex items-center justify-center gap-6 text-sm text-gray-400">
-                <div className="flex items-center gap-1.5">
-                  <Link2 className="w-4 h-4" />
-                  <span>Enlaces de pago</span>
+            <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-white via-emerald-50/30 to-white shadow-sm">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+              
+              <div className="relative p-8">
+                {/* Section Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-200/50">
+                    <ShoppingCart className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
+                    <p className="text-sm text-gray-500">Seguimiento en tiempo real de tus ventas</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Conversión</span>
+
+                {/* Preview Metric Cards (zeroed out) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+                  {[
+                    { title: 'Ventas', value: '0', icon: <ShoppingCart className="w-5 h-5" />, gradient: 'from-emerald-500 to-emerald-600' },
+                    { title: 'Ingresos', value: '$0', icon: <DollarSign className="w-5 h-5" />, gradient: 'from-green-500 to-green-600' },
+                    { title: 'Ticket Promedio', value: '$0', icon: <TrendingUp className="w-5 h-5" />, gradient: 'from-cyan-500 to-cyan-600' },
+                    { title: 'Conversión', value: '0%', icon: <Link2 className="w-5 h-5" />, gradient: 'from-violet-500 to-violet-600' },
+                  ].map((card, i) => (
+                    <div key={i} className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-100/80">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{card.title}</span>
+                        <div className={`p-1.5 rounded-lg bg-gradient-to-r ${card.gradient} text-white opacity-60`}>
+                          {card.icon}
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-300">{card.value}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4" />
-                  <span>Ingresos</span>
+
+                {/* CTA */}
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-50 border border-emerald-100">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-sm font-medium text-emerald-700">
+                      Las ventas aparecerán aquí cuando tus clientes usen los enlaces de pago
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
           <>
+
+          {/* Header de Ventas con datos */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-200/50">
+                <ShoppingCart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
+                <p className="text-sm text-gray-500">Seguimiento en tiempo real de tus ventas</p>
+              </div>
+            </div>
+            {salesStats?.all_time?.total_sales > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-medium text-emerald-700">
+                  {salesStats.all_time.total_sales} ventas totales
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Métricas de Ventas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
