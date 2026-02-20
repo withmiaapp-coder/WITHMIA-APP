@@ -2,8 +2,6 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\Log;
-
 /**
  * Trait unificado para resolver configuración de Chatwoot
  * Evita duplicación de código entre ChatwootController y EvolutionApiController
@@ -42,13 +40,6 @@ trait ResolvesChatwootConfig
         // 🚀 CACHE: Evitar recálculos en cada request (3 minutos)
         $config = $this->resolveChatwootConfig($user);
         $this->applyChatwootConfig($config);
-        
-        Log::debug('Chatwoot config initialized via Trait', [
-            'user_id' => $this->chatwootUserId,
-            'account_id' => $this->chatwootAccountId,
-            'inbox_id' => $this->chatwootInboxId,
-            'company_slug' => $this->chatwootCompanySlug
-        ]);
     }
 
     /**

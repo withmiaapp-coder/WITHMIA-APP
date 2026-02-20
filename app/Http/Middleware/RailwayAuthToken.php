@@ -32,11 +32,6 @@ class RailwayAuthToken
             
             if ($user) {
                 Auth::login($user);
-                Log::debug('RailwayAuthToken: User authenticated via token', [
-                    'user_id' => $user->id,
-                    'source' => $request->query('auth_token') ? 'query' : 
-                               ($request->header('X-Railway-Auth-Token') ? 'header' : 'input')
-                ]);
                 return $next($request);
             } else {
                 Log::warning('RailwayAuthToken: Invalid token provided', [

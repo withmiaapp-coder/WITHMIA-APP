@@ -323,7 +323,7 @@ class ChatwootController extends Controller
                 $localUser = $localUsers->get($agent->email);
                 return [
                     'id' => $agent->id,
-                    'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                    'name' => $localUser?->full_name ?? $agent->display_name ?? $agent->name,
                     'email' => $agent->email,
                     'role' => $agent->role,
                     'thumbnail' => '',
@@ -886,9 +886,10 @@ class ChatwootController extends Controller
             }
 
             // Get Chatwoot user ID for the current user
-            $chatwootUser = $this->chatwootDb()->table('users')
-                ->where('email', auth()->user()->email)
-                ->first();
+            $user = auth()->user();
+            $chatwootUser = $user ? $this->chatwootDb()->table('users')
+                ->where('email', $user->email)
+                ->first() : null;
 
             $id = $this->chatwootDb()->table('notes')->insertGetId([
                 'account_id' => $this->accountId,

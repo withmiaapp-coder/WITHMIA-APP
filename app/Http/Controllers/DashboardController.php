@@ -88,12 +88,7 @@ class DashboardController extends Controller
             'auto_provision' => true
         ];
 
-        // Logging mejorado para debug
-        Log::debug('Dashboard Data Debug:', [
-            'user_id' => $user->id,
-            'inbox_id' => $inboxId,
-            'chatwoot_status' => $chatwootStatus
-        ]);
+
 
         // 🚀 PREFETCH: Cargar teams y agents directamente de BD (sin cache)
         $prefetchedTeams = [];

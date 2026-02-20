@@ -362,9 +362,7 @@ class EvolutionApiController extends Controller
     public function getStatus(Request $request, ?string $instanceName = null): JsonResponse
     {
         $instanceName = $instanceName ?? $this->getInstanceName($request);
-        Log::debug('WhatsApp Status Check', ['instanceName' => $instanceName]);
         $result = $this->evolutionApi->getStatus($instanceName);
-        Log::debug('WhatsApp Status Result', ['result' => $result]);
 
         // Broadcast status change to all connected clients (CON RATE LIMITING)
         if ($result['success'] ?? false) {
@@ -388,11 +386,7 @@ class EvolutionApiController extends Controller
                             $result['profileInfo'] ?? null
                         ));
                         
-                        Log::debug('📡 WhatsAppStatusChanged broadcast (estado cambió)', [
-                            'instance' => $instanceName,
-                            'state' => $state,
-                            'previous' => $lastBroadcastState
-                        ]);
+                        // Status broadcast sent
                     }
                 }
                 

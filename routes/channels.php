@@ -31,15 +31,6 @@ Broadcast::channel('inbox.{inboxId}', function ($user, $inboxId) {
         }
     }
     
-    // Log para debug
-    \Illuminate\Support\Facades\Log::debug('🔐 Broadcasting auth check', [
-        'user_id' => $user->id,
-        'user_inbox_id' => $userInboxId,
-        'company_slug' => $user->company_slug,
-        'requested_inbox_id' => $inboxId,
-        'match' => $userInboxId == (int) $inboxId
-    ]);
-    
     return $userInboxId == (int) $inboxId;
 });
 
