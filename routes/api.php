@@ -325,6 +325,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::put('/{id}', [ProductController::class, 'update']);
     Route::delete('/{id}', [ProductController::class, 'destroy']);
     Route::post('/bulk-delete', [ProductController::class, 'bulkDelete']);
+    Route::post('/upload-image', [ProductController::class, 'uploadImage']);
 });
 
 Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {

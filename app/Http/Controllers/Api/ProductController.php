@@ -244,6 +244,30 @@ class ProductController extends Controller
     }
 
     /**
+     * Upload product image
+     */
+    public function uploadImage(Request $request)
+    {
+        $company = $this->getCompany($request);
+        if (!$company) {
+            return response()->json(['error' => 'No autorizado'], 401);
+        }
+
+        $request->validate([
+            'image' => 'required|image|max:5120', // 5MB
+        ]);
+
+        $file = $request->file('image');
+        $path = $file->store("products/{$company->id}", 'public');
+        $url = asset("storage/{$path}");
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+        ]);
+    }
+
+    /**
      * Get categories for this company
      */
     public function categories(Request $request)

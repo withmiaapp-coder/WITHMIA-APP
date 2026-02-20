@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Package,
   Plus,
@@ -17,6 +17,9 @@ import {
   Tag,
   Box,
   LayoutGrid,
+  Upload,
+  DollarSign,
+  GripVertical,
 } from 'lucide-react';
 
 // ====== TYPES ======
@@ -604,6 +607,10 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
   const [imageUrl, setImageUrl] = useState('');
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'media'>('general');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImage = () => {
     if (imageUrl.trim() && !images.includes(imageUrl.trim())) {
@@ -614,6 +621,59 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
 
   const removeImage = (idx: number) => {
     setImages(images.filter((_, i) => i !== idx));
+  };
+
+  const uploadFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no puede superar 5MB');
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('auth_token') || '';
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`/api/products/upload-image?auth_token=${token}`, {
+        method: 'POST',
+        headers: { 'X-Railway-Auth': token, 'Accept': 'application/json' },
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      if (data.success && data.url) {
+        setImages(prev => [...prev, data.url]);
+      }
+    } catch (err) {
+      console.error('Error uploading image:', err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => uploadFile(file));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => uploadFile(file));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -640,146 +700,280 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
     }
   };
 
+  const tabs = [
+    { id: 'general' as const, label: 'General', icon: Package },
+    { id: 'pricing' as const, label: 'Precio & Stock', icon: DollarSign },
+    { id: 'media' as const, label: 'Imágenes', icon: ImageIcon },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-5 pb-0 flex-shrink-0">
+
+          {/* Header */}
+          <div className="relative px-6 pt-5 pb-0 flex-shrink-0">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-t-2xl" />
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-neutral-800">{product ? 'Editar producto' : 'Nuevo producto'}</h3>
-              <button type="button" onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-200/50">
+                  {product ? <Edit3 className="w-5 h-5 text-white" /> : <Plus className="w-5 h-5 text-white" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-800">{product ? 'Editar producto' : 'Nuevo producto'}</h3>
+                  <p className="text-xs text-neutral-400">Completa la información de tu producto</p>
+                </div>
+              </div>
+              <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                 <X className="w-5 h-5 text-neutral-400" />
               </button>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto px-5 pb-4">
-            <div className="space-y-3.5">
-              {/* Name */}
-              <input type="text" placeholder="Nombre del producto *" value={name} onChange={e => setName(e.target.value)}
-                className="w-full px-4 py-2.5 text-base font-medium border-0 border-b-2 border-slate-200 focus:border-orange-500 focus:ring-0 placeholder:text-neutral-300 text-neutral-800"
-                autoFocus required />
-
-              {/* Description */}
-              <textarea placeholder="Descripción (el bot usará esto para responder preguntas)" value={description} onChange={e => setDescription(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 placeholder:text-neutral-300 resize-none" />
-
-              {/* Price + Compare + Currency */}
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Precio</label>
-                  <input type="number" step="0.01" min="0" placeholder="0" value={price} onChange={e => setPrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Precio anterior</label>
-                  <input type="number" step="0.01" min="0" placeholder="Opcional" value={comparePrice} onChange={e => setComparePrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Moneda</label>
-                  <select value={currency} onChange={e => setCurrency(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 bg-white">
-                    <option value="CLP">CLP</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="ARS">ARS</option>
-                    <option value="MXN">MXN</option>
-                    <option value="BRL">BRL</option>
-                    <option value="COP">COP</option>
-                    <option value="PEN">PEN</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Stock + SKU */}
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Stock</label>
-                  <input type="number" min="0" placeholder="Cantidad" value={stockQty} onChange={e => setStockQty(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Estado</label>
-                  <select value={stockStatus} onChange={e => setStockStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 bg-white">
-                    <option value="in_stock">En stock</option>
-                    <option value="out_of_stock">Agotado</option>
-                    <option value="on_backorder">Por encargo</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">SKU</label>
-                  <input type="text" placeholder="Opcional" value={sku} onChange={e => setSku(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                </div>
-              </div>
-
-              {/* Category + Brand */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Categoría</label>
-                  <input type="text" placeholder="Ej: Electrónica" value={category} onChange={e => setCategory(e.target.value)}
-                    list="category-list"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                  <datalist id="category-list">
-                    {categories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">Marca</label>
-                  <input type="text" placeholder="Opcional" value={brand} onChange={e => setBrand(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                </div>
-              </div>
-
-              {/* URL */}
-              <div>
-                <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-0.5 block">URL del producto</label>
-                <input type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-              </div>
-
-              {/* Images */}
-              <div>
-                <label className="text-[10px] font-semibold text-neutral-400 uppercase mb-1 block">Imágenes</label>
-                <div className="flex gap-2 mb-2">
-                  <input type="url" placeholder="URL de imagen" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addImage())}
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500" />
-                  <button type="button" onClick={addImage}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-neutral-600 transition-colors">
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                {images.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {images.map((img, idx) => (
-                      <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 group">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button type="button" onClick={() => removeImage(idx)}
-                          className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Tabs */}
+            <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 justify-center ${
+                    activeTab === tab.id
+                      ? 'bg-white text-neutral-800 shadow-sm'
+                      : 'text-neutral-400 hover:text-neutral-600'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                  {tab.id === 'media' && images.length > 0 && (
+                    <span className="ml-0.5 w-4 h-4 rounded-full bg-orange-100 text-orange-600 text-[10px] flex items-center justify-center font-bold">{images.length}</span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="border-t border-slate-100 px-5 py-3 flex justify-end gap-2 bg-slate-50/50 flex-shrink-0">
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-slate-100 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={!name.trim() || submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {product ? 'Guardar cambios' : 'Crear producto'}
-            </button>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+
+            {/* TAB: General */}
+            {activeTab === 'general' && (
+              <div className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Nombre del producto *</label>
+                  <input type="text" placeholder="Ej: Camiseta Premium 100% algodón" value={name} onChange={e => setName(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-neutral-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none"
+                    autoFocus required />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Descripción</label>
+                  <textarea placeholder="Describe tu producto en detalle. WITHMIA usará esta info para responder preguntas de tus clientes." value={description} onChange={e => setDescription(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 resize-none transition-all outline-none" />
+                </div>
+
+                {/* Category + Brand */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Categoría</label>
+                    <input type="text" placeholder="Ej: Electrónica" value={category} onChange={e => setCategory(e.target.value)}
+                      list="category-list"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                    <datalist id="category-list">
+                      {categories.map(c => <option key={c} value={c} />)}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Marca</label>
+                    <input type="text" placeholder="Opcional" value={brand} onChange={e => setBrand(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                  </div>
+                </div>
+
+                {/* URL */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">URL del producto</label>
+                  <input type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                </div>
+              </div>
+            )}
+
+            {/* TAB: Pricing & Stock */}
+            {activeTab === 'pricing' && (
+              <div className="space-y-4">
+                {/* Price section */}
+                <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Precio</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Precio</label>
+                      <input type="number" step="0.01" min="0" placeholder="0" value={price} onChange={e => setPrice(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm font-semibold text-neutral-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Precio anterior</label>
+                      <input type="number" step="0.01" min="0" placeholder="Opcional" value={comparePrice} onChange={e => setComparePrice(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm text-neutral-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Moneda</label>
+                      <select value={currency} onChange={e => setCurrency(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm font-semibold text-neutral-700 focus:border-emerald-400 outline-none transition-all">
+                        <option value="CLP">CLP</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="ARS">ARS</option>
+                        <option value="MXN">MXN</option>
+                        <option value="BRL">BRL</option>
+                        <option value="COP">COP</option>
+                        <option value="PEN">PEN</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stock section */}
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Box className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Inventario</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">Cantidad</label>
+                      <input type="number" min="0" placeholder="0" value={stockQty} onChange={e => setStockQty(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm font-semibold text-neutral-800 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">Estado</label>
+                      <select value={stockStatus} onChange={e => setStockStatus(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm text-neutral-700 focus:border-blue-400 outline-none transition-all">
+                        <option value="in_stock">En stock</option>
+                        <option value="out_of_stock">Agotado</option>
+                        <option value="on_backorder">Por encargo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">SKU</label>
+                      <input type="text" placeholder="Opcional" value={sku} onChange={e => setSku(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm text-neutral-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: Media */}
+            {activeTab === 'media' && (
+              <div className="space-y-4">
+                {/* Drag & Drop Zone */}
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                    dragOver
+                      ? 'border-orange-400 bg-orange-50 scale-[1.02]'
+                      : 'border-slate-200 bg-slate-50/50 hover:border-orange-300 hover:bg-orange-50/30'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
+                      <p className="text-sm font-medium text-neutral-600">Subiendo imagen...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                        <Upload className="w-7 h-7 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-700">Arrastra imágenes aquí</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">o haz clic para seleccionar archivos</p>
+                      </div>
+                      <p className="text-[10px] text-neutral-300 uppercase font-medium tracking-wider">PNG, JPG, WEBP — máx 5MB</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* URL input */}
+                <div>
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">O agrega por URL</label>
+                  <div className="flex gap-2">
+                    <input type="url" placeholder="https://ejemplo.com/imagen.jpg" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addImage())}
+                      className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                    <button type="button" onClick={addImage} disabled={!imageUrl.trim()}
+                      className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 disabled:cursor-not-allowed">
+                      <Plus className="w-4 h-4" />
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Image Gallery */}
+                {images.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">{images.length} imagen{images.length !== 1 ? 'es' : ''}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {images.map((img, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 group hover:border-orange-300 transition-all">
+                          <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                          {idx === 0 && (
+                            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-orange-500 text-white rounded-md text-[9px] font-bold uppercase">
+                              Principal
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => removeImage(idx)}
+                              className="absolute bottom-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-lg">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50/80 flex-shrink-0">
+            <div className="flex items-center gap-1.5">
+              {['general', 'pricing', 'media'].map((tab, i) => (
+                <div key={tab} className={`w-2 h-2 rounded-full transition-all ${activeTab === tab ? 'bg-orange-500 w-6' : 'bg-slate-300'}`} />
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose}
+                className="px-5 py-2.5 text-sm font-medium text-neutral-500 hover:bg-slate-100 rounded-xl transition-colors">
+                Cancelar
+              </button>
+              <button type="submit" disabled={!name.trim() || submitting}
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-orange-200/50">
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {product ? 'Guardar cambios' : 'Crear producto'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
