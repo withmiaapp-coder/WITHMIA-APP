@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   MessageCircle, 
   Mail, 
@@ -29,7 +29,11 @@ import {
   RefreshCw,
   Loader2,
   QrCode,
-  Plug
+  Plug,
+  Link2,
+  Unlink,
+  Bot,
+  ExternalLink
 } from 'lucide-react';
 
 interface IntegrationSectionProps {
@@ -63,6 +67,111 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     daysLimitImportMessages: whatsAppSettings.daysLimitImportMessages || 7
   });
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Google Calendar state
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalConnecting, setGcalConnecting] = useState(false);
+  const [gcalIntegration, setGcalIntegration] = useState<any>(null);
+  const [gcalLoading, setGcalLoading] = useState(true);
+  const [expandedTool, setExpandedTool] = useState<string | null>(null);
+
+  // API helper
+  const gcalApiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('auth_token') || '';
+    const separator = url.includes('?') ? '&' : '?';
+    const fullUrl = `${url}${separator}auth_token=${token}`;
+    const res = await fetch(fullUrl, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Railway-Auth': token,
+        ...(options.headers || {}),
+      },
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(`API Error ${res.status}`);
+    return res.json();
+  }, []);
+
+  // Load Google Calendar status
+  const loadGcalStatus = useCallback(async () => {
+    try {
+      setGcalLoading(true);
+      const data = await gcalApiFetch('/api/calendar/status');
+      setGcalConnected(data.connected);
+      setGcalIntegration(data.integration);
+    } catch (err) {
+      console.error('Error loading calendar status:', err);
+    } finally {
+      setGcalLoading(false);
+    }
+  }, [gcalApiFetch]);
+
+  // Connect Google Calendar
+  const connectGoogleCalendar = useCallback(async () => {
+    try {
+      setGcalConnecting(true);
+      const data = await gcalApiFetch('/api/calendar/google/auth-url');
+      const authWindow = window.open(data.auth_url, 'google_auth', 'width=600,height=700,left=200,top=100');
+
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data?.type === 'gcal_oauth_result') {
+          window.removeEventListener('message', handleMessage);
+          setGcalConnecting(false);
+          if (event.data.status === 'success') {
+            await loadGcalStatus();
+          }
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      const pollInterval = setInterval(() => {
+        if (authWindow?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => {
+            setGcalConnecting(false);
+            window.removeEventListener('message', handleMessage);
+            await loadGcalStatus();
+          }, 500);
+        }
+      }, 1000);
+
+      setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setGcalConnecting(false); }, 300000);
+    } catch (err) {
+      console.error('Error connecting Google Calendar:', err);
+      setGcalConnecting(false);
+    }
+  }, [gcalApiFetch, loadGcalStatus]);
+
+  // Disconnect Google Calendar
+  const disconnectGoogleCalendar = useCallback(async () => {
+    if (!confirm('¿Desconectar Google Calendar? WITHMIA perderá acceso al calendario.')) return;
+    try {
+      await gcalApiFetch('/api/calendar/google/disconnect', { method: 'POST' });
+      setGcalConnected(false);
+      setGcalIntegration(null);
+    } catch (err) {
+      console.error('Error disconnecting:', err);
+    }
+  }, [gcalApiFetch]);
+
+  // Toggle bot access
+  const toggleGcalBotAccess = useCallback(async () => {
+    if (!gcalIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/calendar/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !gcalIntegration.bot_access_enabled }),
+      });
+      setGcalIntegration(data.integration);
+    } catch (err) {
+      console.error('Error toggling bot access:', err);
+    }
+  }, [gcalIntegration, gcalApiFetch]);
+
+  useEffect(() => { loadGcalStatus(); }, [loadGcalStatus]);
 
   const isConnected = whatsAppStatus === 'open' || whatsAppStatus === 'connected';
 
@@ -536,7 +645,143 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
           </div>
           
           <div className="space-y-3">
-            {tools.map((tool) => (
+            {/* Google Calendar - Funcional */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'calendar'
+                ? 'border-rose-300 shadow-lg ring-1 ring-rose-100'
+                : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer"
+                onClick={() => setExpandedTool(expandedTool === 'calendar' ? null : 'calendar')}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #DC2626, #DC2626DD)' }}>
+                    <CalendarDays className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Google Calendar</h3>
+                    <p className="text-sm text-neutral-500">Integra con Google Calendar para agendar citas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {gcalLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                  ) : gcalConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                      Conectado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                      No conectado
+                    </span>
+                  )}
+                  {expandedTool === 'calendar'
+                    ? <ChevronDown className="w-5 h-5 text-neutral-400" />
+                    : <ChevronRight className="w-5 h-5 text-neutral-400" />
+                  }
+                </div>
+              </div>
+
+              {expandedTool === 'calendar' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {gcalConnected ? (
+                    <div className="space-y-4">
+                      {/* Connected Info */}
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700">
+                            <Check className="w-4 h-4" />
+                            <span className="text-sm font-medium">Google Calendar conectado</span>
+                          </div>
+                          {gcalIntegration?.provider_email && (
+                            <span className="text-xs text-green-600">{gcalIntegration.provider_email}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bot Access Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${gcalIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">
+                              {gcalIntegration?.bot_access_enabled
+                                ? 'WITHMIA puede consultar y crear eventos'
+                                : 'Activa para que WITHMIA agende citas'}
+                            </p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={gcalIntegration?.bot_access_enabled || false}
+                            onChange={toggleGcalBotAccess}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Disconnect */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={disconnectGoogleCalendar}
+                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-rose-50 rounded-lg flex-shrink-0">
+                            <svg className="w-8 h-8" viewBox="0 0 24 24">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Google Calendar</h4>
+                            <p className="text-sm text-neutral-500 mb-3">
+                              Sincroniza tu calendario de Google para que WITHMIA pueda consultar disponibilidad y agendar citas automáticamente con tus clientes.
+                            </p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Ver disponibilidad en tiempo real</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar reuniones automáticamente</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sincronización bidireccional</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={connectGoogleCalendar}
+                        disabled={gcalConnecting}
+                        className="w-full py-3 bg-white border-2 border-slate-200 hover:border-rose-300 text-neutral-700 hover:text-rose-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {gcalConnecting ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                        ) : (
+                          <><Link2 className="w-4 h-4" /> Conectar con Google</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Other tools - Coming Soon */}
+            {tools.filter(t => t.id !== 'calendar').map((tool) => (
               <div 
                 key={tool.id}
                 className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 opacity-75"

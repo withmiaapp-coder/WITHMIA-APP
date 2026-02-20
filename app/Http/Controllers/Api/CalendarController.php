@@ -757,7 +757,7 @@ class CalendarController extends Controller
             'summary' => $validated['title'],
             'description' => ($validated['description'] ?? '') .
                 (!empty($validated['attendee_phone']) ? "\n\nTeléfono: " . $validated['attendee_phone'] : '') .
-                "\n\n[Agendado por MIA Bot]",
+                "\n\n[Agendado por WITHMIA Bot]",
             'start' => ['dateTime' => $validated['start'], 'timeZone' => $timezone],
             'end' => ['dateTime' => $validated['end'], 'timeZone' => $timezone],
         ];
@@ -838,7 +838,7 @@ class CalendarController extends Controller
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
-<head><title>Google Calendar - MIA</title></head>
+<head><title>Google Calendar - WITHMIA</title></head>
 <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">
 <div style="text-align:center;padding:2rem;">
 <div style="font-size:3rem;margin-bottom:1rem;">{$this->getStatusEmoji($success)}</div>
