@@ -2196,9 +2196,9 @@
                 "url": "={{APP_URL}}/api/product-hub/bot/generate-link",
                 "sendBody": true,
                 "specifyBody": "json",
-                "jsonBody": "={{ JSON.stringify({ company_slug: '{{COMPANY_SLUG}}', product_name: $fromAI('product_name', 'Nombre exacto del producto que el cliente quiere comprar'), quantity: $fromAI('quantity', 'Cantidad de unidades, por defecto 1') }) }}",
+                "jsonBody": "={{ JSON.stringify({ company_slug: '{{COMPANY_SLUG}}', product_name: $fromAI('product_name', 'Nombre exacto del producto que el cliente quiere comprar'), quantity: $fromAI('quantity', 'Cantidad de unidades, por defecto 1'), customer_name: $fromAI('customer_name', 'Nombre del cliente si lo conoces, opcional'), customer_phone: $('Normalize Data').item.json.message.chat_id }) }}",
                 "options": {},
-                "description": "=Genera un enlace de compra/pago para un producto especifico. Usa esta herramienta DESPUES de buscar productos, cuando el cliente confirme que quiere comprar algo. Necesitas el nombre del producto y la cantidad. Devuelve un enlace directo de pago que puedes enviar al cliente por WhatsApp. Parametros: product_name (nombre del producto), quantity (cantidad, default 1)."
+                "description": "=Genera un enlace de compra/pago para un producto especifico. Usa esta herramienta DESPUES de buscar productos, cuando el cliente confirme que quiere comprar algo. Necesitas el nombre del producto y la cantidad. Devuelve un enlace directo de pago y registra automaticamente la venta en el sistema. Tambien devuelve un sale_id para trackeo. Parametros: product_name (nombre del producto), quantity (cantidad, default 1), customer_name (nombre del cliente, opcional)."
             },
             "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
             "typeVersion": 1.1,
@@ -5154,9 +5154,9 @@
                     "url": "={{APP_URL}}/api/product-hub/bot/generate-link",
                     "sendBody": true,
                     "specifyBody": "json",
-                    "jsonBody": "={{ JSON.stringify({ company_slug: '{{COMPANY_SLUG}}', product_name: $fromAI('product_name', 'Nombre exacto del producto que el cliente quiere comprar'), quantity: $fromAI('quantity', 'Cantidad de unidades, por defecto 1') }) }}",
+                    "jsonBody": "={{ JSON.stringify({ company_slug: '{{COMPANY_SLUG}}', product_name: $fromAI('product_name', 'Nombre exacto del producto que el cliente quiere comprar'), quantity: $fromAI('quantity', 'Cantidad de unidades, por defecto 1'), customer_name: $fromAI('customer_name', 'Nombre del cliente si lo conoces, opcional'), customer_phone: $('Normalize Data').item.json.message.chat_id }) }}",
                     "options": {},
-                    "description": "=Genera un enlace de compra/pago para un producto especifico. Usa esta herramienta DESPUES de buscar productos, cuando el cliente confirme que quiere comprar algo. Necesitas el nombre del producto y la cantidad. Devuelve un enlace directo de pago que puedes enviar al cliente por WhatsApp. Parametros: product_name (nombre del producto), quantity (cantidad, default 1)."
+                    "description": "=Genera un enlace de compra/pago para un producto especifico. Usa esta herramienta DESPUES de buscar productos, cuando el cliente confirme que quiere comprar algo. Necesitas el nombre del producto y la cantidad. Devuelve un enlace directo de pago y registra automaticamente la venta en el sistema. Tambien devuelve un sale_id para trackeo. Parametros: product_name (nombre del producto), quantity (cantidad, default 1), customer_name (nombre del cliente, opcional)."
                 },
                 "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
                 "typeVersion": 1.1,

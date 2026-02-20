@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\CalendarHubController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductIntegrationController;
 use App\Http\Controllers\Api\ProductHubController;
+use App\Http\Controllers\Api\SaleController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -336,11 +337,24 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::post('/sync', [ProductIntegrationController::class, 'sync']);
 });
 
+// Sales — Dashboard endpoints (auth required)
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('sales')->group(function () {
+    Route::get('/stats', [SaleController::class, 'stats']);
+    Route::get('/', [SaleController::class, 'index']);
+    Route::patch('/{id}/status', [SaleController::class, 'updateStatus']);
+});
+
 // Product Hub — Endpoint para n8n bot (buscar productos)
 Route::prefix('product-hub/bot')->group(function () {
     Route::get('/search', [ProductHubController::class, 'botSearch']);
     Route::get('/catalog', [ProductHubController::class, 'botCatalog']);
     Route::post('/generate-link', [ProductHubController::class, 'botGenerateLink']);
+});
+
+// Sales — Bot endpoints (sin auth, usan company_slug)
+Route::prefix('sales/bot')->group(function () {
+    Route::post('/record', [SaleController::class, 'botRecord']);
+    Route::patch('/update-status', [SaleController::class, 'botUpdateStatus']);
 });
 
 // Google OAuth GET callback (sin auth - Google redirige directamente aquí)

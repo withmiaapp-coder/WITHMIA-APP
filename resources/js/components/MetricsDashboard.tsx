@@ -10,7 +10,12 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
-  Loader2
+  Loader2,
+  ShoppingCart,
+  DollarSign,
+  Package,
+  Link2,
+  ExternalLink,
 } from 'lucide-react';
 
 interface MetricsDashboardProps {
@@ -34,6 +39,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 }) => {
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [salesStats, setSalesStats] = useState<any>(null);
+  const [loadingSales, setLoadingSales] = useState(true);
   
   // Cargar estadísticas reales del backend
   useEffect(() => {
@@ -60,9 +67,33 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         setLoadingStats(false);
       }
     };
+
+    const fetchSalesStats = async () => {
+      try {
+        setLoadingSales(true);
+        const period = timeRange === 'all' ? 'year' : timeRange;
+        const response = await fetch(`/api/sales/stats?period=${period}`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSalesStats(data);
+        }
+      } catch (error) {
+        debugLog.error('Error fetching sales stats:', error);
+      } finally {
+        setLoadingSales(false);
+      }
+    };
     
     fetchStats();
-  }, []);
+    fetchSalesStats();
+  }, [timeRange]);
   
   const metrics = useMemo(() => {
     const now = Date.now();
@@ -295,6 +326,23 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     if (seconds < 60) return `${Math.round(seconds)}s`;
     if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
     return `${(seconds / 3600).toFixed(1)}h`;
+  };
+
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    const symbols: Record<string, string> = {
+      'USD': 'US$', 'EUR': '€', 'CLP': '$',
+      'ARS': 'AR$', 'MXN': 'MX$', 'BRL': 'R$',
+      'COP': 'COL$', 'PEN': 'S/',
+    };
+    const symbol = symbols[currency] || '$';
+    const noDecimals = ['CLP', 'COP'].includes(currency);
+    if (amount >= 1000000) {
+      return `${symbol}${(amount / 1000000).toFixed(1)}M`;
+    }
+    if (amount >= 10000) {
+      return `${symbol}${(amount / 1000).toFixed(1)}K`;
+    }
+    return `${symbol}${amount.toLocaleString('es-CL', { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
   };
 
   const MetricCard: React.FC<{
@@ -562,6 +610,177 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             })}
           </div>
         </div>
+      )}
+
+      {/* ══════════════════ VENTAS ══════════════════ */}
+      {salesStats && (salesStats.metrics.links_generated > 0 || salesStats.all_time.total_sales > 0) && (
+        <>
+          {/* Header de Ventas */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center space-x-2">
+              <ShoppingCart className="w-5 h-5 text-emerald-500" />
+              <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
+            </div>
+            {salesStats.all_time.total_sales > 0 && (
+              <span className="text-sm text-gray-500">
+                Total histórico: {salesStats.all_time.total_sales} ventas
+              </span>
+            )}
+          </div>
+
+          {/* Métricas de Ventas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              title="Ventas Completadas"
+              value={salesStats.metrics.total_sales}
+              icon={<ShoppingCart className="w-6 h-6 text-white" />}
+              color="bg-gradient-to-r from-emerald-500 to-emerald-600"
+            />
+            <MetricCard
+              title="Ingresos"
+              value={formatCurrency(salesStats.metrics.total_revenue, salesStats.currency)}
+              icon={<DollarSign className="w-6 h-6 text-white" />}
+              color="bg-gradient-to-r from-green-500 to-green-600"
+            />
+            <MetricCard
+              title="Ticket Promedio"
+              value={formatCurrency(salesStats.metrics.avg_ticket, salesStats.currency)}
+              icon={<TrendingUp className="w-6 h-6 text-white" />}
+              color="bg-gradient-to-r from-cyan-500 to-cyan-600"
+            />
+            <MetricCard
+              title="Conversión de Enlaces"
+              value={`${salesStats.metrics.conversion_rate}%`}
+              icon={<Link2 className="w-6 h-6 text-white" />}
+              color="bg-gradient-to-r from-violet-500 to-violet-600"
+            />
+          </div>
+
+          {/* Pendientes */}
+          {salesStats.metrics.pending_count > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MetricCard
+                title="Ventas Pendientes"
+                value={salesStats.metrics.pending_count}
+                icon={<Clock className="w-6 h-6 text-white" />}
+                color="bg-gradient-to-r from-amber-500 to-amber-600"
+              />
+              <MetricCard
+                title="Valor Pendiente"
+                value={formatCurrency(salesStats.metrics.pending_value, salesStats.currency)}
+                icon={<DollarSign className="w-6 h-6 text-white" />}
+                color="bg-gradient-to-r from-yellow-500 to-yellow-600"
+              />
+            </div>
+          )}
+
+          {/* Top Productos + Ventas Recientes */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Productos */}
+            {salesStats.top_products && salesStats.top_products.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center mb-4">
+                  <Package className="w-5 h-5 text-emerald-500 mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">Top Productos</h3>
+                </div>
+                <div className="space-y-3">
+                  {salesStats.top_products.slice(0, 5).map((product: any, index: number) => {
+                    const maxRevenue = salesStats.top_products[0]?.revenue || 1;
+                    const percentage = (product.revenue / maxRevenue) * 100;
+                    
+                    return (
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="font-medium text-gray-900 truncate">{product.product_name}</span>
+                            {product.product_category && (
+                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{product.product_category}</span>
+                            )}
+                          </div>
+                          <div className="text-right ml-2">
+                            <span className="font-semibold text-gray-700">{formatCurrency(product.revenue, salesStats.currency)}</span>
+                            <span className="text-xs text-gray-500 ml-1">({product.units_sold} uds)</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Ventas Recientes */}
+            {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center mb-4">
+                  <ShoppingCart className="w-5 h-5 text-blue-500 mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
+                </div>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {salesStats.recent_sales.slice(0, 10).map((sale: any) => (
+                    <div key={sale.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{sale.product_name}</p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          {sale.customer_name && <span>{sale.customer_name}</span>}
+                          {sale.customer_phone && <span>· {sale.customer_phone}</span>}
+                          <span>· {sale.quantity}x</span>
+                        </div>
+                      </div>
+                      <div className="text-right ml-3">
+                        <p className="text-sm font-semibold text-gray-900">{sale.formatted_total}</p>
+                        <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
+                          sale.status_color === 'green' ? 'bg-green-100 text-green-700' :
+                          sale.status_color === 'blue' ? 'bg-blue-100 text-blue-700' :
+                          sale.status_color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          sale.status_color === 'red' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>{sale.status_label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Ventas por Día (gráfico de barras) */}
+          {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center mb-4">
+                <TrendingUp className="w-5 h-5 text-emerald-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">Ingresos por Día</h3>
+              </div>
+              <div className="flex items-end justify-between space-x-1 h-40">
+                {salesStats.daily_sales.map((day: any, index: number) => {
+                  const maxRevenue = Math.max(...salesStats.daily_sales.map((d: any) => d.revenue), 1);
+                  const height = (day.revenue / maxRevenue) * 100;
+                  const dateLabel = new Date(day.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                  
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center">
+                      <div 
+                        className="w-full bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t hover:from-emerald-600 hover:to-emerald-400 transition-all cursor-pointer relative group"
+                        style={{ height: `${height}%`, minHeight: day.revenue > 0 ? '8px' : '0' }}
+                      >
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {formatCurrency(day.revenue, salesStats.currency)} · {day.count} ventas
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 mt-2 truncate w-full text-center">{dateLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

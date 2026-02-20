@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductIntegration;
+use App\Models\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -317,10 +318,38 @@ class ProductHubController extends Controller
         }
 
         // Add discount info
+        $discountAmount = 0;
         if ($product->compare_at_price && $product->compare_at_price > $product->price) {
             $discount = round((1 - $product->price / $product->compare_at_price) * 100);
             $response['discount'] = "{$discount}% de descuento";
             $response['original_price'] = $this->formatPrice($product->compare_at_price, $product->currency);
+            $discountAmount = ($product->compare_at_price - $product->price) * $quantity;
+        }
+
+        // Auto-record sale for tracking
+        try {
+            $sale = Sale::create([
+                'company_id' => $company->id,
+                'product_id' => $product->id,
+                'customer_name' => $request->input('customer_name'),
+                'customer_phone' => $request->input('customer_phone'),
+                'product_name' => $product->name,
+                'product_sku' => $product->sku,
+                'product_category' => $product->category,
+                'product_provider' => $product->provider,
+                'quantity' => $quantity,
+                'unit_price' => $product->price,
+                'total_price' => $total,
+                'discount_amount' => $discountAmount,
+                'currency' => $product->currency ?? 'USD',
+                'status' => $checkoutUrl ? 'link_generated' : 'link_generated',
+                'source' => 'bot_whatsapp',
+                'checkout_url' => $checkoutUrl ?? $product->url,
+                'conversation_id' => $request->input('conversation_id'),
+            ]);
+            $response['sale_id'] = $sale->id;
+        } catch (\Exception $e) {
+            Log::warning("Failed to record sale: {$e->getMessage()}");
         }
 
         return response()->json($response);
