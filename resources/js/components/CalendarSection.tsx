@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 
 // ====== TIPOS ======
+type CalendarProvider = 'google' | 'outlook' | 'calendly' | 'reservo' | 'agendapro';
+
 interface CalendarEvent {
   id: string;
   title: string;
@@ -34,9 +36,12 @@ interface CalendarEvent {
   status: string;
   htmlLink: string | null;
   hangoutLink: string | null;
+  onlineMeetingUrl: string | null;
+  webLink: string | null;
   attendees: { email: string; name: string; status: string }[];
   color: string | null;
   creator: string | null;
+  provider: CalendarProvider;
 }
 
 interface GoogleCalendar {
@@ -106,7 +111,27 @@ const EVENT_COLORS = [
   '#0b8043', '#d50000',
 ];
 
+const PROVIDER_COLORS: Record<CalendarProvider, string> = {
+  google: '#4285f4',
+  outlook: '#0078D4',
+  calendly: '#006BFF',
+  reservo: '#14b8a6',
+  agendapro: '#6366f1',
+};
+
+const PROVIDER_NAMES: Record<CalendarProvider, string> = {
+  google: 'Google Calendar',
+  outlook: 'Outlook',
+  calendly: 'Calendly',
+  reservo: 'Reservo',
+  agendapro: 'AgendaPro',
+};
+
 function getEventColor(event: CalendarEvent, index: number): string {
+  // Use provider color for non-Google events
+  if (event.provider && event.provider !== 'google') {
+    return PROVIDER_COLORS[event.provider] || EVENT_COLORS[index % EVENT_COLORS.length];
+  }
   if (event.color && EVENT_COLORS[parseInt(event.color) - 1]) {
     return EVENT_COLORS[parseInt(event.color) - 1];
   }
@@ -214,9 +239,9 @@ export default function CalendarSection({ user, company }: Props) {
     }
   }, []);
 
-  // ====== CARGAR EVENTOS ======
+  // ====== CARGAR EVENTOS (MULTI-PROVEEDOR) ======
   const loadEvents = useCallback(async () => {
-    if (!isConnected) return;
+    if (!isConnected && !outlookConnected && !calendlyConnected) return;
 
     try {
       setLoadingEvents(true);
@@ -238,17 +263,94 @@ export default function CalendarSection({ user, company }: Props) {
       const timeMin = startOfView.toISOString();
       const timeMax = endOfView.toISOString();
 
-      const data = await apiFetch(
-        `/api/calendar/events?calendar_id=${encodeURIComponent(selectedCalendar)}&time_min=${timeMin}&time_max=${timeMax}`
-      );
-      setEvents(data.events || []);
+      // Fetch from all connected providers in parallel
+      const fetches: Promise<{ provider: CalendarProvider; events: any[] }>[] = [];
+
+      if (isConnected) {
+        fetches.push(
+          apiFetch(`/api/calendar/events?calendar_id=${encodeURIComponent(selectedCalendar)}&time_min=${timeMin}&time_max=${timeMax}`)
+            .then(data => ({ provider: 'google' as CalendarProvider, events: data.events || [] }))
+            .catch(() => ({ provider: 'google' as CalendarProvider, events: [] }))
+        );
+      }
+
+      if (outlookConnected) {
+        fetches.push(
+          apiFetch(`/api/outlook/events?start=${timeMin}&end=${timeMax}`)
+            .then(data => ({ provider: 'outlook' as CalendarProvider, events: data.events || [] }))
+            .catch(() => ({ provider: 'outlook' as CalendarProvider, events: [] }))
+        );
+      }
+
+      if (calendlyConnected) {
+        fetches.push(
+          apiFetch(`/api/calendly/events?min_date=${timeMin}&max_date=${timeMax}`)
+            .then(data => ({ provider: 'calendly' as CalendarProvider, events: data.events || [] }))
+            .catch(() => ({ provider: 'calendly' as CalendarProvider, events: [] }))
+        );
+      }
+
+      const results = await Promise.all(fetches);
+
+      // Normalize all events into unified CalendarEvent format
+      const allEvents: CalendarEvent[] = [];
+
+      for (const result of results) {
+        for (const evt of result.events) {
+          if (result.provider === 'google') {
+            allEvents.push({ ...evt, provider: 'google', onlineMeetingUrl: null, webLink: null });
+          } else if (result.provider === 'outlook') {
+            allEvents.push({
+              id: evt.id,
+              title: evt.title || '(Sin título)',
+              description: evt.body?.content || evt.description || '',
+              location: evt.location || '',
+              start: evt.start,
+              end: evt.end,
+              allDay: evt.allDay || false,
+              status: evt.status || 'confirmed',
+              htmlLink: null,
+              hangoutLink: null,
+              onlineMeetingUrl: evt.onlineMeetingUrl || null,
+              webLink: evt.webLink || null,
+              attendees: evt.attendees || [],
+              color: null,
+              creator: null,
+              provider: 'outlook',
+            });
+          } else if (result.provider === 'calendly') {
+            allEvents.push({
+              id: evt.uri || evt.id || `calendly-${Math.random()}`,
+              title: evt.name || '(Sin título)',
+              description: '',
+              location: evt.location?.location || evt.location || '',
+              start: evt.start_time || evt.start || '',
+              end: evt.end_time || evt.end || '',
+              allDay: false,
+              status: evt.status || 'active',
+              htmlLink: evt.uri || null,
+              hangoutLink: null,
+              onlineMeetingUrl: null,
+              webLink: null,
+              attendees: [],
+              color: null,
+              creator: null,
+              provider: 'calendly',
+            });
+          }
+        }
+      }
+
+      // Sort by start time
+      allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      setEvents(allEvents);
     } catch (err: any) {
       console.error('Error loading events:', err);
       setError('Error al cargar eventos. Intenta reconectar tu calendario desde Integraciones.');
     } finally {
       setLoadingEvents(false);
     }
-  }, [isConnected, currentDate, viewMode, selectedCalendar]);
+  }, [isConnected, outlookConnected, calendlyConnected, currentDate, viewMode, selectedCalendar]);
 
   // ====== CONECTAR GOOGLE CALENDAR ======
   const connectGoogle = useCallback(async () => {
@@ -430,25 +532,37 @@ export default function CalendarSection({ user, company }: Props) {
     }
   }, [selectedCalendar, loadEvents]);
 
-  // ====== ELIMINAR EVENTO ======
-  const handleDeleteEvent = useCallback(async (eventId: string) => {
+  // ====== ELIMINAR EVENTO (MULTI-PROVEEDOR) ======
+  const handleDeleteEvent = useCallback(async (event: CalendarEvent) => {
     if (!confirm('¿Eliminar este evento?')) return;
     try {
-      await apiFetch(`/api/calendar/events/${eventId}?calendar_id=${encodeURIComponent(selectedCalendar)}`, {
-        method: 'DELETE',
-      });
+      if (event.provider === 'google') {
+        await apiFetch(`/api/calendar/events/${event.id}?calendar_id=${encodeURIComponent(selectedCalendar)}`, {
+          method: 'DELETE',
+        });
+      } else if (event.provider === 'outlook') {
+        await apiFetch(`/api/outlook/events/${event.id}`, {
+          method: 'DELETE',
+        });
+      } else {
+        // Calendly, Reservo, AgendaPro don't support delete from here
+        return;
+      }
       setSelectedEvent(null);
       await loadEvents();
     } catch (err) {
       console.error('Error deleting event:', err);
+      setError('Error al eliminar el evento');
     }
   }, [selectedCalendar, loadEvents]);
 
   // ====== EFECTOS ======
   useEffect(() => { loadIntegrationStatus(); }, [loadIntegrationStatus]);
   useEffect(() => {
-    if (isConnected) { loadCalendars(); loadEvents(); }
-  }, [isConnected, loadCalendars, loadEvents]);
+    const anyCalendarConnected = isConnected || outlookConnected || calendlyConnected;
+    if (anyCalendarConnected) { loadEvents(); }
+    if (isConnected) { loadCalendars(); }
+  }, [isConnected, outlookConnected, calendlyConnected, loadCalendars, loadEvents]);
 
   // ====== HELPERS DE FECHA ======
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -563,15 +677,17 @@ export default function CalendarSection({ user, company }: Props) {
                 >
                   <Settings className="w-4 h-4" />
                 </button>
-
-                <button
-                  onClick={loadEvents}
-                  disabled={loadingEvents}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loadingEvents ? 'animate-spin' : ''}`} />
-                </button>
               </>
+            )}
+
+            {anyConnected && (
+              <button
+                onClick={loadEvents}
+                disabled={loadingEvents}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingEvents ? 'animate-spin' : ''}`} />
+              </button>
             )}
 
             <button
@@ -882,17 +998,20 @@ export default function CalendarSection({ user, company }: Props) {
                         <div
                           key={event.id}
                           onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }}
-                          className="px-1.5 py-0.5 rounded text-[10px] leading-tight font-medium truncate cursor-pointer hover:opacity-80 transition-opacity"
+                          className="px-1.5 py-0.5 rounded text-[10px] leading-tight font-medium truncate cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-0.5"
                           style={{
                             backgroundColor: `${getEventColor(event, eIdx)}12`,
                             color: getEventColor(event, eIdx),
                             borderLeft: `2px solid ${getEventColor(event, eIdx)}`,
                           }}
                         >
+                          {event.provider !== 'google' && (
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: PROVIDER_COLORS[event.provider] }} />
+                          )}
                           {!event.allDay && (
                             <span className="opacity-60 mr-0.5">{formatTime(event.start)}</span>
                           )}
-                          {event.title}
+                          <span className="truncate">{event.title}</span>
                         </div>
                       ))}
                       {dayEvents.length > 3 && (
@@ -933,7 +1052,7 @@ export default function CalendarSection({ user, company }: Props) {
         <EventDetailModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
-          onDelete={() => handleDeleteEvent(selectedEvent.id)}
+          onDelete={() => handleDeleteEvent(selectedEvent)}
         />
       )}
 
@@ -1068,7 +1187,7 @@ function DayView({ currentDate, events, onEventClick, onSlotClick }: {
                         {formatTimeStr(event.start)} - {formatTimeStr(event.end)}
                       </div>
                     </div>
-                    {event.hangoutLink && <Video className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                    {(event.hangoutLink || event.onlineMeetingUrl) && <Video className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                     {event.location && <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0" />}
                   </div>
                 ))}
@@ -1086,73 +1205,233 @@ function EventDetailModal({ event, onClose, onDelete }: {
   onClose: () => void;
   onDelete: () => void;
 }) {
+  const providerColor = PROVIDER_COLORS[event.provider] || '#4285f4';
+  const providerName = PROVIDER_NAMES[event.provider] || 'Calendario';
+  const canDelete = event.provider === 'google' || event.provider === 'outlook';
+
+  // Determine video meeting link (Google Meet, Teams, Zoom, etc.)
+  const meetingLink = event.hangoutLink || event.onlineMeetingUrl || null;
+  const getMeetingLabel = () => {
+    if (event.hangoutLink) return 'Google Meet';
+    if (event.onlineMeetingUrl) {
+      if (event.onlineMeetingUrl.includes('teams.microsoft')) return 'Microsoft Teams';
+      if (event.onlineMeetingUrl.includes('zoom.us')) return 'Zoom';
+      return 'Reunión online';
+    }
+    return '';
+  };
+  const getMeetingIcon = () => {
+    if (event.hangoutLink) return (
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-sm">
+        <Video className="w-4 h-4 text-white" />
+      </div>
+    );
+    if (event.onlineMeetingUrl?.includes('teams.microsoft')) return (
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#5B5FC7] to-[#4B4EBF] flex items-center justify-center shadow-sm">
+        <Video className="w-4 h-4 text-white" />
+      </div>
+    );
+    return (
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm">
+        <Video className="w-4 h-4 text-white" />
+      </div>
+    );
+  };
+
+  // Open in provider link
+  const externalLink = event.htmlLink || event.webLink || null;
+  const getExternalLabel = () => {
+    if (event.provider === 'google') return 'Abrir en Google Calendar';
+    if (event.provider === 'outlook') return 'Abrir en Outlook';
+    if (event.provider === 'calendly') return 'Ver en Calendly';
+    return 'Abrir evento';
+  };
+
+  // Provider icon
+  const ProviderIcon = () => {
+    if (event.provider === 'google') return (
+      <svg className="w-3.5 h-3.5" viewBox="0 0 48 48">
+        <path d="M34 42H14c-4.4 0-8-3.6-8-8V14c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v20c0 4.4-3.6 8-8 8z" fill="#FFF"/>
+        <path d="M34 6H14C9.6 6 6 9.6 6 14v20c0 4.4 3.6 8 8 8h20c4.4 0 8-3.6 8-8V14c0-4.4-3.6-8-8-8zm-4 32H18c-2.2 0-4-1.8-4-4V18h20v16c0 2.2-1.8 4-4 4z" fill="#1E88E5"/>
+        <path d="M34 6H14C9.6 6 6 9.6 6 14v4h36v-4c0-4.4-3.6-8-8-8z" fill="#1565C0"/>
+      </svg>
+    );
+    if (event.provider === 'outlook') return (
+      <svg className="w-3.5 h-3.5" viewBox="0 0 32 32">
+        <path d="M19.484 7.937v5.477l1.916 1.205a.076.076 0 00.069 0L28 10.169V8.375A1.398 1.398 0 0026.625 7H19.484z" fill="#0364B8"/>
+        <path d="M19.484 15.457l1.747 1.2a.076.076 0 00.069 0l7.2-4.571v8.539A1.375 1.375 0 0127.125 22H19.484z" fill="#0A2767"/>
+        <path d="M2.153 5.155v21.427L15.3 29.535a.613.613 0 00.178.025.6.6 0 00.283-.067l.017-.009V2.586L15.48 2.5a.541.541 0 00-.176-.028.606.606 0 00-.293.07z" fill="#0364B8"/>
+      </svg>
+    );
+    if (event.provider === 'calendly') return (
+      <svg className="w-3.5 h-3.5" viewBox="0 0 32 32" fill="none">
+        <path d="M22.195 17.891c-1.027 1.777-2.88 2.779-4.965 2.779-1.174 0-2.32-.328-3.305-.948a6.453 6.453 0 01-2.395-2.586 6.66 6.66 0 01-.035-6.058 6.39 6.39 0 012.322-2.635A6.239 6.239 0 0117.123 7.5c2.123 0 3.98 1.005 5.003 2.77l3.36-1.93C23.72 5.29 20.695 3.5 17.123 3.5c-1.97 0-3.884.534-5.536 1.545a10.481 10.481 0 00-3.806 4.22 10.708 10.708 0 00.051 9.757 10.494 10.494 0 003.738 4.143A10.175 10.175 0 0017.124 24.7c3.538 0 6.564-1.801 8.36-4.87z" fill="#006BFF"/>
+      </svg>
+    );
+    return <CalendarIcon className="w-3.5 h-3.5" />;
+  };
+
+  // Format full date
+  const formatFullDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `${dayNames[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+  };
+
+  // Duration calculation
+  const getDuration = () => {
+    if (event.allDay) return null;
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    const diffMin = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (diffMin < 60) return `${diffMin} min`;
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  };
+
+  const duration = getDuration();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-bold text-neutral-800 pr-4">{event.title}</h3>
-            <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg flex-shrink-0">
-              <X className="w-5 h-5 text-neutral-400" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[420px] mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        {/* Color header bar */}
+        <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${providerColor}, ${providerColor}88)` }} />
+
+        <div className="p-5">
+          {/* Provider badge + Close */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase" style={{ backgroundColor: `${providerColor}10`, color: providerColor }}>
+              <ProviderIcon />
+              <span>{providerName}</span>
+            </div>
+            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors group">
+              <X className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 transition-colors" />
             </button>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <Clock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-              <span className="text-neutral-600">
-                {event.allDay ? 'Todo el día' : `${formatTimeStr(event.start)} - ${formatTimeStr(event.end)}`}
-              </span>
+          {/* Title */}
+          <h3 className="text-[17px] font-bold text-neutral-900 leading-snug mb-4">{event.title}</h3>
+
+          {/* Date & Time */}
+          <div className="space-y-2.5">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <CalendarIcon className="w-4 h-4 text-neutral-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-neutral-800">{formatFullDate(event.start)}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-[12px] text-neutral-500">
+                    {event.allDay ? 'Todo el día' : `${formatTimeStr(event.start)} – ${formatTimeStr(event.end)}`}
+                  </p>
+                  {duration && (
+                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-medium text-neutral-400">{duration}</span>
+                  )}
+                </div>
+              </div>
             </div>
 
+            {/* Location */}
             {event.location && (
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                <span className="text-neutral-600">{event.location}</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-neutral-400" />
+                </div>
+                <p className="text-[13px] text-neutral-600 flex-1 min-w-0 truncate">{event.location}</p>
               </div>
             )}
 
-            {event.hangoutLink && (
-              <a href={event.hangoutLink} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 text-sm text-blue-600 hover:text-blue-700">
-                <Video className="w-4 h-4 flex-shrink-0" />
-                <span>Unirse a Google Meet</span>
-                <ExternalLink className="w-3 h-3" />
+            {/* Video meeting link */}
+            {meetingLink && (
+              <a href={meetingLink} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-2.5 -mx-1 rounded-xl hover:bg-blue-50/50 transition-colors group">
+                {getMeetingIcon()}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">{getMeetingLabel()}</p>
+                  <p className="text-[11px] text-neutral-400">Clic para unirse</p>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
               </a>
             )}
 
+            {/* Attendees */}
             {event.attendees.length > 0 && (
-              <div className="flex items-start gap-3 text-sm">
-                <Users className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Users className="w-4 h-4 text-neutral-400" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">{event.attendees.length} participante{event.attendees.length > 1 ? 's' : ''}</p>
                   {event.attendees.map((a, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="text-neutral-600">{a.name || a.email}</span>
-                      {a.status === 'accepted' && <Check className="w-3 h-3 text-emerald-500" />}
-                      {a.status === 'declined' && <X className="w-3 h-3 text-red-500" />}
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                        style={{ backgroundColor: EVENT_COLORS[i % EVENT_COLORS.length] }}>
+                        {(a.name || a.email).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[12px] text-neutral-700 truncate block">{a.name || a.email}</span>
+                        {a.name && <span className="text-[10px] text-neutral-400 truncate block">{a.email}</span>}
+                      </div>
+                      {a.status === 'accepted' && (
+                        <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0" title="Aceptado">
+                          <Check className="w-2.5 h-2.5 text-emerald-600" />
+                        </div>
+                      )}
+                      {a.status === 'declined' && (
+                        <div className="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0" title="Rechazado">
+                          <X className="w-2.5 h-2.5 text-red-500" />
+                        </div>
+                      )}
+                      {a.status === 'tentative' && (
+                        <div className="w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0" title="Tentativo">
+                          <span className="text-[8px] font-bold text-amber-600">?</span>
+                        </div>
+                      )}
+                      {a.status === 'needsAction' && (
+                        <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0" title="Pendiente">
+                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Description */}
             {event.description && (
-              <div className="pt-3 border-t border-slate-100">
-                <p className="text-sm text-neutral-500 whitespace-pre-line">{event.description}</p>
+              <div className="pt-2 mt-1 border-t border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 6h16M4 10h16M4 14h10M4 18h7" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <p className="text-[12px] text-neutral-500 leading-relaxed whitespace-pre-line flex-1">{event.description}</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-6 py-3 flex items-center justify-between bg-slate-50/50">
-          <button onClick={onDelete}
-            className="flex items-center gap-2 text-red-500 hover:text-red-600 text-sm font-medium px-3 py-1.5 hover:bg-red-50 rounded-lg transition-colors">
-            <Trash2 className="w-4 h-4" /> Eliminar
-          </button>
-          {event.htmlLink && (
-            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 text-sm px-3 py-1.5 hover:bg-slate-100 rounded-lg transition-colors">
-              <ExternalLink className="w-4 h-4" /> Abrir en Google
+        {/* Action footer */}
+        <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between bg-slate-50/60">
+          {canDelete ? (
+            <button onClick={onDelete}
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[12px] font-medium px-3 py-1.5 hover:bg-red-50 rounded-lg transition-all">
+              <Trash2 className="w-3.5 h-3.5" /> Eliminar
+            </button>
+          ) : (
+            <div />
+          )}
+          {externalLink && (
+            <a href={externalLink} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg transition-all hover:shadow-sm"
+              style={{ color: providerColor, backgroundColor: `${providerColor}08` }}>
+              <ExternalLink className="w-3.5 h-3.5" /> {getExternalLabel()}
             </a>
           )}
         </div>
