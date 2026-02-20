@@ -631,6 +631,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
   // Estado de integraciones de calendario (para el contador del sidebar)
   const [calendarIntegrationsCount, setCalendarIntegrationsCount] = useState(0);
+  const [productIntegrationsCount, setProductIntegrationsCount] = useState(0);
 
   const [notification, setNotification] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
   
@@ -827,6 +828,19 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Cargar integraciones de calendario al montar
   useEffect(() => {
     checkCalendarIntegrations();
+    // Load product integrations count
+    (async () => {
+      try {
+        const res = await secureFetch('/api/product-integrations/status', { requireCsrf: false, timeout: 8000 });
+        const data = await res.json();
+        const integrations = data.integrations || {};
+        let count = 0;
+        for (const [key, val] of Object.entries(integrations)) {
+          if (key !== 'manual' && key !== 'total_products' && (val as any)?.connected) count++;
+        }
+        setProductIntegrationsCount(count);
+      } catch {}
+    })();
   }, [checkCalendarIntegrations]);
 
   // Función para contar Integraciones realmente conectadas
@@ -840,6 +854,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     
     // Calendario (Google, Outlook, Calendly, Reservo, AgendaPro)
     connected += calendarIntegrationsCount;
+
+    // Producto integrations (WooCommerce, Shopify, MercadoLibre)
+    connected += productIntegrationsCount;
     
     return connected;
   };
@@ -1267,6 +1284,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 onUpdateSettings={updateWhatsAppSettings}
                 isUpdatingSettings={isUpdatingWhatsAppSettings}
                 onIntegrationChange={checkCalendarIntegrations}
+                onNavigateToProducts={() => setActiveSection('reports')}
               />
             ) : activeSection === 'knowledge' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">

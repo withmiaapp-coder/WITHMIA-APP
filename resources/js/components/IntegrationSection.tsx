@@ -49,6 +49,7 @@ interface IntegrationSectionProps {
   onUpdateSettings: (settings: any) => Promise<void>;
   isUpdatingSettings?: boolean;
   onIntegrationChange?: () => void;
+  onNavigateToProducts?: () => void;
 }
 
 const IntegrationSection: React.FC<IntegrationSectionProps> = ({
@@ -59,6 +60,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   onUpdateSettings,
   isUpdatingSettings = false,
   onIntegrationChange,
+  onNavigateToProducts,
 }) => {
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState({
@@ -103,6 +105,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [agendaproApiKey, setAgendaproApiKey] = useState('');
   const [agendaproConnecting, setAgendaproConnecting] = useState(false);
   const [agendaproError, setAgendaproError] = useState('');
+
+  // Product integrations state
+  const [productIntegrations, setProductIntegrations] = useState<Record<string, any>>({});
+  const [productIntegrationsLoading, setProductIntegrationsLoading] = useState(true);
 
   // API helper
   const gcalApiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -437,6 +443,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     loadOutlookStatus();
     loadReservoStatus();
     loadAgendaproStatus();
+    // Load product integrations status
+    (async () => {
+      try {
+        const data = await gcalApiFetch('/api/product-integrations/status');
+        setProductIntegrations(data.integrations || {});
+      } catch (err) {
+        console.error('Error loading product integrations:', err);
+      } finally {
+        setProductIntegrationsLoading(false);
+      }
+    })();
   }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus]);
 
   const isConnected = whatsAppStatus === 'open' || whatsAppStatus === 'connected';
@@ -1382,11 +1399,50 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               )}
             </div>
 
+            {/* ==================== TIENDAS / PRODUCTOS ==================== */}
+            {[
+              { id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart, color: '#96588A', description: 'Conecta tu tienda WooCommerce' },
+              { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: '#96BF48', description: 'Sincroniza con tu tienda Shopify' },
+              { id: 'mercadolibre', name: 'MercadoLibre', icon: Store, color: '#FFE600', description: 'Conecta tu tienda MercadoLibre', textColor: '#333' },
+            ].map((tool) => {
+              const status = productIntegrations[tool.id];
+              const isConnected = status?.connected ?? false;
+              const productsCount = status?.products_count ?? 0;
+              return (
+                <div key={tool.id}
+                  onClick={() => onNavigateToProducts?.()}
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:border-orange-300 hover:shadow-md transition-all cursor-pointer group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl shadow-md" style={{ background: `linear-gradient(135deg, ${tool.color}, ${tool.color}DD)` }}>
+                        <tool.icon className="w-5 h-5" style={{ color: (tool as any).textColor || 'white' }} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-neutral-800">{tool.name}</h3>
+                        <p className="text-sm text-neutral-500">{isConnected ? `${productsCount} productos sincronizados` : tool.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isConnected ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                          Conectado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                          Configurar
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-orange-500 transition-colors" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
             {/* ==================== PRÓXIMAMENTE ==================== */}
             {[
               { id: 'crm', name: 'CRM', icon: Database, color: '#059669', description: 'Gestiona relaciones con clientes' },
-              { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: '#96BF48', description: 'Sincroniza con tu tienda Shopify' },
-              { id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart, color: '#96588A', description: 'Conecta tu tienda WooCommerce' },
             ].map((tool) => (
               <div key={tool.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 opacity-75">
                 <div className="flex items-center justify-between">
