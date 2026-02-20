@@ -16,6 +16,11 @@ import {
   Package,
   Link2,
   ExternalLink,
+  BarChart3,
+  Zap,
+  Target,
+  Mail,
+  Eye,
 } from 'lucide-react';
 
 interface MetricsDashboardProps {
@@ -351,20 +356,24 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     icon: React.ReactNode;
     color: string;
     trend?: { value: number; isUp: boolean };
-  }> = ({ title, value, icon, color, trend }) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    subtitle?: string;
+  }> = ({ title, value, icon, color, trend, subtitle }) => (
+    <div className="group relative bg-white rounded-2xl p-5 border border-gray-100/80 hover:border-gray-200 transition-all duration-300 hover:shadow-lg hover:shadow-gray-100/50 hover:-translate-y-0.5">
       <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-gray-900">{value}</h3>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{title}</p>
+          <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{value}</h3>
           {trend && (
-            <div className={`flex items-center mt-2 text-sm ${trend.isUp ? 'text-green-600' : 'text-red-600'}`}>
-              {trend.isUp ? <ArrowUp className="w-4 h-4 mr-1" /> : <ArrowDown className="w-4 h-4 mr-1" />}
+            <div className={`flex items-center mt-2 text-xs font-medium ${trend.isUp ? 'text-emerald-600' : 'text-red-500'}`}>
+              <div className={`flex items-center justify-center w-4 h-4 rounded-full mr-1 ${trend.isUp ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                {trend.isUp ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+              </div>
               <span>{Math.abs(trend.value)}%</span>
             </div>
           )}
+          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
+        <div className={`p-2.5 rounded-xl ${color} shadow-lg opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300`}>
           {icon}
         </div>
       </div>
@@ -376,24 +385,32 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
-          <p className="text-gray-600">Cargando estadísticas...</p>
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-[3px] border-gray-100" />
+            <div className="absolute inset-0 w-12 h-12 rounded-full border-[3px] border-transparent border-t-blue-500 animate-spin" />
+          </div>
+          <p className="text-sm text-gray-400 mt-4 font-medium">Cargando métricas...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* ═══════════ HEADER ═══════════ */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Dashboard de Métricas</h2>
-          <p className="text-gray-600">Análisis de actividad y rendimiento</p>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+            <BarChart3 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Panel de Métricas</h2>
+            <p className="text-sm text-gray-400 font-medium">Análisis de actividad y rendimiento</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Activity className="w-5 h-5 text-blue-500" />
-          <span className="text-sm font-medium text-gray-700">
+        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-sm font-semibold text-gray-600">
             {timeRange === 'today' && 'Hoy'}
             {timeRange === 'week' && 'Última semana'}
             {timeRange === 'month' && 'Último mes'}
@@ -402,85 +419,101 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
       </div>
 
-      {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ═══════════ MÉTRICAS PRINCIPALES ═══════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total Conversaciones"
+          title="Conversaciones"
           value={metrics.total}
-          icon={<MessageCircle className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-blue-500 to-blue-600"
+          icon={<MessageCircle className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/25"
         />
         <MetricCard
-          title="Conversaciones Abiertas"
+          title="Abiertas"
           value={metrics.open}
-          icon={<AlertCircle className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-orange-500 to-orange-600"
+          icon={<AlertCircle className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-amber-500 to-orange-500 shadow-orange-500/25"
         />
         <MetricCard
           title="Resueltas"
           value={metrics.resolved}
-          icon={<CheckCircle2 className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-green-500 to-green-600"
+          icon={<CheckCircle2 className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/25"
         />
         <MetricCard
-          title="Mensajes No Leídos"
+          title="No Leídos"
           value={metrics.unread}
-          icon={<MessageCircle className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-red-500 to-red-600"
+          icon={<Eye className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/25"
         />
       </div>
 
-      {/* Fila secundaria */}
+      {/* ═══════════ MÉTRICAS SECUNDARIAS ═══════════ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          title="Tiempo Promedio Respuesta"
+          title="Tiempo de Respuesta"
           value={backendStats?.avgResponseTime || formatTime(metrics.avgResponseTime)}
-          icon={<Clock className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-purple-500 to-purple-600"
+          icon={<Zap className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/25"
+          subtitle="Promedio últimos 7 días"
         />
         <MetricCard
-          title="Total Mensajes"
-          value={metrics.totalMessages}
-          icon={<TrendingUp className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-indigo-500 to-indigo-600"
+          title="Mensajes Totales"
+          value={metrics.totalMessages.toLocaleString()}
+          icon={<Mail className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/25"
         />
         <MetricCard
           title="Tasa de Resolución"
           value={`${metrics.resolutionRate}%`}
-          icon={<CheckCircle2 className="w-6 h-6 text-white" />}
-          color="bg-gradient-to-r from-teal-500 to-teal-600"
+          icon={<Target className="w-5 h-5 text-white" />}
+          color="bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/25"
         />
       </div>
 
-      {/* Gráficos y tablas */}
+      {/* ═══════════ CONTACTOS + DISTRIBUCIÓN ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Top Contactos */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center mb-4">
-            <Users className="w-5 h-5 text-blue-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Top 5 Contactos Más Activos</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Top 5 Contactos</h3>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {metrics.topContacts.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No hay datos disponibles</p>
+              <div className="text-center py-8">
+                <Users className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Sin datos aún</p>
+              </div>
             ) : (
               metrics.topContacts.map((contact, index) => {
                 const maxCount = metrics.topContacts[0].count;
                 const percentage = (contact.count / maxCount) * 100;
+                const colors = [
+                  'from-blue-500 to-indigo-500',
+                  'from-violet-500 to-purple-500',
+                  'from-emerald-500 to-teal-500',
+                  'from-amber-500 to-orange-500',
+                  'from-rose-500 to-pink-500',
+                ];
                 
                 return (
-                  <div key={index} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        <span className="font-medium text-gray-900 truncate">{contact.name}</span>
-                        <span className="text-gray-400 text-xs">{contact.phone}</span>
+                  <div key={index} className="group">
+                    <div className="flex items-center justify-between text-sm mb-1.5">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${colors[index]} flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-[10px] font-bold text-white">{index + 1}</span>
+                        </div>
+                        <span className="font-semibold text-gray-800 truncate">{contact.name}</span>
+                        <span className="text-gray-300 text-xs hidden sm:inline">{contact.phone}</span>
                       </div>
-                      <span className="font-semibold text-gray-700">{contact.count} msgs</span>
+                      <span className="font-bold text-gray-600 text-xs bg-gray-50 px-2 py-0.5 rounded-md">{contact.count} msgs</span>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-500"
+                        className={`bg-gradient-to-r ${colors[index]} h-full rounded-full transition-all duration-700 ease-out`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -492,89 +525,109 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
 
         {/* Distribución de Mensajes */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center mb-4">
-            <MessageCircle className="w-5 h-5 text-green-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Distribución de Mensajes</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+              <MessageCircle className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Distribución de Mensajes</h3>
           </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">Mensajes de Agentes</span>
-                <span className="text-sm font-semibold text-gray-900">{metrics.agentMessages}</span>
+          
+          {/* Visual ratio bar */}
+          <div className="mb-6">
+            <div className="flex rounded-xl h-10 overflow-hidden shadow-inner bg-gray-50">
+              {metrics.totalMessages > 0 ? (
+                <>
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-green-400 flex items-center justify-center transition-all duration-700"
+                    style={{ width: `${(metrics.agentMessages / metrics.totalMessages) * 100}%` }}
+                  >
+                    {(metrics.agentMessages / metrics.totalMessages) * 100 > 15 && (
+                      <span className="text-xs font-bold text-white">{Math.round((metrics.agentMessages / metrics.totalMessages) * 100)}%</span>
+                    )}
+                  </div>
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-indigo-400 flex items-center justify-center transition-all duration-700"
+                    style={{ width: `${(metrics.clientMessages / metrics.totalMessages) * 100}%` }}
+                  >
+                    {(metrics.clientMessages / metrics.totalMessages) * 100 > 15 && (
+                      <span className="text-xs font-bold text-white">{Math.round((metrics.clientMessages / metrics.totalMessages) * 100)}%</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="w-full flex items-center justify-center">
+                  <span className="text-xs text-gray-300">Sin datos</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mt-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
+                <span className="text-xs text-gray-500">Agentes</span>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${metrics.totalMessages > 0 
-                      ? (metrics.agentMessages / metrics.totalMessages) * 100 
-                      : 0}%` 
-                  }}
-                />
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-400" />
+                <span className="text-xs text-gray-500">Clientes</span>
               </div>
             </div>
-            
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">Mensajes de Clientes</span>
-                <span className="text-sm font-semibold text-gray-900">{metrics.clientMessages}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${metrics.totalMessages > 0 
-                      ? (metrics.clientMessages / metrics.totalMessages) * 100 
-                      : 0}%` 
-                  }}
-                />
-              </div>
-            </div>
+          </div>
 
-            <div className="pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{metrics.totalMessages}</p>
-                  <p className="text-xs text-gray-500">Total</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-600">{metrics.agentMessages}</p>
-                  <p className="text-xs text-gray-500">Agentes</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-600">{metrics.clientMessages}</p>
-                  <p className="text-xs text-gray-500">Clientes</p>
-                </div>
-              </div>
+          {/* Stats grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 bg-gray-50/80 rounded-xl">
+              <p className="text-2xl font-extrabold text-gray-900">{metrics.totalMessages.toLocaleString()}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">Total</p>
+            </div>
+            <div className="text-center p-3 bg-emerald-50/60 rounded-xl">
+              <p className="text-2xl font-extrabold text-emerald-600">{metrics.agentMessages.toLocaleString()}</p>
+              <p className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mt-0.5">Agentes</p>
+            </div>
+            <div className="text-center p-3 bg-blue-50/60 rounded-xl">
+              <p className="text-2xl font-extrabold text-blue-600">{metrics.clientMessages.toLocaleString()}</p>
+              <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mt-0.5">Clientes</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Actividad por hora (solo para 'today') */}
+      {/* ═══════════ ACTIVIDAD POR HORA ═══════════ */}
       {timeRange === 'today' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center mb-4">
-            <Clock className="w-5 h-5 text-purple-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Actividad por Hora (Hoy)</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/20">
+              <Clock className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Actividad por Hora</h3>
+            <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">Hoy</span>
           </div>
-          <div className="flex items-end justify-between space-x-1 h-40">
+          <div className="flex items-end justify-between gap-0.5 h-40">
             {metrics.hourlyActivity.map((count, hour) => {
               const maxCount = Math.max(...metrics.hourlyActivity, 1);
               const height = (count / maxCount) * 100;
+              const isCurrentHour = new Date().getHours() === hour;
               
               return (
                 <div key={hour} className="flex-1 flex flex-col items-center">
                   <div 
-                    className="w-full bg-gradient-to-t from-purple-500 to-purple-300 rounded-t hover:from-purple-600 hover:to-purple-400 transition-all cursor-pointer relative group"
-                    style={{ height: `${height}%`, minHeight: count > 0 ? '8px' : '0' }}
+                    className={`w-full rounded-t-md transition-all cursor-pointer relative group ${
+                      isCurrentHour
+                        ? 'bg-gradient-to-t from-violet-600 to-violet-400 shadow-sm shadow-violet-300'
+                        : count > 0
+                        ? 'bg-gradient-to-t from-violet-400 to-violet-200 hover:from-violet-500 hover:to-violet-300'
+                        : 'bg-gray-50'
+                    }`}
+                    style={{ height: `${Math.max(height, count > 0 ? 6 : 2)}%` }}
                   >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      {count} msgs
-                    </div>
+                    {count > 0 && (
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        {count} msgs
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-500 mt-2">{hour}h</span>
+                  <span className={`text-[10px] mt-1.5 ${isCurrentHour ? 'text-violet-600 font-bold' : 'text-gray-300'}`}>
+                    {hour % 3 === 0 ? `${hour}h` : ''}
+                  </span>
                 </div>
               );
             })}
@@ -582,29 +635,41 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
       )}
 
-      {/* Actividad diaria (solo para 'week') */}
+      {/* ═══════════ ACTIVIDAD DIARIA ═══════════ */}
       {timeRange === 'week' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center mb-4">
-            <TrendingUp className="w-5 h-5 text-indigo-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Conversaciones por Día (Última Semana)</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20">
+              <TrendingUp className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Conversaciones por Día</h3>
+            <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">Última semana</span>
           </div>
-          <div className="flex items-end justify-between space-x-2 h-40">
+          <div className="flex items-end justify-between gap-3 h-40">
             {metrics.dailyActivity.map((day, index) => {
               const maxCount = Math.max(...metrics.dailyActivity.map(d => d.count), 1);
               const height = (day.count / maxCount) * 100;
+              const isToday = index === 6;
               
               return (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div 
-                    className="w-full bg-gradient-to-t from-indigo-500 to-indigo-300 rounded-t hover:from-indigo-600 hover:to-indigo-400 transition-all cursor-pointer relative group"
-                    style={{ height: `${height}%`, minHeight: day.count > 0 ? '8px' : '0' }}
+                    className={`w-full rounded-lg transition-all cursor-pointer relative group ${
+                      isToday
+                        ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-200'
+                        : day.count > 0
+                        ? 'bg-gradient-to-t from-indigo-400 to-indigo-200 hover:from-indigo-500 hover:to-indigo-300'
+                        : 'bg-gray-50'
+                    }`}
+                    style={{ height: `${Math.max(height, day.count > 0 ? 8 : 4)}%` }}
                   >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      {day.count} convs
-                    </div>
+                    {day.count > 0 && (
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        {day.count} convs
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-500 mt-2">{day.day}</span>
+                  <span className={`text-xs mt-2 ${isToday ? 'text-indigo-600 font-bold' : 'text-gray-400'}`}>{day.day}</span>
                 </div>
               );
             })}
@@ -612,50 +677,50 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
       )}
 
-      {/* ══════════════════ VENTAS ══════════════════ */}
+      {/* ═══════════ VENTAS ═══════════ */}
       {!loadingSales && (
         <>
           {/* Empty state when no sales data */}
           {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
-            <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-white via-emerald-50/30 to-white shadow-sm">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+            <div className="relative overflow-hidden rounded-2xl border border-gray-100/80 bg-white">
+              {/* Subtle pattern */}
+              <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '20px 20px' }} />
               
               <div className="relative p-8">
                 {/* Section Header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-200/50">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                     <ShoppingCart className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
-                    <p className="text-sm text-gray-500">Seguimiento en tiempo real de tus ventas</p>
+                    <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Ventas y Transacciones</h2>
+                    <p className="text-sm text-gray-400 font-medium">Seguimiento en tiempo real de tus ventas</p>
                   </div>
                 </div>
 
                 {/* Preview Metric Cards (zeroed out) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
                   {[
-                    { title: 'Ventas', value: '0', icon: <ShoppingCart className="w-5 h-5" />, gradient: 'from-emerald-500 to-emerald-600' },
-                    { title: 'Ingresos', value: '$0', icon: <DollarSign className="w-5 h-5" />, gradient: 'from-green-500 to-green-600' },
-                    { title: 'Ticket Promedio', value: '$0', icon: <TrendingUp className="w-5 h-5" />, gradient: 'from-cyan-500 to-cyan-600' },
-                    { title: 'Conversión', value: '0%', icon: <Link2 className="w-5 h-5" />, gradient: 'from-violet-500 to-violet-600' },
+                    { title: 'VENTAS', value: '0', icon: <ShoppingCart className="w-4 h-4" />, gradient: 'from-emerald-500 to-green-600' },
+                    { title: 'INGRESOS', value: '$0', icon: <DollarSign className="w-4 h-4" />, gradient: 'from-green-500 to-teal-600' },
+                    { title: 'TICKET PROMEDIO', value: '$0', icon: <TrendingUp className="w-4 h-4" />, gradient: 'from-cyan-500 to-blue-600' },
+                    { title: 'CONVERSIÓN', value: '0%', icon: <Link2 className="w-4 h-4" />, gradient: 'from-violet-500 to-purple-600' },
                   ].map((card, i) => (
-                    <div key={i} className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-100/80">
+                    <div key={i} className="rounded-xl p-4 border border-gray-50 bg-gray-50/50">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{card.title}</span>
-                        <div className={`p-1.5 rounded-lg bg-gradient-to-r ${card.gradient} text-white opacity-60`}>
+                        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{card.title}</span>
+                        <div className={`p-1.5 rounded-lg bg-gradient-to-br ${card.gradient} text-white opacity-30`}>
                           {card.icon}
                         </div>
                       </div>
-                      <p className="text-2xl font-bold text-gray-300">{card.value}</p>
+                      <p className="text-2xl font-extrabold text-gray-200">{card.value}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* CTA */}
                 <div className="text-center">
-                  <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-50 border border-emerald-100">
+                  <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-50/80 border border-emerald-100/80">
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-sm font-medium text-emerald-700">
                       Las ventas aparecerán aquí cuando tus clientes usen los enlaces de pago
@@ -668,20 +733,20 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           <>
 
           {/* Header de Ventas con datos */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-200/50">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                 <ShoppingCart className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Ventas y Transacciones</h2>
-                <p className="text-sm text-gray-500">Seguimiento en tiempo real de tus ventas</p>
+                <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Ventas y Transacciones</h2>
+                <p className="text-sm text-gray-400 font-medium">Seguimiento en tiempo real de tus ventas</p>
               </div>
             </div>
             {salesStats?.all_time?.total_sales > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50/80 rounded-xl border border-emerald-100/80">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-medium text-emerald-700">
+                <span className="text-sm font-semibold text-emerald-700">
                   {salesStats.all_time.total_sales} ventas totales
                 </span>
               </div>
@@ -689,30 +754,30 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           </div>
 
           {/* Métricas de Ventas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               title="Ventas Completadas"
               value={salesStats.metrics.total_sales}
-              icon={<ShoppingCart className="w-6 h-6 text-white" />}
-              color="bg-gradient-to-r from-emerald-500 to-emerald-600"
+              icon={<ShoppingCart className="w-5 h-5 text-white" />}
+              color="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/25"
             />
             <MetricCard
               title="Ingresos"
               value={formatCurrency(salesStats.metrics.total_revenue, salesStats.currency)}
-              icon={<DollarSign className="w-6 h-6 text-white" />}
-              color="bg-gradient-to-r from-green-500 to-green-600"
+              icon={<DollarSign className="w-5 h-5 text-white" />}
+              color="bg-gradient-to-br from-green-500 to-teal-600 shadow-green-500/25"
             />
             <MetricCard
               title="Ticket Promedio"
               value={formatCurrency(salesStats.metrics.avg_ticket, salesStats.currency)}
-              icon={<TrendingUp className="w-6 h-6 text-white" />}
-              color="bg-gradient-to-r from-cyan-500 to-cyan-600"
+              icon={<TrendingUp className="w-5 h-5 text-white" />}
+              color="bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/25"
             />
             <MetricCard
-              title="Conversión de Enlaces"
+              title="Conversión"
               value={`${salesStats.metrics.conversion_rate}%`}
-              icon={<Link2 className="w-6 h-6 text-white" />}
-              color="bg-gradient-to-r from-violet-500 to-violet-600"
+              icon={<Link2 className="w-5 h-5 text-white" />}
+              color="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/25"
             />
           </div>
 
@@ -722,14 +787,14 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               <MetricCard
                 title="Ventas Pendientes"
                 value={salesStats.metrics.pending_count}
-                icon={<Clock className="w-6 h-6 text-white" />}
-                color="bg-gradient-to-r from-amber-500 to-amber-600"
+                icon={<Clock className="w-5 h-5 text-white" />}
+                color="bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/25"
               />
               <MetricCard
                 title="Valor Pendiente"
                 value={formatCurrency(salesStats.metrics.pending_value, salesStats.currency)}
-                icon={<DollarSign className="w-6 h-6 text-white" />}
-                color="bg-gradient-to-r from-yellow-500 to-yellow-600"
+                icon={<DollarSign className="w-5 h-5 text-white" />}
+                color="bg-gradient-to-br from-yellow-500 to-amber-500 shadow-yellow-500/25"
               />
             </div>
           )}
@@ -738,33 +803,38 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Productos */}
             {salesStats.top_products && salesStats.top_products.length > 0 && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center mb-4">
-                  <Package className="w-5 h-5 text-emerald-500 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Top Productos</h3>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                    <Package className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-gray-900">Top Productos</h3>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {salesStats.top_products.slice(0, 5).map((product: any, index: number) => {
                     const maxRevenue = salesStats.top_products[0]?.revenue || 1;
                     const percentage = (product.revenue / maxRevenue) * 100;
                     
                     return (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="font-medium text-gray-900 truncate">{product.product_name}</span>
+                      <div key={index} className="group">
+                        <div className="flex items-center justify-between text-sm mb-1.5">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[10px] font-bold text-white">{index + 1}</span>
+                            </div>
+                            <span className="font-semibold text-gray-800 truncate">{product.product_name}</span>
                             {product.product_category && (
-                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{product.product_category}</span>
+                              <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md font-medium">{product.product_category}</span>
                             )}
                           </div>
-                          <div className="text-right ml-2">
-                            <span className="font-semibold text-gray-700">{formatCurrency(product.revenue, salesStats.currency)}</span>
-                            <span className="text-xs text-gray-500 ml-1">({product.units_sold} uds)</span>
+                          <div className="text-right ml-2 flex items-center gap-2">
+                            <span className="font-bold text-gray-700 text-xs">{formatCurrency(product.revenue, salesStats.currency)}</span>
+                            <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md">{product.units_sold} uds</span>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-500"
+                            className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-700 ease-out"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -777,30 +847,32 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
             {/* Ventas Recientes */}
             {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center mb-4">
-                  <ShoppingCart className="w-5 h-5 text-blue-500 mr-2" />
-                  <h3 className="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+                    <ShoppingCart className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-gray-900">Ventas Recientes</h3>
                 </div>
-                <div className="space-y-2 max-h-80 overflow-y-auto">
+                <div className="space-y-1 max-h-80 overflow-y-auto">
                   {salesStats.recent_sales.slice(0, 10).map((sale: any) => (
-                    <div key={sale.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div key={sale.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-gray-50/80 transition-colors">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{sale.product_name}</p>
-                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{sale.product_name}</p>
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-0.5">
                           {sale.customer_name && <span>{sale.customer_name}</span>}
                           {sale.customer_phone && <span>· {sale.customer_phone}</span>}
                           <span>· {sale.quantity}x</span>
                         </div>
                       </div>
                       <div className="text-right ml-3">
-                        <p className="text-sm font-semibold text-gray-900">{sale.formatted_total}</p>
-                        <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                          sale.status_color === 'green' ? 'bg-green-100 text-green-700' :
-                          sale.status_color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                          sale.status_color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
-                          sale.status_color === 'red' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
+                        <p className="text-sm font-bold text-gray-900">{sale.formatted_total}</p>
+                        <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                          sale.status_color === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                          sale.status_color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                          sale.status_color === 'yellow' ? 'bg-amber-50 text-amber-600' :
+                          sale.status_color === 'red' ? 'bg-red-50 text-red-600' :
+                          'bg-gray-50 text-gray-500'
                         }`}>{sale.status_label}</span>
                       </div>
                     </div>
@@ -812,12 +884,14 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
           {/* Ventas por Día (gráfico de barras) */}
           {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center mb-4">
-                <TrendingUp className="w-5 h-5 text-emerald-500 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Ingresos por Día</h3>
+            <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                  <TrendingUp className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900">Ingresos por Día</h3>
               </div>
-              <div className="flex items-end justify-between space-x-1 h-40">
+              <div className="flex items-end justify-between gap-1 h-40">
                 {salesStats.daily_sales.map((day: any, index: number) => {
                   const maxRevenue = Math.max(...salesStats.daily_sales.map((d: any) => d.revenue), 1);
                   const height = (day.revenue / maxRevenue) * 100;
@@ -826,14 +900,20 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                   return (
                     <div key={index} className="flex-1 flex flex-col items-center">
                       <div 
-                        className="w-full bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t hover:from-emerald-600 hover:to-emerald-400 transition-all cursor-pointer relative group"
-                        style={{ height: `${height}%`, minHeight: day.revenue > 0 ? '8px' : '0' }}
+                        className={`w-full rounded-md transition-all cursor-pointer relative group ${
+                          day.revenue > 0
+                            ? 'bg-gradient-to-t from-emerald-500 to-green-300 hover:from-emerald-600 hover:to-green-400'
+                            : 'bg-gray-50'
+                        }`}
+                        style={{ height: `${Math.max(height, day.revenue > 0 ? 6 : 2)}%` }}
                       >
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                          {formatCurrency(day.revenue, salesStats.currency)} · {day.count} ventas
-                        </div>
+                        {day.revenue > 0 && (
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                            {formatCurrency(day.revenue, salesStats.currency)} · {day.count} ventas
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-500 mt-2 truncate w-full text-center">{dateLabel}</span>
+                      <span className="text-[10px] text-gray-400 mt-1.5 truncate w-full text-center">{dateLabel}</span>
                     </div>
                   );
                 })}

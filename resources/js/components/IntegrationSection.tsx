@@ -1599,7 +1599,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : isConnected ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />Conectado</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">Sin conectar</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full" />Desconectado</span>
                         )}
                         {isExpanded ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                       </div>
