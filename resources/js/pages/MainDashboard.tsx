@@ -18,6 +18,7 @@ import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents, useTeams } from "../hooks/useChatwoot";
+import { getDailyQuote } from '../utils/dailyQuotes';
 import { useReverb } from "../hooks/useReverb";
 import {
   MessageCircle,
@@ -502,22 +503,24 @@ function DashboardClock() {
 
 function ClockDisplay({ firstName }: { firstName: string }) {
   const { greeting, icon, date } = DashboardClock();
+  const dailyQuote = getDailyQuote(date);
   return (
-    <div>
-      <div className="flex items-center space-x-2.5 mb-1">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-neutral-700 to-neutral-600 bg-clip-text text-transparent">
-          {greeting}, {firstName}!
-        </h1>
-        <span className="text-xl">{icon}</span>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+            <span className="text-sm">💡</span>
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[13px] text-gray-700 font-medium italic leading-snug truncate" title={dailyQuote.quote}>
+            "{dailyQuote.quote}"
+          </p>
+          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+            — {dailyQuote.author} · <span className="text-gray-300">{dailyQuote.context}</span>
+          </p>
+        </div>
       </div>
-      <p className="text-sm text-neutral-500 font-medium">
-        {date.toLocaleDateString('es-ES', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })}
-      </p>
     </div>
   );
 }
@@ -1339,6 +1342,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 <div className="p-6">
                   <MetricsDashboard
                     conversations={conversations || []}
+                    firstName={safeUser.firstName}
                   />
                 </div>
               </div>

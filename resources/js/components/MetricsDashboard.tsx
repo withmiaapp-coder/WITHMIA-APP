@@ -26,6 +26,7 @@ import {
 interface MetricsDashboardProps {
   conversations: any[];
   timeRange?: 'today' | 'week' | 'month' | 'all';
+  firstName?: string;
 }
 
 interface BackendStats {
@@ -40,7 +41,8 @@ interface BackendStats {
 
 const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   conversations,
-  timeRange = 'all'
+  timeRange = 'all',
+  firstName = 'Usuario'
 }) => {
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -500,46 +502,37 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       }
     `}</style>
     <div className="space-y-6">
-      {/* ═══════════ WELCOME BANNER ═══════════ */}
+      {/* ═══════════ GREETING + QUICK STATS ═══════════ */}
       <div
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 p-6 lg:p-8"
-        style={{ animation: 'fadeIn 0.8s ease-out' }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        style={{ animation: 'fadeIn 0.6s ease-out' }}
       >
-        {/* Decorative orbs */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
-        <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-gradient-to-br from-violet-500/10 to-pink-500/10 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2" />
-
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+            <BarChart3 className="w-5 h-5 text-white" />
+          </div>
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="relative">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              </div>
-              <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-[0.15em]">En vivo</span>
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-              {getGreeting()} 👋
-            </h1>
-            <p className="text-blue-200/60 text-sm mt-1.5 font-medium">
-              {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
+              {getGreeting()}, {firstName} 👋
+            </h2>
+            <p className="text-[13px] text-gray-400 font-medium">
+              {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · Panel de métricas
             </p>
           </div>
+        </div>
 
-          {/* Quick stats pills */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: 'Conversaciones', value: metrics.total, color: 'from-blue-500/20 to-blue-400/20 text-blue-200 border-blue-400/20' },
-              { label: 'Abiertas', value: metrics.open, color: 'from-amber-500/20 to-orange-400/20 text-amber-200 border-amber-400/20' },
-              { label: 'Resolución', value: `${metrics.resolutionRate}%`, color: 'from-emerald-500/20 to-green-400/20 text-emerald-200 border-emerald-400/20' },
-            ].map((pill, i) => (
-              <div key={i} className={`px-4 py-2 rounded-xl bg-gradient-to-r ${pill.color} border backdrop-blur-sm`}>
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{pill.label}</span>
-                <p className="text-lg font-extrabold">{pill.value}</p>
-              </div>
-            ))}
-          </div>
+        {/* Quick stats pills */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'Conversaciones', value: metrics.total, bg: 'bg-blue-50 text-blue-700 border-blue-100' },
+            { label: 'Abiertas', value: metrics.open, bg: 'bg-amber-50 text-amber-700 border-amber-100' },
+            { label: 'Resolución', value: `${metrics.resolutionRate}%`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+          ].map((pill, i) => (
+            <div key={i} className={`px-3.5 py-1.5 rounded-xl border ${pill.bg} backdrop-blur-sm`}>
+              <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{pill.label}</span>
+              <p className="text-base font-extrabold leading-tight">{pill.value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
