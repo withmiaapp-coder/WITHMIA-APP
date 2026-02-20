@@ -583,8 +583,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadProductIntegrations]);
 
   // ── OAuth popup flow for Messenger / Instagram / WhatsApp Cloud ──
-  const connectChannelRef = useRef(connectChannel);
-  useEffect(() => { connectChannelRef.current = connectChannel; });
+  const connectChannelRef = useRef<((channelId: string, endpoint: string, payload: any) => Promise<void>) | null>(null);
 
   // Open OAuth popup (same pattern as Google Calendar)
   const openOAuthPopup = useCallback(async (channel: string) => {
@@ -639,19 +638,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       const { channel, ...payload } = event.data;
 
       if (channel === 'messenger') {
-        connectChannelRef.current('messenger', '/api/channels/facebook-messenger', {
+        connectChannelRef.current?.('messenger', '/api/channels/facebook-messenger', {
           page_access_token: payload.page_access_token,
           page_id: payload.page_id,
           page_name: payload.page_name || 'Mi Página',
         });
       } else if (channel === 'instagram') {
-        connectChannelRef.current('instagram', '/api/channels/instagram', {
+        connectChannelRef.current?.('instagram', '/api/channels/instagram', {
           page_access_token: payload.page_access_token,
           page_id: payload.page_id,
           instagram_id: payload.instagram_id || undefined,
         });
       } else if (channel === 'whatsapp-cloud') {
-        connectChannelRef.current('whatsapp-api', '/api/channels/whatsapp-cloud', {
+        connectChannelRef.current?.('whatsapp-api', '/api/channels/whatsapp-cloud', {
           phone_number: payload.phone_number,
           phone_number_id: payload.phone_number_id,
           business_account_id: payload.business_account_id,
@@ -719,6 +718,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       setChannelConnecting(null);
     }
   };
+
+  // Keep ref in sync so OAuth popup handler can call connectChannel
+  useEffect(() => { connectChannelRef.current = connectChannel; });
 
   // Disconnect a channel
   const disconnectChannel = async (channelId: string) => {
