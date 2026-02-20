@@ -108,6 +108,21 @@ Route::get('/channels/oauth/callback', [ChannelOAuthController::class, 'callback
     ->name('channels.oauth.callback');
 
 // ============================================================================
+// 5c. META / FACEBOOK — legal pages required for app review
+// ============================================================================
+Route::get('/privacy', fn () => view('legal.privacy'))->name('privacy');
+Route::get('/terms', fn () => view('legal.terms'))->name('terms');
+Route::get('/data-deletion', fn () => view('legal.data-deletion'))->name('data-deletion');
+Route::post('/data-deletion', function (Request $request) {
+    // Facebook sends signed_request for data deletion callback
+    Log::info('Data deletion request received', $request->all());
+    return response()->json([
+        'url' => url('/data-deletion'),
+        'confirmation_code' => \Illuminate\Support\Str::uuid()->toString(),
+    ]);
+})->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// ============================================================================
 // 6. ONBOARDING
 // ============================================================================
 Route::post('/onboarding', [OnboardingController::class, 'store'])

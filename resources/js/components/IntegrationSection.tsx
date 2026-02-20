@@ -582,6 +582,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     loadChatwootChannels();
   }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadProductIntegrations]);
 
+  // Load Chatwoot channel statuses
+  const loadChatwootChannels = useCallback(async () => {
+    try {
+      setChannelsLoading(true);
+      const data = await gcalApiFetch('/api/channels');
+      const channelMap: Record<string, any> = {};
+      (data.channels || []).forEach((ch: any) => {
+        channelMap[ch.id] = ch;
+      });
+      setChatwootChannels(channelMap);
+
+      // Auto-load widget script for already-connected web-chat
+      if (channelMap['web-chat']?.inbox_id && !widgetScript) {
+        try {
+          const scriptData = await gcalApiFetch(`/api/channels/${channelMap['web-chat'].inbox_id}/widget-script`);
+          setWidgetScript(scriptData.script || '');
+        } catch (e) {
+          console.error('Error loading widget script:', e);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading channels:', err);
+    } finally {
+      setChannelsLoading(false);
+    }
+  }, [gcalApiFetch]);
+
   // ── OAuth popup flow for Messenger / Instagram / WhatsApp Cloud ──
   const connectChannelRef = useRef<((channelId: string, endpoint: string, payload: any) => Promise<void>) | null>(null);
 
@@ -662,33 +689,6 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
-
-  // Load Chatwoot channel statuses
-  const loadChatwootChannels = useCallback(async () => {
-    try {
-      setChannelsLoading(true);
-      const data = await gcalApiFetch('/api/channels');
-      const channelMap: Record<string, any> = {};
-      (data.channels || []).forEach((ch: any) => {
-        channelMap[ch.id] = ch;
-      });
-      setChatwootChannels(channelMap);
-
-      // Auto-load widget script for already-connected web-chat
-      if (channelMap['web-chat']?.inbox_id && !widgetScript) {
-        try {
-          const scriptData = await gcalApiFetch(`/api/channels/${channelMap['web-chat'].inbox_id}/widget-script`);
-          setWidgetScript(scriptData.script || '');
-        } catch (e) {
-          console.error('Error loading widget script:', e);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading channels:', err);
-    } finally {
-      setChannelsLoading(false);
-    }
-  }, [gcalApiFetch]);
 
   // Connect a new channel
   const connectChannel = async (channelId: string, endpoint: string, payload: any) => {
