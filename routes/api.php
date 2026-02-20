@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\CalendlyController;
 use App\Http\Controllers\Api\OutlookCalendarController;
 use App\Http\Controllers\Api\ReservoController;
 use App\Http\Controllers\Api\AgendaProController;
+use App\Http\Controllers\Api\CalendarHubController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -302,6 +303,12 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 Route::prefix('calendar/bot')->group(function () {
     Route::get('/availability', [CalendarController::class, 'botGetAvailability']);
     Route::post('/create-event', [CalendarController::class, 'botCreateEvent']);
+});
+
+// Calendar Hub — Endpoint UNIFICADO para n8n (consulta TODOS los calendarios conectados)
+Route::prefix('calendar-hub/bot')->group(function () {
+    Route::get('/availability', [CalendarHubController::class, 'botGetAvailability']);
+    Route::post('/create-event', [CalendarHubController::class, 'botCreateEvent']);
 });
 
 // Google OAuth GET callback (sin auth - Google redirige directamente aquí)
