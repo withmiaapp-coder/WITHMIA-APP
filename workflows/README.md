@@ -1,6 +1,6 @@
 # 📁 Workflows n8n - WITHMIA SaaS
 
-Workflows predefinidos para n8n optimizados para la arquitectura Railway.
+Workflows predefinidos para n8n, desplegados automáticamente desde Laravel (`N8nService`).
 
 ---
 
@@ -8,125 +8,119 @@ Workflows predefinidos para n8n optimizados para la arquitectura Railway.
 
 ```
 workflows/
-├── README.md (este archivo)
-├── whatsapp-bot-updated.json (WhatsApp AI Agent - actualizado)
-├── rag-documents-updated.json (RAG con Qdrant - actualizado)
-├── whatsapp-mia-original.json (backup original)
-└── bbdd-mia-original.json (backup original)
+├── README.md                      (este archivo)
+├── withmia-bot-template.json      (Bot WhatsApp AI Agent — template principal)
+├── training-chat.json             (Chat de entrenamiento RAG)
+└── rag-text-processor.json        (Procesador de texto → embeddings → Qdrant)
 ```
 
 ---
 
-## 🤖 1. WhatsApp AI Agent (`whatsapp-bot-updated.json`)
+## 🤖 1. Bot WhatsApp AI Agent (`withmia-bot-template.json`)
 
-**Función:** Bot conversacional MIA® para WhatsApp con todas las capacidades empresariales
+**Función:** Bot conversacional inteligente para WhatsApp con capacidades completas de venta, agendamiento y atención al cliente.
 
-**Arquitectura completa:**
-- 47 nodos funcionales
-- 30 sticky notes de documentación
-- Procesamiento multi-formato (texto, audio, imagen)
-- Sistema de memoria conversacional distribuida
-- RAG con búsqueda semántica
-- Catálogo de productos en tiempo real
-- Control de flujo conversacional
+### Herramientas del bot (9 tools):
 
-**Características principales:**
-- ✅ **Multi-formato**: Procesa texto, audio (Whisper) e imágenes (GPT-4o-mini Vision)
-- ✅ **AI Agent**: GPT-4o-mini con prompt completo de MIA®
-- ✅ **Memoria dual**: Redis temporal (7s typing) + Buffer conversacional (20 mensajes)
-- ✅ **RAG con Qdrant**: Búsqueda semántica en base de conocimientos (15 resultados, threshold 0.7)
-- ✅ **Google Sheets**: Catálogo de productos en tiempo real
-- ✅ **División inteligente**: Mensajes largos divididos en 2-3 partes naturales (max 100 chars)
-- ✅ **Control de flujo**: Sistema de bloqueo/activación con palabra clave "BOT"
-- ✅ **Solicitud de humano**: Cliente puede pedir hablar con persona real
+| Herramienta | Tipo | Endpoint |
+|---|---|---|
+| **Buscar en Base de Conocimientos** | Workflow (RAG) | Qdrant semántico |
+| **Consultar Disponibilidad** | HTTP GET | `/api/calendar-hub/bot/availability` |
+| **Agendar Cita** | HTTP POST | `/api/calendar-hub/bot/create-event` |
+| **Buscar Productos** | HTTP GET | `/api/product-hub/bot/search` |
+| **Generar Enlace de Compra** | HTTP POST | `/api/product-hub/bot/generate-link` |
+| **Consultar Catálogo** | HTTP GET | `/api/product-hub/bot/catalog` |
+| **Bloqueo a Humano** | Redis | Palabra clave "BOT" |
+| **Think** | Interno | Mejora redacción |
+| **Humanizador** | Interno | Naturalidad en respuestas |
+
+### Capacidades:
+
+- ✅ **Multi-formato**: Texto, audio (Whisper) e imágenes (GPT-4o-mini Vision)
+- ✅ **AI Agent**: GPT-4o-mini con prompt empresarial completo
+- ✅ **Memoria**: Redis temporal (7s typing) + Buffer conversacional (20 mensajes)
+- ✅ **RAG**: Búsqueda semántica en Qdrant (base de conocimientos de la empresa)
+- ✅ **Productos**: Búsqueda en WooCommerce, Shopify, MercadoLibre + productos manuales
+- ✅ **Descuentos**: Muestra precios originales, descuentos y porcentaje de ahorro
+- ✅ **Enlaces de compra**: Genera checkout URLs (WooCommerce add-to-cart, Shopify cart, ML listing)
+- ✅ **Catálogo**: Vista general de categorías, rangos de precio y stock
+- ✅ **Calendario**: Consulta disponibilidad en Google Calendar, Outlook, Calendly, Reservo, AgendaPro
+- ✅ **Agendamiento**: Crea citas/eventos directamente o envía links de agendamiento
+- ✅ **Handoff**: El cliente puede pedir hablar con una persona real
+- ✅ **División inteligente**: Mensajes largos divididos en partes naturales
 - ✅ **Anti-spam**: Cooldown de 10 minutos después de bloqueo
-- ✅ **Filtros**: Ignora grupos y mensajes vacíos
-- ✅ **Validación**: Solo responde cuando el último mensaje procesado coincide
+- ✅ **Documentos**: Procesa PDFs, comprobantes de pago, cotizaciones
 
-**Flujo de procesamiento:**
-1. Webhook Evolution API → Normalización
-2. Control de acceso (¿Es del bot? ¿Está bloqueado?)
-3. Clasificación por tipo (audio/imagen/texto)
-4. Procesamiento específico:
-   - Audio: Base64 → Binary → Whisper → Transcripción
-   - Imagen: Base64 → Binary → GPT-4o-mini Vision → Descripción
-   - Texto: Directo
-5. Unificación a formato de chat
-6. Acumulación en Redis (7 segundos - simula typing)
-7. Validación de último mensaje
-8. Limpieza de memoria temporal
-9. AI Agent con herramientas:
-   - Buscar en Qdrant (RAG)
-   - Info Products (Google Sheets)
-   - Send Image (Google Drive)
-   - Bloqueo a Humano
-   - Think (mejora redacción)
-   - Humanizador (naturalidad)
-10. División inteligente de respuesta (GPT-4o-mini)
-11. Envío escalonado (0s → 2s → 4s)
+### Flujo de venta completo:
 
-**Variables de entorno necesarias:**
-```bash
-# Ya configuradas en n8n Railway
-EVOLUTION_API_URL=http://evolution-api.railway.internal
-QDRANT_URL=http://qdrant.railway.internal:6333
-REDIS_HOST=redis.railway.internal
-REDIS_PORT=6379
-REDIS_PASSWORD=<from Railway>
+```
+1. Cliente pregunta por producto → Buscar Productos
+2. Bot presenta opciones con precios, descuentos y disponibilidad
+3. Cliente elige producto → confirma producto y cantidad
+4. Bot genera enlace de compra → Generar Enlace de Compra
+5. Bot envía enlace + resumen del pedido (producto, cantidad, total)
+6. Si no hay enlace → ofrece conectar con el equipo
 ```
 
-**Credenciales necesarias en n8n:**
-- OpenAI API (GPT-4)
-- Cohere API (embeddings)
-- Redis
-- Google Sheets (opcional - para productos)
+### Flujo de agendamiento:
 
-**Webhook URL:**
 ```
-https://n8n-production-5f6d.up.railway.app/webhook/whatsapp-mia
+1. Cliente quiere agendar → Consultar Disponibilidad
+2. Bot muestra horarios disponibles de todos los calendarios
+3. Calendly → envía link de agendamiento
+4. Reservo/AgendaPro → pregunta servicio, luego agenda
+5. Google/Outlook → Agendar Cita directamente
 ```
 
-**Configurar en Evolution API:**
-```bash
-WEBHOOK_GLOBAL_URL=https://n8n-production-5f6d.up.railway.app/webhook/whatsapp-mia
-```
+### Placeholders reemplazados por N8nService:
+
+| Placeholder | Valor |
+|---|---|
+| `{{COMPANY_SLUG}}` | Slug de la empresa |
+| `{{COMPANY_NAME}}` | Nombre de la empresa |
+| `{{ASSISTANT_NAME}}` | Nombre del asistente (ej: "MIA") |
+| `{{INSTANCE_NAME}}` | Nombre de la instancia WhatsApp |
+| `{{APP_URL}}` | URL de la app Laravel |
+| `{{EVOLUTION_API_URL}}` | URL de Evolution API |
+| `{{QDRANT_URL}}` | URL de Qdrant |
+| `{{N8N_OPENAI_CREDENTIAL_ID}}` | ID credencial OpenAI en n8n |
+| `{{N8N_QDRANT_CREDENTIAL_ID}}` | ID credencial Qdrant en n8n |
 
 ---
 
-## 📄 2. RAG Documents Processor (`rag-documents-updated.json`)
+## 💬 2. Training Chat (`training-chat.json`)
 
-**Función:** Procesar documentos PDF/DOCX → generar embeddings → almacenar en Qdrant
+**Función:** Chat de entrenamiento que permite al usuario probar el RAG y decidir si guardar nuevos datos.
 
-**Características:**
-- ✅ Trigger desde Google Drive o upload directo
-- ✅ Extracción de texto de PDFs/DOCX
-- ✅ Chunking inteligente (500 tokens)
-- ✅ Generación de embeddings (Cohere multilingual)
-- ✅ Almacenamiento en Qdrant
-- ✅ Notificación a Laravel con vector IDs
+**Flujo:**
+1. Webhook recibe pregunta del usuario
+2. Genera embedding de la pregunta
+3. Busca en Qdrant (colección de la empresa)
+4. Construye contexto con resultados relevantes
+5. GPT genera respuesta basada en contexto
+6. Si el usuario marca "guardar" → almacena la respuesta en Qdrant como nuevo conocimiento
 
-**Variables de entorno necesarias:**
-```bash
-QDRANT_URL=http://qdrant.railway.internal:6333
-LARAVEL_API_URL=https://mia-app-production.up.railway.app
+---
+
+## 📄 3. RAG Text Processor (`rag-text-processor.json`)
+
+**Función:** Procesar texto plano → chunking → embeddings → almacenar en Qdrant.
+
+**Flujo:**
+1. Webhook recibe texto + metadatos (company_id, filename)
+2. Valida datos de entrada
+3. Divide texto en chunks (500 tokens)
+4. Genera embeddings por chunk (OpenAI text-embedding-3-small)
+5. Almacena vectors en Qdrant con metadatos
+6. Notifica a Laravel con vector IDs
+
+**Webhook de notificación:**
 ```
-
-**Credenciales necesarias en n8n:**
-- Google Drive OAuth2 (para trigger)
-- Cohere API (embeddings)
-- Qdrant API
-
-**Webhook para Laravel:**
-```
-POST https://mia-app-production.up.railway.app/api/knowledge/update-vector-ids
-```
-
-**Payload:**
-```json
+POST {{APP_URL}}/api/knowledge/update-vector-ids
 {
   "company_id": 1,
   "filename": "documento.pdf",
-  "vector_ids": ["uuid1", "uuid2", ...],
+  "vector_ids": ["uuid1", "uuid2"],
   "chunks_created": 15,
   "secret_token": "withmia_n8n_secret_2024"
 }
@@ -134,184 +128,63 @@ POST https://mia-app-production.up.railway.app/api/knowledge/update-vector-ids
 
 ---
 
-## 🚀 Importar Workflows en n8n
+## 🚀 Despliegue Automático
 
-### ⭐ Método 1: Script PowerShell Automatizado (RECOMENDADO)
+Los workflows se crean automáticamente desde Laravel via `N8nService::createBotWorkflow()`:
 
-```powershell
-cd workflows
-.\import-to-n8n.ps1
-```
-
-**Características del script:**
-- ✅ Lista workflows existentes en n8n
-- ✅ Importa RAG workflow automáticamente
-- ✅ Importa WhatsApp workflow automáticamente
-- ✅ Opción para importar ambos de una vez
-- ✅ Activa workflows después de importar
-- ✅ Maneja errores y muestra detalles
-
-**Configuración:**
-- URL n8n: https://n8n-production-8f14.up.railway.app
-- API Key: Configurada en variable `N8N_API_KEY` (Railway)
-- Headers: `X-N8N-API-KEY: [token JWT]`
-
----
-
-### Método 2: Dashboard n8n
-1. Ir a https://n8n-production-8f14.up.railway.app
-2. Login: `automatiza@withmia.com` / `Thebulldog.1650`
-3. Click en **"+"** → **"Import from File"**
-4. Seleccionar `whatsapp-bot-updated.json` o `rag-documents-updated.json`
-5. Configurar credenciales (OpenAI, Cohere, Redis, etc.)
-6. Activar workflow
-
----
-
-### Método 3: n8n API REST (desde Laravel o cURL)
-
-**Listar workflows:**
-```bash
-curl -X GET https://n8n-production-8f14.up.railway.app/api/v1/workflows \
-  -H "X-N8N-API-KEY: $N8N_API_KEY"
-```
-
-**Importar workflow:**
-```bash
-curl -X POST https://n8n-production-8f14.up.railway.app/api/v1/workflows \
-  -H "X-N8N-API-KEY: $N8N_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d @whatsapp-bot-updated.json
-```
-
-**Activar workflow:**
-```bash
-curl -X PATCH https://n8n-production-8f14.up.railway.app/api/v1/workflows/{id} \
-  -H "X-N8N-API-KEY: $N8N_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"active": true}'
-```
-
-**Desde Laravel:**
 ```php
-use Illuminate\Support\Facades\Http;
-
-$workflowJson = file_get_contents(
-    base_path('workflows/whatsapp-bot-updated.json')
-);
-
-$response = Http::withHeaders([
-    'X-N8N-API-KEY' => env('N8N_API_KEY')
-])->post(env('N8N_URL') . '/api/v1/workflows', 
-    json_decode($workflowJson, true)
-);
-
-if ($response->successful()) {
-    $workflowId = $response->json('id');
-    
-    // Activar workflow
-    Http::withHeaders([
-        'X-N8N-API-KEY' => env('N8N_API_KEY')
-    ])->patch(env('N8N_URL') . "/api/v1/workflows/{$workflowId}", [
-        'active' => true
-    ]);
-}
+// app/Services/N8nService.php
+$n8nService->createBotWorkflow($company, $instanceName);
+// 1. Carga template JSON
+// 2. Reemplaza todos los placeholders
+// 3. Crea workflow via n8n API
+// 4. Activa workflow automáticamente
 ```
+
+**No es necesario importar manualmente** — todo se provisiona durante el onboarding.
 
 ---
 
-## 🔧 Personalización por Empresa
+## 🔧 Endpoints del Bot (sin auth, usan company_slug)
 
-Cuando creas una instancia para una empresa, personaliza:
+### Productos
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/product-hub/bot/search` | Buscar productos (query, category, price range) |
+| GET | `/api/product-hub/bot/catalog` | Catálogo: categorías, rangos de precio, stock |
+| POST | `/api/product-hub/bot/generate-link` | Generar enlace de compra/pago |
 
-**WhatsApp Bot:**
-```json
-{
-  "webhook_path": "whatsapp-company-{company_id}",
-  "qdrant_collection": "company_{company_id}_knowledge",
-  "redis_keys": "company_{company_id}_*",
-  "session_key": "company_{company_id}_{{ chat_id }}"
-}
-```
+### Calendario
+| Método | Endpoint | Descripción |
+|---|---|---|
+| GET | `/api/calendar-hub/bot/availability` | Disponibilidad en todos los calendarios |
+| POST | `/api/calendar-hub/bot/create-event` | Crear cita/evento |
 
-**RAG Documents:**
-```json
-{
-  "qdrant_collection": "company_{company_id}_knowledge",
-  "company_id": "{company_id}",
-  "google_drive_folder": "{folder_id_específico}"
-}
-```
-
----
-
-## 📊 Monitoreo y Logs
-
-**Ver ejecuciones en n8n:**
-```
-https://n8n-production-5f6d.up.railway.app/executions
-```
-
-**Logs de Laravel:**
-```bash
-railway logs --service mia-app | grep "n8n"
-```
-
-**Logs de n8n:**
-```bash
-railway logs --service n8n
-```
-
----
-
-## 🔄 Actualizar Workflows Existentes
-
-Si ya tienes workflows importados:
-
-1. Exportar workflow actual desde n8n
-2. Comparar con versión actualizada
-3. Actualizar URLs/credenciales manualmente
-4. Reimportar o editar en n8n directamente
+### Parámetros comunes
+- `company_slug` — identificador de la empresa (requerido en todos)
+- Los endpoints detectan automáticamente qué proveedores tiene conectados la empresa
 
 ---
 
 ## 🆘 Troubleshooting
 
 ### Error: "Webhook not found"
-- Verifica que el workflow esté **activado** en n8n
-- Revisa que la URL del webhook coincida exactamente
+- Verificar que el workflow esté **activado** en n8n
+- Verificar que la URL del webhook coincida con la instancia WhatsApp
 
 ### Error: "Qdrant connection failed"
-- Verifica: `http://qdrant.railway.internal:6333`
-- No uses URLs públicas dentro de Railway (usa `.railway.internal`)
+- Usar URL interna: `http://qdrant.railway.internal:6333`
+- No usar URLs públicas dentro de Railway
 
 ### Error: "Redis ECONNREFUSED"
-- Credenciales Redis deben estar configuradas en n8n
+- Verificar credenciales Redis en n8n
 - Host: `redis.railway.internal:6379`
 
-### Error: "OpenAI API key invalid"
-- Configura credencial OpenAI en n8n Settings → Credentials
-- Usa API key válida con créditos
+### Workflow no se crea
+- Verificar `N8N_INTERNAL_URL`, `N8N_API_KEY` en `.env`
+- Verificar que n8n tenga credenciales OpenAI y Qdrant creadas
+- Revisar logs: `Log::channel('n8n')` en Laravel
 
 ---
 
-## 📝 Notas Importantes
-
-1. **NO usar URLs públicas** dentro de workflows cuando estás en Railway → usar `*.railway.internal`
-2. **Siempre** guardar cambios antes de ejecutar workflows
-3. **Credenciales** se configuran por separado en n8n (no en el JSON)
-4. **Webhooks** deben estar activos (workflow debe estar "Active")
-5. **Backups originales** están en `*-original.json` → NO MODIFICAR
-
----
-
-## 🎯 Próximos Workflows a Crear
-
-- [ ] Email → Chatwoot (recibir emails en Chatwoot)
-- [ ] Automated Reports (generar reportes automáticos)
-- [ ] Lead Scoring (puntuar leads automáticamente)
-- [ ] Campaign Triggers (disparar campañas según eventos)
-
----
-
-**Última actualización:** 11 de enero de 2026
+**Última actualización:** 12 de febrero de 2026

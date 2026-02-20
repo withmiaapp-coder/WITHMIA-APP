@@ -340,6 +340,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 Route::prefix('product-hub/bot')->group(function () {
     Route::get('/search', [ProductHubController::class, 'botSearch']);
     Route::get('/catalog', [ProductHubController::class, 'botCatalog']);
+    Route::post('/generate-link', [ProductHubController::class, 'botGenerateLink']);
 });
 
 // Google OAuth GET callback (sin auth - Google redirige directamente aquí)

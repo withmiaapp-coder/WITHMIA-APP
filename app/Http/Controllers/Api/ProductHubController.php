@@ -118,6 +118,9 @@ class ProductHubController extends Controller
                 $result['discount_percentage'] = $discount . '%';
             }
 
+            // Generate checkout URL based on provider
+            $result['checkout_url'] = $this->buildCheckoutUrl($product, $company);
+
             if ($product->attributes) {
                 $result['attributes'] = $product->attributes;
             }
@@ -137,7 +140,7 @@ class ProductHubController extends Controller
         } elseif ($formattedProducts->isEmpty() && $searchTerm) {
             $instructions = "No se encontraron productos que coincidan con '{$searchTerm}'. Informa al usuario y sugiere buscar con otros términos. Categorías disponibles: " . $categories->implode(', ');
         } else {
-            $instructions = "Presenta los productos de forma atractiva y natural. Incluye precio, disponibilidad y enlace si existe. Si el producto tiene descuento, menciónalo. Si tiene imagen, envíala. Usa las categorías disponibles para sugerir alternativas.";
+            $instructions = "Presenta los productos de forma atractiva y natural. Incluye precio, disponibilidad y enlace si existe. Si el producto tiene descuento, menciónalo destacando el ahorro. Si tiene checkout_url, úsalo cuando el cliente quiera comprar (es un enlace directo de compra). Si solo tiene url, úsalo como enlace informativo del producto. Usa las categorías disponibles para sugerir alternativas si el usuario lo necesita.";
         }
 
         return response()->json([
@@ -225,5 +228,159 @@ class ProductHubController extends Controller
                 ? "El catálogo tiene {$totalProducts} productos en " . $categories->count() . " categorías. Usa la herramienta 'Buscar Productos' con un query específico para obtener detalles de productos individuales."
                 : 'No hay productos configurados.',
         ]);
+    }
+
+    /**
+     * Generate a checkout/payment link for a specific product.
+     * POST /api/product-hub/bot/generate-link
+     */
+    public function botGenerateLink(Request $request)
+    {
+        $companySlug = $request->input('company_slug');
+        $productId = $request->input('product_id');
+        $productName = $request->input('product_name');
+        $quantity = max(1, (int) ($request->input('quantity', 1)));
+
+        if (!$companySlug) {
+            return response()->json(['error' => 'company_slug requerido'], 400);
+        }
+
+        $company = Company::where('slug', $companySlug)->first();
+        if (!$company) {
+            return response()->json(['error' => 'Empresa no encontrada'], 404);
+        }
+
+        // Find product by ID or by name search
+        $product = null;
+        if ($productId) {
+            $product = Product::where('company_id', $company->id)
+                ->where('id', $productId)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$product && $productName) {
+            $product = Product::where('company_id', $company->id)
+                ->where('is_active', true)
+                ->search($productName)
+                ->first();
+        }
+
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Producto no encontrado. Usa la herramienta "Buscar Productos" primero para encontrar el producto correcto.',
+                'instructions' => 'Informa al cliente que no encontraste el producto y ofrece ayuda para buscarlo.',
+            ]);
+        }
+
+        // Build checkout URL
+        $checkoutUrl = $this->buildCheckoutUrl($product, $company, $quantity);
+
+        // Calculate total
+        $total = $product->price * $quantity;
+        $formattedTotal = $this->formatPrice($total, $product->currency);
+
+        $response = [
+            'success' => true,
+            'product_name' => $product->name,
+            'price' => $product->formatted_price,
+            'quantity' => $quantity,
+            'total' => $formattedTotal,
+            'currency' => $product->currency,
+            'stock_status' => $product->stock_status,
+            'provider' => $product->provider,
+        ];
+
+        if ($product->stock_status === 'out_of_stock') {
+            $response['message'] = "El producto \"{$product->name}\" está agotado actualmente.";
+            $response['instructions'] = 'Informa al cliente que el producto no está disponible y ofrece alternativas o conectar con el equipo.';
+            return response()->json($response);
+        }
+
+        if ($product->stock_quantity !== null && $quantity > $product->stock_quantity) {
+            $response['message'] = "Solo hay {$product->stock_quantity} unidades disponibles de \"{$product->name}\".";
+            $response['instructions'] = 'Informa al cliente del stock disponible y pregunta si quiere ajustar la cantidad.';
+            return response()->json($response);
+        }
+
+        if ($checkoutUrl) {
+            $response['checkout_url'] = $checkoutUrl;
+            $response['message'] = "Enlace de compra generado para {$quantity}x {$product->name} por {$formattedTotal}.";
+            $response['instructions'] = "Envía este enlace al cliente junto con el resumen del pedido: producto, cantidad, precio total. El enlace lleva directamente a la página de pago.";
+        } else {
+            $response['product_url'] = $product->url;
+            $response['message'] = "No se puede generar un enlace de pago directo para este producto.";
+            $response['instructions'] = $product->url
+                ? "Envía la URL del producto al cliente y explica que puede completar la compra desde ahí."
+                : "No hay enlace disponible. Ofrece conectar al cliente con el equipo para completar la compra manualmente. Confirma: producto, cantidad y precio total.";
+        }
+
+        // Add discount info
+        if ($product->compare_at_price && $product->compare_at_price > $product->price) {
+            $discount = round((1 - $product->price / $product->compare_at_price) * 100);
+            $response['discount'] = "{$discount}% de descuento";
+            $response['original_price'] = $this->formatPrice($product->compare_at_price, $product->currency);
+        }
+
+        return response()->json($response);
+    }
+
+    /**
+     * Build a checkout URL for a product based on its provider.
+     */
+    private function buildCheckoutUrl(Product $product, Company $company, int $quantity = 1): ?string
+    {
+        // If the product already has a URL, use smart provider-based checkout
+        $integration = ProductIntegration::where('company_id', $company->id)
+            ->where('provider', $product->provider)
+            ->where('is_connected', true)
+            ->first();
+
+        $storeUrl = $integration?->store_url ? rtrim($integration->store_url, '/') : null;
+
+        switch ($product->provider) {
+            case 'woocommerce':
+                if ($storeUrl && $product->external_id) {
+                    return "{$storeUrl}/?add-to-cart={$product->external_id}&quantity={$quantity}";
+                }
+                return $product->url;
+
+            case 'shopify':
+                // Shopify: use variant ID if available, otherwise product URL
+                if ($storeUrl && $product->variants && count($product->variants) > 0) {
+                    $variantId = $product->variants[0]['id'] ?? null;
+                    if ($variantId) {
+                        return "{$storeUrl}/cart/{$variantId}:{$quantity}";
+                    }
+                }
+                return $product->url;
+
+            case 'mercadolibre':
+                // MercadoLibre products link directly to the listing
+                return $product->url;
+
+            case 'custom_api':
+            case 'manual':
+            default:
+                return $product->url ?: null;
+        }
+    }
+
+    /**
+     * Format a price with currency symbol.
+     */
+    private function formatPrice(float $price, ?string $currency): string
+    {
+        $symbols = [
+            'USD' => 'US$', 'EUR' => '€', 'CLP' => '$',
+            'ARS' => 'AR$', 'MXN' => 'MX$', 'BRL' => 'R$',
+            'COP' => 'COL$', 'PEN' => 'S/',
+        ];
+
+        $symbol = $symbols[$currency ?? 'USD'] ?? '$';
+        $decimals = in_array($currency, ['CLP', 'COP']) ? 0 : 2;
+
+        return $symbol . number_format($price, $decimals, ',', '.');
     }
 }
