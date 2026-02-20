@@ -13,6 +13,7 @@ import ProfilePage from './profile/ProfilePage';
 import SubscriptionPage from './subscription/SubscriptionPage';
 import IntegrationSection from '../components/IntegrationSection';
 import CalendarSection from '../components/CalendarSection';
+import ProductsSection from '../components/ProductsSection';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
@@ -1305,39 +1306,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
             ) : activeSection === 'calendar' ? (
               <CalendarSection user={user} company={company} />
             ) : activeSection === 'reports' ? (
-              <div className="min-h-[700px] p-8">
-                {/* Sección Productos */}
-                <div className="max-w-7xl mx-auto">
-                  <div className="mb-8">
-                    <div className="flex items-center space-x-4 mb-2">
-                      <div className="p-4 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl shadow-lg">
-                        <Package className="w-10 h-10 text-white" />
-                      </div>
-                      <div>
-                        <h1 className="text-4xl font-bold text-neutral-800">Productos</h1>
-                        <p className="text-lg text-neutral-500">Catálogo de productos y servicios</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/95 backdrop-blur-sm rounded-xl p-12 border border-slate-200 shadow-xl text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="mb-6">
-                        <Package className="w-20 h-20 mx-auto text-orange-500" />
-                      </div>
-                      <h2 className="text-2xl font-bold text-neutral-800 mb-4">Catálogo de Productos</h2>
-                      <p className="text-neutral-500 mb-6">
-                        Gestiona tu catálogo de productos y servicios. 
-                        MIA podrá responder preguntas sobre precios, disponibilidad y características de tus productos.
-                      </p>
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-lg">
-                        <Sparkles className="w-5 h-5" />
-                        <span className="font-medium">🔜 Próximamente disponible</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ProductsSection user={user} company={company} />
             ) : activeSection === 'settings' ? (
               <SettingsPage />
             ) : activeSection === 'admin' ? (

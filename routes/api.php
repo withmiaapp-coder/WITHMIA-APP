@@ -31,6 +31,9 @@ use App\Http\Controllers\Api\OutlookCalendarController;
 use App\Http\Controllers\Api\ReservoController;
 use App\Http\Controllers\Api\AgendaProController;
 use App\Http\Controllers\Api\CalendarHubController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductIntegrationController;
+use App\Http\Controllers\Api\ProductHubController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -309,6 +312,33 @@ Route::prefix('calendar/bot')->group(function () {
 Route::prefix('calendar-hub/bot')->group(function () {
     Route::get('/availability', [CalendarHubController::class, 'botGetAvailability']);
     Route::post('/create-event', [CalendarHubController::class, 'botCreateEvent']);
+});
+
+// ============================================================================
+// PRODUCTS — CRUD + Integrations
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
+    Route::get('/', [ProductController::class, 'index']);
+    Route::post('/', [ProductController::class, 'store']);
+    Route::get('/categories', [ProductController::class, 'categories']);
+    Route::get('/{id}', [ProductController::class, 'show']);
+    Route::put('/{id}', [ProductController::class, 'update']);
+    Route::delete('/{id}', [ProductController::class, 'destroy']);
+    Route::post('/bulk-delete', [ProductController::class, 'bulkDelete']);
+});
+
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
+    Route::get('/status', [ProductIntegrationController::class, 'status']);
+    Route::post('/connect', [ProductIntegrationController::class, 'connect']);
+    Route::post('/disconnect', [ProductIntegrationController::class, 'disconnect']);
+    Route::post('/toggle-bot-access', [ProductIntegrationController::class, 'toggleBotAccess']);
+    Route::post('/sync', [ProductIntegrationController::class, 'sync']);
+});
+
+// Product Hub — Endpoint para n8n bot (buscar productos)
+Route::prefix('product-hub/bot')->group(function () {
+    Route::get('/search', [ProductHubController::class, 'botSearch']);
+    Route::get('/catalog', [ProductHubController::class, 'botCatalog']);
 });
 
 // Google OAuth GET callback (sin auth - Google redirige directamente aquí)
