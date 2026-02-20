@@ -99,7 +99,15 @@ class ProductIntegrationController extends Controller
                 'access_token' => 'required|string',
                 'user_id' => 'required|string',
             ],
-            'custom_api' => [
+            'custom_api' => $request->input('connection_type') === 'mysql' ? [
+                'connection_type' => 'required|in:mysql',
+                'db_host' => 'required|string',
+                'db_port' => 'nullable|string',
+                'db_name' => 'required|string',
+                'db_user' => 'required|string',
+                'db_password' => 'required|string',
+                'db_table' => 'required|string',
+            ] : [
                 'api_url' => 'required|url',
                 'api_key' => 'nullable|string',
             ],
@@ -158,8 +166,23 @@ class ProductIntegrationController extends Controller
                 $data['settings'] = ['user_id' => $validated['user_id']];
                 break;
             case 'custom_api':
-                $data['store_url'] = $validated['api_url'];
-                $data['api_key'] = $validated['api_key'] ?? null;
+                if (($validated['connection_type'] ?? '') === 'mysql') {
+                    $port = $validated['db_port'] ?? '3306';
+                    $data['store_url'] = "mysql://{$validated['db_host']}:{$port}/{$validated['db_name']}";
+                    $data['api_key'] = $validated['db_password'];
+                    $data['settings'] = [
+                        'connection_type' => 'mysql',
+                        'db_host' => $validated['db_host'],
+                        'db_port' => $port ?: '3306',
+                        'db_name' => $validated['db_name'],
+                        'db_user' => $validated['db_user'],
+                        'db_table' => $validated['db_table'],
+                    ];
+                } else {
+                    $data['store_url'] = $validated['api_url'];
+                    $data['api_key'] = $validated['api_key'] ?? null;
+                    $data['settings'] = ['connection_type' => 'api'];
+                }
                 break;
         }
 
@@ -613,6 +636,12 @@ class ProductIntegrationController extends Controller
 
     private function syncCustomApi(Company $company, ProductIntegration $integration): array
     {
+        // Check if this is a MySQL connection
+        $settings = $integration->settings ?? [];
+        if (($settings['connection_type'] ?? '') === 'mysql') {
+            return $this->syncMysql($company, $integration);
+        }
+
         $apiUrl = $integration->store_url;
         if (!$apiUrl) {
             throw new \Exception('URL de API no configurada');
@@ -736,6 +765,18 @@ class ProductIntegrationController extends Controller
                 return ['success' => $response->successful()];
 
             case 'custom_api':
+                if (($data['connection_type'] ?? '') === 'mysql') {
+                    $port = $data['db_port'] ?? '3306';
+                    $dsn = "mysql:host={$data['db_host']};port={$port};dbname={$data['db_name']}";
+                    $pdo = new \PDO($dsn, $data['db_user'], $data['db_password'], [
+                        \PDO::ATTR_TIMEOUT => 10,
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                    ]);
+                    // Verify the table exists
+                    $stmt = $pdo->prepare('SELECT 1 FROM ' . $this->sanitizeTableName($data['db_table']) . ' LIMIT 1');
+                    $stmt->execute();
+                    return ['success' => true];
+                }
                 $headers = [];
                 if (!empty($data['api_key'])) {
                     $headers['Authorization'] = 'Bearer ' . $data['api_key'];
@@ -756,8 +797,214 @@ class ProductIntegrationController extends Controller
             'woocommerce' => 'WooCommerce',
             'shopify' => 'Shopify',
             'mercadolibre' => 'MercadoLibre',
-            'custom_api' => 'API Personalizada',
+            'custom_api' => 'Base de datos / API',
             default => $provider,
         };
+    }
+
+    /**
+     * Sanitize table name to prevent SQL injection
+     */
+    private function sanitizeTableName(string $table): string
+    {
+        return preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    }
+
+    /**
+     * Sync products from a MySQL database
+     */
+    private function syncMysql(Company $company, ProductIntegration $integration): array
+    {
+        $settings = $integration->settings ?? [];
+        $host = $settings['db_host'] ?? null;
+        $port = $settings['db_port'] ?? '3306';
+        $dbName = $settings['db_name'] ?? null;
+        $dbUser = $settings['db_user'] ?? null;
+        $dbPassword = $integration->api_key; // stored encrypted
+        $table = $settings['db_table'] ?? null;
+
+        if (!$host || !$dbName || !$dbUser || !$table) {
+            throw new \Exception('Faltan datos de conexión MySQL');
+        }
+
+        $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
+        $pdo = new \PDO($dsn, $dbUser, $dbPassword, [
+            \PDO::ATTR_TIMEOUT => 30,
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+        ]);
+
+        $safeTable = $this->sanitizeTableName($table);
+        $stmt = $pdo->query("SELECT * FROM {$safeTable} WHERE 1=1 LIMIT 5000");
+        $rows = $stmt->fetchAll();
+
+        if (empty($rows)) {
+            return ['count' => 0, 'created' => 0, 'updated' => 0];
+        }
+
+        // Get column names from first row for smart mapping
+        $columns = array_keys($rows[0]);
+
+        // Smart column detection - map common column patterns
+        $colMap = $this->detectMysqlColumns($columns);
+
+        $created = 0;
+        $updated = 0;
+        $allExternalIds = [];
+
+        foreach ($rows as $idx => $row) {
+            $externalId = (string) ($this->getCol($row, $colMap, 'id') ?? "mysql-{$idx}");
+            $allExternalIds[] = $externalId;
+
+            $name = $this->getCol($row, $colMap, 'name') ?? 'Sin nombre';
+            $price = $this->getCol($row, $colMap, 'price');
+            $description = $this->getCol($row, $colMap, 'description');
+            $sku = $this->getCol($row, $colMap, 'sku');
+            $stock = $this->getCol($row, $colMap, 'stock');
+            $category = $this->getCol($row, $colMap, 'category');
+            $image = $this->getCol($row, $colMap, 'image');
+            $url = $this->getCol($row, $colMap, 'url');
+            $brand = $this->getCol($row, $colMap, 'brand');
+            $comparePrice = $this->getCol($row, $colMap, 'compare_price');
+            $currency = $this->getCol($row, $colMap, 'currency') ?? 'CLP';
+            $active = $this->getCol($row, $colMap, 'active');
+
+            $images = [];
+            if ($image) {
+                // Handle comma-separated images
+                if (str_contains((string) $image, ',')) {
+                    $images = array_map('trim', explode(',', $image));
+                } else {
+                    $images = [$image];
+                }
+            }
+
+            $existing = Product::where('company_id', $company->id)
+                ->where('provider', 'custom_api')
+                ->where('external_id', $externalId)
+                ->first();
+
+            $productData = [
+                'company_id' => $company->id,
+                'provider' => 'custom_api',
+                'external_id' => $externalId,
+                'name' => $name,
+                'description' => $description,
+                'price' => $price ? (float) $price : null,
+                'compare_at_price' => $comparePrice ? (float) $comparePrice : null,
+                'currency' => strtoupper($currency),
+                'sku' => $sku,
+                'stock_quantity' => $stock !== null ? (int) $stock : null,
+                'stock_status' => ($stock === null || (int) $stock > 0) ? 'in_stock' : 'out_of_stock',
+                'category' => $category,
+                'images' => $images,
+                'url' => $url,
+                'brand' => $brand,
+                'is_active' => $active !== null ? (bool) $active : true,
+                'synced_at' => now(),
+            ];
+
+            if ($existing) {
+                $existing->update($productData);
+                $updated++;
+            } else {
+                Product::create($productData);
+                $created++;
+            }
+        }
+
+        Product::where('company_id', $company->id)
+            ->where('provider', 'custom_api')
+            ->whereNotIn('external_id', $allExternalIds)
+            ->delete();
+
+        return ['count' => count($allExternalIds), 'created' => $created, 'updated' => $updated];
+    }
+
+    /**
+     * Detect which MySQL columns map to product fields
+     */
+    private function detectMysqlColumns(array $columns): array
+    {
+        $map = [];
+        $lower = array_map('strtolower', $columns);
+        $original = array_combine($lower, $columns);
+
+        // ID
+        foreach (['id', 'product_id', 'codigo', 'code', 'idproducto', 'id_producto'] as $c) {
+            if (isset($original[$c])) { $map['id'] = $original[$c]; break; }
+        }
+
+        // Name
+        foreach (['name', 'nombre', 'title', 'titulo', 'product_name', 'nombre_producto', 'descripcion_corta'] as $c) {
+            if (isset($original[$c])) { $map['name'] = $original[$c]; break; }
+        }
+
+        // Description
+        foreach (['description', 'descripcion', 'detalle', 'detail', 'desc', 'descripcion_larga', 'product_description'] as $c) {
+            if (isset($original[$c])) { $map['description'] = $original[$c]; break; }
+        }
+
+        // Price
+        foreach (['price', 'precio', 'valor', 'monto', 'price_amount', 'precio_venta', 'pvp', 'unit_price'] as $c) {
+            if (isset($original[$c])) { $map['price'] = $original[$c]; break; }
+        }
+
+        // Compare price
+        foreach (['compare_at_price', 'precio_anterior', 'precio_original', 'old_price', 'precio_lista', 'regular_price', 'msrp'] as $c) {
+            if (isset($original[$c])) { $map['compare_price'] = $original[$c]; break; }
+        }
+
+        // SKU
+        foreach (['sku', 'codigo', 'code', 'ref', 'referencia', 'barcode', 'ean'] as $c) {
+            if (isset($original[$c]) && !isset($map['id'])) { $map['sku'] = $original[$c]; break; }
+            if (isset($original[$c]) && $c !== ($map['id'] ?? '')) { $map['sku'] = $original[$c]; break; }
+        }
+
+        // Stock
+        foreach (['stock', 'stock_quantity', 'cantidad', 'qty', 'quantity', 'inventario', 'existencia', 'disponible'] as $c) {
+            if (isset($original[$c])) { $map['stock'] = $original[$c]; break; }
+        }
+
+        // Category
+        foreach (['category', 'categoria', 'cat', 'tipo', 'type', 'rubro', 'linea', 'family', 'familia', 'category_name'] as $c) {
+            if (isset($original[$c])) { $map['category'] = $original[$c]; break; }
+        }
+
+        // Image
+        foreach (['image', 'imagen', 'img', 'photo', 'foto', 'image_url', 'imagen_url', 'thumbnail', 'picture', 'images'] as $c) {
+            if (isset($original[$c])) { $map['image'] = $original[$c]; break; }
+        }
+
+        // URL
+        foreach (['url', 'link', 'enlace', 'permalink', 'product_url'] as $c) {
+            if (isset($original[$c])) { $map['url'] = $original[$c]; break; }
+        }
+
+        // Brand
+        foreach (['brand', 'marca', 'manufacturer', 'fabricante', 'brand_name'] as $c) {
+            if (isset($original[$c])) { $map['brand'] = $original[$c]; break; }
+        }
+
+        // Currency
+        foreach (['currency', 'moneda', 'divisa', 'currency_code'] as $c) {
+            if (isset($original[$c])) { $map['currency'] = $original[$c]; break; }
+        }
+
+        // Active
+        foreach (['active', 'activo', 'status', 'estado', 'enabled', 'habilitado', 'visible', 'published'] as $c) {
+            if (isset($original[$c])) { $map['active'] = $original[$c]; break; }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Get a value from a row using the column map
+     */
+    private function getCol(array $row, array $colMap, string $field)
+    {
+        $col = $colMap[$field] ?? null;
+        return $col ? ($row[$col] ?? null) : null;
     }
 }

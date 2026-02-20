@@ -113,6 +113,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Unified product provider state: { [providerId]: { fields: {fieldKey: value}, connecting: bool, error: string } }
   const [providerForms, setProviderForms] = useState<Record<string, { fields: Record<string, string>; connecting: boolean; error: string }>>({});
   const [syncingProductProvider, setSyncingProductProvider] = useState<string | null>(null);
+  const [customConnectionType, setCustomConnectionType] = useState<'api' | 'mysql'>('mysql');
 
   const getProviderForm = (id: string) => providerForms[id] || { fields: {}, connecting: false, error: '' };
   const setProviderField = (id: string, key: string, value: string) => setProviderForms(prev => ({ ...prev, [id]: { ...getProviderForm(id), ...prev[id], fields: { ...(prev[id]?.fields || {}), [key]: value } } }));
@@ -512,7 +513,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   }, [gcalApiFetch, loadProductIntegrations]);
 
   // Generic connect function for any product provider
-  const connectProvider = useCallback(async (providerId: string, credentialMap: Record<string, string>, requiredFields: string[]) => {
+  const connectProvider = useCallback(async (providerId: string, credentialMap: Record<string, string>, requiredFields: string[], extraParams?: Record<string, string>) => {
     const form = getProviderForm(providerId);
     const missing = requiredFields.filter(f => !form.fields[f]?.trim());
     if (missing.length > 0) {
@@ -522,7 +523,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     setProviderConnecting(providerId, true);
     setProviderError(providerId, '');
     try {
-      const creds: Record<string, string> = {};
+      const creds: Record<string, string> = { ...(extraParams || {}) };
       for (const [apiKey, formKey] of Object.entries(credentialMap)) {
         creds[apiKey] = form.fields[formKey] || '';
       }
@@ -634,7 +635,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     { id: 'outlook', name: 'Outlook Calendar', icon: CalendarDays, color: '#0078D4', description: 'Integra con Outlook Calendar' },
     { id: 'calendly', name: 'Calendly', icon: CalendarDays, color: '#006BFF', description: 'Agenda reuniones con Calendly' },
     { id: 'mercadolibre', name: 'MercadoLibre', icon: Store, color: '#FFE600', description: 'Conecta tu tienda MercadoLibre' },
-    { id: 'custom_api', name: 'API Personalizada / MySQL', icon: Database, color: '#0ea5e9', description: 'Base de datos propia o endpoint REST' },
+    { id: 'custom_api', name: 'Base de datos / API', icon: Database, color: '#0ea5e9', description: 'MySQL directo o endpoint REST' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -1541,16 +1542,29 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                   ],
                 },
                 {
-                  id: 'custom_api', name: 'Base de datos / API propia', icon: Database,
+                  id: 'custom_api', name: customConnectionType === 'mysql' ? 'Base de datos MySQL' : 'API REST propia', icon: Database,
                   gradient: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)',
-                  subtitle: 'Conecta cualquier sistema que tengas',
-                  fields: [
+                  subtitle: customConnectionType === 'mysql' ? 'Conecta directo a tu base de datos' : 'Conecta cualquier endpoint REST',
+                  fields: customConnectionType === 'mysql' ? [
+                    { key: 'db_host', label: 'Host del servidor', placeholder: 'Ej: mysql.miempresa.com o 192.168.1.100', hint: 'La dirección de tu servidor MySQL', type: 'text' },
+                    { key: 'db_port', label: 'Puerto (opcional)', placeholder: '3306', hint: 'Normalmente es 3306', type: 'text' },
+                    { key: 'db_name', label: 'Nombre de la base de datos', placeholder: 'Ej: mi_tienda', hint: '', type: 'text' },
+                    { key: 'db_user', label: 'Usuario', placeholder: 'Ej: admin', hint: '', type: 'text' },
+                    { key: 'db_password', label: 'Contraseña', placeholder: 'Contraseña del usuario MySQL', hint: '', type: 'password' },
+                    { key: 'db_table', label: 'Tabla de productos', placeholder: 'Ej: productos, products, items', hint: 'La tabla donde están guardados tus productos', type: 'text' },
+                  ] : [
                     { key: 'api_url', label: 'Link donde están tus productos', placeholder: 'Ej: https://misite.com/api/productos.php', hint: 'Debe devolver tus productos en formato JSON', type: 'text' },
                     { key: 'api_key', label: 'Contraseña de la API (si tiene)', placeholder: 'Déjalo vacío si no requiere contraseña', hint: '', type: 'password' },
                   ],
-                  requiredFields: ['api_url'],
-                  credentialMap: { api_url: 'api_url', api_key: 'api_key' },
-                  steps: [
+                  requiredFields: customConnectionType === 'mysql' ? ['db_host', 'db_name', 'db_user', 'db_password', 'db_table'] : ['api_url'],
+                  credentialMap: customConnectionType === 'mysql'
+                    ? { db_host: 'db_host', db_port: 'db_port', db_name: 'db_name', db_user: 'db_user', db_password: 'db_password', db_table: 'db_table' }
+                    : { api_url: 'api_url', api_key: 'api_key' },
+                  steps: customConnectionType === 'mysql' ? [
+                    'Pídele a tu programador los datos de acceso a MySQL',
+                    'Necesitas: host, base de datos, usuario y contraseña',
+                    'Indica la tabla donde están guardados tus productos',
+                  ] : [
                     'Pídele a tu programador el link de tu API de productos',
                     'Si tiene contraseña/API Key, pégala abajo',
                     'Nosotros importamos todo automáticamente',
@@ -1629,6 +1643,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         ) : (
                           <div className="space-y-5">
+                            {/* Mode toggle for custom_api */}
+                            {prov.id === 'custom_api' && (
+                              <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+                                <button
+                                  onClick={() => { setCustomConnectionType('mysql'); resetProviderFields('custom_api'); }}
+                                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                                    customConnectionType === 'mysql'
+                                      ? 'bg-white text-blue-700 shadow-sm'
+                                      : 'text-neutral-500 hover:text-neutral-700'
+                                  }`}
+                                >
+                                  <Database className="w-4 h-4" />
+                                  MySQL directo
+                                </button>
+                                <button
+                                  onClick={() => { setCustomConnectionType('api'); resetProviderFields('custom_api'); }}
+                                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                                    customConnectionType === 'api'
+                                      ? 'bg-white text-blue-700 shadow-sm'
+                                      : 'text-neutral-500 hover:text-neutral-700'
+                                  }`}
+                                >
+                                  <Globe className="w-4 h-4" />
+                                  API REST
+                                </button>
+                              </div>
+                            )}
                             {/* Step-by-step guide */}
                             <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl">
                               <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">¿Cómo lo hago?</p>
@@ -1663,7 +1704,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               </div>
                             )}
                             <button
-                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
+                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields, prov.id === 'custom_api' ? { connection_type: customConnectionType } : undefined)}
                               disabled={form.connecting}
                               className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-200/50"
                             >
