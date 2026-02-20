@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import debugLog from '@/utils/debugLogger';
 import {
   TrendingUp,
@@ -350,6 +350,59 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     return `${symbol}${amount.toLocaleString('es-CL', { minimumFractionDigits: noDecimals ? 0 : 2, maximumFractionDigits: noDecimals ? 0 : 2 })}`;
   };
 
+  // ─── Helper Components ─────────────────────────────────────
+
+  const CircularProgress: React.FC<{
+    value: number;
+    size?: number;
+    strokeWidth?: number;
+    color?: string;
+    label?: string;
+  }> = ({ value, size = 130, strokeWidth = 10, color = '#6366f1', label }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (value / 100) * circumference;
+
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <svg width={size} height={size} className="transform -rotate-90">
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#f3f4f6" strokeWidth={strokeWidth} />
+          <circle
+            cx={size/2} cy={size/2} r={radius} fill="none"
+            stroke={color} strokeWidth={strokeWidth}
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 1.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-extrabold text-gray-900">{value}%</span>
+          {label && <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">{label}</span>}
+        </div>
+      </div>
+    );
+  };
+
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
+  const generateInsights = (): { text: string; type: 'success' | 'warning' | 'info' }[] => {
+    const insights: { text: string; type: 'success' | 'warning' | 'info' }[] = [];
+    const rate = parseFloat(metrics.resolutionRate as string);
+    if (rate >= 80) insights.push({ text: 'Excelente tasa de resolución', type: 'success' });
+    else if (rate < 50 && metrics.total > 0) insights.push({ text: 'La tasa de resolución necesita atención', type: 'warning' });
+    if (metrics.open > metrics.resolved && metrics.total > 0) {
+      insights.push({ text: `${metrics.open} conversaciones requieren atención`, type: 'warning' });
+    }
+    if (metrics.unread > 0) insights.push({ text: `${metrics.unread} mensajes sin leer`, type: 'info' });
+    if (metrics.totalMessages > 100) insights.push({ text: `${metrics.totalMessages.toLocaleString()} mensajes procesados`, type: 'success' });
+    return insights.slice(0, 3);
+  };
+
   const MetricCard: React.FC<{
     title: string;
     value: string | number;
@@ -357,23 +410,26 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     color: string;
     trend?: { value: number; isUp: boolean };
     subtitle?: string;
-  }> = ({ title, value, icon, color, trend, subtitle }) => (
-    <div className="group relative bg-white rounded-2xl p-5 border border-gray-100/80 hover:border-gray-200 transition-all duration-300 hover:shadow-lg hover:shadow-gray-100/50 hover:-translate-y-0.5">
-      <div className="flex items-start justify-between">
+    delay?: number;
+  }> = ({ title, value, icon, color, trend, subtitle, delay = 0 }) => (
+    <div
+      className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100/60 hover:border-gray-200/80 transition-all duration-500 hover:shadow-xl hover:shadow-gray-200/40 hover:-translate-y-1"
+      style={{ animation: `fadeInUp 0.6s ease-out ${delay}ms both` }}
+    >
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/30 group-hover:via-white/0 group-hover:to-purple-50/20 transition-all duration-500 pointer-events-none" />
+      <div className="relative flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{title}</p>
-          <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">{value}</h3>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.08em] mb-2">{title}</p>
+          <h3 className="text-[28px] font-extrabold text-gray-900 tracking-tight leading-none">{value}</h3>
           {trend && (
-            <div className={`flex items-center mt-2 text-xs font-medium ${trend.isUp ? 'text-emerald-600' : 'text-red-500'}`}>
-              <div className={`flex items-center justify-center w-4 h-4 rounded-full mr-1 ${trend.isUp ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                {trend.isUp ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
-              </div>
-              <span>{Math.abs(trend.value)}%</span>
+            <div className={`inline-flex items-center mt-2.5 text-xs font-semibold px-2 py-0.5 rounded-full ${trend.isUp ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+              {trend.isUp ? <ArrowUp className="w-3 h-3 mr-0.5" /> : <ArrowDown className="w-3 h-3 mr-0.5" />}
+              {Math.abs(trend.value)}%
             </div>
           )}
-          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-[11px] text-gray-400 mt-1.5 font-medium">{subtitle}</p>}
         </div>
-        <div className={`p-2.5 rounded-xl ${color} shadow-lg opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300`}>
+        <div className={`p-3 rounded-2xl ${color} shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
           {icon}
         </div>
       </div>
@@ -383,39 +439,107 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   // Mostrar loading mientras carga las estadísticas
   if (loadingStats) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-full border-[3px] border-gray-100" />
-            <div className="absolute inset-0 w-12 h-12 rounded-full border-[3px] border-transparent border-t-blue-500 animate-spin" />
+      <div className="space-y-6">
+        {/* Skeleton welcome banner */}
+        <div className="rounded-3xl bg-gradient-to-r from-slate-200 to-slate-100 p-8 animate-pulse">
+          <div className="h-4 w-20 bg-slate-300/60 rounded-full mb-3" />
+          <div className="h-8 w-56 bg-slate-300/60 rounded-lg mb-2" />
+          <div className="h-4 w-72 bg-slate-300/40 rounded-lg" />
+        </div>
+        {/* Skeleton metric cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-2xl bg-white border border-gray-100 p-5 animate-pulse">
+              <div className="flex justify-between">
+                <div className="space-y-3 flex-1">
+                  <div className="h-3 w-20 bg-gray-100 rounded-full" />
+                  <div className="h-8 w-16 bg-gray-100 rounded-lg" />
+                </div>
+                <div className="w-11 h-11 bg-gray-100 rounded-2xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Skeleton secondary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="rounded-2xl bg-white border border-gray-100 p-6 flex items-center justify-center animate-pulse">
+            <div className="w-[130px] h-[130px] rounded-full border-[10px] border-gray-100" />
           </div>
-          <p className="text-sm text-gray-400 mt-4 font-medium">Cargando métricas...</p>
+          <div className="lg:col-span-2 grid grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl bg-white border border-gray-100 p-5 animate-pulse">
+                <div className="space-y-3">
+                  <div className="h-3 w-24 bg-gray-100 rounded-full" />
+                  <div className="h-8 w-14 bg-gray-100 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* ═══════════ HEADER ═══════════ */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
-            <BarChart3 className="w-6 h-6 text-white" />
-          </div>
+    <>
+    <style>{`
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(-12px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes growWidth {
+        from { width: 0%; }
+      }
+    `}</style>
+    <div className="space-y-6">
+      {/* ═══════════ WELCOME BANNER ═══════════ */}
+      <div
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 p-6 lg:p-8"
+        style={{ animation: 'fadeIn 0.8s ease-out' }}
+      >
+        {/* Decorative orbs */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-gradient-to-br from-violet-500/10 to-pink-500/10 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2" />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Panel de Métricas</h2>
-            <p className="text-sm text-gray-400 font-medium">Análisis de actividad y rendimiento</p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <span className="text-emerald-300 text-[11px] font-bold uppercase tracking-[0.15em]">En vivo</span>
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+              {getGreeting()} 👋
+            </h1>
+            <p className="text-blue-200/60 text-sm mt-1.5 font-medium">
+              {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-sm font-semibold text-gray-600">
-            {timeRange === 'today' && 'Hoy'}
-            {timeRange === 'week' && 'Última semana'}
-            {timeRange === 'month' && 'Último mes'}
-            {timeRange === 'all' && 'Todo el tiempo'}
-          </span>
+
+          {/* Quick stats pills */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: 'Conversaciones', value: metrics.total, color: 'from-blue-500/20 to-blue-400/20 text-blue-200 border-blue-400/20' },
+              { label: 'Abiertas', value: metrics.open, color: 'from-amber-500/20 to-orange-400/20 text-amber-200 border-amber-400/20' },
+              { label: 'Resolución', value: `${metrics.resolutionRate}%`, color: 'from-emerald-500/20 to-green-400/20 text-emerald-200 border-emerald-400/20' },
+            ].map((pill, i) => (
+              <div key={i} className={`px-4 py-2 rounded-xl bg-gradient-to-r ${pill.color} border backdrop-blur-sm`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{pill.label}</span>
+                <p className="text-lg font-extrabold">{pill.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -425,97 +549,159 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           title="Conversaciones"
           value={metrics.total}
           icon={<MessageCircle className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/25"
+          color="bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30"
+          delay={100}
         />
         <MetricCard
           title="Abiertas"
           value={metrics.open}
           icon={<AlertCircle className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-amber-500 to-orange-500 shadow-orange-500/25"
+          color="bg-gradient-to-br from-amber-500 to-orange-500 shadow-orange-500/30"
+          delay={200}
         />
         <MetricCard
           title="Resueltas"
           value={metrics.resolved}
           icon={<CheckCircle2 className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/25"
+          color="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/30"
+          delay={300}
         />
         <MetricCard
           title="No Leídos"
           value={metrics.unread}
           icon={<Eye className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/25"
+          color="bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30"
+          delay={400}
         />
       </div>
 
-      {/* ═══════════ MÉTRICAS SECUNDARIAS ═══════════ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard
-          title="Tiempo de Respuesta"
-          value={backendStats?.avgResponseTime || formatTime(metrics.avgResponseTime)}
-          icon={<Zap className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/25"
-          subtitle="Promedio últimos 7 días"
-        />
-        <MetricCard
-          title="Mensajes Totales"
-          value={metrics.totalMessages.toLocaleString()}
-          icon={<Mail className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/25"
-        />
-        <MetricCard
-          title="Tasa de Resolución"
-          value={`${metrics.resolutionRate}%`}
-          icon={<Target className="w-5 h-5 text-white" />}
-          color="bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/25"
-        />
+      {/* ═══════════ PERFORMANCE + SECONDARY ═══════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ animation: 'fadeInUp 0.6s ease-out 300ms both' }}>
+        {/* Circular gauge */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 flex flex-col items-center justify-center hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+          <CircularProgress
+            value={parseFloat(metrics.resolutionRate as string) || 0}
+            size={130}
+            strokeWidth={10}
+            color={parseFloat(metrics.resolutionRate as string) >= 70 ? '#10b981' : parseFloat(metrics.resolutionRate as string) >= 40 ? '#f59e0b' : '#ef4444'}
+            label="Resolución"
+          />
+          <p className="text-xs text-gray-400 mt-3 font-medium text-center">Tasa de resolución general</p>
+        </div>
+
+        {/* Secondary metrics */}
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetricCard
+            title="Tiempo Respuesta"
+            value={backendStats?.avgResponseTime || formatTime(metrics.avgResponseTime)}
+            icon={<Zap className="w-5 h-5 text-white" />}
+            color="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/30"
+            subtitle="Promedio últimos 7 días"
+            delay={500}
+          />
+          <MetricCard
+            title="Mensajes Totales"
+            value={metrics.totalMessages.toLocaleString()}
+            icon={<Mail className="w-5 h-5 text-white" />}
+            color="bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/30"
+            delay={600}
+          />
+          <MetricCard
+            title="Contactos Activos"
+            value={metrics.topContacts.length}
+            icon={<Users className="w-5 h-5 text-white" />}
+            color="bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/30"
+            delay={700}
+          />
+        </div>
       </div>
+
+      {/* ═══════════ QUICK INSIGHTS ═══════════ */}
+      {generateInsights().length > 0 && (
+        <div className="flex flex-wrap gap-2" style={{ animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
+          {generateInsights().map((insight, i) => (
+            <div
+              key={i}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${
+                insight.type === 'success' ? 'bg-emerald-50/80 text-emerald-700 border-emerald-100' :
+                insight.type === 'warning' ? 'bg-amber-50/80 text-amber-700 border-amber-100' :
+                'bg-blue-50/80 text-blue-700 border-blue-100'
+              }`}
+              style={{ animation: `slideInRight 0.5s ease-out ${600 + i * 100}ms both` }}
+            >
+              <span className={`w-2 h-2 rounded-full ${
+                insight.type === 'success' ? 'bg-emerald-500' :
+                insight.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+              }`} />
+              {insight.text}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ═══════════ CONTACTOS + DISTRIBUCIÓN ═══════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ animation: 'fadeInUp 0.6s ease-out 400ms both' }}>
         
         {/* Top Contactos */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
-              <Users className="w-4 h-4 text-white" />
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+                <Users className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Top Contactos</h3>
+                <p className="text-[11px] text-gray-400 font-medium">Más activos del período</p>
+              </div>
             </div>
-            <h3 className="text-base font-bold text-gray-900">Top 5 Contactos</h3>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {metrics.topContacts.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">Sin datos aún</p>
+              <div className="text-center py-10">
+                <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                  <Users className="w-7 h-7 text-gray-200" />
+                </div>
+                <p className="text-sm font-medium text-gray-400">Sin datos aún</p>
+                <p className="text-xs text-gray-300 mt-1">Los contactos aparecerán aquí</p>
               </div>
             ) : (
               metrics.topContacts.map((contact, index) => {
                 const maxCount = metrics.topContacts[0].count;
                 const percentage = (contact.count / maxCount) * 100;
                 const colors = [
-                  'from-blue-500 to-indigo-500',
-                  'from-violet-500 to-purple-500',
-                  'from-emerald-500 to-teal-500',
-                  'from-amber-500 to-orange-500',
-                  'from-rose-500 to-pink-500',
+                  { gradient: 'from-blue-500 to-indigo-500', bar: 'from-blue-500 to-indigo-400' },
+                  { gradient: 'from-violet-500 to-purple-500', bar: 'from-violet-500 to-purple-400' },
+                  { gradient: 'from-emerald-500 to-teal-500', bar: 'from-emerald-500 to-teal-400' },
+                  { gradient: 'from-amber-500 to-orange-500', bar: 'from-amber-500 to-orange-400' },
+                  { gradient: 'from-rose-500 to-pink-500', bar: 'from-rose-500 to-pink-400' },
                 ];
+                const c = colors[index] || colors[0];
                 
                 return (
-                  <div key={index} className="group">
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${colors[index]} flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-[10px] font-bold text-white">{index + 1}</span>
-                        </div>
-                        <span className="font-semibold text-gray-800 truncate">{contact.name}</span>
-                        <span className="text-gray-300 text-xs hidden sm:inline">{contact.phone}</span>
+                  <div
+                    key={index}
+                    className="group rounded-xl p-3 hover:bg-gray-50/80 transition-all duration-300"
+                    style={{ animation: `slideInRight 0.5s ease-out ${index * 80}ms both` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
+                        <span className="text-xs font-bold text-white">{index + 1}</span>
                       </div>
-                      <span className="font-bold text-gray-600 text-xs bg-gray-50 px-2 py-0.5 rounded-md">{contact.count} msgs</span>
-                    </div>
-                    <div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className={`bg-gradient-to-r ${colors[index]} h-full rounded-full transition-all duration-700 ease-out`}
-                        style={{ width: `${percentage}%` }}
-                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-semibold text-gray-800 text-sm truncate">{contact.name}</span>
+                            <span className="text-gray-300 text-[11px] hidden sm:inline truncate">{contact.phone}</span>
+                          </div>
+                          <span className="font-bold text-gray-600 text-xs bg-gray-50 px-2 py-0.5 rounded-lg ml-2 flex-shrink-0">{contact.count} msgs</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`bg-gradient-to-r ${c.bar} h-full rounded-full`}
+                            style={{ width: `${percentage}%`, animation: 'growWidth 1s ease-out 0.3s both' }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -524,68 +710,80 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           </div>
         </div>
 
-        {/* Distribución de Mensajes */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+        {/* Distribución de Mensajes - Donut Chart */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
               <MessageCircle className="w-4 h-4 text-white" />
             </div>
-            <h3 className="text-base font-bold text-gray-900">Distribución de Mensajes</h3>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Distribución de Mensajes</h3>
+              <p className="text-[11px] text-gray-400 font-medium">Agentes vs Clientes</p>
+            </div>
           </div>
           
-          {/* Visual ratio bar */}
-          <div className="mb-6">
-            <div className="flex rounded-xl h-10 overflow-hidden shadow-inner bg-gray-50">
-              {metrics.totalMessages > 0 ? (
-                <>
-                  <div
-                    className="bg-gradient-to-r from-emerald-500 to-green-400 flex items-center justify-center transition-all duration-700"
-                    style={{ width: `${(metrics.agentMessages / metrics.totalMessages) * 100}%` }}
-                  >
-                    {(metrics.agentMessages / metrics.totalMessages) * 100 > 15 && (
-                      <span className="text-xs font-bold text-white">{Math.round((metrics.agentMessages / metrics.totalMessages) * 100)}%</span>
-                    )}
-                  </div>
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-400 flex items-center justify-center transition-all duration-700"
-                    style={{ width: `${(metrics.clientMessages / metrics.totalMessages) * 100}%` }}
-                  >
-                    {(metrics.clientMessages / metrics.totalMessages) * 100 > 15 && (
-                      <span className="text-xs font-bold text-white">{Math.round((metrics.clientMessages / metrics.totalMessages) * 100)}%</span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="w-full flex items-center justify-center">
-                  <span className="text-xs text-gray-300">Sin datos</span>
+          <div className="flex items-center gap-6">
+            {/* SVG Donut Chart */}
+            <div className="relative flex-shrink-0">
+              {(() => {
+                const size = 150;
+                const strokeWidth = 22;
+                const radius = (size - strokeWidth) / 2;
+                const circumference = 2 * Math.PI * radius;
+                const agentPct = metrics.totalMessages > 0 ? (metrics.agentMessages / metrics.totalMessages) : 0.5;
+                const agentOffset = circumference * (1 - agentPct);
+                
+                return (
+                  <svg width={size} height={size} className="transform -rotate-90">
+                    <circle cx={size/2} cy={size/2} r={radius} fill="none"
+                      stroke="url(#clientGradientDonut)" strokeWidth={strokeWidth} />
+                    <circle cx={size/2} cy={size/2} r={radius} fill="none"
+                      stroke="url(#agentGradientDonut)" strokeWidth={strokeWidth}
+                      strokeDasharray={circumference} strokeDashoffset={agentOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                    />
+                    <defs>
+                      <linearGradient id="agentGradientDonut" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#34d399" />
+                      </linearGradient>
+                      <linearGradient id="clientGradientDonut" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#818cf8" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                );
+              })()}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-extrabold text-gray-900">{metrics.totalMessages.toLocaleString()}</span>
+                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total</span>
+              </div>
+            </div>
+            
+            {/* Legend + Stats */}
+            <div className="flex-1 space-y-3">
+              <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 hover:bg-emerald-50 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
+                  <span className="text-xs font-semibold text-gray-600">Agentes</span>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-between mt-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
-                <span className="text-xs text-gray-500">Agentes</span>
+                <p className="text-xl font-extrabold text-emerald-600">{metrics.agentMessages.toLocaleString()}</p>
+                <p className="text-[10px] text-emerald-500 font-medium">
+                  {metrics.totalMessages > 0 ? Math.round((metrics.agentMessages / metrics.totalMessages) * 100) : 0}% del total
+                </p>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-400" />
-                <span className="text-xs text-gray-500">Clientes</span>
+              <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100/60 hover:bg-indigo-50 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-400" />
+                  <span className="text-xs font-semibold text-gray-600">Clientes</span>
+                </div>
+                <p className="text-xl font-extrabold text-indigo-600">{metrics.clientMessages.toLocaleString()}</p>
+                <p className="text-[10px] text-indigo-500 font-medium">
+                  {metrics.totalMessages > 0 ? Math.round((metrics.clientMessages / metrics.totalMessages) * 100) : 0}% del total
+                </p>
               </div>
-            </div>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-gray-50/80 rounded-xl">
-              <p className="text-2xl font-extrabold text-gray-900">{metrics.totalMessages.toLocaleString()}</p>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">Total</p>
-            </div>
-            <div className="text-center p-3 bg-emerald-50/60 rounded-xl">
-              <p className="text-2xl font-extrabold text-emerald-600">{metrics.agentMessages.toLocaleString()}</p>
-              <p className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mt-0.5">Agentes</p>
-            </div>
-            <div className="text-center p-3 bg-blue-50/60 rounded-xl">
-              <p className="text-2xl font-extrabold text-blue-600">{metrics.clientMessages.toLocaleString()}</p>
-              <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mt-0.5">Clientes</p>
             </div>
           </div>
         </div>
@@ -593,7 +791,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD POR HORA ═══════════ */}
       {timeRange === 'today' && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500" style={{ animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/20">
               <Clock className="w-4 h-4 text-white" />
@@ -637,7 +835,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD DIARIA ═══════════ */}
       {timeRange === 'week' && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500" style={{ animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20">
               <TrendingUp className="w-4 h-4 text-white" />
@@ -682,7 +880,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         <>
           {/* Empty state when no sales data */}
           {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
-            <div className="relative overflow-hidden rounded-2xl border border-gray-100/80 bg-white">
+            <div className="relative overflow-hidden rounded-2xl border border-gray-100/60 bg-white/80 backdrop-blur-sm">
               {/* Subtle pattern */}
               <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '20px 20px' }} />
               
@@ -803,7 +1001,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Productos */}
             {salesStats.top_products && salesStats.top_products.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                     <Package className="w-4 h-4 text-white" />
@@ -847,7 +1045,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
             {/* Ventas Recientes */}
             {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
                     <ShoppingCart className="w-4 h-4 text-white" />
@@ -884,7 +1082,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
           {/* Ventas por Día (gráfico de barras) */}
           {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100/80 hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                   <TrendingUp className="w-4 h-4 text-white" />
@@ -925,6 +1123,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </>
       )}
     </div>
+    </>
   );
 };
 
