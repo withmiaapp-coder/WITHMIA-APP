@@ -30,7 +30,14 @@ import {
   Link2,
   Unlink,
   Bot,
-  ExternalLink
+  ExternalLink,
+  Copy,
+  Code,
+  Palette,
+  AtSign,
+  Send,
+  Shield,
+  Smartphone,
 } from 'lucide-react';
 
 interface IntegrationSectionProps {
@@ -109,6 +116,39 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Product integrations state
   const [productIntegrations, setProductIntegrations] = useState<Record<string, any>>({});
   const [productIntegrationsLoading, setProductIntegrationsLoading] = useState(true);
+
+  // Chatwoot channels state (Instagram, Messenger, Web Chat, Email, WhatsApp Cloud API)
+  const [chatwootChannels, setChatwootChannels] = useState<Record<string, any>>({});
+  const [channelsLoading, setChannelsLoading] = useState(true);
+  const [channelConnecting, setChannelConnecting] = useState<string | null>(null);
+  const [channelError, setChannelError] = useState<string | null>(null);
+  const [channelSuccess, setChannelSuccess] = useState<string | null>(null);
+
+  // Web Chat Widget form
+  const [webChatUrl, setWebChatUrl] = useState('');
+  const [webChatColor, setWebChatColor] = useState('#6366f1');
+  const [webChatTitle, setWebChatTitle] = useState('¡Hola! 👋');
+  const [webChatTagline, setWebChatTagline] = useState('Estamos aquí para ayudarte');
+  const [widgetScript, setWidgetScript] = useState('');
+
+  // Email form
+  const [emailForm, setEmailForm] = useState({
+    email: '', imap_address: 'imap.gmail.com', imap_port: 993, imap_login: '',
+    imap_password: '', imap_enable_ssl: true, smtp_address: 'smtp.gmail.com',
+    smtp_port: 587, smtp_login: '', smtp_password: '', smtp_enable_ssl_tls: true,
+  });
+
+  // Facebook/Instagram form
+  const [fbPageToken, setFbPageToken] = useState('');
+  const [fbPageId, setFbPageId] = useState('');
+  const [fbPageName, setFbPageName] = useState('');
+  const [igId, setIgId] = useState('');
+
+  // WhatsApp Cloud API form
+  const [waCloudPhone, setWaCloudPhone] = useState('');
+  const [waCloudPhoneId, setWaCloudPhoneId] = useState('');
+  const [waCloudBusinessId, setWaCloudBusinessId] = useState('');
+  const [waCloudApiKey, setWaCloudApiKey] = useState('');
 
   // Unified product provider state: { [providerId]: { fields: {fieldKey: value}, connecting: bool, error: string } }
   const [providerForms, setProviderForms] = useState<Record<string, { fields: Record<string, string>; connecting: boolean; error: string }>>({});
@@ -543,7 +583,72 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     loadReservoStatus();
     loadAgendaproStatus();
     loadProductIntegrations();
+    loadChatwootChannels();
   }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadProductIntegrations]);
+
+  // Load Chatwoot channel statuses
+  const loadChatwootChannels = useCallback(async () => {
+    try {
+      setChannelsLoading(true);
+      const data = await gcalApiFetch('/api/channels');
+      const channelMap: Record<string, any> = {};
+      (data.channels || []).forEach((ch: any) => {
+        channelMap[ch.id] = ch;
+      });
+      setChatwootChannels(channelMap);
+    } catch (err) {
+      console.error('Error loading channels:', err);
+    } finally {
+      setChannelsLoading(false);
+    }
+  }, [gcalApiFetch]);
+
+  // Connect a new channel
+  const connectChannel = async (channelId: string, endpoint: string, payload: any) => {
+    setChannelConnecting(channelId);
+    setChannelError(null);
+    setChannelSuccess(null);
+    try {
+      const data = await gcalApiFetch(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (data.success) {
+        setChannelSuccess(`¡${channelId === 'web-chat' ? 'Widget' : 'Canal'} conectado exitosamente!`);
+        if (data.inbox?.website_token && channelId === 'web-chat') {
+          // Fetch widget script
+          const scriptData = await gcalApiFetch(`/api/channels/${data.inbox.id}/widget-script`);
+          setWidgetScript(scriptData.script || '');
+        }
+        await loadChatwootChannels();
+        onIntegrationChange?.();
+      } else {
+        setChannelError(data.error || 'Error al conectar canal');
+      }
+    } catch (err: any) {
+      setChannelError(err.message || 'Error de conexión');
+    } finally {
+      setChannelConnecting(null);
+    }
+  };
+
+  // Disconnect a channel
+  const disconnectChannel = async (channelId: string) => {
+    const channel = chatwootChannels[channelId];
+    if (!channel?.inbox_id) return;
+    setChannelConnecting(channelId);
+    setChannelError(null);
+    try {
+      await gcalApiFetch(`/api/channels/${channel.inbox_id}`, { method: 'DELETE' });
+      setChannelSuccess('Canal desconectado');
+      await loadChatwootChannels();
+      onIntegrationChange?.();
+    } catch (err: any) {
+      setChannelError(err.message || 'Error al desconectar');
+    } finally {
+      setChannelConnecting(null);
+    }
+  };
 
   const isConnected = whatsAppStatus === 'open' || whatsAppStatus === 'connected';
 
@@ -562,6 +667,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   };
 
   // Canales de comunicación
+  const getChannelStatus = (id: string) => chatwootChannels[id] ? 'connected' : 'disconnected';
+  
   const channels = [
     {
       id: 'whatsapp',
@@ -574,55 +681,55 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       available: true
     },
     {
+      id: 'web-chat',
+      name: 'Chat Web / Widget',
+      description: 'Agrega un widget de chat en vivo a tu sitio web',
+      icon: null,
+      fallbackIcon: Globe,
+      iconBg: 'from-indigo-500 to-purple-600',
+      status: getChannelStatus('web-chat'),
+      available: true
+    },
+    {
+      id: 'gmail',
+      name: 'Email / Gmail',
+      description: 'Conecta tu correo electrónico para gestionar soporte por email',
+      icon: null,
+      fallbackIcon: Mail,
+      iconBg: 'from-red-500 to-orange-500',
+      status: getChannelStatus('email'),
+      available: true
+    },
+    {
       id: 'instagram',
       name: 'Instagram Direct',
-      description: 'Recibe mensajes directos de Instagram',
+      description: 'Recibe y responde mensajes directos de Instagram',
       icon: '/icons/instagram-new.webp',
       fallbackIcon: MessageSquare,
       iconBg: 'from-pink-500 to-rose-500',
-      status: 'coming_soon',
-      available: false
+      status: getChannelStatus('instagram'),
+      available: true
     },
     {
       id: 'messenger',
       name: 'Facebook Messenger',
-      description: 'Conecta tu página de Facebook para Messenger',
+      description: 'Conecta tu página de Facebook para atender por Messenger',
       icon: '/icons/facebook-new.webp',
       fallbackIcon: Mail,
       iconBg: 'from-blue-500 to-indigo-500',
-      status: 'coming_soon',
-      available: false
+      status: getChannelStatus('messenger'),
+      available: true
     },
     {
       id: 'whatsapp-api',
-      name: 'WhatsApp API Oficial',
-      description: 'API oficial de WhatsApp Business (Meta)',
+      name: 'WhatsApp Cloud API',
+      description: 'API oficial de WhatsApp Business de Meta (sin QR, números verificados)',
       icon: null,
-      fallbackIcon: MessageCircle,
+      fallbackIcon: Smartphone,
       iconBg: 'from-emerald-600 to-teal-600',
-      status: 'coming_soon',
-      available: false
+      status: getChannelStatus('whatsapp-api'),
+      available: true
     },
-    {
-      id: 'web-chat',
-      name: 'Chat Web / Widget',
-      description: 'Widget de chat para tu sitio web',
-      icon: null,
-      fallbackIcon: Globe,
-      iconBg: 'from-blue-600 to-purple-600',
-      status: 'coming_soon',
-      available: false
-    },
-    {
-      id: 'gmail',
-      name: 'Gmail',
-      description: 'Conecta tu cuenta de Gmail para gestionar emails',
-      icon: null,
-      fallbackIcon: Mail,
-      iconBg: 'from-red-500 to-orange-500',
-      status: 'coming_soon',
-      available: false
-    }
   ];
 
   // Herramientas
@@ -1005,6 +1112,580 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* Expanded Content - Web Chat Widget */}
+                {expandedChannel === channel.id && channel.id === 'web-chat' && (
+                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                    {chatwootChannels['web-chat'] ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-green-600 mb-4">
+                          <Check className="w-5 h-5" />
+                          <span className="font-semibold">Widget conectado</span>
+                        </div>
+                        {widgetScript && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-neutral-700">
+                              <Code className="w-4 h-4 inline mr-1" />
+                              Código para insertar en tu sitio web:
+                            </label>
+                            <div className="relative">
+                              <pre className="bg-neutral-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">{widgetScript}</pre>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(widgetScript); setChannelSuccess('¡Código copiado!'); setTimeout(() => setChannelSuccess(null), 2000); }}
+                                className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-white transition-colors"
+                                title="Copiar código"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-neutral-500">Pega este código antes de la etiqueta &lt;/body&gt; en tu sitio web.</p>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => { if (confirm('¿Desconectar el widget de chat web?')) disconnectChannel('web-chat'); }}
+                          disabled={channelConnecting === 'web-chat'}
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar Widget
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Globe className="w-5 h-5 text-indigo-600" />
+                          <h4 className="font-semibold text-neutral-800">Configurar Widget de Chat Web</h4>
+                        </div>
+                        <p className="text-sm text-neutral-500 mb-4">Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente.</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">URL de tu sitio web *</label>
+                            <input
+                              type="url"
+                              value={webChatUrl}
+                              onChange={(e) => setWebChatUrl(e.target.value)}
+                              placeholder="https://tusitio.com"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                              <Palette className="w-3.5 h-3.5 inline mr-1" />
+                              Color del widget
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={webChatColor}
+                                onChange={(e) => setWebChatColor(e.target.value)}
+                                className="w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer"
+                              />
+                              <span className="text-sm text-neutral-500">{webChatColor}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Título de bienvenida</label>
+                            <input
+                              type="text"
+                              value={webChatTitle}
+                              onChange={(e) => setWebChatTitle(e.target.value)}
+                              placeholder="¡Hola! 👋"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Subtítulo</label>
+                            <input
+                              type="text"
+                              value={webChatTagline}
+                              onChange={(e) => setWebChatTagline(e.target.value)}
+                              placeholder="Estamos aquí para ayudarte"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {channelError && channelConnecting === null && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {channelError}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => connectChannel('web-chat', '/api/channels/web-widget', {
+                            website_url: webChatUrl,
+                            widget_color: webChatColor,
+                            welcome_title: webChatTitle,
+                            welcome_tagline: webChatTagline,
+                          })}
+                          disabled={channelConnecting === 'web-chat' || !webChatUrl}
+                          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          {channelConnecting === 'web-chat' ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                          ) : (
+                            <><Globe className="w-4 h-4" /> Crear Widget</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {channelSuccess && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        {channelSuccess}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded Content - Email / Gmail */}
+                {expandedChannel === channel.id && channel.id === 'gmail' && (
+                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                    {chatwootChannels['email'] ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-green-600 mb-2">
+                          <Check className="w-5 h-5" />
+                          <span className="font-semibold">Correo conectado</span>
+                        </div>
+                        <p className="text-sm text-neutral-600">
+                          Email: <span className="font-medium">{chatwootChannels['email']?.email || 'Configurado'}</span>
+                        </p>
+                        <button
+                          onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
+                          disabled={channelConnecting === 'gmail'}
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar Email
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Mail className="w-5 h-5 text-red-500" />
+                          <h4 className="font-semibold text-neutral-800">Configurar Email / Gmail</h4>
+                        </div>
+                        <p className="text-sm text-neutral-500 mb-4">Conecta tu correo electrónico para recibir y responder emails como conversaciones. Los campos vienen preconfigurados para Gmail.</p>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Dirección de email *</label>
+                            <input
+                              type="email"
+                              value={emailForm.email}
+                              onChange={(e) => { setEmailForm(p => ({ ...p, email: e.target.value, imap_login: e.target.value, smtp_login: e.target.value })); }}
+                              placeholder="tu@gmail.com"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none"
+                            />
+                          </div>
+
+                          {/* IMAP Settings */}
+                          <div className="p-4 bg-white border border-neutral-200 rounded-lg">
+                            <h5 className="text-sm font-semibold text-neutral-700 mb-3">📥 Configuración IMAP (recepción)</h5>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs text-neutral-500 mb-1">Servidor IMAP</label>
+                                <input type="text" value={emailForm.imap_address} onChange={(e) => setEmailForm(p => ({ ...p, imap_address: e.target.value }))}
+                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                <input type="number" value={emailForm.imap_port} onChange={(e) => setEmailForm(p => ({ ...p, imap_port: parseInt(e.target.value) || 993 }))}
+                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                              </div>
+                              <div className="col-span-2">
+                                <label className="block text-xs text-neutral-500 mb-1">Contraseña de aplicación *</label>
+                                <input type="password" value={emailForm.imap_password}
+                                  onChange={(e) => setEmailForm(p => ({ ...p, imap_password: e.target.value, smtp_password: e.target.value }))}
+                                  placeholder="Contraseña de app de Gmail"
+                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                                <p className="text-xs text-neutral-400 mt-1">
+                                  Para Gmail: usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">contraseña de aplicación</a>.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* SMTP Settings */}
+                          <div className="p-4 bg-white border border-neutral-200 rounded-lg">
+                            <h5 className="text-sm font-semibold text-neutral-700 mb-3">📤 Configuración SMTP (envío)</h5>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs text-neutral-500 mb-1">Servidor SMTP</label>
+                                <input type="text" value={emailForm.smtp_address} onChange={(e) => setEmailForm(p => ({ ...p, smtp_address: e.target.value }))}
+                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                <input type="number" value={emailForm.smtp_port} onChange={(e) => setEmailForm(p => ({ ...p, smtp_port: parseInt(e.target.value) || 587 }))}
+                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {channelError && channelConnecting === null && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {channelError}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => connectChannel('email', '/api/channels/email', emailForm)}
+                          disabled={channelConnecting === 'gmail' || !emailForm.email || !emailForm.imap_password}
+                          className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          {channelConnecting === 'gmail' ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                          ) : (
+                            <><Mail className="w-4 h-4" /> Conectar Email</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {channelSuccess && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        {channelSuccess}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded Content - Instagram */}
+                {expandedChannel === channel.id && channel.id === 'instagram' && (
+                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                    {chatwootChannels['instagram'] ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-green-600 mb-2">
+                          <Check className="w-5 h-5" />
+                          <span className="font-semibold">Instagram conectado</span>
+                        </div>
+                        <button
+                          onClick={() => { if (confirm('¿Desconectar Instagram?')) disconnectChannel('instagram'); }}
+                          disabled={channelConnecting === 'instagram'}
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar Instagram
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AtSign className="w-5 h-5 text-pink-500" />
+                          <h4 className="font-semibold text-neutral-800">Conectar Instagram Direct</h4>
+                        </div>
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium">Requisitos:</p>
+                            <ul className="list-disc list-inside mt-1 text-xs space-y-0.5">
+                              <li>Cuenta de Instagram <strong>Business</strong> o <strong>Creator</strong></li>
+                              <li>Página de Facebook conectada a tu cuenta de Instagram</li>
+                              <li>Page Access Token con permisos <code className="bg-amber-100 px-1 rounded">instagram_manage_messages</code></li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page Access Token *</label>
+                            <input
+                              type="password"
+                              value={fbPageToken}
+                              onChange={(e) => setFbPageToken(e.target.value)}
+                              placeholder="EAAxxxxxxxx..."
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page ID *</label>
+                              <input
+                                type="text"
+                                value={fbPageId}
+                                onChange={(e) => setFbPageId(e.target.value)}
+                                placeholder="123456789..."
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Instagram Business ID</label>
+                              <input
+                                type="text"
+                                value={igId}
+                                onChange={(e) => setIgId(e.target.value)}
+                                placeholder="17841400..."
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {channelError && channelConnecting === null && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {channelError}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => connectChannel('instagram', '/api/channels/instagram', {
+                            page_access_token: fbPageToken,
+                            page_id: fbPageId,
+                            instagram_id: igId || undefined,
+                          })}
+                          disabled={channelConnecting === 'instagram' || !fbPageToken || !fbPageId}
+                          className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-medium rounded-lg transition-all flex items-center gap-2"
+                        >
+                          {channelConnecting === 'instagram' ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                          ) : (
+                            <><AtSign className="w-4 h-4" /> Conectar Instagram</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {channelSuccess && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        {channelSuccess}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded Content - Facebook Messenger */}
+                {expandedChannel === channel.id && channel.id === 'messenger' && (
+                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                    {chatwootChannels['messenger'] ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-green-600 mb-2">
+                          <Check className="w-5 h-5" />
+                          <span className="font-semibold">Messenger conectado</span>
+                        </div>
+                        <button
+                          onClick={() => { if (confirm('¿Desconectar Facebook Messenger?')) disconnectChannel('messenger'); }}
+                          disabled={channelConnecting === 'messenger'}
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar Messenger
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Send className="w-5 h-5 text-blue-500" />
+                          <h4 className="font-semibold text-neutral-800">Conectar Facebook Messenger</h4>
+                        </div>
+                        <p className="text-sm text-neutral-500 mb-4">Conecta tu página de Facebook para recibir y responder mensajes de Messenger directamente en WITHMIA.</p>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Page Access Token *</label>
+                            <input
+                              type="password"
+                              value={fbPageToken}
+                              onChange={(e) => setFbPageToken(e.target.value)}
+                              placeholder="EAAxxxxxxxx..."
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Page ID *</label>
+                              <input
+                                type="text"
+                                value={fbPageId}
+                                onChange={(e) => setFbPageId(e.target.value)}
+                                placeholder="123456789..."
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre de la Página</label>
+                              <input
+                                type="text"
+                                value={fbPageName}
+                                onChange={(e) => setFbPageName(e.target.value)}
+                                placeholder="Mi Página de Facebook"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-start gap-2">
+                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <p>Necesitas un Page Access Token con permisos <code className="bg-blue-100 px-1 rounded">pages_messaging</code>. Puedes obtenerlo desde <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="underline font-medium">Meta Graph API Explorer</a>.</p>
+                        </div>
+
+                        {channelError && channelConnecting === null && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {channelError}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => connectChannel('messenger', '/api/channels/facebook-messenger', {
+                            page_access_token: fbPageToken,
+                            page_id: fbPageId,
+                            page_name: fbPageName || 'Mi Página',
+                          })}
+                          disabled={channelConnecting === 'messenger' || !fbPageToken || !fbPageId}
+                          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          {channelConnecting === 'messenger' ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                          ) : (
+                            <><Send className="w-4 h-4" /> Conectar Messenger</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {channelSuccess && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        {channelSuccess}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded Content - WhatsApp Cloud API */}
+                {expandedChannel === channel.id && channel.id === 'whatsapp-api' && (
+                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                    {chatwootChannels['whatsapp-api'] ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-green-600 mb-2">
+                          <Check className="w-5 h-5" />
+                          <span className="font-semibold">WhatsApp Cloud API conectado</span>
+                        </div>
+                        <p className="text-sm text-neutral-600">
+                          Teléfono: <span className="font-medium">{chatwootChannels['whatsapp-api']?.phone || 'Configurado'}</span>
+                        </p>
+                        <button
+                          onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
+                          disabled={channelConnecting === 'whatsapp-api'}
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Unlink className="w-4 h-4" />
+                          Desconectar WhatsApp Cloud API
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Smartphone className="w-5 h-5 text-emerald-600" />
+                          <h4 className="font-semibold text-neutral-800">Conectar WhatsApp Cloud API</h4>
+                        </div>
+                        <p className="text-sm text-neutral-500 mb-4">Usa la API oficial de Meta para WhatsApp Business. No requiere QR, solo números verificados con Meta Business Suite.</p>
+
+                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 flex items-start gap-2">
+                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium">¿Cuándo usar WhatsApp Cloud API en vez de WhatsApp QR?</p>
+                            <ul className="list-disc list-inside mt-1 space-y-0.5">
+                              <li>Para enviar mensajes masivos (campañas, templates)</li>
+                              <li>Usar un número verificado sin escanear QR</li>
+                              <li>Escala empresarial con la API oficial de Meta</li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Número de teléfono *</label>
+                            <input
+                              type="tel"
+                              value={waCloudPhone}
+                              onChange={(e) => setWaCloudPhone(e.target.value)}
+                              placeholder="+56912345678"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Phone Number ID *</label>
+                              <input
+                                type="text"
+                                value={waCloudPhoneId}
+                                onChange={(e) => setWaCloudPhoneId(e.target.value)}
+                                placeholder="103xxxxxxxx"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Business Account ID *</label>
+                              <input
+                                type="text"
+                                value={waCloudBusinessId}
+                                onChange={(e) => setWaCloudBusinessId(e.target.value)}
+                                placeholder="102xxxxxxxx"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">API Key / Permanent Token *</label>
+                            <input
+                              type="password"
+                              value={waCloudApiKey}
+                              onChange={(e) => setWaCloudApiKey(e.target.value)}
+                              placeholder="EAAxxxxxxxx..."
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
+                            />
+                            <p className="text-xs text-neutral-400 mt-1">
+                              Obtén tu token permanente en <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">Meta Business Suite → System Users</a>.
+                            </p>
+                          </div>
+                        </div>
+
+                        {channelError && channelConnecting === null && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {channelError}
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => connectChannel('whatsapp-api', '/api/channels/whatsapp-cloud', {
+                            phone_number: waCloudPhone,
+                            phone_number_id: waCloudPhoneId,
+                            business_account_id: waCloudBusinessId,
+                            api_key: waCloudApiKey,
+                          })}
+                          disabled={channelConnecting === 'whatsapp-api' || !waCloudPhone || !waCloudPhoneId || !waCloudBusinessId || !waCloudApiKey}
+                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          {channelConnecting === 'whatsapp-api' ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                          ) : (
+                            <><Smartphone className="w-4 h-4" /> Conectar WhatsApp Cloud API</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {channelSuccess && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        {channelSuccess}
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
             ))}
           </div>

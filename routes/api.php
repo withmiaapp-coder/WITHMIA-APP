@@ -224,6 +224,19 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     // --- Daily inspirational quote (OpenAI powered) ---
     Route::get('/daily-quote', \App\Http\Controllers\Api\DailyQuoteController::class);
 
+    // --- Communication Channels (Chatwoot inboxes) ---
+    Route::prefix('channels')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'index']);
+        Route::post('/web-widget', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createWebWidget']);
+        Route::post('/email', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createEmail']);
+        Route::post('/facebook-messenger', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createFacebookMessenger']);
+        Route::post('/instagram', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createInstagram']);
+        Route::post('/whatsapp-cloud', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createWhatsAppCloud']);
+        Route::get('/facebook-auth-url', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'getFacebookAuthUrl']);
+        Route::get('/{inboxId}/widget-script', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'getWidgetScript']);
+        Route::delete('/{inboxId}', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'destroy']);
+    });
+
     // --- Contactos ---
     Route::put('/contacts/{contactId}', [ChatwootController::class, 'updateContact']);
 
