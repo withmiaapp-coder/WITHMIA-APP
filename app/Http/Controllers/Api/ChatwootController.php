@@ -697,13 +697,23 @@ class ChatwootController extends Controller
                 ", [$this->accountId, $this->inboxId]);
 
                 if ($avgSeconds && $avgSeconds->avg_time) {
-                    $seconds = abs($avgSeconds->avg_time);
-                    if ($seconds instanceof \DateInterval) {
-                        $minutes = round(($seconds->h * 60 + $seconds->i + $seconds->s / 60), 1);
-                    } else {
-                        $minutes = round($seconds / 60, 1);
+                    $raw = $avgSeconds->avg_time;
+                    $totalSeconds = 0;
+
+                    if (is_numeric($raw)) {
+                        $totalSeconds = abs((float) $raw);
+                    } elseif (is_string($raw) && preg_match('/^(-?)(\d+):(\d+):([\d.]+)$/', $raw, $m)) {
+                        // PostgreSQL interval format "HH:MM:SS" or "-HH:MM:SS"
+                        $totalSeconds = abs($m[2] * 3600 + $m[3] * 60 + (float) $m[4]);
+                    } elseif (is_string($raw) && preg_match('/^(-?)(\d+)\s+days?\s+(\d+):(\d+):([\d.]+)$/', $raw, $m)) {
+                        // PostgreSQL interval "X days HH:MM:SS"
+                        $totalSeconds = abs($m[2] * 86400 + $m[3] * 3600 + $m[4] * 60 + (float) $m[5]);
                     }
-                    $avgResponseTime = $minutes < 60 ? "{$minutes} min" : round($minutes / 60, 1) . " hrs";
+
+                    if ($totalSeconds > 0) {
+                        $minutes = round($totalSeconds / 60, 1);
+                        $avgResponseTime = $minutes < 60 ? "{$minutes} min" : round($minutes / 60, 1) . " hrs";
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::debug('No se pudo calcular avg response time', ['error' => $e->getMessage()]);
