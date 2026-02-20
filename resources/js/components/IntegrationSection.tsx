@@ -83,6 +83,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [outlookConnecting, setOutlookConnecting] = useState(false);
   const [outlookIntegration, setOutlookIntegration] = useState<any>(null);
   const [outlookLoading, setOutlookLoading] = useState(true);
+  const [outlookError, setOutlookError] = useState('');
 
   // Reservo state
   const [reservoConnected, setReservoConnected] = useState(false);
@@ -282,7 +283,16 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
-    } catch (err) { console.error('Error connecting Outlook:', err); setOutlookConnecting(false); }
+    } catch (err: any) {
+      console.error('Error connecting Outlook:', err);
+      const msg = err?.message || '';
+      if (msg.includes('500') || msg.includes('not configured')) {
+        setOutlookError('Outlook Calendar no está configurado aún. Contacta al administrador para configurar las credenciales de Microsoft.');
+      } else {
+        setOutlookError('Error al conectar Outlook Calendar');
+      }
+      setOutlookConnecting(false);
+    }
   }, [gcalApiFetch, loadOutlookStatus]);
 
   const disconnectOutlook = useCallback(async () => {
@@ -1251,6 +1261,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <button onClick={connectOutlook} disabled={outlookConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-400 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                         {outlookConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Microsoft</>)}
                       </button>
+                      {outlookError && (
+                        <div className="mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{outlookError}</div>
+                      )}
                     </div>
                   )}
                 </div>

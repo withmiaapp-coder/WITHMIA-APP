@@ -628,6 +628,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   });
   const [isUpdatingWhatsAppSettings, setIsUpdatingWhatsAppSettings] = useState(false);
 
+  // Estado de integraciones de calendario (para el contador del sidebar)
+  const [calendarIntegrationsCount, setCalendarIntegrationsCount] = useState(0);
+
   const [notification, setNotification] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
   
   // Estado para controlar el colapso del sidebar
@@ -797,29 +800,45 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     };
   }, [fetchTeams]);
 
+  // Verificar integraciones de calendario conectadas
+  const checkCalendarIntegrations = useCallback(async () => {
+    try {
+      const endpoints = [
+        '/api/calendar/status',
+        '/api/outlook/status',
+        '/api/calendly/status',
+        '/api/reservo/status',
+        '/api/agendapro/status',
+      ];
+      const results = await Promise.allSettled(
+        endpoints.map(url => secureFetch(url, { requireCsrf: false, timeout: 8000 }).then(r => r.json()))
+      );
+      let count = 0;
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value?.connected) count++;
+      }
+      setCalendarIntegrationsCount(count);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  // Cargar integraciones de calendario al montar
+  useEffect(() => {
+    checkCalendarIntegrations();
+  }, [checkCalendarIntegrations]);
+
   // Función para contar Integraciones realmente conectadas
   const getConnectedIntegrationsCount = () => {
     let connected = 0;
     
-    // WhatsApp - verificar estado real
+    // WhatsApp
     if (whatsAppStatus === 'connected' || whatsAppStatus === 'open') {
       connected++;
     }
     
-    // Instagram - NO conectado (pro�ximamente)
-    // connected++; // Comentado hasta que esto� realmente conectado
-    
-    // Messenger - NO conectado (pro�ximamente)  
-    // connected++; // Comentado hasta que esto� realmente conectado
-    
-    // WhatsApp API Oficial - NO conectado (configurar cuando esto� listo)
-    // connected++; // Comentado hasta que esto� realmente conectado
-    
-    // Chat WEB Plugins WordPress - NO conectado (configurar cuando esto� listo)
-    // connected++; // Comentado hasta que esto� realmente conectado
-    
-    // Gmail - NO conectado (configurar cuando esto� listo)
-    // connected++; // Comentado hasta que esto� realmente conectado
+    // Calendario (Google, Outlook, Calendly, Reservo, AgendaPro)
+    connected += calendarIntegrationsCount;
     
     return connected;
   };

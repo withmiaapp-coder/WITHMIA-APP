@@ -319,9 +319,14 @@ export default function CalendarSection({ user, company }: Props) {
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error connecting Outlook:', err);
-      setError('Error al conectar Outlook Calendar');
+      const msg = err?.message || '';
+      if (msg.includes('500') || msg.includes('not configured')) {
+        setError('Outlook Calendar no está configurado aún. Contacta al administrador para configurar las credenciales de Microsoft.');
+      } else {
+        setError('Error al conectar Outlook Calendar');
+      }
       setOutlookConnecting(false);
     }
   }, [loadIntegrationStatus]);
