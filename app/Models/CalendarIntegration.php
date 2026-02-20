@@ -54,27 +54,6 @@ class CalendarIntegration extends Model
     }
 
     /**
-     * Verificar si el token de acceso ha expirado.
-     */
-    public function isTokenExpired(): bool
-    {
-        if (!$this->token_expires_at) {
-            return true;
-        }
-        return $this->token_expires_at->isPast();
-    }
-
-    /**
-     * Verificar si la integración está conectada y activa.
-     */
-    public function isConnected(): bool
-    {
-        return $this->is_active 
-            && !empty($this->refresh_token) 
-            && !empty($this->access_token);
-    }
-
-    /**
      * Obtener el access token válido, refrescándolo si es necesario.
      */
     public function getValidAccessToken(): ?string
@@ -93,6 +72,8 @@ class CalendarIntegration extends Model
 
     /**
      * Refrescar el access token usando el refresh token.
+     * Soporta múltiples proveedores: google, outlook, calendly.
+     * Para proveedores con API key (reservo, agendapro) no se necesita refresh.
      */
     public function refreshAccessToken(): ?string
     {
@@ -100,35 +81,111 @@ class CalendarIntegration extends Model
             return null;
         }
 
-        try {
-            $response = \Illuminate\Support\Facades\Http::asForm()->post('https://oauth2.googleapis.com/token', [
+        // Proveedores con API Key no necesitan refresh
+        if (in_array($this->provider, ['reservo', 'agendapro'])) {
+            return $this->access_token;
+        }
+
+        $tokenUrl = match ($this->provider) {
+            'google' => 'https://oauth2.googleapis.com/token',
+            'outlook' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+            'calendly' => 'https://auth.calendly.com/oauth/token',
+            default => null,
+        };
+
+        if (!$tokenUrl) {
+            return null;
+        }
+
+        $params = match ($this->provider) {
+            'google' => [
                 'client_id' => config('services.google.client_id'),
                 'client_secret' => config('services.google.client_secret'),
                 'refresh_token' => $this->refresh_token,
                 'grant_type' => 'refresh_token',
-            ]);
+            ],
+            'outlook' => [
+                'client_id' => config('services.microsoft.client_id'),
+                'client_secret' => config('services.microsoft.client_secret'),
+                'refresh_token' => $this->refresh_token,
+                'grant_type' => 'refresh_token',
+                'scope' => 'openid profile email offline_access Calendars.ReadWrite',
+            ],
+            'calendly' => [
+                'client_id' => config('services.calendly.client_id'),
+                'client_secret' => config('services.calendly.client_secret'),
+                'refresh_token' => $this->refresh_token,
+                'grant_type' => 'refresh_token',
+            ],
+            default => [],
+        };
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::asForm()->post($tokenUrl, $params);
 
             if ($response->successful()) {
                 $data = $response->json();
-                $this->update([
+                $updateData = [
                     'access_token' => $data['access_token'],
                     'token_expires_at' => now()->addSeconds($data['expires_in'] ?? 3600),
-                ]);
+                ];
+                // Some providers return a new refresh token
+                if (!empty($data['refresh_token'])) {
+                    $updateData['refresh_token'] = $data['refresh_token'];
+                }
+                $this->update($updateData);
                 return $data['access_token'];
             }
 
-            \Illuminate\Support\Facades\Log::warning('[Calendar] Token refresh failed', [
+            \Illuminate\Support\Facades\Log::warning("[Calendar:{$this->provider}] Token refresh failed", [
                 'user_id' => $this->user_id,
                 'status' => $response->status(),
             ]);
 
             return null;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('[Calendar] Token refresh error', [
+            \Illuminate\Support\Facades\Log::error("[Calendar:{$this->provider}] Token refresh error", [
                 'user_id' => $this->user_id,
                 'error' => $e->getMessage(),
             ]);
             return null;
         }
+    }
+
+    /**
+     * Verificar si este es un proveedor basado en API Key (no expira).
+     */
+    public function isApiKeyProvider(): bool
+    {
+        return in_array($this->provider, ['reservo', 'agendapro']);
+    }
+
+    /**
+     * Override isTokenExpired para API key providers.
+     */
+    public function isTokenExpired(): bool
+    {
+        if ($this->isApiKeyProvider()) {
+            return false; // API keys don't expire
+        }
+
+        if (!$this->token_expires_at) {
+            return true;
+        }
+        return $this->token_expires_at->isPast();
+    }
+
+    /**
+     * Override isConnected para soportar múltiples proveedores.
+     */
+    public function isConnected(): bool
+    {
+        if ($this->isApiKeyProvider()) {
+            return $this->is_active && !empty($this->access_token);
+        }
+
+        return $this->is_active 
+            && !empty($this->refresh_token) 
+            && !empty($this->access_token);
     }
 }

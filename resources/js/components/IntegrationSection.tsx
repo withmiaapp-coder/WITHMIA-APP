@@ -14,14 +14,11 @@ import {
   Clock,
   MessageSquare,
   Database,
-  Code,
   ShoppingCart,
   ShoppingBag,
   Calendar,
   CalendarDays,
-  HardDrive,
   Cloud,
-  FileSpreadsheet,
   Store,
   Lightbulb,
   Zap,
@@ -74,6 +71,35 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [gcalIntegration, setGcalIntegration] = useState<any>(null);
   const [gcalLoading, setGcalLoading] = useState(true);
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
+
+  // Calendly state
+  const [calendlyConnected, setCalendlyConnected] = useState(false);
+  const [calendlyConnecting, setCalendlyConnecting] = useState(false);
+  const [calendlyIntegration, setCalendlyIntegration] = useState<any>(null);
+  const [calendlyLoading, setCalendlyLoading] = useState(true);
+
+  // Outlook state
+  const [outlookConnected, setOutlookConnected] = useState(false);
+  const [outlookConnecting, setOutlookConnecting] = useState(false);
+  const [outlookIntegration, setOutlookIntegration] = useState<any>(null);
+  const [outlookLoading, setOutlookLoading] = useState(true);
+
+  // Reservo state
+  const [reservoConnected, setReservoConnected] = useState(false);
+  const [reservoIntegration, setReservoIntegration] = useState<any>(null);
+  const [reservoLoading, setReservoLoading] = useState(true);
+  const [reservoApiKey, setReservoApiKey] = useState('');
+  const [reservoSubdomain, setReservoSubdomain] = useState('');
+  const [reservoConnecting, setReservoConnecting] = useState(false);
+  const [reservoError, setReservoError] = useState('');
+
+  // AgendaPro state
+  const [agendaproConnected, setAgendaproConnected] = useState(false);
+  const [agendaproIntegration, setAgendaproIntegration] = useState<any>(null);
+  const [agendaproLoading, setAgendaproLoading] = useState(true);
+  const [agendaproApiKey, setAgendaproApiKey] = useState('');
+  const [agendaproConnecting, setAgendaproConnecting] = useState(false);
+  const [agendaproError, setAgendaproError] = useState('');
 
   // API helper
   const gcalApiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -171,7 +197,226 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     }
   }, [gcalIntegration, gcalApiFetch]);
 
-  useEffect(() => { loadGcalStatus(); }, [loadGcalStatus]);
+  // ========== CALENDLY ==========
+  const loadCalendlyStatus = useCallback(async () => {
+    try {
+      setCalendlyLoading(true);
+      const data = await gcalApiFetch('/api/calendly/status');
+      setCalendlyConnected(data.connected);
+      setCalendlyIntegration(data.integration);
+    } catch (err) { console.error('Error loading Calendly status:', err); }
+    finally { setCalendlyLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectCalendly = useCallback(async () => {
+    try {
+      setCalendlyConnecting(true);
+      const data = await gcalApiFetch('/api/calendly/auth-url');
+      const authWindow = window.open(data.auth_url, 'calendly_auth', 'width=600,height=700,left=200,top=100');
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data?.type === 'calendly_oauth_result') {
+          window.removeEventListener('message', handleMessage);
+          setCalendlyConnecting(false);
+          if (event.data.status === 'success') await loadCalendlyStatus();
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      const pollInterval = setInterval(() => {
+        if (authWindow?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => { setCalendlyConnecting(false); window.removeEventListener('message', handleMessage); await loadCalendlyStatus(); }, 500);
+        }
+      }, 1000);
+      setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setCalendlyConnecting(false); }, 300000);
+    } catch (err) { console.error('Error connecting Calendly:', err); setCalendlyConnecting(false); }
+  }, [gcalApiFetch, loadCalendlyStatus]);
+
+  const disconnectCalendly = useCallback(async () => {
+    if (!confirm('¿Desconectar Calendly? WITHMIA perderá acceso.')) return;
+    try {
+      await gcalApiFetch('/api/calendly/disconnect', { method: 'POST' });
+      setCalendlyConnected(false);
+      setCalendlyIntegration(null);
+    } catch (err) { console.error('Error disconnecting Calendly:', err); }
+  }, [gcalApiFetch]);
+
+  const toggleCalendlyBotAccess = useCallback(async () => {
+    if (!calendlyIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/calendly/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !calendlyIntegration.bot_access_enabled }),
+      });
+      setCalendlyIntegration(data.integration);
+    } catch (err) { console.error('Error toggling Calendly bot access:', err); }
+  }, [calendlyIntegration, gcalApiFetch]);
+
+  // ========== OUTLOOK ==========
+  const loadOutlookStatus = useCallback(async () => {
+    try {
+      setOutlookLoading(true);
+      const data = await gcalApiFetch('/api/outlook/status');
+      setOutlookConnected(data.connected);
+      setOutlookIntegration(data.integration);
+    } catch (err) { console.error('Error loading Outlook status:', err); }
+    finally { setOutlookLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectOutlook = useCallback(async () => {
+    try {
+      setOutlookConnecting(true);
+      const data = await gcalApiFetch('/api/outlook/auth-url');
+      const authWindow = window.open(data.auth_url, 'outlook_auth', 'width=600,height=700,left=200,top=100');
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data?.type === 'outlook_oauth_result') {
+          window.removeEventListener('message', handleMessage);
+          setOutlookConnecting(false);
+          if (event.data.status === 'success') await loadOutlookStatus();
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      const pollInterval = setInterval(() => {
+        if (authWindow?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => { setOutlookConnecting(false); window.removeEventListener('message', handleMessage); await loadOutlookStatus(); }, 500);
+        }
+      }, 1000);
+      setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
+    } catch (err) { console.error('Error connecting Outlook:', err); setOutlookConnecting(false); }
+  }, [gcalApiFetch, loadOutlookStatus]);
+
+  const disconnectOutlook = useCallback(async () => {
+    if (!confirm('¿Desconectar Outlook Calendar? WITHMIA perderá acceso.')) return;
+    try {
+      await gcalApiFetch('/api/outlook/disconnect', { method: 'POST' });
+      setOutlookConnected(false);
+      setOutlookIntegration(null);
+    } catch (err) { console.error('Error disconnecting Outlook:', err); }
+  }, [gcalApiFetch]);
+
+  const toggleOutlookBotAccess = useCallback(async () => {
+    if (!outlookIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/outlook/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !outlookIntegration.bot_access_enabled }),
+      });
+      setOutlookIntegration(data.integration);
+    } catch (err) { console.error('Error toggling Outlook bot access:', err); }
+  }, [outlookIntegration, gcalApiFetch]);
+
+  // ========== RESERVO ==========
+  const loadReservoStatus = useCallback(async () => {
+    try {
+      setReservoLoading(true);
+      const data = await gcalApiFetch('/api/reservo/status');
+      setReservoConnected(data.connected);
+      setReservoIntegration(data.integration);
+    } catch (err) { console.error('Error loading Reservo status:', err); }
+    finally { setReservoLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectReservo = useCallback(async () => {
+    if (!reservoApiKey || !reservoSubdomain) {
+      setReservoError('Ingresa tu API Key y subdominio de Reservo');
+      return;
+    }
+    setReservoConnecting(true);
+    setReservoError('');
+    try {
+      const data = await gcalApiFetch('/api/reservo/connect', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: reservoApiKey, subdomain: reservoSubdomain }),
+      });
+      if (data.success) {
+        setReservoApiKey('');
+        setReservoSubdomain('');
+        await loadReservoStatus();
+      }
+    } catch (err: any) {
+      setReservoError('API Key o subdominio inválido');
+    } finally { setReservoConnecting(false); }
+  }, [reservoApiKey, reservoSubdomain, gcalApiFetch, loadReservoStatus]);
+
+  const disconnectReservo = useCallback(async () => {
+    if (!confirm('¿Desconectar Reservo?')) return;
+    try {
+      await gcalApiFetch('/api/reservo/disconnect', { method: 'POST' });
+      setReservoConnected(false);
+      setReservoIntegration(null);
+    } catch (err) { console.error('Error disconnecting Reservo:', err); }
+  }, [gcalApiFetch]);
+
+  const toggleReservoBotAccess = useCallback(async () => {
+    if (!reservoIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/reservo/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !reservoIntegration.bot_access_enabled }),
+      });
+      setReservoIntegration(data.integration);
+    } catch (err) { console.error('Error toggling Reservo bot access:', err); }
+  }, [reservoIntegration, gcalApiFetch]);
+
+  // ========== AGENDAPRO ==========
+  const loadAgendaproStatus = useCallback(async () => {
+    try {
+      setAgendaproLoading(true);
+      const data = await gcalApiFetch('/api/agendapro/status');
+      setAgendaproConnected(data.connected);
+      setAgendaproIntegration(data.integration);
+    } catch (err) { console.error('Error loading AgendaPro status:', err); }
+    finally { setAgendaproLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectAgendapro = useCallback(async () => {
+    if (!agendaproApiKey) {
+      setAgendaproError('Ingresa tu API Key de AgendaPro');
+      return;
+    }
+    setAgendaproConnecting(true);
+    setAgendaproError('');
+    try {
+      const data = await gcalApiFetch('/api/agendapro/connect', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: agendaproApiKey }),
+      });
+      if (data.success) {
+        setAgendaproApiKey('');
+        await loadAgendaproStatus();
+      }
+    } catch (err: any) {
+      setAgendaproError('API Key inválida');
+    } finally { setAgendaproConnecting(false); }
+  }, [agendaproApiKey, gcalApiFetch, loadAgendaproStatus]);
+
+  const disconnectAgendapro = useCallback(async () => {
+    if (!confirm('¿Desconectar AgendaPro?')) return;
+    try {
+      await gcalApiFetch('/api/agendapro/disconnect', { method: 'POST' });
+      setAgendaproConnected(false);
+      setAgendaproIntegration(null);
+    } catch (err) { console.error('Error disconnecting AgendaPro:', err); }
+  }, [gcalApiFetch]);
+
+  const toggleAgendaproBotAccess = useCallback(async () => {
+    if (!agendaproIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/agendapro/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !agendaproIntegration.bot_access_enabled }),
+      });
+      setAgendaproIntegration(data.integration);
+    } catch (err) { console.error('Error toggling AgendaPro bot access:', err); }
+  }, [agendaproIntegration, gcalApiFetch]);
+
+  useEffect(() => {
+    loadGcalStatus();
+    loadCalendlyStatus();
+    loadOutlookStatus();
+    loadReservoStatus();
+    loadAgendaproStatus();
+  }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus]);
 
   const isConnected = whatsAppStatus === 'open' || whatsAppStatus === 'connected';
 
@@ -256,13 +501,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Herramientas
   const tools = [
     { id: 'crm', name: 'CRM', icon: Database, color: '#059669', description: 'Gestiona relaciones con clientes' },
-    { id: 'api', name: 'API', icon: Code, color: '#6B7280', description: 'Integración personalizada' },
     { id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart, color: '#96588A', description: 'Conecta tu tienda WooCommerce' },
     { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: '#96BF48', description: 'Sincroniza con tu tienda Shopify' },
     { id: 'reservo', name: 'Reservo', icon: Calendar, color: '#F59E0B', description: 'Sistema de reservas y citas' },
+    { id: 'agendapro', name: 'AgendaPro', icon: Calendar, color: '#00C4B4', description: 'Gestión de citas con AgendaPro' },
     { id: 'calendar', name: 'Google Calendar', icon: CalendarDays, color: '#DC2626', description: 'Integra con Google Calendar' },
-    { id: 'drive', name: 'Google Drive', icon: HardDrive, color: '#34A853', description: 'Almacenamiento en la nube' },
-    { id: 'excel', name: 'Google Sheets', icon: FileSpreadsheet, color: '#217346', description: 'Conecta con Google Sheets' },
+    { id: 'outlook', name: 'Outlook Calendar', icon: CalendarDays, color: '#0078D4', description: 'Integra con Outlook Calendar' },
+    { id: 'calendly', name: 'Calendly', icon: CalendarDays, color: '#006BFF', description: 'Agenda reuniones con Calendly' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -645,7 +890,175 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
           </div>
           
           <div className="space-y-3">
-            {/* Google Calendar - Funcional */}
+
+            {/* ==================== AGENDAPRO ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'agendapro' ? 'border-teal-300 shadow-lg ring-1 ring-teal-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'agendapro' ? null : 'agendapro')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #00C4B4, #00C4B4DD)' }}>
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">AgendaPro</h3>
+                    <p className="text-sm text-neutral-500">Gestión de citas con AgendaPro</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {agendaproLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : agendaproConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'agendapro' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'agendapro' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {agendaproConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">AgendaPro conectado</span></div>
+                          {agendaproIntegration?.provider_email && <span className="text-xs text-green-600">{agendaproIntegration.provider_email}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${agendaproIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{agendaproIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en AgendaPro'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={agendaproIntegration?.bot_access_enabled || false} onChange={toggleAgendaproBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectAgendapro} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-teal-50 rounded-lg flex-shrink-0">
+                            <Calendar className="w-8 h-8 text-teal-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu AgendaPro</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Integra AgendaPro para que WITHMIA gestione citas y reservas automáticamente.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por servicio</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear reservas automáticamente</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples sucursales y profesionales</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Key de AgendaPro</label>
+                          <input
+                            type="password"
+                            value={agendaproApiKey}
+                            onChange={(e) => setAgendaproApiKey(e.target.value)}
+                            placeholder="Tu API Key de AgendaPro"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          />
+                        </div>
+                        {agendaproError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {agendaproError}</p>}
+                        <button onClick={connectAgendapro} disabled={agendaproConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-teal-300 text-neutral-700 hover:text-teal-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                          {agendaproConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar AgendaPro</>)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ==================== CALENDLY ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'calendly' ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'calendly' ? null : 'calendly')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #006BFF, #006BFFDD)' }}>
+                    <CalendarDays className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Calendly</h3>
+                    <p className="text-sm text-neutral-500">Agenda reuniones con Calendly</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {calendlyLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : calendlyConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'calendly' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'calendly' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {calendlyConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Calendly conectado</span></div>
+                          {calendlyIntegration?.provider_email && <span className="text-xs text-green-600">{calendlyIntegration.provider_email}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${calendlyIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{calendlyIntegration?.bot_access_enabled ? 'WITHMIA puede enviar links de agendamiento' : 'Activa para que WITHMIA agende vía Calendly'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={calendlyIntegration?.bot_access_enabled || false} onChange={toggleCalendlyBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectCalendly} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                            <CalendarDays className="w-8 h-8 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Calendly</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Integra Calendly para que WITHMIA envíe links de agendamiento a tus clientes automáticamente.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Links de agendamiento personalizados</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Tipos de evento configurables</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sincronización automática</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={connectCalendly} disabled={calendlyConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-300 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        {calendlyConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Calendly</>)}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ==================== GOOGLE CALENDAR ==================== */}
             <div className={`bg-white rounded-xl border transition-all duration-200 ${
               expandedTool === 'calendar'
                 ? 'border-rose-300 shadow-lg ring-1 ring-rose-100'
@@ -673,9 +1086,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       Conectado
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">
-                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
-                      No conectado
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                      Desconectado
                     </span>
                   )}
                   {expandedTool === 'calendar'
@@ -684,12 +1097,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                   }
                 </div>
               </div>
-
               {expandedTool === 'calendar' && (
                 <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                   {gcalConnected ? (
                     <div className="space-y-4">
-                      {/* Connected Info */}
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700">
@@ -701,39 +1112,24 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           )}
                         </div>
                       </div>
-
-                      {/* Bot Access Toggle */}
                       <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${gcalIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
                             <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
                             <p className="text-sm text-neutral-500">
-                              {gcalIntegration?.bot_access_enabled
-                                ? 'WITHMIA puede consultar y crear eventos'
-                                : 'Activa para que WITHMIA agende citas'}
+                              {gcalIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}
                             </p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={gcalIntegration?.bot_access_enabled || false}
-                            onChange={toggleGcalBotAccess}
-                            className="sr-only peer"
-                          />
+                          <input type="checkbox" checked={gcalIntegration?.bot_access_enabled || false} onChange={toggleGcalBotAccess} className="sr-only peer" />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                         </label>
                       </div>
-
-                      {/* Disconnect */}
                       <div className="flex justify-end">
-                        <button
-                          onClick={disconnectGoogleCalendar}
-                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar
+                        <button onClick={disconnectGoogleCalendar} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                          <Unlink className="w-4 h-4" /> Desconectar
                         </button>
                       </div>
                     </div>
@@ -751,9 +1147,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                           <div>
                             <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Google Calendar</h4>
-                            <p className="text-sm text-neutral-500 mb-3">
-                              Sincroniza tu calendario de Google para que WITHMIA pueda consultar disponibilidad y agendar citas automáticamente con tus clientes.
-                            </p>
+                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu calendario para que WITHMIA consulte disponibilidad y agende citas.</p>
                             <ul className="text-xs text-neutral-500 space-y-1">
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Ver disponibilidad en tiempo real</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar reuniones automáticamente</li>
@@ -762,17 +1156,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
                       </div>
-
-                      <button
-                        onClick={connectGoogleCalendar}
-                        disabled={gcalConnecting}
-                        className="w-full py-3 bg-white border-2 border-slate-200 hover:border-rose-300 text-neutral-700 hover:text-rose-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {gcalConnecting ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
-                        ) : (
-                          <><Link2 className="w-4 h-4" /> Conectar con Google</>
-                        )}
+                      <button onClick={connectGoogleCalendar} disabled={gcalConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-rose-300 text-neutral-700 hover:text-rose-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        {gcalConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Google</>)}
                       </button>
                     </div>
                   )}
@@ -780,18 +1165,198 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               )}
             </div>
 
-            {/* Other tools - Coming Soon */}
-            {tools.filter(t => t.id !== 'calendar').map((tool) => (
-              <div 
-                key={tool.id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 opacity-75"
-              >
+            {/* ==================== OUTLOOK CALENDAR ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'outlook' ? 'border-blue-400 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'outlook' ? null : 'outlook')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #0078D4, #0078D4DD)' }}>
+                    <CalendarDays className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Outlook Calendar</h3>
+                    <p className="text-sm text-neutral-500">Integra con Outlook/Microsoft Calendar</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {outlookLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : outlookConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'outlook' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'outlook' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {outlookConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Outlook Calendar conectado</span></div>
+                          {outlookIntegration?.provider_email && <span className="text-xs text-green-600">{outlookIntegration.provider_email}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${outlookIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{outlookIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={outlookIntegration?.bot_access_enabled || false} onChange={toggleOutlookBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectOutlook} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
+                            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
+                              <path d="M21.5 5H8.5C7.67 5 7 5.67 7 6.5V17.5C7 18.33 7.67 19 8.5 19H21.5C22.33 19 23 18.33 23 17.5V6.5C23 5.67 22.33 5 21.5 5Z" fill="#0078D4"/>
+                              <path d="M23 8L15 13L7 8V6L15 11L23 6V8Z" fill="white" opacity="0.9"/>
+                              <path d="M1 7H6V18H2.5C1.67 18 1 17.33 1 16.5V7Z" fill="#0078D4" opacity="0.7"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Outlook Calendar</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu calendario de Microsoft para que WITHMIA agende citas automáticamente.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Ver disponibilidad en tiempo real</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear eventos automáticamente</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Microsoft 365 y Outlook.com</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={connectOutlook} disabled={outlookConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-400 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        {outlookConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Microsoft</>)}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ==================== RESERVO ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'reservo' ? 'border-amber-300 shadow-lg ring-1 ring-amber-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'reservo' ? null : 'reservo')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #F59E0B, #F59E0BDD)' }}>
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Reservo</h3>
+                    <p className="text-sm text-neutral-500">Sistema de reservas y citas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {reservoLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : reservoConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'reservo' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'reservo' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {reservoConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Reservo conectado</span></div>
+                          {reservoIntegration?.provider_email && <span className="text-xs text-green-600">{reservoIntegration.provider_email}.reservo.cl</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${reservoIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{reservoIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en Reservo'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={reservoIntegration?.bot_access_enabled || false} onChange={toggleReservoBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectReservo} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-amber-50 rounded-lg flex-shrink-0">
+                            <Calendar className="w-8 h-8 text-amber-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Reservo</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Integra Reservo para que WITHMIA gestione reservas y citas de tus clientes.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear reservas automáticamente</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Gestión de servicios</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">Subdominio de Reservo</label>
+                          <input
+                            type="text"
+                            value={reservoSubdomain}
+                            onChange={(e) => setReservoSubdomain(e.target.value)}
+                            placeholder="tu-negocio"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          />
+                          <p className="text-xs text-neutral-400 mt-1">tu-negocio.reservo.cl</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={reservoApiKey}
+                            onChange={(e) => setReservoApiKey(e.target.value)}
+                            placeholder="Tu API Key de Reservo"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          />
+                        </div>
+                        {reservoError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {reservoError}</p>}
+                        <button onClick={connectReservo} disabled={reservoConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-amber-300 text-neutral-700 hover:text-amber-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                          {reservoConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Reservo</>)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ==================== PRÓXIMAMENTE ==================== */}
+            {[
+              { id: 'crm', name: 'CRM', icon: Database, color: '#059669', description: 'Gestiona relaciones con clientes' },
+              { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: '#96BF48', description: 'Sincroniza con tu tienda Shopify' },
+              { id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart, color: '#96588A', description: 'Conecta tu tienda WooCommerce' },
+            ].map((tool) => (
+              <div key={tool.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 opacity-75">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div 
-                      className="p-3 rounded-xl shadow-md"
-                      style={{ background: `linear-gradient(135deg, ${tool.color}, ${tool.color}DD)` }}
-                    >
+                    <div className="p-3 rounded-xl shadow-md" style={{ background: `linear-gradient(135deg, ${tool.color}, ${tool.color}DD)` }}>
                       <tool.icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -806,6 +1371,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
             ))}
+
           </div>
         </div>
 

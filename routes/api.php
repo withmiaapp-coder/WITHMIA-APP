@@ -26,6 +26,10 @@ use App\Http\Controllers\Api\WhatsAppInstanceController;
 use App\Http\Controllers\AttachmentProxyController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\CalendlyController;
+use App\Http\Controllers\Api\OutlookCalendarController;
+use App\Http\Controllers\Api\ReservoController;
+use App\Http\Controllers\Api\AgendaProController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -302,6 +306,78 @@ Route::prefix('calendar/bot')->group(function () {
 
 // Google OAuth GET callback (sin auth - Google redirige directamente aquí)
 Route::get('/calendar/google/callback', [CalendarController::class, 'handleCallbackGet']);
+
+// ============================================================================
+// 8c. CALENDLY INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('calendly')->group(function () {
+    Route::get('/auth-url', [CalendlyController::class, 'getAuthUrl']);
+    Route::post('/disconnect', [CalendlyController::class, 'disconnect']);
+    Route::get('/status', [CalendlyController::class, 'status']);
+    Route::put('/settings', [CalendlyController::class, 'updateSettings']);
+    Route::get('/event-types', [CalendlyController::class, 'listEventTypes']);
+    Route::get('/events', [CalendlyController::class, 'getEvents']);
+});
+Route::get('/calendly/callback', [CalendlyController::class, 'handleCallbackGet']);
+Route::prefix('calendly/bot')->group(function () {
+    Route::get('/availability', [CalendlyController::class, 'botGetAvailability']);
+});
+
+// ============================================================================
+// 8d. OUTLOOK CALENDAR INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('outlook')->group(function () {
+    Route::get('/auth-url', [OutlookCalendarController::class, 'getAuthUrl']);
+    Route::post('/disconnect', [OutlookCalendarController::class, 'disconnect']);
+    Route::get('/status', [OutlookCalendarController::class, 'status']);
+    Route::put('/settings', [OutlookCalendarController::class, 'updateSettings']);
+    Route::get('/calendars', [OutlookCalendarController::class, 'listCalendars']);
+    Route::get('/events', [OutlookCalendarController::class, 'getEvents']);
+    Route::post('/events', [OutlookCalendarController::class, 'createEvent']);
+    Route::delete('/events/{eventId}', [OutlookCalendarController::class, 'deleteEvent']);
+});
+Route::get('/outlook/callback', [OutlookCalendarController::class, 'handleCallbackGet']);
+Route::prefix('outlook/bot')->group(function () {
+    Route::get('/availability', [OutlookCalendarController::class, 'botGetAvailability']);
+    Route::post('/create-event', [OutlookCalendarController::class, 'botCreateEvent']);
+});
+
+// ============================================================================
+// 8e. RESERVO INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('reservo')->group(function () {
+    Route::post('/connect', [ReservoController::class, 'connect']);
+    Route::post('/disconnect', [ReservoController::class, 'disconnect']);
+    Route::get('/status', [ReservoController::class, 'status']);
+    Route::put('/settings', [ReservoController::class, 'updateSettings']);
+    Route::get('/services', [ReservoController::class, 'listServices']);
+    Route::get('/availability', [ReservoController::class, 'getAvailability']);
+    Route::get('/bookings', [ReservoController::class, 'listBookings']);
+    Route::post('/bookings', [ReservoController::class, 'createBooking']);
+});
+Route::prefix('reservo/bot')->group(function () {
+    Route::get('/availability', [ReservoController::class, 'botGetAvailability']);
+    Route::post('/create-booking', [ReservoController::class, 'botCreateBooking']);
+});
+
+// ============================================================================
+// 8f. AGENDAPRO INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('agendapro')->group(function () {
+    Route::post('/connect', [AgendaProController::class, 'connect']);
+    Route::post('/disconnect', [AgendaProController::class, 'disconnect']);
+    Route::get('/status', [AgendaProController::class, 'status']);
+    Route::put('/settings', [AgendaProController::class, 'updateSettings']);
+    Route::get('/locations', [AgendaProController::class, 'listLocations']);
+    Route::get('/services', [AgendaProController::class, 'listServices']);
+    Route::get('/availability', [AgendaProController::class, 'getAvailability']);
+    Route::get('/bookings', [AgendaProController::class, 'listBookings']);
+    Route::post('/bookings', [AgendaProController::class, 'createBooking']);
+});
+Route::prefix('agendapro/bot')->group(function () {
+    Route::get('/availability', [AgendaProController::class, 'botGetAvailability']);
+    Route::post('/create-booking', [AgendaProController::class, 'botCreateBooking']);
+});
 
 // ============================================================================
 // 9. EVOLUTION API (WhatsApp multi-tenant)

@@ -261,7 +261,7 @@
         {
             "parameters": {
                 "promptType": "define",
-                "text": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nTU IDENTIDAD:\n- Tu nombre es {{ $('Normalize Data').item.json.config.assistant_name }}\n- Cuando te pregunten como te llamas, responde que te llamas {{ $('Normalize Data').item.json.config.assistant_name }}\n- Eres el asistente de {{ $('Normalize Data').item.json.config.company_name }}\n\nREGLA FUNDAMENTAL (OBLIGATORIO):\n- SIEMPRE debes usar la herramienta \"Buscar en Base de Conocimientos\" ANTES de responder CUALQUIER pregunta del usuario, sin excepcion\n- UNICAMENTE puedes responder con informacion que encuentres en los resultados de esa busqueda\n- JAMAS inventes, supongas, improvises o uses conocimiento general de tu entrenamiento\n- Si la busqueda NO devuelve informacion relevante sobre lo que pregunta el usuario, responde EXACTAMENTE: \"No tengo esa informacion disponible. Te gustaria que te conecte con alguien del equipo para ayudarte?\"\n- No mezcles informacion de la base de conocimientos con informacion que imagines o sepas por entrenamiento general\n- Cada respuesta tuya DEBE estar respaldada por informacion encontrada en la busqueda\n\nMANEJO DE IMAGENES:\n- Cuando el mensaje contenga una descripcion de imagen (dentro de etiquetas <image>), extrae las palabras clave principales y usalas para buscar en la base de conocimientos\n- SIEMPRE usa el RAG cuando recibas una imagen, busca informacion relacionada con lo que muestra la imagen\n- Si el RAG tiene informacion relacionada con el contenido de la imagen, responde con esos datos\n- NO repitas la descripcion de la imagen al usuario, responde directamente con la informacion encontrada en el RAG\n- Si el RAG no tiene informacion relacionada, indica que no tienes informacion sobre eso\n\nMANEJO DE DOCUMENTOS:\n- Cuando el mensaje contenga texto extraido de un documento (dentro de etiquetas <documento>), analiza el contenido y responde directamente con la informacion extraida\n- CONFIRMA siempre que recibiste el documento y resume los datos clave que contiene\n- Si es un comprobante de pago, transferencia, boleta o factura: menciona monto, fecha, destinatario, banco, numero de operacion y cualquier dato relevante\n- Si es una presentacion, propuesta o cotizacion: resume los puntos principales del documento\n- Si es cualquier otro tipo de documento: resume su contenido de forma clara y concisa\n- NO necesitas buscar en el RAG para responder sobre el contenido del documento, responde directamente con lo que extraiste\n- Solo usa el RAG si el usuario hace una PREGUNTA adicional que requiera informacion de la empresa\n\nESTILO DE RESPUESTA:\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Maximo 2-3 oraciones por respuesta\n- Amigable y profesional\n\nPROHIBICIONES ABSOLUTAS:\n- PROHIBIDO responder con informacion que NO provenga de tu base de conocimientos\n- PROHIBIDO inventar datos sobre la empresa, productos, servicios, precios, horarios o cualquier otro dato\n- NO te presentes dos veces en la conversacion\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas\n\nFecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNumero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n={{ $json.chat_input }}",
+                "text": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nTU IDENTIDAD:\n- Tu nombre es {{ $('Normalize Data').item.json.config.assistant_name }}\n- Cuando te pregunten como te llamas, responde que te llamas {{ $('Normalize Data').item.json.config.assistant_name }}\n- Eres el asistente de {{ $('Normalize Data').item.json.config.company_name }}\n\nREGLA FUNDAMENTAL (OBLIGATORIO):\n- SIEMPRE debes usar la herramienta \"Buscar en Base de Conocimientos\" ANTES de responder CUALQUIER pregunta del usuario, sin excepcion\n- UNICAMENTE puedes responder con informacion que encuentres en los resultados de esa busqueda\n- JAMAS inventes, supongas, improvises o uses conocimiento general de tu entrenamiento\n- Si la busqueda NO devuelve informacion relevante sobre lo que pregunta el usuario, responde EXACTAMENTE: \"No tengo esa informacion disponible. Te gustaria que te conecte con alguien del equipo para ayudarte?\"\n- No mezcles informacion de la base de conocimientos con informacion que imagines o sepas por entrenamiento general\n- Cada respuesta tuya DEBE estar respaldada por informacion encontrada en la busqueda\n\nMANEJO DE IMAGENES:\n- Cuando el mensaje contenga una descripcion de imagen (dentro de etiquetas <image>), extrae las palabras clave principales y usalas para buscar en la base de conocimientos\n- SIEMPRE usa el RAG cuando recibas una imagen, busca informacion relacionada con lo que muestra la imagen\n- Si el RAG tiene informacion relacionada con el contenido de la imagen, responde con esos datos\n- NO repitas la descripcion de la imagen al usuario, responde directamente con la informacion encontrada en el RAG\n- Si el RAG no tiene informacion relacionada, indica que no tienes informacion sobre eso\n\nMANEJO DE DOCUMENTOS:\n- Cuando el mensaje contenga texto extraido de un documento (dentro de etiquetas <documento>), analiza el contenido y responde directamente con la informacion extraida\n- CONFIRMA siempre que recibiste el documento y resume los datos clave que contiene\n- Si es un comprobante de pago, transferencia, boleta o factura: menciona monto, fecha, destinatario, banco, numero de operacion y cualquier dato relevante\n- Si es una presentacion, propuesta o cotizacion: resume los puntos principales del documento\n- Si es cualquier otro tipo de documento: resume su contenido de forma clara y concisa\n- NO necesitas buscar en el RAG para responder sobre el contenido del documento, responde directamente con lo que extraiste\n- Solo usa el RAG si el usuario hace una PREGUNTA adicional que requiera informacion de la empresa\n\nESTILO DE RESPUESTA:\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Maximo 2-3 oraciones por respuesta\n- Amigable y profesional\n\nAGENDAMIENTO DE CITAS:\n- Si el cliente quiere agendar una cita, reunion o reserva, usa la herramienta \"Consultar Disponibilidad\" para ver los horarios disponibles\n- Presenta las opciones de horario disponibles al cliente de forma clara y breve\n- Cuando el cliente confirme fecha y hora, usa la herramienta \"Agendar Cita\" para crear el evento\n- SIEMPRE confirma los datos antes de agendar: fecha, hora y nombre del cliente\n- Si no hay calendario conectado, informa que no hay sistema de agendamiento y ofrece conectar con el equipo\n\nPROHIBICIONES ABSOLUTAS:\n- PROHIBIDO responder con informacion que NO provenga de tu base de conocimientos\n- PROHIBIDO inventar datos sobre la empresa, productos, servicios, precios, horarios o cualquier otro dato\n- NO te presentes dos veces en la conversacion\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas\n\nFecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNumero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n={{ $json.chat_input }}",
                 "options": {
                     "systemMessage": "="
                 }
@@ -2096,6 +2096,67 @@
                 -2980,
                 1400
             ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "=https://app.withmia.com/api/calendar/bot/availability?company_slug=withmia-evp7rj&date={{ $fromAI('date', 'Fecha en formato YYYY-MM-DD, por defecto hoy') }}&days_ahead={{ $fromAI('days_ahead', 'Cantidad de dias a consultar, por defecto 7') }}",
+                "options": {},
+                "description": "=Consulta la disponibilidad del calendario del negocio. Usa esta herramienta cuando el cliente quiera agendar una cita, reunion o reserva. Devuelve los horarios ocupados y disponibles. Parametros: date (fecha YYYY-MM-DD), days_ahead (dias a consultar, default 7). Si no hay calendario conectado, informa al cliente que no hay sistema de agendamiento disponible."
+            },
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                1320,
+                1680
+            ],
+            "id": "tool-calendar-availability",
+            "name": "Consultar Disponibilidad"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://app.withmia.com/api/calendar/bot/create-event",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "company_slug",
+                            "value": "withmia-evp7rj"
+                        },
+                        {
+                            "name": "summary",
+                            "value": "={{ $fromAI('summary', 'Titulo o descripcion de la cita') }}"
+                        },
+                        {
+                            "name": "start_time",
+                            "value": "={{ $fromAI('start_time', 'Hora de inicio en formato ISO 8601, ejemplo: 2026-02-20T10:00:00-03:00') }}"
+                        },
+                        {
+                            "name": "end_time",
+                            "value": "={{ $fromAI('end_time', 'Hora de fin en formato ISO 8601, ejemplo: 2026-02-20T11:00:00-03:00') }}"
+                        },
+                        {
+                            "name": "attendee_name",
+                            "value": "={{ $fromAI('attendee_name', 'Nombre del cliente que agenda la cita') }}"
+                        },
+                        {
+                            "name": "attendee_phone",
+                            "value": "={{ $fromAI('attendee_phone', 'Telefono del cliente, opcional') }}"
+                        }
+                    ]
+                },
+                "options": {},
+                "description": "Crea una cita o evento en el calendario del negocio. Usa esta herramienta DESPUES de consultar disponibilidad y confirmar con el cliente la fecha y hora. Parametros obligatorios: summary (titulo), start_time y end_time (formato ISO 8601 con timezone). Opcionales: attendee_name, attendee_phone."
+            },
+            "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+            "typeVersion": 1.1,
+            "position": [
+                1464,
+                1680
+            ],
+            "id": "tool-calendar-create-event",
+            "name": "Agendar Cita"
         }
     ],
     "connections": {
@@ -2184,6 +2245,28 @@
             ]
         },
         "Buscar en Base de Conocimientos": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Consultar Disponibilidad": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Agendar Cita": {
             "ai_tool": [
                 [
                     {
@@ -3036,7 +3119,7 @@
             {
                 "parameters": {
                     "promptType": "define",
-                    "text": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nTU IDENTIDAD:\n- Tu nombre es {{ $('Normalize Data').item.json.config.assistant_name }}\n- Cuando te pregunten como te llamas, responde que te llamas {{ $('Normalize Data').item.json.config.assistant_name }}\n- Eres el asistente de {{ $('Normalize Data').item.json.config.company_name }}\n\nREGLA FUNDAMENTAL (OBLIGATORIO):\n- SIEMPRE debes usar la herramienta \"Buscar en Base de Conocimientos\" ANTES de responder CUALQUIER pregunta del usuario, sin excepcion\n- UNICAMENTE puedes responder con informacion que encuentres en los resultados de esa busqueda\n- JAMAS inventes, supongas, improvises o uses conocimiento general de tu entrenamiento\n- Si la busqueda NO devuelve informacion relevante sobre lo que pregunta el usuario, responde EXACTAMENTE: \"No tengo esa informacion disponible. Te gustaria que te conecte con alguien del equipo para ayudarte?\"\n- No mezcles informacion de la base de conocimientos con informacion que imagines o sepas por entrenamiento general\n- Cada respuesta tuya DEBE estar respaldada por informacion encontrada en la busqueda\n\nMANEJO DE IMAGENES:\n- Cuando el mensaje contenga una descripcion de imagen (dentro de etiquetas <image>), extrae las palabras clave principales y usalas para buscar en la base de conocimientos\n- SIEMPRE usa el RAG cuando recibas una imagen, busca informacion relacionada con lo que muestra la imagen\n- Si el RAG tiene informacion relacionada con el contenido de la imagen, responde con esos datos\n- NO repitas la descripcion de la imagen al usuario, responde directamente con la informacion encontrada en el RAG\n- Si el RAG no tiene informacion relacionada, indica que no tienes informacion sobre eso\n\nMANEJO DE DOCUMENTOS:\n- Cuando el mensaje contenga texto extraido de un documento (dentro de etiquetas <documento>), analiza el contenido y responde directamente con la informacion extraida\n- CONFIRMA siempre que recibiste el documento y resume los datos clave que contiene\n- Si es un comprobante de pago, transferencia, boleta o factura: menciona monto, fecha, destinatario, banco, numero de operacion y cualquier dato relevante\n- Si es una presentacion, propuesta o cotizacion: resume los puntos principales del documento\n- Si es cualquier otro tipo de documento: resume su contenido de forma clara y concisa\n- NO necesitas buscar en el RAG para responder sobre el contenido del documento, responde directamente con lo que extraiste\n- Solo usa el RAG si el usuario hace una PREGUNTA adicional que requiera informacion de la empresa\n\nESTILO DE RESPUESTA:\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Maximo 2-3 oraciones por respuesta\n- Amigable y profesional\n\nPROHIBICIONES ABSOLUTAS:\n- PROHIBIDO responder con informacion que NO provenga de tu base de conocimientos\n- PROHIBIDO inventar datos sobre la empresa, productos, servicios, precios, horarios o cualquier otro dato\n- NO te presentes dos veces en la conversacion\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas\n\nFecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNumero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n={{ $json.chat_input }}",
+                    "text": "=Eres {{ $('Normalize Data').item.json.config.assistant_name }}, el asistente virtual de {{ $('Normalize Data').item.json.config.company_name }}.\n\nTU IDENTIDAD:\n- Tu nombre es {{ $('Normalize Data').item.json.config.assistant_name }}\n- Cuando te pregunten como te llamas, responde que te llamas {{ $('Normalize Data').item.json.config.assistant_name }}\n- Eres el asistente de {{ $('Normalize Data').item.json.config.company_name }}\n\nREGLA FUNDAMENTAL (OBLIGATORIO):\n- SIEMPRE debes usar la herramienta \"Buscar en Base de Conocimientos\" ANTES de responder CUALQUIER pregunta del usuario, sin excepcion\n- UNICAMENTE puedes responder con informacion que encuentres en los resultados de esa busqueda\n- JAMAS inventes, supongas, improvises o uses conocimiento general de tu entrenamiento\n- Si la busqueda NO devuelve informacion relevante sobre lo que pregunta el usuario, responde EXACTAMENTE: \"No tengo esa informacion disponible. Te gustaria que te conecte con alguien del equipo para ayudarte?\"\n- No mezcles informacion de la base de conocimientos con informacion que imagines o sepas por entrenamiento general\n- Cada respuesta tuya DEBE estar respaldada por informacion encontrada en la busqueda\n\nMANEJO DE IMAGENES:\n- Cuando el mensaje contenga una descripcion de imagen (dentro de etiquetas <image>), extrae las palabras clave principales y usalas para buscar en la base de conocimientos\n- SIEMPRE usa el RAG cuando recibas una imagen, busca informacion relacionada con lo que muestra la imagen\n- Si el RAG tiene informacion relacionada con el contenido de la imagen, responde con esos datos\n- NO repitas la descripcion de la imagen al usuario, responde directamente con la informacion encontrada en el RAG\n- Si el RAG no tiene informacion relacionada, indica que no tienes informacion sobre eso\n\nMANEJO DE DOCUMENTOS:\n- Cuando el mensaje contenga texto extraido de un documento (dentro de etiquetas <documento>), analiza el contenido y responde directamente con la informacion extraida\n- CONFIRMA siempre que recibiste el documento y resume los datos clave que contiene\n- Si es un comprobante de pago, transferencia, boleta o factura: menciona monto, fecha, destinatario, banco, numero de operacion y cualquier dato relevante\n- Si es una presentacion, propuesta o cotizacion: resume los puntos principales del documento\n- Si es cualquier otro tipo de documento: resume su contenido de forma clara y concisa\n- NO necesitas buscar en el RAG para responder sobre el contenido del documento, responde directamente con lo que extraiste\n- Solo usa el RAG si el usuario hace una PREGUNTA adicional que requiera informacion de la empresa\n\nESTILO DE RESPUESTA:\n- Respondes como si respondieras por redes sociales: natural, cercano y directo\n- Maximo 2-3 oraciones por respuesta\n- Amigable y profesional\n\nAGENDAMIENTO DE CITAS:\n- Si el cliente quiere agendar una cita, reunion o reserva, usa la herramienta \"Consultar Disponibilidad\" para ver los horarios disponibles\n- Presenta las opciones de horario disponibles al cliente de forma clara y breve\n- Cuando el cliente confirme fecha y hora, usa la herramienta \"Agendar Cita\" para crear el evento\n- SIEMPRE confirma los datos antes de agendar: fecha, hora y nombre del cliente\n- Si no hay calendario conectado, informa que no hay sistema de agendamiento y ofrece conectar con el equipo\n\nPROHIBICIONES ABSOLUTAS:\n- PROHIBIDO responder con informacion que NO provenga de tu base de conocimientos\n- PROHIBIDO inventar datos sobre la empresa, productos, servicios, precios, horarios o cualquier otro dato\n- NO te presentes dos veces en la conversacion\n- NO uses markdown ni formato especial\n- NO respondas en bloques largos\n- NO uses puntos suspensivos (...)\n- NO uses asteriscos ni negritas\n\nFecha: {{ $now.format('dd MMM. yyyy', 'es') }}\nNombre del usuario: {{ $('Normalize Data').item.json.user.name }}\nNumero: {{ $('Normalize Data').item.json.message.chat_id }}\nTipo de mensaje: {{ $('Normalize Data').item.json.message.content_type }}\n\nMensaje:\n={{ $json.chat_input }}",
                     "options": {
                         "systemMessage": "="
                     }
@@ -4871,6 +4954,67 @@
                     -2980,
                     1400
                 ]
+            },
+            {
+                "parameters": {
+                    "method": "GET",
+                    "url": "=https://app.withmia.com/api/calendar/bot/availability?company_slug=withmia-evp7rj&date={{ $fromAI('date', 'Fecha en formato YYYY-MM-DD, por defecto hoy') }}&days_ahead={{ $fromAI('days_ahead', 'Cantidad de dias a consultar, por defecto 7') }}",
+                    "options": {},
+                    "description": "=Consulta la disponibilidad del calendario del negocio. Usa esta herramienta cuando el cliente quiera agendar una cita, reunion o reserva. Devuelve los horarios ocupados y disponibles. Parametros: date (fecha YYYY-MM-DD), days_ahead (dias a consultar, default 7). Si no hay calendario conectado, informa al cliente que no hay sistema de agendamiento disponible."
+                },
+                "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+                "typeVersion": 1.1,
+                "position": [
+                    1320,
+                    1680
+                ],
+                "id": "tool-calendar-availability",
+                "name": "Consultar Disponibilidad"
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "https://app.withmia.com/api/calendar/bot/create-event",
+                    "sendBody": true,
+                    "bodyParameters": {
+                        "parameters": [
+                            {
+                                "name": "company_slug",
+                                "value": "withmia-evp7rj"
+                            },
+                            {
+                                "name": "summary",
+                                "value": "={{ $fromAI('summary', 'Titulo o descripcion de la cita') }}"
+                            },
+                            {
+                                "name": "start_time",
+                                "value": "={{ $fromAI('start_time', 'Hora de inicio en formato ISO 8601, ejemplo: 2026-02-20T10:00:00-03:00') }}"
+                            },
+                            {
+                                "name": "end_time",
+                                "value": "={{ $fromAI('end_time', 'Hora de fin en formato ISO 8601, ejemplo: 2026-02-20T11:00:00-03:00') }}"
+                            },
+                            {
+                                "name": "attendee_name",
+                                "value": "={{ $fromAI('attendee_name', 'Nombre del cliente que agenda la cita') }}"
+                            },
+                            {
+                                "name": "attendee_phone",
+                                "value": "={{ $fromAI('attendee_phone', 'Telefono del cliente, opcional') }}"
+                            }
+                        ]
+                    },
+                    "options": {},
+                    "description": "Crea una cita o evento en el calendario del negocio. Usa esta herramienta DESPUES de consultar disponibilidad y confirmar con el cliente la fecha y hora. Parametros obligatorios: summary (titulo), start_time y end_time (formato ISO 8601 con timezone). Opcionales: attendee_name, attendee_phone."
+                },
+                "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+                "typeVersion": 1.1,
+                "position": [
+                    1464,
+                    1680
+                ],
+                "id": "tool-calendar-create-event",
+                "name": "Agendar Cita"
             }
         ],
         "connections": {
@@ -4959,6 +5103,28 @@
                 ]
             },
             "Buscar en Base de Conocimientos": {
+                "ai_tool": [
+                    [
+                        {
+                            "node": "AI Agent",
+                            "type": "ai_tool",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Consultar Disponibilidad": {
+                "ai_tool": [
+                    [
+                        {
+                            "node": "AI Agent",
+                            "type": "ai_tool",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Agendar Cita": {
                 "ai_tool": [
                     [
                         {

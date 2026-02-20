@@ -46,6 +46,18 @@ return [
         "cse_engine_id" => env("GOOGLE_CSE_ENGINE_ID"),
     ],
 
+    "microsoft" => [
+        "client_id" => env("MICROSOFT_CLIENT_ID"),
+        "client_secret" => env("MICROSOFT_CLIENT_SECRET"),
+        "calendar_redirect_uri" => env("MICROSOFT_CALENDAR_REDIRECT_URI"),
+    ],
+
+    "calendly" => [
+        "client_id" => env("CALENDLY_CLIENT_ID"),
+        "client_secret" => env("CALENDLY_CLIENT_SECRET"),
+        "redirect_uri" => env("CALENDLY_REDIRECT_URI"),
+    ],
+
     "baileys" => [
         "url" => env("BAILEYS_API_URL", "http://localhost:3001"),
     ],
