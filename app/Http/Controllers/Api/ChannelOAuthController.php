@@ -157,6 +157,13 @@ class ChannelOAuthController extends Controller
      */
     private function handlePageBasedOAuth(string $userAccessToken, int $userId, string $channel)
     {
+        // Debug: check what permissions the token actually has
+        $debugResponse = Http::timeout(10)->get(
+            "https://graph.facebook.com/{$this->graphVersion}/me/permissions",
+            ['access_token' => $userAccessToken]
+        );
+        Log::info('OAuth: Token permissions', ['permissions' => $debugResponse->json()]);
+
         $pagesResponse = Http::timeout(15)->get(
             "https://graph.facebook.com/{$this->graphVersion}/me/accounts",
             [
@@ -165,6 +172,11 @@ class ChannelOAuthController extends Controller
                 'limit' => 100,
             ]
         );
+
+        Log::info('OAuth: /me/accounts response', [
+            'status' => $pagesResponse->status(),
+            'body' => $pagesResponse->json(),
+        ]);
 
         if (!$pagesResponse->successful()) {
             Log::error('OAuth: Pages fetch failed', ['body' => $pagesResponse->body()]);
