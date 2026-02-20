@@ -637,121 +637,136 @@ export default function CalendarSection({ user, company }: Props) {
               <X className="w-4 h-4 text-neutral-400" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Google Calendar */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-rose-300'}`}>
-              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${isConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-rose-400 hover:shadow-md'}`}>
+              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 48 48">
+                  <path d="M34 42H14c-4.4 0-8-3.6-8-8V14c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v20c0 4.4-3.6 8-8 8z" fill="#FFF"/>
+                  <path d="M34 6H14C9.6 6 6 9.6 6 14v20c0 4.4 3.6 8 8 8h20c4.4 0 8-3.6 8-8V14c0-4.4-3.6-8-8-8zm-4 32H18c-2.2 0-4-1.8-4-4V18h20v16c0 2.2-1.8 4-4 4z" fill="#1E88E5"/>
+                  <path d="M34 6H14C9.6 6 6 9.6 6 14v4h36v-4c0-4.4-3.6-8-8-8z" fill="#1565C0"/>
+                  <circle cx="33" cy="13" r="2" fill="#E53935"/>
+                  <circle cx="15" cy="13" r="2" fill="#E53935"/>
+                  <path d="M21 23h-3v3h3v-3zm0 5h-3v3h3v-3zm5-5h-3v3h3v-3zm0 5h-3v3h3v-3zm5-5h-3v3h3v-3zm0 5h-3v3h3v-3z" fill="#1565C0"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-700">Google Calendar</p>
-                <p className="text-[10px] text-neutral-400">{isConnected ? 'Conectado' : 'OAuth'}</p>
+                <p className="text-sm font-bold text-neutral-800">Google Calendar</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{isConnected ? 'Conectado' : 'Sincroniza eventos'}</p>
               </div>
               {isConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
                 <button onClick={connectGoogle} disabled={connecting}
-                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-rose-300 hover:text-rose-600 transition-all disabled:opacity-50">
+                  className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 shadow-sm">
                   {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
                 </button>
               )}
             </div>
 
             {/* Outlook Calendar */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${outlookConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
-              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M24 7.387v10.478c0 .23-.08.424-.238.576-.16.154-.352.23-.578.23h-8.26v-6.68l1.316 1.04c.108.086.236.13.382.13s.27-.044.38-.13L24 7.387z" fill="#0072C6"/>
-                  <path d="M16.92 7.32l-1.664 1.32-7.74-5.32h8.826c.224 0 .414.078.57.232.154.156.23.348.23.576v.002L16.92 7.32z" fill="#0072C6"/>
-                  <path d="M7.184 2.717L0 5.49v11.38l7.184.803V2.717z" fill="#0072C6"/>
-                  <path d="M3.592 12.188c0-.85.224-1.56.672-2.128.448-.57 1.04-.854 1.776-.854.71 0 1.282.278 1.716.836.434.558.65 1.266.65 2.124 0 .854-.22 1.568-.658 2.14-.438.572-1.018.858-1.74.858-.72 0-1.304-.282-1.748-.844-.444-.562-.668-1.275-.668-2.132z" fill="white"/>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${outlookConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-sky-400 hover:shadow-md'}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#0078D4] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 32 32">
+                  <path d="M19.484 7.937v5.477l1.916 1.205a.076.076 0 00.069 0L28 10.169V8.375A1.398 1.398 0 0026.625 7H19.484z" fill="#0364B8"/>
+                  <path d="M19.484 15.457l1.747 1.2a.076.076 0 00.069 0l7.2-4.571v8.539A1.375 1.375 0 0127.125 22H19.484z" fill="#0A2767"/>
+                  <path d="M10.44 12.932a4.215 4.215 0 011.864-1.213 4.325 4.325 0 013.131.161 4.236 4.236 0 011.713 1.39 4.14 4.14 0 01.67 2.238 4.258 4.258 0 01-.546 2.283 4.282 4.282 0 01-1.67 1.558 4.337 4.337 0 01-2.2.564 4.467 4.467 0 01-2.243-.557 4.232 4.232 0 01-1.614-1.573 4.199 4.199 0 01-.545-2.275 4.107 4.107 0 01.44-1.988 4.174 4.174 0 011-1.588zm1.334 4.612c.27.538.68.973 1.185 1.26a3.018 3.018 0 001.646.459c.608 0 1.174-.156 1.635-.47.462-.315.817-.752 1.05-1.282a4.153 4.153 0 00.37-1.75 3.932 3.932 0 00-.37-1.718 2.973 2.973 0 00-1.03-1.265c-.44-.315-.987-.477-1.583-.477-.624 0-1.195.16-1.655.462a2.954 2.954 0 00-1.062 1.262 4.128 4.128 0 00-.36 1.756c0 .608.064 1.224.174 1.563z" fill="#FFF"/>
+                  <path d="M2.153 5.155v21.427L15.3 29.535a.613.613 0 00.178.025.6.6 0 00.283-.067l.017-.009V2.586L15.48 2.5a.541.541 0 00-.176-.028.606.606 0 00-.293.07z" fill="#0364B8"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-700">Outlook</p>
-                <p className="text-[10px] text-neutral-400">{outlookConnected ? 'Conectado' : 'OAuth Microsoft'}</p>
+                <p className="text-sm font-bold text-neutral-800">Outlook</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{outlookConnected ? 'Conectado' : 'Microsoft Calendar'}</p>
               </div>
               {outlookConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
                 <button onClick={connectOutlook} disabled={outlookConnecting}
-                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-50">
+                  className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-[#0078D4] to-[#005A9E] text-white rounded-lg hover:from-[#005A9E] hover:to-[#004578] transition-all disabled:opacity-50 shadow-sm">
                   {outlookConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
                 </button>
               )}
             </div>
 
             {/* Calendly */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${calendlyConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
-              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="#006BFF" strokeWidth="2"/>
-                  <path d="M16 10.5c0-2.2-1.8-4-4-4s-4 1.8-4 4 1.8 4 4 4" stroke="#006BFF" strokeWidth="2" strokeLinecap="round"/>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${calendlyConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-[#006BFF] hover:shadow-md'}`}>
+              <div className="w-10 h-10 rounded-xl bg-[#006BFF] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <path d="M22.195 17.891c-1.027 1.777-2.88 2.779-4.965 2.779-1.174 0-2.32-.328-3.305-.948a6.453 6.453 0 01-2.395-2.586 6.66 6.66 0 01-.035-6.058 6.39 6.39 0 012.322-2.635A6.239 6.239 0 0117.123 7.5c2.123 0 3.98 1.005 5.003 2.77l3.36-1.93C23.72 5.29 20.695 3.5 17.123 3.5c-1.97 0-3.884.534-5.536 1.545a10.481 10.481 0 00-3.806 4.22 10.708 10.708 0 00.051 9.757 10.494 10.494 0 003.738 4.143A10.175 10.175 0 0017.124 24.7c3.538 0 6.564-1.801 8.36-4.87z" fill="#FFF"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-700">Calendly</p>
-                <p className="text-[10px] text-neutral-400">{calendlyConnected ? 'Conectado' : 'Agendamiento'}</p>
+                <p className="text-sm font-bold text-neutral-800">Calendly</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{calendlyConnected ? 'Conectado' : 'Agendamiento online'}</p>
               </div>
               {calendlyConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
                 <button onClick={connectCalendly} disabled={calendlyConnecting}
-                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-50">
+                  className="px-4 py-2 text-xs font-bold bg-gradient-to-r from-[#006BFF] to-[#0052CC] text-white rounded-lg hover:from-[#0052CC] hover:to-[#003D99] transition-all disabled:opacity-50 shadow-sm">
                   {calendlyConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
                 </button>
               )}
             </div>
 
             {/* Reservo */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${reservoConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <CalendarIcon className="w-4 h-4 text-white" />
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${reservoConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" strokeWidth="2"/>
+                  <path d="M6 13h20" stroke="white" strokeWidth="2"/>
+                  <path d="M11 6v4M21 6v4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="12" cy="18" r="1.5" fill="white"/>
+                  <circle cx="16" cy="18" r="1.5" fill="white"/>
+                  <circle cx="20" cy="18" r="1.5" fill="white"/>
+                  <circle cx="12" cy="22" r="1.5" fill="white"/>
+                  <circle cx="16" cy="22" r="1.5" fill="white"/>
+                </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-700">Reservo</p>
-                <p className="text-[10px] text-neutral-400">{reservoConnected ? 'Conectado' : 'Configurar en Integraciones'}</p>
+                <p className="text-sm font-bold text-neutral-800">Reservo</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{reservoConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {reservoConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[10px] text-neutral-400 italic">API Key</span>
+                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Key</span>
               )}
             </div>
 
             {/* AgendaPro */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${agendaproConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <CalendarIcon className="w-4 h-4 text-white" />
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${agendaproConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" strokeWidth="2"/>
+                  <path d="M6 13h20" stroke="white" strokeWidth="2"/>
+                  <path d="M11 6v4M21 6v4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M13 18l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-neutral-700">AgendaPro</p>
-                <p className="text-[10px] text-neutral-400">{agendaproConnected ? 'Conectado' : 'Configurar en Integraciones'}</p>
+                <p className="text-sm font-bold text-neutral-800">AgendaPro</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{agendaproConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {agendaproConnected ? (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
-                  <Check className="w-3 h-3 text-emerald-600" />
-                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[10px] text-neutral-400 italic">API Key</span>
+                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Key</span>
               )}
             </div>
           </div>
