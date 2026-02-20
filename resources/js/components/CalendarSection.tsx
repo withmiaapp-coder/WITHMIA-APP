@@ -755,8 +755,15 @@ export default function CalendarSection({ user, company }: Props) {
               )}
             </div>
           </div>
+          {/* Tip de buenas prácticas */}
+          <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              <span className="font-semibold">Recomendación:</span> Conecta solo el servicio de calendario que uses activamente en tu negocio. Tener múltiples proveedores activos puede generar eventos duplicados o conflictos de disponibilidad.
+            </p>
+          </div>
           {!anyConnected && (
-            <p className="text-[11px] text-neutral-400 mt-3 text-center">Conecta un proveedor para sincronizar eventos y permitir que WITHMIA agende citas por ti</p>
+            <p className="text-[11px] text-neutral-400 mt-2 text-center">Conecta un proveedor para sincronizar eventos y permitir que WITHMIA agende citas por ti</p>
           )}
         </div>
       )}

@@ -888,6 +888,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             <Settings className="w-5 h-5 text-purple-600" />
             <h2 className="text-xl font-semibold text-neutral-800">Herramientas</h2>
           </div>
+
+          {/* Tip de buenas prácticas */}
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200/60 rounded-xl flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-amber-800 font-medium mb-0.5">Conecta solo lo que uses</p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                Activa únicamente los servicios que tu negocio utiliza en el día a día. Conectar herramientas que no usas o duplicar funciones (ej. dos calendarios distintos) puede generar conflictos, citas duplicadas o errores de sincronización.
+              </p>
+            </div>
+          </div>
           
           <div className="space-y-3">
 
