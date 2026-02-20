@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -120,11 +120,23 @@ function formatTimeStr(dateStr: string): string {
 
 // ====== COMPONENTE PRINCIPAL ======
 export default function CalendarSection({ user, company }: Props) {
-  // Estado de integración
+  // Estado de integración (Google Calendar como proveedor principal de vista)
   const [integration, setIntegration] = useState<Integration | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
+
+  // Estado de otros proveedores
+  const [outlookConnected, setOutlookConnected] = useState(false);
+  const [outlookConnecting, setOutlookConnecting] = useState(false);
+  const [calendlyConnected, setCalendlyConnected] = useState(false);
+  const [calendlyConnecting, setCalendlyConnecting] = useState(false);
+  const [reservoConnected, setReservoConnected] = useState(false);
+  const [agendaproConnected, setAgendaproConnected] = useState(false);
+
+  // Panel de conexión
+  const [showConnectPanel, setShowConnectPanel] = useState(false);
 
   // Estado del calendario
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -145,15 +157,45 @@ export default function CalendarSection({ user, company }: Props) {
   // Errores
   const [error, setError] = useState<string | null>(null);
 
-  // ====== CARGAR ESTADO DE INTEGRACIÓN ======
+  // ====== CARGAR ESTADO DE INTEGRACIÓN (TODOS LOS PROVEEDORES) ======
   const loadIntegrationStatus = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await apiFetch('/api/calendar/status');
-      setIsConnected(data.connected);
-      setIntegration(data.integration);
-      if (data.integration?.selected_calendar_id) {
-        setSelectedCalendar(data.integration.selected_calendar_id);
+      // Cargar todos los proveedores en paralelo
+      const [googleRes, outlookRes, calendlyRes, reservoRes, agendaproRes] = await Promise.allSettled([
+        apiFetch('/api/calendar/status'),
+        apiFetch('/api/outlook/status'),
+        apiFetch('/api/calendly/status'),
+        apiFetch('/api/reservo/status'),
+        apiFetch('/api/agendapro/status'),
+      ]);
+
+      // Google Calendar
+      if (googleRes.status === 'fulfilled') {
+        const data = googleRes.value;
+        setIsConnected(data.connected);
+        setIntegration(data.integration);
+        if (data.connected) setActiveProvider('google');
+        if (data.integration?.selected_calendar_id) {
+          setSelectedCalendar(data.integration.selected_calendar_id);
+        }
+      }
+      // Outlook
+      if (outlookRes.status === 'fulfilled') {
+        setOutlookConnected(outlookRes.value.connected);
+        if (outlookRes.value.connected && !isConnected) setActiveProvider('outlook');
+      }
+      // Calendly
+      if (calendlyRes.status === 'fulfilled') {
+        setCalendlyConnected(calendlyRes.value.connected);
+      }
+      // Reservo
+      if (reservoRes.status === 'fulfilled') {
+        setReservoConnected(reservoRes.value.connected);
+      }
+      // AgendaPro
+      if (agendaproRes.status === 'fulfilled') {
+        setAgendaproConnected(agendaproRes.value.connected);
       }
     } catch (err) {
       console.error('Error loading calendar status:', err);
@@ -252,6 +294,64 @@ export default function CalendarSection({ user, company }: Props) {
       console.error('Error connecting Google Calendar:', err);
       setError('Error al conectar Google Calendar');
       setConnecting(false);
+    }
+  }, [loadIntegrationStatus]);
+
+  // ====== CONECTAR OUTLOOK ======
+  const connectOutlook = useCallback(async () => {
+    try {
+      setOutlookConnecting(true);
+      const data = await apiFetch('/api/outlook/auth-url');
+      const authWindow = window.open(data.auth_url, 'outlook_auth', 'width=600,height=700,left=200,top=100');
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data?.type === 'outlook_oauth_result') {
+          window.removeEventListener('message', handleMessage);
+          setOutlookConnecting(false);
+          if (event.data.status === 'success') await loadIntegrationStatus();
+          else setError(event.data.message || 'Error al conectar Outlook');
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      const pollInterval = setInterval(() => {
+        if (authWindow?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => { setOutlookConnecting(false); window.removeEventListener('message', handleMessage); await loadIntegrationStatus(); }, 500);
+        }
+      }, 1000);
+      setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
+    } catch (err) {
+      console.error('Error connecting Outlook:', err);
+      setError('Error al conectar Outlook Calendar');
+      setOutlookConnecting(false);
+    }
+  }, [loadIntegrationStatus]);
+
+  // ====== CONECTAR CALENDLY ======
+  const connectCalendly = useCallback(async () => {
+    try {
+      setCalendlyConnecting(true);
+      const data = await apiFetch('/api/calendly/auth-url');
+      const authWindow = window.open(data.auth_url, 'calendly_auth', 'width=600,height=700,left=200,top=100');
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.data?.type === 'calendly_oauth_result') {
+          window.removeEventListener('message', handleMessage);
+          setCalendlyConnecting(false);
+          if (event.data.status === 'success') await loadIntegrationStatus();
+          else setError(event.data.message || 'Error al conectar Calendly');
+        }
+      };
+      window.addEventListener('message', handleMessage);
+      const pollInterval = setInterval(() => {
+        if (authWindow?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => { setCalendlyConnecting(false); window.removeEventListener('message', handleMessage); await loadIntegrationStatus(); }, 500);
+        }
+      }, 1000);
+      setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setCalendlyConnecting(false); }, 300000);
+    } catch (err) {
+      console.error('Error connecting Calendly:', err);
+      setError('Error al conectar Calendly');
+      setCalendlyConnecting(false);
     }
   }, [loadIntegrationStatus]);
 
@@ -406,6 +506,10 @@ export default function CalendarSection({ user, company }: Props) {
     );
   }
 
+  // Cualquier proveedor conectado
+  const anyConnected = isConnected || outlookConnected || calendlyConnected || reservoConnected || agendaproConnected;
+  const connectedCount = [isConnected, outlookConnected, calendlyConnected, reservoConnected, agendaproConnected].filter(Boolean).length;
+
   // ====== RENDER: SIEMPRE EL CALENDARIO ======
   return (
     <div className="min-h-[700px] flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
@@ -419,10 +523,10 @@ export default function CalendarSection({ user, company }: Props) {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-neutral-800">Calendario</h1>
-                {isConnected && (
+                {anyConnected && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[10px] font-medium text-emerald-700">Sincronizado</span>
+                    <span className="text-[10px] font-medium text-emerald-700">{connectedCount} conectado{connectedCount > 1 ? 's' : ''}</span>
                   </div>
                 )}
               </div>
@@ -465,20 +569,13 @@ export default function CalendarSection({ user, company }: Props) {
               </>
             )}
 
-            {!isConnected && (
-              <button
-                onClick={connectGoogle}
-                disabled={connecting}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-rose-300 hover:shadow-sm transition-all text-xs font-medium text-neutral-600 hover:text-rose-600 disabled:opacity-50"
-              >
-                {connecting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
-                ) : (
-                  <Link2 className="w-3.5 h-3.5" />
-                )}
-                {connecting ? 'Conectando...' : 'Conectar Google Calendar'}
-              </button>
-            )}
+            <button
+              onClick={() => setShowConnectPanel(!showConnectPanel)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-rose-300 hover:shadow-sm transition-all text-xs font-medium text-neutral-600 hover:text-rose-600"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              {anyConnected ? 'Integraciones' : 'Conectar calendario'}
+            </button>
 
             <button
               onClick={() => { setCreateDate(new Date()); setShowCreateModal(true); }}
@@ -488,7 +585,7 @@ export default function CalendarSection({ user, company }: Props) {
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
               disabled={!isConnected}
-              title={!isConnected ? 'Conecta Google Calendar primero' : 'Crear evento'}
+              title={!isConnected ? 'Conecta un calendario primero' : 'Crear evento'}
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Nuevo evento</span>
@@ -497,8 +594,7 @@ export default function CalendarSection({ user, company }: Props) {
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-2.5">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mt-2.5">          <div className="flex items-center gap-2">
             <button onClick={() => navigateMonth(-1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors">
               <ChevronLeft className="w-4.5 h-4.5 text-neutral-500" />
             </button>
@@ -532,26 +628,172 @@ export default function CalendarSection({ user, company }: Props) {
         </div>
       </div>
 
-      {/* Connect banner cuando no está conectado */}
-      {!isConnected && !connecting && (
-        <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-xl flex items-center gap-3">
-          <div className="p-2 bg-white rounded-lg border border-rose-100 shadow-sm flex-shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
+      {/* Multi-Provider Connection Panel */}
+      {showConnectPanel && (
+        <div className="mx-4 mt-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-neutral-700">Conectar calendario</h3>
+            <button onClick={() => setShowConnectPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+              <X className="w-4 h-4 text-neutral-400" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {/* Google Calendar */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-rose-300'}`}>
+              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-700">Google Calendar</p>
+                <p className="text-[10px] text-neutral-400">{isConnected ? 'Conectado' : 'OAuth'}</p>
+              </div>
+              {isConnected ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <button onClick={connectGoogle} disabled={connecting}
+                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-rose-300 hover:text-rose-600 transition-all disabled:opacity-50">
+                  {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
+                </button>
+              )}
+            </div>
+
+            {/* Outlook Calendar */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${outlookConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
+              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M24 7.387v10.478c0 .23-.08.424-.238.576-.16.154-.352.23-.578.23h-8.26v-6.68l1.316 1.04c.108.086.236.13.382.13s.27-.044.38-.13L24 7.387z" fill="#0072C6"/>
+                  <path d="M16.92 7.32l-1.664 1.32-7.74-5.32h8.826c.224 0 .414.078.57.232.154.156.23.348.23.576v.002L16.92 7.32z" fill="#0072C6"/>
+                  <path d="M7.184 2.717L0 5.49v11.38l7.184.803V2.717z" fill="#0072C6"/>
+                  <path d="M3.592 12.188c0-.85.224-1.56.672-2.128.448-.57 1.04-.854 1.776-.854.71 0 1.282.278 1.716.836.434.558.65 1.266.65 2.124 0 .854-.22 1.568-.658 2.14-.438.572-1.018.858-1.74.858-.72 0-1.304-.282-1.748-.844-.444-.562-.668-1.275-.668-2.132z" fill="white"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-700">Outlook</p>
+                <p className="text-[10px] text-neutral-400">{outlookConnected ? 'Conectado' : 'OAuth Microsoft'}</p>
+              </div>
+              {outlookConnected ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <button onClick={connectOutlook} disabled={outlookConnecting}
+                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-50">
+                  {outlookConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
+                </button>
+              )}
+            </div>
+
+            {/* Calendly */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${calendlyConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}>
+              <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#006BFF" strokeWidth="2"/>
+                  <path d="M16 10.5c0-2.2-1.8-4-4-4s-4 1.8-4 4 1.8 4 4 4" stroke="#006BFF" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-700">Calendly</p>
+                <p className="text-[10px] text-neutral-400">{calendlyConnected ? 'Conectado' : 'Agendamiento'}</p>
+              </div>
+              {calendlyConnected ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <button onClick={connectCalendly} disabled={calendlyConnecting}
+                  className="px-3 py-1.5 text-[11px] font-medium bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-all disabled:opacity-50">
+                  {calendlyConnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Conectar'}
+                </button>
+              )}
+            </div>
+
+            {/* Reservo */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${reservoConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <CalendarIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-700">Reservo</p>
+                <p className="text-[10px] text-neutral-400">{reservoConnected ? 'Conectado' : 'Configurar en Integraciones'}</p>
+              </div>
+              {reservoConnected ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <span className="text-[10px] text-neutral-400 italic">API Key</span>
+              )}
+            </div>
+
+            {/* AgendaPro */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${agendaproConnected ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <CalendarIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-neutral-700">AgendaPro</p>
+                <p className="text-[10px] text-neutral-400">{agendaproConnected ? 'Conectado' : 'Configurar en Integraciones'}</p>
+              </div>
+              {agendaproConnected ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span className="text-[10px] font-medium text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <span className="text-[10px] text-neutral-400 italic">API Key</span>
+              )}
+            </div>
+          </div>
+          {!anyConnected && (
+            <p className="text-[11px] text-neutral-400 mt-3 text-center">Conecta un proveedor para sincronizar eventos y permitir que WITHMIA agende citas por ti</p>
+          )}
+        </div>
+      )}
+
+      {/* Banner cuando no hay nada conectado y el panel cerrado */}
+      {!anyConnected && !showConnectPanel && (
+        <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-xl flex items-center gap-3 cursor-pointer hover:shadow-sm transition-all" onClick={() => setShowConnectPanel(true)}>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm -ml-2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path d="M24 7.387v10.478c0 .23-.08.424-.238.576-.16.154-.352.23-.578.23h-8.26v-6.68l1.316 1.04c.108.086.236.13.382.13s.27-.044.38-.13L24 7.387z" fill="#0072C6"/>
+                <path d="M16.92 7.32l-1.664 1.32-7.74-5.32h8.826c.224 0 .414.078.57.232.154.156.23.348.23.576v.002L16.92 7.32z" fill="#0072C6"/>
+                <path d="M7.184 2.717L0 5.49v11.38l7.184.803V2.717z" fill="#0072C6"/>
+                <path d="M3.592 12.188c0-.85.224-1.56.672-2.128.448-.57 1.04-.854 1.776-.854.71 0 1.282.278 1.716.836.434.558.65 1.266.65 2.124 0 .854-.22 1.568-.658 2.14-.438.572-1.018.858-1.74.858-.72 0-1.304-.282-1.748-.844-.444-.562-.668-1.275-.668-2.132z" fill="white"/>
+              </svg>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm -ml-2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#006BFF" strokeWidth="2"/>
+                <path d="M16 10.5c0-2.2-1.8-4-4-4s-4 1.8-4 4 1.8 4 4 4" stroke="#006BFF" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-700">Conecta tu Google Calendar</p>
-            <p className="text-xs text-neutral-400">Sincroniza eventos y permite a WITHMIA agendar citas por ti</p>
+            <p className="text-sm font-medium text-neutral-700">Conecta tu calendario</p>
+            <p className="text-xs text-neutral-400">Google, Outlook, Calendly, Reservo o AgendaPro</p>
           </div>
-          <button
-            onClick={connectGoogle}
-            className="flex-shrink-0 px-4 py-2 bg-white border border-rose-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm"
-          >
-            Conectar
+          <button className="flex-shrink-0 px-4 py-2 bg-white border border-rose-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm">
+            Ver opciones
           </button>
         </div>
       )}
