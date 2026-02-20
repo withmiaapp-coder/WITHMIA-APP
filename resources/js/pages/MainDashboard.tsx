@@ -1265,6 +1265,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 onDisconnectWhatsApp={disconnectWhatsApp}
                 onUpdateSettings={updateWhatsAppSettings}
                 isUpdatingSettings={isUpdatingWhatsAppSettings}
+                onIntegrationChange={checkCalendarIntegrations}
               />
             ) : activeSection === 'knowledge' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">

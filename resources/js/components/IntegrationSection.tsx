@@ -48,6 +48,7 @@ interface IntegrationSectionProps {
   onDisconnectWhatsApp: () => void;
   onUpdateSettings: (settings: any) => Promise<void>;
   isUpdatingSettings?: boolean;
+  onIntegrationChange?: () => void;
 }
 
 const IntegrationSection: React.FC<IntegrationSectionProps> = ({
@@ -56,7 +57,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   onConnectWhatsApp,
   onDisconnectWhatsApp,
   onUpdateSettings,
-  isUpdatingSettings = false
+  isUpdatingSettings = false,
+  onIntegrationChange,
 }) => {
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState({
@@ -149,6 +151,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
           setGcalConnecting(false);
           if (event.data.status === 'success') {
             await loadGcalStatus();
+            onIntegrationChange?.();
           }
         }
       };
@@ -161,6 +164,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             setGcalConnecting(false);
             window.removeEventListener('message', handleMessage);
             await loadGcalStatus();
+            onIntegrationChange?.();
           }, 500);
         }
       }, 1000);
@@ -170,7 +174,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       console.error('Error connecting Google Calendar:', err);
       setGcalConnecting(false);
     }
-  }, [gcalApiFetch, loadGcalStatus]);
+  }, [gcalApiFetch, loadGcalStatus, onIntegrationChange]);
 
   // Disconnect Google Calendar
   const disconnectGoogleCalendar = useCallback(async () => {
@@ -179,10 +183,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       await gcalApiFetch('/api/calendar/google/disconnect', { method: 'POST' });
       setGcalConnected(false);
       setGcalIntegration(null);
+      onIntegrationChange?.();
     } catch (err) {
       console.error('Error disconnecting:', err);
     }
-  }, [gcalApiFetch]);
+  }, [gcalApiFetch, onIntegrationChange]);
 
   // Toggle bot access
   const toggleGcalBotAccess = useCallback(async () => {
@@ -218,19 +223,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         if (event.data?.type === 'calendly_oauth_result') {
           window.removeEventListener('message', handleMessage);
           setCalendlyConnecting(false);
-          if (event.data.status === 'success') await loadCalendlyStatus();
+          if (event.data.status === 'success') { await loadCalendlyStatus(); onIntegrationChange?.(); }
         }
       };
       window.addEventListener('message', handleMessage);
       const pollInterval = setInterval(() => {
         if (authWindow?.closed) {
           clearInterval(pollInterval);
-          setTimeout(async () => { setCalendlyConnecting(false); window.removeEventListener('message', handleMessage); await loadCalendlyStatus(); }, 500);
+          setTimeout(async () => { setCalendlyConnecting(false); window.removeEventListener('message', handleMessage); await loadCalendlyStatus(); onIntegrationChange?.(); }, 500);
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setCalendlyConnecting(false); }, 300000);
     } catch (err) { console.error('Error connecting Calendly:', err); setCalendlyConnecting(false); }
-  }, [gcalApiFetch, loadCalendlyStatus]);
+  }, [gcalApiFetch, loadCalendlyStatus, onIntegrationChange]);
 
   const disconnectCalendly = useCallback(async () => {
     if (!confirm('¿Desconectar Calendly? WITHMIA perderá acceso.')) return;
@@ -238,8 +243,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       await gcalApiFetch('/api/calendly/disconnect', { method: 'POST' });
       setCalendlyConnected(false);
       setCalendlyIntegration(null);
+      onIntegrationChange?.();
     } catch (err) { console.error('Error disconnecting Calendly:', err); }
-  }, [gcalApiFetch]);
+  }, [gcalApiFetch, onIntegrationChange]);
 
   const toggleCalendlyBotAccess = useCallback(async () => {
     if (!calendlyIntegration) return;
@@ -272,14 +278,14 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         if (event.data?.type === 'outlook_oauth_result') {
           window.removeEventListener('message', handleMessage);
           setOutlookConnecting(false);
-          if (event.data.status === 'success') await loadOutlookStatus();
+          if (event.data.status === 'success') { await loadOutlookStatus(); onIntegrationChange?.(); }
         }
       };
       window.addEventListener('message', handleMessage);
       const pollInterval = setInterval(() => {
         if (authWindow?.closed) {
           clearInterval(pollInterval);
-          setTimeout(async () => { setOutlookConnecting(false); window.removeEventListener('message', handleMessage); await loadOutlookStatus(); }, 500);
+          setTimeout(async () => { setOutlookConnecting(false); window.removeEventListener('message', handleMessage); await loadOutlookStatus(); onIntegrationChange?.(); }, 500);
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
@@ -293,7 +299,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       }
       setOutlookConnecting(false);
     }
-  }, [gcalApiFetch, loadOutlookStatus]);
+  }, [gcalApiFetch, loadOutlookStatus, onIntegrationChange]);
 
   const disconnectOutlook = useCallback(async () => {
     if (!confirm('¿Desconectar Outlook Calendar? WITHMIA perderá acceso.')) return;
@@ -301,8 +307,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       await gcalApiFetch('/api/outlook/disconnect', { method: 'POST' });
       setOutlookConnected(false);
       setOutlookIntegration(null);
+      onIntegrationChange?.();
     } catch (err) { console.error('Error disconnecting Outlook:', err); }
-  }, [gcalApiFetch]);
+  }, [gcalApiFetch, onIntegrationChange]);
 
   const toggleOutlookBotAccess = useCallback(async () => {
     if (!outlookIntegration) return;
@@ -342,11 +349,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         setReservoApiKey('');
         setReservoSubdomain('');
         await loadReservoStatus();
+        onIntegrationChange?.();
       }
     } catch (err: any) {
       setReservoError('API Key o subdominio inválido');
     } finally { setReservoConnecting(false); }
-  }, [reservoApiKey, reservoSubdomain, gcalApiFetch, loadReservoStatus]);
+  }, [reservoApiKey, reservoSubdomain, gcalApiFetch, loadReservoStatus, onIntegrationChange]);
 
   const disconnectReservo = useCallback(async () => {
     if (!confirm('¿Desconectar Reservo?')) return;
@@ -354,8 +362,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       await gcalApiFetch('/api/reservo/disconnect', { method: 'POST' });
       setReservoConnected(false);
       setReservoIntegration(null);
+      onIntegrationChange?.();
     } catch (err) { console.error('Error disconnecting Reservo:', err); }
-  }, [gcalApiFetch]);
+  }, [gcalApiFetch, onIntegrationChange]);
 
   const toggleReservoBotAccess = useCallback(async () => {
     if (!reservoIntegration) return;
@@ -394,11 +403,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       if (data.success) {
         setAgendaproApiKey('');
         await loadAgendaproStatus();
+        onIntegrationChange?.();
       }
     } catch (err: any) {
       setAgendaproError('API Key inválida');
     } finally { setAgendaproConnecting(false); }
-  }, [agendaproApiKey, gcalApiFetch, loadAgendaproStatus]);
+  }, [agendaproApiKey, gcalApiFetch, loadAgendaproStatus, onIntegrationChange]);
 
   const disconnectAgendapro = useCallback(async () => {
     if (!confirm('¿Desconectar AgendaPro?')) return;
@@ -406,8 +416,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       await gcalApiFetch('/api/agendapro/disconnect', { method: 'POST' });
       setAgendaproConnected(false);
       setAgendaproIntegration(null);
+      onIntegrationChange?.();
     } catch (err) { console.error('Error disconnecting AgendaPro:', err); }
-  }, [gcalApiFetch]);
+  }, [gcalApiFetch, onIntegrationChange]);
 
   const toggleAgendaproBotAccess = useCallback(async () => {
     if (!agendaproIntegration) return;
