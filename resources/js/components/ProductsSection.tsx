@@ -794,8 +794,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
 
                 {/* URL */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">URL del producto</label>
-                  <input type="url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)}
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">URL del producto <span className="text-neutral-300 normal-case font-normal">(opcional)</span></label>
+                  <input type="url" placeholder="https://... (opcional)" value={url} onChange={e => setUrl(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
                 </div>
               </div>
