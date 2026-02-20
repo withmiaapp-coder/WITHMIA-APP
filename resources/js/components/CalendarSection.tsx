@@ -720,17 +720,8 @@ export default function CalendarSection({ user, company }: Props) {
 
             {/* Reservo */}
             <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${reservoConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
-                  <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" strokeWidth="2"/>
-                  <path d="M6 13h20" stroke="white" strokeWidth="2"/>
-                  <path d="M11 6v4M21 6v4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  <circle cx="12" cy="18" r="1.5" fill="white"/>
-                  <circle cx="16" cy="18" r="1.5" fill="white"/>
-                  <circle cx="20" cy="18" r="1.5" fill="white"/>
-                  <circle cx="12" cy="22" r="1.5" fill="white"/>
-                  <circle cx="16" cy="22" r="1.5" fill="white"/>
-                </svg>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                <img src="/icons/reservo.webp" alt="Reservo" className="w-8 h-auto object-contain brightness-0 invert" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-neutral-800">Reservo</p>
@@ -748,13 +739,8 @@ export default function CalendarSection({ user, company }: Props) {
 
             {/* AgendaPro */}
             <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${agendaproConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
-                  <rect x="6" y="8" width="20" height="18" rx="3" stroke="white" strokeWidth="2"/>
-                  <path d="M6 13h20" stroke="white" strokeWidth="2"/>
-                  <path d="M11 6v4M21 6v4" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M13 18l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <img src="/icons/agendapro-icon.svg" alt="AgendaPro" className="w-7 h-7 object-contain" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-neutral-800">AgendaPro</p>

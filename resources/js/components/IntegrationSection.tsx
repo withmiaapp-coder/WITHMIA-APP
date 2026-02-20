@@ -908,8 +908,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'agendapro' ? null : 'agendapro')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #00C4B4, #00C4B4DD)' }}>
-                    <Calendar className="w-5 h-5 text-white" />
+                  <div className="p-3 rounded-xl shadow-md bg-white border border-slate-200">
+                    <img src="/icons/agendapro-icon.svg" alt="AgendaPro" className="w-5 h-5 object-contain" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-neutral-800">AgendaPro</h3>
@@ -1263,8 +1263,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'reservo' ? null : 'reservo')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #F59E0B, #F59E0BDD)' }}>
-                    <Calendar className="w-5 h-5 text-white" />
+                  <div className="p-3 rounded-xl shadow-md bg-gradient-to-br from-teal-400 to-teal-600 overflow-hidden flex items-center justify-center">
+                    <img src="/icons/reservo.webp" alt="Reservo" className="w-5 h-auto object-contain brightness-0 invert" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-neutral-800">Reservo</h3>

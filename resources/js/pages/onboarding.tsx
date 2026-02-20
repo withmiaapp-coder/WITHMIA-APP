@@ -1302,25 +1302,53 @@ export default function Onboarding({
                 value: "reservo",
                 label: "Reservo",
                 icon: Calendar,
-                color: "#F59E0B",
+                color: "#14B8A6",
+                customSvg: (
+                  <div className="w-5 h-5 rounded bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center overflow-hidden">
+                    <img src="/icons/reservo.webp" alt="Reservo" className="w-4 h-auto object-contain brightness-0 invert" />
+                  </div>
+                ),
               },
               {
                 value: "agendapro",
                 label: "AgendaPro",
                 icon: Calendar,
-                color: "#00C4B4",
+                color: "#F97316",
+                customSvg: (
+                  <img src="/icons/agendapro-icon.svg" alt="AgendaPro" className="w-5 h-5 object-contain" />
+                ),
               },
               {
                 value: "calendar",
-                label: "Calendar",
+                label: "Google Calendar",
                 icon: CalendarDays,
-                color: "#DC2626",
+                color: "#1E88E5",
+                customSvg: (
+                  <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path d="M34 42H14c-4.4 0-8-3.6-8-8V14c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v20c0 4.4-3.6 8-8 8z" fill="#FFF"/>
+                    <path d="M34 6H14C9.6 6 6 9.6 6 14v20c0 4.4 3.6 8 8 8h20c4.4 0 8-3.6 8-8V14c0-4.4-3.6-8-8-8zm-4 32H18c-2.2 0-4-1.8-4-4V18h20v16c0 2.2-1.8 4-4 4z" fill="#1E88E5"/>
+                    <path d="M34 6H14C9.6 6 6 9.6 6 14v4h36v-4c0-4.4-3.6-8-8-8z" fill="#1565C0"/>
+                    <circle cx="33" cy="13" r="2" fill="#E53935"/>
+                    <circle cx="15" cy="13" r="2" fill="#E53935"/>
+                    <path d="M21 23h-3v3h3v-3zm0 5h-3v3h3v-3zm5-5h-3v3h3v-3zm0 5h-3v3h3v-3zm5-5h-3v3h3v-3zm0 5h-3v3h3v-3z" fill="#1565C0"/>
+                  </svg>
+                ),
               },
               {
                 value: "outlook",
                 label: "Outlook",
                 icon: CalendarDays,
                 color: "#0078D4",
+                customSvg: (
+                  <svg width="20" height="20" viewBox="0 0 32 32">
+                    <rect width="32" height="32" rx="6" fill="#0078D4"/>
+                    <path d="M19.484 9.937v5.477l1.916 1.205a.076.076 0 00.069 0L28 12.169v-1.794a1.398 1.398 0 00-1.375-1.375h-7.141z" fill="#28A8EA"/>
+                    <path d="M19.484 17.457l1.747 1.2a.076.076 0 00.069 0l7.2-4.571v8.539A1.375 1.375 0 0127.125 24H19.484z" fill="#0364B8"/>
+                    <path d="M4 7.717v16.946l11.3 2.872a.613.613 0 00.178.025.6.6 0 00.283-.067l.017-.009V4.586L15.48 4.5a.541.541 0 00-.176-.028.606.606 0 00-.293.07z" fill="#0078D4"/>
+                    <path d="M10.44 14.932a4.215 4.215 0 011.864-1.213 4.325 4.325 0 013.131.161 4.236 4.236 0 011.713 1.39 4.14 4.14 0 01.67 2.238 4.258 4.258 0 01-.546 2.283 4.282 4.282 0 01-1.67 1.558c-.7.368-1.44.564-2.2.564a4.467 4.467 0 01-2.243-.557 4.232 4.232 0 01-1.614-1.573 4.199 4.199 0 01-.545-2.275 4.107 4.107 0 01.44-1.988 4.174 4.174 0 011-1.588z" fill="#0078D4"/>
+                    <ellipse cx="11.5" cy="17.5" rx="2.8" ry="3" fill="white"/>
+                  </svg>
+                ),
               },
               {
                 value: "dropbox",
@@ -1333,6 +1361,12 @@ export default function Onboarding({
                 label: "Calendly",
                 icon: CalendarDays,
                 color: "#006BFF",
+                customSvg: (
+                  <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="6" fill="#006BFF"/>
+                    <path d="M22.195 17.891c-1.027 1.777-2.88 2.779-4.965 2.779-1.174 0-2.32-.328-3.305-.948a6.453 6.453 0 01-2.395-2.586 6.66 6.66 0 01-.035-6.058 6.39 6.39 0 012.322-2.635A6.239 6.239 0 0117.123 7.5c2.123 0 3.98 1.005 5.003 2.77l3.36-1.93C23.72 5.29 20.695 3.5 17.123 3.5c-1.97 0-3.884.534-5.536 1.545a10.481 10.481 0 00-3.806 4.22 10.708 10.708 0 00.051 9.757 10.494 10.494 0 003.738 4.143A10.175 10.175 0 0017.124 24.7c3.538 0 6.564-1.801 8.36-4.87z" fill="white"/>
+                  </svg>
+                ),
               },
               {
                 value: "mercadolibre",
@@ -1395,7 +1429,7 @@ export default function Onboarding({
                 }}
               >
                 <div style={{ fontSize: "18px", marginBottom: "4px" }}>
-                  <tool.icon size={18} color={tool.color} />
+                  {(tool as any).customSvg ? (tool as any).customSvg : <tool.icon size={18} color={tool.color} />}
                 </div>
                 <span
                   style={{
