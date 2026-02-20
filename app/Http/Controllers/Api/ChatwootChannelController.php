@@ -364,7 +364,17 @@ HTML;
 
                 // Add agents to inbox
                 $this->addAgentsToInbox($config, $inboxId);
+
+                // Invalidate resolver caches so new inbox is picked up
+                \Illuminate\Support\Facades\Cache::forget("inbox_to_slug:{$inboxId}");
+                if ($config['account_id']) {
+                    \Illuminate\Support\Facades\Cache::forget("account_to_slug:{$config['account_id']}");
+                }
             }
+
+            // Ensure n8n bot workflow exists for this company
+            // (may already exist if WhatsApp was connected first)
+            $this->ensureN8nWorkflowForCompany($request->user());
 
             Log::info('ChatwootChannelController: Inbox created', [
                 'channel' => $channelId,
@@ -491,13 +501,27 @@ HTML;
 
     /**
      * Determine if a Facebook Page channel is for Instagram or Messenger.
+     * Uses multiple signals: channel metadata, provider, and name as fallback.
      */
     private function isFacebookOrInstagram(array $inbox): string
     {
+        // 1. Check provider field (most reliable if set by Chatwoot)
+        $provider = strtolower($inbox['provider'] ?? '');
+        if (str_contains($provider, 'instagram')) {
+            return 'instagram';
+        }
+
+        // 2. Check channel-specific attributes
+        if (!empty($inbox['instagram_id']) || !empty($inbox['instagram_add_on'])) {
+            return 'instagram';
+        }
+
+        // 3. Fallback: check inbox name
         $name = strtolower($inbox['name'] ?? '');
         if (str_contains($name, 'instagram')) {
             return 'instagram';
         }
+
         return 'messenger';
     }
 
@@ -521,5 +545,58 @@ HTML;
     {
         $base = rtrim(config('chatwoot.url', ''), '/');
         return $base . $path;
+    }
+
+    /**
+     * Ensure an n8n bot workflow exists for the company.
+     * If WhatsApp is already connected, the workflow already exists.
+     * If not, create one using the company slug as the webhook path.
+     */
+    private function ensureN8nWorkflowForCompany($user): void
+    {
+        try {
+            $company = $user->company;
+            if (!$company) return;
+
+            // Check if any active WhatsAppInstance already has a workflow
+            $instance = \App\Models\WhatsAppInstance::where('company_id', $company->id)
+                ->where('is_active', true)
+                ->whereNotNull('n8n_workflow_id')
+                ->first();
+
+            if ($instance) {
+                Log::debug('ChatwootChannelController: n8n workflow already exists via WhatsApp', [
+                    'company' => $company->slug,
+                    'workflow_id' => $instance->n8n_workflow_id,
+                ]);
+                return;
+            }
+
+            // No workflow exists — create one using company slug as webhook path
+            $n8nService = app(\App\Services\N8nService::class);
+            $webhookPath = $company->slug;
+
+            $result = $n8nService->createBotWorkflow($company, $webhookPath);
+
+            if ($result['success']) {
+                // Store workflow reference in a WhatsAppInstance record (reuse model for workflow tracking)
+                // or create a minimal one so resolveCompanySlugFromInbox can find it
+                Log::info('ChatwootChannelController: n8n bot workflow created for non-WhatsApp company', [
+                    'company' => $company->slug,
+                    'workflow_id' => $result['workflow_id'],
+                    'webhook_path' => $webhookPath,
+                ]);
+            } else {
+                Log::warning('ChatwootChannelController: Could not create n8n workflow', [
+                    'company' => $company->slug,
+                    'error' => $result['error'] ?? 'Unknown',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Non-blocking: channel still works, just no AI bot
+            Log::warning('ChatwootChannelController: Error ensuring n8n workflow', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -121,8 +121,14 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [chatwootChannels, setChatwootChannels] = useState<Record<string, any>>({});
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [channelConnecting, setChannelConnecting] = useState<string | null>(null);
-  const [channelError, setChannelError] = useState<string | null>(null);
-  const [channelSuccess, setChannelSuccess] = useState<string | null>(null);
+  const [channelErrors, setChannelErrors] = useState<Record<string, string | null>>({});
+  const [channelSuccesses, setChannelSuccesses] = useState<Record<string, string | null>>({});
+
+  // Per-channel error/success helpers
+  const channelError = (id: string) => channelErrors[id] || null;
+  const channelSuccess = (id: string) => channelSuccesses[id] || null;
+  const setChannelError = (id: string, msg: string | null) => setChannelErrors(prev => ({ ...prev, [id]: msg }));
+  const setChannelSuccess = (id: string, msg: string | null) => setChannelSuccesses(prev => ({ ...prev, [id]: msg }));
 
   // Web Chat Widget form
   const [webChatUrl, setWebChatUrl] = useState('');
@@ -138,10 +144,14 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     smtp_port: 587, smtp_login: '', smtp_password: '', smtp_enable_ssl_tls: true,
   });
 
-  // Facebook/Instagram form
+  // Facebook Messenger form (separate from Instagram)
   const [fbPageToken, setFbPageToken] = useState('');
   const [fbPageId, setFbPageId] = useState('');
   const [fbPageName, setFbPageName] = useState('');
+
+  // Instagram form (separate from Messenger)
+  const [igPageToken, setIgPageToken] = useState('');
+  const [igPageId, setIgPageId] = useState('');
   const [igId, setIgId] = useState('');
 
   // WhatsApp Cloud API form
@@ -596,6 +606,16 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         channelMap[ch.id] = ch;
       });
       setChatwootChannels(channelMap);
+
+      // Auto-load widget script for already-connected web-chat
+      if (channelMap['web-chat']?.inbox_id && !widgetScript) {
+        try {
+          const scriptData = await gcalApiFetch(`/api/channels/${channelMap['web-chat'].inbox_id}/widget-script`);
+          setWidgetScript(scriptData.script || '');
+        } catch (e) {
+          console.error('Error loading widget script:', e);
+        }
+      }
     } catch (err) {
       console.error('Error loading channels:', err);
     } finally {
@@ -606,15 +626,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Connect a new channel
   const connectChannel = async (channelId: string, endpoint: string, payload: any) => {
     setChannelConnecting(channelId);
-    setChannelError(null);
-    setChannelSuccess(null);
+    setChannelError(channelId, null);
+    setChannelSuccess(channelId, null);
     try {
       const data = await gcalApiFetch(endpoint, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
       if (data.success) {
-        setChannelSuccess(`¡${channelId === 'web-chat' ? 'Widget' : 'Canal'} conectado exitosamente!`);
+        setChannelSuccess(channelId, `¡${channelId === 'web-chat' ? 'Widget' : 'Canal'} conectado exitosamente!`);
         if (data.inbox?.website_token && channelId === 'web-chat') {
           // Fetch widget script
           const scriptData = await gcalApiFetch(`/api/channels/${data.inbox.id}/widget-script`);
@@ -623,10 +643,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         await loadChatwootChannels();
         onIntegrationChange?.();
       } else {
-        setChannelError(data.error || 'Error al conectar canal');
+        setChannelError(channelId, data.error || 'Error al conectar canal');
       }
     } catch (err: any) {
-      setChannelError(err.message || 'Error de conexión');
+      setChannelError(channelId, err.message || 'Error de conexión');
     } finally {
       setChannelConnecting(null);
     }
@@ -637,14 +657,14 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     const channel = chatwootChannels[channelId];
     if (!channel?.inbox_id) return;
     setChannelConnecting(channelId);
-    setChannelError(null);
+    setChannelError(channelId, null);
     try {
       await gcalApiFetch(`/api/channels/${channel.inbox_id}`, { method: 'DELETE' });
-      setChannelSuccess('Canal desconectado');
+      setChannelSuccess(channelId, 'Canal desconectado');
       await loadChatwootChannels();
       onIntegrationChange?.();
     } catch (err: any) {
-      setChannelError(err.message || 'Error al desconectar');
+      setChannelError(channelId, err.message || 'Error al desconectar');
     } finally {
       setChannelConnecting(null);
     }
@@ -1131,7 +1151,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <div className="relative">
                               <pre className="bg-neutral-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">{widgetScript}</pre>
                               <button
-                                onClick={() => { navigator.clipboard.writeText(widgetScript); setChannelSuccess('¡Código copiado!'); setTimeout(() => setChannelSuccess(null), 2000); }}
+                                onClick={() => { navigator.clipboard.writeText(widgetScript); setChannelSuccess('web-chat', '¡Código copiado!'); setTimeout(() => setChannelSuccess('web-chat', null), 2000); }}
                                 className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-white transition-colors"
                                 title="Copiar código"
                               >
@@ -1206,10 +1226,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
 
-                        {channelError && channelConnecting === null && (
+                        {channelError('web-chat') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            {channelError}
+                            {channelError('web-chat')}
                           </div>
                         )}
 
@@ -1232,10 +1252,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     )}
 
-                    {channelSuccess && (
+                    {channelSuccess('web-chat') && (
                       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        {channelSuccess}
+                        {channelSuccess('web-chat')}
                       </div>
                     )}
                   </div>
@@ -1255,7 +1275,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </p>
                         <button
                           onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
-                          disabled={channelConnecting === 'gmail'}
+                          disabled={channelConnecting === 'email'}
                           className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                         >
                           <Unlink className="w-4 h-4" />
@@ -1327,19 +1347,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
 
-                        {channelError && channelConnecting === null && (
+                        {channelError('email') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            {channelError}
+                            {channelError('email')}
                           </div>
                         )}
 
                         <button
                           onClick={() => connectChannel('email', '/api/channels/email', emailForm)}
-                          disabled={channelConnecting === 'gmail' || !emailForm.email || !emailForm.imap_password}
+                          disabled={channelConnecting === 'email' || !emailForm.email || !emailForm.imap_password}
                           className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
                         >
-                          {channelConnecting === 'gmail' ? (
+                          {channelConnecting === 'email' ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
                           ) : (
                             <><Mail className="w-4 h-4" /> Conectar Email</>
@@ -1348,10 +1368,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     )}
 
-                    {channelSuccess && (
+                    {channelSuccess('email') && (
                       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        {channelSuccess}
+                        {channelSuccess('email')}
                       </div>
                     )}
                   </div>
@@ -1398,8 +1418,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page Access Token *</label>
                             <input
                               type="password"
-                              value={fbPageToken}
-                              onChange={(e) => setFbPageToken(e.target.value)}
+                              value={igPageToken}
+                              onChange={(e) => setIgPageToken(e.target.value)}
                               placeholder="EAAxxxxxxxx..."
                               className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
                             />
@@ -1409,8 +1429,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page ID *</label>
                               <input
                                 type="text"
-                                value={fbPageId}
-                                onChange={(e) => setFbPageId(e.target.value)}
+                                value={igPageId}
+                                onChange={(e) => setIgPageId(e.target.value)}
                                 placeholder="123456789..."
                                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
                               />
@@ -1428,20 +1448,20 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
 
-                        {channelError && channelConnecting === null && (
+                        {channelError('instagram') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            {channelError}
+                            {channelError('instagram')}
                           </div>
                         )}
 
                         <button
                           onClick={() => connectChannel('instagram', '/api/channels/instagram', {
-                            page_access_token: fbPageToken,
-                            page_id: fbPageId,
+                            page_access_token: igPageToken,
+                            page_id: igPageId,
                             instagram_id: igId || undefined,
                           })}
-                          disabled={channelConnecting === 'instagram' || !fbPageToken || !fbPageId}
+                          disabled={channelConnecting === 'instagram' || !igPageToken || !igPageId}
                           className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-medium rounded-lg transition-all flex items-center gap-2"
                         >
                           {channelConnecting === 'instagram' ? (
@@ -1453,10 +1473,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     )}
 
-                    {channelSuccess && (
+                    {channelSuccess('instagram') && (
                       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        {channelSuccess}
+                        {channelSuccess('instagram')}
                       </div>
                     )}
                   </div>
@@ -1528,10 +1548,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <p>Necesitas un Page Access Token con permisos <code className="bg-blue-100 px-1 rounded">pages_messaging</code>. Puedes obtenerlo desde <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="underline font-medium">Meta Graph API Explorer</a>.</p>
                         </div>
 
-                        {channelError && channelConnecting === null && (
+                        {channelError('messenger') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            {channelError}
+                            {channelError('messenger')}
                           </div>
                         )}
 
@@ -1553,10 +1573,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     )}
 
-                    {channelSuccess && (
+                    {channelSuccess('messenger') && (
                       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        {channelSuccess}
+                        {channelSuccess('messenger')}
                       </div>
                     )}
                   </div>
@@ -1572,7 +1592,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <span className="font-semibold">WhatsApp Cloud API conectado</span>
                         </div>
                         <p className="text-sm text-neutral-600">
-                          Teléfono: <span className="font-medium">{chatwootChannels['whatsapp-api']?.phone || 'Configurado'}</span>
+                          Teléfono: <span className="font-medium">{chatwootChannels['whatsapp-api']?.phone_number || 'Configurado'}</span>
                         </p>
                         <button
                           onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
@@ -1651,10 +1671,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
 
-                        {channelError && channelConnecting === null && (
+                        {channelError('whatsapp-api') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                            {channelError}
+                            {channelError('whatsapp-api')}
                           </div>
                         )}
 
@@ -1677,10 +1697,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     )}
 
-                    {channelSuccess && (
+                    {channelSuccess('whatsapp-api') && (
                       <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
                         <Check className="w-4 h-4" />
-                        {channelSuccess}
+                        {channelSuccess('whatsapp-api')}
                       </div>
                     )}
                   </div>

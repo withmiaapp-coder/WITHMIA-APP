@@ -379,33 +379,86 @@ class ChatwootWebhookController extends Controller
     }
 
     /**
-     * Resolver el company slug desde un inbox_id.
-     * Cadena de fallback: WhatsAppInstance → Company → inbox name parsing (legacy)
+     * Resolver el company slug (= n8n webhook path) desde un inbox_id.
+     * Cadena de fallback:
+     *   1. WhatsAppInstance por chatwoot_inbox_id → instance_name (preferido, ES el webhook path)
+     *   2. Company por chatwoot_inbox_id → slug
+     *   3. Company por chatwoot_account_id → slug (soporta TODOS los canales)
+     *   4. Inbox name parsing (legacy)
+     *   5. Company por account_id → WhatsAppInstance → instance_name
      */
     private function resolveCompanySlugFromInbox(?int $inboxId, array $data): ?string
     {
         if (!$inboxId) return null;
 
         // 1. Buscar en WhatsAppInstance por chatwoot_inbox_id (cached 10 min)
-        $companySlug = \Illuminate\Support\Facades\Cache::remember(
-            "inbox_to_company:{$inboxId}",
+        //    instance_name ES el webhook path de n8n (= company slug)
+        $resolved = \Illuminate\Support\Facades\Cache::remember(
+            "inbox_to_slug:{$inboxId}",
             600,
             function () use ($inboxId) {
-                return \App\Models\WhatsAppInstance::where('chatwoot_inbox_id', $inboxId)
+                // 1a. WhatsAppInstance.instance_name (directo, es el webhook path exacto)
+                $instance = \App\Models\WhatsAppInstance::where('chatwoot_inbox_id', $inboxId)
                     ->where('is_active', true)
-                    ->value('company_slug');
+                    ->first();
+                if ($instance) {
+                    return $instance->instance_name ?: $instance->company_slug;
+                }
+
+                // 1b. Company por chatwoot_inbox_id (inbox inicial de onboarding)
+                $company = \App\Models\Company::where('chatwoot_inbox_id', $inboxId)->first();
+                if ($company) {
+                    return $company->slug;
+                }
+
+                return null;
             }
         );
 
-        if ($companySlug) return $companySlug;
+        if ($resolved) return $resolved;
 
-        // 2. Fallback: buscar en Company por chatwoot_inbox_id
-        $companySlug = \App\Models\Company::where('chatwoot_inbox_id', $inboxId)->value('slug');
-        if ($companySlug) return $companySlug;
+        // 2. Buscar Company por chatwoot_account_id (soporta TODOS los canales: Web, Email, IG, FB, WA Cloud)
+        $accountId = $data['account']['id'] ?? $data['account_id'] ?? null;
+        if ($accountId) {
+            $resolved = \Illuminate\Support\Facades\Cache::remember(
+                "account_to_slug:{$accountId}",
+                600,
+                function () use ($accountId) {
+                    $company = \App\Models\Company::where('chatwoot_account_id', $accountId)->first();
+                    if (!$company) return null;
 
-        // 3. Fallback legacy: derivar del nombre del inbox (ej: "WhatsApp mi-empresa" → "mi-empresa")
+                    // Preferir instance_name de WhatsAppInstance (es el webhook path de n8n)
+                    $instance = \App\Models\WhatsAppInstance::where('company_id', $company->id)
+                        ->where('is_active', true)
+                        ->first();
+
+                    return $instance->instance_name ?? $company->slug;
+                }
+            );
+
+            if ($resolved) return $resolved;
+        }
+
+        // 3. Fallback legacy: derivar del nombre del inbox
         $inboxName = $data['inbox']['name'] ?? null;
-        return $inboxName ? preg_replace('/^WhatsApp\s+/i', '', $inboxName) : null;
+        if ($inboxName) {
+            // Para WhatsApp: "WhatsApp mi-empresa" → "mi-empresa"
+            $cleaned = preg_replace('/^WhatsApp\s+/i', '', $inboxName);
+            // Para otros canales: "Instagram - Mi Empresa", "Email - Mi Empresa", etc.
+            // Intentar extraer slug después del separador " - "
+            if ($cleaned === $inboxName) {
+                // No era WhatsApp, intentar buscar company por nombre en el inbox name
+                $parts = explode(' - ', $inboxName, 2);
+                if (count($parts) === 2) {
+                    $companyName = trim($parts[1]);
+                    $company = \App\Models\Company::where('name', $companyName)->first();
+                    if ($company) return $company->slug;
+                }
+            }
+            return $cleaned;
+        }
+
+        return null;
     }
 
     /**
