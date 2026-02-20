@@ -221,6 +221,7 @@ class ChannelOAuthController extends Controller
             'phones' => [],
             'channel' => $channel,
             'appUrl' => config('app.url'),
+            'userAccessToken' => $userAccessToken,
         ]);
     }
 

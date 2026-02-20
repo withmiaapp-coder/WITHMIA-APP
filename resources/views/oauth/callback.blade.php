@@ -177,6 +177,7 @@
         const appUrl = @json($appUrl);
         const wabaId = @json($wabaId ?? '');
         const waAccessToken = @json($accessToken ?? '');
+        const userAccessToken = @json($userAccessToken ?? '');
 
         function showLoading() {
             document.getElementById('page-list').classList.add('hidden');
@@ -201,6 +202,7 @@
                 type: 'oauth-page-selected',
                 channel: channel,
                 page_access_token: page.access_token,
+                user_access_token: userAccessToken,
                 page_id: page.id,
                 page_name: page.name,
             };

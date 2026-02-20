@@ -177,6 +177,7 @@ class ChatwootChannelController extends Controller
     {
         $request->validate([
             'page_access_token' => 'required|string',
+            'user_access_token' => 'required|string',
             'page_id' => 'required|string',
             'page_name' => 'nullable|string|max:200',
         ]);
@@ -184,12 +185,13 @@ class ChatwootChannelController extends Controller
         $config = $this->resolveChatwootConfig($request->user());
         $company = $request->user()->company;
 
-        // For Facebook channel, Chatwoot has a specific API
+        // Chatwoot requires both user_access_token and page_access_token
         $payload = [
             'name' => $request->page_name ? "Messenger - {$request->page_name}" : "Messenger - {$company->name}",
             'channel' => [
                 'type' => 'facebook',
                 'page_access_token' => $request->page_access_token,
+                'user_access_token' => $request->user_access_token,
                 'page_id' => $request->page_id,
             ],
         ];
@@ -204,6 +206,7 @@ class ChatwootChannelController extends Controller
     {
         $request->validate([
             'page_access_token' => 'required|string',
+            'user_access_token' => 'required|string',
             'page_id' => 'required|string',
             'instagram_id' => 'nullable|string',
         ]);
@@ -213,11 +216,13 @@ class ChatwootChannelController extends Controller
 
         // Instagram uses the Facebook Page connection in Chatwoot
         // The page must have an Instagram Business account linked
+        // Chatwoot requires both user_access_token and page_access_token
         $payload = [
             'name' => "Instagram - {$company->name}",
             'channel' => [
                 'type' => 'facebook',
                 'page_access_token' => $request->page_access_token,
+                'user_access_token' => $request->user_access_token,
                 'page_id' => $request->page_id,
             ],
         ];

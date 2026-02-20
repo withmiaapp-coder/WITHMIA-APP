@@ -667,12 +667,14 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       if (channel === 'messenger') {
         connectChannelRef.current?.('messenger', '/api/channels/facebook-messenger', {
           page_access_token: payload.page_access_token,
+          user_access_token: payload.user_access_token,
           page_id: payload.page_id,
           page_name: payload.page_name || 'Mi Página',
         });
       } else if (channel === 'instagram') {
         connectChannelRef.current?.('instagram', '/api/channels/instagram', {
           page_access_token: payload.page_access_token,
+          user_access_token: payload.user_access_token,
           page_id: payload.page_id,
           instagram_id: payload.instagram_id || undefined,
         });
