@@ -217,7 +217,13 @@ class ChatwootWebhookController extends Controller
 
         Cache::put($cacheKey, $events, now()->addMinutes(5));
 
-        // 🔊 ENRIQUECER Y REENVIAR A N8N para mensajes entrantes
+        // � PROACTIVE MEDIA CACHING: Cachear attachments inmediatamente en PostgreSQL
+        // para que sobrevivan a redeploys de Chatwoot (filesystem efímero en Railway)
+        if ($event === 'message_created') {
+            $this->dispatchAttachmentCaching($data, $accountId);
+        }
+
+        // �🔊 ENRIQUECER Y REENVIAR A N8N para mensajes entrantes
         // PRIORIDAD: Despachar a n8n ANTES del broadcast (broadcast puede bloquear si Reverb no responde)
         if ($event === 'message_created') {
             $this->forwardToN8nWithEnrichment($data, $inboxId, $accountId);
@@ -288,6 +294,86 @@ class ChatwootWebhookController extends Controller
         } catch (\Throwable $e) {
             Log::error('❌ Error al despachar ForwardToN8nWithEnrichmentJob', [
                 'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * 📦 PROACTIVE MEDIA CACHING
+     * 
+     * Despacha un job por cada attachment del mensaje para descargarlo
+     * y guardarlo en PostgreSQL INMEDIATAMENTE, antes de que Chatwoot
+     * pierda los archivos en su próximo redeploy.
+     */
+    private function dispatchAttachmentCaching(array $data, ?int $accountId): void
+    {
+        try {
+            $attachments = $data['attachments'] ?? [];
+            $messageId = (int) ($data['id'] ?? 0);
+            $conversationDisplayId = $data['conversation']['id'] ?? null;
+            $content = $data['content'] ?? '';
+
+            if (!$messageId) {
+                return;
+            }
+
+            // Si no hay attachments NI contenido, es posible que sea un media message
+            // con race condition (Chatwoot aún no guardó el attachment).
+            // Despachar un job delayed para verificar después.
+            if (empty($attachments) && empty(trim($content))) {
+                \App\Jobs\CacheAttachmentJob::dispatch(
+                    0, // attachment_id = 0 indica "buscar por message_id"
+                    $messageId,
+                    $conversationDisplayId,
+                    null,
+                    null,
+                    $accountId,
+                )->delay(now()->addSeconds(10)); // Dar 10s a Chatwoot para guardar
+
+                Log::debug('📦 [ProactiveCache] Dispatched delayed cache job for empty media message', [
+                    'message_id' => $messageId,
+                ]);
+                return;
+            }
+
+            if (empty($attachments)) {
+                return;
+            }
+
+            $dispatched = 0;
+            foreach ($attachments as $attachment) {
+                $attId = (int) ($attachment['id'] ?? 0);
+                if ($attId <= 0) continue;
+
+                // Verificar si ya está cacheado (evitar jobs innecesarios)
+                $alreadyCached = \App\Models\CachedAttachment::where('attachment_id', $attId)->exists();
+                if ($alreadyCached) continue;
+
+                $dataUrl = $attachment['data_url'] ?? $attachment['file_url'] ?? $attachment['thumb_url'] ?? null;
+                $fileType = $attachment['file_type'] ?? null;
+
+                \App\Jobs\CacheAttachmentJob::dispatch(
+                    $attId,
+                    $messageId,
+                    $conversationDisplayId,
+                    $dataUrl,
+                    $fileType,
+                    $accountId,
+                );
+
+                $dispatched++;
+            }
+
+            if ($dispatched > 0) {
+                Log::info('📦 [ProactiveCache] Dispatched attachment caching jobs', [
+                    'count' => $dispatched,
+                    'message_id' => $messageId,
+                    'conversation_id' => $conversationDisplayId,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('📦 [ProactiveCache] Error dispatching cache jobs', [
+                'error' => $e->getMessage(),
             ]);
         }
     }
