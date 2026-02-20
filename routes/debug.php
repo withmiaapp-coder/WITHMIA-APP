@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
-Route::prefix('debug')->group(function () {
+Route::prefix('debug')->middleware(function ($request, $next) {\n    // Require X-Debug-Key header matching APP_KEY (first 16 chars)\n    $expectedKey = substr(config('app.key'), 0, 16);\n    if ($request->header('X-Debug-Key') !== $expectedKey) {\n        return response()->json(['error' => 'Unauthorized'], 403);\n    }\n    return $next($request);\n})->group(function () {
 
     Route::get('/debug-chatwoot-config', function () {
         $companies = \App\Models\Company::select('id', 'name', 'slug', 'chatwoot_account_id')

@@ -64,19 +64,14 @@ import {
 } from 'lucide-react';
 import { useConversations, useLabels, labelsGlobalCache } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
-// NOTA: useNotifications eliminado - ahora usamos el sistema unificado GlobalNotificationContext
 import NotificationToast from './NotificationToast.tsx';
-// FASE 3: Nuevos componentes y hooks (Filtros)
 import AdvancedFilters from './AdvancedFilters';
 import { useMessagePagination } from '../hooks/useMessagePagination';
-// NOTA: useEnhancedNotifications eliminado - usamos GlobalNotificationContext centralizado
 import NotificationCenter from './NotificationCenter.tsx';
 import NotificationSettings from './NotificationSettings.tsx';
-// ?? OPTIMIZACIONES: Utilidades extraídas para mejor performance
 import { formatTimestamp } from '../utils/dateFormatter';
 import { getPriorityColor, getStatusColor } from '../utils/conversationColors';
 import debugLog from '../utils/debugLogger';
-// 🏷️ NUEVOS: Componentes de gestión de conversaciones
 import ConversationActionsDropdown from './ConversationActionsDropdown';
 import AssignAgentDropdown from './AssignAgentDropdown';
 import LabelsManager from './LabelsManager';
@@ -107,9 +102,6 @@ interface Conversation {
     email: string;
   };
 }
-
-// MessageStatus component extracted to ./conversations/MessageStatus.tsx
-// Utility functions extracted to ../utils/conversationHelpers.ts
 
 /**
  * Resuelve la URL de un attachment.
@@ -876,14 +868,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
     const hasMore = activeConversation?._hasMoreMessages !== false;
     if (!hasMore || activeConversation?._isLoading || isLoadingMoreRef.current || !activeConversation?.messages?.length) {
-      console.log(`📜 [LoadMore] Bloqueado: hasMore=${hasMore}, isLoading=${activeConversation?._isLoading}, isLoadingMoreRef=${isLoadingMoreRef.current}, msgs=${activeConversation?.messages?.length}`);
       return;
     }
 
     isLoadingMoreRef.current = true;
     lastLoadTimeRef.current = Date.now();
-
-    console.log(`📜 [LoadMore] Cargando más mensajes para conv ${activeConversation.id}, mensajes actuales: ${activeConversation.messages.length}, hasMore: ${activeConversation._hasMoreMessages}`);
 
     const prevScrollHeight = container.scrollHeight;
     const prevScrollTop = container.scrollTop;
@@ -898,11 +887,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             if (addedHeight > 0) {
               container.scrollTop = prevScrollTop + addedHeight;
             }
-            console.log(`📜 [LoadMore] Completado: +${addedHeight}px, scrollTop=${container.scrollTop}`);
             // Mantener el flag activo 500ms más para bloquear cualquier scroll-to-bottom async
             setTimeout(() => {
               isLoadingMoreRef.current = false;
-              console.log('📜 [LoadMore] Flag liberado');
             }, 500);
           });
         });
@@ -946,7 +933,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     const timer = setTimeout(() => {
       // Si el contenido no llena el container (no hay scrollbar), intentar cargar más
       if (container.scrollHeight <= container.clientHeight && activeConversation?._hasMoreMessages !== false) {
-        console.log(`📜 [AutoLoad] Container no lleno (scrollH=${container.scrollHeight}, clientH=${container.clientHeight}), cargando más...`);
         triggerLoadMore();
       }
     }, 500);
@@ -2694,7 +2680,6 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'auto') => {
     // 🚫 NUNCA hacer scroll al fondo mientras se cargan mensajes anteriores
     if (isLoadingMoreRef.current) {
-      console.log('🛑 [scrollToBottom] Bloqueado: loadMore en progreso');
       return;
     }
     const container = messagesContainerRef.current;

@@ -666,7 +666,6 @@ export const useConversations = () => {
     const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
     
     if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
-      console.log(`⚡ [Cache] conv=${conversationId}, msgs=${cached.messages.length}, hasMore=${cached.hasMore}, cachedHasMore=${cachedHasMore}`);
       const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
         || activeConversationRef.current;
       if (conversation && conversation.id === conversationId) {
@@ -711,7 +710,6 @@ export const useConversations = () => {
             const oldestId = sortedMessages[0]?.id;
             if (oldestId) {
               url += `&before=${oldestId}&_t=${Date.now()}`;
-              console.log(`📜 [LoadMore] URL: ${url}, oldestId=${oldestId}, realMessages=${realMessages.length}, types: id[0]=${typeof realMessages[0].id}`);
             }
           } else {
             console.warn(`⚠️ [LoadMore] No hay mensajes con IDs válidos! Total msgs=${currentMessages.length}, sample IDs:`, currentMessages.slice(0, 3).map((m: any) => ({ id: m.id, type: typeof m.id })));
@@ -722,17 +720,6 @@ export const useConversations = () => {
       const result = await apiCall(url);
       const messagesArray = result?.payload?.payload || result?.payload || [];
       const meta = result?.meta || {};
-
-      console.log(`📜 [API Response] conv=${conversationId}, loadMore=${loadMore}, messagesCount=${messagesArray?.length}, has_more=${meta.has_more}, meta=`, meta);
-
-      // Debug: log first and last message IDs from API response
-      if (loadMore && Array.isArray(messagesArray) && messagesArray.length > 0) {
-        const apiIds = messagesArray.map((m: any) => m.id).sort((a: number, b: number) => a - b);
-        console.log(`📜 [API IDs] first=${apiIds[0]}, last=${apiIds[apiIds.length-1]}, count=${apiIds.length}`);
-        const existingMsgs = cached?.messages || activeConversationRef.current?.messages || [];
-        const existIds = existingMsgs.map((m: any) => Number(m.id)).sort((a: number, b: number) => a - b);
-        console.log(`📜 [Existing IDs] first=${existIds[0]}, last=${existIds[existIds.length-1]}, count=${existIds.length}`);
-      }
 
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
@@ -808,7 +795,6 @@ export const useConversations = () => {
             // Normalizar IDs a números para comparación consistente
             const existingIds = new Set(existingMessages.map((m: any) => Number(m.id)));
             const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(Number(m.id)));
-            console.log(`📜 [Merge] ${newOlderMessages.length} mensajes nuevos, ${existingMessages.length} existentes, uniqueMessages=${uniqueMessages.length}`);
             
             // ⚠️ Si no hay mensajes nuevos, significa que no hay más mensajes anteriores
             if (newOlderMessages.length === 0) {
