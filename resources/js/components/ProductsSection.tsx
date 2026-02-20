@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Package,
   Plus,
   Search,
-  Filter,
-  Grid3X3,
   List,
   RefreshCw,
   Trash2,
@@ -14,20 +12,10 @@ import {
   Check,
   Loader2,
   AlertCircle,
-  ShoppingCart,
-  ShoppingBag,
-  Globe,
   Database,
   Image as ImageIcon,
-  DollarSign,
   Tag,
   Box,
-  Link2,
-  MoreVertical,
-  ChevronDown,
-  Bot,
-  Zap,
-  Upload,
   LayoutGrid,
 } from 'lucide-react';
 
@@ -54,14 +42,6 @@ interface Product {
   is_active: boolean;
   synced_at: string | null;
   created_at: string;
-}
-
-interface IntegrationStatus {
-  connected: boolean;
-  bot_access_enabled?: boolean;
-  products_count: number;
-  last_sync_at: string | null;
-  store_url?: string;
 }
 
 interface Props {
@@ -128,12 +108,6 @@ export default function ProductsSection({ user, company }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // Integrations
-  const [integrations, setIntegrations] = useState<Record<string, IntegrationStatus>>({});
-  const [showIntegrationPanel, setShowIntegrationPanel] = useState(false);
-  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
-  const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
-
   // Filters & View
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -143,29 +117,17 @@ export default function ProductsSection({ user, company }: Props) {
 
   // Stats
   const [totalProducts, setTotalProducts] = useState(0);
-  const [providerCounts, setProviderCounts] = useState<Record<string, number>>({});
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showConnectModal, setShowConnectModal] = useState<string | null>(null);
 
   // Errors
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // ====== LOAD DATA ======
-  const loadIntegrations = useCallback(async () => {
-    try {
-      const data = await apiFetch('/api/product-integrations/status');
-      setIntegrations(data.integrations || {});
-      setTotalProducts(data.integrations?.total_products || 0);
-    } catch (err) {
-      console.error('Error loading product integrations:', err);
-    }
-  }, []);
-
   const loadProducts = useCallback(async () => {
     try {
       setLoadingProducts(true);
@@ -180,7 +142,6 @@ export default function ProductsSection({ user, company }: Props) {
       setProducts(data.products || []);
       setCategories(data.stats?.categories || []);
       setTotalProducts(data.stats?.total || 0);
-      setProviderCounts(data.stats?.by_provider || {});
     } catch (err) {
       console.error('Error loading products:', err);
       setError('Error al cargar productos');
@@ -190,7 +151,7 @@ export default function ProductsSection({ user, company }: Props) {
   }, [searchQuery, selectedCategory, selectedProvider]);
 
   useEffect(() => {
-    Promise.all([loadIntegrations(), loadProducts()]).finally(() => setLoading(false));
+    loadProducts().finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -250,91 +211,6 @@ export default function ProductsSection({ user, company }: Props) {
     }
   }, [loadProducts]);
 
-  // ====== INTEGRATION ACTIONS ======
-  const handleConnect = useCallback(async (provider: string, credentials: Record<string, string>) => {
-    try {
-      setConnectingProvider(provider);
-      const result = await apiFetch('/api/product-integrations/connect', {
-        method: 'POST',
-        body: JSON.stringify({ provider, ...credentials }),
-      });
-      if (result.success) {
-        setShowConnectModal(null);
-        setSuccessMsg(result.message);
-        await loadIntegrations();
-        // Auto-sync after connecting
-        handleSync(provider);
-      }
-    } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('400')) {
-        setError('No se pudo conectar. Verifica tus credenciales.');
-      } else {
-        setError('Error al conectar');
-      }
-    } finally {
-      setConnectingProvider(null);
-    }
-  }, [loadIntegrations]);
-
-  const handleDisconnect = useCallback(async (provider: string) => {
-    if (!confirm(`¿Desconectar ${PROVIDER_CONFIG[provider]?.name}? Los productos sincronizados se mantendrán.`)) return;
-    try {
-      await apiFetch('/api/product-integrations/disconnect', {
-        method: 'POST',
-        body: JSON.stringify({ provider }),
-      });
-      setSuccessMsg(`Desconectado de ${PROVIDER_CONFIG[provider]?.name}`);
-      await loadIntegrations();
-    } catch (err) {
-      setError('Error al desconectar');
-    }
-  }, [loadIntegrations]);
-
-  const handleSync = useCallback(async (provider: string) => {
-    try {
-      setSyncingProvider(provider);
-      const result = await apiFetch('/api/product-integrations/sync', {
-        method: 'POST',
-        body: JSON.stringify({ provider }),
-      });
-      if (result.success) {
-        setSuccessMsg(result.message);
-        await Promise.all([loadProducts(), loadIntegrations()]);
-      }
-    } catch (err) {
-      setError('Error al sincronizar productos');
-    } finally {
-      setSyncingProvider(null);
-    }
-  }, [loadProducts, loadIntegrations]);
-
-  const handleToggleBotAccess = useCallback(async (provider: string) => {
-    try {
-      await apiFetch('/api/product-integrations/toggle-bot-access', {
-        method: 'POST',
-        body: JSON.stringify({ provider }),
-      });
-      await loadIntegrations();
-    } catch (err) {
-      setError('Error al cambiar acceso del bot');
-    }
-  }, [loadIntegrations]);
-
-  // ====== COMPUTED ======
-  const anyConnected = useMemo(() => {
-    return Object.entries(integrations)
-      .filter(([key]) => key !== 'manual' && key !== 'total_products')
-      .some(([_, val]) => (val as IntegrationStatus)?.connected);
-  }, [integrations]);
-
-  const connectedCount = useMemo(() => {
-    return Object.entries(integrations)
-      .filter(([key]) => key !== 'manual' && key !== 'total_products')
-      .filter(([_, val]) => (val as IntegrationStatus)?.connected)
-      .length;
-  }, [integrations]);
-
   // ====== LOADING ======
   if (loading) {
     return (
@@ -363,12 +239,6 @@ export default function ProductsSection({ user, company }: Props) {
                 <span className="px-2 py-0.5 bg-slate-100 rounded-full text-[11px] font-semibold text-neutral-500">
                   {totalProducts}
                 </span>
-                {anyConnected && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-medium text-emerald-700">{connectedCount} tienda{connectedCount > 1 ? 's' : ''}</span>
-                  </div>
-                )}
               </div>
               <p className="text-[11px] text-neutral-400">Catálogo de productos y servicios para WITHMIA</p>
             </div>
@@ -381,14 +251,6 @@ export default function ProductsSection({ user, company }: Props) {
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loadingProducts ? 'animate-spin' : ''}`} />
-            </button>
-
-            <button
-              onClick={() => setShowIntegrationPanel(!showIntegrationPanel)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-orange-300 hover:shadow-sm transition-all text-xs font-medium text-neutral-600 hover:text-orange-600"
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              {anyConnected ? 'Tiendas' : 'Conectar tienda'}
             </button>
 
             <button
@@ -457,19 +319,6 @@ export default function ProductsSection({ user, company }: Props) {
         </div>
       </div>
 
-      {/* Integration Panel */}
-      {showIntegrationPanel && (
-        <IntegrationPanel
-          integrations={integrations}
-          syncingProvider={syncingProvider}
-          onConnect={(provider) => setShowConnectModal(provider)}
-          onDisconnect={handleDisconnect}
-          onSync={handleSync}
-          onToggleBotAccess={handleToggleBotAccess}
-          onClose={() => setShowIntegrationPanel(false)}
-        />
-      )}
-
       {/* Success / Error Banners */}
       {successMsg && (
         <div className="mx-4 mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 animate-in fade-in">
@@ -496,7 +345,6 @@ export default function ProductsSection({ user, company }: Props) {
           <EmptyState
             hasFilters={!!searchQuery || !!selectedCategory || !!selectedProvider}
             onCreateProduct={() => setShowCreateModal(true)}
-            onConnectStore={() => setShowIntegrationPanel(true)}
           />
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -558,98 +406,6 @@ export default function ProductsSection({ user, company }: Props) {
         />
       )}
 
-      {showConnectModal && (
-        <ConnectProviderModal
-          provider={showConnectModal}
-          connecting={connectingProvider === showConnectModal}
-          onConnect={(creds) => handleConnect(showConnectModal, creds)}
-          onClose={() => setShowConnectModal(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-// ====== INTEGRATION PANEL ======
-function IntegrationPanel({ integrations, syncingProvider, onConnect, onDisconnect, onSync, onToggleBotAccess, onClose }: {
-  integrations: Record<string, IntegrationStatus>;
-  syncingProvider: string | null;
-  onConnect: (provider: string) => void;
-  onDisconnect: (provider: string) => void;
-  onSync: (provider: string) => void;
-  onToggleBotAccess: (provider: string) => void;
-  onClose: () => void;
-}) {
-  const providers = [
-    { id: 'woocommerce', name: 'WooCommerce', color: '#96588A', desc: 'Tienda WordPress', icon: <WooIcon /> },
-    { id: 'shopify', name: 'Shopify', color: '#96BF48', desc: 'Tienda Shopify', icon: <ShopifyIcon /> },
-    { id: 'mercadolibre', name: 'MercadoLibre', color: '#FFE600', desc: 'Marketplace', icon: <MLIcon /> },
-    { id: 'custom_api', name: 'API Personalizada', color: '#0ea5e9', desc: 'Base de datos / REST API', icon: <Database className="w-5 h-5 text-white" /> },
-  ];
-
-  return (
-    <div className="mx-4 mt-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-neutral-700">Conectar tienda de productos</h3>
-        <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-          <X className="w-4 h-4 text-neutral-400" />
-        </button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {providers.map(p => {
-          const status = integrations[p.id] as IntegrationStatus | undefined;
-          const isConnected = status?.connected ?? false;
-          const isSyncing = syncingProvider === p.id;
-
-          return (
-            <div key={p.id} className={`flex flex-col p-3.5 rounded-xl border-2 transition-all ${isConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-orange-300 hover:shadow-md'}`}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm" style={{ backgroundColor: p.id === 'mercadolibre' ? '#FFF159' : p.color }}>
-                  {p.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-neutral-800">{p.name}</p>
-                  <p className="text-[11px] text-neutral-500 font-medium">{isConnected ? `${status?.products_count ?? 0} productos` : p.desc}</p>
-                </div>
-              </div>
-
-              {isConnected ? (
-                <div className="flex items-center gap-1.5 mt-auto pt-2 border-t border-emerald-200/60">
-                  <button onClick={() => onSync(p.id)} disabled={isSyncing}
-                    className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-neutral-600 hover:bg-slate-50 transition-colors disabled:opacity-50 flex-1 justify-center">
-                    <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? 'Sync...' : 'Sincronizar'}
-                  </button>
-                  <button onClick={() => onToggleBotAccess(p.id)}
-                    className={`p-1.5 rounded-lg transition-colors ${status?.bot_access_enabled ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'}`}
-                    title={status?.bot_access_enabled ? 'Bot habilitado' : 'Habilitar bot'}>
-                    <Bot className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => onDisconnect(p.id)}
-                    className="p-1.5 rounded-lg bg-slate-100 text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Desconectar">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => onConnect(p.id)}
-                  className="mt-auto px-3 py-1.5 text-xs font-bold text-white rounded-lg transition-all shadow-sm hover:shadow-md"
-                  style={{ background: `linear-gradient(135deg, ${p.color}, ${p.color}dd)` }}>
-                  Conectar
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Manual products info */}
-      <div className="mt-3 p-2.5 bg-indigo-50/50 border border-indigo-200/40 rounded-lg flex items-center gap-2">
-        <Edit3 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-        <p className="text-[11px] text-indigo-600">
-          <span className="font-semibold">{(integrations.manual as IntegrationStatus)?.products_count ?? 0} productos manuales</span> — También puedes crear productos directamente sin conectar una tienda. WITHMIA los incluirá en su base de conocimientos.
-        </p>
-      </div>
     </div>
   );
 }
@@ -795,10 +551,9 @@ function ProductListItem({ product, onClick, onEdit, onDelete }: {
 }
 
 // ====== EMPTY STATE ======
-function EmptyState({ hasFilters, onCreateProduct, onConnectStore }: {
+function EmptyState({ hasFilters, onCreateProduct }: {
   hasFilters: boolean;
   onCreateProduct: () => void;
-  onConnectStore: () => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
@@ -814,20 +569,14 @@ function EmptyState({ hasFilters, onCreateProduct, onConnectStore }: {
         <>
           <h3 className="text-lg font-semibold text-neutral-700 mb-1">Tu catálogo está vacío</h3>
           <p className="text-sm text-neutral-400 text-center max-w-sm mb-5">
-            Agrega productos para que WITHMIA pueda responder preguntas sobre precios, disponibilidad y características
+            Agrega productos para que WITHMIA pueda responder preguntas sobre precios, disponibilidad y características.
+            También puedes conectar tiendas desde la sección de Integraciones.
           </p>
-          <div className="flex items-center gap-3">
-            <button onClick={onConnectStore}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-sm font-semibold text-neutral-700 hover:border-orange-300 hover:shadow-md transition-all">
-              <Zap className="w-4 h-4 text-orange-500" />
-              Conectar tienda
-            </button>
-            <button onClick={onCreateProduct}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl text-sm font-semibold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-200">
-              <Plus className="w-4 h-4" />
-              Crear producto
-            </button>
-          </div>
+          <button onClick={onCreateProduct}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl text-sm font-semibold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-200">
+            <Plus className="w-4 h-4" />
+            Crear producto
+          </button>
         </>
       )}
     </div>
@@ -1184,113 +933,6 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
               <ExternalLink className="w-3.5 h-3.5" /> Ver producto
             </a>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ====== CONNECT PROVIDER MODAL ======
-function ConnectProviderModal({ provider, connecting, onConnect, onClose }: {
-  provider: string;
-  connecting: boolean;
-  onConnect: (credentials: Record<string, string>) => void;
-  onClose: () => void;
-}) {
-  const [fields, setFields] = useState<Record<string, string>>({});
-
-  const configs: Record<string, { title: string; fields: { key: string; label: string; placeholder: string; type?: string }[]; help?: string }> = {
-    woocommerce: {
-      title: 'Conectar WooCommerce',
-      fields: [
-        { key: 'store_url', label: 'URL de tu tienda', placeholder: 'https://mitienda.com' },
-        { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_...' },
-        { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_...', type: 'password' },
-      ],
-      help: 'Ve a WooCommerce → Ajustes → API → Claves para generar tus credenciales.',
-    },
-    shopify: {
-      title: 'Conectar Shopify',
-      fields: [
-        { key: 'store_url', label: 'Nombre de tu tienda', placeholder: 'mi-tienda (sin .myshopify.com)' },
-        { key: 'access_token', label: 'Access Token', placeholder: 'shpat_...', type: 'password' },
-      ],
-      help: 'Ve a Shopify Admin → Apps → Develop apps → Create an app → Admin API access token.',
-    },
-    mercadolibre: {
-      title: 'Conectar MercadoLibre',
-      fields: [
-        { key: 'user_id', label: 'User ID de MercadoLibre', placeholder: '123456789' },
-        { key: 'access_token', label: 'Access Token', placeholder: 'APP_USR-...', type: 'password' },
-      ],
-      help: 'Obtén tus credenciales en developers.mercadolibre.com → Mis aplicaciones.',
-    },
-    custom_api: {
-      title: 'Conectar API Personalizada',
-      fields: [
-        { key: 'api_url', label: 'URL del endpoint', placeholder: 'https://misite.com/api/products' },
-        { key: 'api_key', label: 'API Key (opcional)', placeholder: 'Bearer token o API Key', type: 'password' },
-      ],
-      help: 'Tu endpoint debe devolver un JSON con un array de productos. Campos soportados: name/nombre, price/precio, description/descripcion, stock/cantidad, category/categoria, image/images, sku, url.',
-    },
-  };
-
-  const config = configs[provider];
-  if (!config) return null;
-
-  const allFieldsFilled = config.fields
-    .filter(f => f.key !== 'api_key')
-    .every(f => fields[f.key]?.trim());
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-        <div className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-neutral-800">{config.title}</h3>
-            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
-              <X className="w-5 h-5 text-neutral-400" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {config.fields.map(field => (
-              <div key={field.key}>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">{field.label}</label>
-                <input
-                  type={field.type || 'text'}
-                  placeholder={field.placeholder}
-                  value={fields[field.key] || ''}
-                  onChange={e => setFields({ ...fields, [field.key]: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 placeholder:text-neutral-300"
-                />
-              </div>
-            ))}
-          </div>
-
-          {config.help && (
-            <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg">
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5" />
-                {config.help}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-slate-100 px-5 py-3 flex justify-end gap-2 bg-slate-50/50">
-          <button onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-slate-100 rounded-lg transition-colors">
-            Cancelar
-          </button>
-          <button
-            onClick={() => onConnect(fields)}
-            disabled={!allFieldsFilled || connecting}
-            className="px-4 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {connecting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Conectar y sincronizar
-          </button>
         </div>
       </div>
     </div>
