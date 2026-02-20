@@ -345,14 +345,35 @@ HTML;
     private function createInbox(array $config, array $payload, string $channelId)
     {
         try {
+            $url = $this->chatwootUrl("/api/v1/accounts/{$config['account_id']}/inboxes");
+
+            // Debug: log full request details
+            $debugPayload = $payload;
+            if (isset($debugPayload['channel']['page_access_token'])) {
+                $debugPayload['channel']['page_access_token'] = substr($debugPayload['channel']['page_access_token'], 0, 20) . '...';
+            }
+            if (isset($debugPayload['channel']['user_access_token'])) {
+                $debugPayload['channel']['user_access_token'] = substr($debugPayload['channel']['user_access_token'], 0, 20) . '...';
+            }
+            Log::info('ChatwootChannelController: Creating inbox', [
+                'channel' => $channelId,
+                'url' => $url,
+                'payload_keys' => array_keys($payload),
+                'channel_keys' => array_keys($payload['channel'] ?? []),
+                'payload_debug' => $debugPayload,
+                'account_id' => $config['account_id'],
+                'has_token' => !empty($config['token']),
+            ]);
+
             $response = $this->chatwootClient($config)
-                ->post($this->chatwootUrl("/api/v1/accounts/{$config['account_id']}/inboxes"), $payload);
+                ->post($url, $payload);
 
             if (!$response->successful()) {
                 Log::error('ChatwootChannelController: Inbox creation failed', [
                     'channel' => $channelId,
                     'status' => $response->status(),
                     'body' => $response->body(),
+                    'response_headers' => $response->headers(),
                 ]);
                 return response()->json([
                     'error' => 'No se pudo crear el canal',
