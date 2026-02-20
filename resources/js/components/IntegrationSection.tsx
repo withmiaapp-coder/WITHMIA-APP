@@ -1493,61 +1493,68 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               const providers = [
                 {
                   id: 'woocommerce', name: 'WooCommerce', icon: ShoppingCart,
-                  gradient: 'linear-gradient(135deg, #96588A, #96588ADD)', color: 'purple',
-                  subtitle: 'Conecta tu tienda WooCommerce',
-                  description: 'Sincroniza tu catálogo de productos de WooCommerce para que WITHMIA los conozca.',
-                  features: ['Sincronización automática de productos', 'Precios, stock y categorías', 'WITHMIA recomienda productos por WhatsApp'],
+                  gradient: 'linear-gradient(135deg, #96588A, #96588ADD)',
+                  subtitle: 'Importa tus productos automáticamente',
                   fields: [
-                    { key: 'store_url', label: 'URL de tu tienda', placeholder: 'https://mitienda.com', type: 'text' },
-                    { key: 'consumer_key', label: 'Consumer Key', placeholder: 'ck_...', type: 'password' },
-                    { key: 'consumer_secret', label: 'Consumer Secret', placeholder: 'cs_...', type: 'password' },
+                    { key: 'store_url', label: 'Dirección de tu tienda', placeholder: 'Ej: https://mitienda.com', hint: 'Copia la URL de tu página principal', type: 'text' },
+                    { key: 'consumer_key', label: 'Clave pública', placeholder: 'Empieza con ck_...', hint: '', type: 'password' },
+                    { key: 'consumer_secret', label: 'Clave secreta', placeholder: 'Empieza con cs_...', hint: '', type: 'password' },
                   ],
                   requiredFields: ['store_url', 'consumer_key', 'consumer_secret'],
                   credentialMap: { store_url: 'store_url', consumer_key: 'consumer_key', consumer_secret: 'consumer_secret' },
-                  helpText: 'Ve a WooCommerce → Ajustes → API → Claves para generar tus credenciales.',
+                  steps: [
+                    'Entra al panel de tu WordPress/WooCommerce',
+                    'Ve a WooCommerce → Ajustes → Avanzado → API REST',
+                    'Haz clic en "Agregar clave" y copia las dos claves aquí',
+                  ],
                 },
                 {
                   id: 'shopify', name: 'Shopify', icon: ShoppingBag,
-                  gradient: 'linear-gradient(135deg, #96BF48, #96BF48DD)', color: 'green',
-                  subtitle: 'Sincroniza con tu tienda Shopify',
-                  description: 'Sincroniza tu catálogo de Shopify para que WITHMIA conozca tus productos.',
-                  features: ['Importar productos automáticamente', 'Variantes, precios y stock', 'WITHMIA recomienda productos por WhatsApp'],
+                  gradient: 'linear-gradient(135deg, #96BF48, #96BF48DD)',
+                  subtitle: 'Importa tus productos automáticamente',
                   fields: [
-                    { key: 'store_url', label: 'Nombre de tu tienda', placeholder: 'mi-tienda (sin .myshopify.com)', type: 'text' },
-                    { key: 'access_token', label: 'Access Token', placeholder: 'shpat_...', type: 'password' },
+                    { key: 'store_url', label: 'Nombre de tu tienda', placeholder: 'Ej: mi-tienda', hint: 'Solo el nombre, sin .myshopify.com', type: 'text' },
+                    { key: 'access_token', label: 'Token de acceso', placeholder: 'Empieza con shpat_...', hint: '', type: 'password' },
                   ],
                   requiredFields: ['store_url', 'access_token'],
                   credentialMap: { store_url: 'store_url', access_token: 'access_token' },
-                  helpText: 'Ve a Shopify Admin → Apps → Develop apps → Create an app → Admin API access token.',
+                  steps: [
+                    'Entra a tu panel de Shopify (admin)',
+                    'Ve a Configuración → Apps → Desarrollar apps',
+                    'Crea una app y copia el "Admin API access token"',
+                  ],
                 },
                 {
                   id: 'mercadolibre', name: 'MercadoLibre', icon: Store,
-                  gradient: 'linear-gradient(135deg, #FFE600, #FFE600DD)', color: 'yellow',
-                  subtitle: 'Conecta tu tienda MercadoLibre',
-                  description: 'Importa tus publicaciones de MercadoLibre para que WITHMIA las conozca.',
-                  features: ['Importar publicaciones activas', 'Precios y stock actualizados', 'WITHMIA recomienda productos por WhatsApp'],
+                  gradient: 'linear-gradient(135deg, #FFE600, #FFE600DD)',
+                  subtitle: 'Importa tus publicaciones activas',
                   fields: [
-                    { key: 'user_id', label: 'User ID de MercadoLibre', placeholder: '123456789', type: 'text' },
-                    { key: 'access_token', label: 'Access Token', placeholder: 'APP_USR-...', type: 'password' },
+                    { key: 'user_id', label: 'Tu número de vendedor', placeholder: 'Ej: 123456789', hint: 'Lo encuentras en Mi cuenta → Mis datos', type: 'text' },
+                    { key: 'access_token', label: 'Token de acceso', placeholder: 'Empieza con APP_USR-...', hint: '', type: 'password' },
                   ],
                   requiredFields: ['user_id', 'access_token'],
                   credentialMap: { user_id: 'user_id', access_token: 'access_token' },
-                  helpText: 'Obtén tus credenciales en developers.mercadolibre.com → Mis aplicaciones.',
+                  steps: [
+                    'Entra a developers.mercadolibre.com',
+                    'Ve a "Mis aplicaciones" y crea una app',
+                    'Copia tu User ID y el Access Token aquí',
+                  ],
                 },
                 {
-                  id: 'custom_api', name: 'API Personalizada / MySQL', icon: Database,
-                  gradient: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)', color: 'cyan',
-                  subtitle: 'Base de datos propia o endpoint REST',
-                  description: 'Conecta tu MySQL via phpMyAdmin, cPanel u otro endpoint REST que devuelva tus productos en JSON.',
-                  features: ['Cualquier endpoint que devuelva JSON', 'Compatible con PHP + MySQL / phpMyAdmin', 'API Key opcional para autenticación'],
+                  id: 'custom_api', name: 'Base de datos / API propia', icon: Database,
+                  gradient: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)',
+                  subtitle: 'Conecta cualquier sistema que tengas',
                   fields: [
-                    { key: 'api_url', label: 'URL del endpoint JSON', placeholder: 'https://misite.com/api/products.php', type: 'text' },
-                    { key: 'api_key', label: 'API Key (opcional)', placeholder: 'Bearer token o API Key', type: 'password' },
+                    { key: 'api_url', label: 'Link donde están tus productos', placeholder: 'Ej: https://misite.com/api/productos.php', hint: 'Debe devolver tus productos en formato JSON', type: 'text' },
+                    { key: 'api_key', label: 'Contraseña de la API (si tiene)', placeholder: 'Déjalo vacío si no requiere contraseña', hint: '', type: 'password' },
                   ],
                   requiredFields: ['api_url'],
                   credentialMap: { api_url: 'api_url', api_key: 'api_key' },
-                  helpText: 'El endpoint debe devolver un JSON con un array de productos.',
-                  extraNote: 'Campos soportados: name/nombre, price/precio, description/descripcion, stock/cantidad, category/categoria, image/images, sku, url.',
+                  steps: [
+                    'Pídele a tu programador el link de tu API de productos',
+                    'Si tiene contraseña/API Key, pégala abajo',
+                    'Nosotros importamos todo automáticamente',
+                  ],
                 },
               ];
 
@@ -1561,7 +1568,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 return (
                   <div key={prov.id} className={`bg-white rounded-xl border transition-all duration-200 ${
-                    isExpanded ? `border-${prov.color}-300 shadow-lg ring-1 ring-${prov.color}-100` : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+                    isExpanded ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
                   }`}>
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(isExpanded ? null : prov.id)}>
@@ -1578,7 +1585,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : isConnected ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />Conectado</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full" />Desconectado</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">Sin conectar</span>
                         )}
                         {isExpanded ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                       </div>
@@ -1602,8 +1609,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               <div className="flex items-center gap-3">
                                 <Bot className={`w-5 h-5 ${integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                                 <div>
-                                  <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                                  <p className="text-sm text-neutral-500">{integration?.bot_access_enabled ? 'WITHMIA puede buscar y recomendar productos' : 'Activa para que WITHMIA acceda a tus productos'}</p>
+                                  <p className="font-medium text-neutral-700">Que WITHMIA use estos productos</p>
+                                  <p className="text-sm text-neutral-500">{integration?.bot_access_enabled ? 'WITHMIA recomienda estos productos a tus clientes' : 'Activa para que WITHMIA recomiende tus productos'}</p>
                                 </div>
                               </div>
                               <label className="relative inline-flex items-center cursor-pointer">
@@ -1615,29 +1622,26 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               <button onClick={() => syncProductProvider(prov.id)} disabled={syncingProductProvider === prov.id}
                                 className="px-4 py-2 bg-white border border-slate-200 hover:border-slate-400 text-neutral-700 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
                                 <RefreshCw className={`w-4 h-4 ${syncingProductProvider === prov.id ? 'animate-spin' : ''}`} />
-                                {syncingProductProvider === prov.id ? 'Sincronizando...' : 'Sincronizar'}
+                                {syncingProductProvider === prov.id ? 'Actualizando...' : 'Actualizar productos'}
                               </button>
                               <button onClick={() => disconnectProductProvider(prov.id)} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-4">
-                            <div className="p-4 bg-white rounded-lg border border-slate-200">
-                              <div className="flex items-start gap-4">
-                                <div className="p-2 bg-slate-50 rounded-lg flex-shrink-0">
-                                  <ProvIcon className="w-8 h-8 text-neutral-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-neutral-800 mb-1">Conecta tu {prov.name}</h4>
-                                  <p className="text-sm text-neutral-500 mb-3">{prov.description}</p>
-                                  <ul className="text-xs text-neutral-500 space-y-1">
-                                    {prov.features.map((f, i) => (
-                                      <li key={i} className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> {f}</li>
-                                    ))}
-                                  </ul>
-                                </div>
+                          <div className="space-y-5">
+                            {/* Step-by-step guide */}
+                            <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl">
+                              <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">¿Cómo lo hago?</p>
+                              <div className="space-y-2.5">
+                                {prov.steps.map((step, i) => (
+                                  <div key={i} className="flex items-start gap-3">
+                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                                    <p className="text-sm text-blue-800 leading-relaxed">{step}</p>
+                                  </div>
+                                ))}
                               </div>
                             </div>
+                            {/* Fields */}
                             <div className="space-y-3">
                               {prov.fields.map(field => (
                                 <div key={field.key}>
@@ -1647,27 +1651,24 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                     value={form.fields[field.key] || ''}
                                     onChange={e => setProviderField(prov.id, field.key, e.target.value)}
                                     placeholder={field.placeholder}
-                                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
+                                  {field.hint && <p className="text-xs text-neutral-400 mt-1 ml-1">{field.hint}</p>}
                                 </div>
                               ))}
-                              <p className="text-xs text-neutral-400">{prov.helpText}</p>
-                              {prov.extraNote && (
-                                <div className="p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg">
-                                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                                    <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5" />{prov.extraNote}
-                                  </p>
-                                </div>
-                              )}
-                              {form.error && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {form.error}</p>}
-                              <button
-                                onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
-                                disabled={form.connecting}
-                                className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-300 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                              >
-                                {form.connecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar {prov.name}</>)}
-                              </button>
                             </div>
+                            {form.error && (
+                              <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                                <p className="text-sm text-red-600 flex items-center gap-2"><AlertCircle className="w-4 h-4 flex-shrink-0" /> {form.error}</p>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
+                              disabled={form.connecting}
+                              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-200/50"
+                            >
+                              {form.connecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar {prov.name}</>)}
+                            </button>
                           </div>
                         )}
                       </div>
