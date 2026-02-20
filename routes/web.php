@@ -14,6 +14,7 @@ use App\Http\Controllers\AttachmentProxyController;
 use App\Http\Controllers\ImageProxyController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChatwootEnterpriseController;
+use App\Http\Controllers\Api\ChannelOAuthController;
 
 // ============================================================================
 // 1. PROXIES (sin auth, máxima prioridad, rate-limited)
@@ -99,6 +100,12 @@ Route::get('/auth-loading', function (Request $request) {
 Route::get('/invitation/accept/{token}', function ($token) {
     return Inertia::render('AcceptInvitation', ['token' => $token]);
 })->name('invitation.accept');
+
+// ============================================================================
+// 5b. OAUTH CALLBACK (público — Facebook/Instagram redirige aquí)
+// ============================================================================
+Route::get('/channels/oauth/callback', [ChannelOAuthController::class, 'callback'])
+    ->name('channels.oauth.callback');
 
 // ============================================================================
 // 6. ONBOARDING

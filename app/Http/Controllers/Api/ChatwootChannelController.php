@@ -374,7 +374,7 @@ HTML;
 
             // Ensure n8n bot workflow exists for this company
             // (may already exist if WhatsApp was connected first)
-            $this->ensureN8nWorkflowForCompany($request->user());
+            $this->ensureN8nWorkflowForCompany(request()->user());
 
             Log::info('ChatwootChannelController: Inbox created', [
                 'channel' => $channelId,

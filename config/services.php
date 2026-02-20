@@ -74,4 +74,11 @@ return [
         "secret_key" => env("DLOCAL_SECRET_KEY"),
         "api_url" => env("DLOCAL_API_URL", "https://api.dlocalgo.com"),
     ],
+
+    "facebook" => [
+        "app_id" => env("FACEBOOK_APP_ID"),
+        "app_secret" => env("FACEBOOK_APP_SECRET"),
+        "graph_version" => env("FACEBOOK_GRAPH_VERSION", "v20.0"),
+        "whatsapp_config_id" => env("FACEBOOK_WHATSAPP_CONFIG_ID"), // Embedded Signup config
+    ],
 ];

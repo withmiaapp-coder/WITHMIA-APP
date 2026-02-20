@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   MessageCircle, 
   Mail, 
@@ -144,21 +144,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     smtp_port: 587, smtp_login: '', smtp_password: '', smtp_enable_ssl_tls: true,
   });
 
-  // Facebook Messenger form (separate from Instagram)
-  const [fbPageToken, setFbPageToken] = useState('');
-  const [fbPageId, setFbPageId] = useState('');
-  const [fbPageName, setFbPageName] = useState('');
-
-  // Instagram form (separate from Messenger)
-  const [igPageToken, setIgPageToken] = useState('');
-  const [igPageId, setIgPageId] = useState('');
-  const [igId, setIgId] = useState('');
-
-  // WhatsApp Cloud API form
-  const [waCloudPhone, setWaCloudPhone] = useState('');
-  const [waCloudPhoneId, setWaCloudPhoneId] = useState('');
-  const [waCloudBusinessId, setWaCloudBusinessId] = useState('');
-  const [waCloudApiKey, setWaCloudApiKey] = useState('');
+  // (Manual form state removed — replaced by OAuth popup flow)
 
   // Unified product provider state: { [providerId]: { fields: {fieldKey: value}, connecting: bool, error: string } }
   const [providerForms, setProviderForms] = useState<Record<string, { fields: Record<string, string>; connecting: boolean; error: string }>>({});
@@ -595,6 +581,88 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     loadProductIntegrations();
     loadChatwootChannels();
   }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadProductIntegrations]);
+
+  // ── OAuth popup flow for Messenger / Instagram / WhatsApp Cloud ──
+  const connectChannelRef = useRef(connectChannel);
+  useEffect(() => { connectChannelRef.current = connectChannel; });
+
+  // Open OAuth popup (same pattern as Google Calendar)
+  const openOAuthPopup = useCallback(async (channel: string) => {
+    const channelId = channel === 'whatsapp-cloud' ? 'whatsapp-api' : channel;
+    try {
+      setChannelConnecting(channelId);
+      setChannelError(channelId, null);
+      setChannelSuccess(channelId, null);
+
+      const data = await gcalApiFetch(`/api/channels/oauth/${channel}/auth-url`);
+      if (data.error) {
+        setChannelError(channelId, data.error);
+        setChannelConnecting(null);
+        return;
+      }
+
+      const width = 600, height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        data.auth_url,
+        'channel_oauth',
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+      );
+
+      // Poll popup close as fallback
+      const pollInterval = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(pollInterval);
+          setTimeout(async () => {
+            setChannelConnecting(null);
+            await loadChatwootChannels();
+            onIntegrationChange?.();
+          }, 500);
+        }
+      }, 1000);
+
+      setTimeout(() => { clearInterval(pollInterval); setChannelConnecting(null); }, 300000);
+    } catch (err: any) {
+      setChannelError(channelId, err.message || 'Error al iniciar conexión');
+      setChannelConnecting(null);
+    }
+  }, [gcalApiFetch, loadChatwootChannels, onIntegrationChange]);
+
+  // Listen for OAuth popup postMessage results
+  useEffect(() => {
+    const handler = async (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'oauth-page-selected') return;
+
+      const { channel, ...payload } = event.data;
+
+      if (channel === 'messenger') {
+        connectChannelRef.current('messenger', '/api/channels/facebook-messenger', {
+          page_access_token: payload.page_access_token,
+          page_id: payload.page_id,
+          page_name: payload.page_name || 'Mi Página',
+        });
+      } else if (channel === 'instagram') {
+        connectChannelRef.current('instagram', '/api/channels/instagram', {
+          page_access_token: payload.page_access_token,
+          page_id: payload.page_id,
+          instagram_id: payload.instagram_id || undefined,
+        });
+      } else if (channel === 'whatsapp-cloud') {
+        connectChannelRef.current('whatsapp-api', '/api/channels/whatsapp-cloud', {
+          phone_number: payload.phone_number,
+          phone_number_id: payload.phone_number_id,
+          business_account_id: payload.business_account_id,
+          api_key: payload.api_key,
+        });
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
   // Load Chatwoot channel statuses
   const loadChatwootChannels = useCallback(async () => {
@@ -1397,54 +1465,20 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <AtSign className="w-5 h-5 text-pink-500" />
                           <h4 className="font-semibold text-neutral-800">Conectar Instagram Direct</h4>
                         </div>
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Requisitos:</p>
-                            <ul className="list-disc list-inside mt-1 text-xs space-y-0.5">
-                              <li>Cuenta de Instagram <strong>Business</strong> o <strong>Creator</strong></li>
-                              <li>Página de Facebook conectada a tu cuenta de Instagram</li>
-                              <li>Page Access Token con permisos <code className="bg-amber-100 px-1 rounded">instagram_manage_messages</code></li>
-                            </ul>
-                          </div>
-                        </div>
+                        <p className="text-sm text-neutral-500">
+                          Conecta tu cuenta de Instagram Business para que MIA reciba y responda mensajes directos automáticamente.
+                        </p>
 
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page Access Token *</label>
-                            <input
-                              type="password"
-                              value={igPageToken}
-                              onChange={(e) => setIgPageToken(e.target.value)}
-                              placeholder="EAAxxxxxxxx..."
-                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Facebook Page ID *</label>
-                              <input
-                                type="text"
-                                value={igPageId}
-                                onChange={(e) => setIgPageId(e.target.value)}
-                                placeholder="123456789..."
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Instagram Business ID</label>
-                              <input
-                                type="text"
-                                value={igId}
-                                onChange={(e) => setIgId(e.target.value)}
-                                placeholder="17841400..."
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400 outline-none"
-                              />
-                            </div>
+                        <div className="p-3 bg-pink-50/60 border border-pink-200 rounded-xl text-sm text-pink-700 flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <div className="text-xs space-y-0.5">
+                            <p className="font-medium text-sm">Requisitos:</p>
+                            <p>• Cuenta de Instagram <strong>Business</strong> o <strong>Creator</strong></p>
+                            <p>• Vinculada a una Página de Facebook</p>
                           </div>
                         </div>
 
@@ -1456,18 +1490,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         )}
 
                         <button
-                          onClick={() => connectChannel('instagram', '/api/channels/instagram', {
-                            page_access_token: igPageToken,
-                            page_id: igPageId,
-                            instagram_id: igId || undefined,
-                          })}
-                          disabled={channelConnecting === 'instagram' || !igPageToken || !igPageId}
-                          className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 disabled:opacity-50 text-white font-medium rounded-lg transition-all flex items-center gap-2"
+                          onClick={() => openOAuthPopup('instagram')}
+                          disabled={channelConnecting === 'instagram'}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-pink-200/50"
                         >
                           {channelConnecting === 'instagram' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                            <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
                           ) : (
-                            <><AtSign className="w-4 h-4" /> Conectar Instagram</>
+                            <>
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                              Conectar con Instagram
+                            </>
                           )}
                         </button>
                       </div>
@@ -1502,51 +1535,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <Send className="w-5 h-5 text-blue-500" />
                           <h4 className="font-semibold text-neutral-800">Conectar Facebook Messenger</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Conecta tu página de Facebook para recibir y responder mensajes de Messenger directamente en WITHMIA.</p>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Page Access Token *</label>
-                            <input
-                              type="password"
-                              value={fbPageToken}
-                              onChange={(e) => setFbPageToken(e.target.value)}
-                              placeholder="EAAxxxxxxxx..."
-                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Page ID *</label>
-                              <input
-                                type="text"
-                                value={fbPageId}
-                                onChange={(e) => setFbPageId(e.target.value)}
-                                placeholder="123456789..."
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre de la Página</label>
-                              <input
-                                type="text"
-                                value={fbPageName}
-                                onChange={(e) => setFbPageName(e.target.value)}
-                                placeholder="Mi Página de Facebook"
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 flex items-start gap-2">
-                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          <p>Necesitas un Page Access Token con permisos <code className="bg-blue-100 px-1 rounded">pages_messaging</code>. Puedes obtenerlo desde <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="underline font-medium">Meta Graph API Explorer</a>.</p>
-                        </div>
+                        <p className="text-sm text-neutral-500">
+                          Conecta tu Página de Facebook para que MIA reciba y responda mensajes de Messenger automáticamente.
+                        </p>
 
                         {channelError('messenger') && channelConnecting === null && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
@@ -1556,20 +1551,23 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         )}
 
                         <button
-                          onClick={() => connectChannel('messenger', '/api/channels/facebook-messenger', {
-                            page_access_token: fbPageToken,
-                            page_id: fbPageId,
-                            page_name: fbPageName || 'Mi Página',
-                          })}
-                          disabled={channelConnecting === 'messenger' || !fbPageToken || !fbPageId}
-                          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                          onClick={() => openOAuthPopup('messenger')}
+                          disabled={channelConnecting === 'messenger'}
+                          className="w-full py-3 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-200/50"
                         >
                           {channelConnecting === 'messenger' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                            <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
                           ) : (
-                            <><Send className="w-4 h-4" /> Conectar Messenger</>
+                            <>
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.2 5.42 3.15 7.2.17.15.27.37.28.6l.06 1.87c.02.56.6.93 1.11.7l2.09-.82c.18-.07.38-.09.56-.05.86.24 1.78.37 2.75.37 5.64 0 10-4.13 10-9.7S17.64 2 12 2z"/></svg>
+                              Conectar con Facebook
+                            </>
                           )}
                         </button>
+
+                        <p className="text-xs text-neutral-400 text-center">
+                          Seleccionarás la Página de Facebook en el paso siguiente
+                        </p>
                       </div>
                     )}
 
@@ -1605,69 +1603,21 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <Smartphone className="w-5 h-5 text-emerald-600" />
                           <h4 className="font-semibold text-neutral-800">Conectar WhatsApp Cloud API</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Usa la API oficial de Meta para WhatsApp Business. No requiere QR, solo números verificados con Meta Business Suite.</p>
+                        <p className="text-sm text-neutral-500">
+                          Usa la API oficial de Meta para WhatsApp Business. Conecta tu número verificado sin escanear QR.
+                        </p>
 
-                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 flex items-start gap-2">
-                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-medium">¿Cuándo usar WhatsApp Cloud API en vez de WhatsApp QR?</p>
-                            <ul className="list-disc list-inside mt-1 space-y-0.5">
-                              <li>Para enviar mensajes masivos (campañas, templates)</li>
-                              <li>Usar un número verificado sin escanear QR</li>
-                              <li>Escala empresarial con la API oficial de Meta</li>
-                            </ul>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Número de teléfono *</label>
-                            <input
-                              type="tel"
-                              value={waCloudPhone}
-                              onChange={(e) => setWaCloudPhone(e.target.value)}
-                              placeholder="+56912345678"
-                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Phone Number ID *</label>
-                              <input
-                                type="text"
-                                value={waCloudPhoneId}
-                                onChange={(e) => setWaCloudPhoneId(e.target.value)}
-                                placeholder="103xxxxxxxx"
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Business Account ID *</label>
-                              <input
-                                type="text"
-                                value={waCloudBusinessId}
-                                onChange={(e) => setWaCloudBusinessId(e.target.value)}
-                                placeholder="102xxxxxxxx"
-                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">API Key / Permanent Token *</label>
-                            <input
-                              type="password"
-                              value={waCloudApiKey}
-                              onChange={(e) => setWaCloudApiKey(e.target.value)}
-                              placeholder="EAAxxxxxxxx..."
-                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 outline-none"
-                            />
-                            <p className="text-xs text-neutral-400 mt-1">
-                              Obtén tu token permanente en <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="text-emerald-600 underline">Meta Business Suite → System Users</a>.
-                            </p>
+                        <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-start gap-2.5">
+                          <Zap className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <div className="text-xs space-y-0.5">
+                            <p className="font-medium text-sm">¿Cuándo usar WhatsApp Cloud API?</p>
+                            <p>• Mensajes masivos, campañas y templates</p>
+                            <p>• Número verificado sin escanear QR</p>
+                            <p>• Escala empresarial con la API oficial de Meta</p>
                           </div>
                         </div>
 
@@ -1679,21 +1629,23 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         )}
 
                         <button
-                          onClick={() => connectChannel('whatsapp-api', '/api/channels/whatsapp-cloud', {
-                            phone_number: waCloudPhone,
-                            phone_number_id: waCloudPhoneId,
-                            business_account_id: waCloudBusinessId,
-                            api_key: waCloudApiKey,
-                          })}
-                          disabled={channelConnecting === 'whatsapp-api' || !waCloudPhone || !waCloudPhoneId || !waCloudBusinessId || !waCloudApiKey}
-                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                          onClick={() => openOAuthPopup('whatsapp-cloud')}
+                          disabled={channelConnecting === 'whatsapp-api'}
+                          className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20BD5A] disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-green-200/50"
                         >
                           {channelConnecting === 'whatsapp-api' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                            <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
                           ) : (
-                            <><Smartphone className="w-4 h-4" /> Conectar WhatsApp Cloud API</>
+                            <>
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.352 0-4.55-.752-6.337-2.076l-.442-.332-3.17 1.063 1.063-3.17-.332-.442A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                              Conectar WhatsApp Business
+                            </>
                           )}
                         </button>
+
+                        <p className="text-xs text-neutral-400 text-center">
+                          Se abrirá el registro de WhatsApp Business de Meta
+                        </p>
                       </div>
                     )}
 
