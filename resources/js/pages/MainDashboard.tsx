@@ -654,6 +654,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   // Estado de integraciones de calendario (para el contador del sidebar)
   const [calendarIntegrationsCount, setCalendarIntegrationsCount] = useState(0);
   const [productIntegrationsCount, setProductIntegrationsCount] = useState(0);
+  const [chatwootChannelCount, setChatwootChannelCount] = useState(0);
 
   const [notification, setNotification] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
   
@@ -847,9 +848,22 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     }
   }, []);
 
-  // Cargar integraciones de calendario al montar
+  // Load Chatwoot channel count (Messenger, Instagram, WhatsApp Cloud, Email, Web Chat)
+  const checkChatwootChannels = useCallback(async () => {
+    try {
+      const res = await secureFetch('/api/channels', { requireCsrf: false, timeout: 8000 });
+      const data = await res.json();
+      const channels = data.channels || [];
+      // Exclude Evolution API WhatsApp (already counted via whatsAppStatus)
+      const count = channels.filter((ch: any) => ch.id !== 'whatsapp').length;
+      setChatwootChannelCount(count);
+    } catch {}
+  }, []);
+
+  // Cargar integraciones al montar
   useEffect(() => {
     checkCalendarIntegrations();
+    checkChatwootChannels();
     // Load product integrations count
     (async () => {
       try {
@@ -863,7 +877,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         setProductIntegrationsCount(count);
       } catch {}
     })();
-  }, [checkCalendarIntegrations]);
+  }, [checkCalendarIntegrations, checkChatwootChannels]);
 
   // Función para contar Integraciones realmente conectadas
   const getConnectedIntegrationsCount = () => {
@@ -874,6 +888,9 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       connected++;
     }
     
+    // Chatwoot channels (Messenger, Instagram, WhatsApp Cloud, Email, Web Chat)
+    connected += chatwootChannelCount;
+
     // Calendario (Google, Outlook, Calendly, Reservo, AgendaPro)
     connected += calendarIntegrationsCount;
 
@@ -1305,7 +1322,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 onDisconnectWhatsApp={disconnectWhatsApp}
                 onUpdateSettings={updateWhatsAppSettings}
                 isUpdatingSettings={isUpdatingWhatsAppSettings}
-                onIntegrationChange={checkCalendarIntegrations}
+                onIntegrationChange={() => { checkCalendarIntegrations(); checkChatwootChannels(); }}
                 onNavigateToProducts={() => setActiveSection('reports')}
               />
             ) : activeSection === 'knowledge' ? (
