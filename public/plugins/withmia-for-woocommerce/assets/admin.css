@@ -1,0 +1,158 @@
+/* WITHMIA Admin Styles */
+
+.withmia-settings-wrap {
+    max-width: 900px;
+}
+
+.withmia-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0 10px;
+    border-bottom: 2px solid #7c3aed;
+    margin-bottom: 20px;
+}
+
+.withmia-logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.withmia-logo {
+    width: 40px;
+    height: 40px;
+}
+
+.withmia-header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #1d2327;
+}
+
+.withmia-version {
+    color: #999;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Cards */
+.withmia-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.withmia-card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    padding: 0;
+    color: #1d2327;
+}
+
+.withmia-card > .description {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #646970;
+}
+
+/* Status Card */
+.withmia-status-card {
+    border-left: 4px solid #7c3aed;
+}
+
+.withmia-info-table th {
+    width: 160px;
+    font-weight: 500;
+}
+
+.withmia-info-table code {
+    background: #f0f0f1;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+/* API Key group */
+.withmia-api-key-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.withmia-api-key-group input {
+    font-family: 'Courier New', monospace;
+    background: #f6f7f7;
+    font-size: 13px;
+}
+
+/* Setup Card */
+.withmia-setup-card {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border-color: #c4b5fd;
+}
+
+.withmia-setup-card h2 {
+    color: #5b21b6;
+}
+
+.withmia-setup-card ol {
+    line-height: 2;
+}
+
+.withmia-setup-card code {
+    background: rgba(124, 58, 237, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* Endpoints table */
+.withmia-card .widefat {
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.withmia-card .widefat th,
+.withmia-card .widefat td {
+    padding: 10px 14px;
+}
+
+.withmia-card .widefat code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+/* Test result */
+#withmia-test-result {
+    margin-left: 12px;
+    font-weight: 500;
+}
+
+/* Form */
+.withmia-form .form-table th {
+    width: 180px;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .withmia-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .withmia-api-key-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .withmia-api-key-group input {
+        width: 100%;
+    }
+}

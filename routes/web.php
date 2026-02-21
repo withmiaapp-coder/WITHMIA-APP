@@ -123,6 +123,39 @@ Route::post('/data-deletion', function (Request $request) {
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // ============================================================================
+// 5d. WITHMIA FOR WOOCOMMERCE PLUGIN DOWNLOAD
+// ============================================================================
+Route::get('/plugins/withmia-for-woocommerce/download', function () {
+    $pluginDir = public_path('plugins/withmia-for-woocommerce');
+    if (!is_dir($pluginDir)) {
+        abort(404, 'Plugin not found');
+    }
+
+    $zipPath = storage_path('app/withmia-for-woocommerce.zip');
+    $zip = new \ZipArchive();
+    if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        abort(500, 'Could not create ZIP');
+    }
+
+    $files = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($pluginDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+        \RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ($files as $file) {
+        if (!$file->isDir()) {
+            $relativePath = 'withmia-for-woocommerce/' . substr($file->getPathname(), strlen($pluginDir) + 1);
+            $relativePath = str_replace('\\', '/', $relativePath);
+            $zip->addFile($file->getPathname(), $relativePath);
+        }
+    }
+
+    $zip->close();
+
+    return response()->download($zipPath, 'withmia-for-woocommerce.zip')->deleteFileAfterSend(true);
+})->name('plugins.woocommerce.download');
+
+// ============================================================================
 // 6. ONBOARDING
 // ============================================================================
 Route::post('/onboarding', [OnboardingController::class, 'store'])
