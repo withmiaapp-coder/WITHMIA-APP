@@ -427,6 +427,11 @@ class ChatwootChannelController extends Controller
 
             $script = <<<HTML
 <script>
+  window.chatwootSettings = {
+    position: 'right',
+    type: 'standard',
+    launcherTitle: 'Chatea con nosotros'
+  };
   (function(d,t) {
     var BASE_URL="{$chatwootUrl}";
     var g=d.createElement(t),s=d.getElementsByTagName(t)[0];

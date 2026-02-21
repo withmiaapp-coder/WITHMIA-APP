@@ -136,6 +136,24 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [webChatTitle, setWebChatTitle] = useState('¡Hola! 👋');
   const [webChatTagline, setWebChatTagline] = useState('Estamos aquí para ayudarte');
   const [widgetScript, setWidgetScript] = useState('');
+  // Advanced widget config
+  const [widgetConfig, setWidgetConfig] = useState({
+    agentName: '',
+    agentIconUrl: '',
+    askForPhone: false,
+    askForEmail: false,
+    askForName: false,
+    darkTheme: false,
+    primaryColor: '#6366f1',
+    secondaryColor: '',
+    language: 'es',
+    chatWithUsText: '',
+    xPosition: 20,
+    yPosition: 20,
+    suggestedQuestions: [] as string[],
+  });
+  const [newSuggestedQ, setNewSuggestedQ] = useState('');
+  const [showWidgetPreview, setShowWidgetPreview] = useState(false);
 
   // Email form
   const [emailForm, setEmailForm] = useState({
@@ -775,7 +793,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     {
       id: 'web-chat',
       name: 'Chat Web / Widget',
-      description: 'Agrega un widget de chat en vivo a tu sitio web',
+      description: 'Widget de chat en vivo para tu sitio web (WordPress, Shopify, Wix...)',
       icon: null,
       fallbackIcon: Globe,
       iconBg: 'from-indigo-500 to-purple-600',
@@ -1209,38 +1227,312 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 {expandedChannel === channel.id && channel.id === 'web-chat' && (
                   <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                     {chatwootChannels['web-chat'] ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-4">
-                          <Check className="w-5 h-5" />
-                          <span className="font-semibold">Widget conectado</span>
+                      <div className="space-y-6">
+                        {/* Connection Status */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Globe className="w-5 h-5 text-indigo-600" />
+                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                            </div>
+                            <button
+                              onClick={() => { if (confirm('¿Desconectar el widget de chat web?')) disconnectChannel('web-chat'); }}
+                              disabled={channelConnecting === 'web-chat'}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Desconectar
+                            </button>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm font-medium">Widget de chat activo y funcionando</span>
+                            </div>
+                            {chatwootChannels['web-chat']?.website_url && (
+                              <p className="text-xs text-green-600 mt-1 ml-6">{chatwootChannels['web-chat'].website_url}</p>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Install Script */}
                         {widgetScript && (
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-neutral-700">
-                              <Code className="w-4 h-4 inline mr-1" />
-                              Código para insertar en tu sitio web:
-                            </label>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Code className="w-5 h-5 text-neutral-600" />
+                              <h4 className="font-medium text-neutral-700">Usa WITHMIA Webchat en tu sitio web</h4>
+                            </div>
+                            <p className="text-sm text-neutral-500">Copia y pega el siguiente script en tu sitio web para activar el Webchat.</p>
                             <div className="relative">
-                              <pre className="bg-neutral-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap">{widgetScript}</pre>
+                              <pre className="bg-neutral-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap font-mono">{widgetScript}</pre>
                               <button
                                 onClick={() => { navigator.clipboard.writeText(widgetScript); setChannelSuccess('web-chat', '¡Código copiado!'); setTimeout(() => setChannelSuccess('web-chat', null), 2000); }}
-                                className="absolute top-2 right-2 p-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-white transition-colors"
+                                className="absolute top-2 right-2 p-2 bg-neutral-700 hover:bg-neutral-600 rounded-lg text-white transition-colors"
                                 title="Copiar código"
                               >
                                 <Copy className="w-4 h-4" />
                               </button>
                             </div>
-                            <p className="text-xs text-neutral-500">Pega este código antes de la etiqueta &lt;/body&gt; en tu sitio web.</p>
+                            <p className="text-xs text-neutral-400">Pega este código antes de la etiqueta <code className="bg-neutral-200 px-1 rounded">&lt;/body&gt;</code> en tu sitio web.</p>
+
+                            {/* WordPress note */}
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-xs text-blue-700">
+                                <strong>WordPress:</strong> Pega el código en Apariencia → Editor de temas → footer.php, o usa un plugin como "Insert Headers and Footers" para agregarlo fácilmente.
+                              </p>
+                            </div>
                           </div>
                         )}
-                        <button
-                          onClick={() => { if (confirm('¿Desconectar el widget de chat web?')) disconnectChannel('web-chat'); }}
-                          disabled={channelConnecting === 'web-chat'}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar Widget
-                        </button>
+
+                        {/* Widget Configuration */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Settings className="w-5 h-5 text-neutral-600" />
+                            <h4 className="font-medium text-neutral-700">Configuraciones</h4>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Agent Name */}
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre del agente</label>
+                              <input
+                                type="text"
+                                value={widgetConfig.agentName}
+                                onChange={(e) => setWidgetConfig(p => ({ ...p, agentName: e.target.value }))}
+                                placeholder="Ej: MIA"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                              />
+                              <p className="text-xs text-neutral-400 mt-1">El nombre que se mostrará en el webchat.</p>
+                            </div>
+
+                            {/* Agent Icon */}
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">URL del ícono del agente</label>
+                              <input
+                                type="url"
+                                value={widgetConfig.agentIconUrl}
+                                onChange={(e) => setWidgetConfig(p => ({ ...p, agentIconUrl: e.target.value }))}
+                                placeholder="https://tusitio.com/avatar.png"
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                              />
+                              <p className="text-xs text-neutral-400 mt-1">URL de una imagen para el avatar del agente.</p>
+                            </div>
+                          </div>
+
+                          {/* Checkboxes */}
+                          <div className="space-y-3">
+                            {[
+                              { key: 'askForPhone' as const, label: 'Solicitar número de teléfono', desc: 'Pedir el teléfono del usuario antes de iniciar el chat.' },
+                              { key: 'askForEmail' as const, label: 'Solicitar email', desc: 'Pedir el correo electrónico del usuario antes de iniciar el chat.' },
+                              { key: 'askForName' as const, label: 'Solicitar nombre del usuario', desc: 'Pedir el nombre del usuario antes de iniciar el chat.' },
+                              { key: 'darkTheme' as const, label: 'Tema oscuro', desc: 'Usar el tema oscuro para el webchat.' },
+                            ].map((opt) => (
+                              <label key={opt.key} className="flex items-start gap-3 p-3 bg-white border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={widgetConfig[opt.key]}
+                                  onChange={(e) => setWidgetConfig(p => ({ ...p, [opt.key]: e.target.checked }))}
+                                  className="mt-0.5 w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <div>
+                                  <span className="text-sm font-medium text-neutral-700">{opt.label}</span>
+                                  <p className="text-xs text-neutral-400 mt-0.5">{opt.desc}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+
+                          {/* Colors */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Color primario</label>
+                              <div className="flex items-center gap-2">
+                                <input type="color" value={widgetConfig.primaryColor}
+                                  onChange={(e) => setWidgetConfig(p => ({ ...p, primaryColor: e.target.value }))}
+                                  className="w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer" />
+                                <input type="text" value={widgetConfig.primaryColor}
+                                  onChange={(e) => setWidgetConfig(p => ({ ...p, primaryColor: e.target.value }))}
+                                  className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Color secundario</label>
+                              <div className="flex items-center gap-2">
+                                <input type="color" value={widgetConfig.secondaryColor || '#000000'}
+                                  onChange={(e) => setWidgetConfig(p => ({ ...p, secondaryColor: e.target.value }))}
+                                  className="w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer" />
+                                <input type="text" value={widgetConfig.secondaryColor}
+                                  onChange={(e) => setWidgetConfig(p => ({ ...p, secondaryColor: e.target.value }))}
+                                  placeholder="Opcional"
+                                  className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Language */}
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Idioma</label>
+                            <select
+                              value={widgetConfig.language}
+                              onChange={(e) => setWidgetConfig(p => ({ ...p, language: e.target.value }))}
+                              className="w-full max-w-xs px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                            >
+                              <option value="es">Español</option>
+                              <option value="en">English</option>
+                              <option value="pt">Português</option>
+                              <option value="fr">Français</option>
+                              <option value="de">Deutsch</option>
+                            </select>
+                          </div>
+
+                          {/* Chat With Us Text */}
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Texto del botón de chat</label>
+                            <input
+                              type="text"
+                              value={widgetConfig.chatWithUsText}
+                              onChange={(e) => setWidgetConfig(p => ({ ...p, chatWithUsText: e.target.value }))}
+                              placeholder="Ej: Habla con nosotros"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                            />
+                          </div>
+
+                          {/* Position */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Posición X del botón</label>
+                              <input type="number" value={widgetConfig.xPosition}
+                                onChange={(e) => setWidgetConfig(p => ({ ...p, xPosition: parseInt(e.target.value) || 20 }))}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-neutral-700 mb-1">Posición Y del botón</label>
+                              <input type="number" value={widgetConfig.yPosition}
+                                onChange={(e) => setWidgetConfig(p => ({ ...p, yPosition: parseInt(e.target.value) || 20 }))}
+                                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
+                            </div>
+                          </div>
+
+                          {/* Suggested Questions */}
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Preguntas sugeridas</label>
+                            <p className="text-xs text-neutral-400 mb-2">Las preguntas que se mostrarán en el webchat. Máximo 4.</p>
+                            <div className="space-y-2">
+                              {widgetConfig.suggestedQuestions.map((q, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <span className="flex-1 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700">{q}</span>
+                                  <button onClick={() => setWidgetConfig(p => ({ ...p, suggestedQuestions: p.suggestedQuestions.filter((_, idx) => idx !== i) }))}
+                                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                              {widgetConfig.suggestedQuestions.length < 4 && (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={newSuggestedQ}
+                                    onChange={(e) => setNewSuggestedQ(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && newSuggestedQ.trim()) {
+                                        setWidgetConfig(p => ({ ...p, suggestedQuestions: [...p.suggestedQuestions, newSuggestedQ.trim()] }));
+                                        setNewSuggestedQ('');
+                                      }
+                                    }}
+                                    placeholder="Escribe una pregunta..."
+                                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      if (newSuggestedQ.trim()) {
+                                        setWidgetConfig(p => ({ ...p, suggestedQuestions: [...p.suggestedQuestions, newSuggestedQ.trim()] }));
+                                        setNewSuggestedQ('');
+                                      }
+                                    }}
+                                    disabled={!newSuggestedQ.trim()}
+                                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                  >
+                                    + Agregar
+                                  </button>
+                                </div>
+                              )}
+                              {widgetConfig.suggestedQuestions.length === 0 && (
+                                <p className="text-xs text-neutral-400 italic">+ Agregar pregunta (0/4)</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Live Preview Toggle */}
+                        <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Eye className="w-4 h-4 text-indigo-600" />
+                            <span className="text-sm font-medium text-indigo-700">Vista previa del widget</span>
+                          </div>
+                          <button
+                            onClick={() => setShowWidgetPreview(!showWidgetPreview)}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                          >
+                            {showWidgetPreview ? 'Ocultar' : 'Mostrar'}
+                          </button>
+                        </div>
+
+                        {/* Widget Preview */}
+                        {showWidgetPreview && (
+                          <div className="relative border-2 border-dashed border-neutral-300 rounded-xl p-4 bg-white min-h-[350px]">
+                            <p className="text-xs text-neutral-400 mb-2">Vista previa (solo visual, no funcional)</p>
+                            {/* Floating Button Preview */}
+                            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
+                              {widgetConfig.chatWithUsText && (
+                                <span className="px-3 py-1.5 bg-white shadow-lg rounded-full text-xs font-medium text-neutral-700 border">{widgetConfig.chatWithUsText}</span>
+                              )}
+                              <div
+                                className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                                style={{ backgroundColor: widgetConfig.primaryColor }}
+                              >
+                                <MessageCircle className="w-6 h-6 text-white" />
+                              </div>
+                            </div>
+                            {/* Chat Window Preview */}
+                            <div className={`absolute bottom-20 right-4 w-80 rounded-xl shadow-2xl overflow-hidden border ${widgetConfig.darkTheme ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-neutral-200'}`}>
+                              {/* Header */}
+                              <div className="p-4 text-white" style={{ backgroundColor: widgetConfig.primaryColor }}>
+                                <div className="flex items-center gap-3">
+                                  {widgetConfig.agentIconUrl ? (
+                                    <img src={widgetConfig.agentIconUrl} alt="" className="w-10 h-10 rounded-full object-cover bg-white/20" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                      <Bot className="w-5 h-5" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-semibold text-sm">{widgetConfig.agentName || 'Asistente IA'}</p>
+                                    <p className="text-xs opacity-80">En línea</p>
+                                  </div>
+                                </div>
+                              </div>
+                              {/* Body */}
+                              <div className={`p-4 min-h-[120px] ${widgetConfig.darkTheme ? 'bg-neutral-800' : 'bg-white'}`}>
+                                {widgetConfig.suggestedQuestions.length > 0 && (
+                                  <div className="space-y-1.5 mb-3">
+                                    {widgetConfig.suggestedQuestions.map((q, i) => (
+                                      <div key={i} className={`px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${widgetConfig.darkTheme ? 'bg-neutral-700 text-neutral-300 hover:bg-neutral-600' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                                        {q}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Footer */}
+                              <div className={`p-3 border-t ${widgetConfig.darkTheme ? 'border-neutral-700' : 'border-neutral-200'}`}>
+                                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${widgetConfig.darkTheme ? 'bg-neutral-700' : 'bg-neutral-100'}`}>
+                                  <span className={`text-xs ${widgetConfig.darkTheme ? 'text-neutral-400' : 'text-neutral-400'}`}>Escribe tu mensaje...</span>
+                                </div>
+                                <p className="text-center mt-2"><span className="text-[10px] text-neutral-400">by © WITHMIA</span></p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1248,7 +1540,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <Globe className="w-5 h-5 text-indigo-600" />
                           <h4 className="font-semibold text-neutral-800">Configurar Widget de Chat Web</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente.</p>
+                        <p className="text-sm text-neutral-500 mb-4">Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente. Compatible con WordPress, Shopify, Wix y cualquier sitio web.</p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -1270,7 +1562,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               <input
                                 type="color"
                                 value={webChatColor}
-                                onChange={(e) => setWebChatColor(e.target.value)}
+                                onChange={(e) => { setWebChatColor(e.target.value); setWidgetConfig(p => ({ ...p, primaryColor: e.target.value })); }}
                                 className="w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer"
                               />
                               <span className="text-sm text-neutral-500">{webChatColor}</span>
@@ -1313,12 +1605,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             welcome_tagline: webChatTagline,
                           })}
                           disabled={channelConnecting === 'web-chat' || !webChatUrl}
-                          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                          className="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-indigo-300 disabled:to-purple-300 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2"
                         >
                           {channelConnecting === 'web-chat' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Creando widget...</>
                           ) : (
-                            <><Globe className="w-4 h-4" /> Crear Widget</>
+                            <><Globe className="w-4 h-4" /> Crear Widget de Chat</>
                           )}
                         </button>
                       </div>
