@@ -172,6 +172,10 @@ class ChatwootChannelController extends Controller
 
     /**
      * Create a Facebook Messenger inbox using a page access token.
+     * Chatwoot's REST API does NOT support creating Facebook channels via POST /inboxes.
+     * The InboxBuilder only handles web_widget, email, api, whatsapp, etc.
+     * Facebook channels are created exclusively through Chatwoot's own OAuth flow.
+     * So we insert directly into Chatwoot's PostgreSQL database (same pattern as ChatwootProvisioningService).
      */
     public function createFacebookMessenger(Request $request)
     {
@@ -184,19 +188,11 @@ class ChatwootChannelController extends Controller
 
         $config = $this->resolveChatwootConfig($request->user());
         $company = $request->user()->company;
+        $inboxName = $request->page_name
+            ? "Messenger - {$request->page_name}"
+            : "Messenger - {$company->name}";
 
-        // Chatwoot requires both user_access_token and page_access_token
-        $payload = [
-            'name' => $request->page_name ? "Messenger - {$request->page_name}" : "Messenger - {$company->name}",
-            'channel' => [
-                'type' => 'facebook',
-                'page_access_token' => $request->page_access_token,
-                'user_access_token' => $request->user_access_token,
-                'page_id' => $request->page_id,
-            ],
-        ];
-
-        return $this->createInbox($config, $payload, 'messenger');
+        return $this->createFacebookPageInbox($config, $request, $inboxName, 'messenger');
     }
 
     /**
@@ -213,21 +209,138 @@ class ChatwootChannelController extends Controller
 
         $config = $this->resolveChatwootConfig($request->user());
         $company = $request->user()->company;
+        $inboxName = "Instagram - {$company->name}";
 
-        // Instagram uses the Facebook Page connection in Chatwoot
-        // The page must have an Instagram Business account linked
-        // Chatwoot requires both user_access_token and page_access_token
-        $payload = [
-            'name' => "Instagram - {$company->name}",
-            'channel' => [
-                'type' => 'facebook',
-                'page_access_token' => $request->page_access_token,
-                'user_access_token' => $request->user_access_token,
+        return $this->createFacebookPageInbox($config, $request, $inboxName, 'instagram');
+    }
+
+    /**
+     * Shared: Create a Channel::FacebookPage + Inbox directly in Chatwoot DB.
+     * Bypasses Chatwoot's REST API which doesn't support Facebook channel creation.
+     */
+    private function createFacebookPageInbox(array $config, Request $request, string $inboxName, string $channelId)
+    {
+        $chatwootDb = DB::connection('chatwoot');
+        $accountId = (int) $config['account_id'];
+
+        try {
+            $chatwootDb->beginTransaction();
+
+            // 1. Check for existing channel with same page_id in this account
+            $existing = $chatwootDb->table('channel_facebook_pages')
+                ->where('page_id', $request->page_id)
+                ->where('account_id', $accountId)
+                ->first();
+
+            if ($existing) {
+                // Update tokens on existing channel
+                $chatwootDb->table('channel_facebook_pages')
+                    ->where('id', $existing->id)
+                    ->update([
+                        'page_access_token' => $request->page_access_token,
+                        'user_access_token' => $request->user_access_token,
+                        'updated_at' => now(),
+                    ]);
+
+                // Check if inbox exists for this channel
+                $existingInbox = $chatwootDb->table('inboxes')
+                    ->where('channel_id', $existing->id)
+                    ->where('channel_type', 'Channel::FacebookPage')
+                    ->where('account_id', $accountId)
+                    ->first();
+
+                if ($existingInbox) {
+                    $chatwootDb->commit();
+
+                    // Subscribe webhook + add agents
+                    $this->subscribeInboxWebhook($config, $existingInbox->id);
+                    $this->addAgentsToInbox($config, $existingInbox->id);
+                    $this->ensureN8nWorkflowForCompany($request->user());
+
+                    Log::info('ChatwootChannelController: Existing FB inbox updated', [
+                        'channel' => $channelId,
+                        'inbox_id' => $existingInbox->id,
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'channel' => $channelId,
+                        'inbox' => [
+                            'id' => $existingInbox->id,
+                            'name' => $existingInbox->name,
+                            'channel_type' => 'Channel::FacebookPage',
+                        ],
+                    ]);
+                }
+
+                // Channel exists but no inbox — create inbox below
+                $fbChannelId = $existing->id;
+            } else {
+                // 2. Create Channel::FacebookPage record
+                $fbChannelId = $chatwootDb->table('channel_facebook_pages')->insertGetId([
+                    'page_id' => $request->page_id,
+                    'user_access_token' => $request->user_access_token,
+                    'page_access_token' => $request->page_access_token,
+                    'account_id' => $accountId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // 3. Create Inbox linked to the channel
+            $inboxId = $chatwootDb->table('inboxes')->insertGetId([
+                'account_id' => $accountId,
+                'channel_id' => $fbChannelId,
+                'channel_type' => 'Channel::FacebookPage',
+                'name' => $inboxName,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $chatwootDb->commit();
+
+            // 4. Post-creation: subscribe webhook, add agents, ensure n8n workflow
+            $this->subscribeInboxWebhook($config, $inboxId);
+            $this->addAgentsToInbox($config, $inboxId);
+
+            // Invalidate caches
+            \Illuminate\Support\Facades\Cache::forget("inbox_to_slug:{$inboxId}");
+            if ($accountId) {
+                \Illuminate\Support\Facades\Cache::forget("account_to_slug:{$accountId}");
+            }
+
+            $this->ensureN8nWorkflowForCompany($request->user());
+
+            Log::info('ChatwootChannelController: FB inbox created via DB', [
+                'channel' => $channelId,
+                'inbox_id' => $inboxId,
+                'fb_channel_id' => $fbChannelId,
                 'page_id' => $request->page_id,
-            ],
-        ];
+            ]);
 
-        return $this->createInbox($config, $payload, 'instagram');
+            return response()->json([
+                'success' => true,
+                'channel' => $channelId,
+                'inbox' => [
+                    'id' => $inboxId,
+                    'name' => $inboxName,
+                    'channel_type' => 'Channel::FacebookPage',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            $chatwootDb->rollBack();
+
+            Log::error('ChatwootChannelController: Error creating FB inbox via DB', [
+                'channel' => $channelId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Error al crear canal de Facebook',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
