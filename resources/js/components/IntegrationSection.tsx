@@ -1612,6 +1612,27 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         )}
 
+                        {/* WordPress plugin download */}
+                        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Download className="w-4.5 h-4.5 text-indigo-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-indigo-800 mb-1">¿Usas WordPress?</p>
+                              <p className="text-xs text-indigo-600 mb-2">Instala nuestro plugin y configura el chat desde tu panel de WordPress sin tocar código.</p>
+                              <a
+                                href="/plugins/withmia-chatweb/download"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                download
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                Descargar WITHMIA ChatWeb
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
                         <button
                           onClick={() => connectChannel('web-chat', '/api/channels/web-widget', {
                             website_url: webChatUrl,
