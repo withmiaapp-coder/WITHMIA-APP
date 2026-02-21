@@ -785,7 +785,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     {
       id: 'gmail',
       name: 'Email / Gmail',
-      description: 'Conecta tu correo electrónico para gestionar soporte por email',
+      description: 'Conecta tu correo (Gmail, Outlook u otro) para gestionar soporte por email',
       icon: null,
       fallbackIcon: Mail,
       iconBg: 'from-red-500 to-orange-500',
@@ -1337,86 +1337,144 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 {expandedChannel === channel.id && channel.id === 'gmail' && (
                   <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                     {chatwootChannels['email'] ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-2">
-                          <Check className="w-5 h-5" />
-                          <span className="font-semibold">Correo conectado</span>
+                      <div className="space-y-5">
+                        {/* Connection Status */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-5 h-5 text-red-500" />
+                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                            </div>
+                            <button
+                              onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
+                              disabled={channelConnecting === 'email'}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Desconectar
+                            </button>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm font-medium">Email conectado y funcionando</span>
+                            </div>
+                            {chatwootChannels['email']?.email && (
+                              <p className="text-xs text-green-600 mt-1 ml-6">{chatwootChannels['email'].email}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-neutral-600">
-                          Email: <span className="font-medium">{chatwootChannels['email']?.email || 'Configurado'}</span>
-                        </p>
-                        <button
-                          onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
-                          disabled={channelConnecting === 'email'}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar Email
-                        </button>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Mail className="w-5 h-5 text-red-500" />
-                          <h4 className="font-semibold text-neutral-800">Configurar Email / Gmail</h4>
+                          <h4 className="font-semibold text-neutral-800">Conectar Email</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Conecta tu correo electrónico para recibir y responder emails como conversaciones. Los campos vienen preconfigurados para Gmail.</p>
+                        <p className="text-sm text-neutral-500 mb-4">Conecta tu correo electrónico para recibir y responder emails como conversaciones.</p>
 
-                        <div className="space-y-4">
+                        {/* Provider selector */}
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">Proveedor de correo</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'gmail', label: 'Gmail', imap: 'imap.gmail.com', smtp: 'smtp.gmail.com', imapPort: 993, smtpPort: 587 },
+                              { id: 'outlook', label: 'Outlook / Hotmail', imap: 'outlook.office365.com', smtp: 'smtp.office365.com', imapPort: 993, smtpPort: 587 },
+                              { id: 'custom', label: 'Otro', imap: '', smtp: '', imapPort: 993, smtpPort: 587 },
+                            ].map((provider) => (
+                              <button
+                                key={provider.id}
+                                type="button"
+                                onClick={() => setEmailForm(p => ({
+                                  ...p,
+                                  imap_address: provider.imap,
+                                  smtp_address: provider.smtp,
+                                  imap_port: provider.imapPort,
+                                  smtp_port: provider.smtpPort,
+                                }))}
+                                className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                                  emailForm.imap_address === provider.imap && provider.id !== 'custom'
+                                    ? 'border-red-400 bg-red-50 text-red-700'
+                                    : emailForm.imap_address !== 'imap.gmail.com' && emailForm.imap_address !== 'outlook.office365.com' && provider.id === 'custom'
+                                      ? 'border-red-400 bg-red-50 text-red-700'
+                                      : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'
+                                }`}
+                              >
+                                {provider.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
                           <div>
                             <label className="block text-sm font-medium text-neutral-700 mb-1">Dirección de email *</label>
                             <input
                               type="email"
                               value={emailForm.email}
                               onChange={(e) => { setEmailForm(p => ({ ...p, email: e.target.value, imap_login: e.target.value, smtp_login: e.target.value })); }}
-                              placeholder="tu@gmail.com"
+                              placeholder={emailForm.imap_address === 'imap.gmail.com' ? 'tu@gmail.com' : emailForm.imap_address === 'outlook.office365.com' ? 'tu@outlook.com' : 'tu@dominio.com'}
                               className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none"
                             />
                           </div>
 
-                          {/* IMAP Settings */}
-                          <div className="p-4 bg-white border border-neutral-200 rounded-lg">
-                            <h5 className="text-sm font-semibold text-neutral-700 mb-3">📥 Configuración IMAP (recepción)</h5>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-neutral-500 mb-1">Servidor IMAP</label>
-                                <input type="text" value={emailForm.imap_address} onChange={(e) => setEmailForm(p => ({ ...p, imap_address: e.target.value }))}
-                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
-                                <input type="number" value={emailForm.imap_port} onChange={(e) => setEmailForm(p => ({ ...p, imap_port: parseInt(e.target.value) || 993 }))}
-                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
-                              </div>
-                              <div className="col-span-2">
-                                <label className="block text-xs text-neutral-500 mb-1">Contraseña de aplicación *</label>
-                                <input type="password" value={emailForm.imap_password}
-                                  onChange={(e) => setEmailForm(p => ({ ...p, imap_password: e.target.value, smtp_password: e.target.value }))}
-                                  placeholder="Contraseña de app de Gmail"
-                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
-                                <p className="text-xs text-neutral-400 mt-1">
-                                  Para Gmail: usa una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">contraseña de aplicación</a>.
-                                </p>
-                              </div>
-                            </div>
+                          <div>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">Contraseña de aplicación *</label>
+                            <input type="password" value={emailForm.imap_password}
+                              onChange={(e) => setEmailForm(p => ({ ...p, imap_password: e.target.value, smtp_password: e.target.value }))}
+                              placeholder="Contraseña de app"
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                            {emailForm.imap_address === 'imap.gmail.com' && (
+                              <p className="text-xs text-neutral-400 mt-1.5 flex items-center gap-1">
+                                <Shield className="w-3 h-3" />
+                                Gmail requiere una <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">contraseña de aplicación</a> (no tu contraseña normal).
+                              </p>
+                            )}
+                            {emailForm.imap_address === 'outlook.office365.com' && (
+                              <p className="text-xs text-neutral-400 mt-1.5 flex items-center gap-1">
+                                <Shield className="w-3 h-3" />
+                                Usa tu contraseña de Outlook. Si tienes 2FA, genera una <a href="https://account.live.com/proofs/AppPassword" target="_blank" rel="noopener noreferrer" className="text-indigo-500 underline">contraseña de app</a>.
+                              </p>
+                            )}
                           </div>
 
-                          {/* SMTP Settings */}
-                          <div className="p-4 bg-white border border-neutral-200 rounded-lg">
-                            <h5 className="text-sm font-semibold text-neutral-700 mb-3">📤 Configuración SMTP (envío)</h5>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-neutral-500 mb-1">Servidor SMTP</label>
-                                <input type="text" value={emailForm.smtp_address} onChange={(e) => setEmailForm(p => ({ ...p, smtp_address: e.target.value }))}
-                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                          {/* Show IMAP/SMTP fields only for custom provider */}
+                          {emailForm.imap_address !== 'imap.gmail.com' && emailForm.imap_address !== 'outlook.office365.com' && (
+                            <>
+                              <div className="p-4 bg-white border border-neutral-200 rounded-lg">
+                                <h5 className="text-sm font-semibold text-neutral-700 mb-3">📥 IMAP (recepción)</h5>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-neutral-500 mb-1">Servidor</label>
+                                    <input type="text" value={emailForm.imap_address} onChange={(e) => setEmailForm(p => ({ ...p, imap_address: e.target.value }))}
+                                      placeholder="imap.tudominio.com"
+                                      className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                    <input type="number" value={emailForm.imap_port} onChange={(e) => setEmailForm(p => ({ ...p, imap_port: parseInt(e.target.value) || 993 }))}
+                                      className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
-                                <input type="number" value={emailForm.smtp_port} onChange={(e) => setEmailForm(p => ({ ...p, smtp_port: parseInt(e.target.value) || 587 }))}
-                                  className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                              <div className="p-4 bg-white border border-neutral-200 rounded-lg">
+                                <h5 className="text-sm font-semibold text-neutral-700 mb-3">📤 SMTP (envío)</h5>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-neutral-500 mb-1">Servidor</label>
+                                    <input type="text" value={emailForm.smtp_address} onChange={(e) => setEmailForm(p => ({ ...p, smtp_address: e.target.value }))}
+                                      placeholder="smtp.tudominio.com"
+                                      className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                    <input type="number" value={emailForm.smtp_port} onChange={(e) => setEmailForm(p => ({ ...p, smtp_port: parseInt(e.target.value) || 587 }))}
+                                      className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            </>
+                          )}
                         </div>
 
                         {channelError('email') && channelConnecting === null && (
@@ -1429,7 +1487,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <button
                           onClick={() => connectChannel('email', '/api/channels/email', emailForm)}
                           disabled={channelConnecting === 'email' || !emailForm.email || !emailForm.imap_password}
-                          className="px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                          className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 disabled:from-red-300 disabled:to-orange-300 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2"
                         >
                           {channelConnecting === 'email' ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
