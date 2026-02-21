@@ -38,6 +38,7 @@ import {
   Send,
   Shield,
   Smartphone,
+  Download,
 } from 'lucide-react';
 
 interface IntegrationSectionProps {
@@ -1275,11 +1276,25 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </div>
                             <p className="text-xs text-neutral-400">Pega este código antes de la etiqueta <code className="bg-neutral-200 px-1 rounded">&lt;/body&gt;</code> en tu sitio web.</p>
 
-                            {/* WordPress note */}
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <p className="text-xs text-blue-700">
-                                <strong>WordPress:</strong> Pega el código en Apariencia → Editor de temas → footer.php, o usa un plugin como "Insert Headers and Footers" para agregarlo fácilmente.
-                              </p>
+                            {/* WordPress plugin download */}
+                            <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <Globe className="w-4 h-4 text-indigo-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-indigo-800 mb-1">¿Usas WordPress?</p>
+                                  <p className="text-xs text-indigo-600 mb-2">Instala nuestro plugin y configura todo desde tu panel de WordPress, sin tocar código.</p>
+                                  <a
+                                    href="/plugins/withmia-chatweb/download"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                    download
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                    Descargar WITHMIA ChatWeb
+                                  </a>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2728,7 +2743,28 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 ))}
                               </div>
                             </div>
-                            {/* Fields */}
+                            {/* Plugin download CTA for WooCommerce */}
+                            {prov.id === 'woocommerce' && (
+                              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <Download className="w-4 h-4 text-purple-600" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-purple-800 mb-1">Plugin WITHMIA para WooCommerce</p>
+                                    <p className="text-xs text-purple-600 mb-2">Instala nuestro plugin en WordPress para sincronizar productos, generar carritos por URL, rastrear carritos abandonados y más.</p>
+                                    <a
+                                      href="/plugins/withmia-for-woocommerce/download"
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                      download
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                      Descargar plugin .zip
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             <div className="space-y-3">
                               {prov.fields.map(field => (
                                 <div key={field.key}>

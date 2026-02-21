@@ -60,6 +60,13 @@ class Withmia_Admin {
     public function settings_link($links) {
         $link = '<a href="' . admin_url('admin.php?page=withmia-settings') . '">' . __('Configurar', 'withmia-woo') . '</a>';
         array_unshift($links, $link);
+
+        // Add subscription CTA if webhook not configured
+        $webhook_url = get_option('withmia_webhook_url');
+        if (empty($webhook_url)) {
+            $links[] = '<a href="' . esc_url(WITHMIA_WC_SIGNUP_URL) . '" target="_blank" style="color:#96588A;font-weight:bold;">Obtener suscripción</a>';
+        }
+
         return $links;
     }
 
@@ -154,6 +161,22 @@ class Withmia_Admin {
                 </div>
                 <p class="withmia-version">v<?php echo esc_html(WITHMIA_WC_VERSION); ?></p>
             </div>
+
+            <?php if (empty($webhook_url)): ?>
+            <!-- Subscription CTA -->
+            <div class="withmia-card" style="background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 50%,#e0e7ff 100%);border:2px solid #c4b5fd;text-align:center;padding:28px;">
+                <h2 style="font-size:20px;color:#4c1d95;margin-bottom:10px;">¿Aún no tienes cuenta de WITHMIA?</h2>
+                <p style="color:#5b21b6;margin-bottom:20px;">Para usar este plugin necesitas una suscripción activa en WITHMIA. Tu asistente de IA podrá vender productos, generar carritos y rastrear pedidos.</p>
+                <a href="<?php echo esc_url(WITHMIA_WC_SIGNUP_URL); ?>" target="_blank"
+                   style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;margin-right:10px;box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+                    🚀 Crear cuenta en WITHMIA
+                </a>
+                <a href="<?php echo esc_url(WITHMIA_WC_PRICING_URL); ?>" target="_blank"
+                   style="display:inline-block;padding:12px 28px;background:#fff;color:#6366f1;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;border:2px solid #6366f1;">
+                    💰 Ver planes y precios
+                </a>
+            </div>
+            <?php endif; ?>
 
             <!-- Connection Status -->
             <div class="withmia-card withmia-status-card">

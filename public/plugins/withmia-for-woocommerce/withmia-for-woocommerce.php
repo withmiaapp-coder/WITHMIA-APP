@@ -26,6 +26,8 @@ define('WITHMIA_WC_VERSION', '1.0.0');
 define('WITHMIA_WC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WITHMIA_WC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('WITHMIA_WC_API_BASE', 'https://app.withmia.com');
+define('WITHMIA_WC_SIGNUP_URL', 'https://app.withmia.com/onboarding?utm_source=wordpress&utm_medium=plugin&utm_campaign=woocommerce');
+define('WITHMIA_WC_PRICING_URL', 'https://withmia.com/precios?utm_source=wordpress&utm_medium=plugin&utm_campaign=woocommerce');
 
 /**
  * Check if WooCommerce is active

@@ -156,6 +156,39 @@ Route::get('/plugins/withmia-for-woocommerce/download', function () {
 })->name('plugins.woocommerce.download');
 
 // ============================================================================
+// 5e. WITHMIA CHATWEB PLUGIN DOWNLOAD
+// ============================================================================
+Route::get('/plugins/withmia-chatweb/download', function () {
+    $pluginDir = public_path('plugins/withmia-chatweb');
+    if (!is_dir($pluginDir)) {
+        abort(404, 'Plugin not found');
+    }
+
+    $zipPath = storage_path('app/withmia-chatweb.zip');
+    $zip = new \ZipArchive();
+    if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        abort(500, 'Could not create ZIP');
+    }
+
+    $files = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($pluginDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+        \RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ($files as $file) {
+        if (!$file->isDir()) {
+            $relativePath = 'withmia-chatweb/' . substr($file->getPathname(), strlen($pluginDir) + 1);
+            $relativePath = str_replace('\\', '/', $relativePath);
+            $zip->addFile($file->getPathname(), $relativePath);
+        }
+    }
+
+    $zip->close();
+
+    return response()->download($zipPath, 'withmia-chatweb.zip')->deleteFileAfterSend(true);
+})->name('plugins.chatweb.download');
+
+// ============================================================================
 // 6. ONBOARDING
 // ============================================================================
 Route::post('/onboarding', [OnboardingController::class, 'store'])
