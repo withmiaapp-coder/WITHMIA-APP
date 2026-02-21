@@ -242,11 +242,15 @@ class ChatwootChannelController extends Controller
                         'updated_at' => now(),
                     ]);
 
-                // Check if inbox exists for this channel
+                // Check if inbox exists for this SPECIFIC channel type
+                // (Messenger and Instagram share the same channel_facebook_pages record
+                //  but need separate inboxes with different names)
+                $namePattern = $channelId === 'instagram' ? 'Instagram%' : 'Messenger%';
                 $existingInbox = $chatwootDb->table('inboxes')
                     ->where('channel_id', $existing->id)
                     ->where('channel_type', 'Channel::FacebookPage')
                     ->where('account_id', $accountId)
+                    ->where('name', 'LIKE', $namePattern)
                     ->first();
 
                 if ($existingInbox) {

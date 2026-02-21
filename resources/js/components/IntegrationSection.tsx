@@ -1453,19 +1453,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 {expandedChannel === channel.id && channel.id === 'instagram' && (
                   <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                     {chatwootChannels['instagram'] ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-2">
-                          <Check className="w-5 h-5" />
-                          <span className="font-semibold">Instagram conectado</span>
+                      <div className="space-y-5">
+                        {/* Connection Status */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-5 h-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                            </div>
+                            <button
+                              onClick={() => { if (confirm('¿Desconectar Instagram?')) disconnectChannel('instagram'); }}
+                              disabled={channelConnecting === 'instagram'}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Desconectar
+                            </button>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm font-medium">Instagram conectado y funcionando</span>
+                            </div>
+                            {chatwootChannels['instagram']?.page_id && (
+                              <p className="text-xs text-green-600 mt-1 ml-6">Página ID: {chatwootChannels['instagram'].page_id}</p>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => { if (confirm('¿Desconectar Instagram?')) disconnectChannel('instagram'); }}
-                          disabled={channelConnecting === 'instagram'}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar Instagram
-                        </button>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1523,19 +1537,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 {expandedChannel === channel.id && channel.id === 'messenger' && (
                   <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                     {chatwootChannels['messenger'] ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-2">
-                          <Check className="w-5 h-5" />
-                          <span className="font-semibold">Messenger conectado</span>
+                      <div className="space-y-5">
+                        {/* Connection Status */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.2 5.42 3.15 7.2.17.15.27.37.28.6l.06 1.87c.02.56.6.93 1.11.7l2.09-.82c.18-.07.38-.09.56-.05.86.24 1.78.37 2.75.37 5.64 0 10-4.13 10-9.7S17.64 2 12 2z"/></svg>
+                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                            </div>
+                            <button
+                              onClick={() => { if (confirm('¿Desconectar Facebook Messenger?')) disconnectChannel('messenger'); }}
+                              disabled={channelConnecting === 'messenger'}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Desconectar
+                            </button>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm font-medium">Messenger conectado y funcionando</span>
+                            </div>
+                            {chatwootChannels['messenger']?.page_id && (
+                              <p className="text-xs text-green-600 mt-1 ml-6">Página: {chatwootChannels['messenger'].name || chatwootChannels['messenger'].page_id}</p>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => { if (confirm('¿Desconectar Facebook Messenger?')) disconnectChannel('messenger'); }}
-                          disabled={channelConnecting === 'messenger'}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar Messenger
-                        </button>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1588,22 +1616,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 {expandedChannel === channel.id && channel.id === 'whatsapp-api' && (
                   <div className="border-t border-slate-100 p-6 bg-slate-50/50">
                     {chatwootChannels['whatsapp-api'] ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-2">
-                          <Check className="w-5 h-5" />
-                          <span className="font-semibold">WhatsApp Cloud API conectado</span>
+                      <div className="space-y-5">
+                        {/* Connection Status */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Smartphone className="w-5 h-5 text-emerald-600" />
+                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                            </div>
+                            <button
+                              onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
+                              disabled={channelConnecting === 'whatsapp-api'}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Desconectar
+                            </button>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-700">
+                              <Check className="w-4 h-4" />
+                              <span className="text-sm font-medium">WhatsApp Cloud API conectado y funcionando</span>
+                            </div>
+                            {chatwootChannels['whatsapp-api']?.phone_number && (
+                              <p className="text-xs text-green-600 mt-1 ml-6">Teléfono: {chatwootChannels['whatsapp-api'].phone_number}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-neutral-600">
-                          Teléfono: <span className="font-medium">{chatwootChannels['whatsapp-api']?.phone_number || 'Configurado'}</span>
-                        </p>
-                        <button
-                          onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
-                          disabled={channelConnecting === 'whatsapp-api'}
-                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Unlink className="w-4 h-4" />
-                          Desconectar WhatsApp Cloud API
-                        </button>
                       </div>
                     ) : (
                       <div className="space-y-4">
