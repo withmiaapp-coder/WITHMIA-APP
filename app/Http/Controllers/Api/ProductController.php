@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
 use App\Traits\HasCompanyAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -16,7 +17,7 @@ class ProductController extends Controller
     /**
      * List products with search, filtering, and pagination
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -91,7 +92,7 @@ class ProductController extends Controller
     /**
      * Create a manual product
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -133,7 +134,7 @@ class ProductController extends Controller
     /**
      * Get a single product
      */
-    public function show(Request $request, $id)
+    public function show(Request $request, $id): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -151,7 +152,7 @@ class ProductController extends Controller
     /**
      * Update a product
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -192,7 +193,7 @@ class ProductController extends Controller
     /**
      * Delete a product
      */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, $id): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -211,7 +212,7 @@ class ProductController extends Controller
     /**
      * Bulk delete products
      */
-    public function bulkDelete(Request $request)
+    public function bulkDelete(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -237,7 +238,7 @@ class ProductController extends Controller
     /**
      * Upload product image
      */
-    public function uploadImage(Request $request)
+    public function uploadImage(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -261,7 +262,7 @@ class ProductController extends Controller
     /**
      * Get categories for this company
      */
-    public function categories(Request $request)
+    public function categories(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {

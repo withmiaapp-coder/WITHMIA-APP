@@ -38,7 +38,7 @@ interface Product {
   category: string | null;
   images: string[] | null;
   attributes: Record<string, string> | null;
-  variants: any[] | null;
+  variants: { id?: number; name?: string; price?: number | null; sku?: string | null; [key: string]: unknown }[] | null;
   url: string | null;
   brand: string | null;
   weight: number | null;
@@ -48,8 +48,8 @@ interface Product {
 }
 
 interface Props {
-  user: any;
-  company: any;
+  user: { id?: number; name?: string };
+  company?: { id?: number; name?: string };
 }
 
 // ====== HELPERS ======
@@ -694,7 +694,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
         brand: brand.trim() || null,
         url: url.trim() || null,
         images: images.length > 0 ? images : null,
-      } as any);
+      } as Partial<Product>);
     } finally {
       setSubmitting(false);
     }

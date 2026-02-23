@@ -17,9 +17,13 @@ class Withmia_Webhook {
     /** @var string */
     private $api_key;
 
+    /** @var string HMAC signing secret for outbound webhooks */
+    private $webhook_secret;
+
     public function __construct() {
         $this->webhook_url = get_option('withmia_webhook_url', '');
         $this->api_key = get_option('withmia_api_key', '');
+        $this->webhook_secret = get_option('withmia_webhook_secret', '');
 
         // Order events
         add_action('woocommerce_new_order', [$this, 'on_new_order'], 10, 2);
@@ -49,6 +53,12 @@ class Withmia_Webhook {
             return false;
         }
 
+        // Respect enabled_events configuration
+        $enabled_events = get_option('withmia_enabled_events', []);
+        if (!empty($enabled_events) && is_array($enabled_events) && !in_array($event, $enabled_events, true)) {
+            return false;
+        }
+
         $payload = array_merge([
             'event' => $event,
             'store_url' => home_url(),
@@ -57,16 +67,26 @@ class Withmia_Webhook {
             'plugin_version' => WITHMIA_WC_VERSION,
         ], $data);
 
+        $body = wp_json_encode($payload);
+
+        $headers = [
+            'Content-Type' => 'application/json',
+            'X-Withmia-Key' => $this->api_key,
+            'X-Withmia-Store' => home_url(),
+            'X-Withmia-Event' => $event,
+        ];
+
+        // Sign payload with HMAC-SHA256 using the webhook secret
+        if (!empty($this->webhook_secret)) {
+            $signature = hash_hmac('sha256', $body, $this->webhook_secret);
+            $headers['X-Hub-Signature-256'] = 'sha256=' . $signature;
+        }
+
         $response = wp_remote_post($this->webhook_url, [
             'timeout' => 15,
             'blocking' => false,
-            'body' => wp_json_encode($payload),
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-Withmia-Key' => $this->api_key,
-                'X-Withmia-Store' => home_url(),
-                'X-Withmia-Event' => $event,
-            ],
+            'body' => $body,
+            'headers' => $headers,
         ]);
 
         // Log errors

@@ -83,7 +83,7 @@ export function usePermissions() {
         // Si no hay success, usar defaults
         setPermissions(DEFAULT_PERMISSIONS);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // En cualquier error, usar defaults de admin para no bloquear la UI
       setPermissions(DEFAULT_PERMISSIONS);
       // Limpiar cache inválido

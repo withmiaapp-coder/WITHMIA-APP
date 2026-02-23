@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -52,7 +53,7 @@ class DocumentController extends Controller
         }
     }
 
-    public function getDocuments(Request $request)
+    public function getDocuments(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -95,7 +96,7 @@ class DocumentController extends Controller
     /**
      * Delete a document
      */
-    public function deleteDocument(Request $request, $documentId)
+    public function deleteDocument(Request $request, $documentId): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -192,7 +193,7 @@ class DocumentController extends Controller
      * Store document metadata after successful upload to N8N
      * This endpoint is called by the frontend AFTER the N8N webhook succeeds
      */
-    public function storeDocumentMetadata(Request $request)
+    public function storeDocumentMetadata(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -253,7 +254,7 @@ class DocumentController extends Controller
      * Update vector IDs after N8N processing is complete
      * This is called in the background when n8n finishes processing
      */
-    public function updateVectorIds(Request $request)
+    public function updateVectorIds(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -306,7 +307,7 @@ class DocumentController extends Controller
      * Update vector IDs from n8n webhook (no authentication required, uses secret token)
      * This endpoint is called by n8n after processing is complete
      */
-    public function updateVectorIdsWebhook(Request $request)
+    public function updateVectorIdsWebhook(Request $request): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -353,7 +354,7 @@ class DocumentController extends Controller
      * Store chunk notification from n8n (no authentication required)
      * Called by n8n after each chunk is stored in Qdrant
      */
-    public function chunkStored(Request $request)
+    public function chunkStored(Request $request): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -432,7 +433,7 @@ class DocumentController extends Controller
      * Proxy request to n8n RAG webhook to avoid CORS issues
      * Creates a company-specific workflow if it doesn't exist
      */
-    public function proxyToN8n(Request $request)
+    public function proxyToN8n(Request $request): JsonResponse
     {
         Log::info('proxyToN8n called', [
             'filename' => $request->input('filename'),
@@ -1252,7 +1253,7 @@ JS;
     /**
      * Reset the RAG workflow for the company (deletes and recreates)
      */
-    public function resetWorkflow(Request $request)
+    public function resetWorkflow(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();

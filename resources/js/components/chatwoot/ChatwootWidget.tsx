@@ -30,8 +30,7 @@ export default function ChatwootWidget({ chatwootUrl }: ChatwootWidgetProps) {
     loading, 
     error, 
     fetchAllConversations, 
-    totalConversations,
-    clearCache 
+    totalConversations
   } = useConversations();
   
   const [stats, setStats] = useState<StatsData>({ total: 0, open: 0, resolved: 0, pending: 0 });
@@ -155,7 +154,7 @@ export default function ChatwootWidget({ chatwootUrl }: ChatwootWidgetProps) {
             </button>
             {/* Botón para limpiar cache */}
             <button
-              onClick={clearCache}
+              onClick={() => fetchAllConversations()}
               className="p-1 hover:bg-blue-500/30 rounded text-xs"
               title="Limpiar caché"
             >
@@ -247,7 +246,7 @@ export default function ChatwootWidget({ chatwootUrl }: ChatwootWidgetProps) {
 
                     <div className="flex items-center mt-2 text-xs text-gray-400">
                       <Clock className="w-3 h-3 mr-1" />
-                      {formatDate(conversation.last_message?.timestamp || new Date().toISOString())}
+                      {formatDate(String(conversation.last_message?.timestamp || new Date().toISOString()))}
                     </div>
                   </div>
                 </div>

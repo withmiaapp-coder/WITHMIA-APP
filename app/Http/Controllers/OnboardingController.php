@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use OpenAI;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 use App\Models\User;
 use App\Models\Company;
 use App\Services\ChatwootProvisioningService;
@@ -25,7 +26,7 @@ class OnboardingController extends Controller
         $this->middleware('auth')->only(['show', 'index']);
     }
 
-    public function show(Request $request)
+    public function show(Request $request): RedirectResponse|InertiaResponse
     {
         $user = auth()->user();
         if ($user->company_slug) {
@@ -44,7 +45,7 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function index(Request $request)
+    public function index(Request $request): RedirectResponse|InertiaResponse
     {
         $user = auth()->user();
         if ($user->company_slug) {
@@ -58,7 +59,7 @@ class OnboardingController extends Controller
         return Inertia::render('onboarding');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         Log::debug('OnboardingController: store', ['step' => $request->input('step')]);
         
@@ -82,7 +83,7 @@ class OnboardingController extends Controller
                 if ($isJsonRequest) {
                     return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
                 }
-                return response()->file(public_path('login.html'));
+                return view('login');
             }
             
             $user = auth()->user();
@@ -91,7 +92,7 @@ class OnboardingController extends Controller
                 if ($isJsonRequest) {
                     return response()->json(['success' => false, 'error' => 'Usuario no autenticado'], 401);
                 }
-                return response()->file(public_path('login.html'));
+                return view('login');
             }
 
             if ($user->company_slug) {

@@ -23,12 +23,39 @@ if (empty($url)) {
 
 $url = urldecode($url);
 
-// Validar que sea una URL de Chatwoot
+// Validate URL scheme — only allow https
+$scheme = parse_url($url, PHP_URL_SCHEME);
+if (!in_array($scheme, ['https', 'http'], true)) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Solo se permiten URLs HTTP/HTTPS']);
+    exit;
+}
+
+// Validar que sea una URL de Chatwoot (host must contain 'chatwoot')
 $host = parse_url($url, PHP_URL_HOST);
 if (!$host || strpos($host, 'chatwoot') === false) {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'URL no autorizada']);
+    exit;
+}
+
+// SSRF protection: block private/reserved IP ranges
+$ip = gethostbyname($host);
+if ($ip === $host) {
+    // DNS resolution failed
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'No se pudo resolver el host']);
+    exit;
+}
+if (
+    filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
+) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'URL apunta a una dirección IP privada/reservada']);
     exit;
 }
 
@@ -61,7 +88,7 @@ curl_setopt_array($ch, [
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_MAXREDIRS => 5,
     CURLOPT_TIMEOUT => 30,
-    CURLOPT_SSL_VERIFYPEER => false,
+    CURLOPT_SSL_VERIFYPEER => true,
     CURLOPT_HTTPHEADER => [
         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Range: bytes=0-5000000' // Solo descargar primeros 5MB para el thumbnail

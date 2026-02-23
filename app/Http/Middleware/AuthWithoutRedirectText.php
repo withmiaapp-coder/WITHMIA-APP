@@ -11,13 +11,13 @@ class AuthWithoutRedirectText
 {
     /**
      * Handle an incoming request.
-     * Si no está autenticado, muestra login.html directamente sin el feo "Redirecting to"
+     * Si no está autenticado, muestra login directamente sin el feo "Redirecting to"
      */
     public function handle(Request $request, Closure $next): Response
     {
         if (!Auth::check()) {
             // Mostrar login directamente sin redirect
-            return response()->file(public_path('login.html'));
+            return response(view('login')->render(), 200, ['Content-Type' => 'text/html']);
         }
 
         return $next($request);

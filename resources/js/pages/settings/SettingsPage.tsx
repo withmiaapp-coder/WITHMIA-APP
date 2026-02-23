@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Settings, Globe, Bell, Shield, Clock, Check, Loader2, Building2,
   Save, ChevronRight, Smartphone, MessageCircle, AlertCircle,
-  Moon, Sun, Palette, Eye, Volume2, VolumeX, Lock, Key
+  Moon, Sun, Palette, Eye, Volume2, VolumeX, Lock, Key,
+  type LucideIcon
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -48,7 +49,7 @@ const TIMEZONES = [
 // ====== TABS CONFIG ======
 type SettingsTab = 'general' | 'notifications' | 'security';
 
-const TABS: { id: SettingsTab; label: string; icon: any; description: string }[] = [
+const TABS: { id: SettingsTab; label: string; icon: LucideIcon; description: string }[] = [
   { id: 'general', label: 'General', icon: Settings, description: 'Empresa, zona horaria y preferencias' },
   { id: 'notifications', label: 'Notificaciones', icon: Bell, description: 'Alertas, sonidos y avisos' },
   { id: 'security', label: 'Seguridad', icon: Shield, description: 'Contraseña y acceso' },
@@ -77,7 +78,7 @@ function Toggle({ enabled, onChange, disabled = false }: { enabled: boolean; onC
 function NotificationItem({ 
   icon: Icon, title, description, enabled, onChange, iconColor = 'text-blue-600', iconBg = 'bg-blue-100' 
 }: { 
-  icon: any; title: string; description: string; enabled: boolean; onChange: () => void;
+  icon: LucideIcon; title: string; description: string; enabled: boolean; onChange: () => void;
   iconColor?: string; iconBg?: string;
 }) {
   return (
@@ -194,8 +195,9 @@ function GeneralTab() {
       } else {
         setError(response.data.message || 'Error al guardar');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al guardar');
+    } catch (err: unknown) {
+      const errObj = err as { response?: { data?: { message?: string } } };
+      setError(errObj.response?.data?.message || 'Error al guardar');
     } finally { setSaving(false); }
   };
 

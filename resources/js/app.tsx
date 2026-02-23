@@ -4,6 +4,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import axios from 'axios';
 
 // Inicializar Laravel Echo para WebSocket en tiempo real con Reverb
@@ -87,12 +88,16 @@ createInertiaApp({
         const root = createRoot(el);
         
         // Guardar el token de Railway si viene en los props iniciales
-        const pageProps = props.initialPage?.props as any;
+        const pageProps = props.initialPage?.props as { railwayAuthToken?: string } | undefined;
         if (pageProps?.railwayAuthToken) {
             saveRailwayToken(pageProps.railwayAuthToken);
         }
 
-        root.render(<App {...props} />);
+        root.render(
+            <ErrorBoundary>
+                <App {...props} />
+            </ErrorBoundary>
+        );
     },
     progress: {
         color: '#4B5563',

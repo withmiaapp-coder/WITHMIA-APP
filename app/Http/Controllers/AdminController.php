@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\UserDeletionService;
 use App\Services\QdrantService;
 use App\Jobs\CreateQdrantCollectionJob;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,7 @@ class AdminController extends Controller
     /**
      * Admin Dashboard
      */
-    public function dashboard()
+    public function dashboard(): \Inertia\Response
     {
         return inertia('admin/AdminDashboard');
     }
@@ -42,7 +43,7 @@ class AdminController extends Controller
     /**
      * Users Management Page
      */
-    public function users()
+    public function users(): \Inertia\Response
     {
         return inertia('admin/Users');
     }
@@ -50,7 +51,7 @@ class AdminController extends Controller
     /**
      * Companies Management Page
      */
-    public function companies()
+    public function companies(): \Inertia\Response
     {
         return inertia('admin/Companies');
     }
@@ -58,7 +59,7 @@ class AdminController extends Controller
     /**
      * API: Get all users
      */
-    public function apiUsers()
+    public function apiUsers(): JsonResponse
     {
         $users = User::select('id', 'name', 'email', 'role', 'company_slug', 'onboarding_completed', 'created_at', 'updated_at')
             ->orderByDesc('created_at')
@@ -71,7 +72,7 @@ class AdminController extends Controller
     /**
      * API: Get all companies
      */
-    public function apiCompanies()
+    public function apiCompanies(): JsonResponse
     {
         $companies = Company::select('id', 'name', 'slug', 'is_active', 'chatwoot_inbox_id', 'created_at', 'updated_at')
             ->orderByDesc('created_at')
@@ -84,7 +85,7 @@ class AdminController extends Controller
     /**
      * API: Update user role
      */
-    public function updateUserRole(Request $request, $id)
+    public function updateUserRole(Request $request, $id): JsonResponse
     {
         $request->validate([
             'role' => 'required|in:agent,admin,superadmin'
@@ -101,7 +102,7 @@ class AdminController extends Controller
      * API: Delete user.
      * Usa UserDeletionService para limpieza completa de datos.
      */
-    public function deleteUser($id, UserDeletionService $deletionService)
+    public function deleteUser($id, UserDeletionService $deletionService): JsonResponse
     {
         if (Auth::id() == $id) {
             return response()->json(['error' => 'No puedes eliminarte a ti mismo'], 400);
@@ -120,7 +121,7 @@ class AdminController extends Controller
     /**
      * API: Get admin stats
      */
-    public function stats()
+    public function stats(): JsonResponse
     {
         $users = User::select('id', 'name', 'email', 'role', 'company_slug', 'onboarding_completed', 'created_at')
             ->orderByDesc('created_at')
@@ -143,7 +144,7 @@ class AdminController extends Controller
     /**
      * API: Health check real de todos los servicios
      */
-    public function health()
+    public function health(): JsonResponse
     {
         $services = [];
         $startTotal = microtime(true);

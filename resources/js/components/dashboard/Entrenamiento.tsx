@@ -68,7 +68,7 @@ interface EntrenamientoProps {
     name: string;
     slug: string;
     description?: string;
-    settings?: any;
+    settings?: Record<string, unknown>;
   };
   onboardingData: OnboardingData;
 }
@@ -553,7 +553,7 @@ export default function Entrenamiento({
                       type="text"
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
+                      onKeyDown={handleKeyPress}
                       placeholder="Escribe para entrenar..."
                       className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 focus:bg-white"
                     />

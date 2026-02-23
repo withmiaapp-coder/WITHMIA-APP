@@ -12,7 +12,7 @@ class ImageProxyController extends Controller
      * Proxy images from Chatwoot Railway to avoid CORS/SSL issues.
      * Returns an SVG placeholder if the image can't be fetched.
      */
-    public function proxy(Request $request)
+    public function proxy(Request $request): \Illuminate\Http\Response
     {
         $request->validate([
             'url' => 'nullable|url',

@@ -174,12 +174,17 @@ class User extends Authenticatable
     }
 
     /**
-     * Alias para compatibilidad con código que usa companies()
+     * Retorna la empresa del usuario como Collection (compatibilidad).
+     *
+     * NOTA: NO es una Eloquent Relation — no soporta eager loading ni query chaining.
+     * Para queries, usar company() que retorna BelongsTo.
+     *
+     * @return \Illuminate\Support\Collection<int, Company>
      */
-    public function companies()
+    public function companies(): \Illuminate\Support\Collection
     {
-        // Retorna una colección con la empresa del usuario (si tiene)
-        return $this->company() ? collect([$this->company]) : collect([]);
+        $company = $this->company;
+        return $company ? collect([$company]) : collect([]);
     }
 
     /**

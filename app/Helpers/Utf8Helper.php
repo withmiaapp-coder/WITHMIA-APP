@@ -25,8 +25,10 @@ class Utf8Helper
         $fixed = preg_replace('/\x{FFFD}/u', '', $fixed);
         
         // 2. Intentar arreglar doble encoding UTF-8
-        if (preg_match('/[\xC0-\xDF][\x80-\xBF]/', $fixed)) {
-            $decoded = @iconv('UTF-8', 'ISO-8859-1//IGNORE', $fixed);
+        // Detect actual double-encoding signatures (e.g. "Ã±" for ñ, "Ã©" for é)
+        // Pattern: C3 82/83 followed by C2 xx — NOT just any valid 2-byte UTF-8 char
+        if (preg_match('/\xC3[\x82\x83]\xC2[\x80-\xBF]/', $fixed)) {
+            $decoded = @iconv('UTF-8', 'ISO-8859-1', $fixed);
             if ($decoded !== false && mb_check_encoding($decoded, 'UTF-8')) {
                 $fixed = $decoded;
             }

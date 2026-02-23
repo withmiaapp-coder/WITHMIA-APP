@@ -60,12 +60,15 @@ class Product extends Model
     {
         if (!$term) return $query;
 
-        return $query->where(function ($q) use ($term) {
-            $q->where('name', 'like', "%{$term}%")
-              ->orWhere('description', 'like', "%{$term}%")
-              ->orWhere('sku', 'like', "%{$term}%")
-              ->orWhere('category', 'like', "%{$term}%")
-              ->orWhere('brand', 'like', "%{$term}%");
+        // Escape LIKE wildcards to prevent injection via % or _
+        $escaped = str_replace(['%', '_'], ['\%', '\_'], $term);
+
+        return $query->where(function ($q) use ($escaped) {
+            $q->where('name', 'like', "%{$escaped}%")
+              ->orWhere('description', 'like', "%{$escaped}%")
+              ->orWhere('sku', 'like', "%{$escaped}%")
+              ->orWhere('category', 'like', "%{$escaped}%")
+              ->orWhere('brand', 'like', "%{$escaped}%");
         });
     }
 

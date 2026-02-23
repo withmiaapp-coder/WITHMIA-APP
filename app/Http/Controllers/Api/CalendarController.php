@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use App\Traits\RendersOAuthPopup;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +15,11 @@ use Illuminate\Support\Str;
 
 class CalendarController extends Controller
 {
+    use FormatsIntegration, RendersOAuthPopup;
+
+    protected string $oauthProvider = 'Google Calendar';
+    protected string $oauthMessageType = 'gcal_oauth_result';
+
     /**
      * Google Calendar API scopes.
      */
@@ -28,7 +36,7 @@ class CalendarController extends Controller
     /**
      * Generar URL de autorización para Google Calendar OAuth.
      */
-    public function getAuthUrl(Request $request)
+    public function getAuthUrl(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -65,7 +73,7 @@ class CalendarController extends Controller
      * Callback GET de Google OAuth. Viene directamente de Google al popup.
      * Intercambia el código por tokens y devuelve HTML que cierra el popup.
      */
-    public function handleCallbackGet(Request $request)
+    public function handleCallbackGet(Request $request): \Illuminate\Http\Response
     {
         $code = $request->query('code');
         $state = $request->query('state');
@@ -173,7 +181,7 @@ class CalendarController extends Controller
     /**
      * Callback POST (legacy/API). 
      */
-    public function handleCallback(Request $request)
+    public function handleCallback(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -267,7 +275,7 @@ class CalendarController extends Controller
     /**
      * Desconectar Google Calendar.
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -303,7 +311,7 @@ class CalendarController extends Controller
     /**
      * Obtener estado de la integración del usuario actual.
      */
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -319,7 +327,7 @@ class CalendarController extends Controller
     /**
      * Actualizar configuración de la integración.
      */
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -360,7 +368,7 @@ class CalendarController extends Controller
     /**
      * Listar calendarios disponibles del usuario.
      */
-    public function listCalendars(Request $request)
+    public function listCalendars(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -406,7 +414,7 @@ class CalendarController extends Controller
     /**
      * Obtener eventos del calendario del usuario.
      */
-    public function getEvents(Request $request)
+    public function getEvents(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -480,7 +488,7 @@ class CalendarController extends Controller
     /**
      * Crear un evento en Google Calendar.
      */
-    public function createEvent(Request $request)
+    public function createEvent(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -569,7 +577,7 @@ class CalendarController extends Controller
     /**
      * Eliminar un evento de Google Calendar.
      */
-    public function deleteEvent(Request $request, string $eventId)
+    public function deleteEvent(Request $request, string $eventId): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -611,7 +619,7 @@ class CalendarController extends Controller
      * Endpoint para que n8n/bot consulte disponibilidad del calendario.
      * Se usa desde el workflow del bot cuando un cliente quiere agendar.
      */
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -713,7 +721,7 @@ class CalendarController extends Controller
     /**
      * Endpoint para que n8n/bot cree un evento (agendar cita).
      */
-    public function botCreateEvent(Request $request)
+    public function botCreateEvent(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -813,52 +821,4 @@ class CalendarController extends Controller
         );
     }
 
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email,
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->isConnected(),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'selected_calendar_id' => $integration->selected_calendar_id,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
-
-    /**
-     * Renderiza HTML que cierra el popup de OAuth y notifica al opener.
-     */
-    private function renderPopupClose(bool $success, string $message): \Illuminate\Http\Response
-    {
-        $status = $success ? 'success' : 'error';
-        $html = <<<HTML
-<!DOCTYPE html>
-<html>
-<head><title>Google Calendar - WITHMIA</title></head>
-<body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">
-<div style="text-align:center;padding:2rem;">
-<div style="font-size:3rem;margin-bottom:1rem;">{$this->getStatusEmoji($success)}</div>
-<h2 style="color:#1f2937;margin-bottom:0.5rem;">{$message}</h2>
-<p style="color:#6b7280;font-size:0.875rem;">Esta ventana se cerrará automáticamente...</p>
-</div>
-<script>
-  if (window.opener) {
-    window.opener.postMessage({ type: 'gcal_oauth_result', status: '{$status}', message: '{$message}' }, '*');
-  }
-  setTimeout(function() { window.close(); }, 2000);
-</script>
-</body>
-</html>
-HTML;
-        return response($html, 200)->header('Content-Type', 'text/html');
-    }
-
-    private function getStatusEmoji(bool $success): string
-    {
-        return $success ? '✅' : '❌';
-    }
 }

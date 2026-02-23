@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppInstance;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WhatsAppInstanceController extends Controller
@@ -12,7 +13,7 @@ class WhatsAppInstanceController extends Controller
      * Get company_id for a given WhatsApp instance name
      * Protected by X-N8N-Secret header
      */
-    public function getCompanyByInstance(Request $request, $instanceName)
+    public function getCompanyByInstance(Request $request, $instanceName): JsonResponse
     {
         $instance = WhatsAppInstance::where('instance_name', $instanceName)
             ->active()

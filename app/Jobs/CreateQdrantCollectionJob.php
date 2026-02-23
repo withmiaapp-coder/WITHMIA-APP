@@ -99,4 +99,16 @@ class CreateQdrantCollectionJob implements ShouldQueue
             Log::error("❌ Exception inserting company info to Qdrant: " . $e->getMessage());
         }
     }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('❌ [CreateQdrantCollection] Job failed permanently', [
+            'company_id' => $this->companyId,
+            'company_slug' => $this->companySlug,
+            'error' => $exception->getMessage(),
+        ]);
+    }
 }

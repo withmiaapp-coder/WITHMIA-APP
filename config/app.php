@@ -1,10 +1,7 @@
 <?php
 
-// Deploy trigger: 2026-02-13 qdrant-search endpoint for n8n
-
 return [
 
-    // Deploy trigger: 2026-02-14
     /*
     |--------------------------------------------------------------------------
     | Application Name
@@ -30,7 +27,6 @@ return [
     */
 
     'env' => env('APP_ENV', 'production'),
-    'deploy_timestamp' => '2026-02-01 16:29:32',
 
     /*
     |--------------------------------------------------------------------------
@@ -42,7 +38,7 @@ return [
     */
 
     'super_admin_emails' => env('SUPER_ADMIN_EMAILS', ''),
-    'debug_key' => env('DEBUG_KEY'),
+    'debug_key' => env('DEBUG_KEY', ''),
 
     /*
     |--------------------------------------------------------------------------
@@ -81,7 +77,7 @@ return [
     |
     */
 
-    'timezone' => 'America/Santiago',
+    'timezone' => env('APP_TIMEZONE', 'America/Santiago'),
 
     /*
     |--------------------------------------------------------------------------
@@ -96,7 +92,7 @@ return [
 
     'locale' => env('APP_LOCALE', 'es'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'es'),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'es_ES'),
 
@@ -158,9 +154,6 @@ return [
     | This key is used for admin API operations that require authentication.
     |
     */
-    'admin_secret_key' => env('ADMIN_SECRET_KEY'),
+    'admin_secret_key' => env('ADMIN_SECRET_KEY', ''),
 
 ];
-
-// Deploy trigger: 01/28/2026 08:55:12
-

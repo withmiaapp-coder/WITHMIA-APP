@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +22,7 @@ class ContactsController extends Controller
     /**
      * Exportar contactos del usuario a Excel
      */
-    public function exportToExcel(Request $request)
+    public function exportToExcel(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -85,7 +86,7 @@ class ContactsController extends Controller
     /**
      * Descargar archivo Excel de contactos
      */
-    public function downloadExcel(Request $request, $fileName)
+    public function downloadExcel(Request $request, $fileName): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         try {
             $user = Auth::user();
@@ -126,7 +127,7 @@ class ContactsController extends Controller
     /**
      * Listar exportaciones del usuario
      */
-    public function listExports(Request $request)
+    public function listExports(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -176,7 +177,7 @@ class ContactsController extends Controller
     /**
      * Eliminar exportación
      */
-    public function deleteExport(Request $request, $fileName)
+    public function deleteExport(Request $request, $fileName): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -236,7 +237,7 @@ class ContactsController extends Controller
     /**
      * Descargar Excel dinámico del usuario
      */
-    public function downloadDynamicExcel(Request $request)
+    public function downloadDynamicExcel(Request $request): JsonResponse|\Symfony\Component\HttpFoundation\StreamedResponse
     {
         try {
             $user = Auth::user();
@@ -284,7 +285,7 @@ class ContactsController extends Controller
     /**
      * Obtener estadísticas del Excel dinámico
      */
-    public function getExcelStats(Request $request)
+    public function getExcelStats(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -316,7 +317,7 @@ class ContactsController extends Controller
     /**
      * Refrescar Excel con contactos actuales de Evolution API
      */
-    public function refreshExcel(Request $request)
+    public function refreshExcel(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -382,7 +383,7 @@ class ContactsController extends Controller
     /**
      * Resetear Excel dinámico (crear uno nuevo vacío)
      */
-    public function resetExcel(Request $request)
+    public function resetExcel(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();

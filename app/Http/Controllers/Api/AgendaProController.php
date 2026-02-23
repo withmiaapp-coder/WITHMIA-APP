@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\Log;
  */
 class AgendaProController extends Controller
 {
+    use FormatsIntegration;
+
     private const PROVIDER = 'agendapro';
     private const BASE_URL = 'https://api.agendapro.com/v1';
 
@@ -28,7 +32,7 @@ class AgendaProController extends Controller
     /**
      * Conectar AgendaPro con API Key.
      */
-    public function connect(Request $request)
+    public function connect(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -100,7 +104,7 @@ class AgendaProController extends Controller
     /**
      * Desconectar AgendaPro.
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -119,7 +123,7 @@ class AgendaProController extends Controller
     // STATUS & SETTINGS
     // ==========================================
 
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -133,7 +137,7 @@ class AgendaProController extends Controller
         ]);
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -169,7 +173,7 @@ class AgendaProController extends Controller
     /**
      * Listar sucursales/locations.
      */
-    public function listLocations(Request $request)
+    public function listLocations(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -192,7 +196,7 @@ class AgendaProController extends Controller
     /**
      * Listar servicios.
      */
-    public function listServices(Request $request)
+    public function listServices(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -215,7 +219,7 @@ class AgendaProController extends Controller
     /**
      * Obtener disponibilidad.
      */
-    public function getAvailability(Request $request)
+    public function getAvailability(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -245,7 +249,7 @@ class AgendaProController extends Controller
     /**
      * Listar reservas.
      */
-    public function listBookings(Request $request)
+    public function listBookings(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -275,7 +279,7 @@ class AgendaProController extends Controller
     /**
      * Crear una reserva.
      */
-    public function createBooking(Request $request)
+    public function createBooking(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -320,7 +324,7 @@ class AgendaProController extends Controller
     // BOT ACCESS
     // ==========================================
 
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -401,7 +405,7 @@ class AgendaProController extends Controller
         }
     }
 
-    public function botCreateBooking(Request $request)
+    public function botCreateBooking(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -482,18 +486,4 @@ class AgendaProController extends Controller
         ])->post(self::BASE_URL . $endpoint, $data);
     }
 
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email,
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->is_active && !empty($integration->access_token),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
 }

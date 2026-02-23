@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +21,8 @@ use Illuminate\Support\Facades\Log;
  */
 class DentalinkController extends Controller
 {
+    use FormatsIntegration;
+
     private const PROVIDER = 'dentalink';
     private const BASE_URL = 'https://api.dentalink.healthatom.com/api/v1';
 
@@ -29,7 +33,7 @@ class DentalinkController extends Controller
     /**
      * Conectar Dentalink con API Token.
      */
-    public function connect(Request $request)
+    public function connect(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -101,7 +105,7 @@ class DentalinkController extends Controller
     /**
      * Desconectar Dentalink.
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -120,7 +124,7 @@ class DentalinkController extends Controller
     // STATUS & SETTINGS
     // ==========================================
 
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -134,7 +138,7 @@ class DentalinkController extends Controller
         ]);
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -170,7 +174,7 @@ class DentalinkController extends Controller
     /**
      * Listar sucursales (branches/locations).
      */
-    public function listBranches(Request $request)
+    public function listBranches(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -193,7 +197,7 @@ class DentalinkController extends Controller
     /**
      * Listar dentistas/profesionales.
      */
-    public function listDentists(Request $request)
+    public function listDentists(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -216,7 +220,7 @@ class DentalinkController extends Controller
     /**
      * Listar tratamientos/servicios.
      */
-    public function listTreatments(Request $request)
+    public function listTreatments(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -239,7 +243,7 @@ class DentalinkController extends Controller
     /**
      * Obtener disponibilidad de citas.
      */
-    public function getAvailability(Request $request)
+    public function getAvailability(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -276,7 +280,7 @@ class DentalinkController extends Controller
     /**
      * Listar citas (appointments).
      */
-    public function listAppointments(Request $request)
+    public function listAppointments(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -306,7 +310,7 @@ class DentalinkController extends Controller
     /**
      * Crear una cita.
      */
-    public function createAppointment(Request $request)
+    public function createAppointment(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -374,7 +378,7 @@ class DentalinkController extends Controller
     // BOT ACCESS
     // ==========================================
 
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -469,7 +473,7 @@ class DentalinkController extends Controller
         }
     }
 
-    public function botCreateAppointment(Request $request)
+    public function botCreateAppointment(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -571,18 +575,4 @@ class DentalinkController extends Controller
         ])->timeout(15)->post(self::BASE_URL . $endpoint, $data);
     }
 
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email,
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->is_active && !empty($integration->access_token),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
 }

@@ -86,7 +86,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         setProfile(loaded);
         setOriginalProfile(loaded);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Fallback to user prop data
       console.error('Error loading profile:', err);
     } finally {
@@ -113,8 +113,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       } else {
         setError(response.data.message || 'Error al guardar');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al actualizar el perfil');
+    } catch (err: unknown) {
+      const errObj = err as { response?: { data?: { message?: string } } };
+      setError(errObj.response?.data?.message || 'Error al actualizar el perfil');
     } finally {
       setSaving(false);
     }
@@ -142,7 +143,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         setProfile(prev => ({ ...prev, avatar: response.data.data.avatar_url }));
         setOriginalProfile(prev => ({ ...prev, avatar: response.data.data.avatar_url }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError('Error al subir la imagen');
     } finally {
       setAvatarUploading(false);
@@ -456,7 +457,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   </label>
                   <div className="flex items-center gap-2">
                     <Globe className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-sm text-gray-500 font-mono">app.withmia.com/dashboard/{profile.company_slug}</span>
+                    <span className="text-sm text-gray-500 font-mono">{window.location.host}/dashboard/{profile.company_slug}</span>
                   </div>
                 </div>
               )}

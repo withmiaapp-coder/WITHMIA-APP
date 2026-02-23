@@ -7,11 +7,11 @@
  * Format the last message preview for the conversation sidebar.
  * Cleans markdown, detects media types, truncates long URLs.
  */
-export const formatLastMessagePreview = (message: string | null | undefined, attachments?: any[]): string => {
+export const formatLastMessagePreview = (message: string | null | undefined, attachments?: { file_type?: string | number; content_type?: string; data_url?: string; file_name?: string }[]): string => {
   // If no content but has attachments, show file type
   if ((!message || message.trim() === '') && attachments && attachments.length > 0) {
     const attachment = attachments[0];
-    const fileType = attachment.file_type || attachment.content_type || '';
+    const fileType = String(attachment.file_type || attachment.content_type || '');
     const fileName = attachment.data_url?.split('/').pop() || attachment.file_name || 'archivo';
     
     if (fileType.startsWith('image/')) return '📷 Imagen';
@@ -81,7 +81,8 @@ export const formatAvatar = (avatar: string | null | undefined, name: string | n
  */
 export const getAvatarProxyUrl = (avatarUrl: string | null | undefined, contactName?: string): string | null => {
   if (!avatarUrl) return null;
-  if (avatarUrl.includes('chatwoot') && avatarUrl.includes('railway.app')) {
+  // Proxy external avatar URLs that need CORS bypass (Chatwoot storage)
+  if (avatarUrl.includes('/rails/active_storage/') || avatarUrl.includes('/chatwoot/')) {
     const nameParam = contactName ? `&name=${encodeURIComponent(contactName)}` : '';
     return `/img-proxy?url=${encodeURIComponent(avatarUrl)}${nameParam}`;
   }

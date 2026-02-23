@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Cache;
 class Company extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Sensitive fields hidden from JSON serialization.
+     */
+    protected $hidden = [
+        'chatwoot_api_key',
+        'chatwoot_api_token',
+    ];
+
     protected $fillable = [
         'user_id',
         'name',

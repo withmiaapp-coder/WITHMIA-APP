@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppInstance;
 use App\Services\N8nService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -121,7 +122,7 @@ class BotConfigController extends Controller
     /**
      * Obtener la configuración actual del bot
      */
-    public function index()
+    public function index(): JsonResponse
     {
         try {
             $workflowId = $this->getCompanyWorkflowId();
@@ -165,7 +166,7 @@ class BotConfigController extends Controller
      * #2: Cliente Final pide humano (human_keyword) → BLOQUEA bot por human_block_duration
      * #3: Cliente Empresa responde (cualquier canal) → BLOQUEA bot por block_duration
      */
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
         $request->validate([
             'unlock_keyword' => 'nullable|string|max:50',           // #1: Palabra para desbloquear (empresa)

@@ -65,12 +65,10 @@ class Withmia_Abandoned_Cart {
      * Check API permissions
      */
     public function check_permissions($request) {
+        // Allow WITHMIA API key (header only — never accept via query params to avoid log leakage)
         $api_key = $request->get_header('X-Withmia-Key');
-        if (!$api_key) {
-            $api_key = $request->get_param('withmia_key');
-        }
 
-        if ($api_key && $api_key === get_option('withmia_api_key')) {
+        if ($api_key && hash_equals(get_option('withmia_api_key', ''), $api_key)) {
             return true;
         }
 
@@ -227,7 +225,7 @@ class Withmia_Abandoned_Cart {
         global $wpdb;
         $table = $wpdb->prefix . 'withmia_abandoned_carts';
 
-        $threshold = date('Y-m-d H:i:s', strtotime('-' . self::ABANDON_THRESHOLD . ' minutes'));
+        $threshold = current_time('Y-m-d H:i:s', strtotime('-' . self::ABANDON_THRESHOLD . ' minutes'));
 
         // Mark active carts as abandoned if not updated recently
         $abandoned = $wpdb->get_results($wpdb->prepare(
@@ -259,7 +257,7 @@ class Withmia_Abandoned_Cart {
         // Clean up old carts (older than 30 days)
         $wpdb->query($wpdb->prepare(
             "DELETE FROM $table WHERE created_at < %s AND status != 'recovered'",
-            date('Y-m-d H:i:s', strtotime('-30 days'))
+            current_time('Y-m-d H:i:s', strtotime('-30 days'))
         ));
     }
 
@@ -350,17 +348,12 @@ class Withmia_Abandoned_Cart {
 
         $cart_id = $request->get_param('id');
 
-        $wpdb->update(
-            $table,
-            [
-                'notified_at' => current_time('mysql'),
-                'notification_count' => $wpdb->get_var($wpdb->prepare(
-                    "SELECT notification_count FROM $table WHERE id = %d", $cart_id
-                )) + 1,
-                'updated_at' => current_time('mysql'),
-            ],
-            ['id' => $cart_id]
-        );
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$table} SET notified_at = %s, notification_count = notification_count + 1, updated_at = %s WHERE id = %d",
+            current_time('mysql'),
+            current_time('mysql'),
+            $cart_id
+        ));
 
         return new WP_REST_Response(['success' => true], 200);
     }
@@ -378,7 +371,8 @@ class Withmia_Abandoned_Cart {
             $parts[] = $id_part . ':' . $item['quantity'];
         }
 
-        return home_url('/cart/?add-withmia-cart=' . implode(',', $parts) . '&withmia-clear-cart=1');
+        $nonce = wp_create_nonce('withmia_clear_cart');
+        return home_url('/cart/?add-withmia-cart=' . implode(',', $parts) . '&withmia-clear-cart=1&_wcnonce=' . $nonce);
     }
 
     /**

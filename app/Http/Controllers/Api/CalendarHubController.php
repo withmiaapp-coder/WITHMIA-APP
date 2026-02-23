@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +27,7 @@ class CalendarHubController extends Controller
      * Consulta la disponibilidad de TODOS los calendarios conectados de la empresa.
      * Devuelve información consolidada que el bot puede usar para ofrecer horarios.
      */
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -159,7 +160,7 @@ class CalendarHubController extends Controller
      * Crea un evento/cita/reserva en el calendario de la empresa.
      * Detecta automáticamente qué proveedor usar según las integraciones activas.
      */
-    public function botCreateEvent(Request $request)
+    public function botCreateEvent(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {

@@ -68,7 +68,7 @@ export default function GeneralSettings() {
         setSettings(loadedSettings);
         setOriginalSettings(loadedSettings);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError('Error al cargar la configuración');
     } finally {
       setLoading(false);
@@ -91,8 +91,9 @@ export default function GeneralSettings() {
       } else {
         setError(response.data.message || 'Error al guardar');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al guardar la configuración');
+    } catch (err: unknown) {
+      const errObj = err as { response?: { data?: { message?: string } } };
+      setError(errObj.response?.data?.message || 'Error al guardar la configuración');
     } finally {
       setSaving(false);
     }

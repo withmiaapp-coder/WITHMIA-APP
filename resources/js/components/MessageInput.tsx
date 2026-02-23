@@ -7,7 +7,7 @@ interface MessageInputProps {
   onSubmit: (e: React.FormEvent) => void;
   disabled?: boolean;
   placeholder?: string;
-  replyingTo: any | null;
+  replyingTo: { id?: number | string; content?: string; sender_name?: string } | null;
   onCancelReply: () => void;
   inputRef?: React.RefObject<HTMLInputElement>;
 }
@@ -37,7 +37,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSubmit(e as any);
+      onSubmit(e as unknown as React.FormEvent);
     }
   };
 

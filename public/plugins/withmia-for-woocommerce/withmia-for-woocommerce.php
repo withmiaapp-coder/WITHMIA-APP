@@ -110,7 +110,12 @@ function withmia_wc_activate() {
 
     // Generate API keys on activation if not exists
     if (!get_option('withmia_api_key')) {
-        update_option('withmia_api_key', wp_generate_password(32, false));
+        update_option('withmia_api_key', 'wmia_' . wp_generate_password(32, false));
+    }
+
+    // Generate separate webhook secret for HMAC signing (outbound webhooks)
+    if (!get_option('withmia_webhook_secret')) {
+        update_option('withmia_webhook_secret', 'whsec_' . wp_generate_password(40, false));
     }
 }
 register_activation_hook(__FILE__, 'withmia_wc_activate');
@@ -122,6 +127,32 @@ function withmia_wc_deactivate() {
     wp_clear_scheduled_hook('withmia_check_abandoned_carts');
 }
 register_deactivation_hook(__FILE__, 'withmia_wc_deactivate');
+
+/**
+ * Uninstall hook - clean up all plugin data on deletion
+ */
+function withmia_wc_uninstall() {
+    global $wpdb;
+
+    // Remove custom table
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}withmia_abandoned_carts");
+
+    // Remove all plugin options
+    $options = [
+        'withmia_api_key',
+        'withmia_webhook_secret',
+        'withmia_webhook_url',
+        'withmia_enabled_events',
+        'withmia_abandoned_cart_timeout',
+    ];
+    foreach ($options as $option) {
+        delete_option($option);
+    }
+
+    // Clear scheduled events
+    wp_clear_scheduled_hook('withmia_check_abandoned_carts');
+}
+register_uninstall_hook(__FILE__, 'withmia_wc_uninstall');
 
 /**
  * Add settings link on plugin page

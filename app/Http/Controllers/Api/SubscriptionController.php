@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Subscription;
 use App\Models\Company;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -12,21 +13,12 @@ use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
 {
-    // Pricing constants
-    private const BASE_PRICE_MONTHLY = 18;
-    private const BASE_PRICE_ANNUAL = 15;
-    private const PER_MEMBER_MONTHLY = 10;
-    private const PER_MEMBER_ANNUAL = 8;
-    private const TRIAL_DAYS = 14;
-
-    // dLocal GO subscription checkout URL (pre-configured plan)
-    private const DLOCAL_CHECKOUT_URL = 'https://checkout.dlocalgo.com/validate/subscription/ZdwgZ40KegihK2EB3uJolVekTbWzi264';
 
     /**
      * GET /api/subscription
      * Return current subscription status & billing info
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
         $company = Company::where('slug', $user->company_slug)->first();
@@ -35,9 +27,9 @@ class SubscriptionController extends Controller
             return response()->json([
                 'subscription' => null,
                 'team_count' => 1,
-                'base_price' => self::BASE_PRICE_MONTHLY,
-                'per_member_price' => self::PER_MEMBER_MONTHLY,
-                'total_price' => self::BASE_PRICE_MONTHLY,
+                'base_price' => config('billing.base_price_monthly'),
+                'per_member_price' => config('billing.per_member_monthly'),
+                'total_price' => config('billing.base_price_monthly'),
                 'trial_days_remaining' => null,
                 'is_trial' => false,
             ]);
@@ -60,8 +52,8 @@ class SubscriptionController extends Controller
 
         // Calculate pricing
         $billingCycle = $subscription?->billing_cycle ?? 'monthly';
-        $basePrice = $billingCycle === 'annual' ? self::BASE_PRICE_ANNUAL : self::BASE_PRICE_MONTHLY;
-        $perMemberPrice = $billingCycle === 'annual' ? self::PER_MEMBER_ANNUAL : self::PER_MEMBER_MONTHLY;
+        $basePrice = $billingCycle === 'annual' ? config('billing.base_price_annual') : config('billing.base_price_monthly');
+        $perMemberPrice = $billingCycle === 'annual' ? config('billing.per_member_annual') : config('billing.per_member_monthly');
         $additionalMembers = max(0, $teamCount - 1);
         $totalPrice = $basePrice + ($additionalMembers * $perMemberPrice);
 
@@ -80,7 +72,7 @@ class SubscriptionController extends Controller
      * POST /api/subscription/checkout
      * Return the dLocal GO subscription checkout URL
      */
-    public function checkout(Request $request)
+    public function checkout(Request $request): JsonResponse
     {
         $request->validate([
             'billing_cycle' => 'required|in:monthly,annual',
@@ -95,7 +87,7 @@ class SubscriptionController extends Controller
 
         // Return the pre-configured dLocal GO subscription checkout URL
         return response()->json([
-            'checkout_url' => self::DLOCAL_CHECKOUT_URL,
+            'checkout_url' => config('billing.dlocal_checkout_url'),
         ]);
     }
 
@@ -103,7 +95,7 @@ class SubscriptionController extends Controller
      * GET /api/subscription/callback
      * Handle return from dLocal GO checkout
      */
-    public function callback(Request $request)
+    public function callback(Request $request): \Illuminate\Http\RedirectResponse
     {
         $companyId = $request->query('company_id');
         $billingCycle = $request->query('cycle', 'monthly');
@@ -115,8 +107,8 @@ class SubscriptionController extends Controller
             if ($company) {
                 $teamCount = $company->users()->count();
                 $additionalMembers = max(0, $teamCount - 1);
-                $basePrice = $billingCycle === 'annual' ? self::BASE_PRICE_ANNUAL : self::BASE_PRICE_MONTHLY;
-                $perMemberPrice = $billingCycle === 'annual' ? self::PER_MEMBER_ANNUAL : self::PER_MEMBER_MONTHLY;
+                $basePrice = $billingCycle === 'annual' ? config('billing.base_price_annual') : config('billing.base_price_monthly');
+                $perMemberPrice = $billingCycle === 'annual' ? config('billing.per_member_annual') : config('billing.per_member_monthly');
                 $totalPrice = $basePrice + ($additionalMembers * $perMemberPrice);
 
                 // Create or update subscription
@@ -150,7 +142,7 @@ class SubscriptionController extends Controller
      * POST /api/subscription/portal
      * Redirect to dLocal GO management portal (if available)
      */
-    public function portal(Request $request)
+    public function portal(Request $request): JsonResponse
     {
         $user = Auth::user();
         $company = Company::where('slug', $user->company_slug)->first();
@@ -168,24 +160,21 @@ class SubscriptionController extends Controller
      * POST /api/subscription/referral
      * Apply a referral code
      */
-    public function applyReferral(Request $request)
+    public function applyReferral(Request $request): JsonResponse
     {
         $request->validate([
             'code' => 'required|string|max:50',
         ]);
 
-        // TODO: Implement referral code logic
-        // For now, just validate format
         $code = strtoupper(trim($request->code));
 
-        // Validate code format (e.g., WITHMIA-XXXX)
         if (!preg_match('/^[A-Z0-9\-]{4,20}$/', $code)) {
             return response()->json([
                 'message' => 'Código de referido inválido',
             ], 422);
         }
 
-        // TODO: Check code in database, apply discount
+        // Referral system not yet implemented
         return response()->json([
             'message' => 'Código de referido registrado. El descuento se aplicará en tu próxima factura.',
         ]);
@@ -195,7 +184,7 @@ class SubscriptionController extends Controller
      * POST /api/webhooks/dlocal
      * Handle dLocal GO payment notifications (webhook)
      */
-    public function webhook(Request $request)
+    public function webhook(Request $request): JsonResponse
     {
         $payload = $request->all();
 
@@ -253,8 +242,8 @@ class SubscriptionController extends Controller
         if ($status === 'PAID' || $status === 'COMPLETED' || $status === 'approved') {
             $billingCycle = $metadata['billing_cycle'] ?? 'monthly';
             $teamCount = $metadata['team_count'] ?? 1;
-            $basePrice = $metadata['base_price'] ?? self::BASE_PRICE_MONTHLY;
-            $perMemberPrice = $metadata['per_member_price'] ?? self::PER_MEMBER_MONTHLY;
+            $basePrice = $metadata['base_price'] ?? config('billing.base_price_monthly');
+            $perMemberPrice = $metadata['per_member_price'] ?? config('billing.per_member_monthly');
             $additionalMembers = max(0, $teamCount - 1);
             $totalPrice = $basePrice + ($additionalMembers * $perMemberPrice);
 

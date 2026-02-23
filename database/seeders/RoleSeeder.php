@@ -2,77 +2,32 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
+/**
+ * RoleSeeder — DESACTIVADO
+ *
+ * Las tablas de Spatie Permission (roles, permissions, model_has_roles, etc.)
+ * fueron eliminadas en la migración 2026_02_07_000001_drop_unused_tables.
+ *
+ * Los roles ahora se manejan con un campo string `role` en la tabla users
+ * con valores: 'superadmin', 'admin', 'agent'.
+ *
+ * Los permisos se gestionan internamente vía User::DEFAULT_PERMISSIONS.
+ *
+ * Este seeder se mantiene como referencia histórica y NO debe ejecutarse.
+ */
 class RoleSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
-     * 
-     * Solo 2 roles: admin (dueño/administrador) y agent (agentes invitados)
+     * Roles válidos del sistema (definidos en la tabla users.role).
      */
+    public const VALID_ROLES = ['superadmin', 'admin', 'agent'];
+
     public function run(): void
     {
-        // Clear cache
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-
-        // Permisos simplificados para app de chat
-        $permissions = [
-            // Gestión de equipos
-            'manage teams',
-            'view teams',
-            
-            // Gestión de agentes/miembros
-            'invite members',
-            'remove members',
-            'view members',
-            
-            // Configuración de empresa
-            'manage company',
-            'view company settings',
-            
-            // Conversaciones
-            'view all conversations',
-            'manage conversations',
-            
-            // Admin del sistema
-            'access admin panel',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
-        }
-
-        // Solo 2 roles: admin y agent
-        
-        // 1. ADMIN ROLE - Dueño de la cuenta, acceso total
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->syncPermissions([
-            'manage teams', 'view teams',
-            'invite members', 'remove members', 'view members',
-            'manage company', 'view company settings',
-            'view all conversations', 'manage conversations',
-            'access admin panel',
-        ]);
-        
-        // 2. AGENT ROLE - Agente invitado, acceso limitado
-        $agentRole = Role::firstOrCreate(['name' => 'agent']);
-        $agentRole->syncPermissions([
-            'view teams',
-            'view members',
-            'view company settings',
-            'manage conversations',
-        ]);
-
-        // Limpiar roles obsoletos si existen
-        Role::whereIn('name', ['assistant', 'seller'])->delete();
-
-        echo "✅ Roles y permisos creados exitosamente:\n";
-        echo "   - admin (Administrador/Dueño)\n";
-        echo "   - agent (Agente invitado)\n";
-        echo "\n📊 Total de permisos: " . count($permissions) . "\n";
+        $this->command->warn('⚠ RoleSeeder skipped: Spatie Permission tables were dropped in 2026_02_07.');
+        $this->command->info('Roles are managed via the `role` column on users table: ' . implode(', ', self::VALID_ROLES));
+        $this->command->info('Permissions are managed via User::DEFAULT_PERMISSIONS.');
     }
 }

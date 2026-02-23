@@ -21,6 +21,10 @@ class PostOnboardingSetupJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $tries = 3;
+    public int $timeout = 120;
+    public array $backoff = [10, 30, 60];
+
     protected $userId;
     protected $companyId;
     protected $companySlug;
@@ -86,6 +90,19 @@ class PostOnboardingSetupJob implements ShouldQueue
         }
 
         Log::debug("PostOnboardingSetupJob completado para: {$this->companySlug}");
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('❌ [PostOnboardingSetup] Job failed permanently', [
+            'user_id' => $this->userId,
+            'company_id' => $this->companyId,
+            'company_slug' => $this->companySlug,
+            'error' => $exception->getMessage(),
+        ]);
     }
     
     // ⚠️ NOTA: El método createRagWorkflow fue eliminado por ser código muerto.

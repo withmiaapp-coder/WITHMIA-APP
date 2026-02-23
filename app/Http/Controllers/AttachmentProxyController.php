@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +17,7 @@ class AttachmentProxyController extends Controller
      * Proxy para archivos/imágenes de Chatwoot
      * Evita problemas de CORS al cargar imágenes desde Active Storage de Rails
      */
-    public function proxy(Request $request)
+    public function proxy(Request $request): JsonResponse|\Illuminate\Http\Response
     {
         try {
             $request->validate([

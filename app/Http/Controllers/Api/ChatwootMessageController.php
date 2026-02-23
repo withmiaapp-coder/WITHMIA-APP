@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ChatwootService;
 use App\Traits\ChatwootDbAccess;
 use App\Traits\ResolvesChatwootConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -43,7 +44,7 @@ class ChatwootMessageController extends Controller
     /**
      * Enviar mensaje a una conversación via Chatwoot API
      */
-    public function sendMessage(Request $request, $id)
+    public function sendMessage(Request $request, $id): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -395,7 +396,7 @@ class ChatwootMessageController extends Controller
     /**
      * Eliminar un mensaje de una conversación
      */
-    public function deleteMessage($conversationId, $messageId)
+    public function deleteMessage($conversationId, $messageId): JsonResponse
     {
         try {
             if (!$this->inboxId) {

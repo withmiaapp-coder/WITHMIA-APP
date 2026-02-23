@@ -65,18 +65,15 @@ class Withmia_API {
      * Check API permissions (WooCommerce keys or WITHMIA API key)
      */
     public function check_permissions($request) {
-        // Allow WooCommerce consumer key auth
-        if (is_user_logged_in() && current_user_can('read')) {
+        // Allow WooCommerce consumer key auth (require manage_woocommerce capability)
+        if (is_user_logged_in() && current_user_can('manage_woocommerce')) {
             return true;
         }
 
-        // Allow WITHMIA API key
+        // Allow WITHMIA API key (header only — never accept via query params to avoid log leakage)
         $api_key = $request->get_header('X-Withmia-Key');
-        if (!$api_key) {
-            $api_key = $request->get_param('withmia_key');
-        }
 
-        if ($api_key && $api_key === get_option('withmia_api_key')) {
+        if ($api_key && hash_equals(get_option('withmia_api_key', ''), $api_key)) {
             return true;
         }
 

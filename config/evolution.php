@@ -56,9 +56,9 @@ return [
     
     'chatwoot' => [
         'enabled' => env('EVOLUTION_CHATWOOT_ENABLED', false),
-        'url' => env('CHATWOOT_URL', 'https://chatwoot.withmia.com'),
-        'account_id' => env('CHATWOOT_ACCOUNT_ID', null),
-        'token' => env('CHATWOOT_TOKEN', null),
+        'url' => env('CHATWOOT_URL', 'http://localhost:3000'),
+        'account_id' => env('CHATWOOT_ACCOUNT_ID', '1'),
+        'token' => env('CHATWOOT_API_KEY'),
     ],
     
     /*

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\ChatwootProvisioningService;
 use App\Services\ChatwootService;
@@ -37,7 +38,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Provisionar cuenta de Chatwoot para la empresa del usuario
      */
-    public function provisionAccount(Request $request)
+    public function provisionAccount(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -73,7 +74,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Obtener configuración de la empresa
      */
-    public function getConfiguration(Request $request)
+    public function getConfiguration(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -111,7 +112,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Invitar agente a la cuenta de Chatwoot
      */
-    public function inviteAgent(Request $request)
+    public function inviteAgent(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|email',
@@ -197,7 +198,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Obtener invitaciones de agentes
      */
-    public function getInvitations(Request $request)
+    public function getInvitations(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -247,7 +248,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Cancelar invitación de agente
      */
-    public function cancelInvitation(Request $request, $invitationId)
+    public function cancelInvitation(Request $request, $invitationId): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -297,7 +298,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Obtener dashboard empresarial
      */
-    public function getEnterpriseDashboard(Request $request)
+    public function getEnterpriseDashboard(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -356,7 +357,7 @@ class ChatwootEnterpriseController extends Controller
     /**
      * Provisionamiento masivo (solo para super admin)
      */
-    public function bulkProvision(Request $request)
+    public function bulkProvision(Request $request): JsonResponse
     {
         // Este método requiere autenticación de super admin
         // Por simplicidad, lo dejamos disponible pero debería tener middleware de admin

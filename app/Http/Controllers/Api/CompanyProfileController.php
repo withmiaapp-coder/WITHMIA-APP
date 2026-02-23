@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -25,7 +26,7 @@ class CompanyProfileController extends Controller
     /**
      * Fetch current user's company onboarding data
      */
-    public function getOnboardingData(Request $request)
+    public function getOnboardingData(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -82,7 +83,7 @@ class CompanyProfileController extends Controller
     /**
      * Update current user's company onboarding data
      */
-    public function updateOnboardingData(Request $request)
+    public function updateOnboardingData(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -177,7 +178,7 @@ class CompanyProfileController extends Controller
     /**
      * Upload company logo (converts to base64 data URL)
      */
-    public function uploadCompanyLogo(Request $request)
+    public function uploadCompanyLogo(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -264,7 +265,7 @@ class CompanyProfileController extends Controller
     /**
      * Proxy Google Custom Search to keep API key server-side.
      */
-    public function googleSearch(Request $request)
+    public function googleSearch(Request $request): JsonResponse
     {
         $request->validate([
             'q' => 'required|string|min:2|max:200',

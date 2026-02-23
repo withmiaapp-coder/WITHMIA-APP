@@ -1,10 +1,6 @@
 /**
  * SECURITY UTILITIES - WITHMIA Dashboard
  * Herramientas de seguridad para proteger la aplicación
- * 
- * NOTA: Instalar dependencias:
- * npm install crypto-js
- * npm install --save-dev @types/crypto-js
  */
 
 // Security utilities - no client-side crypto needed
@@ -19,7 +15,7 @@ export const secureStorage = {
   /**
    * Guarda datos en sessionStorage
    */
-  set: (key: string, value: any): void => {
+  set: (key: string, value: unknown): void => {
     try {
       sessionStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
@@ -205,7 +201,7 @@ export const validators = {
   /**
    * Valida un número positivo
    */
-  isPositiveNumber: (value: any): boolean => {
+  isPositiveNumber: (value: unknown): boolean => {
     const num = Number(value);
     return !isNaN(num) && num >= 0 && isFinite(num);
   },
@@ -404,11 +400,11 @@ export const secureFetch = async (
     }
 
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId);
 
     // Manejar timeout
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new ApiError(
         'La solicitud tardó demasiado. Verifica tu conexión.',
         408,

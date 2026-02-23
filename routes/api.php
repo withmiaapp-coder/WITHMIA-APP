@@ -145,14 +145,16 @@ Route::prefix('chatwoot-proxy')->group(function () {
 // 6b. CHATWOOT PROXY (auth via RailwayAuthToken)
 // ============================================================================
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->prefix('chatwoot-proxy')->group(function () {
-    // --- DEBUG: Test route to isolate middleware vs controller errors ---
-    Route::get('/ping', function () {
-        return response()->json([
-            'pong' => true,
-            'user' => auth()->id(),
-            'timestamp' => now()->toIso8601String(),
-        ]);
-    });
+    // --- Ping: verify auth/middleware (local + staging only) ---
+    if (app()->environment('local', 'staging')) {
+        Route::get('/ping', function () {
+            return response()->json([
+                'pong' => true,
+                'user' => auth()->id(),
+                'timestamp' => now()->toIso8601String(),
+            ]);
+        });
+    }
     // --- Conversaciones ---
     Route::get('/conversations', [ChatwootConversationController::class, 'getConversations']);
     Route::get('/conversations/search', [ChatwootConversationController::class, 'searchMessages']);
@@ -503,7 +505,7 @@ Route::middleware(['railway.auth:true'])->prefix('evolution-whatsapp')->group(fu
 // ============================================================================
 // 10. N8N WORKFLOW MANAGEMENT (auth:sanctum)
 // ============================================================================
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:30,1'])->group(function () {
     Route::post('/workflows/create-for-company', [N8nWorkflowController::class, 'createWorkflowForCompany']);
     Route::post('/workflows/create-training', [N8nWorkflowController::class, 'createTrainingWorkflow']);
     Route::get('/workflows/company-list', [N8nWorkflowController::class, 'listCompanyWorkflows']);
@@ -513,9 +515,9 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // ============================================================================
-// 11. ADMIN TOOLS (auth:sanctum)
+// 11. ADMIN TOOLS (auth:sanctum + rate limit)
 // ============================================================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:20,1'])->group(function () {
     // Workflow management
     Route::post('/setup-training-workflow/{companySlug}', [AdminToolsController::class, 'setupTrainingWorkflow']);
     Route::post('/regenerate-chatwoot-token/{userId}', [AdminToolsController::class, 'regenerateChatwootToken']);
@@ -565,9 +567,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // ============================================================================
-// 12. DEBUG (auth:sanctum)
+// 12. DEBUG (auth:sanctum + rate limit)
 // ============================================================================
-Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:10,1'])->prefix('debug')->group(function () {
     Route::get('/bot-state/{phone}', [DebugController::class, 'getBotState']);
     Route::delete('/bot-state/{phone}', [DebugController::class, 'deleteBotState']);
     Route::post('/bot-state/{phone}', [DebugController::class, 'setBotState']);
@@ -575,9 +577,9 @@ Route::middleware(['auth:sanctum'])->prefix('debug')->group(function () {
 });
 
 // ============================================================================
-// DEBUG ROUTES (local + staging con X-Debug-Key)
+// DEBUG ROUTES (local only with X-Debug-Key)
 // ============================================================================
-if (app()->environment('local', 'staging')) {
+if (app()->environment('local')) {
     require __DIR__ . '/debug.php';
 }
 

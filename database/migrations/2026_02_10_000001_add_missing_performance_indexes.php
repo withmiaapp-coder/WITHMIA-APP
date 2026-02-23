@@ -23,10 +23,15 @@ return new class extends Migration
         });
 
         // knowledge_documents: add FK constraint on company_id (was missing)
-        // First clean up any orphaned rows that would violate the FK
-        DB::table('knowledge_documents')
+        // Clean orphaned rows first to avoid FK violation errors.
+        // Safe because orphaned docs (no parent company) are inaccessible in the app.
+        $deleted = DB::table('knowledge_documents')
             ->whereNotIn('company_id', DB::table('companies')->select('id'))
             ->delete();
+
+        if ($deleted > 0) {
+            echo "Cleaned {$deleted} orphaned knowledge_documents before adding FK.\n";
+        }
 
         Schema::table('knowledge_documents', function (Blueprint $table) {
             $table->foreign('company_id')

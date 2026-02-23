@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\Log;
  */
 class MedilinkController extends Controller
 {
+    use FormatsIntegration;
+
     private const PROVIDER = 'medilink';
     private const BASE_URL = 'https://api.medilink.healthatom.com/api/v1';
 
@@ -28,7 +32,7 @@ class MedilinkController extends Controller
     /**
      * Conectar Medilink con API Token.
      */
-    public function connect(Request $request)
+    public function connect(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -100,7 +104,7 @@ class MedilinkController extends Controller
     /**
      * Desconectar Medilink.
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -119,7 +123,7 @@ class MedilinkController extends Controller
     // STATUS & SETTINGS
     // ==========================================
 
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -133,7 +137,7 @@ class MedilinkController extends Controller
         ]);
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -169,7 +173,7 @@ class MedilinkController extends Controller
     /**
      * Listar sucursales (branches/locations).
      */
-    public function listBranches(Request $request)
+    public function listBranches(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -192,7 +196,7 @@ class MedilinkController extends Controller
     /**
      * Listar profesionales/médicos.
      */
-    public function listPractitioners(Request $request)
+    public function listPractitioners(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -215,7 +219,7 @@ class MedilinkController extends Controller
     /**
      * Listar especialidades.
      */
-    public function listSpecialties(Request $request)
+    public function listSpecialties(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -238,7 +242,7 @@ class MedilinkController extends Controller
     /**
      * Obtener disponibilidad de citas.
      */
-    public function getAvailability(Request $request)
+    public function getAvailability(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -275,7 +279,7 @@ class MedilinkController extends Controller
     /**
      * Listar citas (appointments).
      */
-    public function listAppointments(Request $request)
+    public function listAppointments(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -305,7 +309,7 @@ class MedilinkController extends Controller
     /**
      * Crear una cita médica.
      */
-    public function createAppointment(Request $request)
+    public function createAppointment(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -371,7 +375,7 @@ class MedilinkController extends Controller
     // BOT ACCESS
     // ==========================================
 
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -465,7 +469,7 @@ class MedilinkController extends Controller
         }
     }
 
-    public function botCreateAppointment(Request $request)
+    public function botCreateAppointment(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -565,18 +569,4 @@ class MedilinkController extends Controller
         ])->timeout(15)->post(self::BASE_URL . $endpoint, $data);
     }
 
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email,
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->is_active && !empty($integration->access_token),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ChatwootService;
 use App\Services\UserDeletionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -21,7 +22,7 @@ class MembersController extends Controller
     /**
      * Listar miembros de la empresa del usuario actual
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -66,7 +67,7 @@ class MembersController extends Controller
     /**
      * Actualizar rol y permisos de un miembro
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -154,7 +155,7 @@ class MembersController extends Controller
      * Eliminar un miembro completamente del sistema.
      * Toda la limpieza se centraliza en UserDeletionService.
      */
-    public function destroy(Request $request, $id, UserDeletionService $deletionService)
+    public function destroy(Request $request, $id, UserDeletionService $deletionService): JsonResponse
     {
         try {
             $user = auth()->user();

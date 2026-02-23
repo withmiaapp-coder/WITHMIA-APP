@@ -51,13 +51,62 @@ interface NotificationSettings {
   groupNotifications?: boolean;
 }
 
+// Forma genérica para datos WebSocket (shape variable desde servidor)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WsPayload = Record<string, any>;
+
+/** WebSocket event shapes for each listener */
+interface WsContactInfo {
+  name?: string;
+  phone_number?: string;
+  identifier?: string;
+}
+
+interface WsMessageReceivedEvent {
+  message?: {
+    id?: number;
+    source_id?: string;
+    message_type?: number | string;
+    content?: string;
+    sender?: WsContactInfo;
+    conversation_id?: number;
+    test?: boolean;
+  };
+  conversation?: { id?: number; meta?: { sender?: WsContactInfo } };
+  conversation_id?: number;
+  message_type?: number | string;
+  sender?: WsContactInfo;
+  test?: boolean;
+  [key: string]: unknown;
+}
+
+interface WsConversationUpdatedEvent {
+  conversation?: { id?: number; [key: string]: unknown };
+  id?: number;
+  [key: string]: unknown;
+}
+
+interface WsMessageUpdatedEvent {
+  message?: { conversation_id?: number; [key: string]: unknown };
+  conversation_id?: number;
+  [key: string]: unknown;
+}
+
+interface WsConversationAssignedEvent {
+  conversation_id?: number;
+  assignee?: { id?: number; name?: string; email?: string };
+  assigned_by?: { name?: string };
+  contact_name?: string;
+  [key: string]: unknown;
+}
+
 // Eventos que el contexto emite para que otros componentes puedan reaccionar
 export interface WebSocketMessageEvent {
   type: 'new_message' | 'message_updated' | 'conversation_updated' | 'conversation_assigned';
   conversationId: number;
-  message?: any;
-  conversation?: any;
-  event: any; // Evento raw del WebSocket
+  message?: WsPayload;
+  conversation?: WsPayload;
+  event: WsPayload; // Evento raw del WebSocket
 }
 
 interface GlobalNotificationContextType {
@@ -158,8 +207,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
   const processedMessageIds = useRef<Set<string>>(new Set());
   const lastNotificationPerConversation = useRef<Map<number, number>>(new Map());
   const messageSubscribers = useRef<Set<(event: WebSocketMessageEvent) => void>>(new Set());
-  const channelRef = useRef<any>(null);
-  const echoRef = useRef<any>(null);
+  const channelRef = useRef<ReturnType<InstanceType<typeof import('laravel-echo').default>['private']> | null>(null);
+  const echoRef = useRef<InstanceType<typeof import('laravel-echo').default> | null>(null);
   const addNotificationRef = useRef<typeof addNotification | null>(null);
   const processedConversationUpdates = useRef<Set<string>>(new Set());
   
@@ -257,7 +306,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     if (!settings.enabled) return;
     
     // Verificar si la conversación está silenciada
-    const mutedConversations = (window as any).__mutedConversations as Set<number> | undefined;
+    const mutedConversations = (window as { __mutedConversations?: Set<number> }).__mutedConversations;
     if (mutedConversations?.has(notification.conversationId)) {
       return;
     }
@@ -457,8 +506,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     if (savedNotifications) {
       try {
         const parsed = JSON.parse(savedNotifications);
-        setNotifications(parsed.map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) })));
-        setUnreadCount(parsed.filter((n: any) => !n.read).length);
+        setNotifications(parsed.map((n: Notification & { timestamp: string }) => ({ ...n, timestamp: new Date(n.timestamp) })));
+        setUnreadCount(parsed.filter((n: { read: boolean }) => !n.read).length);
       } catch (e) {
         // Error handled silently
       }
@@ -488,13 +537,13 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         channel.subscribed(() => {
         });
 
-        channel.error((error: any) => {
+        channel.error((error: unknown) => {
         });
 
         // ========================================
         // LISTENER: Nuevo mensaje
         // ========================================
-        channel.listen('.message.received', (event: any) => {
+        channel.listen('.message.received', (event: WsMessageReceivedEvent) => {
           const messageId = event?.message?.id;
           const sourceId = event?.message?.source_id;
           
@@ -618,7 +667,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         // LISTENER: Conversación actualizada
         // ========================================
-        channel.listen('.conversation.updated', (event: any) => {
+        channel.listen('.conversation.updated', (event: WsConversationUpdatedEvent) => {
           const convId = event?.conversation?.id || event?.id;
           if (!convId) return;
           
@@ -657,7 +706,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         // LISTENER: Mensaje actualizado (status)
         // ========================================
-        channel.listen('.message.updated', (event: any) => {
+        channel.listen('.message.updated', (event: WsMessageUpdatedEvent) => {
           // Mensaje actualizado
           
           const convId = event?.conversation_id || event?.message?.conversation_id;
@@ -682,7 +731,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         // LISTENER: Conversación asignada
         // ========================================
-        channel.listen('.conversation.assigned', (event: any) => {
+        channel.listen('.conversation.assigned', (event: WsConversationAssignedEvent) => {
           const convId = event?.conversation_id;
           if (!convId) return;
 
@@ -725,7 +774,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
         // ========================================
         // ESTADO DE CONEXIÓN
         // ========================================
-        const connector = echo.connector as any;
+        const connector = echo.connector as { pusher?: { connection?: { bind: (event: string, cb: (...args: unknown[]) => void) => void; state: string } } };
         if (connector?.pusher?.connection) {
           const connection = connector.pusher.connection;
 
@@ -737,7 +786,7 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
             setIsWebSocketConnected(false);
           });
 
-          connection.bind('error', (err: any) => {
+          connection.bind('error', (_err: unknown) => {
             // Error handled silently
           });
 
@@ -780,8 +829,8 @@ export const GlobalNotificationProvider: React.FC<GlobalNotificationProviderProp
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         // Reconectar WebSocket si está desconectado
-        if (window.Echo?.connector?.pusher?.connection) {
-          const connection = window.Echo.connector.pusher.connection;
+        if ((window.Echo?.connector as { pusher?: { connection?: { state?: string; connect?: () => void } } })?.pusher?.connection) {
+          const connection = (window.Echo.connector as { pusher: { connection: { state: string; connect: () => void } } }).pusher.connection;
           if (connection.state !== 'connected') {
             connection.connect();
           }

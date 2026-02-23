@@ -838,140 +838,17 @@ class EvolutionApiController extends Controller
 
         // REENVIO A N8N (usando red interna de Railway)
         try {
-            $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
-            
-            // Si la instancia no existe en BD, crearla automáticamente
+            $instance = $this->resolveOrCreateInstance($instanceName, $event);
             if (!$instance) {
-                Log::debug('📝 Instancia no encontrada en BD, creándola automáticamente...', [
-                    'instance' => $instanceName,
-                    'event' => $event
-                ]);
-                
-                // 🔧 FIX: Buscar company_id por el slug del instanceName
-                // El instanceName ES el slug de la empresa (ej: salud-y-belleza-ehppbu)
-                $company = Company::findBySlugCached($instanceName);
-                $companyId = $company ? $company->id : null;
-                
-                if (!$companyId) {
-                    Log::error('❌ No se encontró empresa para instancia - NO SE CREARÁ', [
-                        'instance' => $instanceName,
-                        'searched_slug' => $instanceName
-                    ]);
-                    // NO crear instancia sin company_id válido para evitar problemas de enrutamiento
-                    return response()->json(['status' => 'error', 'message' => 'Company not found for instance']);
-                }
-                
-                WhatsAppInstance::create([
-                    'instance_name' => $instanceName,
-                    'company_id' => $companyId,
-                    'instance_url' => config('evolution.base_url'),
-                    'is_active' => 1,
-                ]);
-                
-                Log::debug('✅ Instancia creada en BD con company correcta', [
-                    'instance' => $instanceName, 
-                    'company_id' => $companyId,
-                    'company_name' => $company->name
-                ]);
-                
-                // Recargar instancia
-                $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
+                return response()->json(['status' => 'error', 'message' => 'Company not found for instance']);
             }
-            
+
             // 🚀 AUTO-CREAR WORKFLOW solo cuando WhatsApp se conecta (connection.update con estado open)
-            // NO crear en cualquier evento para evitar recrear el workflow después de desconectar
-            $shouldCreateWorkflow = false;
-            if ($event === 'connection.update' || $event === 'CONNECTION_UPDATE') {
-                $state = $data['state'] ?? ($data['status'] ?? null);
-                if ($state === 'open' || $state === 'connected') {
-                    $shouldCreateWorkflow = true;
-                }
-            }
-            
-            if ($shouldCreateWorkflow && $instance && empty($instance->n8n_workflow_id)) {
-                Log::debug('🤖 WhatsApp conectado, creando workflow automáticamente...', [
-                    'instance' => $instanceName,
-                    'event' => $event
-                ]);
-                $this->createN8nWorkflowForInstance($instance);
-                // Recargar instancia para obtener el nuevo workflow_id
-                $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
-            }
-            
-            // 📨 REENVÍO A N8N desde Evolution webhook (bypass de Chatwoot webhooks)
-            // Los webhooks de Chatwoot no disparan consistentemente para mensajes
-            // creados por la integración de Evolution API, así que reenviamos directamente.
-            // SYNC: Enviamos directo a n8n sin pasar por la cola (Horizon puede no procesar Jobs)
-            $eventsToForward = ['messages.upsert', 'MESSAGES_UPSERT'];
-            
-            if (in_array($event, $eventsToForward)) {
-                $fromMe = $data['key']['fromMe'] ?? false;
-                // Extraer contenido de TODOS los tipos de mensaje de WhatsApp
-                $msgContent = $data['message']['conversation'] 
-                    ?? $data['message']['extendedTextMessage']['text'] 
-                    ?? $data['message']['imageMessage']['caption'] 
-                    ?? $data['message']['videoMessage']['caption'] 
-                    ?? $data['message']['documentMessage']['caption'] 
-                    ?? $data['message']['documentMessage']['title'] 
-                    ?? '';
-                // Detectar tipo de media para mensajes sin texto
-                $mediaType = null;
-                if (isset($data['message']['imageMessage'])) $mediaType = 'image';
-                elseif (isset($data['message']['audioMessage'])) { $mediaType = 'audio'; if (!$msgContent) $msgContent = '🎵 Audio'; }
-                elseif (isset($data['message']['videoMessage'])) { $mediaType = 'video'; if (!$msgContent) $msgContent = '🎥 Video'; }
-                elseif (isset($data['message']['documentMessage'])) { $mediaType = 'document'; if (!$msgContent) $msgContent = '📄 ' . ($data['message']['documentMessage']['fileName'] ?? 'Documento'); }
-                elseif (isset($data['message']['stickerMessage'])) { $mediaType = 'sticker'; if (!$msgContent) $msgContent = '🏷️ Sticker'; }
-                elseif (isset($data['message']['contactMessage'])) { $mediaType = 'contact'; if (!$msgContent) $msgContent = '👤 Contacto'; }
-                elseif (isset($data['message']['locationMessage'])) { $mediaType = 'location'; if (!$msgContent) $msgContent = '📍 Ubicación'; }
-                    
-                if (!$fromMe && $instance) {
-                    $cleanPhone = str_replace('@s.whatsapp.net', '', $data['key']['remoteJid'] ?? '');
-                    $whatsappMsgId = $data['key']['id'] ?? null;
-                    
-                    // 📎 MEDIA: No reenviar mensajes multimedia a n8n desde aquí.
-                    // Evolution no tiene los attachments procesados (URLs de Chatwoot).
-                    // El ForwardToN8nWithEnrichmentJob (vía Chatwoot webhook) espera a que
-                    // Chatwoot guarde el attachment y envía el payload enriquecido.
-                    if ($mediaType) {
-                        Log::info('📎 Mensaje multimedia detectado - delegando a Chatwoot enrichment job', [
-                            'type' => $mediaType,
-                            'phone' => $cleanPhone,
-                            'has_caption' => !empty($msgContent),
-                        ]);
-                        // NO poner n8n_fwd_ key para que el job de Chatwoot pueda ejecutarse
-                    } else {
-                    // 🚀 ASYNC: Despachar job para buscar en Chatwoot y enviar a n8n
-                    // Ya no bloqueamos el webhook con usleep(2.5s) + HTTP calls síncronos
-                    $company = Company::find($instance->company_id);
-                    $chatwootAccountId = $company->chatwoot_account_id ?? 1;
-                    $chatwootInboxId = $instance->chatwoot_inbox_id ?? ($company->chatwoot_inbox_id ?? null);
-                    $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
-                    $chatwootToken = $company->chatwoot_api_key
-                        ?? ($company->settings['chatwoot_api_token'] ?? null)
-                        ?? config('chatwoot.api_key')
-                        ?? config('chatwoot.super_admin_token')
-                        ?? config('chatwoot.platform_token');
-                    
-                    Log::info('📨 Despachando ForwardTextMessageToN8nJob (async)', [
-                        'phone' => $cleanPhone,
-                        'instance' => $instanceName,
-                        'msg_id' => $whatsappMsgId,
-                        'content_preview' => substr($msgContent, 0, 50),
-                    ]);
-                    
-                    ForwardTextMessageToN8nJob::dispatch(
-                        $cleanPhone,
-                        $msgContent,
-                        $instanceName,
-                        $chatwootAccountId,
-                        $chatwootInboxId,
-                        $whatsappMsgId,
-                        $data['pushName'] ?? null,
-                        $chatwootToken,
-                        $chatwootUrl,
-                    );
-                    } // cierre del else (solo texto se envía por Evolution)
-                }
+            $this->autoCreateWorkflowIfNeeded($instance, $event, $data);
+
+            // 📨 REENVÍO A N8N para mensajes entrantes
+            if (in_array($event, ['messages.upsert', 'MESSAGES_UPSERT'])) {
+                $this->forwardIncomingMessageToN8n($data, $instance, $instanceName);
             } else {
                 Log::debug('🔇 Evento ignorado', ['event' => $event]);
             }
@@ -1009,6 +886,135 @@ class EvolutionApiController extends Controller
         }
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Resolve an existing WhatsApp instance or auto-create one from the instance name.
+     */
+    private function resolveOrCreateInstance(string $instanceName, string $event): ?WhatsAppInstance
+    {
+        $instance = WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
+
+        if ($instance) {
+            return $instance;
+        }
+
+        Log::debug('📝 Instancia no encontrada en BD, creándola automáticamente...', [
+            'instance' => $instanceName,
+            'event' => $event,
+        ]);
+
+        $company = Company::findBySlugCached($instanceName);
+
+        if (!$company) {
+            Log::error('❌ No se encontró empresa para instancia - NO SE CREARÁ', [
+                'instance' => $instanceName,
+                'searched_slug' => $instanceName,
+            ]);
+            return null;
+        }
+
+        WhatsAppInstance::create([
+            'instance_name' => $instanceName,
+            'company_id' => $company->id,
+            'instance_url' => config('evolution.base_url'),
+            'is_active' => 1,
+        ]);
+
+        Log::debug('✅ Instancia creada en BD con company correcta', [
+            'instance' => $instanceName,
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+        ]);
+
+        return WhatsAppInstance::where('instance_name', $instanceName)->active()->first();
+    }
+
+    /**
+     * Auto-create n8n workflow when WhatsApp connects for the first time.
+     */
+    private function autoCreateWorkflowIfNeeded(WhatsAppInstance $instance, string $event, array $data): void
+    {
+        if (!in_array($event, ['connection.update', 'CONNECTION_UPDATE'])) {
+            return;
+        }
+
+        $state = $data['state'] ?? ($data['status'] ?? null);
+        if (!in_array($state, ['open', 'connected'])) {
+            return;
+        }
+
+        if (!empty($instance->n8n_workflow_id)) {
+            return;
+        }
+
+        Log::debug('🤖 WhatsApp conectado, creando workflow automáticamente...', [
+            'instance' => $instance->instance_name,
+            'event' => $event,
+        ]);
+
+        $this->createN8nWorkflowForInstance($instance);
+        $instance->refresh();
+    }
+
+    /**
+     * Forward an incoming WhatsApp text message to n8n via async job.
+     * Media messages are delegated to the Chatwoot enrichment pipeline.
+     */
+    private function forwardIncomingMessageToN8n(array $data, WhatsAppInstance $instance, string $instanceName): void
+    {
+        $fromMe = $data['key']['fromMe'] ?? false;
+
+        if ($fromMe) {
+            return;
+        }
+
+        $extracted = $this->extractMessageContent($data);
+        $msgContent = $extracted['text'];
+        $mediaType = $extracted['mediaType'];
+
+        $cleanPhone = str_replace('@s.whatsapp.net', '', $data['key']['remoteJid'] ?? '');
+        $whatsappMsgId = $data['key']['id'] ?? null;
+
+        // 📎 MEDIA: delegar a Chatwoot enrichment job (tiene URLs de attachments)
+        if ($mediaType) {
+            Log::info('📎 Mensaje multimedia detectado - delegando a Chatwoot enrichment job', [
+                'type' => $mediaType,
+                'phone' => $cleanPhone,
+                'has_caption' => !empty($msgContent),
+            ]);
+            return;
+        }
+
+        // 🚀 ASYNC: Despachar job para buscar en Chatwoot y enviar a n8n
+        $company = Company::find($instance->company_id);
+        $chatwootAccountId = $company->chatwoot_account_id ?? 1;
+        $chatwootInboxId = $instance->chatwoot_inbox_id ?? ($company->chatwoot_inbox_id ?? null);
+        $chatwootUrl = rtrim(config('chatwoot.url', ''), '/');
+        $chatwootToken = $company->chatwoot_api_key
+            ?? ($company->settings['chatwoot_api_token'] ?? null)
+            ?? config('chatwoot.api_key')
+            ?? config('chatwoot.super_admin_token')
+            ?? config('chatwoot.platform_token');
+
+        Log::info('📨 Despachando ForwardTextMessageToN8nJob (async)', [
+            'phone' => $cleanPhone,
+            'instance' => $instanceName,
+            'msg_id' => $whatsappMsgId,
+            'content_preview' => substr($msgContent, 0, 50),
+        ]);
+
+        ForwardTextMessageToN8nJob::dispatch(
+            $cleanPhone,
+            $msgContent,
+            $instanceName,
+            $chatwootAccountId,
+            $chatwootInboxId,
+            $whatsappMsgId,
+            $data['pushName'] ?? null,
+            $chatwootToken,
+            $chatwootUrl,
+        );
     }
 
     /**
@@ -1059,6 +1065,36 @@ class EvolutionApiController extends Controller
         Cache::put($cacheKey, true, 60);
         return false;
     }
+
+    /**
+     * Extraer texto y tipo de media de un mensaje WhatsApp.
+     * Centralizado para evitar duplicación.
+     *
+     * @return array{text: string, mediaType: string|null}
+     */
+    private function extractMessageContent(array $data): array
+    {
+        $message = $data['message'] ?? [];
+
+        $text = $message['conversation']
+            ?? $message['extendedTextMessage']['text']
+            ?? $message['imageMessage']['caption']
+            ?? $message['videoMessage']['caption']
+            ?? $message['documentMessage']['caption']
+            ?? $message['documentMessage']['title']
+            ?? '';
+
+        $mediaType = null;
+        if (isset($message['imageMessage'])) { $mediaType = 'image'; if (!$text) $text = '📷 Imagen'; }
+        elseif (isset($message['audioMessage'])) { $mediaType = 'audio'; if (!$text) $text = '🎵 Audio'; }
+        elseif (isset($message['videoMessage'])) { $mediaType = 'video'; if (!$text) $text = '🎥 Video'; }
+        elseif (isset($message['documentMessage'])) { $mediaType = 'document'; if (!$text) $text = '📄 ' . ($message['documentMessage']['fileName'] ?? 'Documento'); }
+        elseif (isset($message['stickerMessage'])) { $mediaType = 'sticker'; if (!$text) $text = '🏷️ Sticker'; }
+        elseif (isset($message['contactMessage'])) { $mediaType = 'contact'; if (!$text) $text = '👤 Contacto'; }
+        elseif (isset($message['locationMessage'])) { $mediaType = 'location'; if (!$text) $text = '📍 Ubicación'; }
+
+        return ['text' => $text, 'mediaType' => $mediaType];
+    }
     
     /**
      * Manejar evento de nuevo mensaje
@@ -1077,23 +1113,8 @@ class EvolutionApiController extends Controller
         $fromMe = $data['key']['fromMe'] ?? false;
         $messageId = $data['key']['id'] ?? null;
         // Extraer contenido de todos los tipos de mensaje WhatsApp
-        $messageText = $data['message']['conversation'] 
-            ?? $data['message']['extendedTextMessage']['text'] 
-            ?? $data['message']['imageMessage']['caption'] 
-            ?? $data['message']['videoMessage']['caption'] 
-            ?? $data['message']['documentMessage']['caption'] 
-            ?? $data['message']['documentMessage']['title'] 
-            ?? '';
-        // Generar preview descriptivo para media sin caption
-        if (!$messageText) {
-            if (isset($data['message']['audioMessage'])) $messageText = '🎵 Audio';
-            elseif (isset($data['message']['videoMessage'])) $messageText = '🎥 Video';
-            elseif (isset($data['message']['imageMessage'])) $messageText = '📷 Imagen';
-            elseif (isset($data['message']['documentMessage'])) $messageText = '📄 ' . ($data['message']['documentMessage']['fileName'] ?? 'Documento');
-            elseif (isset($data['message']['stickerMessage'])) $messageText = '🏷️ Sticker';
-            elseif (isset($data['message']['contactMessage'])) $messageText = '👤 Contacto';
-            elseif (isset($data['message']['locationMessage'])) $messageText = '📍 Ubicación';
-        }
+        $extracted = $this->extractMessageContent($data);
+        $messageText = $extracted['text'];
 
         if (!$phoneNumber) {
             Log::warning('Mensaje sin número de teléfono', ['data' => $data]);

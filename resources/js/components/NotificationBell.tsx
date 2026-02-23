@@ -43,7 +43,7 @@ export const NotificationBell: React.FC = () => {
     return new Date(date).toLocaleDateString('es-ES');
   };
 
-  const handleNotificationClick = (conversationId: number, notificationId: string, read: boolean) => {
+  const handleNotificationClick = (conversationId: number, notificationId: number | string, read: boolean) => {
     // ✅ Limpiar TODO para esta conversación: badges + notificaciones + toasts
     if (clearBadge) {
       clearBadge(conversationId);

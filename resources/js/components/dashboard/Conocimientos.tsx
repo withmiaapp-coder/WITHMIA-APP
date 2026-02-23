@@ -38,15 +38,25 @@ interface Document {
   chunks_created?: number;
 }
 
+interface QdrantPointPayload {
+  text?: string;
+  content?: string;
+  type?: string;
+  filename?: string;
+  source?: string;
+  category?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 interface QdrantPoint {
   id: string | number;
-  payload: Record<string, any>;
+  payload: QdrantPointPayload;
   vector?: number[];
 }
 
 interface ConocimientosProps {
-  user: any;
-  company: any;
+  user: { id?: number; name?: string; company_slug?: string; company_id?: number };
+  company: { id?: number; name?: string; slug?: string; description?: string; settings?: Record<string, unknown> };
 }
 
 const CATEGORIES = [
@@ -368,9 +378,9 @@ export default function Conocimientos({
           return newProgress;
         });
       }, 1000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       debugLog.error("Upload error:", error);
-      alert(`Error al subir ${file.name}: ${error.message}`);
+      alert(`Error al subir ${file.name}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       setUploadingFiles((prev) => prev.filter((id) => id !== fileId));
     }
   };
@@ -707,9 +717,9 @@ export default function Conocimientos({
                   source = 'Información de empresa';
                 } else if (type) {
                   // Capitalizar el type como fallback
-                  source = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  source = type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                 } else if (category) {
-                  source = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  source = category.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
                 }
                 
                 return (

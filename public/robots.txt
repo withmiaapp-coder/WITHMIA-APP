@@ -1,2 +1,4 @@
 User-agent: *
-Disallow:
+Disallow: /build/
+Disallow: /plugins/
+Disallow: /video-thumbnail.php

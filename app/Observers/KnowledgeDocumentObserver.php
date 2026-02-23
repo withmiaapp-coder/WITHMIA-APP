@@ -26,7 +26,7 @@ class KnowledgeDocumentObserver
         }
 
         try {
-            $qdrantService = new QdrantService();
+            $qdrantService = app(QdrantService::class);
             $qdrantService->deletePoints($collectionName, $vectorIds);
 
             Log::info('KnowledgeDocumentObserver: Qdrant vectors deleted', [

@@ -7,7 +7,7 @@
     <script>
         // 🔑 PRE-GUARDAR TOKEN INMEDIATAMENTE
         (function() {
-            var targetUrl = "{{ $redirect }}";
+            var targetUrl = @json($redirect);
             try {
                 var url = new URL(targetUrl, window.location.origin);
                 var token = url.searchParams.get('auth_token');
@@ -94,7 +94,7 @@
 </head>
 <body>
     <!-- Iframe carga el destino INMEDIATAMENTE detrás del video -->
-    <iframe id="backgroundFrame" class="background-frame" src="{{ $redirect }}"></iframe>
+    <iframe id="backgroundFrame" class="background-frame" src="{{ e($redirect) }}"></iframe>
 
     <!-- Video overlay encima -->
     <div id="videoOverlay" class="video-overlay">
@@ -110,7 +110,7 @@
     
     <script>
         (function() {
-            var targetUrl = "{{ $redirect }}";
+            var targetUrl = @json($redirect);
             var overlay = document.getElementById('videoOverlay');
             var backgroundFrame = document.getElementById('backgroundFrame');
             var iframeLoaded = false;

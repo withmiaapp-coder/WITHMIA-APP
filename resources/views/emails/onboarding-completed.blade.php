@@ -14,7 +14,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://app.withmia.com/logo-mia-original.png" alt="WITHMIA Logo" class="logo" style="border-radius: 8px;">
+            <img src="{{ config('app.url') }}/logo-mia-original.png" alt="WITHMIA Logo" class="logo" style="border-radius: 8px;">
             <h1 style="color: #333;">¡Bienvenido a WITHMIA!</h1>
         </div>
         <div class="content">
@@ -22,7 +22,7 @@
             <p>Has completado exitosamente el proceso de onboarding de WITHMIA.</p>
             <p>Estamos emocionados de tenerte como parte de nuestra comunidad.</p>
             <p>Ahora puedes comenzar a explorar todas las funcionalidades que WITHMIA tiene para ofrecerte.</p>
-            <a href="https://app.withmia.com" class="button">Comenzar ahora</a>
+            <a href="{{ config('app.url') }}" class="button">Comenzar ahora</a>
             <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
             <p>¡Que tengas un excelente día!</p>
             <p><strong>El equipo de WITHMIA</strong></p>

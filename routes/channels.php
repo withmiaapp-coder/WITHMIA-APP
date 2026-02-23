@@ -39,4 +39,3 @@ Broadcast::channel('company.{slug}.whatsapp', function ($user, $slug) {
     return $user->company_slug === $slug;
 });
 
-

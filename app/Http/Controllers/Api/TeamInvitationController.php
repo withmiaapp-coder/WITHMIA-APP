@@ -7,6 +7,7 @@ use App\Mail\TeamInvitationMail;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\ChatwootService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -26,7 +27,7 @@ class TeamInvitationController extends Controller
     /**
      * Listar invitaciones de la empresa
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -68,7 +69,7 @@ class TeamInvitationController extends Controller
     /**
      * Crear y enviar una nueva invitación
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
@@ -160,7 +161,7 @@ class TeamInvitationController extends Controller
     /**
      * Reenviar una invitación
      */
-    public function resend(Request $request, $id)
+    public function resend(Request $request, $id): JsonResponse
     {
         $user = auth()->user();
         $company = $user->company;
@@ -199,7 +200,7 @@ class TeamInvitationController extends Controller
     /**
      * Cancelar una invitación
      */
-    public function cancel(Request $request, $id)
+    public function cancel(Request $request, $id): JsonResponse
     {
         $user = auth()->user();
         $company = $user->company;
@@ -224,7 +225,7 @@ class TeamInvitationController extends Controller
     /**
      * Validar token de invitación (público)
      */
-    public function validateToken(Request $request, $token)
+    public function validateToken(Request $request, $token): JsonResponse
     {
         $invitation = TeamInvitation::where('token', $token)
             ->with(['company:id,name,slug'])
@@ -261,7 +262,7 @@ class TeamInvitationController extends Controller
     /**
      * Aceptar invitación y crear usuario (público)
      */
-    public function accept(Request $request, $token)
+    public function accept(Request $request, $token): JsonResponse
     {
         $invitation = TeamInvitation::where('token', $token)
             ->with(['company'])
@@ -410,7 +411,7 @@ class TeamInvitationController extends Controller
      * Crea agentes en Chatwoot para usuarios que no tienen chatwoot_agent_id
      * Puede ser llamado con autenticación o con clave secreta
      */
-    public function syncUsersWithChatwoot(Request $request)
+    public function syncUsersWithChatwoot(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -535,7 +536,7 @@ class TeamInvitationController extends Controller
     /**
      * Endpoint de diagnóstico para verificar estado de usuarios y agentes de Chatwoot
      */
-    public function diagnosticAgents(Request $request)
+    public function diagnosticAgents(Request $request): JsonResponse
     {
         try {
             $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
@@ -661,7 +662,7 @@ class TeamInvitationController extends Controller
      * Arreglar empresa con API key de Chatwoot desde config/env
      * Y sincronizar usuarios existentes como agentes
      */
-    public function fixCompanyChatwoot(Request $request)
+    public function fixCompanyChatwoot(Request $request): JsonResponse
     {
         try {
             $secretKey = $request->header('X-Admin-Key') ?? $request->input('admin_key');
@@ -808,7 +809,7 @@ class TeamInvitationController extends Controller
     /**
      * Corregir rol de un usuario específico
      */
-    public function fixUserRole(Request $request)
+    public function fixUserRole(Request $request): JsonResponse
     {
         try {
             $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');
@@ -885,7 +886,7 @@ class TeamInvitationController extends Controller
     /**
      * Provisionar Chatwoot para una empresa que no lo tiene
      */
-    public function provisionCompanyChatwoot(Request $request)
+    public function provisionCompanyChatwoot(Request $request): JsonResponse
     {
         try {
             $secretKey = $request->input('secret') ?? $request->header('X-Admin-Key');

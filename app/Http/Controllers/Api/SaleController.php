@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\Sale;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -24,7 +25,7 @@ class SaleController extends Controller
      * Sales stats/metrics for the dashboard.
      * GET /api/sales/stats?period=month
      */
-    public function stats(Request $request)
+    public function stats(Request $request): JsonResponse
     {
         $company = $request->user()->company ?? Company::where('slug', $request->user()->company_slug)->first();
         if (!$company) {
@@ -150,7 +151,7 @@ class SaleController extends Controller
      * List sales with pagination.
      * GET /api/sales?status=completed&page=1
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse|\Illuminate\Pagination\LengthAwarePaginator
     {
         $company = $request->user()->company ?? Company::where('slug', $request->user()->company_slug)->first();
         if (!$company) {
@@ -182,7 +183,7 @@ class SaleController extends Controller
      * Update sale status manually.
      * PATCH /api/sales/{id}/status
      */
-    public function updateStatus(Request $request, int $id)
+    public function updateStatus(Request $request, int $id): JsonResponse
     {
         $company = $request->user()->company ?? Company::where('slug', $request->user()->company_slug)->first();
         if (!$company) {
@@ -212,7 +213,7 @@ class SaleController extends Controller
      * Record a sale from the bot (called by n8n after generating a checkout link).
      * POST /api/sales/bot/record
      */
-    public function botRecord(Request $request)
+    public function botRecord(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -290,7 +291,7 @@ class SaleController extends Controller
      * Update sale status from bot (e.g., mark as link_sent).
      * PATCH /api/sales/bot/update-status
      */
-    public function botUpdateStatus(Request $request)
+    public function botUpdateStatus(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {

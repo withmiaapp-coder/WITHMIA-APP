@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_REVERB_PORT: string;
   readonly VITE_REVERB_SCHEME: string;
   readonly VITE_APP_NAME: string;
+  readonly VITE_DEBUG_LOGS?: string;
 }
 
 interface ImportMeta {

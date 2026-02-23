@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use App\Traits\RendersOAuthPopup;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +15,11 @@ use Illuminate\Support\Str;
 
 class OutlookCalendarController extends Controller
 {
+    use FormatsIntegration, RendersOAuthPopup;
+
+    protected string $oauthProvider = 'Outlook Calendar';
+    protected string $oauthMessageType = 'outlook_oauth_result';
+
     private const PROVIDER = 'outlook';
 
     private const SCOPES = 'openid profile email offline_access Calendars.ReadWrite';
@@ -20,7 +28,7 @@ class OutlookCalendarController extends Controller
     // OAUTH FLOW (Microsoft Identity Platform v2)
     // ==========================================
 
-    public function getAuthUrl(Request $request)
+    public function getAuthUrl(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -52,7 +60,7 @@ class OutlookCalendarController extends Controller
         ]);
     }
 
-    public function handleCallbackGet(Request $request)
+    public function handleCallbackGet(Request $request): \Illuminate\Http\Response
     {
         $code = $request->query('code');
         $state = $request->query('state');
@@ -149,7 +157,7 @@ class OutlookCalendarController extends Controller
         }
     }
 
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -168,7 +176,7 @@ class OutlookCalendarController extends Controller
     // STATUS & SETTINGS
     // ==========================================
 
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -180,7 +188,7 @@ class OutlookCalendarController extends Controller
         ]);
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -217,7 +225,7 @@ class OutlookCalendarController extends Controller
     // CALENDAR DATA (Microsoft Graph API)
     // ==========================================
 
-    public function listCalendars(Request $request)
+    public function listCalendars(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -252,7 +260,7 @@ class OutlookCalendarController extends Controller
         }
     }
 
-    public function getEvents(Request $request)
+    public function getEvents(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -309,7 +317,7 @@ class OutlookCalendarController extends Controller
         }
     }
 
-    public function createEvent(Request $request)
+    public function createEvent(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -395,7 +403,7 @@ class OutlookCalendarController extends Controller
         }
     }
 
-    public function deleteEvent(Request $request, string $eventId)
+    public function deleteEvent(Request $request, string $eventId): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -425,7 +433,7 @@ class OutlookCalendarController extends Controller
     // BOT ACCESS
     // ==========================================
 
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -507,7 +515,7 @@ class OutlookCalendarController extends Controller
         }
     }
 
-    public function botCreateEvent(Request $request)
+    public function botCreateEvent(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -646,47 +654,5 @@ class OutlookCalendarController extends Controller
             Log::error('[Outlook] Token refresh error', ['error' => $e->getMessage()]);
             return null;
         }
-    }
-
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email,
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->isConnected(),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'selected_calendar_id' => $integration->selected_calendar_id,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
-
-    private function renderPopupClose(bool $success, string $message): \Illuminate\Http\Response
-    {
-        $status = $success ? 'success' : 'error';
-        $emoji = $success ? '✅' : '❌';
-        $html = <<<HTML
-<!DOCTYPE html>
-<html>
-<head><title>Outlook Calendar - WITHMIA</title></head>
-<body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">
-<div style="text-align:center;padding:2rem;">
-<div style="font-size:3rem;margin-bottom:1rem;">{$emoji}</div>
-<h2 style="color:#1f2937;margin-bottom:0.5rem;">{$message}</h2>
-<p style="color:#6b7280;font-size:0.875rem;">Esta ventana se cerrará automáticamente...</p>
-</div>
-<script>
-  if (window.opener) {
-    window.opener.postMessage({ type: 'outlook_oauth_result', status: '{$status}', message: '{$message}' }, '*');
-  }
-  setTimeout(function() { window.close(); }, 2000);
-</script>
-</body>
-</html>
-HTML;
-        return response($html, 200)->header('Content-Type', 'text/html');
     }
 }

@@ -48,7 +48,7 @@
     <script>
         // Redirigir después de 3 segundos para que el logo se dibuje completo
         setTimeout(function() {
-            window.location.href = "{{ $redirect ?? '/login' }}";
+            window.location.href = @json($redirect ?? '/login');
         }, 3000);
     </script>
 </body>

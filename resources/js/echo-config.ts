@@ -15,7 +15,7 @@ import debugLog from '@/utils/debugLogger';
 declare global {
   interface Window {
     Pusher: typeof Pusher;
-    Echo: Echo;
+    Echo: InstanceType<typeof Echo>;
   }
 }
 
@@ -26,15 +26,22 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 
 // Obtener auth_token de la URL o de los shared props de Inertia
 const getAuthToken = (): string | null => {
-  // 1) Desde la URL actual
+  // 1) Desde la URL actual (strip from URL immediately to prevent leakage via Referer/history)
   const urlParams = new URLSearchParams(window.location.search);
   const fromUrl = urlParams.get('auth_token');
-  if (fromUrl) return fromUrl;
+  if (fromUrl) {
+    // Remove auth_token from URL to prevent leakage via Referer headers and browser history
+    urlParams.delete('auth_token');
+    const cleanSearch = urlParams.toString();
+    const cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+    return fromUrl;
+  }
   // 2) Desde un meta tag (inyectado por el servidor)
   const meta = document.querySelector('meta[name="auth-token"]');
   if (meta?.getAttribute('content')) return meta.getAttribute('content');
   // 3) Desde las props de Inertia (si están disponibles)
-  const inertiaPage = (window as any).__page;
+  const inertiaPage = (window as unknown as { __page?: { props?: { railwayAuthToken?: string } } }).__page;
   if (inertiaPage?.props?.railwayAuthToken) return inertiaPage.props.railwayAuthToken;
   return null;
 };
@@ -53,10 +60,14 @@ const reverbKey = getMetaContent('reverb-key') || import.meta.env.VITE_REVERB_AP
 const reverbPort = getMetaContent('reverb-port') || import.meta.env.VITE_REVERB_PORT || '443';
 const reverbScheme = getMetaContent('reverb-scheme') || import.meta.env.VITE_REVERB_SCHEME || 'https';
 
-// Validación: Si no hay host o key, la conexión fallará silenciosamente
+// Validación: advertir si falta configuración de Reverb
+if (!reverbHost || !reverbKey) {
+  console.warn('[Echo] ⚠️ Reverb host or key not configured — WebSocket will not connect.', { reverbHost, reverbKey: reverbKey ? '***' : undefined });
+}
 
 // Configurar Laravel Echo con Reverb
-const echoConfig: any = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const echoConfig: Record<string, unknown> = {
   broadcaster: 'reverb',
   key: reverbKey,
   wsHost: reverbHost,
@@ -77,7 +88,7 @@ const echoConfig: any = {
   },
   
   // CRÍTICO: Habilitar envío de credenciales (cookies de sesión)
-  authorizer: (channel: any) => {
+  authorizer: (channel: { name: string }) => {
     return {
       authorize: (socketId: string, callback: Function) => {
         // Construir URL con auth_token si está disponible
@@ -119,7 +130,7 @@ const echoConfig: any = {
   },
 };
 
-const echo = new Echo(echoConfig);
+const echo = new Echo(echoConfig as ConstructorParameters<typeof Echo>[0]);
 
 // Exportar para uso global
 window.Echo = echo;

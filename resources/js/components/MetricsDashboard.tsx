@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
 import debugLog from '@/utils/debugLogger';
+import type { Conversation, Message } from '@/types/chatwoot';
 import {
   TrendingUp,
   MessageCircle,
@@ -23,8 +24,52 @@ import {
   Eye,
 } from 'lucide-react';
 
+interface SalesProduct {
+  product_name: string;
+  product_category?: string;
+  revenue: number;
+  units_sold: number;
+}
+
+interface SaleEntry {
+  id: number | string;
+  product_name: string;
+  customer_name?: string;
+  customer_phone?: string;
+  quantity: number;
+  formatted_total: string;
+  status_color: string;
+  status_label: string;
+}
+
+interface DailySale {
+  date: string;
+  revenue: number;
+  orders: number;
+  count: number;
+}
+
+interface SalesStats {
+  currency: string;
+  metrics: {
+    total_sales: number;
+    total_revenue: number;
+    avg_ticket: number;
+    conversion_rate: number;
+    pending_count: number;
+    pending_value: number;
+    links_generated: number;
+  };
+  all_time: {
+    total_sales: number;
+  };
+  top_products: SalesProduct[];
+  recent_sales: SaleEntry[];
+  daily_sales: DailySale[];
+}
+
 interface MetricsDashboardProps {
-  conversations: any[];
+  conversations: Conversation[];
   timeRange?: 'today' | 'week' | 'month' | 'all';
   firstName?: string;
 }
@@ -46,7 +91,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 }) => {
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [salesStats, setSalesStats] = useState<any>(null);
+  const [salesStats, setSalesStats] = useState<SalesStats | null>(null);
   const [loadingSales, setLoadingSales] = useState(true);
   
   // Cargar estadísticas reales del backend
@@ -186,8 +231,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     
     filteredConvs.forEach(conv => {
       if (conv.messages && conv.messages.length > 0) {
-        conv.messages.forEach((msg: any) => {
-          if (msg.message_type === 1 || msg.sender === 'agent') {
+        conv.messages.forEach((msg: Message) => {
+          if (msg.message_type === 'outgoing' || msg.sender === 'agent') {
             agentMessages++;
           } else {
             clientMessages++;
@@ -195,8 +240,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         });
       } else if (conv.last_message) {
         // Estimar basado en el último mensaje y el conteo de unread
-        const lastMsgType = conv.last_message.message_type;
-        const isAgentLast = lastMsgType === 1 || conv.last_message.sender === 'agent';
+        const isAgentLast = conv.last_message.sender === 'agent';
         // Aproximación: el agente responde a cada mensaje del cliente
         const estimatedTotal = conv.messages_count || 2;
         const half = Math.floor(estimatedTotal / 2);
@@ -216,8 +260,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           const currentMsg = conv.messages[i];
           
           // Si mensaje anterior es del cliente y actual del agente
-          const prevIsClient = prevMsg.message_type === 0 || prevMsg.sender === 'contact';
-          const currentIsAgent = currentMsg.message_type === 1 || currentMsg.sender === 'agent';
+          const prevIsClient = prevMsg.message_type === 'incoming' || prevMsg.sender === 'contact';
+          const currentIsAgent = currentMsg.message_type === 'outgoing' || currentMsg.sender === 'agent';
           
           if (prevIsClient && currentIsAgent) {
             const prevTime = typeof prevMsg.created_at === 'number' 
@@ -280,7 +324,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     if (timeRange === 'today') {
       filteredConvs.forEach(conv => {
         if (conv.messages) {
-          conv.messages.forEach((msg: any) => {
+          conv.messages.forEach((msg: Message) => {
             const timestamp = typeof msg.created_at === 'number' 
               ? msg.created_at * 1000 
               : new Date(msg.created_at).getTime();
@@ -1002,7 +1046,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                   <h3 className="text-base font-bold text-gray-900">Top Productos</h3>
                 </div>
                 <div className="space-y-4">
-                  {salesStats.top_products.slice(0, 5).map((product: any, index: number) => {
+                  {salesStats.top_products.slice(0, 5).map((product: SalesProduct, index: number) => {
                     const maxRevenue = salesStats.top_products[0]?.revenue || 1;
                     const percentage = (product.revenue / maxRevenue) * 100;
                     
@@ -1046,7 +1090,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                   <h3 className="text-base font-bold text-gray-900">Ventas Recientes</h3>
                 </div>
                 <div className="space-y-1 max-h-80 overflow-y-auto">
-                  {salesStats.recent_sales.slice(0, 10).map((sale: any) => (
+                  {salesStats.recent_sales.slice(0, 10).map((sale: SaleEntry) => (
                     <div key={sale.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-gray-50/80 transition-colors">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">{sale.product_name}</p>
@@ -1083,8 +1127,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 <h3 className="text-base font-bold text-gray-900">Ingresos por Día</h3>
               </div>
               <div className="flex items-end justify-between gap-1 h-40">
-                {salesStats.daily_sales.map((day: any, index: number) => {
-                  const maxRevenue = Math.max(...salesStats.daily_sales.map((d: any) => d.revenue), 1);
+                {salesStats.daily_sales.map((day: DailySale, index: number) => {
+                  const maxRevenue = Math.max(...salesStats.daily_sales.map((d: DailySale) => d.revenue), 1);
                   const height = (day.revenue / maxRevenue) * 100;
                   const dateLabel = new Date(day.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
                   

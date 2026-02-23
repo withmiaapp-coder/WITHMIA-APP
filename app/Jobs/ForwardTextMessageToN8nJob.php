@@ -57,9 +57,6 @@ class ForwardTextMessageToN8nJob implements ShouldQueue
             Cache::put($dedupKey, true, 120);
         }
 
-        // Esperar a que Chatwoot procese el mensaje (Evolution → Chatwoot tiene ~1-3s delay)
-        sleep(3);
-
         // Buscar contacto y conversación en Chatwoot
         $conversationData = null;
         $senderData = null;
@@ -189,5 +186,17 @@ class ForwardTextMessageToN8nJob implements ShouldQueue
     public function tags(): array
     {
         return ['n8n-forward', 'instance:' . $this->instanceName, 'phone:' . $this->cleanPhone];
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('❌ [ForwardTextToN8n] Job failed permanently', [
+            'phone' => $this->cleanPhone,
+            'instance' => $this->instanceName,
+            'error' => $exception->getMessage(),
+        ]);
     }
 }

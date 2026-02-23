@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Integración de calendario externo (Google Calendar, Outlook, etc.)
@@ -121,7 +123,7 @@ class CalendarIntegration extends Model
         };
 
         try {
-            $response = \Illuminate\Support\Facades\Http::asForm()->post($tokenUrl, $params);
+            $response = Http::timeout(15)->asForm()->post($tokenUrl, $params);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -137,14 +139,14 @@ class CalendarIntegration extends Model
                 return $data['access_token'];
             }
 
-            \Illuminate\Support\Facades\Log::warning("[Calendar:{$this->provider}] Token refresh failed", [
+            Log::warning("[Calendar:{$this->provider}] Token refresh failed", [
                 'user_id' => $this->user_id,
                 'status' => $response->status(),
             ]);
 
             return null;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[Calendar:{$this->provider}] Token refresh error", [
+            Log::error("[Calendar:{$this->provider}] Token refresh error", [
                 'user_id' => $this->user_id,
                 'error' => $e->getMessage(),
             ]);

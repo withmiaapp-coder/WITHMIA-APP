@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ChatwootService;
 use App\Traits\ChatwootDbAccess;
 use App\Traits\ResolvesChatwootConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -28,7 +29,7 @@ class ChatwootTeamController extends Controller
      * Obtener todos los equipos de la cuenta
      * OPTIMIZADO: BD directa + Sin N+1
      */
-    public function getTeams()
+    public function getTeams(): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -106,7 +107,7 @@ class ChatwootTeamController extends Controller
     /**
      * Obtener un equipo específico con sus miembros
      */
-    public function getTeam($teamId)
+    public function getTeam($teamId): JsonResponse
     {
         try {
             $chatwootDb = $this->chatwootDb();
@@ -162,7 +163,7 @@ class ChatwootTeamController extends Controller
     /**
      * Crear un nuevo equipo
      */
-    public function createTeam(Request $request)
+    public function createTeam(Request $request): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -206,7 +207,7 @@ class ChatwootTeamController extends Controller
     /**
      * Actualizar un equipo existente
      */
-    public function updateTeam(Request $request, $teamId)
+    public function updateTeam(Request $request, $teamId): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -234,7 +235,7 @@ class ChatwootTeamController extends Controller
     /**
      * Eliminar un equipo
      */
-    public function deleteTeam($teamId)
+    public function deleteTeam($teamId): JsonResponse
     {
         try {
             $result = $this->chatwootService->deleteTeam(
@@ -256,7 +257,7 @@ class ChatwootTeamController extends Controller
     /**
      * Obtener miembros de un equipo
      */
-    public function getTeamMembers($teamId)
+    public function getTeamMembers($teamId): JsonResponse
     {
         try {
             $chatwootDb = $this->chatwootDb();
@@ -306,7 +307,7 @@ class ChatwootTeamController extends Controller
     /**
      * Agregar miembros a un equipo
      */
-    public function addTeamMembers(Request $request, $teamId)
+    public function addTeamMembers(Request $request, $teamId): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -354,7 +355,7 @@ class ChatwootTeamController extends Controller
     /**
      * Actualizar miembros de un equipo (reemplazar todos)
      */
-    public function updateTeamMembers(Request $request, $teamId)
+    public function updateTeamMembers(Request $request, $teamId): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -403,7 +404,7 @@ class ChatwootTeamController extends Controller
     /**
      * Eliminar un miembro de un equipo
      */
-    public function removeTeamMember(Request $request, $teamId)
+    public function removeTeamMember(Request $request, $teamId): JsonResponse
     {
         try {
             $validated = $request->validate([

@@ -1,5 +1,5 @@
 import { Head } from "@inertiajs/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MessageCircle,
   Instagram,
@@ -23,10 +23,40 @@ import {
 } from "lucide-react";
 import { showTransitionAndRedirect } from "@/components/TransitionScreen";
 
+interface OnboardingUser {
+  full_name?: string;
+  phone_country?: string;
+  phone?: string | number;
+  [key: string]: unknown;
+}
+
+interface OnboardingCompany {
+  website?: string;
+  name?: string;
+  description?: string;
+  industry?: string;
+  settings?: { onboarding?: Record<string, unknown> };
+  [key: string]: unknown;
+}
+
+interface SearchSuggestion {
+  domain: string;
+  title: string;
+  description: string;
+}
+
+interface OnboardingTool {
+  value: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string }>;
+  color: string;
+  customSvg?: React.ReactNode;
+}
+
 interface OnboardingProps {
   currentStep: number;
-  user: any;
-  company: any;
+  user: OnboardingUser;
+  company: OnboardingCompany;
 }
 
 export default function Onboarding({
@@ -60,6 +90,11 @@ export default function Onboarding({
     const authToken = urlParams.get('auth_token');
     if (authToken) {
       localStorage.setItem('railway_auth_token', authToken);
+      // Strip auth_token from URL to prevent leakage via Referer headers and browser history
+      urlParams.delete('auth_token');
+      const cleanSearch = urlParams.toString();
+      const cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
     }
   }, []);
 
@@ -97,7 +132,7 @@ export default function Onboarding({
       "+31": 9, // Países Bajos
       "+1": 10, // Estados Unidos/Canadá
     };
-    return (phoneLimits as any)[countryCode] || 10;
+    return (phoneLimits as Record<string, number>)[countryCode] || 10;
   };
   const getProgressiveBackground = (step: number): string => {
     const backgrounds = {
@@ -109,30 +144,29 @@ export default function Onboarding({
       6: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%)",
       7: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fed7aa 100%)",
     };
-    return (backgrounds as any)[step] || backgrounds[1];
+    return (backgrounds as Record<number, string>)[step] || backgrounds[1];
   };
 
   const [formData, setFormData] = useState({
-    full_name: user?.full_name || "",
-    phone_country: user?.phone_country || "+56",
+    full_name: (user?.full_name as string) || "",
+    phone_country: (user?.phone_country as string) || "+56",
     phone: user?.phone
-      ? user.phone
-          .toString()
+      ? String(user.phone)
           .replace(/[^0-9]/g, "")
           .slice(0, 9)
       : "",
-    website: company?.website || "",
+    website: (company?.website as string) || "",
     has_website: true,
     found_via_search: true,
-    company_name: company?.name || "",
-    company_description: company?.description || "",
+    company_name: (company?.name as string) || "",
+    company_description: (company?.description as string) || "",
     client_type:
-      company?.settings?.onboarding?.client_type || company?.industry || "",
+      (company?.settings?.onboarding?.client_type as string) || (company?.industry as string) || "",
     monthly_conversations:
-      company?.settings?.onboarding?.monthly_conversations || "",
-    discovered_via: company?.settings?.onboarding?.discovered_via || [],
+      (company?.settings?.onboarding?.monthly_conversations as string) || "",
+    discovered_via: (company?.settings?.onboarding?.discovered_via as string[]) || [] as string[],
     discovered_other: "",
-    tools: company?.settings?.onboarding?.tools || [],
+    tools: (company?.settings?.onboarding?.tools as string[]) || [] as string[],
     other_tools: "",
   });
 
@@ -155,9 +189,10 @@ export default function Onboarding({
   }, [formData]);
 
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   
   // Notification state for elegant toast messages
   const [notification, setNotification] = useState<{
@@ -174,8 +209,8 @@ export default function Onboarding({
     }, 4000);
   };
 
-  const updateFormData = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  const updateFormData = (field: string, value: string | number | boolean | string[]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Función para buscar sitios web con Google Custom Search API
@@ -218,19 +253,19 @@ export default function Onboarding({
   };
 
   // Función para manejar cambios en el input
-  const handleWebsiteInputChange = (e: any) => {
+  const handleWebsiteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     updateFormData("website", value);
 
     // Buscar con un pequeño delay para evitar muchas requests
-    clearTimeout((window as any).searchTimeout);
-    (window as any).searchTimeout = setTimeout(() => {
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
       searchWithGoogle(value);
     }, 500);
   };
 
   // Función para seleccionar una sugerencia
-  const selectSuggestion = (suggestion: any) => {
+  const selectSuggestion = (suggestion: SearchSuggestion) => {
     updateFormData("website", suggestion.domain);
     setShowDropdown(false);
     setSuggestions([]);
@@ -240,7 +275,7 @@ export default function Onboarding({
     setLoading(true);
     try {
       // Preparar datos según el step actual
-      let payload = { step };
+      let payload: Record<string, unknown> = { step };
 
       switch (step) {
         case 1:
@@ -400,7 +435,7 @@ export default function Onboarding({
             <input
               type="text"
               value={formData.full_name}
-              onChange={(e: any) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const lettersOnly = e.target.value.replace(/[^a-zA-Z ]/g, "");
                 if (lettersOnly.length <= 50)
                   updateFormData("full_name", lettersOnly);
@@ -435,7 +470,7 @@ export default function Onboarding({
             </label>
             <select
               value={formData.phone_country}
-              onChange={(e: any) =>
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 updateFormData("phone_country", e.target.value)
               }
               style={{
@@ -503,7 +538,7 @@ export default function Onboarding({
             <input
               type="tel"
               value={formData.phone.slice(0, 9)}
-              onChange={(e: any) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const numericValue = e.target.value.replace(/[^0-9]/g, "");
                 const maxLength =
                   formData.phone_country === "+56"
@@ -562,7 +597,7 @@ export default function Onboarding({
             <input
               type="text"
               value={formData.company_name}
-              onChange={(e: any) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updateFormData("company_name", e.target.value)
               }
               style={{
@@ -595,7 +630,7 @@ export default function Onboarding({
             <div style={{ position: "relative" }}>
               <textarea
                 value={formData.company_description}
-                onChange={(e: any) =>
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   updateFormData("company_description", e.target.value)
                 }
                 style={{
@@ -679,13 +714,13 @@ export default function Onboarding({
                   gap: "4px",
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.transform = "translateY(-2px) scale(1.05)";
-                  e.target.style.boxShadow =
+                  e.currentTarget.style.transform = "translateY(-2px) scale(1.05)";
+                  e.currentTarget.style.boxShadow =
                     "0 8px 25px rgba(255, 215, 0, 0.4), 0 4px 12px rgba(255, 193, 7, 0.3)";
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.transform = "translateY(0)";
-                  e.target.style.boxShadow =
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow =
                     "0 2px 8px rgba(102, 126, 234, 0.3)";
                 }}
               >
@@ -848,16 +883,16 @@ export default function Onboarding({
                           transition: "all 0.2s ease",
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = "transparent";
-                          e.target.style.borderColor = "#FFC107";
-                          e.target.style.transform = "none";
-                          e.target.style.boxShadow = "none";
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.borderColor = "#FFC107";
+                          e.currentTarget.style.transform = "none";
+                          e.currentTarget.style.boxShadow = "none";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "transparent";
-                          e.target.style.borderColor = "transparent";
-                          e.target.style.transform = "none";
-                          e.target.style.boxShadow = "none";
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.borderColor = "transparent";
+                          e.currentTarget.style.transform = "none";
+                          e.currentTarget.style.boxShadow = "none";
                         }}
                       >
                         <div
@@ -1204,7 +1239,7 @@ export default function Onboarding({
               max="10000"
               step="100"
               value={formData.monthly_conversations || 1000}
-              onChange={(e: any) =>
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 updateFormData("monthly_conversations", e.target.value)
               }
               style={{
@@ -1374,7 +1409,7 @@ export default function Onboarding({
                 icon: Store,
                 color: "#FFE600",
               },
-            ].map((tool) => (
+            ].map((tool: OnboardingTool) => (
               <div
                 key={tool.value}
                 onClick={() => {
@@ -1429,7 +1464,7 @@ export default function Onboarding({
                 }}
               >
                 <div style={{ fontSize: "18px", marginBottom: "4px" }}>
-                  {(tool as any).customSvg ? (tool as any).customSvg : <tool.icon size={18} color={tool.color} />}
+                  {tool.customSvg ? tool.customSvg : <tool.icon size={18} color={tool.color} />}
                 </div>
                 <span
                   style={{
@@ -1756,7 +1791,15 @@ export default function Onboarding({
 
       <button
         onClick={() => {
-          fetch("/logout", { method: "GET", credentials: "same-origin" })
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          fetch("/logout", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              'X-CSRF-TOKEN': csrfToken,
+              'Accept': 'application/json',
+            },
+          })
             .then(() => {
               window.location.href = "/login";
             })

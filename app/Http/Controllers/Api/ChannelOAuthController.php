@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -22,7 +23,7 @@ class ChannelOAuthController extends Controller
      * Returns the Facebook/Instagram OAuth URL for the frontend popup.
      * GET /api/channels/oauth/{channel}/auth-url
      */
-    public function getAuthUrl(Request $request, string $channel)
+    public function getAuthUrl(Request $request, string $channel): JsonResponse
     {
         $appId = config('services.facebook.app_id');
 
@@ -77,7 +78,7 @@ class ChannelOAuthController extends Controller
      * Facebook redirects the popup here after user authorization.
      * GET /channels/oauth/callback (public web route)
      */
-    public function callback(Request $request)
+    public function callback(Request $request): \Illuminate\Contracts\View\View
     {
         // Handle errors / cancellation from Facebook
         if ($request->has('error')) {

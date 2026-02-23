@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WhatsAppInstance;
 use App\Services\N8nService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -21,7 +22,7 @@ class N8nWorkflowController extends Controller
     /**
      * Crear un workflow personalizado para una empresa/instancia de WhatsApp
      */
-    public function createWorkflowForCompany(Request $request)
+    public function createWorkflowForCompany(Request $request): JsonResponse
     {
         $request->validate([
             'company_id' => 'required|integer',
@@ -95,7 +96,7 @@ class N8nWorkflowController extends Controller
     /**
      * Listar workflows de empresas
      */
-    public function listCompanyWorkflows()
+    public function listCompanyWorkflows(): JsonResponse
     {
         try {
             $result = $this->n8nService->getWorkflows();
@@ -128,7 +129,7 @@ class N8nWorkflowController extends Controller
     /**
      * Obtener workflow de una empresa específica
      */
-    public function getCompanyWorkflow(int $companyId)
+    public function getCompanyWorkflow(int $companyId): JsonResponse
     {
         try {
             $instance = WhatsAppInstance::where('company_id', $companyId)->first();
@@ -160,7 +161,7 @@ class N8nWorkflowController extends Controller
     /**
      * Eliminar workflow de una empresa
      */
-    public function deleteCompanyWorkflow(int $companyId)
+    public function deleteCompanyWorkflow(int $companyId): JsonResponse
     {
         try {
             $instance = WhatsAppInstance::where('company_id', $companyId)->first();
@@ -192,7 +193,7 @@ class N8nWorkflowController extends Controller
     /**
      * Activar/desactivar workflow
      */
-    public function toggleWorkflow(Request $request, int $companyId)
+    public function toggleWorkflow(Request $request, int $companyId): JsonResponse
     {
         $request->validate([
             'active' => 'required|boolean'
@@ -231,7 +232,7 @@ class N8nWorkflowController extends Controller
      * Crear workflow de entrenamiento para una empresa
      * Este workflow permite entrenar el bot via chat, guardando ejemplos en Qdrant
      */
-    public function createTrainingWorkflow(Request $request)
+    public function createTrainingWorkflow(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();

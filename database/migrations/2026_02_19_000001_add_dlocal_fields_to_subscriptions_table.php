@@ -28,6 +28,10 @@ return new class extends Migration
                 $table->string('dlocal_payment_id')->nullable();
                 $table->string('dlocal_subscription_id')->nullable();
                 $table->timestamps();
+
+                // Query performance indexes
+                $table->index('status');
+                $table->index(['company_id', 'status']);
             });
         } else {
             // Table exists, just add dlocal columns if missing
@@ -44,6 +48,20 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('subscriptions');
+        // Only remove dlocal columns — never drop the entire subscriptions table
+        if (Schema::hasTable('subscriptions')) {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $columns = [];
+                if (Schema::hasColumn('subscriptions', 'dlocal_payment_id')) {
+                    $columns[] = 'dlocal_payment_id';
+                }
+                if (Schema::hasColumn('subscriptions', 'dlocal_subscription_id')) {
+                    $columns[] = 'dlocal_subscription_id';
+                }
+                if (!empty($columns)) {
+                    $table->dropColumn($columns);
+                }
+            });
+        }
     }
 };

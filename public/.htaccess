@@ -1,4 +1,4 @@
 Header always set Access-Control-Allow-Origin "*"
 Header always set Access-Control-Allow-Methods "GET,POST,OPTIONS,DELETE,PUT"
-Header always set Access-Control-Allow-Headers "*"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, X-Withmia-Key"
 Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"

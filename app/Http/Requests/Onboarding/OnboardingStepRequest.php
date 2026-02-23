@@ -13,16 +13,16 @@ class OnboardingStepRequest extends FormRequest
 
     public function rules(): array
     {
-         = ->input('step', 0);
+        $step = $this->input('step', 0);
         
-        return match() {
-            1 => ->step1Rules(),
-            2 => ->step2Rules(),
-            3 => ->step3Rules(),
-            4 => ->step4Rules(),
-            5 => ->step5Rules(),
-            6 => ->step6Rules(),
-            7 => ->step7Rules(),
+        return match($step) {
+            1 => $this->step1Rules(),
+            2 => $this->step2Rules(),
+            3 => $this->step3Rules(),
+            4 => $this->step4Rules(),
+            5 => $this->step5Rules(),
+            6 => $this->step6Rules(),
+            7 => $this->step7Rules(),
             default => []
         };
     }

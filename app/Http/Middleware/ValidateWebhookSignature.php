@@ -27,6 +27,7 @@ class ValidateWebhookSignature
         $secret = match ($source) {
             'chatwoot' => config('chatwoot.webhook_secret'),
             'evolution' => config('evolution.webhook_secret'),
+            'woocommerce' => config('services.woocommerce.webhook_secret'),
             default => env(strtoupper($source) . '_WEBHOOK_SECRET'),
         };
 

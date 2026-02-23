@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'smtp'),
 
     /*
     |--------------------------------------------------------------------------
@@ -109,8 +109,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Example'),
+        'address' => env('MAIL_FROM_ADDRESS', 'noreply@withmia.com'),
+        'name' => env('MAIL_FROM_NAME', 'Withmia'),
     ],
 
     /*
@@ -119,6 +119,6 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'admin_address' => env('MAIL_ADMIN_ADDRESS', 'a.diaz@withmia.com'),
+    'admin_address' => env('MAIL_ADMIN_ADDRESS', 'admin@withmia.com'),
 
 ];

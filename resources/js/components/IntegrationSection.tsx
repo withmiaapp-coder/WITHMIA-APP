@@ -41,20 +41,56 @@ import {
   Download,
 } from 'lucide-react';
 
+interface IntegrationInfo {
+  id: number;
+  provider: string;
+  provider_email: string | null;
+  is_active: boolean;
+  is_connected: boolean;
+  bot_access_enabled: boolean;
+  selected_calendar_id: string | null;
+  settings: Record<string, unknown> | null;
+  last_sync_at: string | null;
+  created_at: string | null;
+}
+
+interface ProductIntegrationInfo {
+  connected?: boolean;
+  store_url?: string;
+  products_count?: number;
+  bot_access_enabled?: boolean;
+  last_sync_at?: string;
+  [key: string]: unknown;
+}
+
+interface ChannelInfo {
+  id: string;
+  inbox_id?: number;
+  connected?: boolean;
+  name?: string;
+  website_url?: string;
+  email?: string;
+  page_id?: string;
+  phone_number?: string;
+  [key: string]: unknown;
+}
+
+interface WhatsAppSettings {
+  rejectCall: boolean;
+  groupsIgnore: boolean;
+  alwaysOnline: boolean;
+  readMessages: boolean;
+  syncFullHistory: boolean;
+  readStatus: boolean;
+  daysLimitImportMessages?: number;
+}
+
 interface IntegrationSectionProps {
   whatsAppStatus: string;
-  whatsAppSettings: {
-    rejectCall: boolean;
-    groupsIgnore: boolean;
-    alwaysOnline: boolean;
-    readMessages: boolean;
-    syncFullHistory: boolean;
-    readStatus: boolean;
-    daysLimitImportMessages?: number;
-  };
+  whatsAppSettings: WhatsAppSettings;
   onConnectWhatsApp: () => void;
   onDisconnectWhatsApp: () => void;
-  onUpdateSettings: (settings: any) => Promise<void>;
+  onUpdateSettings: (settings: WhatsAppSettings) => Promise<void>;
   isUpdatingSettings?: boolean;
   onIntegrationChange?: () => void;
   onNavigateToProducts?: () => void;
@@ -80,26 +116,26 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Google Calendar state
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalConnecting, setGcalConnecting] = useState(false);
-  const [gcalIntegration, setGcalIntegration] = useState<any>(null);
+  const [gcalIntegration, setGcalIntegration] = useState<IntegrationInfo | null>(null);
   const [gcalLoading, setGcalLoading] = useState(true);
   const [expandedTool, setExpandedTool] = useState<string | null>(null);
 
   // Calendly state
   const [calendlyConnected, setCalendlyConnected] = useState(false);
   const [calendlyConnecting, setCalendlyConnecting] = useState(false);
-  const [calendlyIntegration, setCalendlyIntegration] = useState<any>(null);
+  const [calendlyIntegration, setCalendlyIntegration] = useState<IntegrationInfo | null>(null);
   const [calendlyLoading, setCalendlyLoading] = useState(true);
 
   // Outlook state
   const [outlookConnected, setOutlookConnected] = useState(false);
   const [outlookConnecting, setOutlookConnecting] = useState(false);
-  const [outlookIntegration, setOutlookIntegration] = useState<any>(null);
+  const [outlookIntegration, setOutlookIntegration] = useState<IntegrationInfo | null>(null);
   const [outlookLoading, setOutlookLoading] = useState(true);
   const [outlookError, setOutlookError] = useState('');
 
   // Reservo state
   const [reservoConnected, setReservoConnected] = useState(false);
-  const [reservoIntegration, setReservoIntegration] = useState<any>(null);
+  const [reservoIntegration, setReservoIntegration] = useState<IntegrationInfo | null>(null);
   const [reservoLoading, setReservoLoading] = useState(true);
   const [reservoApiKey, setReservoApiKey] = useState('');
   const [reservoSubdomain, setReservoSubdomain] = useState('');
@@ -108,7 +144,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
   // AgendaPro state
   const [agendaproConnected, setAgendaproConnected] = useState(false);
-  const [agendaproIntegration, setAgendaproIntegration] = useState<any>(null);
+  const [agendaproIntegration, setAgendaproIntegration] = useState<IntegrationInfo | null>(null);
   const [agendaproLoading, setAgendaproLoading] = useState(true);
   const [agendaproApiKey, setAgendaproApiKey] = useState('');
   const [agendaproConnecting, setAgendaproConnecting] = useState(false);
@@ -116,7 +152,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
   // Dentalink state
   const [dentalinkConnected, setDentalinkConnected] = useState(false);
-  const [dentalinkIntegration, setDentalinkIntegration] = useState<any>(null);
+  const [dentalinkIntegration, setDentalinkIntegration] = useState<IntegrationInfo | null>(null);
   const [dentalinkLoading, setDentalinkLoading] = useState(true);
   const [dentalinkApiKey, setDentalinkApiKey] = useState('');
   const [dentalinkConnecting, setDentalinkConnecting] = useState(false);
@@ -124,18 +160,18 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
   // Medilink state
   const [medilinkConnected, setMedilinkConnected] = useState(false);
-  const [medilinkIntegration, setMedilinkIntegration] = useState<any>(null);
+  const [medilinkIntegration, setMedilinkIntegration] = useState<IntegrationInfo | null>(null);
   const [medilinkLoading, setMedilinkLoading] = useState(true);
   const [medilinkApiKey, setMedilinkApiKey] = useState('');
   const [medilinkConnecting, setMedilinkConnecting] = useState(false);
   const [medilinkError, setMedilinkError] = useState('');
 
   // Product integrations state
-  const [productIntegrations, setProductIntegrations] = useState<Record<string, any>>({});
+  const [productIntegrations, setProductIntegrations] = useState<Record<string, ProductIntegrationInfo>>({});
   const [productIntegrationsLoading, setProductIntegrationsLoading] = useState(true);
 
   // Chatwoot channels state (Instagram, Messenger, Web Chat, Email, WhatsApp Cloud API)
-  const [chatwootChannels, setChatwootChannels] = useState<Record<string, any>>({});
+  const [chatwootChannels, setChatwootChannels] = useState<Record<string, ChannelInfo>>({});
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [channelConnecting, setChannelConnecting] = useState<string | null>(null);
   const [channelErrors, setChannelErrors] = useState<Record<string, string | null>>({});
@@ -376,9 +412,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error connecting Outlook:', err);
-      const msg = err?.message || '';
+      const msg = err instanceof Error ? err.message : '';
       if (msg.includes('500') || msg.includes('not configured')) {
         setOutlookError('Outlook Calendar no está configurado aún. Contacta al administrador para configurar las credenciales de Microsoft.');
       } else {
@@ -438,7 +474,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         await loadReservoStatus();
         onIntegrationChange?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setReservoError('API Key o subdominio inválido');
     } finally { setReservoConnecting(false); }
   }, [reservoApiKey, reservoSubdomain, gcalApiFetch, loadReservoStatus, onIntegrationChange]);
@@ -492,7 +528,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         await loadAgendaproStatus();
         onIntegrationChange?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setAgendaproError('API Key inválida');
     } finally { setAgendaproConnecting(false); }
   }, [agendaproApiKey, gcalApiFetch, loadAgendaproStatus, onIntegrationChange]);
@@ -546,7 +582,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         await loadDentalinkStatus();
         onIntegrationChange?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setDentalinkError('API Token inválido');
     } finally { setDentalinkConnecting(false); }
   }, [dentalinkApiKey, gcalApiFetch, loadDentalinkStatus, onIntegrationChange]);
@@ -600,7 +636,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         await loadMedilinkStatus();
         onIntegrationChange?.();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMedilinkError('API Token inválido');
     } finally { setMedilinkConnecting(false); }
   }, [medilinkApiKey, gcalApiFetch, loadMedilinkStatus, onIntegrationChange]);
@@ -651,7 +687,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         // Auto-sync after connecting
         syncProductProvider(provider);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       throw err;
     }
   }, [gcalApiFetch, loadProductIntegrations, onIntegrationChange]);
@@ -707,7 +743,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       }
       await connectProductProvider(providerId, creds);
       resetProviderFields(providerId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setProviderError(providerId, 'No se pudo conectar. Verifica tus credenciales.');
     } finally {
       setProviderConnecting(providerId, false);
@@ -731,8 +767,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     try {
       setChannelsLoading(true);
       const data = await gcalApiFetch('/api/channels');
-      const channelMap: Record<string, any> = {};
-      (data.channels || []).forEach((ch: any) => {
+      const channelMap: Record<string, ChannelInfo> = {};
+      (data.channels || []).forEach((ch: ChannelInfo) => {
         channelMap[ch.id] = ch;
       });
       setChatwootChannels(channelMap);
@@ -754,7 +790,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   }, [gcalApiFetch]);
 
   // ── OAuth popup flow for Messenger / Instagram / WhatsApp Cloud ──
-  const connectChannelRef = useRef<((channelId: string, endpoint: string, payload: any) => Promise<void>) | null>(null);
+  const connectChannelRef = useRef<((channelId: string, endpoint: string, payload: Record<string, unknown>) => Promise<void>) | null>(null);
 
   // Open OAuth popup (same pattern as Google Calendar)
   const openOAuthPopup = useCallback(async (channel: string) => {
@@ -794,8 +830,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       }, 1000);
 
       setTimeout(() => { clearInterval(pollInterval); setChannelConnecting(null); }, 300000);
-    } catch (err: any) {
-      setChannelError(channelId, err.message || 'Error al iniciar conexión');
+    } catch (err: unknown) {
+      setChannelError(channelId, err instanceof Error ? err.message : 'Error al iniciar conexión');
       setChannelConnecting(null);
     }
   }, [gcalApiFetch, loadChatwootChannels, onIntegrationChange]);
@@ -837,7 +873,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   }, []);
 
   // Connect a new channel
-  const connectChannel = async (channelId: string, endpoint: string, payload: any) => {
+  const connectChannel = async (channelId: string, endpoint: string, payload: Record<string, unknown>) => {
     setChannelConnecting(channelId);
     setChannelError(channelId, null);
     setChannelSuccess(channelId, null);
@@ -858,8 +894,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       } else {
         setChannelError(channelId, data.error || 'Error al conectar canal');
       }
-    } catch (err: any) {
-      setChannelError(channelId, err.message || 'Error de conexión');
+    } catch (err: unknown) {
+      setChannelError(channelId, err instanceof Error ? err.message : 'Error de conexión');
     } finally {
       setChannelConnecting(null);
     }
@@ -879,8 +915,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       setChannelSuccess(channelId, 'Canal desconectado');
       await loadChatwootChannels();
       onIntegrationChange?.();
-    } catch (err: any) {
-      setChannelError(channelId, err.message || 'Error al desconectar');
+    } catch (err: unknown) {
+      setChannelError(channelId, err instanceof Error ? err.message : 'Error al desconectar');
     } finally {
       setChannelConnecting(null);
     }
@@ -3095,7 +3131,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               </div>
                             )}
                             <button
-                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
+                              onClick={() => connectProvider(prov.id, prov.credentialMap as unknown as Record<string, string>, prov.requiredFields)}
                               disabled={form.connecting}
                               className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-200/50"
                             >

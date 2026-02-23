@@ -37,7 +37,7 @@ interface Subscription {
   starts_at: string;
   ends_at: string | null;
   trial_ends_at: string | null;
-  features: Record<string, any> | null;
+  features: Record<string, unknown> | null;
   payment_info: {
     payment_method?: string;
     last_four?: string;

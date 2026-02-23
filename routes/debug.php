@@ -1,11 +1,11 @@
 ﻿<?php
 
 /**
- * Rutas de Diagnostico y Debug
- * Solo se carga en entorno local (ver api.php).
- * Todas las rutas requieren header X-Debug-Key en staging/development.
+ * Rutas de Diagnóstico y Debug
+ * Solo se cargan en entorno local y staging (ver api.php).
+ * Todas las rutas requieren header X-Debug-Key que coincida con DEBUG_KEY env var.
  *
- * NOTA: La mayoria de diagnosticos estan disponibles en:
+ * NOTA: La mayoría de diagnósticos están disponibles en:
  * - /api/debug/* (DebugController - auth:sanctum)
  * - /api/admin/* (AdminToolsController - auth:sanctum)
  */
@@ -15,7 +15,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
-Route::prefix('debug')->middleware(function ($request, $next) {\n    // Require X-Debug-Key header matching APP_KEY (first 16 chars)\n    $expectedKey = substr(config('app.key'), 0, 16);\n    if ($request->header('X-Debug-Key') !== $expectedKey) {\n        return response()->json(['error' => 'Unauthorized'], 403);\n    }\n    return $next($request);\n})->group(function () {
+Route::prefix('debug')->middleware(function ($request, $next) {
+    // Require X-Debug-Key header matching DEBUG_KEY env variable
+    $expectedKey = config('app.debug_key');
+    if (empty($expectedKey) || $request->header('X-Debug-Key') !== $expectedKey) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    return $next($request);
+})->group(function () {
 
     Route::get('/debug-chatwoot-config', function () {
         $companies = \App\Models\Company::select('id', 'name', 'slug', 'chatwoot_account_id')
@@ -106,19 +113,6 @@ Route::prefix('debug')->middleware(function ($request, $next) {\n    // Require 
         return response()->json($diagnosis);
     });
 
-    // Fix company owners with wrong role (should be 'admin', not 'user')
-    Route::post('/fix-owner-roles', function () {
-        $fixed = DB::table('users')
-            ->where('role', 'user')
-            ->whereNotNull('company_slug')
-            ->where('onboarding_completed', true)
-            ->whereIn('id', DB::table('companies')->select('user_id'))
-            ->update(['role' => 'admin']);
-
-        return response()->json([
-            'fixed' => $fixed,
-            'message' => "Updated {$fixed} company owners from 'user' to 'admin' role"
-        ]);
-    });
+    // fix-owner-roles: Use /api/n8n/fix-owner-roles (AdminToolsController) instead
 
 }); // End debug middleware group

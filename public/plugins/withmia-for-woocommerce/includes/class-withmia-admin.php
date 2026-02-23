@@ -46,11 +46,18 @@ class Withmia_Admin {
         register_setting('withmia_settings', 'withmia_webhook_url', [
             'sanitize_callback' => 'esc_url_raw',
         ]);
+        register_setting('withmia_settings', 'withmia_webhook_secret', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
         register_setting('withmia_settings', 'withmia_enabled_events', [
             'default' => [
                 'order_created', 'order_status_changed', 'cart_abandoned',
                 'stock_changed', 'low_stock', 'customer_created',
             ],
+            'sanitize_callback' => function ($val) {
+                $valid = ['order_created','order_status_changed','cart_abandoned','stock_changed','low_stock','out_of_stock','customer_created','product_updated','refund_created','cart_recovered'];
+                return is_array($val) ? array_values(array_intersect($val, $valid)) : [];
+            },
         ]);
     }
 
@@ -144,6 +151,7 @@ class Withmia_Admin {
     public function render_page() {
         $api_key = get_option('withmia_api_key', '');
         $webhook_url = get_option('withmia_webhook_url', '');
+        $webhook_secret = get_option('withmia_webhook_secret', '');
         $enabled_events = get_option('withmia_enabled_events', []);
         $nonce = wp_create_nonce('withmia_admin');
 
@@ -238,6 +246,16 @@ class Withmia_Admin {
                             </td>
                         </tr>
                         <tr>
+                            <th>Webhook Secret</th>
+                            <td>
+                                <div class="withmia-api-key-group">
+                                    <input type="text" id="withmia_webhook_secret" name="withmia_webhook_secret" value="<?php echo esc_attr($webhook_secret); ?>" class="regular-text" readonly>
+                                    <button type="button" class="button" onclick="withmiaAdmin.copySecret()">📋 Copiar</button>
+                                </div>
+                                <p class="description">Clave secreta para firmar los webhooks salientes (HMAC-SHA256). Copia este valor y pégalo como <code>WOOCOMMERCE_WEBHOOK_SECRET</code> en tu configuración de WITHMIA.</p>
+                            </td>
+                        </tr>
+                        <tr>
                             <th></th>
                             <td>
                                 <button type="button" class="button button-secondary" onclick="withmiaAdmin.testConnection()">
@@ -296,6 +314,7 @@ class Withmia_Admin {
                         <li>Ingresa la URL de tu tienda: <code><?php echo esc_html($store_url); ?></code></li>
                         <li>Pega la <strong>API Key</strong> que aparece arriba</li>
                         <li>Copia la <strong>URL del Webhook</strong> que te proporcione WITHMIA y pégala arriba</li>
+                        <li>Copia el <strong>Webhook Secret</strong> y configúralo como <code>WOOCOMMERCE_WEBHOOK_SECRET</code> en WITHMIA</li>
                         <li>Haz clic en <strong>Guardar cambios</strong></li>
                     </ol>
                 </div>
@@ -367,10 +386,31 @@ class Withmia_Admin {
 
             copyKey: function() {
                 var keyField = document.getElementById('withmia_api_key');
-                keyField.select();
-                document.execCommand('copy');
+                var text = keyField.value;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text);
+                } else {
+                    keyField.select();
+                    document.execCommand('copy');
+                }
 
                 // Visual feedback
+                var btn = event.target;
+                var original = btn.textContent;
+                btn.textContent = '✅ Copiado';
+                setTimeout(function() { btn.textContent = original; }, 2000);
+            },
+
+            copySecret: function() {
+                var secretField = document.getElementById('withmia_webhook_secret');
+                var text = secretField.value;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text);
+                } else {
+                    secretField.select();
+                    document.execCommand('copy');
+                }
+
                 var btn = event.target;
                 var original = btn.textContent;
                 btn.textContent = '✅ Copiado';

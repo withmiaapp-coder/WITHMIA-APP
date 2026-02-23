@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Traits\ResolvesChatwootConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -20,7 +21,7 @@ class ChatwootChannelController extends Controller
     /**
      * List all inboxes/channels for the authenticated user's company.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $config = $this->resolveChatwootConfig($request->user());
 
@@ -71,7 +72,7 @@ class ChatwootChannelController extends Controller
     /**
      * Create a Web Chat Widget inbox.
      */
-    public function createWebWidget(Request $request)
+    public function createWebWidget(Request $request): JsonResponse
     {
         $request->validate([
             'website_url' => 'required|url',
@@ -107,7 +108,7 @@ class ChatwootChannelController extends Controller
     /**
      * Create an Email channel inbox.
      */
-    public function createEmail(Request $request)
+    public function createEmail(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|email',
@@ -153,7 +154,7 @@ class ChatwootChannelController extends Controller
      * Get Facebook OAuth URL for Instagram / Messenger integration.
      * Chatwoot handles the FB OAuth flow internally via its own callbacks.
      */
-    public function getFacebookAuthUrl(Request $request)
+    public function getFacebookAuthUrl(Request $request): JsonResponse
     {
         $config = $this->resolveChatwootConfig($request->user());
 
@@ -177,7 +178,7 @@ class ChatwootChannelController extends Controller
      * Facebook channels are created exclusively through Chatwoot's own OAuth flow.
      * So we insert directly into Chatwoot's PostgreSQL database (same pattern as ChatwootProvisioningService).
      */
-    public function createFacebookMessenger(Request $request)
+    public function createFacebookMessenger(Request $request): JsonResponse
     {
         $request->validate([
             'page_access_token' => 'required|string',
@@ -198,7 +199,7 @@ class ChatwootChannelController extends Controller
     /**
      * Create an Instagram inbox (via Facebook Page).
      */
-    public function createInstagram(Request $request)
+    public function createInstagram(Request $request): JsonResponse
     {
         $request->validate([
             'page_access_token' => 'required|string',
@@ -350,7 +351,7 @@ class ChatwootChannelController extends Controller
     /**
      * Create a WhatsApp Cloud API inbox (native Chatwoot, not Evolution).
      */
-    public function createWhatsAppCloud(Request $request)
+    public function createWhatsAppCloud(Request $request): JsonResponse
     {
         $request->validate([
             'phone_number' => 'required|string',
@@ -382,7 +383,7 @@ class ChatwootChannelController extends Controller
     /**
      * Delete/disconnect a channel inbox.
      */
-    public function destroy(Request $request, int $inboxId)
+    public function destroy(Request $request, int $inboxId): JsonResponse
     {
         $config = $this->resolveChatwootConfig($request->user());
 
@@ -405,7 +406,7 @@ class ChatwootChannelController extends Controller
     /**
      * Get the Web Widget embed script for a given inbox.
      */
-    public function getWidgetScript(Request $request, int $inboxId)
+    public function getWidgetScript(Request $request, int $inboxId): JsonResponse
     {
         $config = $this->resolveChatwootConfig($request->user());
 

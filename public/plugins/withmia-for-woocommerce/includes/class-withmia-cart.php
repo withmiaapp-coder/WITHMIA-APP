@@ -33,16 +33,14 @@ class Withmia_Cart {
      * Check permissions
      */
     public function check_permissions($request) {
+        // Allow WITHMIA API key (header only — never accept via query params to avoid log leakage)
         $api_key = $request->get_header('X-Withmia-Key');
-        if (!$api_key) {
-            $api_key = $request->get_param('withmia_key');
-        }
 
-        if ($api_key && $api_key === get_option('withmia_api_key')) {
+        if ($api_key && hash_equals(get_option('withmia_api_key', ''), $api_key)) {
             return true;
         }
 
-        if (is_user_logged_in() && current_user_can('read')) {
+        if (is_user_logged_in() && current_user_can('manage_woocommerce')) {
             return true;
         }
 
@@ -62,9 +60,11 @@ class Withmia_Cart {
         $added = 0;
         $errors = [];
 
-        // Clear cart first if requested
+        // Clear cart first if requested (requires valid nonce to prevent CSRF)
         if (isset($_GET['withmia-clear-cart']) && $_GET['withmia-clear-cart'] === '1') {
-            WC()->cart->empty_cart();
+            if (isset($_GET['_wcnonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wcnonce'])), 'withmia_clear_cart')) {
+                WC()->cart->empty_cart();
+            }
         }
 
         foreach ($items as $item) {

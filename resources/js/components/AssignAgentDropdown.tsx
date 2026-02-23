@@ -92,7 +92,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
 
   // Asegurar que agents siempre sea un array
   const safeAgents = Array.isArray(agents) ? agents : [];
-  const filteredAgents = safeAgents.filter((agent: Agent) => 
+  const filteredAgents = safeAgents.filter((agent) => 
     (agent?.name?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false) ||
     (agent?.email?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false)
   );
@@ -183,7 +183,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
                 No se encontraron agentes
               </div>
             ) : (
-              filteredAgents.map((agent: Agent) => (
+              filteredAgents.map((agent) => (
                 <button
                   key={agent.id}
                   onClick={() => handleAssign(agent.id)}

@@ -14,7 +14,7 @@ import {
   Trash2
 } from 'lucide-react';
 
-interface FilterConfig {
+export interface FilterConfig {
   dateRange: 'all' | 'today' | 'week' | 'month' | 'custom';
   customDateFrom?: string;
   customDateTo?: string;
@@ -35,7 +35,7 @@ interface AdvancedFiltersProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyFilters: (config: FilterConfig) => void;
-  conversations: any[];
+  conversations: { labels?: string[]; [key: string]: unknown }[];
   currentUserId?: number;
 }
 
@@ -378,7 +378,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   onChange={(e) => setFilterName(e.target.value)}
                   placeholder="Nombre del filtro..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 mb-2"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSaveFilter()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveFilter()}
                 />
                 <div className="flex space-x-2">
                   <button

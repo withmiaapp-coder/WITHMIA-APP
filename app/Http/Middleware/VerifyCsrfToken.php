@@ -8,20 +8,14 @@ class VerifyCsrfToken extends Middleware
 {
     /**
      * The URIs that should be excluded from CSRF verification.
+     * Nota: La configuración principal está en bootstrap/app.php (validateCsrfTokens).
+     * Este archivo se mantiene como fallback para rutas legacy.
      *
      * @var array<int, string>
      */
     protected $except = [
-        'whatsapp/generate-qr',
-        'whatsapp/status',
-        'whatsapp/disconnect',
         'whatsapp/*',
         'auth/google',
         'auth/google/invitation',
-        'api/bot-config',
-        'api/bot-config/*',
-        'api/chatwoot-proxy/*',
-        'api/evolution/*',
-        'api/evolution-whatsapp/*',
     ];
 }

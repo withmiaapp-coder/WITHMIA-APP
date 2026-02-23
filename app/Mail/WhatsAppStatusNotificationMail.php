@@ -49,7 +49,7 @@ class WhatsAppStatusNotificationMail extends Mailable
                 'isConnected' => $this->isConnected(),
                 'profileName' => $this->profileName,
                 'phoneNumber' => $this->phoneNumber,
-                'timestamp' => now()->setTimezone('America/Santiago')->format('d/m/Y H:i:s'),
+                'timestamp' => now()->setTimezone(config('app.timezone', 'America/Santiago'))->format('d/m/Y H:i:s'),
                 'dashboardUrl' => config('app.url') . '/dashboard/' . $this->instanceName,
             ],
         );

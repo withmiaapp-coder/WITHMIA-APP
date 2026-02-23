@@ -198,7 +198,7 @@ export default function AdminPanel() {
         });
     };
 
-    const serviceIcons: Record<string, { icon: any; color: string }> = {
+    const serviceIcons: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
         'PostgreSQL': { icon: Database, color: 'from-blue-500 to-indigo-500' },
         'Redis': { icon: Server, color: 'from-red-500 to-rose-500' },
         'n8n': { icon: Zap, color: 'from-orange-500 to-amber-500' },

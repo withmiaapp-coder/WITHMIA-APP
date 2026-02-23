@@ -60,6 +60,26 @@ function withmia_chat_activate() {
 register_activation_hook(__FILE__, 'withmia_chat_activate');
 
 /**
+ * Uninstall hook - clean up all plugin data on deletion
+ */
+function withmia_chat_uninstall() {
+    $options = [
+        'withmia_chat_website_token',
+        'withmia_chat_base_url',
+        'withmia_chat_position',
+        'withmia_chat_dark_theme',
+        'withmia_chat_launcher_text',
+        'withmia_chat_language',
+        'withmia_chat_show_on_mobile',
+        'withmia_chat_exclude_pages',
+    ];
+    foreach ($options as $option) {
+        delete_option($option);
+    }
+}
+register_uninstall_hook(__FILE__, 'withmia_chat_uninstall');
+
+/**
  * Redirect to settings page on activation
  */
 function withmia_chat_activation_redirect() {

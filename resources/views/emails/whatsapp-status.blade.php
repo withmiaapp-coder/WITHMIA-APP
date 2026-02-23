@@ -33,7 +33,7 @@
 <body>
     <div class="container">
         <div class="header {{ $isConnected ? 'header-connected' : 'header-disconnected' }}">
-            <img src="https://app.withmia.com/logo-mia-original.png" alt="WITHMIA" class="logo">
+            <img src="{{ config('app.url') }}/logo-mia-original.png" alt="WITHMIA" class="logo">
             <h1>
                 @if($isConnected)
                     ✅ WhatsApp Conectado

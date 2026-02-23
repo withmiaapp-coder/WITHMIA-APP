@@ -88,8 +88,6 @@ return [
                     // Asegurar que el dominio sin protocolo también esté permitido
                     env('APP_URL') ? parse_url(env('APP_URL'), PHP_URL_HOST) : null,
                     env('FRONTEND_URL') ? parse_url(env('FRONTEND_URL'), PHP_URL_HOST) : null,
-                    'app.withmia.com',
-                    'https://app.withmia.com',
                 ]),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 25),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 60),

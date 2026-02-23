@@ -89,7 +89,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
   const [success, setSuccess] = useState<string | null>(null);
   const [expandedMember, setExpandedMember] = useState<number | null>(null);
   const [editedPermissions, setEditedPermissions] = useState<Record<number, Record<string, boolean>>>({});
-  const [editedRoles, setEditedRoles] = useState<Record<number, 'admin' | 'agent'>>({});
+  const [editedRoles, setEditedRoles] = useState<Record<number, 'admin' | 'agent' | 'superadmin'>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   // Obtener miembros

@@ -174,4 +174,16 @@ class CreateN8nWorkflowsJob implements ShouldQueue
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('❌ [CreateN8nWorkflows] Job failed permanently', [
+            'company_id' => $this->companyId,
+            'company_slug' => $this->companySlug,
+            'error' => $exception->getMessage(),
+        ]);
+    }
 }

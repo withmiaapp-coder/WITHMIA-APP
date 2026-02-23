@@ -3,8 +3,8 @@ import { ArrowLeft, MessageCircle } from 'lucide-react';
 import ChatwootWidget from '../components/chatwoot/ChatwootWidget';
 
 interface Props {
-  user: any;
-  company: any;
+  user: { name?: string };
+  company: { name?: string };
   chatwoot?: {
     url?: string;
     inbox_id?: number;

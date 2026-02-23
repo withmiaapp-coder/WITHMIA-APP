@@ -61,14 +61,23 @@ interface Integration {
   is_connected: boolean;
   bot_access_enabled: boolean;
   selected_calendar_id: string | null;
-  settings: Record<string, any> | null;
+  settings: Record<string, unknown> | null;
   last_sync_at: string | null;
   created_at: string | null;
 }
 
 interface Props {
-  user: any;
-  company: any;
+  user: unknown;
+  company: unknown;
+}
+
+interface CreateEventData {
+  title: string;
+  description: string;
+  location: string;
+  start: string;
+  end: string;
+  allDay: boolean;
 }
 
 // ====== HELPERS ======
@@ -280,7 +289,8 @@ export default function CalendarSection({ user, company }: Props) {
       const timeMax = endOfView.toISOString();
 
       // Fetch from all connected providers in parallel
-      const fetches: Promise<{ provider: CalendarProvider; events: any[] }>[] = [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fetches: Promise<{ provider: CalendarProvider; events: Record<string, any>[] }>[] = [];
 
       if (isConnected) {
         fetches.push(
@@ -314,7 +324,7 @@ export default function CalendarSection({ user, company }: Props) {
       for (const result of results) {
         for (const evt of result.events) {
           if (result.provider === 'google') {
-            allEvents.push({ ...evt, provider: 'google', onlineMeetingUrl: null, webLink: null });
+            allEvents.push({ ...evt, provider: 'google', onlineMeetingUrl: null, webLink: null } as CalendarEvent);
           } else if (result.provider === 'outlook') {
             allEvents.push({
               id: evt.id,
@@ -360,7 +370,7 @@ export default function CalendarSection({ user, company }: Props) {
       // Sort by start time
       allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
       setEvents(allEvents);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading events:', err);
       setError('Error al cargar eventos. Intenta reconectar tu calendario desde Integraciones.');
     } finally {
@@ -437,9 +447,9 @@ export default function CalendarSection({ user, company }: Props) {
         }
       }, 1000);
       setTimeout(() => { clearInterval(pollInterval); window.removeEventListener('message', handleMessage); setOutlookConnecting(false); }, 300000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error connecting Outlook:', err);
-      const msg = err?.message || '';
+      const msg = err instanceof Error ? err.message : '';
       if (msg.includes('500') || msg.includes('not configured')) {
         setError('Outlook Calendar no está configurado aún. Contacta al administrador para configurar las credenciales de Microsoft.');
       } else {
@@ -1496,7 +1506,7 @@ function EventDetailModal({ event, onClose, onDelete }: {
 
 function CreateEventModal({ initialDate, onSubmit, onClose }: {
   initialDate: Date;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateEventData) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState('');

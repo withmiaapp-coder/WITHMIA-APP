@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -24,7 +25,7 @@ class ChatwootWebhookController extends Controller
     /**
      * Recibir eventos de Chatwoot y notificar al frontend
      */
-    public function handleWebhook(Request $request)
+    public function handleWebhook(Request $request): JsonResponse
     {
         $event = $request->input('event');
         $data = $request->all();

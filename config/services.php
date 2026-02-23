@@ -58,12 +58,9 @@ return [
         "redirect_uri" => env("CALENDLY_REDIRECT_URI"),
     ],
 
-    "baileys" => [
-        "url" => env("BAILEYS_API_URL", "http://localhost:3001"),
-    ],
-
     "timeouts" => [
         "default" => (int) env("HTTP_TIMEOUT_DEFAULT", 10),
+        "chatwoot" => (int) env("HTTP_TIMEOUT_CHATWOOT", 15),
         "n8n" => (int) env("HTTP_TIMEOUT_N8N", 120),
         "openai" => (int) env("HTTP_TIMEOUT_OPENAI", 180),
         "training" => (int) env("HTTP_TIMEOUT_TRAINING", 30),
@@ -73,6 +70,10 @@ return [
         "api_key" => env("DLOCAL_API_KEY"),
         "secret_key" => env("DLOCAL_SECRET_KEY"),
         "api_url" => env("DLOCAL_API_URL", "https://api.dlocalgo.com"),
+    ],
+
+    "woocommerce" => [
+        "webhook_secret" => env("WOOCOMMERCE_WEBHOOK_SECRET"),
     ],
 
     "facebook" => [

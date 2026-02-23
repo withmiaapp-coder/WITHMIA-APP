@@ -7,11 +7,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Company;
+use App\Services\ChatwootService;
 use Illuminate\Support\Str;
 
 class DashboardController extends Controller
 {
-    public function show($companySlug = null)
+    public function show($companySlug = null): \Inertia\Response|\Illuminate\Http\RedirectResponse
     {
         $user = Auth::user();
 
@@ -90,86 +91,14 @@ class DashboardController extends Controller
 
 
 
-        // 🚀 PREFETCH: Cargar teams y agents directamente de BD (sin cache)
+        // 🚀 PREFETCH: Cargar teams y agents directamente de BD
         $prefetchedTeams = [];
         $prefetchedAgents = [];
         
         if ($company->chatwoot_account_id ?? false) {
-            $accountId = $company->chatwoot_account_id;
-            
-            try {
-                $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
-                
-                // 🚀 BD DIRECTA: Obtener equipos
-                $teams = $chatwootDb->table('teams')
-                    ->where('account_id', $accountId)
-                    ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
-                    ->orderBy('name')
-                    ->get();
-                
-                if ($teams->isNotEmpty()) {
-                    // Obtener miembros de todos los equipos en una sola query
-                    $teamIds = $teams->pluck('id')->toArray();
-                    $allMembers = $chatwootDb->table('team_members')
-                        ->join('users', 'team_members.user_id', '=', 'users.id')
-                        ->whereIn('team_members.team_id', $teamIds)
-                        ->select('team_members.team_id', 'users.id', 'users.name', 'users.display_name', 'users.email')
-                        ->get();
-                    
-                    // Pre-cargar usuarios locales
-                    $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
-                    $localUsers = !empty($allEmails)
-                        ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
-                        : collect();
-                    
-                    $membersByTeam = $allMembers->groupBy('team_id');
-                    
-                    $prefetchedTeams = $teams->map(function ($team) use ($membersByTeam, $localUsers) {
-                        $members = $membersByTeam->get($team->id, collect());
-                        return [
-                            'id' => $team->id,
-                            'name' => $team->name,
-                            'description' => $team->description,
-                            'allow_auto_assign' => $team->allow_auto_assign,
-                            'account_id' => $team->account_id,
-                            'members' => $members->map(function ($m) use ($localUsers) {
-                                $localUser = $localUsers->get($m->email);
-                                return [
-                                    'id' => $m->id,
-                                    'name' => $localUser->full_name ?? $m->display_name ?? $m->name,
-                                    'email' => $m->email
-                                ];
-                            })->toArray()
-                        ];
-                    })->toArray();
-                }
-                
-                // 🚀 BD DIRECTA: Obtener agentes
-                $chatwootAgents = $chatwootDb->table('account_users')
-                    ->join('users', 'account_users.user_id', '=', 'users.id')
-                    ->where('account_users.account_id', $accountId)
-                    ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'account_users.role', 'users.availability')
-                    ->get();
-                
-                $agentEmails = $chatwootAgents->pluck('email')->filter()->toArray();
-                $agentLocalUsers = !empty($agentEmails)
-                    ? \App\Models\User::whereIn('email', $agentEmails)->get()->keyBy('email')
-                    : collect();
-                
-                $prefetchedAgents = $chatwootAgents->map(function ($agent) use ($agentLocalUsers) {
-                    $localUser = $agentLocalUsers->get($agent->email);
-                    return [
-                        'id' => $agent->id,
-                        'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
-                        'email' => $agent->email,
-                        'role' => $agent->role,
-                        'availability_status' => $agent->availability ?? 'offline'
-                    ];
-                })->toArray();
-                
-            } catch (\Exception $e) {
-                Log::error('Error prefetching teams/agents: ' . $e->getMessage());
-            }
+            $prefetch = app(ChatwootService::class)->prefetchTeamsAndAgents($company->chatwoot_account_id);
+            $prefetchedTeams = $prefetch['teams'];
+            $prefetchedAgents = $prefetch['agents'];
         }
 
         return Inertia::render('MainDashboard', [
@@ -186,7 +115,7 @@ class DashboardController extends Controller
     }
 
     // Metodo para generar slug de empresa
-    public function generateSlug($companyName)
+    public function generateSlug($companyName): string
     {
         return Str::slug($companyName ?? '');
     }

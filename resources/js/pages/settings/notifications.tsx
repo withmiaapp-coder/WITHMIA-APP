@@ -83,7 +83,7 @@ export default function NotificationsSettings() {
     description,
     settingKey
   }: {
-    icon: any,
+    icon: React.ComponentType<{ className?: string }>,
     title: string,
     description: string,
     settingKey: keyof NotificationSettings

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { MessageCircle, Search, Bell, Settings, Loader2 } from 'lucide-react';
 import { formatTimestamp } from '../utils/dateFormatter';
 import { getPriorityColor, getStatusColor } from '../utils/conversationColors';
@@ -290,7 +290,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
 interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
-  virtualRow: any;
+  virtualRow: VirtualItem;
   onSelect: () => void;
   measureElement: (element: Element | null) => void;
 }

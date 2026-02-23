@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CalendarIntegration;
 use App\Models\Company;
+use App\Traits\FormatsIntegration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ReservoController extends Controller
 {
+    use FormatsIntegration;
+
     private const PROVIDER = 'reservo';
 
     // ==========================================
@@ -27,7 +31,7 @@ class ReservoController extends Controller
     /**
      * Conectar Reservo con API Key + Subdomain.
      */
-    public function connect(Request $request)
+    public function connect(Request $request): JsonResponse
     {
         $user = $request->user();
         if (!$user) {
@@ -101,7 +105,7 @@ class ReservoController extends Controller
     /**
      * Desconectar Reservo.
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -120,7 +124,7 @@ class ReservoController extends Controller
     // STATUS & SETTINGS
     // ==========================================
 
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -134,7 +138,7 @@ class ReservoController extends Controller
         ]);
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): JsonResponse
     {
         $user = $request->user();
         $integration = CalendarIntegration::where('user_id', $user->id)
@@ -170,7 +174,7 @@ class ReservoController extends Controller
     /**
      * Listar servicios disponibles.
      */
-    public function listServices(Request $request)
+    public function listServices(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -193,7 +197,7 @@ class ReservoController extends Controller
     /**
      * Obtener disponibilidad para un servicio.
      */
-    public function getAvailability(Request $request)
+    public function getAvailability(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -227,7 +231,7 @@ class ReservoController extends Controller
     /**
      * Listar reservas/bookings.
      */
-    public function listBookings(Request $request)
+    public function listBookings(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -257,7 +261,7 @@ class ReservoController extends Controller
     /**
      * Crear una reserva.
      */
-    public function createBooking(Request $request)
+    public function createBooking(Request $request): JsonResponse
     {
         $integration = $this->getIntegration($request);
         if (!$integration) {
@@ -300,7 +304,7 @@ class ReservoController extends Controller
     // BOT ACCESS
     // ==========================================
 
-    public function botGetAvailability(Request $request)
+    public function botGetAvailability(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -369,7 +373,7 @@ class ReservoController extends Controller
         }
     }
 
-    public function botCreateBooking(Request $request)
+    public function botCreateBooking(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -454,18 +458,4 @@ class ReservoController extends Controller
         ])->post($this->getBaseUrl($integration) . $endpoint, $data);
     }
 
-    private function formatIntegration(CalendarIntegration $integration): array
-    {
-        return [
-            'id' => $integration->id,
-            'provider' => $integration->provider,
-            'provider_email' => $integration->provider_email, // subdomain for Reservo
-            'is_active' => $integration->is_active,
-            'is_connected' => $integration->is_active && !empty($integration->access_token),
-            'bot_access_enabled' => $integration->bot_access_enabled,
-            'settings' => $integration->settings,
-            'last_sync_at' => $integration->last_sync_at?->toISOString(),
-            'created_at' => $integration->created_at?->toISOString(),
-        ];
-    }
 }

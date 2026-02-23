@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -38,7 +39,7 @@ return new class extends Migration
             }
             
             if (!Schema::hasColumn('users', 'role')) {
-                $table->string('role')->default('user');
+                $table->string('role')->default('admin'); // Valid roles: superadmin, admin, agent
             }
             
             if (!Schema::hasColumn('users', 'whatsapp_instance_id')) {
@@ -50,6 +51,8 @@ return new class extends Migration
             }
             
             if (!Schema::hasColumn('users', 'chatwoot_agent_id')) {
+                // Note: 2026_01_26 migration defines this as unsignedBigInteger.
+                // Using string here for forward-compatibility (Chatwoot IDs may be numeric or string).
                 $table->string('chatwoot_agent_id')->nullable();
             }
             

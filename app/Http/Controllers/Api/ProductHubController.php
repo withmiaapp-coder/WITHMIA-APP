@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductIntegration;
 use App\Models\Sale;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -20,7 +21,7 @@ class ProductHubController extends Controller
      * Search products for the bot.
      * GET /api/product-hub/bot/search?company_slug=xxx&query=xxx&category=xxx
      */
-    public function botSearch(Request $request)
+    public function botSearch(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -158,7 +159,7 @@ class ProductHubController extends Controller
      * Get full catalog summary for the bot.
      * GET /api/product-hub/bot/catalog?company_slug=xxx
      */
-    public function botCatalog(Request $request)
+    public function botCatalog(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         if (!$companySlug) {
@@ -235,7 +236,7 @@ class ProductHubController extends Controller
      * Generate a checkout/payment link for a specific product.
      * POST /api/product-hub/bot/generate-link
      */
-    public function botGenerateLink(Request $request)
+    public function botGenerateLink(Request $request): JsonResponse
     {
         $companySlug = $request->input('company_slug');
         $productId = $request->input('product_id');

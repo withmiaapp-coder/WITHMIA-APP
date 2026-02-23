@@ -87,7 +87,7 @@ interface User {
 interface Company {
   name: string;
   email?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 interface Chatwoot {
@@ -118,10 +118,19 @@ interface Props {
   company?: Company;
   chatwoot?: Chatwoot;
   stats?: Stats;
-  onboardingData?: any;
+  onboardingData?: {
+    company_name?: string;
+    company_description?: string;
+    has_website?: boolean;
+    website?: string;
+    client_type?: string;
+    logo_url?: string;
+    assistant_name?: string;
+    [key: string]: unknown;
+  };
   companySlug: string;
-  prefetchedTeams?: any[];
-  prefetchedAgents?: any[];
+  prefetchedTeams?: { id: number; name: string; [key: string]: unknown }[];
+  prefetchedAgents?: { id: number; name: string; email: string; [key: string]: unknown }[];
   isSuperAdmin?: boolean;
   planInfo?: PlanInfo;
 }
@@ -174,7 +183,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     };
   }, [isOpen]);
 
-  const helpSubmenuItems: Array<{icon: any; label: string; onClick: (() => void) | null; className: string; isDisabled: boolean}> = [
+  const helpSubmenuItems: Array<{icon: React.ComponentType<{ className?: string }>; label: string; onClick: (() => void) | null; className: string; isDisabled: boolean}> = [
     {
       icon: BookOpen,
       label: 'Centro de ayuda',
@@ -562,19 +571,13 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
   useEffect(() => {
     if (prefetchedTeams && prefetchedTeams.length > 0) {
       // Inyectar datos prefetch al cache global de teams
-      (window as any).__prefetchedTeams = prefetchedTeams;
+      (window as Window & { __prefetchedTeams?: unknown[] }).__prefetchedTeams = prefetchedTeams;
     }
     if (prefetchedAgents && prefetchedAgents.length > 0) {
       // Inyectar datos prefetch al cache global de agents
-      (window as any).__prefetchedAgents = prefetchedAgents;
+      (window as Window & { __prefetchedAgents?: unknown[] }).__prefetchedAgents = prefetchedAgents;
     }
   }, [prefetchedTeams, prefetchedAgents]);
-  
-  useEffect(() => {
-    if (inboxId) {
-      // Inbox ID available
-    }
-  }, [inboxId]);
   
   // ====== VALIDACIo�N DE SEGURIDAD ======
   useEffect(() => {
@@ -855,7 +858,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
       const data = await res.json();
       const channels = data.channels || [];
       // Exclude Evolution API WhatsApp (already counted via whatsAppStatus)
-      const count = channels.filter((ch: any) => ch.id !== 'whatsapp').length;
+      const count = channels.filter((ch: { id: string }) => ch.id !== 'whatsapp').length;
       setChatwootChannelCount(count);
     } catch {}
   }, []);
@@ -872,7 +875,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         const integrations = data.integrations || {};
         let count = 0;
         for (const [key, val] of Object.entries(integrations)) {
-          if (key !== 'manual' && key !== 'total_products' && (val as any)?.connected) count++;
+          if (key !== 'manual' && key !== 'total_products' && (val as Record<string, unknown>)?.connected) count++;
         }
         setProductIntegrationsCount(count);
       } catch {}
@@ -952,10 +955,11 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     
     // Subscribirse a eventos de WhatsApp en tiempo real
     const channelName = `company.${companySlug}.whatsapp`;
-    subscribe(channelName, 'WhatsAppStatusChanged', (data: any) => {
+    subscribe(channelName, 'WhatsAppStatusChanged', (data: unknown) => {
       // Actualizar estado directamente sin hacer request
-      if (data.status) {
-        setWhatsAppStatus(data.status.connected ? 'connected' : 'disconnected');
+      const wsData = data as { status?: { connected: boolean } };
+      if (wsData.status) {
+        setWhatsAppStatus(wsData.status.connected ? 'connected' : 'disconnected');
       }
     });
     

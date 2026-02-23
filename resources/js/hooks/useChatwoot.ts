@@ -1,6 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import debugLog from '@/utils/debugLogger';
 import { isReactionMessage } from '@/utils/messageUtils';
+import type {
+  Conversation,
+  Message,
+  MessageAttachment,
+  MessagesCacheEntry,
+  RawChatwootConversation,
+  RawChatwootMessage,
+  ConversationStatus,
+  Agent,
+  Label,
+  LabelCreateData,
+  AgentCreateData,
+  LabelsCache,
+  DataCache,
+  StatusChangeBody,
+  ChatwootApiResponse,
+} from '@/types/chatwoot';
 
 // ============================================================================
 // HOOK PRINCIPAL: Gestión de Conversaciones con Chatwoot - OPTIMIZADO v2
@@ -14,7 +31,7 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const apiCall = useCallback(async (endpoint: string, method = 'GET', data: any = null) => {
+  const apiCall = useCallback(async (endpoint: string, method = 'GET', data: unknown = null) => {
     setLoading(true);
     setError(null);
 
@@ -48,13 +65,14 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
 
       const result = await response.json();
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId);
-      if (err.name === 'AbortError') {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.name === 'AbortError') {
         setError('La solicitud tardó demasiado. Intenta de nuevo.');
         debugLog.warn('⏱️ Timeout en llamada API:', endpoint);
       } else {
-        setError(err.message);
+        setError(error.message);
         debugLog.error('Chatwoot API Error:', err);
       }
       throw err;
@@ -71,8 +89,8 @@ const useChatwootAPI = (config: ChatwootAPIConfig = {}) => {
 // ============================================================================
 
 export const useConversations = () => {
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [activeConversation, setActiveConversationState] = useState<any | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversation, setActiveConversationState] = useState<Conversation | null>(null);
   const [userInboxId, setUserInboxId] = useState<number | null>(null);
   const { apiCall, loading, error } = useChatwootAPI();
   
@@ -95,10 +113,10 @@ export const useConversations = () => {
    * 3. Sin teléfono: Usa ID de contacto como fallback
    * 4. Múltiples formatos: +56, 56, 9xxxxxxxx todos normalizados
    */
-  const deduplicateConversations = (conversations: any[]) => {
-    const phoneMap = new Map<string, any>();
-    const noPhoneConversations: any[] = [];
-    const groups: any[] = [];
+  const deduplicateConversations = (conversations: Conversation[]) => {
+    const phoneMap = new Map<string, Conversation>();
+    const noPhoneConversations: Conversation[] = [];
+    const groups: Conversation[] = [];
 
     /**
      * Normalizar teléfono: solo dígitos, últimos 10
@@ -117,7 +135,7 @@ export const useConversations = () => {
     /**
      * Detectar si es un grupo de WhatsApp
      */
-    const isGroup = (conv: any): boolean => {
+    const isGroup = (conv: Conversation): boolean => {
       const identifier = conv.meta?.sender?.identifier || conv.contact?.identifier || '';
       const name = conv.contact?.name || conv.meta?.sender?.name || '';
       
@@ -138,7 +156,7 @@ export const useConversations = () => {
     /**
      * Extraer teléfono de múltiples fuentes
      */
-    const extractPhone = (conv: any): string | null => {
+    const extractPhone = (conv: Conversation): string | null => {
       // 1. Primero intentar phone_number explícito
       const phone1 = conv.contact?.phone_number;
       const phone2 = conv.meta?.sender?.phone_number;
@@ -181,7 +199,7 @@ export const useConversations = () => {
 
         // Mantener la más reciente
         if (currentTime > existingTime) {
-          debugLog.debug('🔗 Frontend dedup: reemplazando conversación más antigua', {
+          debugLog.log('🔗 Frontend dedup: reemplazando conversación más antigua', {
             phone: normalizedPhone,
             oldId: existing.id,
             newId: conv.id
@@ -201,11 +219,11 @@ export const useConversations = () => {
     ];
     
     // Ordenar por timestamp (más reciente primero)
-    const deduplicated = allConversations.sort((a: any, b: any) => {
-      const timeA = a.timestamp || a.last_activity_at || 
-                    (a.updated_at ? new Date(a.updated_at).getTime() / 1000 : 0);
-      const timeB = b.timestamp || b.last_activity_at || 
-                    (b.updated_at ? new Date(b.updated_at).getTime() / 1000 : 0);
+    const deduplicated = allConversations.sort((a: Conversation, b: Conversation) => {
+      const timeA = Number(a.timestamp || a.last_activity_at || 
+                    (a.updated_at ? new Date(String(a.updated_at)).getTime() / 1000 : 0));
+      const timeB = Number(b.timestamp || b.last_activity_at || 
+                    (b.updated_at ? new Date(String(b.updated_at)).getTime() / 1000 : 0));
       return timeB - timeA;
     });
 
@@ -224,7 +242,7 @@ export const useConversations = () => {
   };
   
   // 🆕 Helper: Construir last_message con soporte para attachments
-  const buildLastMessage = (conv: any) => {
+  const buildLastMessage = (conv: RawChatwootConversation) => {
     // Buscar el último mensaje en múltiples ubicaciones posibles
     const lastMsg = conv.last_non_activity_message 
       || conv.messages?.[0] 
@@ -259,17 +277,17 @@ export const useConversations = () => {
   };
   
   // ✅ NUEVO: Cache de conversaciones para merge inteligente
-  const conversationsCache = useRef<Map<number, any>>(new Map());
+  const conversationsCache = useRef<Map<number, Conversation>>(new Map());
   
   // ✅ NUEVO: Ref para evitar stale closure en callbacks
-  const conversationsRef = useRef<any[]>([]);
-  const activeConversationRef = useRef<any | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
+  const activeConversationRef = useRef<Conversation | null>(null);
   
   // ✅ NUEVO: Flag para evitar cargas concurrentes de mensajes
   const isLoadingMessagesRef = useRef<Set<string>>(new Set());
   
   // 🚀 Cache local de mensajes con persistencia en sessionStorage
-  const messagesLocalCache = useRef<Map<number, { messages: any[], timestamp: number, hasMore: boolean }>>(new Map());
+  const messagesLocalCache = useRef<Map<number, MessagesCacheEntry>>(new Map());
   const LOCAL_CACHE_TTL = 3 * 60 * 1000; // 3 minutos en ms (reducido para evitar cache stale)
   
   // ✅ NUEVO: Cargar caché desde sessionStorage al iniciar
@@ -280,10 +298,10 @@ export const useConversations = () => {
       sessionStorage.removeItem('chatwoot_messages_cache_v2');
       const savedCache = sessionStorage.getItem('chatwoot_messages_cache_v3');
       if (savedCache) {
-        const parsed = JSON.parse(savedCache);
+        const parsed = JSON.parse(savedCache) as Record<string, MessagesCacheEntry>;
         const now = Date.now();
         // Solo restaurar mensajes que no hayan expirado
-        Object.entries(parsed).forEach(([convId, data]: [string, any]) => {
+        Object.entries(parsed).forEach(([convId, data]) => {
           if (now - data.timestamp < LOCAL_CACHE_TTL) {
             // FIX: No confiar en hasMore=false del cache persistido si tiene pocos mensajes
             const fixedHasMore = data.hasMore === false && (data.messages?.length ?? 0) < 50 ? true : data.hasMore;
@@ -300,7 +318,7 @@ export const useConversations = () => {
   // ✅ NUEVO: Función para guardar caché en sessionStorage
   const persistMessagesCache = useCallback(() => {
     try {
-      const cacheObj: Record<string, any> = {};
+      const cacheObj: Record<string, MessagesCacheEntry> = {};
       messagesLocalCache.current.forEach((value, key) => {
         cacheObj[key] = value;
       });
@@ -368,13 +386,13 @@ export const useConversations = () => {
       const meta = result?.data?.meta || result?.meta || {};
       
       if (Array.isArray(payload)) {
-        const chatwootConversations = payload.map((conv: any) => ({
+        const chatwootConversations: Conversation[] = payload.map((conv: RawChatwootConversation) => ({
           id: conv.id,
           contact: {
-            id: conv.meta?.sender?.id || conv.contact_id,
+            id: conv.meta?.sender?.id || conv.contact_id || 0,
             name: conv.meta?.sender?.name || 'Usuario Anónimo',
             email: conv.meta?.sender?.email || 'sin-email@example.com',
-            phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name,
+            phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name || null,
             avatar: conv.meta?.sender?.name?.charAt(0).toUpperCase() || 'U',
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
             status: conv.meta?.sender?.availability_status || 'offline'
@@ -388,7 +406,7 @@ export const useConversations = () => {
           account_id: conv.account_id,
           assignee_id: conv.assignee?.id || null,
           assignee: conv.assignee || null,
-          updated_at: conv.last_activity_at || conv.updated_at,
+          updated_at: conv.last_activity_at || conv.updated_at || '',
           meta: conv.meta
         }));
         
@@ -403,9 +421,9 @@ export const useConversations = () => {
         setTotalConversations(0);
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Ignorar errores de abort (componente desmontado)
-      if (err?.name === 'AbortError') return;
+      if (err instanceof Error && err.name === 'AbortError') return;
       setConversations([]);
     }
   }, [apiCall]);
@@ -431,16 +449,16 @@ export const useConversations = () => {
       setCurrentPage(page);
       
       if (Array.isArray(payload)) {
-        const chatwootConversations = payload.map((conv: any) => {
-          const conversation = {
+        const chatwootConversations: Conversation[] = payload.map((conv: RawChatwootConversation) => {
+          const conversation: Conversation = {
             id: conv.id,
             contact: {
-              id: conv.meta?.sender?.id || conv.contact_id,
+              id: conv.meta?.sender?.id || conv.contact_id || 0,
               name: conv.meta?.sender?.name || 'Usuario Anónimo',
               email: conv.meta?.sender?.email || 'sin-email@example.com',
-              phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name,
+              phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name || null,
               avatar: conv.meta?.sender?.name?.charAt(0).toUpperCase() || 'U',
-            avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
+              avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
               status: conv.meta?.sender?.availability_status || 'offline'
             },
             meta: conv.meta, // Incluir meta para acceso a sender info
@@ -454,7 +472,7 @@ export const useConversations = () => {
             account_id: conv.account_id,
             assignee_id: conv.assignee?.id || null,
             assignee: conv.assignee || null,
-            updated_at: conv.last_activity_at || conv.updated_at,
+            updated_at: conv.last_activity_at || conv.updated_at || '',
             created_at: conv.created_at
           };
           
@@ -510,13 +528,13 @@ export const useConversations = () => {
       if (Array.isArray(payload) && payload.length > 0) {
         debugLog.log(`✅ Found ${payload.length} updated conversations`);
         
-        const updatedConversations = payload.map((conv: any) => ({
+        const updatedConversations: Conversation[] = payload.map((conv: RawChatwootConversation) => ({
           id: conv.id,
           contact: {
-            id: conv.meta?.sender?.id || conv.contact_id,
+            id: conv.meta?.sender?.id || conv.contact_id || 0,
             name: conv.meta?.sender?.name || 'Usuario Anónimo',
             email: conv.meta?.sender?.email || 'sin-email@example.com',
-            phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name,
+            phone_number: conv.meta?.sender?.phone_number || conv.meta?.sender?.name || null,
             avatar: conv.meta?.sender?.name?.charAt(0).toUpperCase() || 'U',
             avatarUrl: conv.meta?.sender?.thumbnail || conv.meta?.sender?.avatar_url || null,
             status: conv.meta?.sender?.availability_status || 'offline'
@@ -530,7 +548,7 @@ export const useConversations = () => {
           account_id: conv.account_id,
           assignee_id: conv.assignee?.id || null,
           assignee: conv.assignee || null,
-          updated_at: conv.last_activity_at || conv.updated_at,
+          updated_at: conv.last_activity_at || conv.updated_at || '',
           meta: conv.meta
         }));
         
@@ -548,14 +566,14 @@ export const useConversations = () => {
           });
 
           // Ordenar por timestamp
-          const getTimestamp = (conv: any) => {
+          const getTimestamp = (conv: Conversation): number => {
             if (conv.updated_at) {
-              return conv.updated_at > 10000000000 ? conv.updated_at : conv.updated_at * 1000;
+              const val = Number(conv.updated_at);
+              return val > 10000000000 ? val : val * 1000;
             }
             if (conv.last_message?.timestamp) {
-              return conv.last_message.timestamp > 10000000000 
-                ? conv.last_message.timestamp 
-                : conv.last_message.timestamp * 1000;
+              const val = Number(conv.last_message.timestamp);
+              return val > 10000000000 ? val : val * 1000;
             }
             return 0;
           };
@@ -666,7 +684,7 @@ export const useConversations = () => {
     const cacheIsValid = cached && cached.messages && cached.messages.length > 0;
     
     if (cacheIsValid && !loadMore && (now - cached.timestamp) < LOCAL_CACHE_TTL) {
-      const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
+      const conversation = conversationsRef.current.find((c) => c.id === conversationId)
         || activeConversationRef.current;
       if (conversation && conversation.id === conversationId) {
         setActiveConversationState({
@@ -700,19 +718,19 @@ export const useConversations = () => {
         if (currentMessages.length > 0) {
           // Filtrar solo mensajes con IDs numéricos (excluir temp/pending)
           // Aceptar tanto number como string numérico (PostgreSQL puede devolver strings)
-          const realMessages = currentMessages.filter((m: any) => {
+          const realMessages = currentMessages.filter((m: Message) => {
             if (typeof m.id === 'number') return !isNaN(m.id) && m.id > 0;
             if (typeof m.id === 'string') return /^\d+$/.test(m.id);
             return false;
           });
           if (realMessages.length > 0) {
-            const sortedMessages = [...realMessages].sort((a: any, b: any) => Number(a.id) - Number(b.id));
+            const sortedMessages = [...realMessages].sort((a: Message, b: Message) => Number(a.id) - Number(b.id));
             const oldestId = sortedMessages[0]?.id;
             if (oldestId) {
               url += `&before=${oldestId}&_t=${Date.now()}`;
             }
           } else {
-            console.warn(`⚠️ [LoadMore] No hay mensajes con IDs válidos! Total msgs=${currentMessages.length}, sample IDs:`, currentMessages.slice(0, 3).map((m: any) => ({ id: m.id, type: typeof m.id })));
+            console.warn(`⚠️ [LoadMore] No hay mensajes con IDs válidos! Total msgs=${currentMessages.length}, sample IDs:`, currentMessages.slice(0, 3).map((m: Message) => ({ id: m.id, type: typeof m.id })));
           }
         }
       }
@@ -724,13 +742,13 @@ export const useConversations = () => {
       if (Array.isArray(messagesArray)) {
         // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend para mostrarlas
         // Filtrar: solo mensajes reales (0=incoming, 1=outgoing), excluir actividad (2)
-        const chatwootMessages = messagesArray
-          .filter((msg: any) => {
+        const chatwootMessages: Message[] = messagesArray
+          .filter((msg: RawChatwootMessage) => {
             const msgType = msg.message_type;
             // Aceptar incoming (0) y outgoing (1), excluir activity (2) y undefined
             return msgType === 0 || msgType === 1 || msgType === '0' || msgType === '1';
           })
-          .map((msg: any) => {
+          .map((msg: RawChatwootMessage) => {
             // Determinar sender basado en message_type
             // Chatwoot: 0 = incoming (contact), 1 = outgoing (agent)
             const isIncoming = msg.message_type === 0 || msg.message_type === '0';
@@ -751,13 +769,13 @@ export const useConversations = () => {
           });
 
         // Deduplicación Evolution
-        const duplicateIds = new Set<number>();
-        const contentGroups = new Map<string, any[]>();
+        const duplicateIds = new Set<number | string>();
+        const contentGroups = new Map<string, Message[]>();
         
         for (const msg of chatwootMessages) {
           const msgTimestamp = typeof msg.timestamp === 'string' 
             ? new Date(msg.timestamp).getTime() 
-            : msg.timestamp * 1000;
+            : Number(msg.timestamp) * 1000;
           const approxTimestamp = Math.floor(msgTimestamp / 3000);
           const groupKey = `${msg.content?.trim()}|${approxTimestamp}|${msg.message_type}`;
           
@@ -767,10 +785,10 @@ export const useConversations = () => {
           contentGroups.get(groupKey)!.push(msg);
         }
         
-        for (const [key, group] of contentGroups) {
+        for (const [, group] of contentGroups) {
           if (group.length >= 2) {
-            const withSourceId = group.filter((m: any) => m.source_id?.startsWith('WAID:'));
-            const withoutSourceId = group.filter((m: any) => !m.source_id);
+            const withSourceId = group.filter((m: Message) => m.source_id?.startsWith('WAID:'));
+            const withoutSourceId = group.filter((m: Message) => !m.source_id);
             
             if (withSourceId.length >= 1 && withoutSourceId.length >= 1) {
               for (const dupMsg of withSourceId) {
@@ -780,11 +798,11 @@ export const useConversations = () => {
           }
         }
         
-        let uniqueMessages = chatwootMessages
-          .filter((m: any) => !duplicateIds.has(m.id))
-          .sort((a: any, b: any) => {
-            const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
-            const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
+        let uniqueMessages: Message[] = chatwootMessages
+          .filter((m: Message) => !duplicateIds.has(m.id))
+          .sort((a: Message, b: Message) => {
+            const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : Number(a.timestamp);
+            const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : Number(b.timestamp);
             return timeA - timeB;
           });
 
@@ -793,8 +811,8 @@ export const useConversations = () => {
           const existingMessages = cached?.messages || activeConversationRef.current?.messages || [];
           if (existingMessages.length > 0) {
             // Normalizar IDs a números para comparación consistente
-            const existingIds = new Set(existingMessages.map((m: any) => Number(m.id)));
-            const newOlderMessages = uniqueMessages.filter((m: any) => !existingIds.has(Number(m.id)));
+            const existingIds = new Set(existingMessages.map((m: Message) => Number(m.id)));
+            const newOlderMessages = uniqueMessages.filter((m: Message) => !existingIds.has(Number(m.id)));
             
             // ⚠️ Si no hay mensajes nuevos, significa que no hay más mensajes anteriores
             if (newOlderMessages.length === 0) {
@@ -803,15 +821,15 @@ export const useConversations = () => {
             
             uniqueMessages = [...newOlderMessages, ...existingMessages];
             // Re-ordenar por timestamp
-            uniqueMessages.sort((a: any, b: any) => {
-              const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp;
-              const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp;
+            uniqueMessages.sort((a: Message, b: Message) => {
+              const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : Number(a.timestamp);
+              const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : Number(b.timestamp);
               return timeA - timeB;
             });
           }
         } else if (cached?.messages) {
           // ✅ FIX: Preservar mensajes optimistas/pendientes que aún no están en API
-          const optimisticMessages = cached.messages.filter((m: any) => 
+          const optimisticMessages = cached.messages.filter((m: Message) => 
             m._isOptimistic || 
             String(m.id).startsWith('temp-') || 
             String(m.id).startsWith('pending-') ||
@@ -821,8 +839,8 @@ export const useConversations = () => {
           if (optimisticMessages.length > 0) {
             debugLog.log(`💾 Preservando ${optimisticMessages.length} mensajes optimistas pendientes`);
             // Agregar mensajes optimistas que no están en la respuesta de API
-            const apiMessageContents = new Set(uniqueMessages.map((m: any) => m.content?.trim()));
-            const pendingToKeep = optimisticMessages.filter((m: any) => 
+            const apiMessageContents = new Set(uniqueMessages.map((m: Message) => m.content?.trim()));
+            const pendingToKeep = optimisticMessages.filter((m: Message) => 
               !apiMessageContents.has(m.content?.trim())
             );
             
@@ -841,7 +859,7 @@ export const useConversations = () => {
         });
         persistMessagesCache(); // ✅ Persistir en sessionStorage
 
-        const conversation = conversationsRef.current.find((c: any) => c.id === conversationId)
+        const conversation = conversationsRef.current.find((c) => c.id === conversationId)
           || activeConversationRef.current;
         
         if (conversation && conversation.id === conversationId) {
@@ -884,7 +902,7 @@ export const useConversations = () => {
               messages: uniqueMessages,
               _isLoading: false,
               _hasMoreMessages: meta.has_more ?? false
-            } as any;
+            } as Conversation;
           });
         }
       }
@@ -898,7 +916,7 @@ export const useConversations = () => {
             _isLoading: false
           };
         }
-        const conversation = conversationsRef.current.find((c: any) => c.id === conversationId);
+        const conversation = conversationsRef.current.find((c) => c.id === conversationId);
         if (conversation) {
           return {
             ...conversation,
@@ -937,7 +955,7 @@ export const useConversations = () => {
               if (Array.isArray(messagesArray)) {
                 // 🎭 Ya no filtramos reacciones aquí - se procesan en el frontend
                 const chatwootMessages = messagesArray
-                  .map((msg: any) => ({
+                  .map((msg: RawChatwootMessage) => ({
                   id: msg.id,
                   content: msg.content,
                   timestamp: msg.created_at,
@@ -1021,7 +1039,7 @@ export const useConversations = () => {
   // ========================================
   // ✅ NUEVO: Función para actualizar caché de mensajes (para sincronización RT)
   // ========================================
-  const updateMessagesCache = useCallback((conversationId: number, messages: any[]) => {
+  const updateMessagesCache = useCallback((conversationId: number, messages: Message[]) => {
     if (!conversationId || !messages) return;
     
     const existingCache = messagesLocalCache.current.get(conversationId);
@@ -1037,13 +1055,13 @@ export const useConversations = () => {
   // ========================================
   // ✅ NUEVO: Función para agregar mensaje a caché existente
   // ========================================
-  const addMessageToCache = useCallback((conversationId: number, newMessage: any) => {
+  const addMessageToCache = useCallback((conversationId: number, newMessage: Message) => {
     if (!conversationId || !newMessage) return;
     
     const existingCache = messagesLocalCache.current.get(conversationId);
     if (existingCache) {
       // Verificar que el mensaje no exista ya
-      const messageExists = existingCache.messages.some((m: any) => 
+      const messageExists = existingCache.messages.some((m: Message) => 
         m.id === newMessage.id || 
         (m._isOptimistic && m.content === newMessage.content)
       );
@@ -1108,7 +1126,7 @@ export const useConversations = () => {
     snoozedUntil?: number // Timestamp para snoozed
   ) => {
     try {
-      const body: any = { status };
+      const body: StatusChangeBody = { status };
       if (status === 'snoozed' && snoozedUntil) {
         body.snoozed_until = snoozedUntil;
       }
@@ -1479,8 +1497,8 @@ const CACHE_TTL = 30000; // 30 segundos de cache en frontend
 
 // Inicializar con datos prefetch del servidor si están disponibles
 const initTeamsCacheFromPrefetch = () => {
-  if ((window as any).__prefetchedTeams && (window as any).__prefetchedTeams.length > 0 && !teamsCache.data) {
-    teamsCache.data = (window as any).__prefetchedTeams;
+  if (window.__prefetchedTeams && window.__prefetchedTeams.length > 0 && !teamsCache.data) {
+    teamsCache.data = window.__prefetchedTeams;
     teamsCache.timestamp = Date.now();
   }
 };
@@ -1525,9 +1543,9 @@ export const useTeams = () => {
       const teamsData = await teamsCache.promise;
       setTeams(teamsData);
       return teamsData;
-    } catch (err: any) {
+    } catch (err: unknown) {
       teamsCache.promise = null;
-      if (err?.name === 'AbortError') return teamsCache.data || [];
+      if (err instanceof Error && err.name === 'AbortError') return teamsCache.data || [];
       return teamsCache.data || [];
     }
   }, [apiCall]);
@@ -1674,11 +1692,11 @@ export const useTeams = () => {
 // ============================================================================
 
 // Cache global para que todas las instancias de useLabels compartan datos
-export let labelsGlobalCache: { data: any[]; timestamp: number } = { data: [], timestamp: 0 };
+export let labelsGlobalCache: LabelsCache = { data: [], timestamp: 0 };
 const LABELS_CACHE_TTL = 15000; // 15 segundos
 
 export const useLabels = () => {
-  const [labels, setLabels] = useState<any[]>(labelsGlobalCache.data);
+  const [labels, setLabels] = useState<Label[]>(labelsGlobalCache.data);
   const { apiCall, loading, error } = useChatwootAPI();
 
   const fetchLabels = useCallback(async (forceRefresh = false) => {
@@ -1700,7 +1718,7 @@ export const useLabels = () => {
     }
   }, [apiCall]);
 
-  const createLabel = useCallback(async (labelData: any) => {
+  const createLabel = useCallback(async (labelData: LabelCreateData) => {
     try {
       const result = await apiCall('/api/chatwoot-proxy/labels', 'POST', labelData);
       await fetchLabels(true);
@@ -1732,7 +1750,7 @@ export const useLabels = () => {
 // ============================================================================
 
 // Cache en memoria para agentes
-let agentsCache: { data: any[] | null; timestamp: number; promise: Promise<any[]> | null } = {
+let agentsCache: DataCache<Agent> = {
   data: null,
   timestamp: 0,
   promise: null
@@ -1741,8 +1759,8 @@ const AGENTS_CACHE_TTL = 30000; // 30 segundos
 
 // Inicializar con datos prefetch del servidor si están disponibles
 const initAgentsCacheFromPrefetch = () => {
-  if ((window as any).__prefetchedAgents && (window as any).__prefetchedAgents.length > 0 && !agentsCache.data) {
-    agentsCache.data = (window as any).__prefetchedAgents;
+  if (window.__prefetchedAgents && window.__prefetchedAgents.length > 0 && !agentsCache.data) {
+    agentsCache.data = window.__prefetchedAgents;
     agentsCache.timestamp = Date.now();
   }
 };
@@ -1753,7 +1771,7 @@ export const useAgents = () => {
     initAgentsCacheFromPrefetch();
   }
   
-  const [agents, setAgents] = useState<any[]>(agentsCache.data || []);
+  const [agents, setAgents] = useState<Agent[]>(agentsCache.data || []);
   const { apiCall, loading, error } = useChatwootAPI();
 
   const fetchAgents = useCallback(async (forceRefresh = false) => {
@@ -1796,7 +1814,7 @@ export const useAgents = () => {
   }, []);
 
   // createAgent placeholder: backend POST /agents route not implemented
-  const createAgent = useCallback(async (_agentData: any) => {
+  const createAgent = useCallback(async (_agentData: AgentCreateData) => {
     console.warn('createAgent: backend route not implemented');
     return null;
   }, []);
@@ -1902,8 +1920,9 @@ export const useTeamInvitations = () => {
       
       await fetchInvitations();
       return result;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
       throw err;
     } finally {
       setLoading(false);
@@ -1928,8 +1947,9 @@ export const useTeamInvitations = () => {
       }
       
       await fetchInvitations();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
       throw err;
     }
   }, [fetchInvitations]);
@@ -1952,8 +1972,9 @@ export const useTeamInvitations = () => {
       }
       
       await fetchInvitations();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
       throw err;
     }
   }, [fetchInvitations]);

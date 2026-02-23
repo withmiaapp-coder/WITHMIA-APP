@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -22,7 +23,7 @@ class TrainingChatController extends Controller
         $this->memoryService = $memoryService;
     }
 
-    public function trainingChat(Request $request)
+    public function trainingChat(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();

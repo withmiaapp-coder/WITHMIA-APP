@@ -413,7 +413,7 @@
 }
 
 /* Submenu slide animation */
-@keyframes slideInRight {
+@keyframes slideInFromLeft {
     from {
         opacity: 0;
         transform: translateX(-10px);

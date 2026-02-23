@@ -64,10 +64,10 @@ import {
 } from 'lucide-react';
 import { useConversations, useLabels, labelsGlobalCache } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
-import AdvancedFilters from './AdvancedFilters';
+import AdvancedFilters, { FilterConfig } from './AdvancedFilters';
 import { useMessagePagination } from '../hooks/useMessagePagination';
-import NotificationCenter from './NotificationCenter.tsx';
-import NotificationSettings from './NotificationSettings.tsx';
+import NotificationCenter from './NotificationCenter';
+import NotificationSettings from './NotificationSettings';
 import { formatTimestamp } from '../utils/dateFormatter';
 import { getPriorityColor, getStatusColor } from '../utils/conversationColors';
 import debugLog from '../utils/debugLogger';
@@ -76,39 +76,58 @@ import AssignAgentDropdown from './AssignAgentDropdown';
 import LabelsManager from './LabelsManager';
 import MessageStatus from './conversations/MessageStatus';
 import { formatLastMessagePreview, formatAvatar, getAvatarProxyUrl } from '../utils/conversationHelpers';
+import type { Conversation, Message, MessageAttachment, Label, ConversationStatus } from '../types/chatwoot';
 
-interface Conversation {
+/** Extended attachment with all URL variants used in this component */
+interface ResolvedAttachment extends MessageAttachment {
+  proxy_url?: string;
+  file_url?: string;
+  url?: string;
+  thumb_url?: string;
+  name?: string;
+  message_id?: number | string;
+  file_category?: string;
+  [key: string]: unknown;
+}
+
+/** Canned response from Chatwoot API */
+interface CannedResponse {
+  id: number | string;
+  short_code: string;
+  content: string;
+}
+
+/** Contact note from Chatwoot API */
+interface ContactNote {
   id: number;
-  contact: {
-    name: string;
-    email: string;
-    avatar: string;
-    status: 'online' | 'offline';
-  };
-  last_message: {
-    content: string;
-    timestamp: string;
-    sender: 'agent' | 'contact';
-  };
-  status: 'open' | 'resolved' | 'pending' | 'snoozed';
-  priority: 'urgent' | 'high' | 'medium' | 'low';
-  labels: string[];
-  unread_count: number;
-  assignee_id?: number;
-  assignee?: {
-    id: number;
-    name: string;
-    email: string;
-  };
+  content: string;
+  created_at: number;
+  user?: { name?: string };
+}
+
+/** Link preview metadata */
+interface LinkPreview {
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+  loading?: boolean;
+  error?: boolean;
+}
+
+/** Search result from backend */
+interface SearchResult {
+  conversation_id: number;
+  matching_message?: Message;
 }
 
 /**
  * Resuelve la URL de un attachment.
- * Si tiene ID numérico > 0 y NO es un blob local, usa el proxy que cachea y
- * obtiene URLs frescas de Chatwoot Active Storage (resolviendo expiración).
+ * Si tiene ID numÃ©rico > 0 y NO es un blob local, usa el proxy que cachea y
+ * obtiene URLs frescas de Chatwoot Active Storage (resolviendo expiraciÃ³n).
  * Para blob: URLs (previews locales/optimistas) las devuelve tal cual.
  */
-const resolveAttachmentUrl = (att: any): string => {
+const resolveAttachmentUrl = (att: ResolvedAttachment): string => {
   // Si el backend devuelve una URL firmada (proxy_url), usarla directamente
   if (att?.proxy_url) {
     return att.proxy_url;
@@ -131,40 +150,40 @@ interface ConversationsInterfaceProps {
 }
 
 const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ currentAgentId }) => {
-  // 🏷️ Labels con colores reales (cache global compartido)
+  // ðŸ·ï¸ Labels con colores reales (cache global compartido)
   useLabels(); // Solo para inicializar la carga de labels al montar
   const getLabelColor = (labelTitle: string): string => {
-    const found = labelsGlobalCache.data.find((l: any) => l.title === labelTitle);
+    const found = labelsGlobalCache.data.find((l: Label) => l.title === labelTitle);
     return found?.color || '#6b7280';
   };
 
-  // 🔔 SISTEMA UNIFICADO: Usamos el contexto global para notificaciones
-  // (ya no usamos useNotifications() - todo está en GlobalNotificationContext)
+  // ðŸ”” SISTEMA UNIFICADO: Usamos el contexto global para notificaciones
+  // (ya no usamos useNotifications() - todo estÃ¡ en GlobalNotificationContext)
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchResults, setSearchResults] = useState<unknown[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  // Estado para navegaci??n entre coincidencias de búsqueda
+  // Estado para navegaci??n entre coincidencias de bÃºsqueda
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [totalMatches, setTotalMatches] = useState(0);
   
-  //  OPTIMIZACIÓN: Debounce timer para recargas
+  //  OPTIMIZACIÃ“N: Debounce timer para recargas
   const reloadDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastReloadTimestampRef = useRef<number>(0);
   const isPendingReloadRef = useRef<boolean>(false);
 
-  // Función para normalizar texto (quitar acentos/diacríticos)
+  // FunciÃ³n para normalizar texto (quitar acentos/diacrÃ­ticos)
   const normalizeText = (text: string) => 
     text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-  // Función para resaltar términos de búsqueda con estilo profesional
+  // FunciÃ³n para resaltar tÃ©rminos de bÃºsqueda con estilo profesional
   const highlightSearchTerm = (text: string, term: string, messageIndex: number) => {
     if (!term || !text) return text;
 
     // Buscar posiciones usando texto normalizado (sin acentos)
     const normalizedText = normalizeText(text);
     const normalizedTerm = normalizeText(term);
-    const parts: (string | JSX.Element)[] = [];
+    const parts: (string | React.JSX.Element)[] = [];
     let lastIndex = 0;
     let matchCounter = 0;
     let searchFrom = 0;
@@ -228,14 +247,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     currentPage,
     updateMessagesCache,
     addMessageToCache,
-    // Funciones de gestión
+    // Funciones de gestiÃ³n
     assignConversation,
     changeConversationStatus,
     updateConversationLabels,
     deleteConversation,
     deleteMessage,
     updateConversationPriority,
-    // Respuestas rápidas
+    // Respuestas rÃ¡pidas
     getCannedResponses,
     createCannedResponse,
     deleteCannedResponse,
@@ -256,7 +275,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   
   // FASE 3: Estados para filtros avanzados
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<any | null>(null);
+  const [appliedFilters, setAppliedFilters] = useState<FilterConfig | null>(null);
   
   // ?? NUEVO: Estado para separador de "nuevos mensajes"
   const [newMessageSeparatorIndex, setNewMessageSeparatorIndex] = useState<number | null>(null);
@@ -265,13 +284,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   
   //  NUEVOS ESTADOS - FUNCIONES DE WHATSAPP
   // 1. Reply/Quote (Responder)
-  const [replyingTo, setReplyingTo] = useState<any | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
   // 2. Starred Messages (Mensajes destacados)
   const [starredMessages, setStarredMessages] = useState<Set<number>>(new Set());
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   
-  // 3. Search (B??squeda en mensajes - NO CONFUNDIR con búsqueda global)
+  // 3. Search (B??squeda en mensajes - NO CONFUNDIR con bÃºsqueda global)
   const [searchQuery, setSearchQuery] = useState('');
   const [messageSearchResults, setMessageSearchResults] = useState<number[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
@@ -287,7 +306,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   
   // 6. Pinned Messages (Mensajes fijados)
-  const [pinnedMessage, setPinnedMessage] = useState<any | null>(null);
+  const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
   
   // 7. Contact Info Panel (Panel de informacion)
   const [showContactInfo, setShowContactInfo] = useState(false);
@@ -306,7 +325,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   });
   
   //  FASE 3 - FUNCIONES AVANZADAS
-  // 1. Search Bar Visual (Barra de búsqueda expandible)
+  // 1. Search Bar Visual (Barra de bÃºsqueda expandible)
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   
@@ -316,17 +335,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const [priorityMenuPos, setPriorityMenuPos] = useState<{top: number; left: number}>({top: 0, left: 0});
   const priorityBtnRef = useRef<HTMLButtonElement>(null);
 
-  // 1. Respuestas rápidas (Canned Responses)
-  const [cannedResponses, setCannedResponses] = useState<any[]>([]);
+  // 1. Respuestas rÃ¡pidas (Canned Responses)
+  const [cannedResponses, setCannedResponses] = useState<CannedResponse[]>([]);
   const [showCannedResponses, setShowCannedResponses] = useState(false);
   const [cannedFilter, setCannedFilter] = useState('');
   
   // 2. Notas de contacto
-  const [contactNotes, setContactNotes] = useState<any[]>([]);
+  const [contactNotes, setContactNotes] = useState<ContactNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
   const [showNotes, setShowNotes] = useState(false);
   
-  // 3. Diálogos de confirmación
+  // 3. DiÃ¡logos de confirmaciÃ³n
   const [confirmDialog, setConfirmDialog] = useState<{
     show: boolean;
     title: string;
@@ -342,10 +361,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   // 3. Drag & Drop (Arrastrar y soltar archivos)
   const [isDragging, setIsDragging] = useState(false);
   const [draggedFiles, setDraggedFiles] = useState<File[]>([]);
-  const [isUploadingFile, setIsUploadingFile] = useState(false); // 📤 Estado de carga de archivo
+  const [isUploadingFile, setIsUploadingFile] = useState(false); // ðŸ“¤ Estado de carga de archivo
   const [uploadProgress, setUploadProgress] = useState<string>(''); // Nombre del archivo subiendo
   
-  // 📎 STAGED FILE: archivo preparado para enviar (preview antes de enviar)
+  // ðŸ“Ž STAGED FILE: archivo preparado para enviar (preview antes de enviar)
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [stagedFilePreviewUrl, setStagedFilePreviewUrl] = useState<string | null>(null);
   const [fileCaption, setFileCaption] = useState<string>('');
@@ -353,7 +372,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   
   // 4. Audio Messages (Mensajes de voz)
   const [isRecording, setIsRecording] = useState(false);
-  const [isSendingAudio, setIsSendingAudio] = useState(false); // 🎤 Estado de envío de audio
+  const [isSendingAudio, setIsSendingAudio] = useState(false); // ðŸŽ¤ Estado de envÃ­o de audio
   const [audioRecorder, setAudioRecorder] = useState<MediaRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -361,24 +380,24 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   
-  // 🎬 Estados para visor de media fullscreen con navegación (estilo WhatsApp)
+  // ðŸŽ¬ Estados para visor de media fullscreen con navegaciÃ³n (estilo WhatsApp)
   const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
   const [mediaGallery, setMediaGallery] = useState<Array<{url: string, type: 'image' | 'video'}>>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const [mediaZoom, setMediaZoom] = useState(1); // 🔍 Zoom level (1 = 100%)
-  const [mediaPan, setMediaPan] = useState({ x: 0, y: 0 }); // 🖱️ Pan position
-  const [isMediaDragging, setIsMediaDragging] = useState(false); // 🖱️ Dragging state for media viewer
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // 🖱️ Drag start position
+  const [mediaZoom, setMediaZoom] = useState(1); // ðŸ” Zoom level (1 = 100%)
+  const [mediaPan, setMediaPan] = useState({ x: 0, y: 0 }); // ðŸ–±ï¸ Pan position
+  const [isMediaDragging, setIsMediaDragging] = useState(false); // ðŸ–±ï¸ Dragging state for media viewer
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }); // ðŸ–±ï¸ Drag start position
   
-  // 🎬 Helper: Abrir visor de media con galería completa de la conversación
+  // ðŸŽ¬ Helper: Abrir visor de media con galerÃ­a completa de la conversaciÃ³n
   const openMediaViewer = useCallback((clickedUrl: string, clickedType: 'image' | 'video') => {
-    // Recolectar todos los medias de los mensajes de la conversación activa
+    // Recolectar todos los medias de los mensajes de la conversaciÃ³n activa
     const allMedia: Array<{url: string, type: 'image' | 'video'}> = [];
     
     if (activeConversation?.messages) {
-      activeConversation.messages.forEach((msg: any) => {
+      activeConversation.messages.forEach((msg: Message) => {
         if (msg.attachments) {
-          msg.attachments.forEach((att: any) => {
+          (msg.attachments as ResolvedAttachment[]).forEach((att: ResolvedAttachment) => {
             const rawUrl = att.data_url || att.file_url || att.url || att.thumb_url || '';
             // file_type puede ser int (0=image,1=audio,2=video) o string
             const rawFileType = att.file_type ?? att.content_type ?? '';
@@ -386,10 +405,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             if (!rawUrl && !(Number(att?.id) > 0)) return;
             
-            // ✅ Usar proxy inteligente
+            // âœ… Usar proxy inteligente
             const attachmentUrl = resolveAttachmentUrl(att);
             
-            // ✅ Detectar imágenes enviadas como documento
+            // âœ… Detectar imÃ¡genes enviadas como documento
             const attContentType = String(att.content_type || '').toLowerCase();
             const attFileName = String(att.file_name || att.name || '').toLowerCase();
             const attIsImage = fileType === 'image' || fileType.includes('image/') || fileType === '0'
@@ -411,7 +430,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       allMedia.push({ url: clickedUrl, type: clickedType });
     }
     
-    // Encontrar el índice del media clickeado
+    // Encontrar el Ã­ndice del media clickeado
     const clickedIndex = allMedia.findIndex(m => m.url === clickedUrl);
     
     setMediaGallery(allMedia);
@@ -421,7 +440,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setMediaViewerOpen(true);
   }, [activeConversation?.messages]);
   
-  // 🎬 Navegación de la galería
+  // ðŸŽ¬ NavegaciÃ³n de la galerÃ­a
   const goToPreviousMedia = useCallback(() => {
     setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : mediaGallery.length - 1));
     setMediaZoom(1); // Reset zoom al cambiar
@@ -434,7 +453,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setMediaPan({ x: 0, y: 0 }); // Reset pan al cambiar
   }, [mediaGallery.length]);
   
-  // 🔍 Handler para zoom con scroll
+  // ðŸ” Handler para zoom con scroll
   const handleMediaWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -447,7 +466,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [mediaZoom]);
   
-  // 🖱️ Handlers para arrastrar imagen con zoom
+  // ðŸ–±ï¸ Handlers para arrastrar imagen con zoom
   const handleMediaMouseDown = useCallback((e: React.MouseEvent) => {
     if (mediaZoom > 1) {
       e.preventDefault();
@@ -495,7 +514,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     toastTimerRef.current = setTimeout(() => setShowToastNotif(false), 3500);
   };
   
-  // 📜 NUEVO: Ref para auto-scroll de mensajes
+  // ðŸ“œ NUEVO: Ref para auto-scroll de mensajes
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
@@ -506,12 +525,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const messageInputRef = useRef<HTMLInputElement>(null);
   
   // ?? NUEVO: Ref para evitar stale closure en callbacks de tiempo real
-  const activeConversationRef = useRef<any | null>(null);
+  const activeConversationRef = useRef<Conversation | null>(null);
   
   // ?? DEDUPLICACI?N: Ref para evitar procesar eventos WebSocket duplicados
   const processedEventsRef = useRef<Set<string>>(new Set());
   
-  // 🔗 Cache de link previews (para evitar fetch repetidos)
+  // ðŸ”— Cache de link previews (para evitar fetch repetidos)
   const [linkPreviews, setLinkPreviews] = useState<Record<string, {
     title?: string;
     description?: string;
@@ -521,7 +540,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     error?: boolean;
   }>>({});
   
-  // 🔗 Función para extraer URLs de un texto
+  // ðŸ”— FunciÃ³n para extraer URLs de un texto
   const extractUrls = useCallback((text: string): string[] => {
     if (!text) return [];
     const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
@@ -534,9 +553,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     );
   }, []);
   
-  // 🔗 Función para obtener preview de un enlace (usando API de metadata)
+  // ðŸ”— FunciÃ³n para obtener preview de un enlace (usando API de metadata)
   const fetchLinkPreview = useCallback(async (url: string) => {
-    // Si ya tenemos el preview cacheado o está cargando, no volver a fetch
+    // Si ya tenemos el preview cacheado o estÃ¡ cargando, no volver a fetch
     if (linkPreviews[url] && !linkPreviews[url].error) return;
     
     // Marcar como cargando
@@ -544,7 +563,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     try {
       // Usar un servicio de metadata (openlinkpreview, microlink, etc.) o nuestro propio proxy
-      // Aquí usamos una API pública gratuita
+      // AquÃ­ usamos una API pÃºblica gratuita
       const response = await axios.get(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
       
       if (response.data?.status === 'success' && response.data?.data) {
@@ -571,7 +590,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         }));
       }
     } catch (error) {
-      // En caso de error, mostrar preview básico
+      // En caso de error, mostrar preview bÃ¡sico
       try {
         setLinkPreviews(prev => ({
           ...prev,
@@ -591,8 +610,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [linkPreviews]);
   
-  // 🔗 Componente para renderizar preview de enlace estilo WhatsApp
-  const LinkPreviewCard: React.FC<{ url: string; preview: any }> = ({ url, preview }) => {
+  // ðŸ”— Componente para renderizar preview de enlace estilo WhatsApp
+  const LinkPreviewCard: React.FC<{ url: string; preview: LinkPreview }> = ({ url, preview }) => {
     const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
     const youtubeId = isYouTube ? url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1] : null;
     
@@ -622,7 +641,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             )}
           </div>
         )}
-        {/* Información del enlace */}
+        {/* InformaciÃ³n del enlace */}
         <div className="p-3">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
             {preview.siteName || new URL(url).hostname}
@@ -642,7 +661,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     );
   };
   
-  //  OPTIMIZACIÓN: Función con debounce para recargar conversaciones
+  //  OPTIMIZACIÃ“N: FunciÃ³n con debounce para recargar conversaciones
   const debouncedFetchConversations = useCallback(() => {
     // Cancelar reload pendiente si existe
     if (reloadDebounceRef.current) {
@@ -673,7 +692,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, []);
   
-  //  Función que ejecuta el fetch real
+  //  FunciÃ³n que ejecuta el fetch real
   const executeFetchConversations = useCallback(async () => {
     isPendingReloadRef.current = true;
     lastReloadTimestampRef.current = Date.now();
@@ -688,7 +707,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [fetchUpdatedConversations]);
   
-  //  OPTIMIZACIÓN: Recargar conversaciones INMEDIATAMENTE sin debounce
+  //  OPTIMIZACIÃ“N: Recargar conversaciones INMEDIATAMENTE sin debounce
   const fetchConversationsImmediate = useCallback(async () => {
     debugLog.log('??? Recargando conversaciones INMEDIATAMENTE (sin debounce)');
     lastReloadTimestampRef.current = Date.now();
@@ -715,13 +734,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, []);
   
-  // ✅ Escuchar evento para refrescar conversaciones cuando hay mensajes pendientes (polling fallback)
+  // âœ… Escuchar evento para refrescar conversaciones cuando hay mensajes pendientes (polling fallback)
   useEffect(() => {
     const handleRefreshConversations = () => {
       if (fetchUpdatedConversations) {
         fetchUpdatedConversations();
       }
-      // También refrescar mensajes de la conversación activa
+      // TambiÃ©n refrescar mensajes de la conversaciÃ³n activa
       if (activeConversationRef.current?.id && loadConversationMessages) {
         loadConversationMessages(activeConversationRef.current.id);
       }
@@ -733,7 +752,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, [fetchUpdatedConversations, loadConversationMessages]);
   
-  // �🔔 Escuchar evento selectConversation desde NotificationBell y query params
+  // ï¿½ðŸ”” Escuchar evento selectConversation desde NotificationBell y query params
   const pendingConversationRef = useRef<number | null>(null);
   const activeConversationIdRef = useRef<number | null>(null);
   const hasCheckedQueryParamRef = useRef(false);
@@ -762,25 +781,25 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   }, []);
   
   useEffect(() => {
-    // Función para seleccionar conversación por ID
+    // FunciÃ³n para seleccionar conversaciÃ³n por ID
     const selectConversationById = (conversationId: number) => {
       
       if (!conversations || conversations.length === 0) {
-        // Guardar para intentar después cuando se carguen las conversaciones
+        // Guardar para intentar despuÃ©s cuando se carguen las conversaciones
         pendingConversationRef.current = conversationId;
         return false;
       }
       
-      const conversation = conversations.find((c: any) => c.id === conversationId);
+      const conversation = conversations.find((c: Conversation) => c.id === conversationId);
       if (conversation) {
         pendingConversationRef.current = null; // Limpiar pendiente
         localStorage.removeItem('pendingConversationId');
         
-        // ✅ FIX: Si esta conversación ya está activa (o cargándose), no resetear
+        // âœ… FIX: Si esta conversaciÃ³n ya estÃ¡ activa (o cargÃ¡ndose), no resetear
         // Esto evita que retries del evento sobreescriban mensajes ya cargados
         const currentActiveId = activeConversation?.id ?? activeConversationIdRef.current;
         if (currentActiveId === conversationId) {
-          // Ya está seleccionada, solo limpiar badges
+          // Ya estÃ¡ seleccionada, solo limpiar badges
           if (clearBadge) clearBadge(conversationId);
           return true;
         }
@@ -791,7 +810,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           unread_count: 0,
           _isLoading: true
         });
-        // ✅ Limpiar TODAS las notificaciones: badges + campana + toasts
+        // âœ… Limpiar TODAS las notificaciones: badges + campana + toasts
         if (clearBadge) {
           clearBadge(conversationId);
         }
@@ -807,7 +826,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         }
         return true;
       } else {
-        // 🔧 FIX: Conversación no encontrada en lista actual.
+        // ðŸ”§ FIX: ConversaciÃ³n no encontrada en lista actual.
         // Guardar como pendiente y refrescar lista de conversaciones.
         pendingConversationRef.current = conversationId;
         if (fetchUpdatedConversations) {
@@ -817,12 +836,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       return false;
     };
 
-    // Si hay una conversación pendiente y ahora tenemos conversaciones, seleccionarla
+    // Si hay una conversaciÃ³n pendiente y ahora tenemos conversaciones, seleccionarla
     if (pendingConversationRef.current && conversations && conversations.length > 0) {
       selectConversationById(pendingConversationRef.current);
     }
     
-    // 🔧 FIX: Revisar localStorage al montar (backup del setTimeout)
+    // ðŸ”§ FIX: Revisar localStorage al montar (backup del setTimeout)
     const storedPending = localStorage.getItem('pendingConversationId');
     if (storedPending && conversations && conversations.length > 0) {
       const pendingId = parseInt(storedPending, 10);
@@ -845,21 +864,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, [conversations, _setActiveConversation, loadConversationMessages, markConversationAsRead, fetchUpdatedConversations]);
   
-  //  Auto-focus del input cuando se abre una conversación (como WhatsApp)
+  //  Auto-focus del input cuando se abre una conversaciÃ³n (como WhatsApp)
   useEffect(() => {
     if (activeConversation && messageInputRef.current) {
-      // Peque??o delay para asegurar que el DOM esté listo
+      // Peque??o delay para asegurar que el DOM estÃ© listo
       setTimeout(() => {
         messageInputRef.current?.focus();
       }, 100);
     }
-  }, [activeConversation?.id]); // Solo cuando cambie la conversación activa
+  }, [activeConversation?.id]); // Solo cuando cambie la conversaciÃ³n activa
 
-  // 🔄 Ref para evitar cargas múltiples en infinite scroll
+  // ðŸ”„ Ref para evitar cargas mÃºltiples en infinite scroll
   const isLoadingMoreRef = useRef(false);
   const lastLoadTimeRef = useRef(0);
 
-  // 🔄 Función reutilizable para cargar más mensajes
+  // ðŸ”„ FunciÃ³n reutilizable para cargar mÃ¡s mensajes
   const triggerLoadMore = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container || !activeConversation) return;
@@ -885,7 +904,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             if (addedHeight > 0) {
               container.scrollTop = prevScrollTop + addedHeight;
             }
-            // Mantener el flag activo 500ms más para bloquear cualquier scroll-to-bottom async
+            // Mantener el flag activo 500ms mÃ¡s para bloquear cualquier scroll-to-bottom async
             setTimeout(() => {
               isLoadingMoreRef.current = false;
             }, 500);
@@ -893,12 +912,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         });
       })
       .catch((err) => {
-        console.error('❌ [LoadMore] Error:', err);
+        console.error('âŒ [LoadMore] Error:', err);
         isLoadingMoreRef.current = false;
       });
   }, [activeConversation?.id, activeConversation?._hasMoreMessages, activeConversation?._isLoading, activeConversation?.messages?.length, loadConversationMessages]);
 
-  // 🔄 Infinite scroll para cargar más mensajes al llegar al tope (usando scroll event)
+  // ðŸ”„ Infinite scroll para cargar mÃ¡s mensajes al llegar al tope (usando scroll event)
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
@@ -908,7 +927,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const now = Date.now();
       if (now - lastLoadTimeRef.current < 1500) return;
       
-      // Si el usuario está cerca del tope (menos de 100px del inicio)
+      // Si el usuario estÃ¡ cerca del tope (menos de 100px del inicio)
       const isNearTop = container.scrollTop < 100;
       
       if (isNearTop) {
@@ -921,7 +940,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     return () => container.removeEventListener('scroll', handleScroll);
   }, [triggerLoadMore]);
 
-  // 🔄 Auto-check: si los mensajes no llenan el container, auto-cargar más
+  // ðŸ”„ Auto-check: si los mensajes no llenan el container, auto-cargar mÃ¡s
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container || !activeConversation?.messages?.length) return;
@@ -929,7 +948,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
     // Esperar a que el DOM renderice
     const timer = setTimeout(() => {
-      // Si el contenido no llena el container (no hay scrollbar), intentar cargar más
+      // Si el contenido no llena el container (no hay scrollbar), intentar cargar mÃ¡s
       if (container.scrollHeight <= container.clientHeight && activeConversation?._hasMoreMessages !== false) {
         triggerLoadMore();
       }
@@ -938,26 +957,26 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     return () => clearTimeout(timer);
   }, [activeConversation?.id, activeConversation?.messages?.length, activeConversation?._isLoading, activeConversation?._hasMoreMessages, triggerLoadMore]);
   
-  // 🎯 SISTEMA UNIFICADO DE NOTIFICACIONES
+  // ðŸŽ¯ SISTEMA UNIFICADO DE NOTIFICACIONES
   const globalNotifications = useGlobalNotifications();
   const isConnected = globalNotifications?.isWebSocketConnected ?? false;
   const wsConnected = isConnected;
   const [lastEventTime, setLastEventTime] = useState<Date | null>(null);
   
-  // ✅ Funciones de badges del contexto global
+  // âœ… Funciones de badges del contexto global
   const incrementBadge = globalNotifications?.incrementBadge;
   const clearBadge = globalNotifications?.clearBadge;
   const conversationBadges = globalNotifications?.conversationBadges;
   const initializeBadges = globalNotifications?.initializeBadges;
   
-  // ✅ Inicializar badges cuando se cargan las conversaciones (solo la primera vez - controlado en el contexto)
+  // âœ… Inicializar badges cuando se cargan las conversaciones (solo la primera vez - controlado en el contexto)
   useEffect(() => {
     if (conversations && conversations.length > 0 && initializeBadges) {
       initializeBadges(conversations);
     }
   }, [conversations, initializeBadges]);
   
-  // 🔌 SUSCRIPCIÓN AL WEBSOCKET UNIFICADO
+  // ðŸ”Œ SUSCRIPCIÃ“N AL WEBSOCKET UNIFICADO
   const debouncedFetchConversationsRef = useRef(debouncedFetchConversations);
   const updateMessagesCacheRef = useRef(updateMessagesCache);
   const addMessageToCacheRef = useRef(addMessageToCache);
@@ -970,7 +989,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     globalNotificationsRef.current = globalNotifications;
   });
   
-  // Suscripción estable al WebSocket - solo se ejecuta cuando cambian las dependencias críticas
+  // SuscripciÃ³n estable al WebSocket - solo se ejecuta cuando cambian las dependencias crÃ­ticas
   useEffect(() => {
     // Solo suscribirse si tenemos todo lo necesario
     if (!globalNotifications || !realtimeEnabled || !userInboxId) {
@@ -981,11 +1000,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setLastEventTime(new Date());
       
       if (wsEvent.type === 'conversation_assigned') {
-        // Actualizar asignación en la lista de conversaciones en tiempo real
+        // Actualizar asignaciÃ³n en la lista de conversaciones en tiempo real
         const assignee = wsEvent.conversation?.assignee || null;
         const assigneeId = wsEvent.conversation?.assignee_id ?? assignee?.id ?? null;
         
-        setConversations((prev: any[]) =>
+        setConversations((prev: Conversation[]) =>
           prev.map(conv =>
             conv.id === wsEvent.conversationId
               ? { ...conv, assignee_id: assigneeId, assignee }
@@ -993,8 +1012,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           )
         );
 
-        // Si la conversación activa es la asignada, actualizar también
-        _setActiveConversation((prev: any) => {
+        // Si la conversaciÃ³n activa es la asignada, actualizar tambiÃ©n
+        _setActiveConversation((prev: Conversation | null) => {
           if (prev && prev.id === wsEvent.conversationId) {
             return { ...prev, assignee_id: assigneeId, assignee };
           }
@@ -1007,7 +1026,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         // Actualizar estado si viene incluido
         const newStatus = wsEvent.event?.status || wsEvent.conversation?.status;
         if (newStatus) {
-          setConversations((prev: any[]) => 
+          setConversations((prev: Conversation[]) => 
             prev.map(conv => 
               conv.id === wsEvent.conversationId 
                 ? { ...conv, status: newStatus }
@@ -1016,24 +1035,24 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           );
         } else {
           // Si no hay status, refrescar la lista de conversaciones
-          // (puede ser nueva conversación, cambio de asignación, etc.)
+          // (puede ser nueva conversaciÃ³n, cambio de asignaciÃ³n, etc.)
           debouncedFetchConversationsRef.current?.();
         }
         return;
       }
       
       if (wsEvent.type === 'message_updated') {
-        // 📝 Actualizar estado del mensaje (sent, delivered, read)
+        // ðŸ“ Actualizar estado del mensaje (sent, delivered, read)
         const messageId = wsEvent.message?.id;
         const newStatus = wsEvent.message?.status;
         
         if (messageId && newStatus) {
-          debugLog.log(`📝 Actualizando estado de mensaje ${messageId} a ${newStatus}`);
+          debugLog.log(`ðŸ“ Actualizando estado de mensaje ${messageId} a ${newStatus}`);
           
-          _setActiveConversation((prev: any) => {
+          _setActiveConversation((prev: Conversation | null) => {
             if (!prev || !prev.messages) return prev;
             
-            const updatedMessages = prev.messages.map((msg: any) => {
+            const updatedMessages = prev.messages.map((msg: Message) => {
               if (msg.id === messageId || (msg._isOptimistic && msg.source_id === wsEvent.message?.source_id)) {
                 return { ...msg, status: newStatus, _isOptimistic: false };
               }
@@ -1050,15 +1069,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const event = wsEvent.event;
         const conversationId = wsEvent.conversationId;
         
-        // 🔒 DEDUPLICACIÓN - solo por IDs (sin hash de contenido para evitar falsos positivos)
+        // ðŸ”’ DEDUPLICACIÃ“N - solo por IDs (sin hash de contenido para evitar falsos positivos)
         const messageId = wsEvent.message?.id || event?.message?.id;
         const sourceId = wsEvent.message?.source_id || event?.message?.source_id;
         
-        // Generar claves de deduplicación solo por IDs únicos
+        // Generar claves de deduplicaciÃ³n solo por IDs Ãºnicos
         const dedupKeys = [
           messageId ? `msg-${conversationId}-${messageId}` : null,
           sourceId ? `src-${sourceId}` : null,
-        ].filter(Boolean);
+        ].filter((k): k is string => Boolean(k));
         
         // Verificar si alguna clave ya existe
         const isDuplicate = dedupKeys.length > 0 && dedupKeys.some(key => processedEventsRef.current.has(key));
@@ -1071,7 +1090,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           if (key) processedEventsRef.current.add(key);
         });
         
-        // Limpiar eventos antiguos (mantener últimos 200)
+        // Limpiar eventos antiguos (mantener Ãºltimos 200)
         if (processedEventsRef.current.size > 200) {
           const iterator = processedEventsRef.current.values();
           for (let i = 0; i < 50; i++) {
@@ -1080,31 +1099,31 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           }
         }
         
-        debugLog.log('📩 [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);
+        debugLog.log('ðŸ“© [UNIFIED-SUBSCRIBER] Nuevo mensaje:', conversationId);
 
-        // ✅ Determinar si es mensaje entrante
+        // âœ… Determinar si es mensaje entrante
         const messageType = event?.message?.message_type;
         const isOutgoing = messageType === 1 || messageType === 'outgoing';
         const isActiveConversation = activeConversationRef.current?.id === conversationId;
         
-        // ✅ Incrementar badge en contexto global si es mensaje entrante y no está activa
+        // âœ… Incrementar badge en contexto global si es mensaje entrante y no estÃ¡ activa
         if (!isOutgoing && !isActiveConversation && globalNotificationsRef.current?.incrementBadge) {
           globalNotificationsRef.current.incrementBadge(conversationId);
         }
 
-        // 🔄 ACTUALIZACIÓN de la lista de conversaciones
-        setConversations((prevConversations: any[]) => {
+        // ðŸ”„ ACTUALIZACIÃ“N de la lista de conversaciones
+        setConversations((prevConversations: Conversation[]) => {
           const newTimestamp = event?.timestamp || event?.message?.created_at || new Date().toISOString();
-          const existingIndex = prevConversations.findIndex((conv: any) => conv.id === conversationId);
+          const existingIndex = prevConversations.findIndex((conv: Conversation) => conv.id === conversationId);
 
           let updated;
           if (existingIndex !== -1) {
-            updated = prevConversations.map((conv: any) => {
+            updated = prevConversations.map((conv: Conversation) => {
               if (conv.id === conversationId) {
-                // ✅ Obtener badge del contexto global
+                // âœ… Obtener badge del contexto global
                 const globalBadge = globalNotificationsRef.current?.conversationBadges?.get(conversationId) || 0;
                 
-                // ✅ Construir contenido: si viene vacío pero hay attachments, generar preview
+                // âœ… Construir contenido: si viene vacÃ­o pero hay attachments, generar preview
                 const msgContent = event?.message?.content || '';
                 const msgAttachments = event?.message?.attachments || [];
                 let displayContent = msgContent;
@@ -1113,37 +1132,35 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   const ft = String(att.file_type || att.content_type || '').toLowerCase();
                   const fn = decodeURIComponent(att.file_name || att.data_url?.split('/').pop() || 'archivo');
                   const attFn = String(att.file_name || att.name || '').toLowerCase();
-                  if (ft.startsWith('image') || ft === '0' || /\.(jpg|jpeg|png|gif|webp)$/i.test(attFn)) displayContent = '📷 Imagen';
-                  else if (ft.startsWith('video') || ft === '2') displayContent = '🎥 Video';
-                  else if (ft.startsWith('audio') || ft === '1') displayContent = '🎵 Audio';
-                  else if (ft.includes('pdf')) displayContent = '📄 PDF';
-                  else if (ft.includes('document') || ft.includes('word')) displayContent = '📄 Documento';
-                  else if (ft.includes('sheet') || ft.includes('excel')) displayContent = '📊 Hoja de cálculo';
-                  else displayContent = `📎 ${fn}`;
+                  if (ft.startsWith('image') || ft === '0' || /\.(jpg|jpeg|png|gif|webp)$/i.test(attFn)) displayContent = 'ðŸ“· Imagen';
+                  else if (ft.startsWith('video') || ft === '2') displayContent = 'ðŸŽ¥ Video';
+                  else if (ft.startsWith('audio') || ft === '1') displayContent = 'ðŸŽµ Audio';
+                  else if (ft.includes('pdf')) displayContent = 'ðŸ“„ PDF';
+                  else if (ft.includes('document') || ft.includes('word')) displayContent = 'ðŸ“„ Documento';
+                  else if (ft.includes('sheet') || ft.includes('excel')) displayContent = 'ðŸ“Š Hoja de cÃ¡lculo';
+                  else displayContent = `ðŸ“Ž ${fn}`;
                 }
                 
                 return {
                   ...conv,
                   last_message: {
                     content: displayContent,
-                    created_at: event?.message?.created_at || newTimestamp,
                     timestamp: new Date(newTimestamp).getTime() / 1000,
-                    message_type: event?.message?.message_type || 0,
-                    sender: event?.sender || event?.message?.sender,
+                    sender: String(event?.sender?.name || event?.message?.sender?.name || 'contact'),
                     attachments: msgAttachments
                   },
                   unread_count: globalBadge,
                   updated_at: newTimestamp,
                   timestamp: new Date(newTimestamp).getTime() / 1000,
                   last_activity_at: new Date(newTimestamp).getTime() / 1000
-                };
+                } as Conversation;
               }
               return conv;
             });
           } else {
-            // Nueva conversación
+            // Nueva conversaciÃ³n
             const sender = event?.sender || event?.message?.sender || { name: 'Nuevo contacto' };
-            // ✅ Construir contenido para nueva conversación con soporte attachments
+            // âœ… Construir contenido para nueva conversaciÃ³n con soporte attachments
             const newMsgContent = event?.message?.content || '';
             const newMsgAttachments = event?.message?.attachments || [];
             let newDisplayContent = newMsgContent;
@@ -1151,11 +1168,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               const att = newMsgAttachments[0];
               const ft = String(att.file_type || att.content_type || '').toLowerCase();
               const fn = att.file_name || att.data_url?.split('/').pop() || 'archivo';
-              if (ft.startsWith('image') || ft === '0') newDisplayContent = '📷 Imagen';
-              else if (ft.startsWith('video') || ft === '2') newDisplayContent = '🎥 Video';
-              else if (ft.startsWith('audio') || ft === '1') newDisplayContent = '🎵 Audio';
-              else if (ft.includes('pdf')) newDisplayContent = '📄 PDF';
-              else newDisplayContent = `📎 ${fn}`;
+              if (ft.startsWith('image') || ft === '0') newDisplayContent = 'ðŸ“· Imagen';
+              else if (ft.startsWith('video') || ft === '2') newDisplayContent = 'ðŸŽ¥ Video';
+              else if (ft.startsWith('audio') || ft === '1') newDisplayContent = 'ðŸŽµ Audio';
+              else if (ft.includes('pdf')) newDisplayContent = 'ðŸ“„ PDF';
+              else newDisplayContent = `ðŸ“Ž ${fn}`;
             }
             
             const newConv = {
@@ -1173,10 +1190,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               },
               last_message: {
                 content: newDisplayContent,
-                created_at: event?.message?.created_at || newTimestamp,
                 timestamp: new Date(newTimestamp).getTime() / 1000,
-                message_type: event?.message?.message_type || 0,
-                sender,
+                sender: String(sender?.name || 'contact'),
                 attachments: newMsgAttachments
               },
               labels: [],
@@ -1184,36 +1199,37 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               last_activity_at: new Date(newTimestamp).getTime() / 1000,
               created_at: newTimestamp,
               updated_at: newTimestamp
-            };
+            } as unknown as Conversation;
             const alreadyExists = prevConversations.some(c => c.id === conversationId);
             updated = alreadyExists ? prevConversations : [newConv, ...prevConversations];
           }
 
-          return updated.sort((a: any, b: any) => {
-            const timeA = a.last_activity_at || a.timestamp || 0;
-            const timeB = b.last_activity_at || b.timestamp || 0;
+          return updated.sort((a: Conversation, b: Conversation) => {
+            const timeA = Number(a.last_activity_at || a.timestamp || 0);
+            const timeB = Number(b.last_activity_at || b.timestamp || 0);
             return timeB - timeA;
           });
         });
 
-        // 💬 Agregar mensaje a la conversación activa si corresponde
+        // ðŸ’¬ Agregar mensaje a la conversaciÃ³n activa si corresponde
         const currentActiveConv = activeConversationRef.current;
         
-        // Debug desactivado en producción
+        // Debug desactivado en producciÃ³n
         
-        // Usar comparación numérica para evitar problemas de tipos
+        // Usar comparaciÃ³n numÃ©rica para evitar problemas de tipos
         if (currentActiveConv && Number(currentActiveConv.id) === Number(conversationId)) {
           const rawMsgType = wsEvent.message?.message_type;
-          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
-          const normalizedSender = normalizedMsgType === 1 ? 'agent' : 'contact';
+          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 'outgoing' : 'incoming';
+          const normalizedSender = normalizedMsgType === 'outgoing' ? 'agent' : 'contact';
           
           // Mensaje agregado silenciosamente
           
-          const newMessage = {
+          const newMessage: Message = {
             id: wsEvent.message?.id || Date.now(),
             content: wsEvent.message?.content || '',
             message_type: normalizedMsgType,
             created_at: wsEvent.message?.created_at || new Date().toISOString(),
+            timestamp: wsEvent.message?.created_at || Date.now(),
             sender: normalizedSender,
             attachments: wsEvent.message?.attachments || [],
             source_id: wsEvent.message?.source_id || null,
@@ -1222,14 +1238,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             status: wsEvent.message?.status || 'sent'
           };
           
-          _setActiveConversation((prev: any) => {
+          _setActiveConversation((prev: Conversation | null) => {
             if (!prev || Number(prev.id) !== Number(conversationId)) return prev;
             
             const existingMessages = prev.messages || [];
             
-            // 🔒 Verificar duplicados - comparación robusta
-            const messageExists = existingMessages.some((m: any) => {
-              // Comparar por ID (numérico para evitar string vs number)
+            // ðŸ”’ Verificar duplicados - comparaciÃ³n robusta
+            const messageExists = existingMessages.some((m: Message) => {
+              // Comparar por ID (numÃ©rico para evitar string vs number)
               if (Number(m.id) === Number(newMessage.id)) return true;
               // Comparar por source_id (ID de WhatsApp)
               if (newMessage.source_id && m.source_id === newMessage.source_id) return true;
@@ -1241,7 +1257,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             
             if (messageExists) {
               // Reemplazar mensaje optimista con el real
-              const updatedMessages = existingMessages.map((m: any) => {
+              const updatedMessages = existingMessages.map((m: Message) => {
                 const isOptimistic = m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-') || String(m.id).startsWith('sent-');
                 if (isOptimistic && m.content === newMessage.content) {
                   return { ...newMessage, _isOptimistic: false };
@@ -1257,16 +1273,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             return { ...prev, messages: newMessages };
           });
         } else if (addMessageToCacheRef.current && conversationId) {
-          // Agregar al caché para conversación inactiva
+          // Agregar al cachÃ© para conversaciÃ³n inactiva
           const rawMsgType = wsEvent.message?.message_type;
-          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 1 : 0;
-          const newMessage = {
+          const normalizedMsgType = (rawMsgType === 'outgoing' || rawMsgType === 1) ? 'outgoing' : 'incoming';
+          const newMessage: Message = {
             id: wsEvent.message?.id || Date.now(),
             content: wsEvent.message?.content || '',
             message_type: normalizedMsgType,
             created_at: wsEvent.message?.created_at || new Date().toISOString(),
-            sender: normalizedMsgType === 1 ? 'agent' : 'contact',
+            timestamp: wsEvent.message?.created_at || Date.now(),
+            sender: normalizedMsgType === 'outgoing' ? 'agent' : 'contact',
             attachments: wsEvent.message?.attachments || [],
+            status: 'sent'
           };
           addMessageToCacheRef.current(conversationId, newMessage);
         }
@@ -1279,26 +1297,26 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   }, [globalNotifications, realtimeEnabled, userInboxId]);
 
   //  HOOK DE NOTIFICACIONES
-  // ELIMINADO: Declaración duplicada de notifications
+  // ELIMINADO: DeclaraciÃ³n duplicada de notifications
   
-  // 📊 NUEVO: Referencias para virtualización
+  // ðŸ“Š NUEVO: Referencias para virtualizaciÃ³n
   const conversationsListRef = useRef<HTMLDivElement>(null);
   
   //  Mensajes filtrados (sin privados, ordenados por fecha)
-  // ⚡ MEJORADO: Filtrar mensajes optimistas cuando ya existe mensaje real con mismo contenido
+  // âš¡ MEJORADO: Filtrar mensajes optimistas cuando ya existe mensaje real con mismo contenido
   const filteredMessages = useMemo(() => {
     if (!activeConversation) return [];
     
     const allMessages = activeConversation.messages || [];
     
-    // 🔒 DEDUPLICACIÓN ROBUSTA: por ID numérico Y por source_id
+    // ðŸ”’ DEDUPLICACIÃ“N ROBUSTA: por ID numÃ©rico Y por source_id
     const seenIds = new Set<number>();
     const seenSourceIds = new Set<string>();
-    const uniqueMessages = allMessages.filter((m: any) => {
+    const uniqueMessages = allMessages.filter((m: Message) => {
       const numId = Number(m.id);
       const sourceId = m.source_id;
       
-      // Si ya vimos este ID numérico, es duplicado
+      // Si ya vimos este ID numÃ©rico, es duplicado
       if (!isNaN(numId) && seenIds.has(numId)) return false;
       // Si ya vimos este source_id (WhatsApp ID), es duplicado
       if (sourceId && seenSourceIds.has(sourceId)) return false;
@@ -1309,10 +1327,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     });
     
     // Obtener contenidos de mensajes reales (no optimistas)
-    // Un mensaje es "real" si tiene ID numérico y NO tiene flags optimistas
+    // Un mensaje es "real" si tiene ID numÃ©rico y NO tiene flags optimistas
     const realMessageContents = new Set(
       uniqueMessages
-        .filter((m: any) => {
+        .filter((m: Message) => {
           const isReal = (
             typeof m.id === 'number' &&
             !m._isOptimistic &&
@@ -1321,12 +1339,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           );
           return isReal;
         })
-        .map((m: any) => m.content?.trim())
+        .map((m: Message) => m.content?.trim())
     );
     
     // Filtrar: excluir mensajes optimistas/pending cuyo contenido ya existe en mensajes reales
-    const deduplicatedMessages = uniqueMessages.filter((m: any) => {
-      // Si es mensaje real (ID numérico, no flags), siempre incluir (excepto privados)
+    const deduplicatedMessages = uniqueMessages.filter((m: Message) => {
+      // Si es mensaje real (ID numÃ©rico, no flags), siempre incluir (excepto privados)
       const isRealMessage = (
         typeof m.id === 'number' &&
         !m._isOptimistic &&
@@ -1342,7 +1360,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       if (m._isOptimistic || String(m.id).startsWith('temp-') || String(m.id).startsWith('pending-')) {
         const contentExists = realMessageContents.has(m.content?.trim());
         if (contentExists) {
-          debugLog.log('🔄 Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
+          debugLog.log('ðŸ”„ Filtrando mensaje optimista duplicado:', m.content?.substring(0, 30));
         }
         return !contentExists;
       }
@@ -1350,8 +1368,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     });
     
     return deduplicatedMessages.sort((a: Message, b: Message) => {
-      const timeA = a.timestamp || new Date(a.created_at).getTime() / 1000;
-      const timeB = b.timestamp || new Date(b.created_at).getTime() / 1000;
+      const timeA = Number(a.timestamp) || new Date(a.created_at).getTime() / 1000;
+      const timeB = Number(b.timestamp) || new Date(b.created_at).getTime() / 1000;
       return timeA - timeB;
     });
   }, [activeConversation]);
@@ -1359,12 +1377,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   // Manejadores para redimensionamiento
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Función para toggle del panel derecho
+  // FunciÃ³n para toggle del panel derecho
   const toggleRightPanel = () => {
     setIsRightPanelVisible(!isRightPanelVisible);
   };
 
-  // Función para abrir el panel derecho (sin toggle)
+  // FunciÃ³n para abrir el panel derecho (sin toggle)
   const openRightPanel = () => {
     setIsRightPanelVisible(true);
   };
@@ -1401,7 +1419,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
   }, [isResizing]);
 
-  //  BÚSQUEDA GLOBAL EN BACKEND - busca en TODOS los mensajes de la BD
+  //  BÃšSQUEDA GLOBAL EN BACKEND - busca en TODOS los mensajes de la BD
   useEffect(() => {
     if (!searchTerm || searchTerm.length < 2) {
       setSearchResults(null);
@@ -1418,17 +1436,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           params: { q: searchTerm }
         });
 
-        debugLog.log('✅ Resultados de búsqueda:', response.data);
+        debugLog.log('âœ… Resultados de bÃºsqueda:', response.data);
         
         if (response.data.success && Array.isArray(response.data.data)) {
-          // El backend retorna { conversation_id, matching_message } por cada conversación que matchea
+          // El backend retorna { conversation_id, matching_message } por cada conversaciÃ³n que matchea
           setSearchResults(response.data.data);
           debugLog.log(` Encontradas ${response.data.data.length} conversaciones con mensajes que matchean`);
         } else {
           setSearchResults([]);
         }
-      } catch (error: any) {
-        debugLog.error('❌ Error en búsqueda:', error.response?.data || error.message);
+      } catch (error: unknown) {
+        debugLog.error('âŒ Error en bÃºsqueda:', error instanceof Error ? error.message : error);
         setSearchResults(null); // null = usar filtrado local como fallback
       } finally {
         setIsSearching(false);
@@ -1447,27 +1465,30 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       searchResultsCount: searchResults?.length || 0
     });
     
-    let result: any[];
+    let result: Conversation[];
 
     if (!searchTerm) {
-      // Sin búsqueda, aplicar solo filtro de pestaña
+      // Sin bÃºsqueda, aplicar solo filtro de pestaÃ±a
       result = (conversations || []).filter(conversation => {
         if (selectedFilter === 'all') return true;
         if (selectedFilter === 'mine') return currentAgentId ? conversation.assignee_id === currentAgentId : conversation.assignee_id;
         if (selectedFilter === 'unassigned') return !conversation.assignee_id;
         return true;
       });
-      debugLog.log('✅ Sin búsqueda, resultados:', result.length);
+      debugLog.log('âœ… Sin bÃºsqueda, resultados:', result.length);
     } else {
     
-      // Con búsqueda activa: combinar resultados del backend + búsqueda local
+      // Con bÃºsqueda activa: combinar resultados del backend + bÃºsqueda local
       const searchNorm = normalizeText(searchTerm);
       
       // Crear mapa de matching_message del backend (conversation_id => matching_message)
-      const backendMatchMap = new Map<number, any>();
+      const backendMatchMap = new Map<number, Message | null>();
       if (searchResults && Array.isArray(searchResults)) {
-        searchResults.forEach((r: any) => {
-          backendMatchMap.set(r.conversation_id, r.matching_message || null);
+        searchResults.forEach((r: unknown) => {
+          const sr = r as { conversation_id?: number; matching_message?: Message };
+          if (sr.conversation_id != null) {
+            backendMatchMap.set(sr.conversation_id, sr.matching_message || null);
+          }
         });
       }
       
@@ -1476,12 +1497,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // 1. Buscar en nombre del contacto (sin acentos)
       const nameMatch = conversation.contact?.name ? normalizeText(conversation.contact.name).includes(searchNorm) : false;
       
-      // 2. Buscar en el último mensaje (sin acentos)
+      // 2. Buscar en el Ãºltimo mensaje (sin acentos)
       const lastMessageMatch = conversation.last_message?.content ? normalizeText(conversation.last_message.content).includes(searchNorm) : false;
       
       // 3. Buscar en mensajes cargados en memoria
-      let matchingMessage: any = null;
-      const allMessagesMatch = conversation.messages?.some((msg: any) => {
+      let matchingMessage: Message | null = null;
+      const allMessagesMatch = conversation.messages?.some((msg: Message) => {
         if (msg.content && normalizeText(msg.content).includes(searchNorm)) {
           matchingMessage = msg;
           return true;
@@ -1489,7 +1510,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         return false;
       });
       
-      // 4. Si el backend encontró un match en mensajes para esta conversación, usarlo
+      // 4. Si el backend encontrÃ³ un match en mensajes para esta conversaciÃ³n, usarlo
       const hasBackendMatch = backendMatchMap.has(conversation.id);
       const backendMatchMsg = backendMatchMap.get(conversation.id);
       
@@ -1497,24 +1518,23 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       if (!matchingMessage && backendMatchMsg) {
         matchingMessage = backendMatchMsg;
       }
-      if (!matchingMessage && lastMessageMatch) {
-        matchingMessage = conversation.last_message;
+      if (!matchingMessage && lastMessageMatch && conversation.last_message) {
+        matchingMessage = conversation.last_message as unknown as Message;
       }
       
       // 5. Buscar en etiquetas (sin acentos)
-      const labelMatch = conversation.labels?.some((label: any) => {
-        const labelTitle = typeof label === 'string' ? label : label.title;
-        return labelTitle ? normalizeText(labelTitle).includes(searchNorm) : false;
+      const labelMatch = conversation.labels?.some((label: string) => {
+        return normalizeText(label).includes(searchNorm);
       });
       
-      // 6. Buscar en email o teléfono
+      // 6. Buscar en email o telÃ©fono
       const contactMatch = (conversation.contact?.email ? normalizeText(conversation.contact.email).includes(searchNorm) : false) ||
                            conversation.contact?.phone_number?.includes(searchTerm);
       
       // Combinar: match local O match del backend
-      const matchesSearch = nameMatch || lastMessageMatch || allMessagesMatch || hasBackendMatch || labelMatch || contactMatch;
+      const matchesSearch = !!(nameMatch || lastMessageMatch || allMessagesMatch || hasBackendMatch || labelMatch || contactMatch);
       
-      // Aplicar filtro de pestaña
+      // Aplicar filtro de pestaÃ±a
       let passesFilter = false;
       if (selectedFilter === 'all') passesFilter = matchesSearch;
       else if (selectedFilter === 'mine') passesFilter = matchesSearch && (currentAgentId ? conversation.assignee_id === currentAgentId : !!conversation.assignee_id);
@@ -1523,23 +1543,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       if (!passesFilter) return null;
       
-      // Adjuntar mensaje que matcheó para mostrar como preview y scroll
+      // Adjuntar mensaje que matcheÃ³ para mostrar como preview y scroll
       return { ...conversation, _matchingMessage: matchingMessage };
-      }).filter(Boolean) as any[];
+      }).filter(Boolean) as Conversation[];
       
-      debugLog.log(' Con búsqueda, resultados:', result.length);
+      debugLog.log(' Con bÃºsqueda, resultados:', result.length);
     } // end else (searchTerm)
 
-    window.DEBUG_CONVS = result.slice(0, 5).map(c => ({ id: c.id, name: c.contact?.name, updated_at: c.updated_at, lastMsg: c.last_message?.timestamp }));
     if (appliedFilters) {
       if (appliedFilters.status && appliedFilters.status.length > 0) {
-        result = result.filter(conv => appliedFilters.status.includes(conv.status));
+        result = result.filter(conv => (appliedFilters.status as string[]).includes(conv.status as string));
       }
 
       if (appliedFilters.priority && appliedFilters.priority.length > 0) {
         result = result.filter(conv => {
           const priority = conv.priority || 'none';
-          return appliedFilters.priority.includes(priority);
+          return (appliedFilters.priority as string[]).includes(priority as string);
         });
       }
 
@@ -1552,7 +1571,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
       if (appliedFilters.unreadOnly) {
         result = result.filter(conv => {
-          // ✅ SOLO usar el Map global
+          // âœ… SOLO usar el Map global
           const globalBadge = conversationBadges?.get(conv.id) ?? 0;
           return globalBadge > 0;
         });
@@ -1600,10 +1619,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             // Intentar obtener la fecha de la conversacion
             if (conv.last_activity_at) {
               // last_activity_at es timestamp Unix en segundos
-              convDate = new Date(conv.last_activity_at * 1000);
+              convDate = new Date(Number(conv.last_activity_at) * 1000);
             } else if (conv.timestamp) {
               // timestamp puede estar en segundos o milisegundos
-              convDate = new Date(conv.timestamp > 10000000000 ? conv.timestamp : conv.timestamp * 1000);
+              const ts = Number(conv.timestamp);
+              convDate = new Date(ts > 10000000000 ? ts : ts * 1000);
             } else if (conv.updated_at) {
               // updated_at puede ser ISO string o timestamp
               if (typeof conv.updated_at === 'string') {
@@ -1612,7 +1632,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 convDate = new Date(conv.updated_at > 10000000000 ? conv.updated_at : conv.updated_at * 1000);
               }
             } else if (conv.last_message?.timestamp) {
-              convDate = new Date(conv.last_message.timestamp > 10000000000 ? conv.last_message.timestamp : conv.last_message.timestamp * 1000);
+              const lmTs = Number(conv.last_message.timestamp);
+              convDate = new Date(lmTs > 10000000000 ? lmTs : lmTs * 1000);
             } else if (conv.created_at) {
               convDate = new Date(conv.created_at);
             }
@@ -1634,21 +1655,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const rowVirtualizer = useVirtualizer({
     count: (filteredConversations || []).length,
     getScrollElement: () => conversationsListRef.current,
-    estimateSize: () => 80, // Altura estimada de cada conversación en px
+    estimateSize: () => 80, // Altura estimada de cada conversaciÃ³n en px
     overscan: 5 // Renderizar 5 items extra arriba/abajo para scroll suave
   });
 
   const handleSelectConversation = async (conversation: Conversation) => {
-    // ✅ NUEVO: Guardar mensajes de la conversación actual en caché ANTES de cambiar
-    if (activeConversation?.id && activeConversation?.messages?.length > 0 && updateMessagesCache) {
-      debugLog.log(`💾 Guardando ${activeConversation.messages.length} mensajes de conversación ${activeConversation.id} en caché antes de cambiar`);
+    // âœ… NUEVO: Guardar mensajes de la conversaciÃ³n actual en cachÃ© ANTES de cambiar
+    if (activeConversation?.id && activeConversation?.messages && activeConversation.messages.length > 0 && updateMessagesCache) {
+      debugLog.log(`ðŸ’¾ Guardando ${activeConversation.messages.length} mensajes de conversaciÃ³n ${activeConversation.id} en cachÃ© antes de cambiar`);
       updateMessagesCache(activeConversation.id, activeConversation.messages);
     }
     
-    // � Limpiar archivo stageado al cambiar de conversación
+    // ï¿½ Limpiar archivo stageado al cambiar de conversaciÃ³n
     cancelStagedFile();
     
-    // �🚀 Mostrar conversación inmediatamente
+    // ï¿½ðŸš€ Mostrar conversaciÃ³n inmediatamente
     _setActiveConversation({
       ...conversation,
       messages: [],
@@ -1656,7 +1677,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       _isLoading: true
     });
     
-    // ✅ Limpiar badge en el SISTEMA UNIFICADO (limpia badges + campana + toasts)
+    // âœ… Limpiar badge en el SISTEMA UNIFICADO (limpia badges + campana + toasts)
     if (clearBadge) {
       clearBadge(conversation.id);
     }
@@ -1671,11 +1692,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // Cargar mensajes en background
     loadConversationMessages(conversation.id);
     
-    // Si hay búsqueda activa, scroll al mensaje que coincide después de cargar
-    if (searchTerm && (conversation as any)._matchingMessage) {
-      const matchMsg = (conversation as any)._matchingMessage;
-      const matchId = matchMsg.id;
-      const matchContent = matchMsg.content || '';
+    // Si hay bÃºsqueda activa, scroll al mensaje que coincide despuÃ©s de cargar
+    if (searchTerm && (conversation as Conversation & { _matchingMessage?: Message })._matchingMessage) {
+      const matchMsg = (conversation as Conversation & { _matchingMessage?: Message })._matchingMessage;
+      const matchId = matchMsg?.id;
+      const matchContent = matchMsg?.content || '';
       const searchNorm = normalizeText(searchTerm);
       
       const tryScroll = (attempts: number) => {
@@ -1684,7 +1705,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           // Intento 1: buscar por ID exacto del mensaje
           let el = document.getElementById(`message-${matchId}`);
           
-          // Intento 2: si no encontró por ID, buscar entre los mensajes renderizados por contenido
+          // Intento 2: si no encontrÃ³ por ID, buscar entre los mensajes renderizados por contenido
           if (!el && matchContent) {
             const allMsgEls = document.querySelectorAll('[id^="message-"]');
             for (const msgEl of allMsgEls) {
@@ -1714,10 +1735,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       tryScroll(8); // Intentar hasta ~5 segundos
     }
     
-    // Marcar como leída en backend
+    // Marcar como leÃ­da en backend
     if (markConversationAsRead) {
       markConversationAsRead(conversation.id).then(() => {
-        debugLog.log('✅ Conversación marcada como leída');
+        debugLog.log('âœ… ConversaciÃ³n marcada como leÃ­da');
       });
     }
   };
@@ -1741,9 +1762,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         id: tempId,
         content: messageContent,
         created_at: new Date().toISOString(),
-        timestamp: nowTimestamp, // ⚡ IMPORTANTE: Agregar timestamp para formatTimestamp()
+        timestamp: nowTimestamp, // âš¡ IMPORTANTE: Agregar timestamp para formatTimestamp()
         message_type: 'outgoing',
-        sender: 'agent', // ✅ String directo, no objeto
+        sender: 'agent', // âœ… String directo, no objeto
         conversation_id: activeConversation.id,
         status: 'sending', // Marcador especial
         _isOptimistic: true // Flag para identificar mensajes temporales
@@ -1751,7 +1772,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       // Agregar al estado local temporalmente
       if (activeConversation.messages) {
-        // ⚡ IMPORTANTE: Crear nuevo array para que useMemo detecte el cambio
+        // âš¡ IMPORTANTE: Crear nuevo array para que useMemo detecte el cambio
         const newMessages = [...activeConversation.messages, optimisticMessage];
         debugLog.log(' Agregando mensaje optimista:', tempId, 'Total mensajes:', (newMessages || []).length);
         // Forzar re-render con nuevo objeto Y nuevo array
@@ -1760,32 +1781,31 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           messages: newMessages 
         });
         
-        // ⚡ NUEVO: Actualizar sidebar (lista de conversaciones) con el mensaje enviado
-        setConversations((prevConversations: any[]) => {
-          return prevConversations.map((conv: any) => {
+        // âš¡ NUEVO: Actualizar sidebar (lista de conversaciones) con el mensaje enviado
+        setConversations((prevConversations: Conversation[]) => {
+          return prevConversations.map((conv: Conversation) => {
             if (conv.id === activeConversation.id) {
               return {
                 ...conv,
                 last_message: {
                   content: messageContent,
-                  created_at: new Date().toISOString(),
                   timestamp: nowTimestamp,
-                  message_type: 1, // outgoing
-                  sender: { name: 'Yo' }
+                  sender: 'agent',
+                  attachments: []
                 },
                 updated_at: new Date().toISOString(),
                 last_activity_at: nowTimestamp
-              };
+              } as Conversation;
             }
             return conv;
-          }).sort((a: any, b: any) => {
-            const timeA = a.last_activity_at || a.timestamp || 0;
-            const timeB = b.last_activity_at || b.timestamp || 0;
+          }).sort((a: Conversation, b: Conversation) => {
+            const timeA = Number(a.last_activity_at || a.timestamp || 0);
+            const timeB = Number(b.last_activity_at || b.timestamp || 0);
             return timeB - timeA;
           });
         });
         
-        // ✅ NUEVO: Actualizar caché de mensajes con el mensaje optimista
+        // âœ… NUEVO: Actualizar cachÃ© de mensajes con el mensaje optimista
         if (addMessageToCache) {
           addMessageToCache(activeConversation.id, optimisticMessage);
         }
@@ -1795,19 +1815,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setNewMessage('');
       setReplyingTo(null);
       
-      // 📤 Enviar al servidor y actualizar status
+      // ðŸ“¤ Enviar al servidor y actualizar status
       const conversationId = activeConversation.id;
       sendMessage(conversationId, messageContent)
         .then((result) => {
-          debugLog.log('✅ Mensaje enviado, actualizando status a sent:', result);
+          debugLog.log('âœ… Mensaje enviado, actualizando status a sent:', result);
           // Actualizar mensaje optimista con ID real y status 'sent'
-          _setActiveConversation((prev: any) => {
+          _setActiveConversation((prev: Conversation | null) => {
             if (!prev || !prev.messages) return prev;
-            const updatedMessages = prev.messages.map((msg: any) => {
+            const updatedMessages = prev.messages.map((msg: Message) => {
               if (msg.id === tempId) {
                 return {
                   ...msg,
-                  id: result?.id || msg.id, // Actualizar con ID real si está disponible
+                  id: result?.id || msg.id, // Actualizar con ID real si estÃ¡ disponible
                   status: 'sent',
                   _isOptimistic: false
                 };
@@ -1815,7 +1835,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               return msg;
             });
             
-            // ✅ NUEVO: Actualizar caché con los mensajes actualizados
+            // âœ… NUEVO: Actualizar cachÃ© con los mensajes actualizados
             if (updateMessagesCache) {
               updateMessagesCache(prev.id, updatedMessages);
             }
@@ -1826,17 +1846,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             };
           });
           
-          // ✅ El mensaje real llegará por WebSocket (broadcast desde el backend)
+          // âœ… El mensaje real llegarÃ¡ por WebSocket (broadcast desde el backend)
           // Ya no es necesario hacer reload manual
         })
         .catch((error) => {
-          debugLog.error('❌ Error sending message:', error);
+          debugLog.error('âŒ Error sending message:', error);
           // Marcar mensaje como fallido
-          _setActiveConversation((prev: any) => {
+          _setActiveConversation((prev: Conversation | null) => {
             if (!prev || !prev.messages) return prev;
             return {
               ...prev,
-              messages: prev.messages.map((msg: any) => {
+              messages: prev.messages.map((msg: Message) => {
                 if (msg.id === tempId) {
                   return { ...msg, status: 'failed', _isOptimistic: false };
                 }
@@ -1846,7 +1866,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           });
         });
       
-      // 🔄 El reload después de 1.5s sincronizará con el mensaje real de Chatwoot
+      // ðŸ”„ El reload despuÃ©s de 1.5s sincronizarÃ¡ con el mensaje real de Chatwoot
       
     } catch (error) {
       debugLog.error('Error preparing message:', error);
@@ -1856,7 +1876,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   //  FUNCIONES DE WHATSAPP
   
   // 1 REPLY - Responder a un mensaje
-  const handleReplyToMessage = (message: any) => {
+  const handleReplyToMessage = (message: Message) => {
     setReplyingTo(message);
     setMessageMenuOpen(null);
     // Focus en el input
@@ -1891,7 +1911,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setMessageMenuOpen(null);
   };
 
-  // 5 DELETE - Eliminar mensaje (con confirmación y API real)
+  // 5 DELETE - Eliminar mensaje (con confirmaciÃ³n y API real)
   const handleDeleteMessage = (messageId: number) => {
     setMessageMenuOpen(null);
     if (!activeConversation) return;
@@ -1899,13 +1919,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setConfirmDialog({
       show: true,
       title: 'Eliminar mensaje',
-      message: '¿Estás seguro de que quieres eliminar este mensaje? Esta acción no se puede deshacer.',
+      message: 'Â¿EstÃ¡s seguro de que quieres eliminar este mensaje? Esta acciÃ³n no se puede deshacer.',
       variant: 'danger',
       onConfirm: async () => {
         try {
           await deleteMessage(activeConversation.id, messageId);
           // Actualizar UI local
-          const updatedMessages = activeConversation.messages.filter((m: any) => m.id !== messageId);
+          const updatedMessages = (activeConversation.messages || []).filter((m: Message) => m.id !== messageId);
           _setActiveConversation({
             ...activeConversation,
             messages: updatedMessages
@@ -1919,7 +1939,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   };
 
   // 6 PIN - Fijar mensaje
-  const handlePinMessage = (message: any) => {
+  const handlePinMessage = (message: Message) => {
     setPinnedMessage(message);
     setMessageMenuOpen(null);
   };
@@ -1935,11 +1955,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
     // Filtrar mensajes que contienen el query y guardar sus IDs (sin acentos)
     const queryNorm = normalizeText(query);
-    const results = activeConversation.messages
-      .filter((msg: any) => 
+    const results = (activeConversation.messages || [])
+      .filter((msg: Message) => 
         msg.content && normalizeText(msg.content).includes(queryNorm)
       )
-      .map((msg: any) => msg.id);
+      .map((msg: Message) => Number(msg.id));
 
     setMessageSearchResults(results);
     setCurrentSearchIndex(0);
@@ -1955,7 +1975,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     debugLog.log(` B??squeda: "${query}" - ${(results || []).length} resultados encontrados`, results);
   };
 
-  // 8 MUTE - Silenciar conversación (persiste en localStorage)
+  // 8 MUTE - Silenciar conversaciÃ³n (persiste en localStorage)
   const handleMuteConversation = (conversationId?: number) => {
     const id = conversationId || activeConversation?.id;
     if (!id) return;
@@ -1970,29 +1990,29 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Persistir en localStorage
       localStorage.setItem('mutedConversations', JSON.stringify([...newSet]));
       // Exponer globalmente para el sistema de notificaciones
-      (window as any).__mutedConversations = newSet;
+      (window as unknown as { __mutedConversations: Set<number> }).__mutedConversations = newSet;
       return newSet;
     });
   };
 
-  // 🏷️ HANDLERS PARA GESTIÓN DE CONVERSACIONES
+  // ðŸ·ï¸ HANDLERS PARA GESTIÃ“N DE CONVERSACIONES
   
-  // Asignar conversación a un agente
+  // Asignar conversaciÃ³n a un agente
   const handleAssignConversation = async (agentId: number | null) => {
     if (!activeConversation) return;
     try {
       const result = await assignConversation(activeConversation.id, agentId);
-      // Actualizar la conversación activa (el hook ya actualiza setConversations)
+      // Actualizar la conversaciÃ³n activa (el hook ya actualiza setConversations)
       _setActiveConversation((prev: Conversation | null) => 
         prev ? { ...prev, assignee_id: agentId, assignee: result?.assignee || null } : null
       );
-      debugLog.log(`✅ Conversación ${activeConversation.id} asignada a agente ${agentId}`);
+      debugLog.log(`âœ… ConversaciÃ³n ${activeConversation.id} asignada a agente ${agentId}`);
     } catch (error) {
-      debugLog.error('Error asignando conversación:', error);
+      debugLog.error('Error asignando conversaciÃ³n:', error);
     }
   };
 
-  // Cambiar estado de la conversación
+  // Cambiar estado de la conversaciÃ³n
   const handleChangeStatus = async (status: string, snoozedUntil?: number) => {
     if (!activeConversation) return;
     try {
@@ -2001,45 +2021,45 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         status as 'open' | 'resolved' | 'pending' | 'snoozed', 
         snoozedUntil
       );
-      // Actualizar la conversación activa (el hook ya actualiza setConversations)
+      // Actualizar la conversaciÃ³n activa (el hook ya actualiza setConversations)
       _setActiveConversation((prev: Conversation | null) => 
         prev ? { ...prev, status: status as 'open' | 'resolved' | 'pending' | 'snoozed' } : null
       );
-      debugLog.log(`✅ Estado de conversación ${activeConversation.id} cambiado a ${status}`);
+      debugLog.log(`âœ… Estado de conversaciÃ³n ${activeConversation.id} cambiado a ${status}`);
     } catch (error) {
       debugLog.error('Error cambiando estado:', error);
     }
   };
 
-  // Actualizar etiquetas de la conversación
+  // Actualizar etiquetas de la conversaciÃ³n
   const handleUpdateLabels = async (labels: string[]) => {
     if (!activeConversation) return;
     try {
       await updateConversationLabels(activeConversation.id, labels);
-      // Actualizar la conversación activa (el hook ya actualiza setConversations)
+      // Actualizar la conversaciÃ³n activa (el hook ya actualiza setConversations)
       _setActiveConversation((prev: Conversation | null) => 
         prev ? { ...prev, labels } : null
       );
-      debugLog.log(`✅ Etiquetas actualizadas para conversación ${activeConversation.id}:`, labels);
+      debugLog.log(`âœ… Etiquetas actualizadas para conversaciÃ³n ${activeConversation.id}:`, labels);
     } catch (error) {
       debugLog.error('Error actualizando etiquetas:', error);
     }
   };
 
-  // Eliminar conversación completa
+  // Eliminar conversaciÃ³n completa
   const handleDeleteConversation = () => {
     if (!activeConversation) return;
     setConfirmDialog({
       show: true,
-      title: 'Eliminar conversación',
-      message: `¿Estás seguro de que quieres eliminar la conversación con ${activeConversation.contact?.name}? Esta acción eliminará todos los mensajes y no se puede deshacer.`,
+      title: 'Eliminar conversaciÃ³n',
+      message: `Â¿EstÃ¡s seguro de que quieres eliminar la conversaciÃ³n con ${activeConversation.contact?.name}? Esta acciÃ³n eliminarÃ¡ todos los mensajes y no se puede deshacer.`,
       variant: 'danger',
       onConfirm: async () => {
         try {
           await deleteConversation(activeConversation.id);
           _setActiveConversation(null);
         } catch (error) {
-          debugLog.error('Error eliminando conversación:', error);
+          debugLog.error('Error eliminando conversaciÃ³n:', error);
         }
         setConfirmDialog(prev => ({ ...prev, show: false }));
       }
@@ -2051,24 +2071,24 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     if (!activeConversation) return;
     try {
       await updateConversationPriority(activeConversation.id, priority);
-      _setActiveConversation((prev: any) => prev ? { ...prev, priority } : null);
+      _setActiveConversation((prev: Conversation | null) => prev ? { ...prev, priority } : null);
     } catch (error) {
       debugLog.error('Error actualizando prioridad:', error);
     }
   };
 
-  // Cargar respuestas rápidas
+  // Cargar respuestas rÃ¡pidas
   const loadCannedResponses = useCallback(async () => {
     const responses = await getCannedResponses();
     setCannedResponses(responses);
   }, [getCannedResponses]);
 
-  // Detectar "/" en el input para mostrar respuestas rápidas
+  // Detectar "/" en el input para mostrar respuestas rÃ¡pidas
   const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setNewMessage(value);
     
-    // Detectar si el usuario está escribiendo un shortcode "/"
+    // Detectar si el usuario estÃ¡ escribiendo un shortcode "/"
     if (value.startsWith('/')) {
       const filter = value.slice(1).toLowerCase();
       setCannedFilter(filter);
@@ -2082,8 +2102,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   };
 
-  // Seleccionar respuesta rápida
-  const handleSelectCannedResponse = (response: any) => {
+  // Seleccionar respuesta rÃ¡pida
+  const handleSelectCannedResponse = (response: CannedResponse) => {
     setNewMessage(response.content);
     setShowCannedResponses(false);
     setCannedFilter('');
@@ -2122,7 +2142,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   };
 
-  // Cargar notas cuando cambie la conversación activa
+  // Cargar notas cuando cambie la conversaciÃ³n activa
   useEffect(() => {
     if (activeConversation?.contact?.id && showNotes) {
       loadContactNotes();
@@ -2134,7 +2154,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setConfirmDialog({
       show: true,
       title: 'Fusionar duplicados',
-      message: '¿Deseas fusionar automáticamente las conversaciones duplicadas? Se mantendrá la más reciente.',
+      message: 'Â¿Deseas fusionar automÃ¡ticamente las conversaciones duplicadas? Se mantendrÃ¡ la mÃ¡s reciente.',
       variant: 'warning',
       onConfirm: async () => {
         try {
@@ -2151,7 +2171,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   // Exponer mutedConversations globalmente al montar
   React.useEffect(() => {
-    (window as any).__mutedConversations = mutedConversations;
+    (window as unknown as { __mutedConversations: Set<number> }).__mutedConversations = mutedConversations;
   }, [mutedConversations]);
 
   // 9 TYPING INDICATOR - Simular "escribiendo..."
@@ -2218,12 +2238,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   };
 
-  // 📎 Stagear archivo para preview antes de enviar
+  // ðŸ“Ž Stagear archivo para preview antes de enviar
   const stageFile = (file: File) => {
-    // Validar tamaño máximo (16MB para WhatsApp)
+    // Validar tamaÃ±o mÃ¡ximo (16MB para WhatsApp)
     const MAX_FILE_SIZE = 16 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      triggerToast(`Archivo demasiado grande. Máximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
+      triggerToast(`Archivo demasiado grande. MÃ¡ximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
       return;
     }
     // Limpiar preview anterior
@@ -2231,11 +2251,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setStagedFile(file);
     setStagedFilePreviewUrl(URL.createObjectURL(file));
     setFileCaption('');
-    // Focus en el input de caption después de renderizar
+    // Focus en el input de caption despuÃ©s de renderizar
     setTimeout(() => fileCaptionInputRef.current?.focus(), 100);
   };
 
-  // 📎 Cancelar archivo stageado
+  // ðŸ“Ž Cancelar archivo stageado
   const cancelStagedFile = () => {
     if (stagedFilePreviewUrl) URL.revokeObjectURL(stagedFilePreviewUrl);
     setStagedFile(null);
@@ -2243,7 +2263,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setFileCaption('');
   };
 
-  // 📎 Enviar archivo stageado con caption opcional
+  // ðŸ“Ž Enviar archivo stageado con caption opcional
   const sendStagedFile = async () => {
     if (!stagedFile) return;
     const caption = fileCaption.trim() || undefined;
@@ -2255,20 +2275,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   const handleSendAttachment = async (file: File, caption?: string) => {
     if (!activeConversation) return;
     
-    // Validar tamaño máximo (16MB para WhatsApp)
+    // Validar tamaÃ±o mÃ¡ximo (16MB para WhatsApp)
     const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
     if (file.size > MAX_FILE_SIZE) {
-      triggerToast(`Archivo demasiado grande. Máximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
+      triggerToast(`Archivo demasiado grande. MÃ¡ximo 16MB (actual: ${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'warning');
       return;
     }
     
     setIsUploadingFile(true);
     setUploadProgress(file.name);
     
-    // 🚀 Crear mensaje optimista para mostrar inmediatamente en el chat
+    // ðŸš€ Crear mensaje optimista para mostrar inmediatamente en el chat
     const tempId = `temp-file-${Date.now()}-${Math.random()}`;
     const nowTimestamp = Math.floor(Date.now() / 1000);
-    const displayContent = caption ? `📎 ${file.name}\n${caption}` : `📎 ${file.name}`;
+    const displayContent = caption ? `ðŸ“Ž ${file.name}\n${caption}` : `ðŸ“Ž ${file.name}`;
     const optimisticMessage = {
       id: tempId,
       content: displayContent,
@@ -2294,36 +2314,35 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         messages: newMessages
       });
       
-      // 🆕 NUEVO: También actualizar sidebar inmediatamente (UI optimista)
-      setConversations((prevConversations: any[]) => {
-        return prevConversations.map((conv: any) => {
+      // ðŸ†• NUEVO: TambiÃ©n actualizar sidebar inmediatamente (UI optimista)
+      setConversations((prevConversations: Conversation[]) => {
+        return prevConversations.map((conv: Conversation) => {
           if (conv.id === activeConversation.id) {
             return {
               ...conv,
               last_message: {
                 content: displayContent,
-                created_at: new Date().toISOString(),
                 timestamp: nowTimestamp,
-                message_type: 1,
-                sender: { name: 'Yo' }
+                sender: 'agent',
+                attachments: []
               },
               updated_at: new Date().toISOString(),
               last_activity_at: nowTimestamp
-            };
+            } as Conversation;
           }
           return conv;
-        }).sort((a: any, b: any) => {
-          const timeA = a.last_activity_at || a.timestamp || 0;
-          const timeB = b.last_activity_at || b.timestamp || 0;
+        }).sort((a: Conversation, b: Conversation) => {
+          const timeA = Number(a.last_activity_at || a.timestamp || 0);
+          const timeB = Number(b.last_activity_at || b.timestamp || 0);
           return timeB - timeA;
         });
       });
     }
     
     try {
-      debugLog.log('📤 Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaño:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+      debugLog.log('ðŸ“¤ Enviando archivo como base64:', file.name, 'tipo:', file.type, 'tamaÃ±o:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
       
-      // Convertir archivo a base64 para evitar límites de upload PHP
+      // Convertir archivo a base64 para evitar lÃ­mites de upload PHP
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -2339,7 +2358,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Obtener CSRF token
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
-      // Enviar como JSON con base64 (evita límites de upload PHP)
+      // Enviar como JSON con base64 (evita lÃ­mites de upload PHP)
       const response = await fetch(`/api/chatwoot-proxy/conversations/${activeConversation.id}/messages`, {
         method: 'POST',
         credentials: 'include',
@@ -2360,7 +2379,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const data = await response.json();
       
       if (response.ok && data.success) {
-        debugLog.log('✅ Archivo enviado:', file.name);
+        debugLog.log('âœ… Archivo enviado:', file.name);
         
         // Actualizar mensaje optimista a "sent"
         _setActiveConversation(prev => {
@@ -2375,29 +2394,28 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           };
         });
         
-        // También actualizar sidebar
-        setConversations((prevConversations: any[]) => {
-          return prevConversations.map((conv: any) => {
+        // TambiÃ©n actualizar sidebar
+        setConversations((prevConversations: Conversation[]) => {
+          return prevConversations.map((conv: Conversation) => {
             if (conv.id === activeConversation.id) {
               return {
                 ...conv,
                 last_message: {
                   content: displayContent,
-                  created_at: new Date().toISOString(),
                   timestamp: nowTimestamp,
-                  message_type: 1,
-                  sender: { name: 'Yo' }
+                  sender: 'agent',
+                  attachments: []
                 },
                 updated_at: new Date().toISOString(),
                 last_activity_at: nowTimestamp
-              };
+              } as Conversation;
             }
             return conv;
           });
         });
       } else {
-        debugLog.error('❌ Error del servidor:', data);
-        // Remover mensaje optimista si falló
+        debugLog.error('âŒ Error del servidor:', data);
+        // Remover mensaje optimista si fallÃ³
         _setActiveConversation(prev => {
           if (!prev) return prev;
           return {
@@ -2408,7 +2426,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         triggerToast(`Error al enviar archivo: ${data.message || data.error || 'Error desconocido'}`, 'error');
       }
     } catch (error) {
-      debugLog.error('💥 Error enviando archivo:', error);
+      debugLog.error('ðŸ’¥ Error enviando archivo:', error);
       // Remover mensaje optimista si hubo error
       _setActiveConversation(prev => {
         if (!prev) return prev;
@@ -2417,7 +2435,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           messages: prev.messages?.filter(msg => msg.id !== tempId) || []
         };
       });
-      triggerToast('Error de conexión al enviar archivo', 'error');
+      triggerToast('Error de conexiÃ³n al enviar archivo', 'error');
     } finally {
       setIsUploadingFile(false);
       setUploadProgress('');
@@ -2449,14 +2467,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setAudioRecorder(recorder);
       setIsRecording(true);
       
-      // Contador de duración
+      // Contador de duraciÃ³n
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
       
     } catch (error) {
-      debugLog.error('🎤 Error al iniciar grabación:', error);
-      triggerToast('No se pudo acceder al micrófono', 'error');
+      debugLog.error('ðŸŽ¤ Error al iniciar grabaciÃ³n:', error);
+      triggerToast('No se pudo acceder al micrÃ³fono', 'error');
     }
   };
 
@@ -2481,7 +2499,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     const nowTimestamp = Math.floor(Date.now() / 1000);
     const optimisticMessage = {
       id: tempId,
-      content: '🎤 Mensaje de voz',
+      content: 'ðŸŽ¤ Mensaje de voz',
       created_at: new Date().toISOString(),
       timestamp: nowTimestamp,
       message_type: 'outgoing',
@@ -2494,19 +2512,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     
     if (activeConversation.messages) {
       _setActiveConversation({ ...activeConversation, messages: [...activeConversation.messages, optimisticMessage] });
-      setConversations((prev: any[]) => prev.map((conv: any) => 
-        conv.id === activeConversation.id ? { ...conv, last_message: { content: '🎤 Mensaje de voz', created_at: new Date().toISOString(), timestamp: nowTimestamp, message_type: 1, sender: { name: 'Yo' } }, updated_at: new Date().toISOString(), last_activity_at: nowTimestamp } : conv
-      ).sort((a: any, b: any) => (b.last_activity_at || b.timestamp || 0) - (a.last_activity_at || a.timestamp || 0)));
+      setConversations((prev: Conversation[]) => prev.map((conv: Conversation) => 
+        conv.id === activeConversation.id ? { ...conv, last_message: { content: 'ðŸŽ¤ Mensaje de voz', timestamp: nowTimestamp, sender: 'agent', attachments: [] }, updated_at: new Date().toISOString(), last_activity_at: nowTimestamp } as Conversation : conv
+      ).sort((a: Conversation, b: Conversation) => Number(b.last_activity_at || b.timestamp || 0) - Number(a.last_activity_at || a.timestamp || 0)));
     }
     
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio-message.webm');
     formData.append('conversation_id', activeConversation.id.toString());
     formData.append('message_type', 'outgoing');
-    formData.append('content', '🎤 Mensaje de voz');
+    formData.append('content', 'ðŸŽ¤ Mensaje de voz');
     
     try {
-      debugLog.log('🎤 Enviando audio, tamaño:', audioBlob.size, 'tipo:', audioBlob.type);
+      debugLog.log('ðŸŽ¤ Enviando audio, tamaÃ±o:', audioBlob.size, 'tipo:', audioBlob.type);
       
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       
@@ -2523,51 +2541,51 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const data = await response.json();
       
       if (response.ok && data.success) {
-        debugLog.log('✅ Audio enviado');
+        debugLog.log('âœ… Audio enviado');
         _setActiveConversation(prev => {
           if (!prev) return prev;
-          return { ...prev, messages: prev.messages?.map((msg: any) => msg.id === tempId ? { ...msg, status: 'sent', id: data.payload?.id || tempId } : msg) || [] };
+          return { ...prev, messages: prev.messages?.map((msg: Message) => msg.id === tempId ? { ...msg, status: 'sent', id: data.payload?.id || tempId } : msg) || [] };
         });
       } else {
-        debugLog.error('❌ Error del servidor:', data);
+        debugLog.error('âŒ Error del servidor:', data);
         _setActiveConversation(prev => {
           if (!prev) return prev;
-          return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
+          return { ...prev, messages: prev.messages?.filter((msg: Message) => msg.id !== tempId) || [] };
         });
         triggerToast(`Error al enviar audio: ${data.message || 'Error desconocido'}`, 'error');
       }
     } catch (error) {
-      debugLog.error('💥 Error enviando audio:', error);
+      debugLog.error('ðŸ’¥ Error enviando audio:', error);
       _setActiveConversation(prev => {
         if (!prev) return prev;
-        return { ...prev, messages: prev.messages?.filter((msg: any) => msg.id !== tempId) || [] };
+        return { ...prev, messages: prev.messages?.filter((msg: Message) => msg.id !== tempId) || [] };
       });
-      triggerToast('Error de conexión al enviar audio', 'error');
+      triggerToast('Error de conexiÃ³n al enviar audio', 'error');
     } finally {
       setIsSendingAudio(false);
     }
   };
 
-  // 3 MULTIMEDIA GALLERY - Extraer multimedia de la conversación
+  // 3 MULTIMEDIA GALLERY - Extraer multimedia de la conversaciÃ³n
   const getMediaFromConversation = () => {
     if (!activeConversation?.messages) return { images: [], files: [], links: [] };
     
-    const images: any[] = [];
-    const files: any[] = [];
-    const links: any[] = [];
+    const images: ResolvedAttachment[] = [];
+    const files: ResolvedAttachment[] = [];
+    const links: { url: string; message_id?: number | string; created_at?: string | number }[] = [];
     
     // Helper para detectar si es imagen
-    const isImage = (att: any): boolean => {
+    const isImage = (att: ResolvedAttachment): boolean => {
       // Verificar por file_type o content_type (puede ser int: 0=image, o string)
       const rawType = att.file_type ?? att.content_type ?? '';
       const mimeType = String(rawType).toLowerCase();
       if (mimeType === 'image' || mimeType === '0' || mimeType.startsWith('image/')) return true;
       
-      // ✅ Verificar content_type por separado (imágenes enviadas como documento)
+      // âœ… Verificar content_type por separado (imÃ¡genes enviadas como documento)
       const contentType = String(att.content_type || '').toLowerCase();
       if (contentType.startsWith('image/')) return true;
       
-      // Verificar por extensión en la URL (data_url primero, es lo que devuelve el backend)
+      // Verificar por extensiÃ³n en la URL (data_url primero, es lo que devuelve el backend)
       const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
       const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i;
       if (imageExtensions.test(url)) return true;
@@ -2580,7 +2598,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
     
     // Helper para detectar tipo de archivo (video, audio, pdf, etc.)
-    const getFileCategory = (att: any, fileName: string): string => {
+    const getFileCategory = (att: ResolvedAttachment, fileName: string): string => {
       // file_type puede ser int (0=image,1=audio,2=video,3=file) o string
       const rawType = att.file_type ?? att.content_type ?? '';
       const mimeType = String(rawType).toLowerCase();
@@ -2606,7 +2624,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         return 'word';
       }
       
-      // Hojas de cálculo
+      // Hojas de cÃ¡lculo
       if (mimeType.includes('sheet') || mimeType.includes('excel') || /\.(xls|xlsx|csv)$/i.test(nameLower)) {
         return 'spreadsheet';
       }
@@ -2615,7 +2633,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     };
     
     // Helper para obtener nombre de archivo
-    const getFileName = (att: any): string => {
+    const getFileName = (att: ResolvedAttachment): string => {
       // Prioridad: file_name > name > extraer de URL
       if (att.file_name && att.file_name !== 'Archivo') return att.file_name;
       if (att.name) return att.name;
@@ -2637,10 +2655,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       return 'Archivo';
     };
     
-    activeConversation.messages.forEach((msg: any) => {
+    activeConversation.messages.forEach((msg: Message) => {
       // Buscar archivos en attachments
       if (msg.attachments && Array.isArray(msg.attachments)) {
-        msg.attachments.forEach((att: any) => {
+        (msg.attachments as ResolvedAttachment[]).forEach((att: ResolvedAttachment) => {
           const fileName = getFileName(att);
           const fileCategory = getFileCategory(att, fileName);
           const enrichedAtt = { 
@@ -2668,15 +2686,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       }
     });
     
-    debugLog.log('📎 Media encontrada:', { images: images.length, files: files.length, links: links.length });
+    debugLog.log('ðŸ“Ž Media encontrada:', { images: images.length, files: files.length, links: links.length });
     
     return { images, files, links };
   };
 
 
-  // ?? NUEVO: Función para hacer scroll al final de los mensajes
+  // ?? NUEVO: FunciÃ³n para hacer scroll al final de los mensajes
   const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'auto') => {
-    // 🚫 NUNCA hacer scroll al fondo mientras se cargan mensajes anteriores
+    // ðŸš« NUNCA hacer scroll al fondo mientras se cargan mensajes anteriores
     if (isLoadingMoreRef.current) {
       return;
     }
@@ -2694,7 +2712,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, []);
 
-  // ✅ ARREGLADO: Auto-scroll inteligente - solo si el usuario está cerca del fondo
+  // âœ… ARREGLADO: Auto-scroll inteligente - solo si el usuario estÃ¡ cerca del fondo
   useEffect(() => {
     if (activeConversation?.messages && (activeConversation?.messages || []).length > 0) {
       const currentMessageCount = (activeConversation?.messages || []).length;
@@ -2702,19 +2720,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       // Detectar si hay nuevos mensajes (no es el primer load)
       if (previousMessageCount > 0 && currentMessageCount > previousMessageCount) {
-        // 🚫 Si estamos cargando mensajes más antiguos (loadMore), NO hacer scroll al fondo
+        // ðŸš« Si estamos cargando mensajes mÃ¡s antiguos (loadMore), NO hacer scroll al fondo
         if (isLoadingMoreRef.current) {
-          debugLog.log('🛑 LoadMore en progreso - NO hacer scroll automático al fondo');
+          debugLog.log('ðŸ›‘ LoadMore en progreso - NO hacer scroll automÃ¡tico al fondo');
           setPreviousMessageCount(currentMessageCount);
           return;
         }
         
-        // ✅ VERIFICAR: Solo mostrar separador si el último mensaje NO es tuyo
+        // âœ… VERIFICAR: Solo mostrar separador si el Ãºltimo mensaje NO es tuyo
         const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
-        const esIncoming = lastMessage?.message_type === 0 || lastMessage?.message_type === 'incoming';
-        const esOutgoing = lastMessage?.message_type === 1 || lastMessage?.message_type === 'outgoing';
+        const esIncoming = lastMessage?.message_type === 'incoming' || lastMessage?.message_type === 'incoming';
+        const esOutgoing = lastMessage?.message_type === 'outgoing' || lastMessage?.message_type === 'outgoing';
         
-        debugLog.log('📨 Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
+        debugLog.log('ðŸ“¨ Nuevos mensajes detectados:', currentMessageCount - previousMessageCount);
         
         // Solo mostrar separador si es mensaje INCOMING (de otro usuario)
         if (esIncoming) {
@@ -2724,12 +2742,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           }, 3000);
         }
         
-        // ✅ NUEVO: Solo hacer scroll si el usuario está cerca del fondo O si es su propio mensaje
+        // âœ… NUEVO: Solo hacer scroll si el usuario estÃ¡ cerca del fondo O si es su propio mensaje
         if (container && !isLoadingMoreRef.current) {
           const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
           const isNearBottom = distanceFromBottom < 150; // Menos de 150px del fondo
           
-          // Hacer scroll si: está cerca del fondo O si es su propio mensaje
+          // Hacer scroll si: estÃ¡ cerca del fondo O si es su propio mensaje
           if (isNearBottom || esOutgoing) {
             requestAnimationFrame(() => {
               if (messagesContainerRef.current && !isLoadingMoreRef.current) {
@@ -2737,11 +2755,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               }
             });
           } else {
-            debugLog.log('🛑 Usuario leyendo mensajes anteriores - NO hacer scroll automático');
+            debugLog.log('ðŸ›‘ Usuario leyendo mensajes anteriores - NO hacer scroll automÃ¡tico');
           }
         }
       } else if (previousMessageCount === 0) {
-        // Primer load - scroll instantáneo
+        // Primer load - scroll instantÃ¡neo
         setTimeout(() => scrollToBottom('auto'), 100);
       }
       
@@ -2750,19 +2768,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [activeConversation?.id, activeConversation?.messages?.length ?? 0, scrollToBottom]);
   
-  // ✅ ARREGLADO: Solo hacer scroll al fondo en primera carga de conversación
+  // âœ… ARREGLADO: Solo hacer scroll al fondo en primera carga de conversaciÃ³n
   // (Eliminado MutationObserver agresivo que causaba scroll no deseado)
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container || !activeConversation) return;
 
-    // Solo scroll al fondo cuando se cambia de conversación (primera carga)
-    // NO usar MutationObserver que causa scroll agresivo al cargar imágenes/videos
+    // Solo scroll al fondo cuando se cambia de conversaciÃ³n (primera carga)
+    // NO usar MutationObserver que causa scroll agresivo al cargar imÃ¡genes/videos
     
     // Scroll inicial solo una vez
     const scrollToBottomOnce = () => {
       if ((searchResults || []).length > 0) {
-        return; // No hacer scroll si hay búsqueda activa
+        return; // No hacer scroll si hay bÃºsqueda activa
       }
       if (isLoadingMoreRef.current) {
         return; // No hacer scroll durante loadMore
@@ -2775,22 +2793,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       });
     };
 
-    // Solo hacer scroll inicial al cambiar de conversación (no durante loadMore)
+    // Solo hacer scroll inicial al cambiar de conversaciÃ³n (no durante loadMore)
     if (!isLoadingMoreRef.current) {
       scrollToBottomOnce();
     }
     
-  }, [activeConversation?.id]); // Solo cuando cambia la conversación, NO en cada mensaje
+  }, [activeConversation?.id]); // Solo cuando cambia la conversaciÃ³n, NO en cada mensaje
 
-  //  Scroll autom??tico al primer mensaje que coincide con la búsqueda
+  //  Scroll autom??tico al primer mensaje que coincide con la bÃºsqueda
   useEffect(() => {
     if (searchTerm && searchResults && activeConversation?.messages) {
       // Esperar a que los mensajes se rendericen
       setTimeout(() => {
         // Buscar el primer mensaje que contiene el t??rmino (sin acentos)
-        const messages = activeConversation.messages;
+        const messages = activeConversation.messages || [];
         const searchNorm = normalizeText(searchTerm);
-        const firstMatchIndex = messages.findIndex((msg: any) => 
+        const firstMatchIndex = messages.findIndex((msg: Message) => 
           msg.content ? normalizeText(msg.content).includes(searchNorm) : false
         );
 
@@ -2809,12 +2827,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [activeConversation?.id, searchTerm, searchResults?.length ?? 0]);
 
-  //  Contar total de coincidencias en la conversación
+  //  Contar total de coincidencias en la conversaciÃ³n
   useEffect(() => {
     if (searchTerm && searchResults && activeConversation?.messages) {
       let count = 0;
       const searchNorm = normalizeText(searchTerm);
-      activeConversation.messages.forEach((msg: any) => {
+      activeConversation.messages.forEach((msg: Message) => {
         if (msg.content) {
           const contentNorm = normalizeText(msg.content);
           let pos = 0;
@@ -2844,11 +2862,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     }
   }, [shouldScrollToBottom, scrollToBottom]);
   
-  // ?? Resetear contador cuando cambia de conversación
+  // ?? Resetear contador cuando cambia de conversaciÃ³n
   useEffect(() => {
     setPreviousMessageCount(0);
     setNewMessageSeparatorIndex(null);
-    //  Limpiar búsqueda al cambiar de conversación
+    //  Limpiar bÃºsqueda al cambiar de conversaciÃ³n
     setSearchQuery('');
     setMessageSearchResults([]);
     setCurrentSearchIndex(0);
@@ -2875,8 +2893,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   // FASE 3: Atajo de teclado para filtros avanzados
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Filtros avanzados: Ctrl+F
-      if (e.ctrlKey && e.key === 'f') {
+      // Filtros avanzados: Ctrl+Shift+F (no overrides browser's Ctrl+F)
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') {
         e.preventDefault();
         setShowAdvancedFilters(true);
       }
@@ -2941,7 +2959,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setEditEmail(contact?.email || '');
       setIsEditModalOpen(true);
     } else {
-      debugLog.error('?? No hay conversación activa');
+      debugLog.error('?? No hay conversaciÃ³n activa');
     }
   };
 
@@ -2958,7 +2976,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     // Intentar obtener el contact_id de diferentes lugares
     const contactId = activeConversation?.contact?.id 
       || activeConversation?.meta?.sender?.id 
-      || activeConversation?.contact_inbox?.contact_id;
+      || (activeConversation as unknown as { contact_inbox?: { contact_id?: number } })?.contact_inbox?.contact_id;
 
     if (!contactId) {
       debugLog.error('No se pudo obtener el ID del contacto', {
@@ -3002,7 +3020,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       const result = await updateResponse.json();
       debugLog.log('Contacto actualizado exitosamente:', result);
 
-      // Actualizar el estado local de la conversación activa Y la lista de conversaciones inmediatamente
+      // Actualizar el estado local de la conversaciÃ³n activa Y la lista de conversaciones inmediatamente
       const newName = editName || editPhone;
       
       if (activeConversation) {
@@ -3017,7 +3035,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         };
         _setActiveConversation(updatedConversation);
         
-        // Actualizar también en la lista de conversaciones inmediatamente
+        // Actualizar tambiÃ©n en la lista de conversaciones inmediatamente
         setConversations(prev => prev.map(conv => 
           conv.id === activeConversation.id 
             ? { ...conv, contact: { ...conv.contact, name: newName, email: editEmail, phone_number: editPhone } }
@@ -3042,12 +3060,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   // Handlers para opciones del men??
   const handleDownloadChat = () => {
     if (!activeConversation) {
-      triggerToast('Selecciona una conversación primero', 'warning');
+      triggerToast('Selecciona una conversaciÃ³n primero', 'warning');
       return;
     }
     
     try {
-      debugLog.log('📊 Iniciando descarga de conversación:', activeConversation.id);
+      debugLog.log('ðŸ“Š Iniciando descarga de conversaciÃ³n:', activeConversation.id);
       
       // Crear workbook
       const wb = XLSX.utils.book_new();
@@ -3088,15 +3106,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       if (activeConversation.messages && (activeConversation?.messages || []).length > 0) {
         // Ordenar mensajes por timestamp (ascendente)
         const mensajesOrdenados = [...activeConversation.messages].sort((a, b) => {
-          const timeA = a.created_at || a.timestamp || 0;
-          const timeB = b.created_at || b.timestamp || 0;
+          const timeA = Number(a.created_at || a.timestamp || 0);
+          const timeB = Number(b.created_at || b.timestamp || 0);
           return timeA - timeB;
         });
         
-        mensajesOrdenados.forEach((msg: any) => {
+        mensajesOrdenados.forEach((msg: Message) => {
           const timestamp = msg.created_at || msg.timestamp;
-          const fecha = timestamp ? new Date(timestamp * 1000).toLocaleString('es-ES') : 'Sin fecha';
-          const esAgente = msg.message_type === 1 || msg.sender === 'agent';
+          const fecha = timestamp ? new Date(Number(timestamp) * 1000).toLocaleString('es-ES') : 'Sin fecha';
+          const esAgente = msg.message_type === 'outgoing' || msg.sender === 'agent';
           const remitente = esAgente 
             ? (activeConversation.assignee?.name || 'Agente')
             : (activeConversation.contact?.name || 'Cliente');
@@ -3118,12 +3136,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       XLSX.utils.book_append_sheet(wb, wsMensajes, 'Mensajes');
       
       // ===== HOJA 3: ESTAD?STICAS =====
-      const mensajesAgente = activeConversation.messages?.filter((m: any) => 
-        m.message_type === 1 || m.sender === 'agent'
+      const mensajesAgente = activeConversation.messages?.filter((m: Message) => 
+        m.message_type === 'outgoing' || m.sender === 'agent'
       ).length || 0;
       
-      const mensajesCliente = activeConversation.messages?.filter((m: any) => 
-        m.message_type === 0 || m.sender === 'user'
+      const mensajesCliente = activeConversation.messages?.filter((m: Message) => 
+        m.message_type === 'incoming' || m.sender === 'user'
       ).length || 0;
       
       const primerMensaje = activeConversation.messages?.[0];
@@ -3141,8 +3159,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         ['Mensajes del cliente', mensajesCliente.toString()],
         ['Mensajes no le??dos', (activeConversation.unread_count || 0).toString()],
         [''],
-        ['Primer mensaje', fechaPrimer ? new Date(fechaPrimer * 1000).toLocaleString('es-ES') : 'N/A'],
-        ['?ltimo mensaje', fechaUltimo ? new Date(fechaUltimo * 1000).toLocaleString('es-ES') : 'N/A'],
+        ['Primer mensaje', fechaPrimer ? new Date(Number(fechaPrimer) * 1000).toLocaleString('es-ES') : 'N/A'],
+        ['?ltimo mensaje', fechaUltimo ? new Date(Number(fechaUltimo) * 1000).toLocaleString('es-ES') : 'N/A'],
         [''],
         ['Estado actual', activeConversation.status || 'N/A'],
         ['Prioridad', activeConversation.priority || 'Normal'],
@@ -3165,16 +3183,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Descargar archivo
       XLSX.writeFile(wb, filename);
       
-      debugLog.log('✅ Excel descargado exitosamente:', filename);
+      debugLog.log('âœ… Excel descargado exitosamente:', filename);
       setIsSettingsOpen(false);
       
     } catch (error) {
-      debugLog.error('❌ Error al descargar chat:', error);
+      debugLog.error('âŒ Error al descargar chat:', error);
       triggerToast('Error al generar el archivo Excel', 'error');
     }
   };
 
-  // ?? Función mejorada con modal de progreso
+  // ?? FunciÃ³n mejorada con modal de progreso
   const handleDownloadAllConversations = async () => {
     try {
       // Abrir modal y resetear estado
@@ -3184,7 +3202,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setDownloadStatus('Conectando con el servidor...');
       setIsSettingsOpen(false);
       
-      debugLog.log('📤 Solicitando exportación de conversaciones con mensajes...');
+      debugLog.log('ðŸ“¤ Solicitando exportaciÃ³n de conversaciones con mensajes...');
 
       // Fase 1: Fetching (0-30%)
       setDownloadProgress(5);
@@ -3210,11 +3228,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         throw new Error('No se recibieron datos del servidor');
       }
 
-      const conversationsWithMessages = result.data.sort((a: any, b: any) => a.id - b.id);
+      const conversationsWithMessages = result.data.sort((a: Conversation, b: Conversation) => a.id - b.id);
       
       setDownloadProgress(30);
       setDownloadStatus(`${(conversationsWithMessages || []).length} conversaciones recibidas`);
-      debugLog.log(`✅ Recibidas ${(conversationsWithMessages || []).length} conversaciones con mensajes`);
+      debugLog.log(`âœ… Recibidas ${(conversationsWithMessages || []).length} conversaciones con mensajes`);
 
       // Fase 2: Processing (30-60%)
       setDownloadPhase('processing');
@@ -3233,7 +3251,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         ['ID', 'Contacto', 'Email', 'Telefono', 'Estado', 'Prioridad', 'No Leidos', 'Total Mensajes', 'Agente', 'Fecha Creacion']
       ];
 
-      conversationsWithMessages.forEach((conv: any, index: number) => {
+      conversationsWithMessages.forEach((conv: Conversation, index: number) => {
         // Actualizar progreso cada 10 conversaciones
         if (index % 10 === 0) {
           const progress = 35 + Math.floor((index / (conversationsWithMessages || []).length) * 25);
@@ -3242,7 +3260,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         }
         
         //  Buscar datos actualizados del contacto en el estado local
-        const localConv = conversations.find((c: any) => c.id === conv.id);
+        const localConv = conversations.find((c: Conversation) => c.id === conv.id);
         const contactData = localConv?.contact || conv.contact || {};
         
         const contacto = conv.meta?.sender || contactData || {};
@@ -3250,7 +3268,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         const email = contactData.email || contacto.email || 'N/A';
         const nombreContacto = contactData.name || conv.contact?.name || 'Sin nombre';
         const fechaCreacion = conv.created_at ? 
-          new Date(conv.created_at * 1000).toLocaleString('es-ES') : 'N/A';
+          new Date(conv.created_at).toLocaleString('es-ES') : 'N/A';
 
         resumenData.push([
           conv.id,
@@ -3287,7 +3305,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       setDownloadStatus('Procesando mensajes...');
       
       let totalMensajes = 0;
-      conversationsWithMessages.forEach((conv: any, convIndex: number) => {
+      conversationsWithMessages.forEach((conv: Conversation, convIndex: number) => {
         // Actualizar progreso cada 5 conversaciones
         if (convIndex % 5 === 0) {
           const progress = 60 + Math.floor((convIndex / (conversationsWithMessages || []).length) * 35);
@@ -3297,22 +3315,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         
         if (conv.messages && (conv?.messages || []).length > 0) {
           //  Buscar datos actualizados del contacto en el estado local
-          const localConv = conversations.find((c: any) => c.id === conv.id);
+          const localConv = conversations.find((c: Conversation) => c.id === conv.id);
           const contactData = localConv?.contact || conv.contact || {};
           const nombreContacto = contactData.name || conv.contact?.name || 'Sin nombre';
           
           // Ordenar mensajes por created_at
-          const mensajesOrdenados = [...conv.messages].sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+          const mensajesOrdenados = [...conv.messages].sort((a, b) => Number(a.created_at || 0) - Number(b.created_at || 0));
           
-          mensajesOrdenados.forEach((msg: any) => {
-            const fecha = new Date(msg.created_at * 1000).toLocaleString('es-ES');
-            const remitente = msg.message_type === 1 
+          mensajesOrdenados.forEach((msg: Message) => {
+            const fecha = new Date(Number(msg.created_at) * 1000).toLocaleString('es-ES');
+            const remitente = msg.message_type === 'outgoing' 
               ? (conv.assignee?.name || 'Agente')
               : nombreContacto;
-            const tipo = msg.message_type === 1 ? 'Agente' : 'Cliente';
+            const tipo = msg.message_type === 'outgoing' ? 'Agente' : 'Cliente';
 
             todosMensajesData.push([
-              conv.id,
+              String(conv.id),
               nombreContacto,
               fecha,
               remitente,
@@ -3330,9 +3348,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       ];
       XLSX.utils.book_append_sheet(wb, wsTodosMensajes, 'Todos los Mensajes');
 
-      const conversacionesAbiertas = conversationsWithMessages.filter((c: any) => c.status === 'open').length;
-      const conversacionesResueltas = conversationsWithMessages.filter((c: any) => c.status === 'resolved').length;
-      const totalNoLeidos = conversationsWithMessages.reduce((sum: number, c: any) => sum + (c.unread_count || 0), 0);
+      const conversacionesAbiertas = conversationsWithMessages.filter((c: Conversation) => c.status === 'open').length;
+      const conversacionesResueltas = conversationsWithMessages.filter((c: Conversation) => c.status === 'resolved').length;
+      const totalNoLeidos = conversationsWithMessages.reduce((sum: number, c: Conversation) => sum + (c.unread_count || 0), 0);
 
       const statsData = [
         ['ESTADISTICAS GENERALES'],
@@ -3360,11 +3378,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       
       setDownloadProgress(100);
       setDownloadPhase('complete');
-      setDownloadStatus(`✅ ¡Completado! ${(conversationsWithMessages || []).length} conversaciones con ${totalMensajes} mensajes`);
+      setDownloadStatus(`âœ… Â¡Completado! ${(conversationsWithMessages || []).length} conversaciones con ${totalMensajes} mensajes`);
       
-      debugLog.log('✅ Excel generado exitosamente:', filename);
+      debugLog.log('âœ… Excel generado exitosamente:', filename);
       
-      // Cerrar modal después de 3 segundos
+      // Cerrar modal despuÃ©s de 3 segundos
       setTimeout(() => {
         setIsDownloadModalOpen(false);
       }, 3000);
@@ -3387,13 +3405,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     const { scrollTop, scrollHeight, clientHeight } = conversationsListRef.current;
     const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
     
-    // Cargar más cuando llega al 80% del scroll
+    // Cargar mÃ¡s cuando llega al 80% del scroll
     if (scrollPercentage > 0.8) {
       loadMoreConversations();
     }
   };
 
-  // ?? OPTIMIZACI?N: Funciones extraídas a ../utils/ para mejor performance y reutilizaci??n
+  // ?? OPTIMIZACI?N: Funciones extraÃ­das a ../utils/ para mejor performance y reutilizaci??n
   // formatTimestamp, getPriorityColor, getStatusColor ahora se importan desde ../utils/
 
   // ?? GUARDIA: Prevenir render si conversations es undefined
@@ -3430,7 +3448,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       <div className="h-full flex items-center justify-center bg-white/20 backdrop-blur-2xl">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error de Conexión</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error de ConexiÃ³n</h3>
           <p className="text-gray-600 mb-4">No se pudieron cargar las conversaciones</p>
           <button 
             onClick={() => fetchUpdatedConversations()}
@@ -3553,13 +3571,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             )}
           </div>
           
-          {/* Indicador de resultados de búsqueda */}
+          {/* Indicador de resultados de bÃºsqueda */}
           {searchTerm && searchTerm.length >= 2 && !isSearching && (
             <div className="mb-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-xl text-xs font-semibold text-blue-800 shadow-md backdrop-blur-sm">
               {(filteredConversations || []).length === 0 ? (
-                <span>🔍 No se encontraron resultados para "{searchTerm}"</span>
+                <span>ðŸ” No se encontraron resultados para "{searchTerm}"</span>
               ) : (
-                <span>🔍 {(filteredConversations || []).length} conversación{(filteredConversations || []).length !== 1 ? 'es' : ''} encontrada{(filteredConversations || []).length !== 1 ? 's' : ''}</span>
+                <span>ðŸ” {(filteredConversations || []).length} conversaciÃ³n{(filteredConversations || []).length !== 1 ? 'es' : ''} encontrada{(filteredConversations || []).length !== 1 ? 's' : ''}</span>
               )}
             </div>
           )}
@@ -3571,21 +3589,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 id: 'all', 
                 label: 'Todas', 
                 count: (conversations || []).length,
-                icon: '📋'
+                icon: 'ðŸ“‹'
               },
               { 
                 id: 'mine', 
-                label: 'Mías', 
+                label: 'MÃ­as', 
                 count: (conversations || []).filter(c => 
                   currentAgentId ? c.assignee_id === currentAgentId : c.assignee_id
                 ).length,
-                icon: '👤'
+                icon: 'ðŸ‘¤'
               },
               { 
                 id: 'unassigned', 
                 label: 'Sin asignar', 
                 count: (conversations || []).filter(c => !c.assignee_id).length,
-                icon: '📭'
+                icon: 'ðŸ“­'
               }
             ].map((filter) => (
               <button
@@ -3630,7 +3648,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   onClick={() => setSearchTerm('')}
                   className="mt-4 text-sm text-blue-600 hover:text-blue-700"
                 >
-                  Limpiar búsqueda
+                  Limpiar bÃºsqueda
                 </button>
               )}
             </div>
@@ -3673,7 +3691,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             onError={(e) => { 
                               e.currentTarget.style.display = 'none';
                               if (e.currentTarget.nextElementSibling) {
-                                e.currentTarget.nextElementSibling.style.display = 'flex';
+                                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
                               }
                             }}
                           />
@@ -3707,18 +3725,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               return <>{before}<span className="bg-yellow-200 text-yellow-900 rounded px-0.5">{match}</span>{after}</>;
                             })() : conversation.contact.name}
                           </h4>
-                          <span className="text-xs text-gray-500">{formatTimestamp(conversation.last_message.timestamp)}</span>
+                          <span className="text-xs text-gray-500">{formatTimestamp(conversation.last_message.timestamp || 0)}</span>
                         </div>
                         
                         <p className="text-sm text-gray-600 truncate mb-2">
-                          {searchTerm && conversation._matchingMessage?.content ? (
-                            // Mostrar mensaje que coincide con la búsqueda (estilo WhatsApp)
+                          {searchTerm && (conversation._matchingMessage as Message | undefined)?.content ? (
+                            // Mostrar mensaje que coincide con la bÃºsqueda (estilo WhatsApp)
                             (() => {
-                              const content = conversation._matchingMessage.content;
+                              const matchMsg = conversation._matchingMessage as Message;
+                              const content = matchMsg.content!;
                               const normContent = normalizeText(content);
                               const normSearch = normalizeText(searchTerm);
                               const matchPos = normContent.indexOf(normSearch);
-                              if (matchPos === -1) return formatLastMessagePreview(content, conversation._matchingMessage.attachments);
+                              if (matchPos === -1) return formatLastMessagePreview(content, matchMsg.attachments as { file_type?: string | number; content_type?: string; data_url?: string; file_name?: string }[]);
                               
                               // Mostrar contexto alrededor del match
                               const start = Math.max(0, matchPos - 20);
@@ -3730,7 +3749,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               
                               return (
                                 <>
-                                  🔍 {prefix}{before}<span className="bg-yellow-200 text-yellow-900 font-semibold rounded px-0.5">{match}</span>{after}{suffix}
+                                  ðŸ” {prefix}{before}<span className="bg-yellow-200 text-yellow-900 font-semibold rounded px-0.5">{match}</span>{after}{suffix}
                                 </>
                               );
                             })()
@@ -3741,16 +3760,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(conversation.priority)}`}>
-                              {{ urgent: 'Urgente', high: 'Alta', medium: 'Media', low: 'Baja', none: 'Sin' }[conversation.priority] || conversation.priority}
+                            <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(conversation.priority || 'none')}`}>
+                              {{ urgent: 'Urgente', high: 'Alta', medium: 'Media', low: 'Baja', none: 'Sin' }[conversation.priority as string] || conversation.priority}
                             </span>
-                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(conversation.status)}`}>
-                              {{ open: 'Abierta', resolved: 'Resuelta', pending: 'Pendiente', snoozed: 'Pospuesta' }[conversation.status] || conversation.status}
+                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(conversation.status || 'open')}`}>
+                              {{ open: 'Abierta', resolved: 'Resuelta', pending: 'Pendiente', snoozed: 'Pospuesta' }[conversation.status as string] || conversation.status}
                             </span>
                           </div>
                           
                           {(() => {
-                            // ✅ SOLO usar el Map global - sin fallback al servidor
+                            // âœ… SOLO usar el Map global - sin fallback al servidor
                             const badgeCount = conversationBadges?.get(conversation.id) ?? 0;
                             return badgeCount > 0 ? (
                               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
@@ -3781,11 +3800,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             </div>
           )}
           
-          {/* Indicador de carga al hacer scroll - Solo mostrar cuando realmente está cargando más páginas */}
+          {/* Indicador de carga al hacer scroll - Solo mostrar cuando realmente estÃ¡ cargando mÃ¡s pÃ¡ginas */}
           {conversationsLoading && hasMorePages && (conversations || []).length > 0 && (
             <div className="p-4 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-blue-500 mr-2" />
-              <span className="text-sm text-gray-600">Cargando más...</span>
+              <span className="text-sm text-gray-600">Cargando mÃ¡s...</span>
             </div>
           )}
         </div>
@@ -3819,13 +3838,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           <div className="absolute inset-0 z-50 bg-blue-600/40 backdrop-blur-sm border-4 border-dashed border-blue-400 flex items-center justify-center pointer-events-none">
             <div className="text-center bg-white/95 p-8 rounded-2xl shadow-2xl transform scale-110">
               <Upload className="w-20 h-20 text-blue-600 mx-auto mb-4 animate-bounce" />
-              <p className="text-2xl font-bold text-blue-800">Suelta los archivos aquí</p>
-              <p className="text-sm text-blue-600 mt-2">Imágenes, videos, documentos (máx 16MB)</p>
+              <p className="text-2xl font-bold text-blue-800">Suelta los archivos aquÃ­</p>
+              <p className="text-sm text-blue-600 mt-2">ImÃ¡genes, videos, documentos (mÃ¡x 16MB)</p>
             </div>
           </div>
         )}
 
-        {/* 📎 MODAL PREVIEW DE ARCHIVO — estilo WhatsApp claro, solo panel derecho */}
+        {/* ðŸ“Ž MODAL PREVIEW DE ARCHIVO â€” estilo WhatsApp claro, solo panel derecho */}
         {stagedFile && !isUploadingFile && (
           <div className="absolute inset-0 bg-gray-50 z-[60] flex flex-col">
             {/* Header */}
@@ -3882,7 +3901,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   </div>
                   <p className="text-lg text-gray-800 font-medium text-center max-w-xs truncate">{stagedFile.name}</p>
                   <p className="text-sm text-gray-400">
-                    {stagedFile.type.split('/').pop()?.toUpperCase() || 'Archivo'} · {(stagedFile.size / 1024 / 1024).toFixed(2)} MB
+                    {stagedFile.type.split('/').pop()?.toUpperCase() || 'Archivo'} Â· {(stagedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
               )}
@@ -3931,7 +3950,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         onError={(e) => { 
                           e.currentTarget.style.display = 'none';
                           if (e.currentTarget.nextElementSibling) {
-                            e.currentTarget.nextElementSibling.style.display = 'flex';
+                            (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
                           }
                         }}
                       />
@@ -4023,7 +4042,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       </>
                     )}
 
-                  {/* Controles de navegación duplicados eliminados - ya están arriba */}
+                  {/* Controles de navegaciÃ³n duplicados eliminados - ya estÃ¡n arriba */}
 
                   </div>
                   
@@ -4060,12 +4079,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               </div>
 
-              {/* 🏷️ BARRA DE HERRAMIENTAS DE CONVERSACIÓN */}
+              {/* ðŸ·ï¸ BARRA DE HERRAMIENTAS DE CONVERSACIÃ“N */}
               <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                {/* Estado de la conversación */}
+                {/* Estado de la conversaciÃ³n */}
                 <ConversationActionsDropdown
                   conversationId={activeConversation.id}
-                  currentStatus={activeConversation.status || 'open'}
+                  currentStatus={(activeConversation.status || 'open') as 'open' | 'resolved' | 'pending' | 'snoozed'}
                   onChangeStatus={handleChangeStatus}
                 />
 
@@ -4191,7 +4210,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 relative"
               onClick={(e) => {
-                // Cerrar menú contextual al hacer click en el chat (si no se clickeó el botón del menú)
+                // Cerrar menÃº contextual al hacer click en el chat (si no se clickeÃ³ el botÃ³n del menÃº)
                 if (messageMenuOpen !== null && !(e.target as HTMLElement).closest('[data-menu-trigger]') && !(e.target as HTMLElement).closest('[data-context-menu]')) {
                   setMessageMenuOpen(null);
                 }
@@ -4218,7 +4237,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              {/* 🚀 SKELETON LOADER mientras cargan mensajes */}
+              {/* ðŸš€ SKELETON LOADER mientras cargan mensajes */}
               {activeConversation?._isLoading && filteredMessages.length === 0 && (
                 <div className="space-y-4 animate-pulse">
                   {/* Mensaje del contacto (izquierda) */}
@@ -4252,7 +4271,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
 
-              {/* � Trigger invisible para infinite scroll (carga más mensajes al llegar al tope) */}
+              {/* ï¿½ Trigger invisible para infinite scroll (carga mÃ¡s mensajes al llegar al tope) */}
               <div 
                 ref={loadMoreTriggerRef} 
                 className="h-4 w-full"
@@ -4269,7 +4288,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
               
-              {/* Botón para cargar más mensajes anteriores */}
+              {/* BotÃ³n para cargar mÃ¡s mensajes anteriores */}
               {activeConversation?._hasMoreMessages && !activeConversation?._isLoading && filteredMessages.length > 0 && (
                 <div className="flex justify-center py-3">
                   <button
@@ -4282,18 +4301,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               )}
               
-              {/* Indicador de inicio de conversación */}
+              {/* Indicador de inicio de conversaciÃ³n */}
               {activeConversation?._hasMoreMessages === false && !activeConversation?._isLoading && filteredMessages.length > 0 && (
                 <div className="flex justify-center py-3">
                   <div className="flex items-center gap-2 text-xs text-gray-400 italic">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Inicio de la conversación
+                    Inicio de la conversaciÃ³n
                   </div>
                 </div>
               )}
 
-              {/* ✨ Renderizar mensajes (sin duplicados) */}
-              {filteredMessages.map((message: any, index: number) => (
+              {/* âœ¨ Renderizar mensajes (sin duplicados) */}
+              {filteredMessages.map((message: Message, index: number) => (
                 <React.Fragment key={message.id}>
                   {/* Separador de "Nuevos mensajes" */}
                   {newMessageSeparatorIndex === index && (
@@ -4318,7 +4337,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {message.sender === 'contact' && (
                         <button
                           data-menu-trigger
-                          onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
+                          onClick={() => setMessageMenuOpen(messageMenuOpen === Number(message.id) ? null : Number(message.id))}
                           className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <ChevronDown className="w-4 h-4 text-gray-600" />
@@ -4328,8 +4347,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Burbuja del mensaje */}
                       <div 
                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl relative ${
-                          messageSearchResults.length > 0 && messageSearchResults.includes(message.id)
-                            ? messageSearchResults[currentSearchIndex] === message.id
+                          messageSearchResults.length > 0 && messageSearchResults.includes(Number(message.id))
+                            ? messageSearchResults[currentSearchIndex] === Number(message.id)
                               ? 'ring-4 ring-yellow-400 !bg-yellow-200 !text-gray-900 shadow-lg'
                               : 'ring-2 ring-yellow-200 !bg-yellow-50 !text-gray-900 shadow-md'
                             : message.sender === 'agent'
@@ -4339,7 +4358,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         id={`message-${message.id}`}
                       >
                         {/* Indicador de mensaje destacado */}
-                        {starredMessages.has(message.id) && (
+                        {starredMessages.has(Number(message.id)) && (
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 absolute top-1 right-1" />
                         )}
                         
@@ -4347,17 +4366,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         {message.content === 'This message was deleted' ? (
                           <p className="text-sm whitespace-pre-wrap break-words italic text-gray-400 flex items-center gap-1.5">
                             <Ban className="w-3.5 h-3.5" />
-                            Se eliminó este mensaje
+                            Se eliminÃ³ este mensaje
                           </p>
                         ) : (
                           <p className="text-sm whitespace-pre-wrap break-words">
-                            {searchQuery ? highlightSearchTerm(message.content, searchQuery, index) : message.content}
+                            {searchQuery ? highlightSearchTerm(message.content || '', searchQuery, index) : message.content}
                           </p>
                         )}
                         
-                        {/* 🔗 Link Previews estilo WhatsApp */}
+                        {/* ðŸ”— Link Previews estilo WhatsApp */}
                         {(() => {
-                          const urls = extractUrls(message.content);
+                          const urls = extractUrls(message.content || '');
                           if (urls.length === 0) return null;
                           
                           // Fetch preview para URLs que no tenemos
@@ -4382,28 +4401,28 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           });
                         })()}
 
-                        {/* Renderizar archivos adjuntos (imágenes, audios, documentos) */}
-                        {/* ✅ Filtrar attachments vacíos o inválidos */}
-                        {message.attachments && message.attachments.filter((att: any) => {
-                          // Solo mostrar attachments que tengan URL o ID válido
+                        {/* Renderizar archivos adjuntos (imÃ¡genes, audios, documentos) */}
+                        {/* âœ… Filtrar attachments vacÃ­os o invÃ¡lidos */}
+                        {message.attachments && (message.attachments as ResolvedAttachment[]).filter((att: ResolvedAttachment) => {
+                          // Solo mostrar attachments que tengan URL o ID vÃ¡lido
                           const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
                           return (url && url.length > 0) || (Number(att?.id) > 0);
                         }).length > 0 && (
                           <div className="mt-2 space-y-2">
-                            {message.attachments.filter((att: any) => {
+                            {(message.attachments as ResolvedAttachment[]).filter((att: ResolvedAttachment) => {
                               const url = att.data_url || att.file_url || att.url || att.thumb_url || '';
                               return (url && url.length > 0) || (Number(att?.id) > 0);
-                            }).map((att: any, idx: number) => {
-                              // ✅ Usar proxy inteligente que cachea y renueva URLs
+                            }).map((att: ResolvedAttachment, idx: number) => {
+                              // âœ… Usar proxy inteligente que cachea y renueva URLs
                               const rawUrl = att.data_url || att.file_url || att.url || att.thumb_url || '';
                               // file_type puede ser int (0=image,1=audio,2=video,3=file) o string
                               const rawFileType = att.file_type ?? att.content_type ?? '';
                               const fileType = String(rawFileType).toLowerCase();
                               
-                              // ✅ Usar resolveAttachmentUrl para URLs permanentes
+                              // âœ… Usar resolveAttachmentUrl para URLs permanentes
                               const attachmentUrl = resolveAttachmentUrl(att);
                               
-                              // ✅ Detectar imágenes enviadas como documento (content_type o extensión)
+                              // âœ… Detectar imÃ¡genes enviadas como documento (content_type o extensiÃ³n)
                               const contentType = String(att.content_type || '').toLowerCase();
                               const fileName = String(att.file_name || att.name || '').toLowerCase();
                               const isImage = fileType === 'image' || fileType.includes('image/') || fileType === '0'
@@ -4444,7 +4463,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     </div>
                                   </div>
                                 ) : (fileType === 'video' || fileType.includes('video/') || fileType === '2') || /\.(mp4|mov|avi|webm|mkv)$/i.test(rawUrl) ? (
-                                  /* 🎬 VIDEO: Thumbnail real generado por el servidor */
+                                  /* ðŸŽ¬ VIDEO: Thumbnail real generado por el servidor */
                                   <div 
                                     className="relative rounded-xl overflow-hidden shadow-lg max-w-[280px] h-40 cursor-pointer group"
                                     onClick={() => openMediaViewer(attachmentUrl, 'video')}
@@ -4473,7 +4492,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     {/* Overlay oscuro para contraste */}
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors"></div>
                                     
-                                    {/* Botón de play central */}
+                                    {/* BotÃ³n de play central */}
                                     <div className="absolute inset-0 flex items-center justify-center">
                                       <div className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform backdrop-blur-sm">
                                         <Play className="w-8 h-8 text-gray-800 ml-1" fill="currentColor" />
@@ -4487,9 +4506,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     </div>
                                   </div>
                                 ) : (fileType === 'audio' || fileType.includes('audio/') || fileType === '1') || /\.(mp3|wav|ogg|oga|m4a|aac|webm)$/i.test(rawUrl) ? (
-                                  /* 🎵 AUDIO: Reproductor estilo WhatsApp */
+                                  /* ðŸŽµ AUDIO: Reproductor estilo WhatsApp */
                                   <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-3 rounded-xl max-w-[280px] border border-emerald-200/50">
-                                    {/* Icono de audio/micrófono */}
+                                    {/* Icono de audio/micrÃ³fono */}
                                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
                                       <Mic className="w-5 h-5 text-white" />
                                     </div>
@@ -4520,7 +4539,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     </audio>
                                   </div>
                                 ) : attachmentUrl ? (
-                                  /* 📄 DOCUMENTO: Card profesional estilo WhatsApp */
+                                  /* ðŸ“„ DOCUMENTO: Card profesional estilo WhatsApp */
                                   (() => {
                                     const docName = att.file_name || att.name || 'Archivo adjunto';
                                     const ext = docName.split('.').pop()?.toLowerCase() || '';
@@ -4528,21 +4547,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                     
                                     // Colores e iconos por tipo de archivo
                                     const fileConfig: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-                                      pdf: { color: 'text-red-600', bg: 'bg-red-100', icon: '📄', label: 'PDF' },
-                                      doc: { color: 'text-blue-600', bg: 'bg-blue-100', icon: '📝', label: 'DOC' },
-                                      docx: { color: 'text-blue-600', bg: 'bg-blue-100', icon: '📝', label: 'DOCX' },
-                                      xls: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'XLS' },
-                                      xlsx: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'XLSX' },
-                                      csv: { color: 'text-green-600', bg: 'bg-green-100', icon: '📊', label: 'CSV' },
-                                      ppt: { color: 'text-orange-600', bg: 'bg-orange-100', icon: '📑', label: 'PPT' },
-                                      pptx: { color: 'text-orange-600', bg: 'bg-orange-100', icon: '📑', label: 'PPTX' },
-                                      txt: { color: 'text-gray-600', bg: 'bg-gray-100', icon: '📃', label: 'TXT' },
-                                      zip: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '🗜️', label: 'ZIP' },
-                                      rar: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: '🗜️', label: 'RAR' },
+                                      pdf: { color: 'text-red-600', bg: 'bg-red-100', icon: 'ðŸ“„', label: 'PDF' },
+                                      doc: { color: 'text-blue-600', bg: 'bg-blue-100', icon: 'ðŸ“', label: 'DOC' },
+                                      docx: { color: 'text-blue-600', bg: 'bg-blue-100', icon: 'ðŸ“', label: 'DOCX' },
+                                      xls: { color: 'text-green-600', bg: 'bg-green-100', icon: 'ðŸ“Š', label: 'XLS' },
+                                      xlsx: { color: 'text-green-600', bg: 'bg-green-100', icon: 'ðŸ“Š', label: 'XLSX' },
+                                      csv: { color: 'text-green-600', bg: 'bg-green-100', icon: 'ðŸ“Š', label: 'CSV' },
+                                      ppt: { color: 'text-orange-600', bg: 'bg-orange-100', icon: 'ðŸ“‘', label: 'PPT' },
+                                      pptx: { color: 'text-orange-600', bg: 'bg-orange-100', icon: 'ðŸ“‘', label: 'PPTX' },
+                                      txt: { color: 'text-gray-600', bg: 'bg-gray-100', icon: 'ðŸ“ƒ', label: 'TXT' },
+                                      zip: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: 'ðŸ—œï¸', label: 'ZIP' },
+                                      rar: { color: 'text-yellow-700', bg: 'bg-yellow-100', icon: 'ðŸ—œï¸', label: 'RAR' },
                                     };
-                                    const config = fileConfig[ext] || { color: 'text-gray-600', bg: 'bg-gray-100', icon: '📎', label: ext.toUpperCase() || 'FILE' };
+                                    const config = fileConfig[ext] || { color: 'text-gray-600', bg: 'bg-gray-100', icon: 'ðŸ“Ž', label: ext.toUpperCase() || 'FILE' };
                                     
-                                    // Tamaño del archivo si está disponible
+                                    // TamaÃ±o del archivo si estÃ¡ disponible
                                     const fileSize = att.file_size ? (
                                       att.file_size > 1048576 
                                         ? `${(att.file_size / 1048576).toFixed(1)} MB`
@@ -4609,13 +4628,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               ? 'text-blue-100' 
                               : 'text-gray-500'
                           }`}>
-                            {formatTimestamp(message.timestamp || message.created_at)}
+                            {formatTimestamp(message.timestamp || message.created_at || 0)}
                           </p>
                           {/* Estado del mensaje tipo WhatsApp */}
                           {message.sender === 'agent' && (
                             <MessageStatus 
                               status={message.status || (message._isOptimistic ? 'sending' : 'delivered')} 
-                              isHighlighted={searchResults && Array.isArray(searchResults) && searchResults.includes(message.id)}
+                              isHighlighted={!!(searchResults && Array.isArray(searchResults) && searchResults.includes(message.id))}
                             />
                           )}
                         </div>
@@ -4625,15 +4644,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {message.sender === 'agent' && (
                         <button
                           data-menu-trigger
-                          onClick={() => setMessageMenuOpen(messageMenuOpen === message.id ? null : message.id)}
+                          onClick={() => setMessageMenuOpen(messageMenuOpen === Number(message.id) ? null : Number(message.id))}
                           className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <ChevronDown className="w-4 h-4 text-gray-600" />
                         </button>
                       )}
 
-                      {/* Menú Contextual */}
-                      {messageMenuOpen === message.id && (
+                      {/* MenÃº Contextual */}
+                      {messageMenuOpen === Number(message.id) && (
                         <div data-context-menu className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-fade-in text-gray-800`}>
                           <button
                             onClick={() => handleReplyToMessage(message)}
@@ -4643,21 +4662,21 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <span>Responder</span>
                           </button>
                           <button
-                            onClick={() => handleStarMessage(message.id)}
+                            onClick={() => handleStarMessage(Number(message.id))}
                             className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
-                            <Star className={`w-4 h-4 ${starredMessages.has(message.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                            <span>{starredMessages.has(message.id) ? 'Quitar destacado' : 'Destacar'}</span>
+                            <Star className={`w-4 h-4 ${starredMessages.has(Number(message.id)) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                            <span>{starredMessages.has(Number(message.id)) ? 'Quitar destacado' : 'Destacar'}</span>
                           </button>
                           <button
-                            onClick={() => handleCopyMessage(message.content)}
+                            onClick={() => handleCopyMessage(message.content || "")}
                             className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Copy className="w-4 h-4" />
                             <span>Copiar</span>
                           </button>
                           <button
-                            onClick={() => handleForwardMessage(message.content)}
+                            onClick={() => handleForwardMessage(message.content || "")}
                             className="w-full px-4 py-2 text-left text-sm text-gray-800 hover:bg-gray-100 flex items-center space-x-2"
                           >
                             <Copy className="w-4 h-4" />
@@ -4672,7 +4691,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           </button>
                           <div className="border-t border-gray-200 my-1"></div>
                           <button
-                            onClick={() => handleDeleteMessage(message.id)}
+                            onClick={() => handleDeleteMessage(Number(message.id))}
                             className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center space-x-2"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -4739,12 +4758,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
-                    <span className="text-xs text-gray-500">{activeConversation.contact.name} está escribiendo...</span>
+                    <span className="text-xs text-gray-500">{activeConversation.contact.name} estÃ¡ escribiendo...</span>
                   </div>
                 </div>
               )}
 
-              {/* 📤 INDICADOR DE SUBIDA DE ARCHIVO */}
+              {/* ðŸ“¤ INDICADOR DE SUBIDA DE ARCHIVO */}
               {isUploadingFile && (
                 <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
                   <div className="flex items-center space-x-3">
@@ -4762,7 +4781,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
 
 
-              {/* 🎤 INDICADOR DE ENVÍO DE AUDIO */}
+              {/* ðŸŽ¤ INDICADOR DE ENVÃO DE AUDIO */}
               {isSendingAudio && (
                 <div className="px-4 py-3 bg-green-50 border-b border-green-100">
                   <div className="flex items-center space-x-3">
@@ -4777,10 +4796,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
               <div className="px-3 py-2">
                 <form onSubmit={handleSendMessage} className="relative">
-                  {/* Contenedor único estilo WhatsApp */}
+                  {/* Contenedor Ãºnico estilo WhatsApp */}
                   <div className="flex items-center bg-white/90 border border-gray-200/40 rounded-full px-2 py-1 focus-within:bg-white focus-within:border-gray-300 transition-all">
                     
-                    {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS (dentro del input) */}
+                    {/* ðŸ“Ž BOTÃ“N PARA ADJUNTAR ARCHIVOS (dentro del input) */}
                     <label className="p-2 hover:bg-gray-100 rounded-full transition-all cursor-pointer flex-shrink-0">
                       <Paperclip className="w-5 h-5 text-gray-500" />
                       <input
@@ -4798,7 +4817,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       />
                     </label>
 
-                    {/* 😊 BOTÓN EMOJI (dentro del input) */}
+                    {/* ðŸ˜Š BOTÃ“N EMOJI (dentro del input) */}
                     <div className="relative flex-shrink-0">
                       <button 
                         type="button"
@@ -4813,10 +4832,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         <div ref={emojiPickerRef} className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 p-2 z-50">
                           <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-gray-100">
                             <span className="text-xs font-medium text-gray-500">Emoticonos</span>
-                            <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
+                            <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">âœ•</button>
                           </div>
                           <div className="grid grid-cols-8 gap-0 max-h-40 overflow-y-auto">
-                            {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
+                            {['ðŸ˜€', 'ðŸ˜ƒ', 'ðŸ˜„', 'ðŸ˜', 'ðŸ˜‚', 'ðŸ¤£', 'ðŸ˜Š', 'ðŸ˜‡', 'ðŸ™‚', 'ðŸ˜‰', 'ðŸ˜', 'ðŸ¥°', 'ðŸ˜˜', 'ðŸ˜—', 'ðŸ˜‹', 'ðŸ˜›', 'ðŸ˜œ', 'ðŸ¤ª', 'ðŸ˜', 'ðŸ¤—', 'ðŸ¤­', 'ðŸ¤«', 'ðŸ¤”', 'ðŸ¤', 'ðŸ˜', 'ðŸ˜Œ', 'ðŸ˜´', 'ðŸ¤¤', 'ðŸ˜·', 'ðŸ¤’', 'ðŸ¤•', 'ðŸ¤¢', 'ðŸ¥µ', 'ðŸ¥¶', 'ðŸ˜Ž', 'ðŸ¤©', 'ðŸ¥³', 'ðŸ˜¤', 'ðŸ˜¡', 'ðŸ¤¬', 'ðŸ˜ˆ', 'ðŸ‘¿', 'ðŸ’€', 'â˜ ï¸', 'ðŸ’©', 'ðŸ¤¡', 'ðŸ‘»', 'ðŸ˜º', 'â¤ï¸', 'ðŸ§¡', 'ðŸ’›', 'ðŸ’š', 'ðŸ’™', 'ðŸ’œ', 'ðŸ–¤', 'ðŸ¤', 'ðŸ’”', 'â£ï¸', 'ðŸ’•', 'ðŸ’—', 'ðŸ’“', 'ðŸ’˜', 'ðŸ’', 'ðŸ’Ÿ', 'ðŸ‘', 'ðŸ‘Ž', 'ðŸ‘Œ', 'âœŒï¸', 'ðŸ¤ž', 'ðŸ¤Ÿ', 'ðŸ¤™', 'ðŸ‘‹', 'ðŸ™Œ', 'ðŸ‘', 'ðŸ¤', 'ðŸ™', 'ðŸ’ª', 'ðŸ”¥', 'â­', 'âœ¨', 'ðŸŽ‰', 'ðŸŽŠ', 'ðŸ’¯', 'âœ…', 'ðŸš€', 'ðŸ’¬', 'ðŸ‘€', 'ðŸ“Ž', 'ðŸŽ¤', 'ðŸ“¸', 'ðŸ’¡', 'â°', 'ðŸŽ¯', 'ðŸ†', 'ðŸŒŸ', 'ðŸ’Ž'].map((emoji, i) => (
                               <button
                                 key={`${emoji}-${i}`}
                                 type="button"
@@ -4840,16 +4859,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         type="text"
                         value={newMessage}
                         onChange={handleMessageInputChange}
-                        placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rápidas)"}
+                        placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rÃ¡pidas)"}
                         className="w-full px-3 py-2 bg-transparent text-gray-900 placeholder-gray-400 outline-none"
                         disabled={isTyping || isUploadingFile}
                       />
                       
-                      {/* Popup de Respuestas Rápidas */}
+                      {/* Popup de Respuestas RÃ¡pidas */}
                       {showCannedResponses && cannedResponses.length > 0 && (
                         <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto z-50">
                           <div className="px-3 py-2 border-b border-gray-100 text-xs font-medium text-gray-500 sticky top-0 bg-white">
-                            Respuestas rápidas — escribe / para filtrar
+                            Respuestas rÃ¡pidas â€” escribe / para filtrar
                           </div>
                           {cannedResponses
                             .filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter))
@@ -4874,13 +4893,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       )}
                     </div>
 
-                    {/* 🎤 BOTÓN DE AUDIO (dentro del input) */}
+                    {/* ðŸŽ¤ BOTÃ“N DE AUDIO (dentro del input) */}
                     {!isRecording ? (
                       <button 
                         type="button"
                         onMouseDown={handleStartRecording}
                         className="p-2 hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
-                        title="Mantén presionado para grabar"
+                        title="MantÃ©n presionado para grabar"
                       >
                         <Mic className="w-5 h-5 text-gray-500" />
                       </button>
@@ -4899,7 +4918,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       </button>
                     )}
 
-                    {/* ✈️ BOTÓN ENVIAR (dentro del input) */}
+                    {/* âœˆï¸ BOTÃ“N ENVIAR (dentro del input) */}
                     <button 
                       type="submit" 
                       disabled={!newMessage.trim() || isTyping}
@@ -4923,14 +4942,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   className="w-40 h-40 mx-auto hover:scale-110 transition-transform duration-300"
                 />
               </div>
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">Selecciona una conversación</h3>
-              <p className="text-gray-500">Elige una conversación para empezar a chatear</p>
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">Selecciona una conversaciÃ³n</h3>
+              <p className="text-gray-500">Elige una conversaciÃ³n para empezar a chatear</p>
             </div>
           </div>
         )}
       </div>
 
-      {/*  GALERÍA MULTIMEDIA MODAL */}
+      {/*  GALERÃA MULTIMEDIA MODAL */}
       {showMediaGallery && activeConversation && (
         <div 
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -4970,7 +4989,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 }`}
               >
                 <ImageIcon className="w-4 h-4" />
-                <span>Imágenes</span>
+                <span>ImÃ¡genes</span>
               </button>
               <button
                 onClick={() => setMediaFilter('files')}
@@ -5004,9 +5023,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 if (mediaFilter === 'all') {
                   return (
                     <>
-                      {/* Sección Imágenes */}
+                      {/* SecciÃ³n ImÃ¡genes */}
                       <div className="mb-6">
-                        <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3">ImÃ¡genes ({images.length})</h4>
                         {images.length > 0 ? (
                           <div className="grid grid-cols-4 gap-3">
                             {images.map((img, idx) => {
@@ -5024,7 +5043,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                       if (placeholder) placeholder.style.display = 'flex';
                                     }}
                                   />
-                                  {/* Placeholder para imagen no disponible en galería */}
+                                  {/* Placeholder para imagen no disponible en galerÃ­a */}
                                   <div className="hidden items-center justify-center bg-gray-200 rounded-lg w-full h-full absolute inset-0" style={{ display: 'none' }}>
                                     <div className="text-center text-gray-400">
                                       <svg className="w-8 h-8 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5035,7 +5054,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                   </div>
                                   {img.message_id && (
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteMessage(img.message_id); }}
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteMessage(Number(img.message_id)); }}
                                       className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                                       title="Eliminar mensaje con esta imagen"
                                     >
@@ -5047,11 +5066,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             })}
                           </div>
                         ) : (
-                          <p className="text-gray-400 text-sm">No hay imágenes</p>
+                          <p className="text-gray-400 text-sm">No hay imÃ¡genes</p>
                         )}
                       </div>
                       
-                      {/* Sección Videos */}
+                      {/* SecciÃ³n Videos */}
                       {(() => {
                         const videos = files.filter(f => f.file_category === 'video');
                         return videos.length > 0 ? (
@@ -5081,7 +5100,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         ) : null;
                       })()}
                       
-                      {/* Sección Audios */}
+                      {/* SecciÃ³n Audios */}
                       {(() => {
                         const audios = files.filter(f => f.file_category === 'audio');
                         return audios.length > 0 ? (
@@ -5111,7 +5130,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         ) : null;
                       })()}
                       
-                      {/* Sección PDFs */}
+                      {/* SecciÃ³n PDFs */}
                       {(() => {
                         const pdfs = files.filter(f => f.file_category === 'pdf');
                         return pdfs.length > 0 ? (
@@ -5147,9 +5166,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         ) : null;
                       })()}
                       
-                      {/* Sección Otros Archivos */}
+                      {/* SecciÃ³n Otros Archivos */}
                       {(() => {
-                        const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category));
+                        const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category || ""));
                         return otherFiles.length > 0 ? (
                           <div className="mb-6">
                             <h4 className="font-semibold text-gray-700 mb-3">Otros archivos ({otherFiles.length})</h4>
@@ -5200,7 +5219,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         </div>
                       )}
                       
-                      {/* Sección Enlaces */}
+                      {/* SecciÃ³n Enlaces */}
                       <div>
                         <h4 className="font-semibold text-gray-700 mb-3">Enlaces ({links.length})</h4>
                         {links.length > 0 ? (
@@ -5230,7 +5249,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 if (mediaFilter === 'images') {
                   return (
                     <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
+                      <h4 className="font-semibold text-gray-700 mb-3">ImÃ¡genes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3">
                         {images.map((img, idx) => {
                           const proxyUrl = resolveAttachmentUrl(img);
@@ -5258,7 +5277,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               </div>
                               {img.message_id && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteMessage(img.message_id); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteMessage(Number(img.message_id)); }}
                                   className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                                   title="Eliminar mensaje con esta imagen"
                                 >
@@ -5277,7 +5296,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   const videos = files.filter(f => f.file_category === 'video');
                   const audios = files.filter(f => f.file_category === 'audio');
                   const pdfs = files.filter(f => f.file_category === 'pdf');
-                  const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category));
+                  const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category || ""));
                   
                   return (
                     <div className="space-y-6">
@@ -5436,7 +5455,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     onError={(e) => { 
                       e.currentTarget.style.display = 'none';
                       if (e.currentTarget.nextElementSibling) {
-                        e.currentTarget.nextElementSibling.style.display = 'flex';
+                        (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
                       }
                     }}
                   />
@@ -5486,7 +5505,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </div>
               </div>
 
-              {/*  GALERÍA MULTIMEDIA */}
+              {/*  GALERÃA MULTIMEDIA */}
               <div>
                 <button 
                   onClick={() => setShowMediaGallery(!showMediaGallery)}
@@ -5501,7 +5520,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 </button>
               </div>
 
-              {/* 📝 NOTAS DEL CONTACTO */}
+              {/* ðŸ“ NOTAS DEL CONTACTO */}
               <div>
                 <button 
                   onClick={() => {
@@ -5549,7 +5568,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             <p className="text-xs text-gray-700 whitespace-pre-wrap">{note.content}</p>
                             <div className="flex items-center justify-between mt-1.5">
                               <span className="text-[10px] text-gray-400">
-                                {note.user?.name || 'Agente'} · {note.created_at ? new Date(note.created_at * 1000).toLocaleDateString() : ''}
+                                {note.user?.name || 'Agente'} Â· {note.created_at ? new Date(note.created_at * 1000).toLocaleDateString() : ''}
                               </span>
                               <button
                                 onClick={() => handleDeleteNote(note.id)}
@@ -5566,14 +5585,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 )}
               </div>
 
-              {/* 🔀 HERRAMIENTAS ADMIN */}
+              {/* ðŸ”€ HERRAMIENTAS ADMIN */}
               <div className="pt-2 border-t border-gray-200/30">
                 <button
                   onClick={handleDeleteConversation}
                   className="w-full p-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-300 flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Eliminar conversación
+                  Eliminar conversaciÃ³n
                 </button>
               </div>
 
@@ -5582,7 +5601,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           ) : (
             <div className="text-center text-gray-500">
               <User className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Selecciona una conversación para ver detalles</p>
+              <p>Selecciona una conversaciÃ³n para ver detalles</p>
             </div>
           )}
         </div>
@@ -5610,12 +5629,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 )}
               </div>
 
-              {/* Título según fase */}
+              {/* TÃ­tulo segÃºn fase */}
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
                 {downloadPhase === 'fetching' && 'Descargando...'}
                 {downloadPhase === 'processing' && 'Procesando...'}
                 {downloadPhase === 'generating' && 'Generando Excel...'}
-                {downloadPhase === 'complete' && '✅ ¡Completado!'}
+                {downloadPhase === 'complete' && 'âœ… Â¡Completado!'}
                 {downloadPhase === 'error' && 'Error'}
               </h3>
 
@@ -5681,15 +5700,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Ej: Juan Pérez"
+                  placeholder="Ej: Juan PÃ©rez"
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
                 />
               </div>
 
-              {/* Campo Teléfono */}
+              {/* Campo TelÃ©fono */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Teléfono
+                  TelÃ©fono
                 </label>
                 <input
                   type="tel"
@@ -5703,7 +5722,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               {/* Campo Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Correo electrónico
+                  Correo electrÃ³nico
                 </label>
                 <input
                   type="email"
@@ -5822,7 +5841,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         </div>
       )}
 
-      {/* NotificationToast ahora está en MainDashboard para funcionar en todas las secciones */}
+      {/* NotificationToast ahora estÃ¡ en MainDashboard para funcionar en todas las secciones */}
       <NotificationCenter 
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
@@ -5858,7 +5877,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         onClose={() => setShowAdvancedFilters(false)}
       />
 
-      {/* 🎬 Modal Fullscreen para Videos/Imágenes con Galería - Estilo Claro */}
+      {/* ðŸŽ¬ Modal Fullscreen para Videos/ImÃ¡genes con GalerÃ­a - Estilo Claro */}
       {mediaViewerOpen && mediaGallery.length > 0 && (
         <div 
           className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-md flex flex-col"
@@ -5870,11 +5889,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           }}
           tabIndex={0}
         >
-          {/* Header con contador, descargar y botón de cerrar */}
+          {/* Header con contador, descargar y botÃ³n de cerrar */}
           <div className="flex-shrink-0 p-4 flex justify-between items-center bg-white/60 backdrop-blur-xl border-b border-gray-200/50 z-10">
             <div className="text-gray-700 flex items-center space-x-3">
               <span className="text-sm font-medium">
-                {mediaGallery[currentMediaIndex]?.type === 'video' ? '🎬 Video' : '🖼️ Imagen'}
+                {mediaGallery[currentMediaIndex]?.type === 'video' ? 'ðŸŽ¬ Video' : 'ðŸ–¼ï¸ Imagen'}
               </span>
               {mediaGallery.length > 1 && (
                 <span className="text-xs text-gray-600 bg-gray-200/60 px-2 py-1 rounded-full">
@@ -5888,7 +5907,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               )}
             </div>
             <div className="flex items-center space-x-2">
-              {/* Botón Descargar */}
+              {/* BotÃ³n Descargar */}
               <a
                 href={mediaGallery[currentMediaIndex]?.url}
                 download
@@ -5900,7 +5919,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Descargar</span>
               </a>
-              {/* Botón Cerrar */}
+              {/* BotÃ³n Cerrar */}
               <button
                 onClick={(e) => { e.stopPropagation(); setMediaViewerOpen(false); }}
                 className="p-2 rounded-lg bg-gray-200/60 hover:bg-gray-300/80 transition-colors"
@@ -5910,7 +5929,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             </div>
           </div>
 
-          {/* Área principal del media con zoom */}
+          {/* Ãrea principal del media con zoom */}
           <div className="flex-1 flex items-center justify-center relative overflow-hidden">
             {/* Flecha Izquierda */}
             {mediaGallery.length > 1 && (
@@ -6013,7 +6032,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
 
 
-      {/* Modal de confirmación genérico */}
+      {/* Modal de confirmaciÃ³n genÃ©rico */}
       {confirmDialog.show && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]"
           onClick={() => setConfirmDialog(prev => ({ ...prev, show: false }))}

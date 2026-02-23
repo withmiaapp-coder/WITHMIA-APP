@@ -170,7 +170,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
 
   // Asegurar que labels siempre sea un array
   const safeLabels = Array.isArray(labels) ? labels : [];
-  const filteredLabels = safeLabels.filter((label: Label) => 
+  const filteredLabels = safeLabels.filter((label) => 
     label?.title?.toLowerCase()?.includes(searchTerm.toLowerCase()) ?? false
   );
 
@@ -296,7 +296,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                 {searchTerm ? 'No se encontraron etiquetas' : 'No hay etiquetas. Crea una nueva.'}
               </div>
             ) : (
-              filteredLabels.map((label: Label) => (
+              filteredLabels.map((label) => (
                 <div
                   key={label.title}
                   className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
@@ -373,7 +373,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
             <div className="px-3 pt-2 border-t border-gray-100">
               <div className="flex flex-wrap gap-1">
                 {selectedLabels.map(labelTitle => {
-                  const label = safeLabels.find((l: Label) => l.title === labelTitle);
+                  const label = safeLabels.find((l) => l.title === labelTitle);
                   return (
                     <span 
                       key={labelTitle}

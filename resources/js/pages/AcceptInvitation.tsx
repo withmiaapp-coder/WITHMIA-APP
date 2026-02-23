@@ -5,8 +5,8 @@ import { CheckCircle, XCircle, Loader2, Mail, AlertCircle, Sparkles, Users } fro
 // Declare google globally for TypeScript
 declare global {
   interface Window {
-    google: any;
-    handleInvitationCredentialResponse: (response: any) => void;
+    google: { accounts: { id: { initialize: (config: Record<string, unknown>) => void; renderButton: (element: HTMLElement | null, config: Record<string, unknown>) => void } } };
+    handleInvitationCredentialResponse: (response: { credential: string }) => void;
   }
 }
 
@@ -105,7 +105,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
   };
 
   // Handle Google Sign-In response
-  const handleCredentialResponse = useCallback(async (response: any) => {
+  const handleCredentialResponse = useCallback(async (response: { credential: string }) => {
     setLoading(true);
     setError(null);
 

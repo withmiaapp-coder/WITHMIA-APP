@@ -6,7 +6,7 @@ import debugLog from '@/utils/debugLogger';
  * Usa echo-config.ts (que configura Reverb) en lugar de crear una instancia separada.
  */
 export function useReverb() {
-    const echoRef = useRef<any>(null);
+    const echoRef = useRef<InstanceType<typeof import('laravel-echo').default> | null>(null);
     const initializedRef = useRef(false);
 
     useEffect(() => {
@@ -27,7 +27,7 @@ export function useReverb() {
         initEcho();
     }, []);
 
-    const subscribe = useCallback((channel: string, event: string, callback: (data: any) => void) => {
+    const subscribe = useCallback((channel: string, event: string, callback: (data: unknown) => void) => {
         if (echoRef.current) {
             echoRef.current.channel(channel)
                 .listen(event, callback);
@@ -36,7 +36,7 @@ export function useReverb() {
         }
     }, []);
 
-    const subscribePrivate = useCallback((channel: string, event: string, callback: (data: any) => void) => {
+    const subscribePrivate = useCallback((channel: string, event: string, callback: (data: unknown) => void) => {
         if (echoRef.current) {
             echoRef.current.private(channel)
                 .listen(event, callback);

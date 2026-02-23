@@ -51,36 +51,23 @@ class RefreshCompanyKnowledge extends Command
             }
         }
 
-        // Clean up any old UUID-based granular_knowledge points (from hardcoded fix)
+        // Clean up any old UUID-based granular_knowledge points
         if ($companyId) {
             $company = $companies->first();
             if ($company) {
                 $collectionName = $company->settings['qdrant_collection'] ?? null;
                 if ($collectionName) {
                     $this->info("🧹 Cleaning up old UUID granular_knowledge points...");
-                    try {
-                        // Delete by filter: source = granular_knowledge
-                        $qdrantUrl = config('qdrant.url') ?: config('services.qdrant.url');
-                        $qdrantKey = config('qdrant.api_key') ?: config('services.qdrant.api_key');
+                    $result = $qdrantService->deleteByFilter($collectionName, [
+                        'must' => [
+                            ['key' => 'source', 'match' => ['value' => 'granular_knowledge']],
+                        ],
+                    ]);
 
-                        $response = \Illuminate\Support\Facades\Http::withHeaders([
-                            'api-key' => $qdrantKey,
-                            'Content-Type' => 'application/json',
-                        ])->post("{$qdrantUrl}/collections/{$collectionName}/points/delete", [
-                            'filter' => [
-                                'must' => [
-                                    ['key' => 'source', 'match' => ['value' => 'granular_knowledge']],
-                                ],
-                            ],
-                        ]);
-
-                        if ($response->successful()) {
-                            $this->info("  ✅ Old granular_knowledge points cleaned up");
-                        } else {
-                            $this->warn("  ⚠ Could not clean up old points: " . $response->body());
-                        }
-                    } catch (\Exception $e) {
-                        $this->warn("  ⚠ Cleanup error: " . $e->getMessage());
+                    if ($result['success']) {
+                        $this->info("  ✅ Old granular_knowledge points cleaned up");
+                    } else {
+                        $this->warn("  ⚠ Could not clean up old points: " . ($result['error'] ?? 'Unknown'));
                     }
                 }
             }

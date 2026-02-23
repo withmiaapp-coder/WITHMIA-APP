@@ -15,13 +15,13 @@ return new class extends Migration
     {
         Schema::create('cached_attachments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('attachment_id')->unique()->index();
+            $table->unsignedBigInteger('attachment_id')->unique(); // unique() already creates index
             $table->string('content_type', 255)->default('application/octet-stream');
             $table->string('file_name', 500)->nullable();
             $table->unsignedBigInteger('file_size')->default(0);
             $table->binary('binary_data'); // BYTEA en PostgreSQL
             $table->string('original_url', 1000)->nullable();
-            $table->unsignedBigInteger('message_id')->nullable();
+            $table->unsignedBigInteger('message_id')->nullable()->index();
             $table->timestamps();
         });
     }

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductIntegration;
 use App\Traits\HasCompanyAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +23,7 @@ class ProductIntegrationController extends Controller
     /**
      * Get all product integration statuses
      */
-    public function status(Request $request)
+    public function status(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -67,7 +68,7 @@ class ProductIntegrationController extends Controller
     /**
      * Connect a product provider
      */
-    public function connect(Request $request)
+    public function connect(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -191,7 +192,7 @@ class ProductIntegrationController extends Controller
     /**
      * Disconnect a product provider
      */
-    public function disconnect(Request $request)
+    public function disconnect(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -228,7 +229,7 @@ class ProductIntegrationController extends Controller
     /**
      * Toggle bot access for a provider
      */
-    public function toggleBotAccess(Request $request)
+    public function toggleBotAccess(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {
@@ -262,7 +263,7 @@ class ProductIntegrationController extends Controller
     /**
      * Sync products from a provider
      */
-    public function sync(Request $request)
+    public function sync(Request $request): JsonResponse
     {
         $company = $this->getCompanyFromRequest($request);
         if (!$company) {

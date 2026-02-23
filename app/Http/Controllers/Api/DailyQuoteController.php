@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,7 @@ class DailyQuoteController extends Controller
      * Uses OpenAI to generate quotes about notable people born/died on today's date.
      * Caches multiple quotes per day and rotates them on each request.
      */
-    public function __invoke(Request $request)
+    public function __invoke(Request $request): JsonResponse
     {
         $date = now();
         $monthDay = $date->format('m-d');

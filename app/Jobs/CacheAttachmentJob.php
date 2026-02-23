@@ -28,6 +28,11 @@ class CacheAttachmentJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * Cola dedicada para no competir con jobs críticos de mensajería.
+     */
+    public string $queue = 'attachments';
+
+    /**
      * Reintentar hasta 5 veces (Chatwoot puede tener race condition
      * donde el attachment aún no está listo cuando se dispara el webhook).
      */
@@ -365,5 +370,18 @@ class CacheAttachmentJob implements ShouldQueue
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('📦 [CacheAttachment] Job failed permanently', [
+            'attachment_id' => $this->attachmentId,
+            'message_id' => $this->messageId,
+            'conversation_id' => $this->conversationDisplayId,
+            'error' => $exception->getMessage(),
+        ]);
     }
 }

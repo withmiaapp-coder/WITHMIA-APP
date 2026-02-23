@@ -38,4 +38,9 @@ export REVERB_SERVER_PORT="$REVERB_PORT"
 echo "Set REVERB_SERVER_PORT=$REVERB_SERVER_PORT"
 
 echo "Starting Laravel Reverb on 0.0.0.0:$REVERB_PORT..."
-exec php artisan reverb:start --host=0.0.0.0 --port="$REVERB_PORT" --debug
+DEBUG_FLAG=""
+if [ "${REVERB_DEBUG:-false}" = "true" ]; then
+    DEBUG_FLAG="--debug"
+    echo "Debug mode enabled"
+fi
+exec php artisan reverb:start --host=0.0.0.0 --port="$REVERB_PORT" $DEBUG_FLAG

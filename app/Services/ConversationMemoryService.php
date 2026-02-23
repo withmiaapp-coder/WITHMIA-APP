@@ -186,9 +186,6 @@ class ConversationMemoryService
             return false;
         }
 
-        // Pequeña pausa para que n8n limpie la memoria
-        usleep(500000); // 500ms
-
         // Paso 2: Reactivar workflow
         Log::info("🔄 Reactivando workflow n8n {$workflowId}...");
         $activateResult = $n8nService->activateWorkflow($workflowId);

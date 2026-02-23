@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Services\ChatwootService;
@@ -20,7 +21,7 @@ class GoogleAuthController extends Controller
         $this->chatwootService = $chatwootService;
     }
 
-    public function authenticate(Request $request)
+    public function authenticate(Request $request): JsonResponse|\Illuminate\Contracts\View\View
     {
         try {
             $request->validate([
@@ -159,7 +160,7 @@ class GoogleAuthController extends Controller
     /**
      * Authenticate with Google and accept team invitation
      */
-    public function authenticateWithInvitation(Request $request)
+    public function authenticateWithInvitation(Request $request): JsonResponse|\Illuminate\Contracts\View\View
     {
         try {
             $request->validate([
@@ -328,12 +329,12 @@ class GoogleAuthController extends Controller
         return null;
     }
 
-    public function login()
+    public function login(): JsonResponse
     {
         return response()->json(['message' => 'Google OAuth login endpoint']);
     }
 
-    public function checkSession(Request $request)
+    public function checkSession(Request $request): JsonResponse
     {
         $sessionId = session()->getId();
         $hasSession = !empty($sessionId) && strlen($sessionId) > 10;

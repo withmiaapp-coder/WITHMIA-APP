@@ -472,6 +472,8 @@ class N8nService
                 '{{EVOLUTION_API_URL}}' => config('evolution.api_url'),
                 '{{EVOLUTION_API_KEY}}' => config('evolution.api_key'),
                 '{{QDRANT_URL}}' => config('qdrant.url'),
+                '{{CHATWOOT_URL}}' => rtrim(config('chatwoot.url', ''), '/'),
+                '{{CHATWOOT_API_TOKEN}}' => config('chatwoot.api_key', ''),
                 '{{N8N_OPENAI_CREDENTIAL_ID}}' => $credentialIds['openai']['id'] ?? '',
                 '{{N8N_OPENAI_CREDENTIAL_NAME}}' => $credentialIds['openai']['name'] ?? 'OpenAI Account',
                 '{{N8N_QDRANT_CREDENTIAL_ID}}' => $credentialIds['qdrant']['id'] ?? '',

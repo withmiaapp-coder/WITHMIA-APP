@@ -238,6 +238,29 @@ class QdrantService
     }
 
     /**
+     * Eliminar puntos de una colección usando un filtro (por payload fields)
+     */
+    public function deleteByFilter(string $collectionName, array $filter): array
+    {
+        try {
+            $response = $this->request('POST', "/collections/{$collectionName}/points/delete", [
+                'filter' => $filter
+            ]);
+
+            if ($response['success']) {
+                return [
+                    'success' => true,
+                    'message' => 'Points deleted by filter successfully'
+                ];
+            }
+
+            return ['success' => false, 'error' => $response['error'] ?? 'Error deleting points by filter'];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => 'Failed to delete points by filter: ' . $e->getMessage()];
+        }
+    }
+
+    /**
      * Obtener el nombre de la colección para una empresa
      */
     public function getCollectionName(string $companySlug): string

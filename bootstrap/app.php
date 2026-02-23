@@ -27,13 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Use 'railway.auth' alias on specific route groups that need token-based auth.
         
         // Excluir rutas de verificación CSRF
+        // api/* es redundante (API routes no usan web middleware) pero se mantiene como safety net
         $middleware->validateCsrfTokens(except: [
             'api/*',
-            'api/bot-config',
-            'api/bot-config/*',
-            'api/chatwoot-proxy/*',
-            'api/evolution/*',
-            'api/evolution-whatsapp/*',
             'whatsapp/*',
             'auth/google',
             'auth/google/invitation',
@@ -56,8 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
-            // Retornar login.html directamente sin redirect
-            return response()->file(public_path('login.html'));
+            // Retornar login directamente sin redirect
+            return response(view('login')->render(), 200, ['Content-Type' => 'text/html']);
         });
 
         // Log ALL unhandled errors to stderr for RoadRunner/Railway visibility

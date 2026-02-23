@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ChatwootService;
 use App\Traits\ChatwootDbAccess;
 use App\Traits\ResolvesChatwootConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -43,7 +44,7 @@ class ChatwootController extends Controller
     /**
      * Obtener etiquetas de la cuenta
      */
-    public function getLabels()
+    public function getLabels(): JsonResponse
     {
         try {
             $labels = $this->chatwootDb()->table('labels')
@@ -63,7 +64,7 @@ class ChatwootController extends Controller
     /**
      * Crear nueva etiqueta
      */
-    public function createLabel(Request $request)
+    public function createLabel(Request $request): JsonResponse
     {
         try {
             $title = $request->input('title');
@@ -106,7 +107,7 @@ class ChatwootController extends Controller
     /**
      * Eliminar una etiqueta del sistema
      */
-    public function deleteLabel($labelId)
+    public function deleteLabel($labelId): JsonResponse
     {
         try {
             $label = $this->chatwootDb()->table('labels')
@@ -161,7 +162,7 @@ class ChatwootController extends Controller
     /**
      * Obtener etiquetas de una conversación
      */
-    public function getConversationLabels($conversationId)
+    public function getConversationLabels($conversationId): JsonResponse
     {
         try {
             $chatwootDb = $this->chatwootDb();
@@ -205,7 +206,7 @@ class ChatwootController extends Controller
     /**
      * Actualizar etiquetas de una conversación
      */
-    public function updateConversationLabels(Request $request, $conversationId)
+    public function updateConversationLabels(Request $request, $conversationId): JsonResponse
     {
         try {
             $labels = $request->input('labels', []);
@@ -293,7 +294,7 @@ class ChatwootController extends Controller
     /**
      * Obtener agentes de la cuenta
      */
-    public function getAgents()
+    public function getAgents(): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -345,7 +346,7 @@ class ChatwootController extends Controller
     /**
      * Asignar conversación a un agente
      */
-    public function assignConversation(Request $request, $conversationId)
+    public function assignConversation(Request $request, $conversationId): JsonResponse
     {
         try {
             $assigneeId = $request->input('assignee_id');
@@ -469,7 +470,7 @@ class ChatwootController extends Controller
     /**
      * Cambiar estado de conversación (open, resolved, pending, snoozed)
      */
-    public function changeConversationStatus(Request $request, $conversationId)
+    public function changeConversationStatus(Request $request, $conversationId): JsonResponse
     {
         try {
             $status = $request->input('status');
@@ -544,7 +545,7 @@ class ChatwootController extends Controller
     /**
      * Actualizar contacto en Chatwoot
      */
-    public function updateContact(Request $request, $contactId)
+    public function updateContact(Request $request, $contactId): JsonResponse
     {
         try {
             $validated = $request->validate([
@@ -608,7 +609,7 @@ class ChatwootController extends Controller
     /**
      * Obtener configuración de Chatwoot para el usuario actual
      */
-    public function getConfig(Request $request)
+    public function getConfig(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -632,7 +633,7 @@ class ChatwootController extends Controller
     /**
      * Obtener estadísticas del dashboard
      */
-    public function getDashboardStats()
+    public function getDashboardStats(): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -757,7 +758,7 @@ class ChatwootController extends Controller
     /**
      * Obtener respuestas rápidas de la cuenta
      */
-    public function getCannedResponses()
+    public function getCannedResponses(): JsonResponse
     {
         try {
             $responses = $this->chatwootDb()->table('canned_responses')
@@ -777,7 +778,7 @@ class ChatwootController extends Controller
     /**
      * Crear respuesta rápida
      */
-    public function createCannedResponse(Request $request)
+    public function createCannedResponse(Request $request): JsonResponse
     {
         try {
             $shortCode = $request->input('short_code');
@@ -816,7 +817,7 @@ class ChatwootController extends Controller
     /**
      * Eliminar respuesta rápida
      */
-    public function deleteCannedResponse($id)
+    public function deleteCannedResponse($id): JsonResponse
     {
         try {
             $deleted = $this->chatwootDb()->table('canned_responses')
@@ -841,7 +842,7 @@ class ChatwootController extends Controller
     /**
      * Obtener notas de un contacto
      */
-    public function getContactNotes($contactId)
+    public function getContactNotes($contactId): JsonResponse
     {
         try {
             $notes = $this->chatwootDb()->table('notes')
@@ -877,7 +878,7 @@ class ChatwootController extends Controller
     /**
      * Crear nota para un contacto
      */
-    public function createContactNote(Request $request, $contactId)
+    public function createContactNote(Request $request, $contactId): JsonResponse
     {
         try {
             $content = $request->input('content');
@@ -918,7 +919,7 @@ class ChatwootController extends Controller
     /**
      * Eliminar nota de un contacto
      */
-    public function deleteContactNote($contactId, $noteId)
+    public function deleteContactNote($contactId, $noteId): JsonResponse
     {
         try {
             $deleted = $this->chatwootDb()->table('notes')
@@ -944,7 +945,7 @@ class ChatwootController extends Controller
     /**
      * Actualizar prioridad de una conversación
      */
-    public function updateConversationPriority(Request $request, $conversationId)
+    public function updateConversationPriority(Request $request, $conversationId): JsonResponse
     {
         try {
             $priority = $request->input('priority'); // null, 'urgent', 'high', 'medium', 'low'

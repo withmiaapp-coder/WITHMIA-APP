@@ -25,7 +25,7 @@ return new class extends Migration
             // Índices
             $table->index(['company_id', 'status']);
             $table->index(['email', 'status']);
-            $table->index('token');
+            // Note: token already indexed via unique() constraint above
         });
     }
 

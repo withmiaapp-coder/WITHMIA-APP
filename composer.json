@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "withmia/app",
     "type": "project",
     "description": "WITHMIA Bot Platform - Build 20260201163041",
     "keywords": [

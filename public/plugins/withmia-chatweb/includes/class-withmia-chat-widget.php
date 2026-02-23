@@ -47,8 +47,7 @@ class Withmia_Chat_Widget {
                 if ($pattern === $current_path) return;
                 // Support wildcard: /blog/*
                 if (strpos($pattern, '*') !== false) {
-                    $regex = str_replace('*', '.*', preg_quote($pattern, '/'));
-                    if (preg_match('/^' . $regex . '$/', $current_path)) return;
+                    if (fnmatch($pattern, $current_path)) return;
                 }
             }
         }
@@ -71,16 +70,16 @@ class Withmia_Chat_Widget {
         }
 
         $settings_json = wp_json_encode($chatwoot_settings);
-        $base_url_escaped = esc_url($base_url);
-        $token_escaped = esc_attr($website_token);
-        $language_escaped = esc_attr($language);
+        $base_url_json = wp_json_encode(esc_url($base_url));
+        $token_json = wp_json_encode(sanitize_text_field($website_token));
+        $language_json = wp_json_encode(sanitize_text_field($language));
 
         ?>
         <!-- WITHMIA ChatWeb Widget -->
         <script>
           window.chatwootSettings = <?php echo $settings_json; ?>;
           (function(d,t) {
-            var BASE_URL="<?php echo $base_url_escaped; ?>";
+            var BASE_URL=<?php echo $base_url_json; ?>;
             var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
             g.src=BASE_URL+"/packs/js/sdk.js";
             g.defer = true;
@@ -88,9 +87,9 @@ class Withmia_Chat_Widget {
             s.parentNode.insertBefore(g,s);
             g.onload=function(){
               window.chatwootSDK.run({
-                websiteToken: '<?php echo $token_escaped; ?>',
+                websiteToken: <?php echo $token_json; ?>,
                 baseUrl: BASE_URL,
-                locale: '<?php echo $language_escaped; ?>'
+                locale: <?php echo $language_json; ?>
               })
             }
           })(document,"script");

@@ -8,6 +8,7 @@ use App\Services\ChatwootService;
 use App\Services\ConversationDeduplicationService;
 use App\Traits\ChatwootDbAccess;
 use App\Traits\ResolvesChatwootConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -35,7 +36,7 @@ class ChatwootConversationController extends Controller
     /**
      * Obtener conversaciones (REAL API) - CON FILTRO DE SEGURIDAD
      */
-    public function getConversations(Request $request)
+    public function getConversations(Request $request): JsonResponse
     {
         try {
             Log::info('[WITHMIA] getConversations ENTRY', [
@@ -274,7 +275,7 @@ class ChatwootConversationController extends Controller
     /**
      * Obtener una conversación específica por ID
      */
-    public function getConversation($id)
+    public function getConversation($id): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -345,7 +346,7 @@ class ChatwootConversationController extends Controller
     /**
      * Obtener mensajes de una conversación específica
      */
-    public function getConversationMessages($id)
+    public function getConversationMessages($id): JsonResponse
     {
         try {
             // Usar request() helper en vez de inyección para compatibilidad con Octane/RoadRunner
@@ -566,7 +567,7 @@ class ChatwootConversationController extends Controller
     /**
      * Marcar conversación como leída
      */
-    public function markAsRead($id)
+    public function markAsRead($id): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -612,7 +613,7 @@ class ChatwootConversationController extends Controller
     /**
      * Exportar todas las conversaciones con mensajes (vía API HTTP de Chatwoot)
      */
-    public function exportAllConversationsWithMessages(Request $request)
+    public function exportAllConversationsWithMessages(Request $request): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -699,7 +700,7 @@ class ChatwootConversationController extends Controller
     /**
      * Eliminar conversación duplicada
      */
-    public function deleteConversation(Request $request, $conversationId)
+    public function deleteConversation(Request $request, $conversationId): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -745,7 +746,7 @@ class ChatwootConversationController extends Controller
     /**
      * Diagnóstico de duplicados
      */
-    public function getDuplicatesDiagnosis(Request $request)
+    public function getDuplicatesDiagnosis(Request $request): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -763,7 +764,7 @@ class ChatwootConversationController extends Controller
     /**
      * Forzar fusión de duplicados
      */
-    public function forceMergeDuplicates(Request $request)
+    public function forceMergeDuplicates(Request $request): JsonResponse
     {
         try {
             if (!$this->inboxId) {
@@ -833,7 +834,7 @@ class ChatwootConversationController extends Controller
      * Retorna las conversaciones que tienen mensajes que coinciden con la búsqueda,
      * junto con el primer mensaje que matchea para previsualización
      */
-    public function searchMessages(Request $request)
+    public function searchMessages(Request $request): JsonResponse
     {
         try {
             $query = $request->input('q', '');
@@ -939,7 +940,7 @@ class ChatwootConversationController extends Controller
      * Cachea el binario en PostgreSQL (sobrevive redeploys en Railway).
      * Fallbacks: Chatwoot API → Active Storage blobs → external_url → DB cache.
      */
-    public function proxyAttachment($attachmentId)
+    public function proxyAttachment($attachmentId): JsonResponse|\Illuminate\Http\Response
     {
         try {
             $attachmentId = (int) $attachmentId;

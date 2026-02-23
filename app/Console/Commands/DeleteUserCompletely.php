@@ -8,8 +8,8 @@ use App\Models\Company;
 
 class DeleteUserCompletely extends Command
 {
-    protected $signature = 'user:delete-completely {email}';
-    protected $description = 'Eliminar completamente usuario y datos relacionados';
+    protected $signature = 'user:reset {email}';
+    protected $description = 'Resetear usuario a estado inicial (elimina empresa, reinicia onboarding)';
 
     public function handle()
     {
@@ -18,9 +18,14 @@ class DeleteUserCompletely extends Command
         
         if (!$user) {
             $this->error("Usuario no encontrado: {$email}");
-            return;
+            return 1;
         }
         
+        if (!$this->confirm("¿Resetear usuario {$user->name} ({$user->email})? Esto eliminará su empresa y reiniciará el onboarding.")) {
+            $this->info('Operación cancelada.');
+            return 0;
+        }
+
         $this->info("Usuario encontrado: {$user->name} ({$user->email})");
         $this->info("Company slug: " . ($user->company_slug ?? 'NULL'));
         
@@ -37,7 +42,8 @@ class DeleteUserCompletely extends Command
             'onboarding_step' => 1
         ]);
         
-        $this->info("✅ Datos eliminados. Usuario reseteado a estado inicial.");
-        $this->info("Ahora puede completar onboarding nuevamente con automatización Chatwoot.");
+        $this->info("✅ Usuario reseteado a estado inicial. Puede completar onboarding nuevamente.");
+
+        return 0;
     }
 }

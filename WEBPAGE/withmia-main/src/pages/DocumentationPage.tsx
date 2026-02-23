@@ -1,570 +1,1703 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from "react";
 import {
-  Search,
-  BookOpen,
-  Code,
-  Webhook,
-  Key,
-  Layers,
-  MessageSquare,
-  Zap,
-  ArrowRight,
-  ChevronRight,
-  Terminal,
-  FileText,
-  Globe,
-  Shield,
-  Users,
-  Settings,
-  Bot,
-  BarChart3,
-  Sparkles,
-  Clock,
-  CheckCircle2,
-  ExternalLink,
-  Copy,
-  Check,
-  Play,
-  Rocket,
-  Database,
-  Lock,
-  Mail,
+  Search, BookOpen, Code, Layers, MessageSquare,
+  ArrowRight, ArrowLeft, ChevronRight, Terminal, FileText,
+  Globe, Shield, Users, Bot, Sparkles, Clock,
+  CheckCircle2, ExternalLink, Copy, Check, Play, Rocket, Database,
+  Menu, X, Hash, ArrowUpRight, Headphones, Key, Lock,
+  Info, AlertTriangle, Lightbulb, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 
-/* ─── Category Cards ─── */
-const categories = [
+/* ══════════════════════════════════════════════════════════════
+   TYPES
+   ══════════════════════════════════════════════════════════════ */
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon?: any;
+  children?: NavItem[];
+}
+
+type CalloutVariant = "info" | "warning" | "tip" | "danger";
+
+type ContentBlock =
+  | { type: "heading"; id: string; text: string }
+  | { type: "p"; text: string }
+  | { type: "code"; code: string; lang?: string }
+  | { type: "codetabs"; tabs: { label: string; lang: string; code: string }[] }
+  | { type: "callout"; variant: CalloutVariant; title: string; text: string }
+  | { type: "list"; items: string[]; ordered?: boolean }
+  | { type: "steps"; steps: { title: string; desc: string }[] }
+  | { type: "nav-cards"; cards: { title: string; desc: string; link: string; color: string }[] };
+
+interface TocEntry { id: string; label: string; }
+
+interface PageMeta {
+  title: string;
+  description: string;
+  breadcrumb: string[];
+  toc: TocEntry[];
+  readTime?: string;
+  lastUpdated?: string;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SIDEBAR NAVIGATION
+   ══════════════════════════════════════════════════════════════ */
+
+const sidebarNav: NavItem[] = [
   {
-    icon: Rocket,
-    title: "Guía de inicio rápido",
-    desc: "Configura tu cuenta, conecta tu primer canal y envía tu primer mensaje en menos de 5 minutos.",
-    articles: 8,
-    color: "#f59e0b",
-    tag: "Esencial",
+    id: "_s_start", label: "Primeros pasos", icon: Rocket,
+    children: [
+      { id: "welcome", label: "Bienvenida" },
+      { id: "quickstart", label: "Inicio rápido" },
+      { id: "create-account", label: "Crear tu cuenta" },
+      { id: "first-channel", label: "Conectar tu primer canal" },
+      { id: "choose-plan", label: "Elegir tu plan" },
+    ],
   },
   {
-    icon: Code,
-    title: "API Reference",
-    desc: "Documentación completa de todos los endpoints, parámetros, respuestas y códigos de error.",
-    articles: 24,
-    color: "#22d3ee",
-    tag: "Técnico",
+    id: "_s_app", label: "Usando WITHMIA", icon: Layers,
+    children: [
+      { id: "dashboard", label: "Dashboard" },
+      { id: "conversations", label: "Conversaciones" },
+      { id: "contacts-crm", label: "Contactos y CRM" },
+      { id: "workflows", label: "Workflows" },
+      { id: "analytics", label: "Analítica" },
+    ],
   },
   {
-    icon: Webhook,
+    id: "_s_channels", label: "Canales", icon: MessageSquare,
+    children: [
+      { id: "whatsapp", label: "WhatsApp Business" },
+      { id: "instagram", label: "Instagram Direct" },
+      { id: "messenger", label: "Facebook Messenger" },
+      { id: "webchat", label: "Chat Web" },
+      { id: "email-channel", label: "Email" },
+    ],
+  },
+  {
+    id: "_s_ai", label: "IA y Automatización", icon: Bot,
+    children: [
+      { id: "ai-assistant", label: "Asistente IA" },
+      { id: "rag-training", label: "Entrenamiento RAG" },
+      { id: "auto-flows", label: "Flujos automáticos" },
+      { id: "suggested-replies", label: "Respuestas sugeridas" },
+    ],
+  },
+  {
+    id: "_s_api", label: "API Reference", icon: Code,
+    children: [
+      { id: "api-auth", label: "Autenticación" },
+      { id: "api-messages", label: "Mensajes" },
+      { id: "api-conversations", label: "Conversaciones" },
+      { id: "api-contacts", label: "Contactos" },
+      { id: "api-webhooks", label: "Webhooks" },
+    ],
+  },
+  {
+    id: "_s_sdks", label: "SDKs", icon: Terminal,
+    children: [
+      { id: "sdk-nodejs", label: "Node.js" },
+      { id: "sdk-python", label: "Python" },
+      { id: "sdk-php", label: "PHP" },
+    ],
+  },
+  {
+    id: "_s_int", label: "Integraciones", icon: Database,
+    children: [
+      { id: "int-n8n", label: "n8n" },
+      { id: "int-zapier", label: "Zapier" },
+      { id: "int-crm", label: "CRM" },
+      { id: "int-tools", label: "Herramientas" },
+    ],
+  },
+  {
+    id: "_s_sec", label: "Seguridad", icon: Shield,
+    children: [
+      { id: "sec-oauth", label: "OAuth 2.0" },
+      { id: "sec-encryption", label: "Encriptación" },
+      { id: "sec-gdpr", label: "GDPR" },
+      { id: "sec-audit", label: "Auditoría" },
+    ],
+  },
+];
+
+/* Flat ordered list for prev/next */
+const pageOrder: string[] = sidebarNav.flatMap(s => s.children?.map(c => c.id) ?? []);
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE METADATA
+   ══════════════════════════════════════════════════════════════ */
+
+const pages: Record<string, PageMeta> = {
+  welcome: {
+    title: "Bienvenido a WITHMIA Docs",
+    description: "Documentación oficial de WITHMIA — la plataforma de comunicación omnicanal con IA. Guías paso a paso, referencias de API, ejemplos de código y mejores prácticas.",
+    breadcrumb: ["Docs", "Primeros pasos", "Bienvenida"],
+    toc: [
+      { id: "where-to-start", label: "Dónde empezar" },
+      { id: "about-withmia", label: "Sobre WITHMIA" },
+      { id: "resources", label: "Recursos adicionales" },
+    ],
+    lastUpdated: "23 Feb 2026",
+  },
+  quickstart: {
+    title: "Inicio rápido",
+    description: "Configura tu cuenta, conecta tu primer canal y envía tu primer mensaje en menos de 5 minutos.",
+    breadcrumb: ["Docs", "Primeros pasos", "Inicio rápido"],
+    toc: [
+      { id: "prerequisites", label: "Prerequisitos" },
+      { id: "step-1", label: "1. Crear tu cuenta" },
+      { id: "step-2", label: "2. Obtener API Key" },
+      { id: "step-3", label: "3. Instalar SDK" },
+      { id: "step-4", label: "4. Enviar primer mensaje" },
+      { id: "next-steps", label: "Próximos pasos" },
+    ],
+    readTime: "5 min", lastUpdated: "23 Feb 2026",
+  },
+  "create-account": {
+    title: "Crear tu cuenta",
+    description: "Regístrate en WITHMIA y configura tu workspace.",
+    breadcrumb: ["Docs", "Primeros pasos", "Crear tu cuenta"],
+    toc: [{ id: "registro", label: "Registro" }, { id: "workspace", label: "Configurar workspace" }, { id: "verificar", label: "Verificar email" }],
+    readTime: "3 min", lastUpdated: "18 Feb 2026",
+  },
+  "first-channel": {
+    title: "Conectar tu primer canal",
+    description: "Conecta WhatsApp, Instagram u otro canal de mensajería a tu cuenta de WITHMIA.",
+    breadcrumb: ["Docs", "Primeros pasos", "Conectar tu primer canal"],
+    toc: [{ id: "elegir-canal", label: "Elegir un canal" }, { id: "configurar", label: "Configurar conexión" }, { id: "probar", label: "Probar el canal" }],
+    readTime: "4 min", lastUpdated: "18 Feb 2026",
+  },
+  "choose-plan": {
+    title: "Elegir tu plan",
+    description: "Conoce los planes de WITHMIA y elige el que mejor se adapte a tu equipo.",
+    breadcrumb: ["Docs", "Primeros pasos", "Elegir tu plan"],
+    toc: [{ id: "planes", label: "Planes disponibles" }, { id: "facturacion", label: "Facturación" }, { id: "cambiar-plan", label: "Cambiar de plan" }],
+    readTime: "2 min", lastUpdated: "16 Feb 2026",
+  },
+  dashboard: {
+    title: "Dashboard",
+    description: "Vista general del dashboard: métricas en tiempo real, accesos rápidos y configuración.",
+    breadcrumb: ["Docs", "Usando WITHMIA", "Dashboard"],
+    toc: [{ id: "overview", label: "Vista general" }, { id: "widgets", label: "Widgets" }, { id: "shortcuts", label: "Accesos rápidos" }],
+    readTime: "4 min", lastUpdated: "15 Feb 2026",
+  },
+  conversations: {
+    title: "Conversaciones",
+    description: "Gestiona todas tus conversaciones desde un inbox unificado.",
+    breadcrumb: ["Docs", "Usando WITHMIA", "Conversaciones"],
+    toc: [{ id: "inbox", label: "Inbox unificado" }, { id: "asignacion", label: "Asignación" }, { id: "etiquetas", label: "Etiquetas" }, { id: "filtros", label: "Filtros" }],
+    readTime: "6 min", lastUpdated: "14 Feb 2026",
+  },
+  "contacts-crm": {
+    title: "Contactos y CRM",
+    description: "Administra tu base de contactos con pipeline visual, campos personalizados y segmentación.",
+    breadcrumb: ["Docs", "Usando WITHMIA", "Contactos y CRM"],
+    toc: [{ id: "contactos", label: "Gestión de contactos" }, { id: "pipeline", label: "Pipeline visual" }, { id: "campos", label: "Campos personalizados" }],
+    readTime: "5 min", lastUpdated: "12 Feb 2026",
+  },
+  workflows: {
+    title: "Workflows",
+    description: "Crea flujos de automatización sin código para responder, etiquetar y asignar automáticamente.",
+    breadcrumb: ["Docs", "Usando WITHMIA", "Workflows"],
+    toc: [{ id: "crear-workflow", label: "Crear un workflow" }, { id: "triggers", label: "Triggers" }, { id: "acciones", label: "Acciones" }],
+    readTime: "7 min", lastUpdated: "10 Feb 2026",
+  },
+  analytics: {
+    title: "Analítica",
+    description: "Reportes en tiempo real sobre rendimiento, tiempos de respuesta y satisfacción.",
+    breadcrumb: ["Docs", "Usando WITHMIA", "Analítica"],
+    toc: [{ id: "metricas", label: "Métricas clave" }, { id: "reportes", label: "Reportes" }, { id: "exportar", label: "Exportar datos" }],
+    readTime: "4 min", lastUpdated: "8 Feb 2026",
+  },
+  whatsapp: {
+    title: "WhatsApp Business",
+    description: "Conecta la API de WhatsApp Business a WITHMIA para enviar y recibir mensajes.",
+    breadcrumb: ["Docs", "Canales", "WhatsApp Business"],
+    toc: [{ id: "requisitos", label: "Requisitos" }, { id: "conexion", label: "Conexión" }, { id: "enviar-mensaje", label: "Enviar mensajes" }, { id: "templates", label: "Message Templates" }, { id: "media", label: "Media" }],
+    readTime: "8 min", lastUpdated: "22 Feb 2026",
+  },
+  instagram: {
+    title: "Instagram Direct",
+    description: "Recibe y responde mensajes de Instagram Direct desde el inbox de WITHMIA.",
+    breadcrumb: ["Docs", "Canales", "Instagram Direct"],
+    toc: [{ id: "conexion-ig", label: "Conexión" }, { id: "funciones-ig", label: "Funcionalidades" }, { id: "limitaciones", label: "Limitaciones" }],
+    readTime: "4 min", lastUpdated: "20 Feb 2026",
+  },
+  messenger: {
+    title: "Facebook Messenger",
+    description: "Integra Facebook Messenger para gestionar conversaciones de tu página.",
+    breadcrumb: ["Docs", "Canales", "Facebook Messenger"],
+    toc: [{ id: "setup-fb", label: "Configuración" }, { id: "features-fb", label: "Funcionalidades" }],
+    readTime: "4 min", lastUpdated: "18 Feb 2026",
+  },
+  webchat: {
+    title: "Chat Web",
+    description: "Instala el widget de chat en tu sitio web para atender visitantes en tiempo real.",
+    breadcrumb: ["Docs", "Canales", "Chat Web"],
+    toc: [{ id: "instalacion", label: "Instalación" }, { id: "personalizacion", label: "Personalización" }, { id: "eventos", label: "Eventos JS" }],
+    readTime: "5 min", lastUpdated: "20 Feb 2026",
+  },
+  "email-channel": {
+    title: "Email",
+    description: "Conecta tu bandeja de entrada de email para gestionar correos como conversaciones.",
+    breadcrumb: ["Docs", "Canales", "Email"],
+    toc: [{ id: "config-email", label: "Configuración" }, { id: "imap-smtp", label: "IMAP / SMTP" }],
+    readTime: "4 min", lastUpdated: "16 Feb 2026",
+  },
+  "ai-assistant": {
+    title: "Asistente IA",
+    description: "Configura y entrena tu asistente de IA para responder con contexto de tu negocio.",
+    breadcrumb: ["Docs", "IA y Automatización", "Asistente IA"],
+    toc: [{ id: "setup-ai", label: "Configurar asistente" }, { id: "personalidad", label: "Personalidad" }, { id: "knowledge", label: "Base de conocimiento" }, { id: "limites", label: "Límites y control" }],
+    readTime: "8 min", lastUpdated: "22 Feb 2026",
+  },
+  "rag-training": {
+    title: "Entrenamiento RAG",
+    description: "Alimenta a tu IA con documentos, FAQs y datos para respuestas más precisas.",
+    breadcrumb: ["Docs", "IA y Automatización", "Entrenamiento RAG"],
+    toc: [{ id: "que-es-rag", label: "¿Qué es RAG?" }, { id: "subir-docs", label: "Subir documentos" }, { id: "formatos", label: "Formatos soportados" }, { id: "mejores-practicas", label: "Mejores prácticas" }],
+    readTime: "6 min", lastUpdated: "20 Feb 2026",
+  },
+  "auto-flows": {
+    title: "Flujos automáticos",
+    description: "Define flujos de conversación con lógica condicional y acciones automáticas.",
+    breadcrumb: ["Docs", "IA y Automatización", "Flujos automáticos"],
+    toc: [{ id: "crear-flujo", label: "Crear un flujo" }, { id: "nodos", label: "Tipos de nodos" }, { id: "condiciones", label: "Condiciones" }],
+    readTime: "7 min", lastUpdated: "18 Feb 2026",
+  },
+  "suggested-replies": {
+    title: "Respuestas sugeridas",
+    description: "La IA sugiere respuestas a tu equipo basándose en el contexto.",
+    breadcrumb: ["Docs", "IA y Automatización", "Respuestas sugeridas"],
+    toc: [{ id: "activar", label: "Activar sugerencias" }, { id: "configurar-sug", label: "Configurar" }],
+    readTime: "3 min", lastUpdated: "16 Feb 2026",
+  },
+  "api-auth": {
+    title: "Autenticación",
+    description: "Autentícate con la API de WITHMIA usando API Keys o OAuth 2.0.",
+    breadcrumb: ["Docs", "API Reference", "Autenticación"],
+    toc: [{ id: "api-keys", label: "API Keys" }, { id: "usar-key", label: "Usar tu API Key" }, { id: "oauth", label: "OAuth 2.0" }, { id: "scopes", label: "Scopes" }],
+    readTime: "5 min", lastUpdated: "23 Feb 2026",
+  },
+  "api-messages": {
+    title: "Mensajes",
+    description: "Endpoints para enviar, recibir y gestionar mensajes en todos los canales.",
+    breadcrumb: ["Docs", "API Reference", "Mensajes"],
+    toc: [{ id: "send-message", label: "Enviar mensaje" }, { id: "list-messages", label: "Listar mensajes" }, { id: "message-status", label: "Estado del mensaje" }],
+    readTime: "8 min", lastUpdated: "22 Feb 2026",
+  },
+  "api-conversations": {
+    title: "Conversaciones",
+    description: "Endpoints para crear, listar, asignar y cerrar conversaciones.",
+    breadcrumb: ["Docs", "API Reference", "Conversaciones"],
+    toc: [{ id: "list-conv", label: "Listar" }, { id: "assign", label: "Asignar agente" }, { id: "close-conv", label: "Cerrar" }],
+    readTime: "6 min", lastUpdated: "20 Feb 2026",
+  },
+  "api-contacts": {
+    title: "Contactos",
+    description: "CRUD completo para gestionar contactos y datos de perfil.",
+    breadcrumb: ["Docs", "API Reference", "Contactos"],
+    toc: [{ id: "create-contact", label: "Crear" }, { id: "update-contact", label: "Actualizar" }, { id: "search-contact", label: "Buscar" }],
+    readTime: "5 min", lastUpdated: "18 Feb 2026",
+  },
+  "api-webhooks": {
     title: "Webhooks",
-    desc: "Configura eventos en tiempo real, firma de payloads, reintentos automáticos y debugging.",
-    articles: 12,
-    color: "#a78bfa",
-    tag: "Técnico",
+    description: "Recibe eventos en tiempo real cuando ocurren acciones en tu cuenta.",
+    breadcrumb: ["Docs", "API Reference", "Webhooks"],
+    toc: [{ id: "setup-wh", label: "Configurar" }, { id: "events", label: "Tipos de eventos" }, { id: "payload", label: "Payload" }, { id: "verify", label: "Verificar firma" }, { id: "retries", label: "Reintentos" }],
+    readTime: "7 min", lastUpdated: "23 Feb 2026",
   },
-  {
-    icon: Layers,
-    title: "SDKs y Librerías",
-    desc: "Guías de instalación y uso para Node.js, Python y PHP con ejemplos prácticos.",
-    articles: 9,
-    color: "#34d399",
-    tag: "Técnico",
+  "sdk-nodejs": {
+    title: "SDK Node.js",
+    description: "Librería oficial de WITHMIA para Node.js.",
+    breadcrumb: ["Docs", "SDKs", "Node.js"],
+    toc: [{ id: "install-node", label: "Instalación" }, { id: "init-node", label: "Inicialización" }, { id: "send-node", label: "Enviar mensajes" }, { id: "webhooks-node", label: "Recibir webhooks" }, { id: "errors-node", label: "Manejo de errores" }],
+    readTime: "6 min", lastUpdated: "22 Feb 2026",
   },
-  {
-    icon: MessageSquare,
-    title: "Canales de mensajería",
-    desc: "WhatsApp Business API, Instagram, Messenger, Email, Chat Web — configuración y mejores prácticas.",
-    articles: 18,
-    color: "#60a5fa",
-    tag: "Guía",
+  "sdk-python": {
+    title: "SDK Python",
+    description: "Librería oficial de WITHMIA para Python.",
+    breadcrumb: ["Docs", "SDKs", "Python"],
+    toc: [{ id: "install-py", label: "Instalación" }, { id: "usage-py", label: "Uso básico" }, { id: "async-py", label: "Async" }],
+    readTime: "5 min", lastUpdated: "20 Feb 2026",
   },
-  {
-    icon: Bot,
-    title: "IA y Automatización",
-    desc: "Configura asistentes de IA, flujos automatizados, RAG y entrenamiento con tus datos.",
-    articles: 15,
-    color: "#fb923c",
-    tag: "Avanzado",
+  "sdk-php": {
+    title: "SDK PHP",
+    description: "Librería oficial de WITHMIA para PHP.",
+    breadcrumb: ["Docs", "SDKs", "PHP"],
+    toc: [{ id: "install-php", label: "Instalación" }, { id: "usage-php", label: "Uso básico" }],
+    readTime: "5 min", lastUpdated: "18 Feb 2026",
   },
-  {
-    icon: Users,
-    title: "Gestión de equipos",
-    desc: "Roles, permisos, asignación automática, métricas de rendimiento y colaboración.",
-    articles: 10,
-    color: "#f472b6",
-    tag: "Guía",
+  "int-n8n": {
+    title: "n8n",
+    description: "Conecta WITHMIA con n8n para automatizaciones avanzadas.",
+    breadcrumb: ["Docs", "Integraciones", "n8n"],
+    toc: [{ id: "n8n-setup", label: "Configuración" }, { id: "n8n-nodes", label: "Nodos disponibles" }, { id: "n8n-templates", label: "Templates" }],
+    readTime: "5 min", lastUpdated: "20 Feb 2026",
   },
-  {
-    icon: Shield,
-    title: "Seguridad y Compliance",
-    desc: "OAuth 2.0, TLS 1.3, GDPR, cifrado de datos, auditoría y políticas de retención.",
-    articles: 7,
-    color: "#6366f1",
-    tag: "Avanzado",
+  "int-zapier": {
+    title: "Zapier",
+    description: "Conecta WITHMIA con +5000 apps a través de Zapier.",
+    breadcrumb: ["Docs", "Integraciones", "Zapier"],
+    toc: [{ id: "zap-setup", label: "Configuración" }, { id: "zap-triggers", label: "Triggers" }, { id: "zap-actions", label: "Acciones" }],
+    readTime: "4 min", lastUpdated: "18 Feb 2026",
   },
-  {
-    icon: Database,
-    title: "Integraciones",
-    desc: "CRM, ERPs, herramientas de soporte, n8n, Zapier — conecta WITHMIA con tu stack.",
-    articles: 14,
-    color: "#14b8a6",
-    tag: "Guía",
+  "int-crm": {
+    title: "CRM",
+    description: "Integra WITHMIA con tu CRM para sincronizar contactos.",
+    breadcrumb: ["Docs", "Integraciones", "CRM"],
+    toc: [{ id: "crm-sync", label: "Sincronización" }, { id: "crm-mapping", label: "Mapeo de campos" }],
+    readTime: "5 min", lastUpdated: "16 Feb 2026",
   },
-];
+  "int-tools": {
+    title: "Herramientas",
+    description: "Conecta Google Sheets, Slack, calendarios y más.",
+    breadcrumb: ["Docs", "Integraciones", "Herramientas"],
+    toc: [{ id: "sheets", label: "Google Sheets" }, { id: "slack", label: "Slack" }, { id: "calendar", label: "Calendarios" }],
+    readTime: "4 min", lastUpdated: "14 Feb 2026",
+  },
+  "sec-oauth": {
+    title: "OAuth 2.0",
+    description: "Autenticación segura con el flujo OAuth 2.0 de WITHMIA.",
+    breadcrumb: ["Docs", "Seguridad", "OAuth 2.0"],
+    toc: [{ id: "oauth-flow", label: "Flujo de autorización" }, { id: "tokens", label: "Tokens" }, { id: "refresh", label: "Refresh tokens" }],
+    readTime: "6 min", lastUpdated: "22 Feb 2026",
+  },
+  "sec-encryption": {
+    title: "Encriptación",
+    description: "TLS 1.3, AES-256 at-rest y protección de datos en WITHMIA.",
+    breadcrumb: ["Docs", "Seguridad", "Encriptación"],
+    toc: [{ id: "transit", label: "En tránsito" }, { id: "at-rest", label: "En reposo" }],
+    readTime: "4 min", lastUpdated: "20 Feb 2026",
+  },
+  "sec-gdpr": {
+    title: "GDPR",
+    description: "Cómo WITHMIA cumple con el Reglamento General de Protección de Datos.",
+    breadcrumb: ["Docs", "Seguridad", "GDPR"],
+    toc: [{ id: "compliance", label: "Cumplimiento" }, { id: "data-rights", label: "Derechos" }, { id: "dpa", label: "DPA" }],
+    readTime: "5 min", lastUpdated: "18 Feb 2026",
+  },
+  "sec-audit": {
+    title: "Auditoría",
+    description: "Rastrea acciones de usuarios y cambios en tu cuenta.",
+    breadcrumb: ["Docs", "Seguridad", "Auditoría"],
+    toc: [{ id: "audit-log", label: "Log de auditoría" }, { id: "retention", label: "Retención" }],
+    readTime: "3 min", lastUpdated: "16 Feb 2026",
+  },
+};
 
-/* ─── Popular Articles ─── */
-const popularArticles = [
-  {
-    category: "Inicio rápido",
-    title: "Conectar WhatsApp Business en 3 pasos",
-    readTime: "3 min",
-    color: "#f59e0b",
-  },
-  {
-    category: "API",
-    title: "Autenticación con OAuth 2.0",
-    readTime: "5 min",
-    color: "#22d3ee",
-  },
-  {
-    category: "Webhooks",
-    title: "Configurar webhooks para mensajes entrantes",
-    readTime: "4 min",
-    color: "#a78bfa",
-  },
-  {
-    category: "IA",
-    title: "Entrenar tu asistente con documentos propios",
-    readTime: "6 min",
-    color: "#fb923c",
-  },
-  {
-    category: "SDKs",
-    title: "Enviar mensajes con el SDK de Node.js",
-    readTime: "3 min",
-    color: "#34d399",
-  },
-  {
-    category: "Canales",
-    title: "Configurar Instagram Direct como canal",
-    readTime: "4 min",
-    color: "#60a5fa",
-  },
-];
+/* ══════════════════════════════════════════════════════════════
+   RICH CONTENT — ContentBlock arrays for key pages
+   ══════════════════════════════════════════════════════════════ */
 
-/* ─── Quick Start Steps ─── */
-const quickStartSteps = [
-  {
-    step: "01",
-    title: "Crea tu cuenta",
-    desc: "Regístrate en app.withmia.com y accede al dashboard.",
-    code: null,
-  },
-  {
-    step: "02",
-    title: "Obtén tu API Key",
-    desc: "Ve a Configuración → API Keys y genera tu token.",
-    code: 'export WITHMIA_API_KEY="sk_live_..."',
-  },
-  {
-    step: "03",
-    title: "Instala el SDK",
-    desc: "Elige tu lenguaje favorito e instala la librería.",
-    code: "npm install @withmia/sdk",
-  },
-  {
-    step: "04",
-    title: "Envía tu primer mensaje",
-    desc: "Un request y tu mensaje llega al destino.",
-    code: `const withmia = new Withmia(process.env.WITHMIA_API_KEY);
-await withmia.messages.send({
-  channel: "whatsapp",
-  to: "+56912345678",
-  text: "Hola desde WITHMIA 🚀"
-});`,
-  },
-];
+const richContent: Record<string, ContentBlock[]> = {
+  /* ── WhatsApp Business ── */
+  whatsapp: [
+    { type: "callout", variant: "info", title: "Requisitos previos", text: "Necesitas una cuenta de Meta Business verificada y un número de teléfono dedicado que no esté registrado en WhatsApp personal." },
+    { type: "heading", id: "requisitos", text: "Requisitos" },
+    { type: "list", items: [
+      "Cuenta de Meta Business verificada",
+      "Número de teléfono dedicado (no puede estar en WhatsApp personal)",
+      "Cuenta de WITHMIA con plan activo",
+      "Acceso a Configuración → Canales en el dashboard",
+    ]},
+    { type: "heading", id: "conexion", text: "Conexión" },
+    { type: "p", text: "Para conectar WhatsApp Business, ve a Configuración → Canales → WhatsApp y sigue el asistente. El proceso toma menos de 5 minutos." },
+    { type: "steps", steps: [
+      { title: "Accede al panel de canales", desc: "Ve a Configuración → Canales en tu dashboard de WITHMIA." },
+      { title: "Selecciona WhatsApp", desc: "Haz clic en 'Conectar WhatsApp Business' e inicia sesión con Meta Business." },
+      { title: "Verifica tu número", desc: "Recibirás un código SMS. Ingresa el código para confirmar la propiedad." },
+    ]},
+    { type: "callout", variant: "tip", title: "Tip", text: "Si ya tienes la API de WhatsApp Business configurada con otro proveedor, puedes migrar tu número a WITHMIA sin perder el historial." },
+    { type: "heading", id: "enviar-mensaje", text: "Enviar mensajes" },
+    { type: "p", text: "Una vez conectado, puedes enviar mensajes desde el inbox o usando la API:" },
+    { type: "codetabs", tabs: [
+      { label: "Node.js", lang: "javascript", code: "const withmia = new Withmia(API_KEY);\n\nawait withmia.messages.send({\n  channel: \"whatsapp\",\n  to: \"+56912345678\",\n  type: \"text\",\n  text: \"¡Hola! ¿En qué puedo ayudarte?\"\n});" },
+      { label: "Python", lang: "python", code: "from withmia import Withmia\n\nclient = Withmia(api_key=API_KEY)\n\nclient.messages.send(\n    channel=\"whatsapp\",\n    to=\"+56912345678\",\n    type=\"text\",\n    text=\"¡Hola! ¿En qué puedo ayudarte?\"\n)" },
+      { label: "cURL", lang: "bash", code: "curl -X POST https://api.withmia.com/v1/messages \\\n  -H \"Authorization: Bearer sk_live_...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"channel\": \"whatsapp\",\n    \"to\": \"+56912345678\",\n    \"type\": \"text\",\n    \"text\": \"¡Hola! ¿En qué puedo ayudarte?\"\n  }'" },
+    ]},
+    { type: "heading", id: "templates", text: "Message Templates" },
+    { type: "p", text: "WhatsApp requiere Message Templates pre-aprobados para iniciar conversaciones outbound. Los templates se gestionan desde Meta Business Suite y se sincronizan automáticamente con WITHMIA." },
+    { type: "callout", variant: "warning", title: "Aprobación requerida", text: "Los templates deben ser aprobados por Meta antes de usarlos. La revisión toma entre 1 y 24 horas." },
+    { type: "code", code: "await withmia.messages.sendTemplate({\n  channel: \"whatsapp\",\n  to: \"+56912345678\",\n  template: \"order_confirmation\",\n  language: \"es\",\n  components: [\n    { type: \"body\", parameters: [{ type: \"text\", text: \"#12345\" }] }\n  ]\n});", lang: "javascript" },
+    { type: "heading", id: "media", text: "Media" },
+    { type: "p", text: "WITHMIA soporta todos los tipos de media de WhatsApp:" },
+    { type: "list", items: [
+      "Imágenes: JPEG, PNG (hasta 5 MB)",
+      "Videos: MP4 (hasta 16 MB)",
+      "Documentos: PDF, DOC, XLS (hasta 100 MB)",
+      "Audio: OGG, MP3 (hasta 16 MB)",
+      "Stickers: WebP estático y animado",
+      "Ubicación: coordenadas con dirección opcional",
+    ]},
+  ],
 
-/* ─── SDK badges ─── */
-const sdkBadges = [
-  { name: "Node.js", color: "#68a063", version: "v2.1.0" },
-  { name: "Python", color: "#3776ab", version: "v1.8.0" },
-  { name: "PHP", color: "#777bb4", version: "v1.4.0" },
-  { name: "cURL", color: "#f59e0b", version: "—" },
-];
+  /* ── API Auth ── */
+  "api-auth": [
+    { type: "heading", id: "api-keys", text: "API Keys" },
+    { type: "p", text: "Las API Keys son la forma más sencilla de autenticarte con la API de WITHMIA. Cada key está asociada a un workspace y tiene permisos configurables." },
+    { type: "steps", steps: [
+      { title: "Accede a la configuración", desc: "Ve a Configuración → API Keys en tu dashboard." },
+      { title: "Crea una nueva key", desc: "Haz clic en 'Crear API Key' y asigna un nombre descriptivo." },
+      { title: "Configura permisos", desc: "Selecciona los scopes necesarios (mensajes, contactos, conversaciones, etc.)." },
+      { title: "Copia tu key", desc: "Guarda tu key de forma segura. Solo se muestra una vez." },
+    ]},
+    { type: "callout", variant: "danger", title: "Seguridad", text: "Nunca expongas tu API Key en código del lado del cliente. Usa variables de entorno o un servidor backend para las llamadas a la API." },
+    { type: "heading", id: "usar-key", text: "Usar tu API Key" },
+    { type: "p", text: "Incluye tu API Key en el header Authorization de cada request:" },
+    { type: "codetabs", tabs: [
+      { label: "cURL", lang: "bash", code: "curl https://api.withmia.com/v1/conversations \\\n  -H \"Authorization: Bearer sk_live_tu_api_key\"" },
+      { label: "Node.js", lang: "javascript", code: "const withmia = new Withmia({\n  apiKey: process.env.WITHMIA_API_KEY,\n});\n\nconst conversations = await withmia.conversations.list();" },
+      { label: "Python", lang: "python", code: "from withmia import Withmia\n\nclient = Withmia(api_key=os.environ[\"WITHMIA_API_KEY\"])\n\nconversations = client.conversations.list()" },
+    ]},
+    { type: "heading", id: "oauth", text: "OAuth 2.0" },
+    { type: "p", text: "Para aplicaciones que actúan en nombre de otros usuarios, WITHMIA soporta el flujo OAuth 2.0 Authorization Code. Esto es ideal para integraciones de terceros y aplicaciones multi-tenant." },
+    { type: "code", code: "# 1. Redirige al usuario a:\nhttps://app.withmia.com/oauth/authorize?\n  client_id=TU_CLIENT_ID&\n  redirect_uri=https://tu-app.com/callback&\n  response_type=code&\n  scope=messages:read messages:write\n\n# 2. Intercambia el code por un access_token:\ncurl -X POST https://api.withmia.com/oauth/token \\\n  -d \"grant_type=authorization_code\" \\\n  -d \"code=AUTHORIZATION_CODE\" \\\n  -d \"client_id=TU_CLIENT_ID\" \\\n  -d \"client_secret=TU_CLIENT_SECRET\" \\\n  -d \"redirect_uri=https://tu-app.com/callback\"", lang: "bash" },
+    { type: "heading", id: "scopes", text: "Scopes" },
+    { type: "p", text: "Los scopes controlan a qué recursos puede acceder un token. Usa el principio de mínimos privilegios:" },
+    { type: "list", items: [
+      "messages:read — Leer mensajes",
+      "messages:write — Enviar mensajes",
+      "conversations:read — Ver conversaciones",
+      "conversations:write — Crear y asignar conversaciones",
+      "contacts:read — Ver contactos",
+      "contacts:write — Crear y editar contactos",
+      "webhooks:manage — Gestionar webhooks",
+      "analytics:read — Ver reportes y métricas",
+    ]},
+  ],
 
-const DocumentationPage = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  /* ── API Webhooks ── */
+  "api-webhooks": [
+    { type: "heading", id: "setup-wh", text: "Configurar webhook" },
+    { type: "p", text: "Los webhooks te permiten recibir notificaciones HTTP en tiempo real cuando ocurren eventos en tu cuenta de WITHMIA." },
+    { type: "steps", steps: [
+      { title: "Define tu endpoint", desc: "Crea un endpoint HTTPS en tu servidor que acepte requests POST." },
+      { title: "Registra el webhook", desc: "Ve a Configuración → Webhooks o usa la API para registrar tu URL." },
+      { title: "Selecciona eventos", desc: "Elige los tipos de eventos que quieres recibir." },
+      { title: "Verifica la firma", desc: "Implementa la verificación HMAC-SHA256 para validar que el request viene de WITHMIA." },
+    ]},
+    { type: "code", code: "curl -X POST https://api.withmia.com/v1/webhooks \\\n  -H \"Authorization: Bearer sk_live_...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"url\": \"https://tu-app.com/webhooks/withmia\",\n    \"events\": [\"message.received\", \"message.sent\", \"conversation.created\"],\n    \"secret\": \"whsec_tu_secreto\"\n  }'", lang: "bash" },
+    { type: "heading", id: "events", text: "Tipos de eventos" },
+    { type: "list", items: [
+      "message.received — Nuevo mensaje entrante",
+      "message.sent — Mensaje enviado exitosamente",
+      "message.failed — Error al enviar mensaje",
+      "message.read — Mensaje leído por el contacto",
+      "conversation.created — Nueva conversación",
+      "conversation.assigned — Conversación asignada a un agente",
+      "conversation.closed — Conversación cerrada",
+      "contact.created — Nuevo contacto",
+      "contact.updated — Contacto actualizado",
+    ]},
+    { type: "heading", id: "payload", text: "Payload" },
+    { type: "p", text: "Cada webhook incluye un payload JSON con la información del evento:" },
+    { type: "code", code: "{\n  \"id\": \"evt_abc123\",\n  \"type\": \"message.received\",\n  \"timestamp\": \"2026-02-23T10:30:00Z\",\n  \"data\": {\n    \"message_id\": \"msg_xyz789\",\n    \"conversation_id\": \"conv_456\",\n    \"channel\": \"whatsapp\",\n    \"from\": \"+56912345678\",\n    \"type\": \"text\",\n    \"text\": \"Hola, necesito ayuda\",\n    \"contact\": {\n      \"id\": \"ct_321\",\n      \"name\": \"María García\"\n    }\n  }\n}", lang: "json" },
+    { type: "heading", id: "verify", text: "Verificar firma" },
+    { type: "p", text: "WITHMIA firma cada webhook con HMAC-SHA256. Siempre verifica la firma antes de procesar el evento:" },
+    { type: "codetabs", tabs: [
+      { label: "Node.js", lang: "javascript", code: "import crypto from 'crypto';\n\nfunction verifyWebhook(payload, signature, secret) {\n  const expected = crypto\n    .createHmac('sha256', secret)\n    .update(payload)\n    .digest('hex');\n  return crypto.timingSafeEqual(\n    Buffer.from(signature),\n    Buffer.from(`sha256=${expected}`)\n  );\n}" },
+      { label: "Python", lang: "python", code: "import hmac\nimport hashlib\n\ndef verify_webhook(payload: bytes, signature: str, secret: str) -> bool:\n    expected = hmac.new(\n        secret.encode(),\n        payload,\n        hashlib.sha256\n    ).hexdigest()\n    return hmac.compare_digest(\n        signature,\n        f\"sha256={expected}\"\n    )" },
+    ]},
+    { type: "callout", variant: "warning", title: "Importante", text: "Si la firma no coincide, responde con HTTP 401 y no proceses el evento. Esto protege contra requests falsificados." },
+    { type: "heading", id: "retries", text: "Reintentos" },
+    { type: "p", text: "Si tu endpoint no responde con HTTP 2xx dentro de 10 segundos, WITHMIA reintenta automáticamente con backoff exponencial:" },
+    { type: "list", items: [
+      "1er reintento: 30 segundos",
+      "2do reintento: 2 minutos",
+      "3er reintento: 10 minutos",
+      "4to reintento: 1 hora",
+      "5to reintento: 6 horas",
+    ], ordered: true },
+    { type: "callout", variant: "tip", title: "Tip", text: "Responde con HTTP 200 inmediatamente y procesa el evento de forma asíncrona. Esto evita timeouts y reintentos innecesarios." },
+  ],
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
+  /* ── SDK Node.js ── */
+  "sdk-nodejs": [
+    { type: "heading", id: "install-node", text: "Instalación" },
+    { type: "p", text: "Instala el SDK oficial de WITHMIA para Node.js usando tu gestor de paquetes favorito:" },
+    { type: "codetabs", tabs: [
+      { label: "npm", lang: "bash", code: "npm install @withmia/sdk" },
+      { label: "yarn", lang: "bash", code: "yarn add @withmia/sdk" },
+      { label: "pnpm", lang: "bash", code: "pnpm add @withmia/sdk" },
+    ]},
+    { type: "callout", variant: "info", title: "Requisitos", text: "Node.js 18 o superior. El SDK usa ESM y soporta TypeScript de forma nativa." },
+    { type: "heading", id: "init-node", text: "Inicialización" },
+    { type: "code", code: "import { Withmia } from '@withmia/sdk';\n\nconst withmia = new Withmia({\n  apiKey: process.env.WITHMIA_API_KEY,\n  // Opciones adicionales:\n  // baseUrl: 'https://api.withmia.com/v1',\n  // timeout: 30000,\n  // retries: 3,\n});", lang: "typescript" },
+    { type: "heading", id: "send-node", text: "Enviar mensajes" },
+    { type: "code", code: "// Mensaje de texto\nconst message = await withmia.messages.send({\n  channel: 'whatsapp',\n  to: '+56912345678',\n  type: 'text',\n  text: '¡Hola desde WITHMIA! 🚀',\n});\n\nconsole.log('Mensaje enviado:', message.id);\n\n// Mensaje con imagen\nawait withmia.messages.send({\n  channel: 'whatsapp',\n  to: '+56912345678',\n  type: 'image',\n  media: {\n    url: 'https://ejemplo.com/imagen.jpg',\n    caption: 'Mira esta imagen',\n  },\n});", lang: "typescript" },
+    { type: "heading", id: "webhooks-node", text: "Recibir webhooks" },
+    { type: "p", text: "El SDK incluye un helper para Express/Fastify que verifica la firma automáticamente:" },
+    { type: "code", code: "import express from 'express';\nimport { Withmia } from '@withmia/sdk';\n\nconst app = express();\nconst withmia = new Withmia({ apiKey: API_KEY });\n\napp.post('/webhooks', express.raw({ type: '*/*' }), (req, res) => {\n  const event = withmia.webhooks.verify(\n    req.body,\n    req.headers['x-withmia-signature'] as string,\n    process.env.WEBHOOK_SECRET!\n  );\n\n  switch (event.type) {\n    case 'message.received':\n      console.log('Nuevo mensaje:', event.data.text);\n      break;\n    case 'conversation.created':\n      console.log('Nueva conversación:', event.data.id);\n      break;\n  }\n\n  res.sendStatus(200);\n});", lang: "typescript" },
+    { type: "heading", id: "errors-node", text: "Manejo de errores" },
+    { type: "code", code: "import { WithmiaError, RateLimitError } from '@withmia/sdk';\n\ntry {\n  await withmia.messages.send({ ... });\n} catch (error) {\n  if (error instanceof RateLimitError) {\n    console.log(`Rate limited. Retry en ${error.retryAfter}s`);\n  } else if (error instanceof WithmiaError) {\n    console.error(`Error ${error.status}: ${error.message}`);\n  }\n}", lang: "typescript" },
+  ],
+
+  /* ── AI Assistant ── */
+  "ai-assistant": [
+    { type: "heading", id: "setup-ai", text: "Configurar asistente" },
+    { type: "p", text: "El asistente IA de WITHMIA se configura desde Configuración → IA → Asistente. Puedes crear múltiples asistentes con diferentes personalidades y bases de conocimiento para distintos canales o equipos." },
+    { type: "steps", steps: [
+      { title: "Crea un asistente", desc: "Ve a Configuración → IA y haz clic en 'Nuevo asistente'." },
+      { title: "Define su propósito", desc: "Describe el rol del asistente: soporte, ventas, FAQ, etc." },
+      { title: "Asigna canales", desc: "Selecciona en qué canales el asistente estará activo." },
+      { title: "Configura el handoff", desc: "Define cuándo el asistente transfiere a un agente humano." },
+    ]},
+    { type: "heading", id: "personalidad", text: "Personalidad" },
+    { type: "p", text: "Configura el comportamiento y tono del asistente con instrucciones de sistema:" },
+    { type: "code", code: "# Ejemplo de prompt de sistema\n\nEres el asistente de soporte de [Empresa].\n\nReglas:\n- Mantén un tono profesional pero amigable\n- Responde siempre en el idioma del cliente\n- Si no sabes la respuesta, ofrece transferir a un humano\n- Nunca inventes información sobre el producto\n- Usa emojis con moderación\n- Máximo 3 párrafos por respuesta", lang: "markdown" },
+    { type: "callout", variant: "tip", title: "Mejores prácticas", text: "Sé específico en las instrucciones. En vez de 'sé amable', di 'saluda al usuario por su nombre, usa tono informal y agrega un emoji al final'." },
+    { type: "heading", id: "knowledge", text: "Base de conocimiento" },
+    { type: "p", text: "El asistente puede acceder a documentos de tu empresa usando RAG (Retrieval-Augmented Generation). Sube PDFs, páginas web, FAQs o conecta tu base de conocimiento existente." },
+    { type: "list", items: [
+      "PDFs y documentos de Word",
+      "URLs de sitio web (crawler automático)",
+      "FAQs en formato pregunta/respuesta",
+      "Archivos CSV y Excel",
+      "Texto plano y Markdown",
+    ]},
+    { type: "callout", variant: "info", title: "Límites", text: "Cada asistente soporta hasta 100 MB de documentos en el plan Growth y 500 MB en el plan Enterprise." },
+    { type: "heading", id: "limites", text: "Límites y control" },
+    { type: "p", text: "Configura guardrails para controlar el comportamiento del asistente:" },
+    { type: "list", items: [
+      "Temas bloqueados — define temas que el asistente debe rechazar",
+      "Handoff automático — transfiere a humano tras N mensajes o por keywords",
+      "Horarios — activa el asistente solo fuera del horario laboral",
+      "Rate limiting — máximo de respuestas por conversación",
+      "Supervisión — revisa y aprueba respuestas antes de enviarlas",
+    ]},
+  ],
+
+  /* ── Webchat ── */
+  webchat: [
+    { type: "heading", id: "instalacion", text: "Instalación" },
+    { type: "p", text: "Agrega el widget de chat a tu sitio web con una sola línea de código. Pega este snippet antes del cierre de </body>:" },
+    { type: "code", code: "<script\n  src=\"https://cdn.withmia.com/widget.js\"\n  data-workspace=\"ws_tu_workspace_id\"\n  data-channel=\"webchat\"\n  data-color=\"#f59e0b\"\n  async\n></script>", lang: "html" },
+    { type: "callout", variant: "tip", title: "Frameworks", text: "Para React, Vue o Angular, usa nuestros componentes oficiales: @withmia/react-widget, @withmia/vue-widget." },
+    { type: "heading", id: "personalizacion", text: "Personalización" },
+    { type: "p", text: "Personaliza la apariencia del widget usando atributos data- o la API JavaScript:" },
+    { type: "code", code: "<script\n  src=\"https://cdn.withmia.com/widget.js\"\n  data-workspace=\"ws_123\"\n  data-color=\"#f59e0b\"\n  data-position=\"bottom-right\"\n  data-greeting=\"¡Hola! ¿En qué puedo ayudarte?\"\n  data-avatar=\"https://tu-sitio.com/avatar.png\"\n  data-name=\"Soporte WITHMIA\"\n  data-lang=\"es\"\n  async\n></script>", lang: "html" },
+    { type: "heading", id: "eventos", text: "Eventos JS" },
+    { type: "p", text: "El widget emite eventos JavaScript que puedes escuchar para analytics o integraciones:" },
+    { type: "code", code: "// Escuchar eventos del widget\nwindow.addEventListener('withmia:ready', () => {\n  console.log('Widget cargado');\n});\n\nwindow.addEventListener('withmia:open', () => {\n  // El usuario abrió el chat\n  analytics.track('Chat Opened');\n});\n\nwindow.addEventListener('withmia:message', (e) => {\n  console.log('Nuevo mensaje:', e.detail);\n});\n\n// Controlar el widget programáticamente\nwindow.Withmia.open();\nwindow.Withmia.close();\nwindow.Withmia.identify({\n  name: 'Juan',\n  email: 'juan@ejemplo.com',\n  plan: 'pro',\n});", lang: "javascript" },
+  ],
+
+  /* ── RAG Training ── */
+  "rag-training": [
+    { type: "heading", id: "que-es-rag", text: "¿Qué es RAG?" },
+    { type: "p", text: "RAG (Retrieval-Augmented Generation) permite que la IA de WITHMIA busque información relevante en tus documentos antes de generar una respuesta. Esto elimina las alucinaciones y asegura que las respuestas sean precisas y basadas en datos reales de tu negocio." },
+    { type: "callout", variant: "info", title: "¿Cómo funciona?", text: "Cuando un cliente hace una pregunta, WITHMIA: 1) busca los fragmentos más relevantes en tu base de conocimiento, 2) los incluye como contexto para la IA, 3) genera una respuesta precisa basada en esos fragmentos." },
+    { type: "heading", id: "subir-docs", text: "Subir documentos" },
+    { type: "p", text: "Ve a Configuración → IA → Base de Conocimiento para subir documentos. Puedes arrastrar archivos o ingresar URLs." },
+    { type: "steps", steps: [
+      { title: "Sube tus documentos", desc: "Arrastra PDFs, Word, CSVs o pega URLs de tu sitio web." },
+      { title: "Espera el procesamiento", desc: "WITHMIA divide el documento en fragmentos y genera embeddings. Esto toma segundos." },
+      { title: "Prueba con preguntas", desc: "Usa el playground para hacer preguntas y verificar las respuestas." },
+    ]},
+    { type: "heading", id: "formatos", text: "Formatos soportados" },
+    { type: "list", items: [
+      "PDF — documentos, manuales, reportes",
+      "DOCX / DOC — documentos de Word",
+      "TXT / MD — texto plano y Markdown",
+      "CSV / XLSX — tablas y datos estructurados",
+      "HTML / URLs — páginas web (crawler automático)",
+      "JSON — datos estructurados tipo FAQ",
+    ]},
+    { type: "heading", id: "mejores-practicas", text: "Mejores prácticas" },
+    { type: "list", items: [
+      "Usa documentos bien estructurados con headings claros",
+      "Evita imágenes escaneadas — usa PDFs con texto seleccionable",
+      "Actualiza los documentos regularmente para mantener la precisión",
+      "Divide documentos largos (+50 páginas) en secciones temáticas",
+      "Incluye FAQs en formato pregunta/respuesta para mejor retrieval",
+      "Prueba con preguntas reales de tus clientes antes de activar",
+    ]},
+    { type: "callout", variant: "warning", title: "Importante", text: "Eliminar un documento NO elimina las respuestas que ya fueron generadas con esa información. Se aplica solo a futuras consultas." },
+  ],
+
+  /* ── Crear cuenta ── */
+  "create-account": [
+    { type: "heading", id: "registro", text: "Registro" },
+    { type: "p", text: "Crear tu cuenta de WITHMIA toma menos de 2 minutos. No necesitas tarjeta de crédito para empezar — el plan gratuito incluye hasta 100 conversaciones al mes." },
+    { type: "steps", steps: [
+      { title: "Ve a la página de registro", desc: "Accede a app.withmia.com/register desde tu navegador." },
+      { title: "Ingresa tus datos", desc: "Completa tu nombre, email corporativo y una contraseña segura." },
+      { title: "Verifica tu email", desc: "Recibirás un código de 6 dígitos en tu bandeja de entrada." },
+      { title: "Configura tu workspace", desc: "Asigna un nombre a tu workspace y selecciona tu zona horaria." },
+    ]},
+    { type: "callout", variant: "tip", title: "SSO disponible", text: "En planes Growth y Enterprise puedes registrarte directamente con Google Workspace o Microsoft 365. Esto también habilita SSO para todo tu equipo." },
+    { type: "heading", id: "dashboard", text: "Dashboard" },
+    { type: "p", text: "Una vez dentro, el dashboard te muestra una visión general de tu operación: conversaciones activas, métricas clave, rendimiento del equipo y estado de los canales conectados." },
+    { type: "list", items: [
+      "Inbox — todas las conversaciones en un solo lugar",
+      "Métricas — tiempo de respuesta, satisfacción, volumen",
+      "Equipo — agentes online, carga de trabajo, asignaciones",
+      "Canales — estado de conexión de cada canal",
+      "IA — rendimiento del asistente y preguntas frecuentes",
+    ]},
+    { type: "heading", id: "equipo-setup", text: "Configurar equipo" },
+    { type: "p", text: "Invita a tu equipo desde Configuración → Equipo. Cada miembro puede tener un rol diferente:" },
+    { type: "list", items: [
+      "Admin — acceso completo, configuración y facturación",
+      "Supervisor — ver métricas, reasignar conversaciones, gestionar equipo",
+      "Agente — responder conversaciones y usar el inbox",
+      "Viewer — solo lectura, ideal para stakeholders",
+    ]},
+    { type: "callout", variant: "info", title: "Límites", text: "El plan Starter incluye hasta 5 agentes. Planes Growth y Enterprise no tienen límite de agentes." },
+  ],
+
+  /* ── Primer canal ── */
+  "first-channel": [
+    { type: "heading", id: "elegir-canal", text: "Elegir tu primer canal" },
+    { type: "p", text: "WITHMIA soporta múltiples canales de comunicación. Te recomendamos empezar con el que más usen tus clientes — típicamente WhatsApp o Webchat." },
+    { type: "list", items: [
+      "WhatsApp Business — el canal más popular en Latinoamérica",
+      "Webchat — widget embebido en tu sitio web, sin fricción",
+      "Instagram — DMs y respuestas a stories",
+      "Messenger — integración con Facebook Pages",
+      "Email — conecta tu correo corporativo",
+    ]},
+    { type: "heading", id: "conectar-canal", text: "Conectar un canal" },
+    { type: "steps", steps: [
+      { title: "Ve a Configuración → Canales", desc: "Accede al panel de canales desde el menú lateral." },
+      { title: "Selecciona el canal", desc: "Haz clic en el ícono del canal que quieres conectar." },
+      { title: "Sigue el asistente", desc: "Cada canal tiene un flujo de configuración guiado. Sigue los pasos en pantalla." },
+      { title: "Envía un mensaje de prueba", desc: "Verifica que todo funciona enviando un mensaje de prueba desde el canal." },
+    ]},
+    { type: "callout", variant: "tip", title: "Recomendación", text: "Empieza con Webchat — es el más rápido de configurar (1 minuto) y no requiere cuentas externas. Perfecto para probar WITHMIA antes de conectar WhatsApp." },
+    { type: "heading", id: "verificar", text: "Verificar la conexión" },
+    { type: "p", text: "Después de conectar, envía un mensaje de prueba y verifica que aparece en tu inbox. Si algo falla, revisa:" },
+    { type: "list", items: [
+      "Estado del canal en Configuración → Canales (debe mostrar 'Conectado')",
+      "Permisos de la cuenta conectada (especialmente para Meta/Instagram)",
+      "Que el número de WhatsApp no esté registrado en WhatsApp personal",
+      "Que tu navegador permita notificaciones para alertas en tiempo real",
+    ]},
+  ],
+
+  /* ── Conversaciones ── */
+  conversations: [
+    { type: "heading", id: "inbox", text: "El Inbox" },
+    { type: "p", text: "El inbox de WITHMIA es donde tu equipo gestiona todas las conversaciones entrantes. Combina mensajes de WhatsApp, Instagram, Email, Webchat y más en una interfaz unificada." },
+    { type: "callout", variant: "info", title: "Omnicanal", text: "Si un cliente te escribe por WhatsApp y luego por Email, WITHMIA unifica ambas conversaciones bajo el mismo perfil de contacto." },
+    { type: "heading", id: "asignacion", text: "Asignación" },
+    { type: "p", text: "Las conversaciones pueden asignarse manual o automáticamente a agentes:" },
+    { type: "list", items: [
+      "Round Robin — distribución equitativa entre agentes disponibles",
+      "Carga mínima — asigna al agente con menos conversaciones activas",
+      "Manual — un supervisor asigna según expertise o prioridad",
+      "Por canal — asigna equipos específicos a cada canal",
+      "IA primero — el asistente IA atiende y transfiere si es necesario",
+    ]},
+    { type: "heading", id: "etiquetas", text: "Etiquetas y prioridad" },
+    { type: "p", text: "Organiza conversaciones con etiquetas de color y niveles de prioridad:" },
+    { type: "code", code: "// Asignar etiqueta via API\nawait withmia.conversations.addLabel({\n  conversationId: \"conv_456\",\n  label: \"urgente\",\n  color: \"red\"\n});\n\n// Cambiar prioridad\nawait withmia.conversations.update({\n  conversationId: \"conv_456\",\n  priority: \"high\" // low | normal | high | urgent\n});", lang: "javascript" },
+    { type: "heading", id: "respuestas-rapidas", text: "Respuestas rápidas" },
+    { type: "p", text: "Crea atajos para respuestas frecuentes. Escribe / en el inbox para ver tus respuestas rápidas disponibles:" },
+    { type: "list", items: [
+      "/saludo — saludo personalizado con el nombre del cliente",
+      "/horarios — información de horarios de atención",
+      "/precios — enlace a la página de precios",
+      "/soporte — escalar a soporte técnico",
+    ]},
+    { type: "callout", variant: "tip", title: "Variables", text: "Las respuestas rápidas soportan variables: {{nombre}}, {{email}}, {{canal}}, {{agente}}. Se reemplazan automáticamente al enviar." },
+    { type: "heading", id: "cerrar", text: "Cerrar conversaciones" },
+    { type: "p", text: "Cierra conversaciones cuando el tema esté resuelto. Las conversaciones cerradas se archivan automáticamente y se pueden reabrir en cualquier momento. Configura cierre automático tras N horas de inactividad desde Configuración → Conversaciones." },
+  ],
+
+  /* ── Instagram ── */
+  instagram: [
+    { type: "heading", id: "requisitos-ig", text: "Requisitos" },
+    { type: "p", text: "Para conectar Instagram a WITHMIA necesitas una cuenta de Instagram Business o Creator vinculada a una Facebook Page." },
+    { type: "list", items: [
+      "Cuenta de Instagram Business o Creator (no personal)",
+      "Facebook Page vinculada a la cuenta de Instagram",
+      "Rol de administrador en la Facebook Page",
+      "Cuenta de WITHMIA con plan activo",
+    ]},
+    { type: "callout", variant: "warning", title: "Cuenta personal", text: "Las cuentas personales de Instagram no soportan la API de mensajes. Cambia a Business o Creator desde Configuración de Instagram → Cuenta → Cambiar tipo de cuenta." },
+    { type: "heading", id: "conexion-ig", text: "Conectar Instagram" },
+    { type: "steps", steps: [
+      { title: "Ve a Canales → Instagram", desc: "En tu dashboard de WITHMIA, accede a Configuración → Canales → Instagram." },
+      { title: "Inicia sesión con Facebook", desc: "Autoriza WITHMIA para acceder a tus páginas y cuentas de Instagram." },
+      { title: "Selecciona la cuenta", desc: "Elige la Page y cuenta de Instagram que quieres conectar." },
+      { title: "Confirma los permisos", desc: "Acepta los permisos requeridos: mensajes, comentarios y datos de perfil." },
+    ]},
+    { type: "heading", id: "funciones-ig", text: "Funcionalidades" },
+    { type: "p", text: "WITHMIA captura automáticamente estos tipos de interacciones:" },
+    { type: "list", items: [
+      "Direct Messages (DMs) — mensajes privados de usuarios",
+      "Story Replies — respuestas a tus Instagram Stories",
+      "Story Mentions — cuando te mencionan en una Story",
+      "Comentarios — respuestas a comentarios en tus posts (opcional)",
+    ]},
+    { type: "heading", id: "automatizacion-ig", text: "Automatización" },
+    { type: "p", text: "Configura respuestas automáticas para Instagram:" },
+    { type: "code", code: "// Respuesta automática a DMs\nawait withmia.automations.create({\n  channel: \"instagram\",\n  trigger: \"message.received\",\n  conditions: [\n    { field: \"source\", operator: \"eq\", value: \"dm\" }\n  ],\n  actions: [\n    { type: \"reply\", text: \"¡Hola! Gracias por tu mensaje. Un agente te responderá en breve 💬\" },\n    { type: \"assign\", strategy: \"round_robin\" }\n  ]\n});", lang: "javascript" },
+    { type: "callout", variant: "tip", title: "Ice breakers", text: "Configura 'Ice Breakers' en la sección de Instagram para mostrar opciones predefinidas cuando un usuario abre el chat por primera vez." },
+  ],
+
+  /* ── SDK Python ── */
+  "sdk-python": [
+    { type: "heading", id: "install-py", text: "Instalación" },
+    { type: "p", text: "Instala el SDK oficial de WITHMIA para Python:" },
+    { type: "codetabs", tabs: [
+      { label: "pip", lang: "bash", code: "pip install withmia" },
+      { label: "pip3", lang: "bash", code: "pip3 install withmia" },
+      { label: "poetry", lang: "bash", code: "poetry add withmia" },
+    ]},
+    { type: "callout", variant: "info", title: "Requisitos", text: "Python 3.9 o superior. Compatible con asyncio para operaciones no bloqueantes." },
+    { type: "heading", id: "init-py", text: "Inicialización" },
+    { type: "code", code: "import os\nfrom withmia import Withmia\n\n# Inicializar cliente\nclient = Withmia(\n    api_key=os.environ[\"WITHMIA_API_KEY\"],\n    # Opciones adicionales:\n    # base_url=\"https://api.withmia.com/v1\",\n    # timeout=30,\n    # max_retries=3,\n)", lang: "python" },
+    { type: "heading", id: "mensajes-py", text: "Enviar mensajes" },
+    { type: "code", code: "# Mensaje de texto\nmessage = client.messages.send(\n    channel=\"whatsapp\",\n    to=\"+56912345678\",\n    type=\"text\",\n    text=\"¡Hola desde Python! 🐍\"\n)\nprint(f\"Enviado: {message.id}\")\n\n# Mensaje con imagen\nclient.messages.send(\n    channel=\"whatsapp\",\n    to=\"+56912345678\",\n    type=\"image\",\n    media={\n        \"url\": \"https://ejemplo.com/imagen.jpg\",\n        \"caption\": \"Mira esta imagen\"\n    }\n)", lang: "python" },
+    { type: "heading", id: "async-py", text: "Modo asíncrono" },
+    { type: "p", text: "Para aplicaciones con asyncio (FastAPI, aiohttp, etc.), usa el cliente async:" },
+    { type: "code", code: "from withmia import AsyncWithmia\nimport asyncio\n\nasync def main():\n    client = AsyncWithmia(api_key=os.environ[\"WITHMIA_API_KEY\"])\n\n    # Enviar múltiples mensajes en paralelo\n    tasks = [\n        client.messages.send(channel=\"whatsapp\", to=num, text=\"¡Hola!\")\n        for num in [\"+56912345678\", \"+56987654321\"]\n    ]\n    results = await asyncio.gather(*tasks)\n    print(f\"Enviados: {len(results)} mensajes\")\n\nasyncio.run(main())", lang: "python" },
+    { type: "heading", id: "webhooks-py", text: "Recibir webhooks" },
+    { type: "p", text: "Ejemplo con FastAPI:" },
+    { type: "code", code: "from fastapi import FastAPI, Request, HTTPException\nfrom withmia import Withmia\nimport os\n\napp = FastAPI()\nclient = Withmia(api_key=os.environ[\"WITHMIA_API_KEY\"])\n\n@app.post(\"/webhooks\")\nasync def handle_webhook(request: Request):\n    body = await request.body()\n    signature = request.headers.get(\"x-withmia-signature\", \"\")\n\n    event = client.webhooks.verify(\n        payload=body,\n        signature=signature,\n        secret=os.environ[\"WEBHOOK_SECRET\"]\n    )\n\n    if event.type == \"message.received\":\n        print(f\"Nuevo mensaje: {event.data.text}\")\n\n    return {\"ok\": True}", lang: "python" },
+    { type: "heading", id: "errores-py", text: "Manejo de errores" },
+    { type: "code", code: "from withmia.exceptions import WithmiaError, RateLimitError\n\ntry:\n    client.messages.send(...)\nexcept RateLimitError as e:\n    print(f\"Rate limited. Reintentar en {e.retry_after}s\")\nexcept WithmiaError as e:\n    print(f\"Error {e.status_code}: {e.message}\")", lang: "python" },
+  ],
+
+  /* ── Workflows ── */
+  workflows: [
+    { type: "heading", id: "que-son", text: "¿Qué son los Workflows?" },
+    { type: "p", text: "Los Workflows de WITHMIA te permiten automatizar procesos repetitivos sin escribir código. Usa un editor visual de arrastrar y soltar para crear flujos que se ejecutan automáticamente cuando ocurren eventos específicos." },
+    { type: "callout", variant: "info", title: "Visual y código", text: "Los workflows se pueden crear desde el editor visual o programáticamente via API. Ambos métodos producen el mismo resultado." },
+    { type: "heading", id: "crear-workflow", text: "Crear un workflow" },
+    { type: "steps", steps: [
+      { title: "Abre el editor", desc: "Ve a Automatización → Workflows y haz clic en 'Nuevo Workflow'." },
+      { title: "Elige un trigger", desc: "Selecciona el evento que inicia el workflow (mensaje recibido, conversación creada, etc.)." },
+      { title: "Agrega acciones", desc: "Arrastra nodos de acción: responder, asignar, etiquetar, enviar a webhook, etc." },
+      { title: "Configura condiciones", desc: "Agrega nodos condicionales para crear ramas lógicas según el contenido del mensaje." },
+      { title: "Activa el workflow", desc: "Prueba con un mensaje de prueba y activa el workflow cuando esté listo." },
+    ]},
+    { type: "heading", id: "triggers", text: "Triggers disponibles" },
+    { type: "list", items: [
+      "message.received — cuando llega un nuevo mensaje",
+      "conversation.created — cuando se crea una nueva conversación",
+      "conversation.assigned — cuando se asigna a un agente",
+      "contact.created — cuando se registra un nuevo contacto",
+      "schedule — ejecución programada (cron)",
+      "webhook — trigger via HTTP externo",
+    ]},
+    { type: "heading", id: "acciones", text: "Acciones" },
+    { type: "list", items: [
+      "Responder — envía un mensaje al contacto",
+      "Asignar — asigna la conversación a un agente o equipo",
+      "Etiquetar — agrega etiquetas a la conversación",
+      "Cerrar — cierra la conversación automáticamente",
+      "Webhook — envía datos a una URL externa",
+      "HTTP Request — llama una API externa y usa la respuesta",
+      "Delay — espera N minutos/horas antes de continuar",
+      "Condición — bifurca según contenido, canal, etiquetas, etc.",
+      "IA — genera respuesta usando el asistente IA",
+    ]},
+    { type: "heading", id: "ejemplo-wf", text: "Ejemplo: auto-respuesta fuera de horario" },
+    { type: "code", code: "// Crear workflow via API\nawait withmia.workflows.create({\n  name: \"Fuera de horario\",\n  trigger: {\n    type: \"message.received\",\n    conditions: [\n      { field: \"business_hours\", operator: \"eq\", value: false }\n    ]\n  },\n  actions: [\n    {\n      type: \"reply\",\n      message: \"¡Hola! Estamos fuera de horario. Te responderemos mañana a primera hora. ⏰\"\n    },\n    {\n      type: \"label\",\n      labels: [\"fuera-de-horario\"]\n    }\n  ]\n});", lang: "javascript" },
+    { type: "callout", variant: "tip", title: "Templates", text: "WITHMIA incluye templates de workflows prediseñados para casos comunes: bienvenida, fuera de horario, encuesta de satisfacción, escalamiento, y más." },
+  ],
+};
+
+/* ══════════════════════════════════════════════════════════════
+   SYNTAX HIGHLIGHTING
+   ══════════════════════════════════════════════════════════════ */
+
+function highlightCode(code: string, lang: string): ReactNode {
+  type Rule = { re: RegExp; cls: string };
+  const rules: Rule[] = [];
+  const g = ["javascript", "typescript", "js", "ts"].includes(lang) ? "js"
+    : ["python", "py"].includes(lang) ? "py"
+    : ["bash", "sh", "shell", "zsh"].includes(lang) ? "sh"
+    : lang === "json" ? "json"
+    : ["html", "xml"].includes(lang) ? "html"
+    : lang === "markdown" ? "md"
+    : null;
+
+  if (g === "js") {
+    rules.push(
+      { re: /\/\/[^\n]*/g, cls: "text-white/25 italic" },
+      { re: /(["'`])(?:(?!\1|\\).|\\.)*?\1/g, cls: "text-emerald-400/70" },
+      { re: /\b(?:const|let|var|function|return|if|else|switch|case|break|default|import|from|export|await|async|try|catch|throw|new|class|typeof|instanceof|extends|in|of|type|interface)\b/g, cls: "text-violet-400/80" },
+      { re: /\b(?:true|false|null|undefined|this|console|process|window)\b/g, cls: "text-amber-400/70" },
+      { re: /\b\d+\.?\d*\b/g, cls: "text-amber-400/60" },
+    );
+  } else if (g === "py") {
+    rules.push(
+      { re: /#[^\n]*/g, cls: "text-white/25 italic" },
+      { re: /(["'])(?:(?!\1|\\).|\\.)*?\1/g, cls: "text-emerald-400/70" },
+      { re: /\b(?:def|class|import|from|return|if|elif|else|for|while|in|as|with|try|except|raise|pass|break|continue|lambda|yield|async|await|not|and|or|is)\b/g, cls: "text-violet-400/80" },
+      { re: /\b(?:True|False|None|self|print|len|str|int|float|list|dict|set|tuple)\b/g, cls: "text-amber-400/70" },
+      { re: /\b\d+\.?\d*\b/g, cls: "text-amber-400/60" },
+    );
+  } else if (g === "sh") {
+    rules.push(
+      { re: /#[^\n]*/g, cls: "text-white/25 italic" },
+      { re: /(["'])(?:(?!\1|\\).|\\.)*?\1/g, cls: "text-emerald-400/70" },
+      { re: /\$[\w{}]+/g, cls: "text-cyan-400/70" },
+      { re: /(?<=\s)-{1,2}[\w-]+/g, cls: "text-violet-400/60" },
+      { re: /\b(?:curl|npm|pip|yarn|pnpm|composer|export|echo|sudo|cd|mkdir|chmod|pip3)\b/g, cls: "text-amber-400/70" },
+    );
+  } else if (g === "json") {
+    rules.push(
+      { re: /"(?:[^"\\]|\\.)*"(?=\s*:)/g, cls: "text-cyan-400/70" },
+      { re: /"(?:[^"\\]|\\.)*"/g, cls: "text-emerald-400/70" },
+      { re: /\b(?:true|false|null)\b/g, cls: "text-amber-400/70" },
+      { re: /\b-?\d+\.?\d*\b/g, cls: "text-amber-400/60" },
+    );
+  } else if (g === "html") {
+    rules.push(
+      { re: /<!--[\s\S]*?-->/g, cls: "text-white/25 italic" },
+      { re: /<\/?[\w-]+/g, cls: "text-violet-400/80" },
+      { re: /\/?>/g, cls: "text-violet-400/60" },
+      { re: /\b[\w-]+(?==)/g, cls: "text-cyan-400/70" },
+      { re: /(["'])(?:(?!\1|\\).|\\.)*?\1/g, cls: "text-emerald-400/70" },
+    );
+  } else if (g === "md") {
+    rules.push(
+      { re: /^#{1,6}\s.*/gm, cls: "text-amber-400/80" },
+      { re: /\*\*[^*]+\*\*/g, cls: "text-white/70" },
+      { re: /`[^`]+`/g, cls: "text-emerald-400/70" },
+      { re: /^-\s/gm, cls: "text-violet-400/80" },
+    );
+  }
+
+  if (rules.length === 0) return code;
+
+  type Token = { start: number; end: number; cls: string };
+  const tokens: Token[] = [];
+  for (const rule of rules) {
+    const re = new RegExp(rule.re.source, rule.re.flags);
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(code)) !== null) {
+      tokens.push({ start: m.index, end: m.index + m[0].length, cls: rule.cls });
+    }
+  }
+  tokens.sort((a, b) => a.start - b.start || b.end - a.end);
+  const merged: Token[] = [];
+  for (const t of tokens) {
+    if (merged.length === 0 || t.start >= merged[merged.length - 1].end) merged.push(t);
+  }
+  if (merged.length === 0) return code;
+
+  const parts: ReactNode[] = [];
+  let pos = 0;
+  for (let i = 0; i < merged.length; i++) {
+    const t = merged[i];
+    if (t.start > pos) parts.push(code.slice(pos, t.start));
+    parts.push(<span key={i} className={t.cls}>{code.slice(t.start, t.end)}</span>);
+    pos = t.end;
+  }
+  if (pos < code.length) parts.push(code.slice(pos));
+  return <>{parts}</>;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REUSABLE COMPONENTS
+   ══════════════════════════════════════════════════════════════ */
+
+/* ─── Code Block ─── */
+function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="relative group rounded-xl border border-white/[0.06] bg-[#0a0c14] overflow-hidden my-4">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
+        <span className="text-[10px] font-mono text-white/20 uppercase tracking-wider">{lang}</span>
+        <button onClick={copy} className="flex items-center gap-1.5 text-[11px] text-white/20 hover:text-white/50 transition-colors">
+          {copied ? <><Check className="w-3 h-3 text-emerald-400" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
+        </button>
+      </div>
+      <pre className="px-5 py-4 overflow-x-auto">
+        <code className="text-[13px] leading-[1.8] font-mono text-white/50">{highlightCode(code, lang)}</code>
+      </pre>
+    </div>
+  );
+}
+
+/* ─── Code Tabs (multi-language) ─── */
+function CodeTabs({ tabs }: { tabs: { label: string; lang: string; code: string }[] }) {
+  const [active, setActive] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(tabs[active].code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-[#0a0c14] overflow-hidden my-4">
+      <div className="flex items-center border-b border-white/[0.04] bg-white/[0.01]">
+        <div className="flex flex-1">
+          {tabs.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={`px-4 py-2 text-[12px] font-medium transition-colors relative ${
+                active === i
+                  ? "text-amber-400"
+                  : "text-white/25 hover:text-white/50"
+              }`}
+            >
+              {t.label}
+              {active === i && (
+                <div className="absolute bottom-0 left-0 right-0 h-px bg-amber-400" />
+              )}
+            </button>
+          ))}
+        </div>
+        <button onClick={copy} className="flex items-center gap-1.5 text-[11px] text-white/20 hover:text-white/50 transition-colors mr-3">
+          {copied ? <><Check className="w-3 h-3 text-emerald-400" /> Copiado</> : <><Copy className="w-3 h-3" /> Copiar</>}
+        </button>
+      </div>
+      <pre className="px-5 py-4 overflow-x-auto">
+        <code className="text-[13px] leading-[1.8] font-mono text-white/50">{highlightCode(tabs[active].code, tabs[active].lang)}</code>
+      </pre>
+    </div>
+  );
+}
+
+/* ─── Callout (info / warning / tip / danger) ─── */
+function Callout({ variant, title, children }: { variant: CalloutVariant; title: string; children: ReactNode }) {
+  const cfg = {
+    info:    { Icon: Info,           border: "border-cyan-500/20",    bg: "bg-cyan-500/[0.04]",    text: "text-cyan-400" },
+    warning: { Icon: AlertTriangle,  border: "border-amber-500/20",   bg: "bg-amber-500/[0.04]",   text: "text-amber-400" },
+    tip:     { Icon: Lightbulb,      border: "border-emerald-500/20", bg: "bg-emerald-500/[0.04]", text: "text-emerald-400" },
+    danger:  { Icon: AlertTriangle,  border: "border-red-500/20",     bg: "bg-red-500/[0.04]",     text: "text-red-400" },
+  }[variant];
+  return (
+    <div className={`rounded-xl border ${cfg.border} ${cfg.bg} p-4 my-6`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <cfg.Icon className={`w-4 h-4 ${cfg.text}`} />
+        <span className={`text-[13px] font-semibold ${cfg.text}`}>{title}</span>
+      </div>
+      <div className="text-[13px] text-white/40 leading-relaxed pl-6">{children}</div>
+    </div>
+  );
+}
+
+/* ─── Feedback Widget ─── */
+function FeedbackWidget({ pageId }: { pageId: string }) {
+  const [feedback, setFeedback] = useState<"yes" | "no" | null>(null);
+  const [prevPage, setPrevPage] = useState(pageId);
+  if (pageId !== prevPage) { setFeedback(null); setPrevPage(pageId); }
 
   return (
-    <div className="min-h-screen bg-[#030507]">
+    <div className="flex items-center gap-4 py-4">
+      <span className="text-[13px] text-white/25">¿Te fue útil esta página?</span>
+      {feedback ? (
+        <span className="text-[13px] text-emerald-400/60">¡Gracias por tu feedback!</span>
+      ) : (
+        <div className="flex gap-2">
+          <button onClick={() => setFeedback("yes")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] text-white/30 hover:text-emerald-400 hover:border-emerald-500/20 transition-all">
+            <ThumbsUp className="w-3.5 h-3.5" /> Sí
+          </button>
+          <button onClick={() => setFeedback("no")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-[12px] text-white/30 hover:text-amber-400 hover:border-amber-500/20 transition-all">
+            <ThumbsDown className="w-3.5 h-3.5" /> No
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Block Renderer ─── */
+function BlockRenderer({ blocks, navigateTo }: { blocks: ContentBlock[]; navigateTo?: (id: string) => void }) {
+  return (
+    <>
+      {blocks.map((block, i) => {
+        switch (block.type) {
+          case "heading":
+            return (
+              <h2 key={i} id={block.id} className="text-xl font-bold text-white mb-4 mt-10 first:mt-0 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" />
+                {block.text}
+              </h2>
+            );
+          case "p":
+            return <p key={i} className="text-[14px] text-white/40 leading-relaxed mb-4">{block.text}</p>;
+          case "code":
+            return <CodeBlock key={i} code={block.code} lang={block.lang} />;
+          case "codetabs":
+            return <CodeTabs key={i} tabs={block.tabs} />;
+          case "callout":
+            return <Callout key={i} variant={block.variant} title={block.title}>{block.text}</Callout>;
+          case "list":
+            if (block.ordered) {
+              return (
+                <ol key={i} className="space-y-2 mb-6 pl-1">
+                  {block.items.map((item, j) => (
+                    <li key={j} className="flex items-start gap-2.5 text-[14px] text-white/40">
+                      <span className="text-amber-400/50 font-mono text-[12px] mt-0.5 shrink-0 w-5">{j + 1}.</span>
+                      {item}
+                    </li>
+                  ))}
+                </ol>
+              );
+            }
+            return (
+              <ul key={i} className="space-y-2 mb-6 pl-1">
+                {block.items.map((item, j) => (
+                  <li key={j} className="flex items-start gap-2.5 text-[14px] text-white/40">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400/40 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            );
+          case "steps":
+            return (
+              <div key={i} className="space-y-3 my-6">
+                {block.steps.map((step, j) => (
+                  <div key={j} className="flex items-start gap-4 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[11px] font-bold font-mono text-amber-400/70">{j + 1}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-[14px] font-semibold text-white/70 mb-1">{step.title}</h4>
+                      <p className="text-[13px] text-white/35 leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          case "nav-cards":
+            return (
+              <div key={i} className="grid sm:grid-cols-2 gap-3 my-6">
+                {block.cards.map((card) => {
+                  const borderMap: Record<string, string> = { amber: "border-amber-500/10 hover:border-amber-500/25", violet: "border-violet-500/10 hover:border-violet-500/25", emerald: "border-emerald-500/10 hover:border-emerald-500/25", cyan: "border-cyan-500/10 hover:border-cyan-500/25" };
+                  const textMap: Record<string, string> = { amber: "text-amber-400", violet: "text-violet-400", emerald: "text-emerald-400", cyan: "text-cyan-400" };
+                  return (
+                    <button
+                      key={card.title}
+                      onClick={() => navigateTo?.(card.link)}
+                      className={`text-left p-5 rounded-xl border ${borderMap[card.color] || borderMap.amber} bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300 group`}
+                    >
+                      <h3 className="text-[14px] font-semibold text-white/70 mb-1">{card.title}</h3>
+                      <p className="text-[12px] text-white/30 mb-2">{card.desc}</p>
+                      <span className={`inline-flex items-center gap-1 text-[12px] font-medium ${textMap[card.color] || textMap.amber}`}>
+                        <ArrowRight className="w-3 h-3" /> Ver más
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          default:
+            return null;
+        }
+      })}
+    </>
+  );
+}
+
+/* ─── Sidebar Section ─── */
+function SidebarSection({ section, activePage, onNavigate, expandedSections, toggleSection }: {
+  section: NavItem; activePage: string; onNavigate: (id: string) => void;
+  expandedSections: Set<string>; toggleSection: (id: string) => void;
+}) {
+  const Icon = section.icon;
+  const isExpanded = expandedSections.has(section.id);
+  const hasActive = section.children?.some(c => c.id === activePage);
+  return (
+    <div className="mb-1">
+      <button
+        onClick={() => toggleSection(section.id)}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 ${hasActive ? "text-white/80" : "text-white/40 hover:text-white/60"}`}
+      >
+        {Icon && <Icon className={`w-4 h-4 shrink-0 ${hasActive ? "text-amber-400/70" : "text-white/25"}`} />}
+        <span className="text-[13px] font-medium flex-1">{section.label}</span>
+        <ChevronRight className={`w-3.5 h-3.5 text-white/15 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
+      </button>
+      {isExpanded && section.children && (
+        <div className="ml-4 pl-3 border-l border-white/[0.04] mt-0.5 space-y-0.5">
+          {section.children.map(child => (
+            <button
+              key={child.id}
+              onClick={() => onNavigate(child.id)}
+              className={`w-full text-left px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
+                activePage === child.id
+                  ? "text-amber-400 bg-amber-500/[0.06] font-medium"
+                  : "text-white/35 hover:text-white/60 hover:bg-white/[0.03]"
+              }`}
+            >
+              {child.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN PAGE COMPONENT
+   ══════════════════════════════════════════════════════════════ */
+
+const DocumentationPage = () => {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  /* ── State ── */
+  const [activePage, setActivePage] = useState("welcome");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(["_s_start"]));
+  const [activeTocId, setActiveTocId] = useState<string>("");
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const page = pages[activePage] || pages.welcome;
+  const blocks = richContent[activePage];
+
+  /* ── Page transition key ── */
+  const [transitionKey, setTransitionKey] = useState(activePage);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  useEffect(() => {
+    setIsTransitioning(true);
+    const t = setTimeout(() => { setTransitionKey(activePage); setIsTransitioning(false); }, 120);
+    return () => clearTimeout(t);
+  }, [activePage]);
+
+  /* ── ⌘K keyboard shortcut ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        searchRef.current?.blur();
+        setSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  /* ── Scroll progress ── */
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollable = document.documentElement;
+      const total = scrollable.scrollHeight - scrollable.clientHeight;
+      setScrollProgress(total > 0 ? (scrollable.scrollTop / total) * 100 : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* ── Active TOC tracking ── */
+  useEffect(() => {
+    const headings = document.querySelectorAll("main h2[id]");
+    if (!headings.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveTocId(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
+    );
+    headings.forEach(h => observer.observe(h));
+    return () => observer.disconnect();
+  }, [activePage]);
+
+  /* ── Navigation helpers ── */
+  const toggleSection = useCallback((id: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const navigateTo = useCallback((id: string) => {
+    setActivePage(id);
+    setMobileSidebarOpen(false);
+    setActiveTocId("");
+    for (const s of sidebarNav) {
+      if (s.children?.some(c => c.id === id)) {
+        setExpandedSections(prev => new Set(prev).add(s.id));
+        break;
+      }
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  /* ── Prev/Next ── */
+  const currentIdx = pageOrder.indexOf(activePage);
+  const prevPage = currentIdx > 0 ? pageOrder[currentIdx - 1] : null;
+  const nextPage = currentIdx < pageOrder.length - 1 ? pageOrder[currentIdx + 1] : null;
+
+  /* ── Search ── */
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return Object.entries(pages)
+      .filter(([, p]) => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
+      .slice(0, 8)
+      .map(([id, p]) => ({ id, title: p.title, breadcrumb: p.breadcrumb }));
+  }, [searchQuery]);
+
+  /* ═══════════════════════════════════════════════════════
+     JSX
+     ═══════════════════════════════════════════════════════ */
+
+  return (
+    <div className="min-h-screen relative">
+      {/* ── Ambient background glows ── */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-amber-500/[0.03] blur-[150px]" />
+        <div className="absolute top-[40%] right-0 w-[500px] h-[500px] rounded-full bg-violet-500/[0.02] blur-[140px]" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-cyan-500/[0.02] blur-[120px]" />
+      </div>
+
       <Navigation />
-      <main className="pt-20">
 
-        {/* ── HERO ── */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-950/10 via-transparent to-transparent" />
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-blue-500/[0.02] rounded-full blur-[140px]" />
-          </div>
+      {/* Scroll Progress — fixed at very top */}
+      <div className={`fixed top-0 left-0 right-0 z-[60] h-[2px] transition-opacity duration-300 ${scrollProgress > 1 ? 'opacity-100' : 'opacity-0'}`}>
+        <div
+          className="h-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500/50 transition-[width] duration-100"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
 
-          <div className="relative max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] mb-8">
-              <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-xs font-medium text-white/50 tracking-wide">
-                Documentación WITHMIA
-              </span>
+      {/* ══ Three-column Layout ══ */}
+      <div className="pt-24 max-w-[1440px] mx-auto flex min-h-[calc(100vh-96px)] relative z-[1]">
+
+        {/* ═══ LEFT SIDEBAR ═══ */}
+        <aside className={`
+          fixed lg:sticky top-24 left-0 z-20
+          w-[280px] h-[calc(100vh-96px)] overflow-y-auto
+          border-r border-white/[0.04] bg-[hsl(var(--background))]/80 lg:bg-transparent backdrop-blur-xl lg:backdrop-blur-none
+          transition-transform duration-300 lg:transition-none
+          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent
+        `}>
+          <nav className="px-4 py-4">
+            {/* Search */}
+            <div className="relative mb-5">
+              <div className={`flex items-center rounded-lg border transition-colors ${
+                searchFocused ? "border-amber-500/25 bg-white/[0.04]" : "border-white/[0.06] bg-white/[0.02]"
+              }`}>
+                <Search className="ml-3 w-3.5 h-3.5 text-white/20 shrink-0" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  className="flex-1 pl-2 pr-3 py-1.5 bg-transparent text-[13px] text-white/70 placeholder-white/20 focus:outline-none"
+                />
+                <kbd className="hidden sm:inline mr-2 px-1.5 py-0.5 rounded text-[9px] font-mono text-white/15 bg-white/[0.04] border border-white/[0.06]">
+                  ⌘K
+                </kbd>
+              </div>
+
+              {searchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border border-white/[0.08] bg-[hsl(var(--background))] shadow-2xl shadow-black/40 z-50 overflow-hidden">
+                  {searchResults.map(r => (
+                    <button
+                      key={r.id}
+                      onMouseDown={() => { navigateTo(r.id); setSearchQuery(""); }}
+                      className="w-full px-4 py-3 text-left hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-0"
+                    >
+                      <p className="text-[13px] text-white/70 font-medium">{r.title}</p>
+                      <p className="text-[10px] text-white/20 mt-0.5">{r.breadcrumb.join(" → ")}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-6">
-              Todo lo que necesitas
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                para construir
-              </span>
-            </h1>
+            {/* Mobile close button */}
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="lg:hidden absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {sidebarNav.map(section => (
+              <SidebarSection
+                key={section.id}
+                section={section}
+                activePage={activePage}
+                onNavigate={navigateTo}
+                expandedSections={expandedSections}
+                toggleSection={toggleSection}
+              />
+            ))}
+            <div className="mt-6 pt-4 border-t border-white/[0.04] space-y-1">
+              <a href="/api" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+                <Terminal className="w-4 h-4" />
+                API Interactiva
+                <ExternalLink className="w-3 h-3 ml-auto" />
+              </a>
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+                <Play className="w-4 h-4" />
+                Ir al Dashboard
+                <ExternalLink className="w-3 h-3 ml-auto" />
+              </a>
+            </div>
+          </nav>
+        </aside>
 
-            <p className="text-lg text-white/45 max-w-2xl mx-auto leading-relaxed mb-12">
-              Guías paso a paso, referencias de API, ejemplos de código y mejores
-              prácticas. Todo lo necesario para integrar y aprovechar WITHMIA al máximo.
-            </p>
+        {mobileSidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-10 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+        )}
 
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-10">
-              <div
-                className={`relative flex items-center rounded-2xl border transition-all duration-300 ${
-                  searchFocused
-                    ? "border-blue-500/30 bg-white/[0.05] shadow-[0_0_40px_rgba(59,130,246,0.06)]"
-                    : "border-white/[0.08] bg-white/[0.03]"
-                }`}
-              >
-                <Search className="absolute left-5 w-5 h-5 text-white/25" />
-                <input
-                  type="text"
-                  placeholder="Buscar en la documentación..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  className="w-full pl-14 pr-5 py-4.5 bg-transparent text-white/80 placeholder-white/25 text-[15px] focus:outline-none"
-                />
-                <div className="absolute right-4 flex items-center gap-2">
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.08] text-[11px] font-mono text-white/25">
-                    ⌘K
-                  </kbd>
+        {/* ═══ MAIN CONTENT ═══ */}
+        <main ref={contentRef} className={`flex-1 min-w-0 px-6 md:px-10 lg:px-16 py-8 md:py-10 transition-all duration-200 ${isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
+
+          {/* Breadcrumb + mobile menu toggle */}
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg text-white/40 hover:text-white/60 hover:bg-white/[0.04] transition-colors -ml-2"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-1.5 text-[12px] text-white/25 min-w-0">
+              {page.breadcrumb.map((b, i) => (
+                <span key={i} className="flex items-center gap-1.5">
+                  {i > 0 && <ChevronRight className="w-3 h-3 text-white/10" />}
+                  <span className={i === page.breadcrumb.length - 1 ? "text-white/45" : ""}>{b}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* ────── WELCOME PAGE ────── */}
+          {activePage === "welcome" && (
+            <div className="max-w-3xl">
+              {/* Hero area with ambient glow */}
+              <div className="relative mb-10">
+                <div className="absolute -top-8 -left-16 w-64 h-64 bg-amber-500/[0.06] rounded-full blur-[80px] pointer-events-none" />
+                <div className="relative">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.06] border border-amber-500/10 mb-5">
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[11px] font-medium text-amber-400/80 uppercase tracking-wider">Documentación</span>
+                  </div>
+                  <h1 className="text-3xl md:text-[2.5rem] font-bold mb-5 leading-[1.15]">
+                    <span className="text-gradient">Bienvenido</span> <span className="text-white">a WITHMIA Docs</span>
+                  </h1>
+                  <p className="text-[15px] text-white/45 leading-relaxed mb-2 max-w-xl">{page.description}</p>
+                  <p className="text-[15px] text-white/35 leading-relaxed">
+                    Cubre todo, desde la configuración inicial hasta el uso avanzado de la API.
+                    Es un trabajo en constante evolución y todas las{" "}
+                    <a href="/contacto" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20">contribuciones</a>{" "}
+                    son bienvenidas.
+                  </p>
                 </div>
               </div>
 
-              {/* Quick links */}
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                <span className="text-[11px] text-white/20">Popular:</span>
-                {["API Keys", "Webhooks", "WhatsApp", "SDK Node.js", "OAuth 2.0"].map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => setSearchQuery(term)}
-                    className="text-[11px] px-3 py-1 rounded-full border border-white/[0.06] bg-white/[0.02] text-white/35 hover:text-white/60 hover:border-white/[0.12] transition-all"
-                  >
-                    {term}
+              <h2 id="where-to-start" className="text-lg font-bold text-white mb-5 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> Dónde empezar
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-3 mb-12">
+                {([
+                  { title: "Inicio rápido", desc: "Comienza con la guía de inicio rápido.", link: "quickstart", color: "amber", icon: Rocket },
+                  { title: "Elige tu configuración", desc: "Cloud, API, SDK o integraciones.", link: "choose-plan", color: "violet", icon: Layers },
+                  { title: "Explora canales", desc: "Conecta WhatsApp, Instagram y más.", link: "whatsapp", color: "emerald", icon: MessageSquare },
+                  { title: "IA y Automatización", desc: "Configura tu asistente IA.", link: "ai-assistant", color: "cyan", icon: Bot },
+                ] as const).map(card => {
+                  const bgMap: Record<string, string> = { amber: "bg-amber-500/[0.06] border-amber-500/10 hover:border-amber-500/20", violet: "bg-violet-500/[0.05] border-violet-500/10 hover:border-violet-500/20", emerald: "bg-emerald-500/[0.05] border-emerald-500/10 hover:border-emerald-500/20", cyan: "bg-cyan-500/[0.05] border-cyan-500/10 hover:border-cyan-500/20" };
+                  const iconBg: Record<string, string> = { amber: "bg-amber-500/10", violet: "bg-violet-500/10", emerald: "bg-emerald-500/10", cyan: "bg-cyan-500/10" };
+                  const iconText: Record<string, string> = { amber: "text-amber-400", violet: "text-violet-400", emerald: "text-emerald-400", cyan: "text-cyan-400" };
+                  const CardIcon = card.icon;
+                  return (
+                    <button key={card.title} onClick={() => navigateTo(card.link)}
+                      className={`text-left p-5 rounded-xl border ${bgMap[card.color]} hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 group`}>
+                      <div className={`w-8 h-8 rounded-lg ${iconBg[card.color]} flex items-center justify-center mb-3`}>
+                        <CardIcon className={`w-4 h-4 ${iconText[card.color]}`} />
+                      </div>
+                      <h3 className="text-[14px] font-semibold text-white/80 mb-1.5">{card.title}</h3>
+                      <p className="text-[12px] text-white/30 leading-relaxed mb-3">{card.desc}</p>
+                      <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${iconText[card.color]} group-hover:gap-2.5 transition-all`}>
+                        Comenzar <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <h2 id="about-withmia" className="text-lg font-bold text-white mb-4 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> Sobre WITHMIA
+              </h2>
+              <div className="text-[14px] text-white/35 leading-relaxed space-y-4 mb-12 p-5 rounded-xl border border-white/[0.04] bg-white/[0.015]">
+                <p>WITHMIA es una plataforma de comunicación omnicanal que combina inteligencia artificial con automatización para transformar cómo las empresas se conectan con sus clientes.</p>
+                <p>Conecta WhatsApp, Instagram, Messenger, Email y Chat Web en un solo inbox inteligente. La IA de WITHMIA responde automáticamente, clasifica conversaciones y sugiere respuestas a tus agentes — todo sin necesidad de código.</p>
+                <p>Para developers, WITHMIA ofrece una API REST completa, SDKs oficiales en Node.js, Python y PHP, webhooks en tiempo real y compatibilidad con n8n y Zapier.</p>
+              </div>
+
+              <h2 id="resources" className="text-lg font-bold text-white mb-5 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> Recursos adicionales
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-3 mb-8">
+                {[
+                  { icon: Terminal, title: "API Reference", desc: "Endpoints y parámetros", href: "/api", color: "#22d3ee" },
+                  { icon: Globe, title: "Status Page", desc: "Estado de la plataforma", href: "#", color: "#34d399", ext: true },
+                  { icon: Sparkles, title: "Changelog", desc: "Nuevas features", href: "#", color: "#a78bfa" },
+                  { icon: MessageSquare, title: "Comunidad", desc: "Preguntas y feedback", href: "#", color: "#f472b6", ext: true },
+                ].map(res => (
+                  <a key={res.title} href={res.href} target={res.ext ? "_blank" : undefined} rel={res.ext ? "noopener noreferrer" : undefined}
+                    className="flex items-start gap-3 p-4 rounded-xl border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-300 group">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${res.color}10`, border: `1px solid ${res.color}20` }}>
+                      <res.icon className="w-4 h-4" style={{ color: res.color }} />
+                    </div>
+                    <div>
+                      <h4 className="text-[13px] font-semibold text-white/60 group-hover:text-white/80 transition-colors flex items-center gap-1.5">
+                        {res.title} {res.ext && <ExternalLink className="w-3 h-3 text-white/15" />}
+                      </h4>
+                      <p className="text-[11px] text-white/25 mt-0.5">{res.desc}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ────── QUICKSTART PAGE ────── */}
+          {activePage === "quickstart" && (
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
+                  <Rocket className="w-4 h-4 text-amber-400" />
+                </div>
+                <span className="flex items-center gap-1 text-[11px] text-white/20"><Clock className="w-3 h-3" /> 5 min lectura</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{page.title}</h1>
+              <p className="text-[15px] text-white/40 leading-relaxed mb-10">{page.description}</p>
+
+              <h2 id="prerequisites" className="text-xl font-bold text-white mb-4 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> Prerequisitos
+              </h2>
+              <ul className="space-y-2 mb-10">
+                {["Una cuenta de WITHMIA (gratis)", "Node.js 18+ (para SDK de Node.js)", "Un canal de mensajería (WhatsApp, Instagram, etc.)"].map(item => (
+                  <li key={item} className="flex items-start gap-2.5 text-[14px] text-white/40">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400/50 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <Callout variant="tip" title="Tip">
+                Si prefieres explorar sin instalar nada, usa la API interactiva en <a href="/api" className="text-emerald-400/70 hover:text-emerald-400 underline underline-offset-2 decoration-emerald-400/20">/api</a> — puedes probar todos los endpoints desde tu navegador.
+              </Callout>
+
+              {/* Step 1 */}
+              <h2 id="step-1" className="text-xl font-bold text-white mb-3 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> 1. Crear tu cuenta
+              </h2>
+              <p className="text-[14px] text-white/40 leading-relaxed mb-6">
+                Regístrate en <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20">app.withmia.com</a> y accede al dashboard. No necesitas tarjeta de crédito.
+              </p>
+
+              {/* Step 2 */}
+              <h2 id="step-2" className="text-xl font-bold text-white mb-3 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> 2. Obtener API Key
+              </h2>
+              <p className="text-[14px] text-white/40 leading-relaxed mb-3">Ve a Configuración → API Keys y genera tu token.</p>
+              <CodeBlock code={'export WITHMIA_API_KEY="sk_live_..."'} lang="bash" />
+
+              <Callout variant="danger" title="Seguridad">
+                Guarda tu API Key de forma segura. Solo se muestra una vez. Usa variables de entorno, nunca hardcodees la key en tu código.
+              </Callout>
+
+              {/* Step 3 */}
+              <h2 id="step-3" className="text-xl font-bold text-white mb-3 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> 3. Instalar SDK
+              </h2>
+              <p className="text-[14px] text-white/40 leading-relaxed mb-3">Elige tu lenguaje favorito:</p>
+              <CodeTabs tabs={[
+                { label: "npm", lang: "bash", code: "npm install @withmia/sdk" },
+                { label: "pip", lang: "bash", code: "pip install withmia" },
+                { label: "composer", lang: "bash", code: "composer require withmia/sdk" },
+              ]} />
+
+              {/* Step 4 */}
+              <h2 id="step-4" className="text-xl font-bold text-white mb-3 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> 4. Enviar primer mensaje
+              </h2>
+              <p className="text-[14px] text-white/40 leading-relaxed mb-3">Un request y tu mensaje llega al destino:</p>
+              <CodeTabs tabs={[
+                { label: "Node.js", lang: "javascript", code: "import { Withmia } from '@withmia/sdk';\n\nconst withmia = new Withmia(process.env.WITHMIA_API_KEY);\n\nawait withmia.messages.send({\n  channel: 'whatsapp',\n  to: '+56912345678',\n  text: 'Hola desde WITHMIA 🚀'\n});" },
+                { label: "Python", lang: "python", code: "from withmia import Withmia\n\nclient = Withmia(os.environ['WITHMIA_API_KEY'])\n\nclient.messages.send(\n    channel='whatsapp',\n    to='+56912345678',\n    text='Hola desde WITHMIA 🚀'\n)" },
+                { label: "cURL", lang: "bash", code: "curl -X POST https://api.withmia.com/v1/messages \\\n  -H \"Authorization: Bearer $WITHMIA_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"channel\": \"whatsapp\",\n    \"to\": \"+56912345678\",\n    \"text\": \"Hola desde WITHMIA 🚀\"\n  }'" },
+              ]} />
+
+              <Callout variant="info" title="Respuesta">
+                Si todo sale bien, recibirás un JSON con el message_id y status "queued". El estado cambiará a "sent" cuando WhatsApp confirme la entrega.
+              </Callout>
+
+              {/* Next steps */}
+              <h2 id="next-steps" className="text-xl font-bold text-white mb-4 flex items-center gap-2 scroll-mt-32">
+                <Hash className="w-4 h-4 text-white/15" /> Próximos pasos
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-3 mb-8">
+                {[
+                  { title: "Configura tu asistente IA", link: "ai-assistant" },
+                  { title: "Conecta WhatsApp", link: "whatsapp" },
+                  { title: "Explora la API", link: "api-auth" },
+                  { title: "Configura Webhooks", link: "api-webhooks" },
+                ].map(ns => (
+                  <button key={ns.title} onClick={() => navigateTo(ns.link)} className="text-left p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-amber-500/15 transition-all group">
+                    <span className="text-[13px] font-medium text-white/60 group-hover:text-white/80 flex items-center gap-2">
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-400/60" /> {ns.title}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
+          )}
 
-            {/* SDK badges */}
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {sdkBadges.map((sdk) => (
-                <div
-                  key={sdk.name}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02]"
-                >
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: sdk.color }}
-                  />
-                  <span className="text-[12px] font-medium text-white/50">{sdk.name}</span>
-                  <span className="text-[10px] font-mono text-white/20">{sdk.version}</span>
+          {/* ────── RICH CONTENT PAGES ────── */}
+          {activePage !== "welcome" && activePage !== "quickstart" && blocks && (
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-amber-400" />
                 </div>
-              ))}
+                {page.readTime && (
+                  <span className="flex items-center gap-1 text-[11px] text-white/20"><Clock className="w-3 h-3" /> {page.readTime} lectura</span>
+                )}
+                <span className="ml-auto px-2 py-0.5 rounded-md text-[10px] font-mono font-medium text-amber-400/60 bg-amber-500/[0.06] border border-amber-500/10">v1.0</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{page.title}</h1>
+              <p className="text-[15px] text-white/40 leading-relaxed mb-8">{page.description}</p>
+              <BlockRenderer blocks={blocks} navigateTo={navigateTo} />
             </div>
-          </div>
-        </section>
+          )}
 
-        {/* ── CATEGORIES ── */}
-        <section className="py-24 border-t border-white/[0.04]">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <p className="text-xs font-semibold text-blue-400/60 uppercase tracking-widest mb-4">
-                Explora por tema
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                Documentación organizada
-              </h2>
-              <p className="text-white/40 max-w-2xl mx-auto">
-                Encuentra exactamente lo que necesitas. Cada sección incluye
-                guías, ejemplos de código y referencias detalladas.
-              </p>
-            </div>
+          {/* ────── STUB PAGES (no rich content yet) ────── */}
+          {activePage !== "welcome" && activePage !== "quickstart" && !blocks && (
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                </div>
+                {page.readTime && (
+                  <span className="flex items-center gap-1 text-[11px] text-white/20"><Clock className="w-3 h-3" /> {page.readTime} lectura</span>
+                )}
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{page.title}</h1>
+              <p className="text-[15px] text-white/40 leading-relaxed mb-8">{page.description}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {categories.map((cat, i) => (
-                <div
-                  key={i}
-                  className="group relative p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 cursor-pointer"
-                >
-                  {/* Tag */}
-                  <div className="absolute top-4 right-4">
-                    <span
-                      className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                      style={{
-                        color: `${cat.color}90`,
-                        backgroundColor: `${cat.color}10`,
-                        border: `1px solid ${cat.color}15`,
-                      }}
-                    >
-                      {cat.tag}
-                    </span>
-                  </div>
-
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300"
-                    style={{
-                      backgroundColor: `${cat.color}12`,
-                      border: `1px solid ${cat.color}20`,
-                    }}
-                  >
-                    <cat.icon className="w-5 h-5" style={{ color: cat.color }} />
-                  </div>
-
-                  <h3 className="text-base font-semibold text-white mb-2 group-hover:text-white/90">
-                    {cat.title}
-                  </h3>
-                  <p className="text-[13px] text-white/30 leading-relaxed mb-4">
-                    {cat.desc}
+              {page.toc.map((t, i) => (
+                <div key={t.id}>
+                  <h2 id={t.id} className="text-xl font-bold text-white mb-4 mt-10 first:mt-0 flex items-center gap-2 scroll-mt-32">
+                    <Hash className="w-4 h-4 text-white/15" />
+                    {t.label}
+                  </h2>
+                  <p className="text-[14px] text-white/35 leading-relaxed mb-4">
+                    {i === 0
+                      ? `En esta sección cubrimos ${t.label.toLowerCase()} dentro del contexto de ${page.title}. WITHMIA ofrece una interfaz intuitiva y una API completa para configurar esta funcionalidad.`
+                      : `Aquí encontrarás información detallada sobre ${t.label.toLowerCase()}. Consulta nuestra guía paso a paso y los ejemplos de código para implementar esta funcionalidad rápidamente.`
+                    }
                   </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-white/20">
-                      {cat.articles} artículos
-                    </span>
-                    <ChevronRight
-                      className="w-4 h-4 text-white/15 group-hover:text-white/40 group-hover:translate-x-0.5 transition-all"
-                    />
-                  </div>
+                  {i === 0 && (
+                    <Callout variant="info" title="En desarrollo">
+                      La documentación detallada de esta sección se está ampliando. Para consultas específicas,{" "}
+                      <a href="/contacto" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 decoration-cyan-400/20">contacta a nuestro equipo</a>.
+                    </Callout>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        </section>
+          )}
 
-        {/* ── QUICK START ── */}
-        <section className="py-24 border-t border-white/[0.04]">
-          <div className="max-w-5xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <p className="text-xs font-semibold text-blue-400/60 uppercase tracking-widest mb-4">
-                Empieza aquí
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                Quick Start
-              </h2>
-              <p className="text-white/40 max-w-xl mx-auto">
-                De cero a tu primer mensaje en menos de 5 minutos.
-                Sigue estos 4 pasos y estarás listo.
-              </p>
+          {/* ────── BOTTOM: Feedback + Prev/Next + Meta ────── */}
+          <div className="max-w-3xl mt-12 pt-6 border-t border-white/[0.04]">
+            <FeedbackWidget pageId={activePage} />
+
+            {/* Prev / Next */}
+            <div className="flex items-stretch gap-4 mt-4">
+              {prevPage ? (
+                <button onClick={() => navigateTo(prevPage)} className="flex-1 text-left p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all group">
+                  <span className="text-[10px] text-white/20 uppercase tracking-wider">Anterior</span>
+                  <span className="flex items-center gap-2 mt-1 text-[14px] font-medium text-white/50 group-hover:text-white/80 transition-colors">
+                    <ArrowLeft className="w-3.5 h-3.5 text-white/25" />
+                    {pages[prevPage]?.title}
+                  </span>
+                </button>
+              ) : <div className="flex-1" />}
+
+              {nextPage ? (
+                <button onClick={() => navigateTo(nextPage)} className="flex-1 text-right p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all group">
+                  <span className="text-[10px] text-white/20 uppercase tracking-wider">Siguiente</span>
+                  <span className="flex items-center justify-end gap-2 mt-1 text-[14px] font-medium text-white/50 group-hover:text-white/80 transition-colors">
+                    {pages[nextPage]?.title}
+                    <ArrowRight className="w-3.5 h-3.5 text-white/25" />
+                  </span>
+                </button>
+              ) : <div className="flex-1" />}
             </div>
 
-            <div className="space-y-4">
-              {quickStartSteps.map((step, i) => (
-                <div
-                  key={i}
-                  className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.03] hover:border-white/[0.1] transition-all duration-500 overflow-hidden"
-                >
-                  <div className="flex flex-col md:flex-row">
-                    {/* Left: Info */}
-                    <div className="flex-1 p-6 md:p-8 flex items-start gap-5">
-                      <div className="shrink-0 w-10 h-10 rounded-xl bg-blue-500/[0.08] border border-blue-500/15 flex items-center justify-center">
-                        <span className="text-[13px] font-bold font-mono text-blue-400/70">
-                          {step.step}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-white mb-1.5">
-                          {step.title}
-                        </h3>
-                        <p className="text-[13px] text-white/35 leading-relaxed">
-                          {step.desc}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Right: Code */}
-                    {step.code && (
-                      <div className="md:w-[55%] bg-[#08080e] border-t md:border-t-0 md:border-l border-white/[0.04] p-5 md:p-6 flex items-center">
-                        <pre className="text-[11px] md:text-[12px] text-white/45 leading-[1.8] font-mono overflow-x-auto w-full">
-                          <code>{step.code}</code>
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            {/* Meta */}
+            <div className="flex items-center justify-between mt-6 text-[11px] text-white/15">
+              <span>Última actualización: {page.lastUpdated}</span>
+              <div className="flex items-center gap-4">
+                <a href="#" className="flex items-center gap-1.5 text-white/15 hover:text-white/40 transition-colors">
+                  <FileText className="w-3 h-3" /> Editar esta página
+                </a>
+                <a href="/contacto" className="flex items-center gap-1.5 text-white/20 hover:text-amber-400/70 transition-colors">
+                  ¿Necesitas ayuda? <ArrowUpRight className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
-        </section>
+        </main>
 
-        {/* ── POPULAR ARTICLES ── */}
-        <section className="py-24 border-t border-white/[0.04]">
-          <div className="max-w-5xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <p className="text-xs font-semibold text-blue-400/60 uppercase tracking-widest mb-4">
-                Más leídos
-              </p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                Artículos populares
-              </h2>
-              <p className="text-white/40 max-w-xl mx-auto">
-                Los artículos más consultados por nuestra comunidad de developers.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {popularArticles.map((article, i) => (
-                <div
-                  key={i}
-                  className="group p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-400 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span
-                      className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                      style={{
-                        color: `${article.color}90`,
-                        backgroundColor: `${article.color}10`,
-                        border: `1px solid ${article.color}15`,
-                      }}
-                    >
-                      {article.category}
-                    </span>
-                    <span className="text-[10px] text-white/15 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {article.readTime}
-                    </span>
-                  </div>
-                  <h3 className="text-[14px] font-medium text-white/70 group-hover:text-white/90 leading-snug transition-colors">
-                    {article.title}
-                  </h3>
-                  <div className="mt-3 flex items-center gap-1 text-[11px] text-white/20 group-hover:text-blue-400/60 transition-colors">
-                    Leer artículo
-                    <ArrowRight className="w-3 h-3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── RESOURCES BAR ── */}
-        <section className="py-20 border-t border-white/[0.04]">
-          <div className="max-w-5xl mx-auto px-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  icon: Terminal,
-                  title: "API Reference",
-                  desc: "Endpoints, parámetros y respuestas",
-                  href: "/api",
-                  color: "#22d3ee",
-                },
-                {
-                  icon: Globe,
-                  title: "Status Page",
-                  desc: "Estado en tiempo real de la API",
-                  href: "https://status.withmia.com",
-                  color: "#34d399",
-                  external: true,
-                },
-                {
-                  icon: Sparkles,
-                  title: "Changelog",
-                  desc: "Nuevas features y actualizaciones",
-                  href: "#",
-                  color: "#a78bfa",
-                },
-                {
-                  icon: MessageSquare,
-                  title: "Comunidad",
-                  desc: "Preguntas, ideas y feedback",
-                  href: "https://app.withmia.com/community",
-                  color: "#f472b6",
-                  external: true,
-                },
-              ].map((res, i) => (
+        {/* ═══ RIGHT TOC SIDEBAR ═══ */}
+        <aside className="hidden xl:block w-[220px] shrink-0 sticky top-24 h-[calc(100vh-96px)] overflow-y-auto py-8 pr-4">
+          <div className="pl-4 border-l border-white/[0.04]">
+            <p className="text-[11px] text-white/25 uppercase tracking-widest font-semibold mb-4">
+              En esta página
+            </p>
+            <nav className="space-y-1">
+              {page.toc.map(t => (
                 <a
-                  key={i}
-                  href={res.href}
-                  target={res.external ? "_blank" : undefined}
-                  rel={res.external ? "noopener noreferrer" : undefined}
-                  className="group flex items-start gap-4 p-5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-400"
+                  key={t.id}
+                  href={`#${t.id}`}
+                  className={`block text-[12px] py-1 leading-snug transition-colors ${
+                    activeTocId === t.id
+                      ? "text-amber-400 font-medium"
+                      : "text-white/30 hover:text-white/60"
+                  }`}
                 >
-                  <div
-                    className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
-                    style={{
-                      backgroundColor: `${res.color}10`,
-                      border: `1px solid ${res.color}18`,
-                    }}
-                  >
-                    <res.icon className="w-4 h-4" style={{ color: res.color }} />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-[13px] font-semibold text-white/70 group-hover:text-white/90 transition-colors flex items-center gap-1.5">
-                      {res.title}
-                      {res.external && <ExternalLink className="w-3 h-3 text-white/15" />}
-                    </h4>
-                    <p className="text-[11px] text-white/25 mt-0.5">{res.desc}</p>
-                  </div>
+                  {t.label}
                 </a>
               ))}
-            </div>
-          </div>
-        </section>
+            </nav>
 
-        {/* ── CTA ── */}
-        <section className="py-24 border-t border-white/[0.04]">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/[0.08] border border-blue-500/15 flex items-center justify-center mx-auto mb-8">
-              <BookOpen className="w-7 h-7 text-blue-400/70" />
-            </div>
-
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">
-              ¿No encuentras lo que buscas?
-            </h2>
-            <p className="text-white/40 mb-10 max-w-xl mx-auto">
-              Nuestro equipo de soporte técnico está disponible para ayudarte
-              con cualquier duda sobre la integración.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href="https://app.withmia.com/support"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold transition-all duration-300 hover:shadow-[0_0_40px_rgba(59,130,246,0.15)] hover:-translate-y-px"
-              >
-                Contactar soporte
-                <ArrowRight className="w-4 h-4" />
+            <div className="mt-8 pt-4 border-t border-white/[0.04] space-y-2">
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-amber-400/60 transition-colors">
+                <Sparkles className="w-3 h-3" /> Chat con soporte IA
               </a>
-              <a
-                href="/api"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/[0.1] text-white/70 hover:text-white hover:border-white/[0.2] font-medium transition-all duration-300"
-              >
-                <Code className="w-4 h-4" />
-                API Reference
+              <a href="/contacto" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors">
+                <Headphones className="w-3 h-3" /> Contactar soporte
               </a>
             </div>
           </div>
-        </section>
+        </aside>
+      </div>
 
-      </main>
       <Footer />
     </div>
   );

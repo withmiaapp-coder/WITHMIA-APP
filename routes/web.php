@@ -39,14 +39,14 @@ Route::get('/', function () {
         }
         return view('transition', ['redirect' => '/onboarding']);
     }
-    return response()->file(public_path('login.html'));
+    return view('login');
 });
 
 Route::get('/login', function () {
     if (Auth::check()) {
         return view('transition', ['redirect' => '/onboarding']);
     }
-    return response()->file(public_path('login.html'));
+    return view('login');
 })->name('login');
 
 Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
@@ -84,13 +84,19 @@ Route::get('/transition-login', function () {
 Route::get('/transition-to-onboarding', function () {
     if (!Auth::check()) {
         Log::error('transition-to-onboarding: User not authenticated after login!');
-        return response()->file(public_path('login.html'));
+        return view('login');
     }
     return view('transition', ['redirect' => '/onboarding']);
 })->name('transition.onboarding');
 
 Route::get('/auth-loading', function (Request $request) {
     $redirect = $request->query('redirect', '/login');
+
+    // SECURITY: Prevent open redirect — only allow relative paths (no scheme, no //)
+    if (!is_string($redirect) || !str_starts_with($redirect, '/') || str_starts_with($redirect, '//')) {
+        $redirect = '/login';
+    }
+
     return view('auth-loading', ['redirect' => $redirect]);
 })->name('auth.loading');
 
@@ -115,7 +121,13 @@ Route::get('/terms', fn () => view('legal.terms'))->name('terms');
 Route::get('/data-deletion', fn () => view('legal.data-deletion'))->name('data-deletion');
 Route::post('/data-deletion', function (Request $request) {
     // Facebook sends signed_request for data deletion callback
-    Log::info('Data deletion request received', $request->all());
+    $signedRequest = $request->input('signed_request');
+    if (!$signedRequest) {
+        Log::warning('Data deletion request missing signed_request');
+        return response()->json(['error' => 'Missing signed_request'], 400);
+    }
+
+    Log::info('Data deletion request received', ['has_signed_request' => true]);
     return response()->json([
         'url' => url('/data-deletion'),
         'confirmation_code' => \Illuminate\Support\Str::uuid()->toString(),
@@ -153,7 +165,7 @@ Route::get('/plugins/withmia-for-woocommerce/download', function () {
     $zip->close();
 
     return response()->download($zipPath, 'withmia-for-woocommerce.zip')->deleteFileAfterSend(true);
-})->name('plugins.woocommerce.download');
+})->middleware('throttle:5,1')->name('plugins.woocommerce.download');
 
 // ============================================================================
 // 5e. WITHMIA CHATWEB PLUGIN DOWNLOAD
@@ -186,7 +198,7 @@ Route::get('/plugins/withmia-chatweb/download', function () {
     $zip->close();
 
     return response()->download($zipPath, 'withmia-chatweb.zip')->deleteFileAfterSend(true);
-})->name('plugins.chatweb.download');
+})->middleware('throttle:5,1')->name('plugins.chatweb.download');
 
 // ============================================================================
 // 6. ONBOARDING
@@ -201,7 +213,7 @@ Route::post('/api/improve-description', [OnboardingController::class, 'improveDe
 
 Route::get('/onboarding', function (Request $request) {
     if (!Auth::check()) {
-        return response()->file(public_path('login.html'));
+        return view('login');
     }
     $user = Auth::user();
     if ($user->company_slug && $user->onboarding_completed) {

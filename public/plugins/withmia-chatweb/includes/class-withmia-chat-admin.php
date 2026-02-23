@@ -42,14 +42,22 @@ class Withmia_Chat_Admin {
         register_setting('withmia_chat_settings', 'withmia_chat_base_url', ['sanitize_callback' => 'esc_url_raw']);
 
         // Appearance settings
-        register_setting('withmia_chat_settings', 'withmia_chat_position');
+        register_setting('withmia_chat_settings', 'withmia_chat_position', [
+            'sanitize_callback' => function ($val) { return in_array($val, ['left', 'right'], true) ? $val : 'right'; },
+        ]);
         register_setting('withmia_chat_settings', 'withmia_chat_color', ['sanitize_callback' => 'sanitize_hex_color']);
-        register_setting('withmia_chat_settings', 'withmia_chat_dark_theme');
+        register_setting('withmia_chat_settings', 'withmia_chat_dark_theme', [
+            'sanitize_callback' => 'absint',
+        ]);
         register_setting('withmia_chat_settings', 'withmia_chat_launcher_text', ['sanitize_callback' => 'sanitize_text_field']);
-        register_setting('withmia_chat_settings', 'withmia_chat_language');
+        register_setting('withmia_chat_settings', 'withmia_chat_language', [
+            'sanitize_callback' => function ($val) { return in_array($val, ['es','en','pt','fr','de'], true) ? $val : 'es'; },
+        ]);
 
         // Behavior settings
-        register_setting('withmia_chat_settings', 'withmia_chat_show_on_mobile');
+        register_setting('withmia_chat_settings', 'withmia_chat_show_on_mobile', [
+            'sanitize_callback' => 'absint',
+        ]);
         register_setting('withmia_chat_settings', 'withmia_chat_exclude_pages', ['sanitize_callback' => 'sanitize_textarea_field']);
     }
 
@@ -318,7 +326,7 @@ class Withmia_Chat_Admin {
                                 </label>
                                 <br><br>
                                 <button type="button" class="button button-link-delete" id="withmia_disconnect_btn" disabled
-                                        onclick="if(confirm('¿Estás seguro? El chat desaparecerá de tu sitio.')){document.getElementById('withmia_chat_website_token').value='';document.getElementById('withmia_chat_base_url').value='';this.form.submit();}">
+                                        onclick="if(confirm('¿Estás seguro? El chat desaparecerá de tu sitio.')){document.getElementById('withmia_chat_website_token_hidden').value='';document.getElementById('withmia_chat_base_url_hidden').value='';this.form.submit();}">
                                     Desconectar widget
                                 </button>
                                 <input type="hidden" name="withmia_chat_website_token" id="withmia_chat_website_token_hidden" value="<?php echo esc_attr($token); ?>">

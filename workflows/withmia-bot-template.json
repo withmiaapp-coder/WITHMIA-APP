@@ -2,7 +2,7 @@
     "updatedAt": "2026-02-05T20:32:18.383Z",
     "createdAt": "2026-01-28T01:57:04.485Z",
     "id": "C1mhxAWt67pfg3BC",
-    "name": "WITHMIA Bot - withmia-evp7rj",
+    "name": "WITHMIA Bot - {{INSTANCE_NAME}}",
     "description": null,
     "active": true,
     "isArchived": false,
@@ -10,7 +10,7 @@
         {
             "parameters": {
                 "httpMethod": "POST",
-                "path": "withmia-evp7rj",
+                "path": "{{INSTANCE_NAME}}",
                 "options": {}
             },
             "type": "n8n-nodes-base.webhook",
@@ -94,7 +94,7 @@
         },
         {
             "parameters": {
-                "url": "={{($json.inbox?.name || $json.body?.inbox?.name) ? 'https://app.withmia.com/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.inbox?.name || $json.body?.inbox?.name) : 'https://app.withmia.com/api/n8n/company-config/withmia-evp7rj'}}",
+                "url": "={{($json.inbox?.name || $json.body?.inbox?.name) ? '{{APP_URL}}/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.inbox?.name || $json.body?.inbox?.name) : '{{APP_URL}}/api/n8n/company-config/{{INSTANCE_NAME}}'}}",
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
@@ -119,13 +119,13 @@
                         {
                             "id": "instance-name",
                             "name": "instance.name",
-                            "value": "={{ $json.evolution_instance_name || 'withmia-evp7rj' }}",
+                            "value": "={{ $json.evolution_instance_name || '{{INSTANCE_NAME}}' }}",
                             "type": "string"
                         },
                         {
                             "id": "instance-apikey",
                             "name": "instance.apikey",
-                            "value": "={{ $json.evolution_api_key || 'withmia_evo_2026_xK9mP2vL8nQr4tYw' }}",
+                            "value": "={{ $json.evolution_api_key || '{{EVOLUTION_API_KEY}}' }}",
                             "type": "string"
                         },
                         {
@@ -185,7 +185,7 @@
                         {
                             "id": "config-collection-name",
                             "name": "config.collection_name",
-                            "value": "={{ $json.collection_name || 'company_withmia-evp7rj_knowledge' }}",
+                            "value": "={{ $json.collection_name || 'company_{{COMPANY_SLUG}}_knowledge' }}",
                             "type": "string"
                         },
                         {
@@ -197,7 +197,7 @@
                         {
                             "id": "chatwoot-api-token",
                             "name": "chatwoot.api_token",
-                            "value": "={{ $json.chatwoot_api_token || 'LsgCRFINz50YWZ9PrNDQj2Be' }}",
+                            "value": "={{ $json.chatwoot_api_token || '{{CHATWOOT_API_TOKEN}}' }}",
                             "type": "string"
                         },
                         {
@@ -303,7 +303,7 @@
         {
             "parameters": {
                 "sessionIdType": "customKey",
-                "sessionKey": "=company_withmia-evp7rj_{{ $('Normalize Data').item.json.message.chat_id }}",
+                "sessionKey": "=company_{{COMPANY_SLUG}}_{{ $('Normalize Data').item.json.message.chat_id }}",
                 "contextWindowLength": 100,
                 "sessionTTL": 0
             },
@@ -404,13 +404,13 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "https://app.withmia.com/api/n8n/notify-response",
+                "url": "{{APP_URL}}/api/n8n/notify-response",
                 "sendBody": true,
                 "bodyParameters": {
                     "parameters": [
                         {
                             "name": "company_slug",
-                            "value": "withmia-evp7rj"
+                            "value": "{{INSTANCE_NAME}}"
                         },
                         {
                             "name": "conversation_id",
@@ -1652,7 +1652,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "=https://chatwoot-production-50cc.up.railway.app/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
+                "url": "={{CHATWOOT_URL}}/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
@@ -1747,7 +1747,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "=https://chatwoot-production-50cc.up.railway.app/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
+                "url": "={{CHATWOOT_URL}}/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
@@ -2968,7 +2968,7 @@
             {
                 "parameters": {
                     "httpMethod": "POST",
-                    "path": "withmia-evp7rj",
+                    "path": "{{INSTANCE_NAME}}",
                     "options": {}
                 },
                 "type": "n8n-nodes-base.webhook",
@@ -3052,7 +3052,7 @@
             },
             {
                 "parameters": {
-                    "url": "={{($json.inbox?.name || $json.body?.inbox?.name) ? 'https://app.withmia.com/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.inbox?.name || $json.body?.inbox?.name) : 'https://app.withmia.com/api/n8n/company-config/withmia-evp7rj'}}",
+                    "url": "={{($json.inbox?.name || $json.body?.inbox?.name) ? '{{APP_URL}}/api/n8n/company-config-by-inbox/' + encodeURIComponent($json.inbox?.name || $json.body?.inbox?.name) : '{{APP_URL}}/api/n8n/company-config/{{INSTANCE_NAME}}'}}",
                     "options": {}
                 },
                 "type": "n8n-nodes-base.httpRequest",
@@ -3077,13 +3077,13 @@
                             {
                                 "id": "instance-name",
                                 "name": "instance.name",
-                                "value": "={{ $json.evolution_instance_name || 'withmia-evp7rj' }}",
+                                "value": "={{ $json.evolution_instance_name || '{{INSTANCE_NAME}}' }}",
                                 "type": "string"
                             },
                             {
                                 "id": "instance-apikey",
                                 "name": "instance.apikey",
-                                "value": "={{ $json.evolution_api_key || 'withmia_evo_2026_xK9mP2vL8nQr4tYw' }}",
+                                "value": "={{ $json.evolution_api_key || '{{EVOLUTION_API_KEY}}' }}",
                                 "type": "string"
                             },
                             {
@@ -3143,7 +3143,7 @@
                             {
                                 "id": "config-collection-name",
                                 "name": "config.collection_name",
-                                "value": "={{ $json.collection_name || 'company_withmia-evp7rj_knowledge' }}",
+                                "value": "={{ $json.collection_name || 'company_{{COMPANY_SLUG}}_knowledge' }}",
                                 "type": "string"
                             },
                             {
@@ -3155,7 +3155,7 @@
                             {
                                 "id": "chatwoot-api-token",
                                 "name": "chatwoot.api_token",
-                                "value": "={{ $json.chatwoot_api_token || 'LsgCRFINz50YWZ9PrNDQj2Be' }}",
+                                "value": "={{ $json.chatwoot_api_token || '{{CHATWOOT_API_TOKEN}}' }}",
                                 "type": "string"
                             },
                             {
@@ -3261,7 +3261,7 @@
             {
                 "parameters": {
                     "sessionIdType": "customKey",
-                    "sessionKey": "=company_withmia-evp7rj_{{ $('Normalize Data').item.json.message.chat_id }}",
+                    "sessionKey": "=company_{{COMPANY_SLUG}}_{{ $('Normalize Data').item.json.message.chat_id }}",
                     "contextWindowLength": 100,
                     "sessionTTL": 0
                 },
@@ -3362,13 +3362,13 @@
             {
                 "parameters": {
                     "method": "POST",
-                    "url": "https://app.withmia.com/api/n8n/notify-response",
+                    "url": "{{APP_URL}}/api/n8n/notify-response",
                     "sendBody": true,
                     "bodyParameters": {
                         "parameters": [
                             {
                                 "name": "company_slug",
-                                "value": "withmia-evp7rj"
+                                "value": "{{INSTANCE_NAME}}"
                             },
                             {
                                 "name": "conversation_id",
@@ -4610,7 +4610,7 @@
             {
                 "parameters": {
                     "method": "POST",
-                    "url": "=https://chatwoot-production-50cc.up.railway.app/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
+                    "url": "={{CHATWOOT_URL}}/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
                     "sendHeaders": true,
                     "headerParameters": {
                         "parameters": [
@@ -4705,7 +4705,7 @@
             {
                 "parameters": {
                     "method": "POST",
-                    "url": "=https://chatwoot-production-50cc.up.railway.app/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
+                    "url": "={{CHATWOOT_URL}}/api/v1/accounts/{{ $('Normalize Data').item.json.chatwoot.account_id }}/conversations/{{ $('Normalize Data').item.json.conversation.id }}/messages",
                     "sendHeaders": true,
                     "headerParameters": {
                         "parameters": [

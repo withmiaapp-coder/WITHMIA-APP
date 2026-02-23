@@ -47,7 +47,12 @@ return new class extends Migration
 
     public function down(): void
     {
-        // These tables can be recreated from their original migrations if needed
-        // Not recreating in down() as they were confirmed empty and unused
+        // Intentionally irreversible: all dropped tables had 0 rows and no code references.
+        // If needed, recreate them from their original migrations.
+        // Spatie tables: roles, permissions, model_has_roles, model_has_permissions, role_has_permissions
+        // App tables: ai_agents, usage_metrics, subscriptions, custom_configs, integrations, agent_invitations
+        throw new \RuntimeException(
+            'Cannot reverse drop_unused_tables: recreate from original migrations if needed.'
+        );
     }
 };

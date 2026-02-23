@@ -24,6 +24,7 @@ import {
   Info
 } from 'lucide-react';
 import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
+import type { Agent } from '@/types/chatwoot';
 import { usePermissions } from '../hooks/usePermissions';
 import MembersManagement from './MembersManagement';
 
@@ -151,7 +152,7 @@ const AddMembersModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onAdd: (userIds: number[]) => Promise<void>;
-  availableAgents: any[];
+  availableAgents: Agent[];
   currentMemberIds: number[];
   loading?: boolean;
 }> = ({ isOpen, onClose, onAdd, availableAgents, currentMemberIds, loading }) => {
@@ -326,8 +327,8 @@ const InviteMemberModal: React.FC<{
       setTimeout(() => {
         onClose();
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Error al enviar invitación');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al enviar invitación');
     } finally {
       setSaving(false);
     }

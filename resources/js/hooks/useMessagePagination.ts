@@ -7,7 +7,7 @@ interface Message {
   created_at: number | string;
   message_type: number | string;
   sender?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UseMessagePaginationOptions {

@@ -21,14 +21,9 @@ return [
     'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
 
     // Database connection
+    // NOTA: La conexión real está en config/database.php 'chatwoot'. Estos valores
+    // se mantienen solo como referencia; usar DB::connection('chatwoot') directamente.
     'database_url' => env('CHATWOOT_DATABASE_URL'),
-    'db' => [
-        'host' => env('CHATWOOT_DB_HOST'),
-        'port' => env('CHATWOOT_DB_PORT', '5432'),
-        'database' => env('CHATWOOT_DB_DATABASE', 'chatwoot'),
-        'username' => env('CHATWOOT_DB_USERNAME'),
-        'password' => env('CHATWOOT_DB_PASSWORD'),
-    ],
 
     // Configuration
     'reopen_conversation' => env('CHATWOOT_REOPEN_CONVERSATION', true),

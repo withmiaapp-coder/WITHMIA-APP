@@ -66,8 +66,6 @@ trait HandlesOnboarding
             'role' => $user->role === 'superadmin' ? 'superadmin' : 'admin', // Preserve superadmin, promote others to admin
         ]);
 
-        $company = $this->getOrCreateCompany($user, $uniqueSlug);
-        
         if ($company->slug !== $uniqueSlug) {
             $company->update(['slug' => $uniqueSlug]);
         }

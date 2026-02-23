@@ -18,7 +18,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://app.withmia.com/logo-mia-original.png" alt="WITHMIA Logo" class="logo">
+            <img src="{{ config('app.url') }}/logo-mia-original.png" alt="WITHMIA Logo" class="logo">
             <h1 style="color: #333;">¡Estás invitado!</h1>
         </div>
         <div class="content">

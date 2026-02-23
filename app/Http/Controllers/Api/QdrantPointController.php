@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,7 @@ class QdrantPointController extends Controller
         $this->qdrantService = $qdrantService;
     }
 
-    public function getQdrantPoints(Request $request)
+    public function getQdrantPoints(Request $request): JsonResponse
     {
         try {
             $company = $this->getAuthenticatedCompany();
@@ -76,7 +77,7 @@ class QdrantPointController extends Controller
     /**
      * Get a single Qdrant point
      */
-    public function getQdrantPoint($pointId)
+    public function getQdrantPoint($pointId): JsonResponse
     {
         try {
             $company = $this->getAuthenticatedCompany();
@@ -109,7 +110,7 @@ class QdrantPointController extends Controller
     /**
      * Update a Qdrant point's payload
      */
-    public function updateQdrantPoint(Request $request, $pointId)
+    public function updateQdrantPoint(Request $request, $pointId): JsonResponse
     {
         try {
             $company = $this->getAuthenticatedCompany();
@@ -149,7 +150,7 @@ class QdrantPointController extends Controller
     /**
      * Delete a single Qdrant point
      */
-    public function deleteQdrantPoint($pointId)
+    public function deleteQdrantPoint($pointId): JsonResponse
     {
         try {
             $company = $this->getAuthenticatedCompany();
@@ -187,7 +188,7 @@ class QdrantPointController extends Controller
     /**
      * Delete multiple Qdrant points
      */
-    public function deleteQdrantPoints(Request $request)
+    public function deleteQdrantPoints(Request $request): JsonResponse
     {
         try {
             $company = $this->getAuthenticatedCompany();

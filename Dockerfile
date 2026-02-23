@@ -31,10 +31,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
        pdo_pgsql pgsql zip gd intl bcmath exif pcntl opcache sockets \
     && pecl install redis && docker-php-ext-enable redis
 
-# Static binaries: ffmpeg (BtbN GitHub mirror) + roadrunner
+# Static binaries: ffmpeg (BtbN GitHub mirror, pinned release) + roadrunner
 # Split into separate RUN for better caching; --retry for transient failures
 RUN curl -sSL --retry 3 --retry-delay 5 \
-    https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
+    https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-12-31-12-50/ffmpeg-n7.1-linux64-gpl-7.1.tar.xz \
     | tar -xJ --strip-components=2 -C /usr/local/bin/ --wildcards '*/bin/ffmpeg' '*/bin/ffprobe'
 
 RUN curl -sSL --retry 3 --retry-delay 5 \

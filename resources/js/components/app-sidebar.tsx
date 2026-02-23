@@ -26,7 +26,7 @@ const adminNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
-    const { auth } = usePage().props as any;
+    const { auth } = usePage().props as unknown as { auth: { user?: { role?: string } } };
     const isAdmin = auth?.user?.role === 'admin' || auth?.user?.role === 'superadmin';
     
     // Combina items de navegación según el rol

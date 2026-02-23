@@ -65,32 +65,30 @@ class ChatwootProvisioningService
             // 7. Crear token de acceso en Chatwoot para el usuario (CRÍTICO para API de Chatwoot)
             $accessToken = $this->createAccessToken($chatwootUserId);
 
-            // 8. Actualizar Company en Laravel
-            // chatwoot_api_key = ACCESS TOKEN del usuario (para API de Chatwoot)
-            // channel_token se guarda en chatwoot_data para Evolution API
-            $company->update([
+            // 8. Actualizar Company en Laravel (single save)
+            // chatwoot_api_key via direct assignment (not in $fillable for security)
+            $company->fill([
                 'chatwoot_account_id' => $accountId,
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_provisioned' => true,
                 'chatwoot_provisioned_at' => now(),
                 'chatwoot_data' => array_merge($company->chatwoot_data ?? [], [
-                    'channel_token' => $channelToken, // Token del channel para Evolution API
+                    'channel_token' => $channelToken,
                     'channel_id' => $channelId,
                 ])
             ]);
-            // Set chatwoot_api_key via direct assignment (not in $fillable for security)
             $company->chatwoot_api_key = $accessToken;
             $company->save();
 
-            // 9. Actualizar User en Laravel
-            $owner->update([
+            // 9. Actualizar User en Laravel (single save)
+            $owner->fill([
                 'chatwoot_agent_id' => $chatwootUserId,
                 'chatwoot_inbox_id' => $inboxId,
                 'chatwoot_agent_token' => $accessToken,
                 'chatwoot_agent_role' => 'administrator',
-                'onboarding_completed' => true
+                'onboarding_completed' => true,
             ]);
-            $owner->role = 'admin'; // El creador de la empresa siempre es admin
+            $owner->role = 'admin';
             $owner->save();
 
             $this->chatwootDb->commit();

@@ -1126,4 +1126,88 @@ class ChatwootService
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Prefetch teams and agents directly from Chatwoot DB for dashboard rendering.
+     *
+     * @return array{teams: array, agents: array}
+     */
+    public function prefetchTeamsAndAgents(int $accountId): array
+    {
+        $teams = [];
+        $agents = [];
+
+        try {
+            $chatwootDb = \Illuminate\Support\Facades\DB::connection('chatwoot');
+
+            // Teams with members
+            $rawTeams = $chatwootDb->table('teams')
+                ->where('account_id', $accountId)
+                ->select('id', 'name', 'description', 'allow_auto_assign', 'account_id')
+                ->orderBy('name')
+                ->get();
+
+            if ($rawTeams->isNotEmpty()) {
+                $teamIds = $rawTeams->pluck('id')->toArray();
+                $allMembers = $chatwootDb->table('team_members')
+                    ->join('users', 'team_members.user_id', '=', 'users.id')
+                    ->whereIn('team_members.team_id', $teamIds)
+                    ->select('team_members.team_id', 'users.id', 'users.name', 'users.display_name', 'users.email')
+                    ->get();
+
+                $allEmails = $allMembers->pluck('email')->filter()->unique()->toArray();
+                $localUsers = !empty($allEmails)
+                    ? \App\Models\User::whereIn('email', $allEmails)->get()->keyBy('email')
+                    : collect();
+
+                $membersByTeam = $allMembers->groupBy('team_id');
+
+                $teams = $rawTeams->map(function ($team) use ($membersByTeam, $localUsers) {
+                    $members = $membersByTeam->get($team->id, collect());
+                    return [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'description' => $team->description,
+                        'allow_auto_assign' => $team->allow_auto_assign,
+                        'account_id' => $team->account_id,
+                        'members' => $members->map(function ($m) use ($localUsers) {
+                            $localUser = $localUsers->get($m->email);
+                            return [
+                                'id' => $m->id,
+                                'name' => $localUser->full_name ?? $m->display_name ?? $m->name,
+                                'email' => $m->email,
+                            ];
+                        })->toArray(),
+                    ];
+                })->toArray();
+            }
+
+            // Agents
+            $chatwootAgents = $chatwootDb->table('account_users')
+                ->join('users', 'account_users.user_id', '=', 'users.id')
+                ->where('account_users.account_id', $accountId)
+                ->select('users.id', 'users.name', 'users.display_name', 'users.email', 'account_users.role', 'users.availability')
+                ->get();
+
+            $agentEmails = $chatwootAgents->pluck('email')->filter()->toArray();
+            $agentLocalUsers = !empty($agentEmails)
+                ? \App\Models\User::whereIn('email', $agentEmails)->get()->keyBy('email')
+                : collect();
+
+            $agents = $chatwootAgents->map(function ($agent) use ($agentLocalUsers) {
+                $localUser = $agentLocalUsers->get($agent->email);
+                return [
+                    'id' => $agent->id,
+                    'name' => $localUser->full_name ?? $agent->display_name ?? $agent->name,
+                    'email' => $agent->email,
+                    'role' => $agent->role,
+                    'availability_status' => $agent->availability ?? 'offline',
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            Log::error('Error prefetching teams/agents: ' . $e->getMessage());
+        }
+
+        return ['teams' => $teams, 'agents' => $agents];
+    }
 }
