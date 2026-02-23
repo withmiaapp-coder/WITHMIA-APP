@@ -47,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'utf8' => \App\Http\Middleware\ForceUtf8::class,
             'n8n.secret' => \App\Http\Middleware\ValidateN8nSecret::class,
             'webhook.hmac' => \App\Http\Middleware\ValidateWebhookSignature::class,
+            'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

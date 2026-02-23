@@ -1,33 +1,24 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
+use App\Traits\HasCompanyAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    private function getCompany(Request $request): ?Company
-    {
-        $user = $request->user();
-        if (!$user) {
-            $authToken = $request->input('auth_token') ?? $request->header('X-Railway-Auth');
-            if ($authToken) {
-                $user = \App\Models\User::where('remember_token', $authToken)->first();
-            }
-        }
-        return $user?->company;
-    }
+    use HasCompanyAccess;
 
     /**
      * List products with search, filtering, and pagination
      */
     public function index(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -102,7 +93,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -144,7 +135,7 @@ class ProductController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -162,7 +153,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -203,7 +194,7 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -222,7 +213,7 @@ class ProductController extends Controller
      */
     public function bulkDelete(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -248,7 +239,7 @@ class ProductController extends Controller
      */
     public function uploadImage(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -272,7 +263,7 @@ class ProductController extends Controller
      */
     public function categories(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }

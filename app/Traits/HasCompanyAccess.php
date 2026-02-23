@@ -3,6 +3,8 @@
 namespace App\Traits;
 
 use App\Models\Company;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 trait HasCompanyAccess
@@ -20,5 +22,20 @@ trait HasCompanyAccess
         }
 
         return $company;
+    }
+
+    /**
+     * Get company from request (supports auth user, auth_token param, and X-Railway-Auth header).
+     */
+    protected function getCompanyFromRequest(Request $request): ?Company
+    {
+        $user = $request->user();
+        if (!$user) {
+            $authToken = $request->input('auth_token') ?? $request->header('X-Railway-Auth');
+            if ($authToken) {
+                $user = User::where('remember_token', $authToken)->first();
+            }
+        }
+        return $user?->company;
     }
 }

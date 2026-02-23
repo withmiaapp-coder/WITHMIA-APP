@@ -127,6 +127,26 @@ class Company extends Model
         return $this->hasMany(Subscription::class);
     }
 
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function productIntegrations()
+    {
+        return $this->hasMany(ProductIntegration::class);
+    }
+
+    public function calendarIntegrations()
+    {
+        return $this->hasMany(CalendarIntegration::class);
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     /**
      * Get the active subscription (active or trialing).
      */

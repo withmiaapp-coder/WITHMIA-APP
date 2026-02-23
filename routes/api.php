@@ -93,24 +93,7 @@ Route::middleware('n8n.secret')->group(function () {
     Route::get('/n8n/company-config-by-inbox/{inboxName}', [N8nConfigController::class, 'companyConfigByInbox']);
     Route::post('/n8n/notify-response', [N8nConfigController::class, 'notifyResponse']);
     Route::post('/n8n/qdrant-search', [N8nConfigController::class, 'qdrantSearch']);
-    Route::post('/n8n/fix-owner-roles', function () {
-        $db = \Illuminate\Support\Facades\DB::class;
-        // Diagnose all users with companies
-        $users = \Illuminate\Support\Facades\DB::table('users')
-            ->select('users.id', 'users.name', 'users.email', 'users.role', 'users.company_slug', 'users.onboarding_completed', 'companies.id as company_id')
-            ->leftJoin('companies', 'companies.user_id', '=', 'users.id')
-            ->whereNotNull('users.company_slug')
-            ->get();
-        
-        // Fix: any user who owns a company but isn't admin
-        $fixed = \Illuminate\Support\Facades\DB::table('users')
-            ->where('role', '!=', 'admin')
-            ->whereNotNull('company_slug')
-            ->whereIn('id', \Illuminate\Support\Facades\DB::table('companies')->select('user_id'))
-            ->update(['role' => 'admin']);
-        
-        return response()->json(['fixed' => $fixed, 'users' => $users]);
-    });
+    Route::post('/n8n/fix-owner-roles', [AdminToolsController::class, 'fixOwnerRoles']);
 });
 
 // ============================================================================
@@ -141,8 +124,9 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::post('/referral', [SubscriptionController::class, 'applyReferral']);
 });
 
-// dLocal GO Webhook (no auth - external callback)
-Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhook']);
+// dLocal GO Webhook (external callback — throttled)
+Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhook'])
+    ->middleware('throttle:30,1');
 
 Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
     Route::get('/user/permissions', [UserController::class, 'permissions']);
@@ -328,14 +312,14 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::delete('/events/{eventId}', [CalendarController::class, 'deleteEvent']);
 });
 
-// Calendar Bot Access (para n8n workflows - auth via API key/webhook secret)
-Route::prefix('calendar/bot')->group(function () {
+// Calendar Bot Access (para n8n workflows - auth via n8n secret)
+Route::middleware('n8n.secret')->prefix('calendar/bot')->group(function () {
     Route::get('/availability', [CalendarController::class, 'botGetAvailability']);
     Route::post('/create-event', [CalendarController::class, 'botCreateEvent']);
 });
 
 // Calendar Hub — Endpoint UNIFICADO para n8n (consulta TODOS los calendarios conectados)
-Route::prefix('calendar-hub/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('calendar-hub/bot')->group(function () {
     Route::get('/availability', [CalendarHubController::class, 'botGetAvailability']);
     Route::post('/create-event', [CalendarHubController::class, 'botCreateEvent']);
 });
@@ -370,14 +354,14 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 });
 
 // Product Hub — Endpoint para n8n bot (buscar productos)
-Route::prefix('product-hub/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('product-hub/bot')->group(function () {
     Route::get('/search', [ProductHubController::class, 'botSearch']);
     Route::get('/catalog', [ProductHubController::class, 'botCatalog']);
     Route::post('/generate-link', [ProductHubController::class, 'botGenerateLink']);
 });
 
-// Sales — Bot endpoints (sin auth, usan company_slug)
-Route::prefix('sales/bot')->group(function () {
+// Sales — Bot endpoints (protegidos por n8n secret)
+Route::middleware('n8n.secret')->prefix('sales/bot')->group(function () {
     Route::post('/record', [SaleController::class, 'botRecord']);
     Route::patch('/update-status', [SaleController::class, 'botUpdateStatus']);
 });
@@ -397,7 +381,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::get('/events', [CalendlyController::class, 'getEvents']);
 });
 Route::get('/calendly/callback', [CalendlyController::class, 'handleCallbackGet']);
-Route::prefix('calendly/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('calendly/bot')->group(function () {
     Route::get('/availability', [CalendlyController::class, 'botGetAvailability']);
 });
 
@@ -415,7 +399,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::delete('/events/{eventId}', [OutlookCalendarController::class, 'deleteEvent']);
 });
 Route::get('/outlook/callback', [OutlookCalendarController::class, 'handleCallbackGet']);
-Route::prefix('outlook/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('outlook/bot')->group(function () {
     Route::get('/availability', [OutlookCalendarController::class, 'botGetAvailability']);
     Route::post('/create-event', [OutlookCalendarController::class, 'botCreateEvent']);
 });
@@ -433,7 +417,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::get('/bookings', [ReservoController::class, 'listBookings']);
     Route::post('/bookings', [ReservoController::class, 'createBooking']);
 });
-Route::prefix('reservo/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('reservo/bot')->group(function () {
     Route::get('/availability', [ReservoController::class, 'botGetAvailability']);
     Route::post('/create-booking', [ReservoController::class, 'botCreateBooking']);
 });
@@ -452,7 +436,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::get('/bookings', [AgendaProController::class, 'listBookings']);
     Route::post('/bookings', [AgendaProController::class, 'createBooking']);
 });
-Route::prefix('agendapro/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('agendapro/bot')->group(function () {
     Route::get('/availability', [AgendaProController::class, 'botGetAvailability']);
     Route::post('/create-booking', [AgendaProController::class, 'botCreateBooking']);
 });
@@ -472,7 +456,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::get('/appointments', [DentalinkController::class, 'listAppointments']);
     Route::post('/appointments', [DentalinkController::class, 'createAppointment']);
 });
-Route::prefix('dentalink/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('dentalink/bot')->group(function () {
     Route::get('/availability', [DentalinkController::class, 'botGetAvailability']);
     Route::post('/create-appointment', [DentalinkController::class, 'botCreateAppointment']);
 });
@@ -491,7 +475,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::get('/appointments', [MedilinkController::class, 'listAppointments']);
     Route::post('/appointments', [MedilinkController::class, 'createAppointment']);
 });
-Route::prefix('medilink/bot')->group(function () {
+Route::middleware('n8n.secret')->prefix('medilink/bot')->group(function () {
     Route::get('/availability', [MedilinkController::class, 'botGetAvailability']);
     Route::post('/create-appointment', [MedilinkController::class, 'botCreateAppointment']);
 });

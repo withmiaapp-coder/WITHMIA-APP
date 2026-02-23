@@ -135,7 +135,8 @@ class User extends Authenticatable
         'phone_country',
         'chatwoot_agent_id',
         'chatwoot_inbox_id',
-        'chatwoot_agent_token'
+        'chatwoot_agent_token',
+        'settings',
     ];
 
     /**
@@ -160,6 +161,7 @@ class User extends Authenticatable
             'whatsapp_instance_data' => 'array',
             'onboarding_completed' => 'boolean',
             'onboarding_step' => 'integer',
+            'settings' => 'array',
         ];
     }
 

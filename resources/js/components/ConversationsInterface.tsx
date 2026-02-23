@@ -64,7 +64,6 @@ import {
 } from 'lucide-react';
 import { useConversations, useLabels, labelsGlobalCache } from '../hooks/useChatwoot';
 import { useGlobalNotifications, WebSocketMessageEvent } from '../contexts/GlobalNotificationContext';
-import NotificationToast from './NotificationToast.tsx';
 import AdvancedFilters from './AdvancedFilters';
 import { useMessagePagination } from '../hooks/useMessagePagination';
 import NotificationCenter from './NotificationCenter.tsx';

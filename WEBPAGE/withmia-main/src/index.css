@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── WITHMIA Dark Premium Design System ── */
+
+@layer base {
+  :root {
+    --background: 230 40% 6%;
+    --foreground: 0 0% 95%;
+
+    --card: 230 40% 6%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 230 40% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 43 96% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 261 100% 65%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 230 30% 14%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 199 100% 62%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 230 25% 18%;
+    --input: 230 25% 18%;
+    --ring: 261 100% 65%;
+
+    --radius: 0.75rem;
+
+    /* WITHMIA gradients — dark blue theme */
+    --gradient-primary: linear-gradient(135deg, hsl(43, 96%, 56%), hsl(36, 100%, 50%));
+    --gradient-purple: linear-gradient(135deg, hsl(261, 100%, 65%), hsl(279, 100%, 76%));
+    --gradient-bg: radial-gradient(76vw 76vw at 12% 18%, rgba(200,140,255,.14) 0%, rgba(200,140,255,.06) 50%, transparent 70%),
+                   radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.20) 0%, transparent 55%),
+                   radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.16) 0%, transparent 55%),
+                   radial-gradient(35vw 35vw at 85% 8%, rgba(200,140,255,.10) 0%, transparent 55%),
+                   radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.14) 0%, transparent 60%),
+                   radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.10) 0%, transparent 60%);
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+    --shadow-medium: 0 6px 16px -3px rgb(0 0 0 / 0.1), 0 3px 6px -3px rgb(0 0 0 / 0.05);
+    --shadow-soft: 0 2px 8px rgb(0 0 0 / 0.06);
+    --shadow-elegant: 0 8px 30px rgb(0 0 0 / 0.08);
+    --shadow-glow: 0 0 20px hsl(43 96% 56% / 0.2);
+    --shadow-purple: 0 4px 20px rgba(139, 92, 246, 0.2);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image: var(--gradient-bg);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+/* ── Utility classes ── */
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-purple);
+  }
+  .glass-card {
+    @apply backdrop-blur-xl border border-white/[0.08];
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.2);
+  }
+  .glass-card-strong {
+    @apply backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+  }
+  .shimmer-border {
+    position: relative;
+  }
+  .shimmer-border::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, rgba(255,215,0,0.5), rgba(255,165,0,0.3), rgba(255,255,0,0.4), rgba(255,215,0,0.5));
+    background-size: 300% 300%;
+    border-radius: inherit;
+    z-index: -1;
+    animation: borderShimmer 6s ease-in-out infinite;
+  }
+}
+
+/* ── Animations ── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes chartPulse {
+  0%   { opacity: 0; }
+  50%  { opacity: 0.15; }
+  100% { opacity: 0; }
+}
+@keyframes borderShimmer {
+  0%   { filter: hue-rotate(0deg) brightness(1); }
+  25%  { filter: hue-rotate(90deg) brightness(1.05); }
+  50%  { filter: hue-rotate(180deg) brightness(1.02); }
+  75%  { filter: hue-rotate(270deg) brightness(1.05); }
+  100% { filter: hue-rotate(360deg) brightness(1); }
+}
+@keyframes gasMovement {
+  0%   { transform: translateX(0px) translateY(0px) rotate(0deg); }
+  20%  { transform: translateX(25px) translateY(15px) rotate(5deg) scale(1.1); }
+  40%  { transform: translateX(-15px) translateY(30px) rotate(-3deg) scale(1.2); }
+  60%  { transform: translateX(35px) translateY(-10px) rotate(8deg) scale(0.9); }
+  80%  { transform: translateX(-20px) translateY(25px) rotate(-5deg) scale(1.15); }
+  100% { transform: translateX(0px) translateY(0px) rotate(0deg); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out both;
+}
+.animate-chart-pulse {
+  animation: chartPulse 2.5s ease-in-out infinite;
+}
+.animate-gas {
+  animation: gasMovement 20s ease-in-out infinite;
+}
+
+@keyframes scrollX {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+@keyframes hubDashFlow {
+  to { stroke-dashoffset: -9; }
+}
+@keyframes networkPulse {
+  0%, 100% { r: 3; opacity: 0.12; }
+  50% { r: 5; opacity: 0.25; }
+}
+@keyframes dataParticle {
+  0% { offset-distance: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+@keyframes ringPulse {
+  0%, 100% { stroke-opacity: 0.03; }
+  50% { stroke-opacity: 0.08; }
+}
+@keyframes centerPulse {
+  0%, 100% { r: 8; opacity: 0.06; }
+  50% { r: 18; opacity: 0; }
+}
+.animate-scroll-x {
+  animation: scrollX 35s linear infinite;
+}
+.animate-scroll-x:hover {
+  animation-play-state: paused;
+}

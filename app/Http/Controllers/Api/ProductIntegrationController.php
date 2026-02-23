@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -6,23 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductIntegration;
+use App\Traits\HasCompanyAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ProductIntegrationController extends Controller
 {
-    private function getCompany(Request $request): ?Company
-    {
-        $user = $request->user();
-        if (!$user) {
-            $authToken = $request->input('auth_token') ?? $request->header('X-Railway-Auth');
-            if ($authToken) {
-                $user = \App\Models\User::where('remember_token', $authToken)->first();
-            }
-        }
-        return $user?->company;
-    }
+    use HasCompanyAccess;
 
     // =============================================
     // STATUS
@@ -33,7 +24,7 @@ class ProductIntegrationController extends Controller
      */
     public function status(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -78,7 +69,7 @@ class ProductIntegrationController extends Controller
      */
     public function connect(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -115,7 +106,7 @@ class ProductIntegrationController extends Controller
         };
 
         if (!$rules) {
-            return response()->json(['error' => 'Proveedor no válido'], 400);
+            return response()->json(['error' => 'Proveedor no vÃ¡lido'], 400);
         }
 
         $validated = $request->validate(array_merge(['provider' => 'required|string'], $rules));
@@ -133,7 +124,7 @@ class ProductIntegrationController extends Controller
             Log::error("Product integration test failed: {$provider}", ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => 'Error de conexión: ' . $e->getMessage(),
+                'error' => 'Error de conexiÃ³n: ' . $e->getMessage(),
             ], 400);
         }
 
@@ -202,7 +193,7 @@ class ProductIntegrationController extends Controller
      */
     public function disconnect(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -239,7 +230,7 @@ class ProductIntegrationController extends Controller
      */
     public function toggleBotAccess(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -251,7 +242,7 @@ class ProductIntegrationController extends Controller
             ->first();
 
         if (!$integration) {
-            return response()->json(['error' => 'Integración no encontrada'], 404);
+            return response()->json(['error' => 'IntegraciÃ³n no encontrada'], 404);
         }
 
         $integration->update([
@@ -273,7 +264,7 @@ class ProductIntegrationController extends Controller
      */
     public function sync(Request $request)
     {
-        $company = $this->getCompany($request);
+        $company = $this->getCompanyFromRequest($request);
         if (!$company) {
             return response()->json(['error' => 'No autorizado'], 401);
         }
@@ -286,7 +277,7 @@ class ProductIntegrationController extends Controller
             ->first();
 
         if (!$integration) {
-            return response()->json(['error' => 'Integración no conectada'], 400);
+            return response()->json(['error' => 'IntegraciÃ³n no conectada'], 400);
         }
 
         try {
@@ -651,7 +642,7 @@ class ProductIntegrationController extends Controller
             ->get($apiUrl);
 
         if (!$response->successful()) {
-            throw new \Exception("API personalizada devolvió error: {$response->status()}");
+            throw new \Exception("API personalizada devolviÃ³ error: {$response->status()}");
         }
 
         $data = $response->json();
@@ -819,7 +810,7 @@ class ProductIntegrationController extends Controller
         $table = $settings['db_table'] ?? null;
 
         if (!$host || !$dbName || !$dbUser || !$table) {
-            throw new \Exception('Faltan datos de conexión MySQL');
+            throw new \Exception('Faltan datos de conexiÃ³n MySQL');
         }
 
         $dsn = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";

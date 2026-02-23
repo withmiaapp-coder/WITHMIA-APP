@@ -278,7 +278,7 @@ Route::middleware(['auth', 'verified'])->get('/chatwoot/enterprise', function ()
 // ============================================================================
 // 10. ADMIN PANEL
 // ============================================================================
-Route::middleware(['auth'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'superadmin'])->prefix('admin')->group(function () {
     // Pages
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');

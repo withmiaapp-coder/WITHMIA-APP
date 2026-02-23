@@ -1400,4 +1400,22 @@ class AdminToolsController extends Controller
             return $this->errorResponse($e);
         }
     }
+
+    /**
+     * Fix company owners with wrong role (should be 'admin', not 'user').
+     */
+    public function fixOwnerRoles(): JsonResponse
+    {
+        $fixed = DB::table('users')
+            ->where('role', 'user')
+            ->whereNotNull('company_slug')
+            ->where('onboarding_completed', true)
+            ->whereIn('id', DB::table('companies')->select('user_id'))
+            ->update(['role' => 'admin']);
+
+        return response()->json([
+            'fixed' => $fixed,
+            'message' => "Updated {$fixed} company owners from 'user' to 'admin' role",
+        ]);
+    }
 }
