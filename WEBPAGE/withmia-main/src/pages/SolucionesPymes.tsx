@@ -108,11 +108,11 @@ const stats = [
 
 /* ─── Lost lead timeline simulation ─── */
 const lostLeadTimeline = [
-  { time: "0:00", message: "Hola! Vi el anuncio, quiero cotizar 👋", type: "incoming" as const, status: "sent" as const },
-  { time: "0:02", message: "¿Tienen disponible para hoy?", type: "incoming" as const, status: "sent" as const },
-  { time: "0:15", message: "Bueno, cuando puedan me avisan...", type: "incoming" as const, status: "waiting" as const },
-  { time: "1:30", message: "¿Hola? ¿Alguien ahí? 🤔", type: "incoming" as const, status: "waiting" as const },
-  { time: "3:00", message: "Ya agenté con otra empresa. Gracias igual.", type: "incoming" as const, status: "lost" as const },
+  { time: "10:32", message: "Hola! Vi el anuncio, quiero cotizar 👋", status: "sent" as const },
+  { time: "10:34", message: "¿Tienen disponible para hoy?", status: "sent" as const },
+  { time: "10:47", message: "Bueno, cuando puedan me avisan...", status: "waiting" as const },
+  { time: "11:58", message: "¿Hola? ¿Alguien ahí? 🤔", status: "waiting" as const },
+  { time: "13:30", message: "Ya reservé con otra empresa. Gracias.", status: "lost" as const },
 ];
 
 const painPoints = [
@@ -297,33 +297,122 @@ const SolucionesPymes = () => {
                 </div>
               </Reveal>
 
-              {/* Right — Visual: stats cards in perspective */}
+              {/* Right — Phone mockup with lost lead */}
               <Reveal delay={200}>
-                <div className="relative">
-                  <div className="absolute -inset-8 bg-gradient-to-br from-amber-500/[0.06] via-transparent to-violet-500/[0.04] rounded-3xl blur-xl" />
-                  <div className="relative grid grid-cols-2 gap-4">
-                    {stats.map((stat, i) => (
-                      <div
-                        key={i}
-                        className="group p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm hover:bg-white/[0.05] hover:border-white/[0.14] transition-all duration-500 overflow-hidden relative"
-                      >
-                        {/* Hover glow */}
-                        <div
-                          className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                          style={{ backgroundColor: `${stat.color}10` }}
-                        />
-                        <div className="relative">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                            style={{ backgroundColor: `${stat.color}10`, border: `1px solid ${stat.color}20` }}
-                          >
-                            <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
+                <div className="flex justify-center lg:justify-end">
+                  <div className="relative w-[280px] sm:w-[300px]">
+                    {/* Phone frame */}
+                    <div className="relative rounded-[2.5rem] border-[3px] border-white/[0.12] bg-[#0c0c14] shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_30px_rgba(0,0,0,0.3)] overflow-hidden">
+                      
+                      {/* Notch / Dynamic Island */}
+                      <div className="flex justify-center pt-3 pb-1">
+                        <div className="w-[90px] h-[26px] rounded-full bg-black border border-white/[0.06]" />
+                      </div>
+
+                      {/* Status bar */}
+                      <div className="flex items-center justify-between px-7 pb-2">
+                        <span className="text-[10px] font-semibold text-white/50">10:32</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex gap-[2px]">
+                            {[1,2,3,4].map(b => (
+                              <div key={b} className={`w-[3px] rounded-sm ${b <= 3 ? 'bg-white/40' : 'bg-white/15'}`} style={{ height: `${6 + b * 2}px` }} />
+                            ))}
                           </div>
-                          <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
-                          <p className="text-[11px] text-white/30 leading-relaxed">{stat.label}</p>
+                          <span className="text-[9px] text-white/30 font-medium">5G</span>
+                          <div className="w-[22px] h-[10px] rounded-[2px] border border-white/30 relative">
+                            <div className="absolute inset-[1.5px] right-[5px] rounded-[1px] bg-white/40" />
+                          </div>
                         </div>
                       </div>
-                    ))}
+
+                      {/* WhatsApp-style chat header */}
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1a1a2e]/80 border-y border-white/[0.04]">
+                        <div className="text-white/30 text-sm">←</div>
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-600/15 border border-emerald-500/20 flex items-center justify-center">
+                          <span className="text-[13px]">🏪</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-white/80">Tu Negocio</p>
+                          <p className="text-[10px] text-white/25">en línea</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/25">
+                          <span className="text-[14px]">📞</span>
+                          <span className="text-[14px]">⋮</span>
+                        </div>
+                      </div>
+
+                      {/* Chat body */}
+                      <div className="relative bg-[#0b0b15] min-h-[300px]">
+                        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1\' fill=\'white\'/%3E%3C/svg%3E")', backgroundSize: '40px 40px' }} />
+
+                        <div className="flex justify-center pt-4 pb-2">
+                          <span className="text-[10px] text-white/20 bg-white/[0.04] px-3 py-1 rounded-md font-medium">HOY</span>
+                        </div>
+
+                        <div className="px-3 pb-4 space-y-1.5">
+                          {lostLeadTimeline.map((msg, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-start"
+                              style={{ animation: `fadeInUp 0.5s ease ${i * 0.15}s both` }}
+                            >
+                              <div className={`relative max-w-[82%] px-3 py-2 rounded-xl rounded-tl-sm text-[12px] leading-relaxed shadow-sm ${
+                                msg.status === "lost"
+                                  ? "bg-red-500/[0.12] border border-red-500/15 text-red-200/70"
+                                  : msg.status === "waiting"
+                                  ? "bg-amber-500/[0.08] border border-amber-500/10 text-amber-100/50"
+                                  : "bg-white/[0.06] border border-white/[0.06] text-white/55"
+                              }`}>
+                                <p>{msg.message}</p>
+                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                  <span className="text-[9px] text-white/15">{msg.time}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Typing indicator that never resolves */}
+                          <div className="flex justify-end" style={{ animation: 'fadeInUp 0.5s ease 0.9s both' }}>
+                            <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl rounded-tr-sm px-4 py-2.5 flex items-center gap-1">
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.2s' }} />
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1.2s' }} />
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.2s' }} />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center pt-3" style={{ animation: 'fadeInUp 0.5s ease 1.2s both' }}>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/[0.08] border border-red-500/12">
+                              <Ban className="w-3 h-3 text-red-400/70" />
+                              <span className="text-[9px] text-red-300/60 font-semibold tracking-wide">NADIE RESPONDIÓ</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Input bar */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0c0c14] border-t border-white/[0.04]">
+                        <span className="text-white/15 text-sm">😊</span>
+                        <div className="flex-1 h-8 rounded-full bg-white/[0.04] border border-white/[0.05] flex items-center px-3">
+                          <span className="text-[11px] text-white/15">Escribe un mensaje...</span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-white/[0.04] flex items-center justify-center">
+                          <span className="text-white/15 text-sm">🎤</span>
+                        </div>
+                      </div>
+
+                      {/* Home indicator */}
+                      <div className="flex justify-center py-2">
+                        <div className="w-[120px] h-[4px] rounded-full bg-white/[0.12]" />
+                      </div>
+                    </div>
+
+                    {/* Bottom badge */}
+                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/[0.08] border border-red-500/12 backdrop-blur-sm shadow-lg">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        <span className="text-[11px] text-red-300/70 font-medium">Pasa el <span className="text-red-400 font-bold">40%</span> de las veces</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </Reveal>
@@ -361,60 +450,125 @@ const SolucionesPymes = () => {
             {/* ─── Two-column: Lost lead sim + Impact stats ─── */}
             <div className="grid lg:grid-cols-2 gap-6 mb-14">
 
-              {/* Left — Lost lead chat simulation */}
+              {/* Left — Phone mockup with lost lead chat */}
               <Reveal delay={100}>
-                <div className="relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-                  {/* Chat header */}
-                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/20 flex items-center justify-center">
-                      <MessageSquare className="w-3.5 h-3.5 text-green-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white/70">Lead desde Instagram</p>
-                      <p className="text-[10px] text-white/25">Lunes 10:32 AM</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/15">
-                      <XCircle className="w-3 h-3 text-red-400" />
-                      <span className="text-[10px] font-medium text-red-400">Perdido</span>
-                    </div>
-                  </div>
+                <div className="flex justify-center">
+                  <div className="relative w-[300px] sm:w-[320px]">
+                    {/* Phone frame */}
+                    <div className="relative rounded-[2.5rem] border-[3px] border-white/[0.12] bg-[#0c0c14] shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_30px_rgba(0,0,0,0.3)] overflow-hidden">
+                      
+                      {/* Notch / Dynamic Island */}
+                      <div className="flex justify-center pt-3 pb-1">
+                        <div className="w-[90px] h-[26px] rounded-full bg-black border border-white/[0.06]" />
+                      </div>
 
-                  {/* Chat messages */}
-                  <div className="p-5 space-y-3">
-                    {lostLeadTimeline.map((msg, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-3"
-                        style={{
-                          opacity: 1,
-                          animation: `fadeInUp 0.5s ease ${i * 0.15}s both`,
-                        }}
-                      >
-                        <span className="text-[10px] font-mono text-white/15 mt-2 shrink-0 w-8 text-right">{msg.time}</span>
-                        <div className={`flex-1 max-w-[85%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
-                          msg.status === "lost"
-                            ? "bg-red-500/[0.08] border border-red-500/15 text-red-300/70"
-                            : msg.status === "waiting"
-                            ? "bg-amber-500/[0.06] border border-amber-500/10 text-amber-200/50"
-                            : "bg-white/[0.04] border border-white/[0.06] text-white/50"
-                        }`}>
-                          {msg.message}
+                      {/* Status bar */}
+                      <div className="flex items-center justify-between px-7 pb-2">
+                        <span className="text-[10px] font-semibold text-white/50">10:32</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex gap-[2px]">
+                            {[1,2,3,4].map(b => (
+                              <div key={b} className={`w-[3px] rounded-sm ${b <= 3 ? 'bg-white/40' : 'bg-white/15'}`} style={{ height: `${6 + b * 2}px` }} />
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-white/30 font-medium">5G</span>
+                          <div className="w-[22px] h-[10px] rounded-[2px] border border-white/30 relative">
+                            <div className="absolute inset-[1.5px] right-[5px] rounded-[1px] bg-white/40" />
+                          </div>
                         </div>
                       </div>
-                    ))}
 
-                    {/* "Nadie respondió" indicator */}
-                    <div className="flex items-center justify-center gap-2 pt-3 mt-2 border-t border-white/[0.04]">
-                      <Ban className="w-3.5 h-3.5 text-red-400/60" />
-                      <span className="text-[11px] text-red-400/50 font-medium">Nadie respondió · Lead perdido</span>
+                      {/* WhatsApp-style chat header */}
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1a1a2e]/80 border-y border-white/[0.04]">
+                        <div className="text-white/30 text-sm">←</div>
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-600/15 border border-emerald-500/20 flex items-center justify-center">
+                          <span className="text-[13px]">🏪</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-white/80">Tu Negocio</p>
+                          <p className="text-[10px] text-white/25">en línea</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/25">
+                          <span className="text-[14px]">📞</span>
+                          <span className="text-[14px]">⋮</span>
+                        </div>
+                      </div>
+
+                      {/* Chat body — wallpaper texture */}
+                      <div className="relative bg-[#0b0b15] min-h-[340px]">
+                        {/* Subtle wallpaper pattern */}
+                        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1\' fill=\'white\'/%3E%3C/svg%3E")', backgroundSize: '40px 40px' }} />
+
+                        {/* Date chip */}
+                        <div className="flex justify-center pt-4 pb-2">
+                          <span className="text-[10px] text-white/20 bg-white/[0.04] px-3 py-1 rounded-md font-medium">HOY</span>
+                        </div>
+
+                        {/* Messages — all from left (incoming), no replies */}
+                        <div className="px-3 pb-4 space-y-1.5">
+                          {lostLeadTimeline.map((msg, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-start"
+                              style={{ animation: `fadeInUp 0.5s ease ${i * 0.15}s both` }}
+                            >
+                              <div className={`relative max-w-[82%] px-3 py-2 rounded-xl rounded-tl-sm text-[12.5px] leading-relaxed shadow-sm ${
+                                msg.status === "lost"
+                                  ? "bg-red-500/[0.12] border border-red-500/15 text-red-200/70"
+                                  : msg.status === "waiting"
+                                  ? "bg-amber-500/[0.08] border border-amber-500/10 text-amber-100/50"
+                                  : "bg-white/[0.06] border border-white/[0.06] text-white/55"
+                              }`}>
+                                <p>{msg.message}</p>
+                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                  <span className="text-[9px] text-white/15">{msg.time}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Typing indicator that never resolves */}
+                          <div className="flex justify-end" style={{ animation: 'fadeInUp 0.5s ease 0.9s both' }}>
+                            <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl rounded-tr-sm px-4 py-2.5 flex items-center gap-1">
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.2s' }} />
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1.2s' }} />
+                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.2s' }} />
+                            </div>
+                          </div>
+
+                          {/* "Nunca respondiste" overlay */}
+                          <div className="flex justify-center pt-4" style={{ animation: 'fadeInUp 0.5s ease 1.2s both' }}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/[0.08] border border-red-500/12">
+                              <Ban className="w-3 h-3 text-red-400/70" />
+                              <span className="text-[10px] text-red-300/60 font-semibold tracking-wide">LEAD PERDIDO — NADIE RESPONDIÓ</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Input bar */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0c0c14] border-t border-white/[0.04]">
+                        <span className="text-white/15 text-sm">😊</span>
+                        <div className="flex-1 h-8 rounded-full bg-white/[0.04] border border-white/[0.05] flex items-center px-3">
+                          <span className="text-[11px] text-white/15">Escribe un mensaje...</span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-white/[0.04] flex items-center justify-center">
+                          <span className="text-white/15 text-sm">🎤</span>
+                        </div>
+                      </div>
+
+                      {/* Home indicator */}
+                      <div className="flex justify-center py-2">
+                        <div className="w-[120px] h-[4px] rounded-full bg-white/[0.12]" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Bottom stat */}
-                  <div className="px-5 py-4 bg-red-500/[0.03] border-t border-red-500/10">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-white/25">Esto pasa <span className="text-red-400 font-semibold">40% de las veces</span> sin automatización</span>
-                      <span className="text-[11px] font-mono text-red-400/60">—$$$</span>
+                    {/* Bottom stat badge */}
+                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/[0.08] border border-red-500/12 backdrop-blur-sm shadow-lg">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        <span className="text-[11px] text-red-300/70 font-medium">Pasa el <span className="text-red-400 font-bold">40%</span> de las veces sin IA</span>
+                      </div>
                     </div>
                   </div>
                 </div>

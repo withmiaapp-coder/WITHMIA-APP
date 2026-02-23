@@ -1167,10 +1167,10 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         {/* Sidebar Premium - MEJORADO: Mejor contraste */}
         <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200/80 flex-shrink-0 shadow-xl shadow-slate-300/40 transition-all duration-150 ease-out relative`}>
           
-          {/* Header del Sidebar */}
-          <div className="p-4 border-b border-slate-200/70">
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'}`}>
-              <div className="relative cursor-pointer" onClick={() => setSidebarCollapsed(false)} title="Expandir sidebar">
+          {/* Header del Sidebar — altura sincronizada con top header */}
+          <div className="px-4 border-b border-slate-200/70 flex items-center" style={{ minHeight: '73px' }}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'} w-full`}>
+              <div className="relative cursor-pointer flex-shrink-0" onClick={() => setSidebarCollapsed(false)} title="Expandir sidebar">
                 <img
                   src="/logo-withmia.webp"
                   alt="WITHMIA Logo"
@@ -1178,8 +1178,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                 />
               </div>
               {!sidebarCollapsed && (
-                <div className="flex-1">
-                  <h1 className="font-bold text-neutral-800 tracking-tight leading-tight" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
+                <div className="flex-1 min-w-0">
+                  <h1 className="font-bold text-neutral-800 tracking-tight leading-tight truncate" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
                   <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>{user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
                   <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
                 </div>
@@ -1284,7 +1284,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         <div className="flex-1 flex flex-col min-w-0">
           
           {/* Header Premium */}
-          <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200 px-8 py-3.5 relative z-10">
+          <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200 px-8 relative z-10 flex items-center" style={{ minHeight: '73px' }}>
             <div className="flex items-center justify-between">
               
               {/* Hero Greeting */}
