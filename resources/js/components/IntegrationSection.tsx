@@ -127,7 +127,6 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [medilinkIntegration, setMedilinkIntegration] = useState<any>(null);
   const [medilinkLoading, setMedilinkLoading] = useState(true);
   const [medilinkApiKey, setMedilinkApiKey] = useState('');
-  const [medilinkInstanceUrl, setMedilinkInstanceUrl] = useState('');
   const [medilinkConnecting, setMedilinkConnecting] = useState(false);
   const [medilinkError, setMedilinkError] = useState('');
 
@@ -594,18 +593,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     try {
       const data = await gcalApiFetch('/api/medilink/connect', {
         method: 'POST',
-        body: JSON.stringify({ api_key: medilinkApiKey, instance_url: medilinkInstanceUrl || undefined }),
+        body: JSON.stringify({ api_key: medilinkApiKey }),
       });
       if (data.success) {
         setMedilinkApiKey('');
-        setMedilinkInstanceUrl('');
         await loadMedilinkStatus();
         onIntegrationChange?.();
       }
     } catch (err: any) {
-      setMedilinkError('API Token o URL inválidos');
+      setMedilinkError('API Token inválido');
     } finally { setMedilinkConnecting(false); }
-  }, [medilinkApiKey, medilinkInstanceUrl, gcalApiFetch, loadMedilinkStatus, onIntegrationChange]);
+  }, [medilinkApiKey, gcalApiFetch, loadMedilinkStatus, onIntegrationChange]);
 
   const disconnectMedilink = useCallback(async () => {
     if (!confirm('¿Desconectar Medilink?')) return;
@@ -2498,16 +2496,6 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             value={medilinkApiKey}
                             onChange={(e) => setMedilinkApiKey(e.target.value)}
                             placeholder="Tu API Token de Medilink"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">URL de tu instancia <span className="text-neutral-400 font-normal">(opcional)</span></label>
-                          <input
-                            type="text"
-                            value={medilinkInstanceUrl}
-                            onChange={(e) => setMedilinkInstanceUrl(e.target.value)}
-                            placeholder="https://api.medilink.cl/api/v1"
                             className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                           />
                         </div>

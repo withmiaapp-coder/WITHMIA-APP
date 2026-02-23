@@ -12,17 +12,17 @@ use Illuminate\Support\Facades\Log;
 /**
  * Medilink Integration Controller
  * 
- * Medilink (fichas médicas) usa API Token authentication.
- * El usuario ingresa su API token y URL base de su instancia.
- * Soporta gestión de pacientes, citas médicas y fichas clínicas.
+ * Medilink (software médico de HealthAtom) usa API Token authentication.
+ * Misma infraestructura que Dentalink (api.medilink.healthatom.com).
+ * Soporta gestión de profesionales, citas médicas, sucursales y especialidades.
  */
 class MedilinkController extends Controller
 {
     private const PROVIDER = 'medilink';
-    private const DEFAULT_BASE_URL = 'https://api.medilink.cl/api/v1';
+    private const BASE_URL = 'https://api.medilink.healthatom.com/api/v1';
 
     // ==========================================
-    // CONNECTION (API Token + Instance URL)
+    // CONNECTION (API Token based)
     // ==========================================
 
     /**
@@ -37,26 +37,16 @@ class MedilinkController extends Controller
 
         $validated = $request->validate([
             'api_key' => 'required|string|min:10',
-            'instance_url' => 'nullable|url|max:500',
         ]);
 
         $apiToken = $validated['api_key'];
-        $baseUrl = rtrim($validated['instance_url'] ?? self::DEFAULT_BASE_URL, '/');
 
-        // Verify the API token works by fetching practitioners or clinic info
+        // Verify the API token works by fetching sucursales (branches)
         try {
             $testResponse = Http::withHeaders([
-                'Authorization' => "Bearer {$apiToken}",
+                'Authorization' => "Token {$apiToken}",
                 'Accept' => 'application/json',
-            ])->timeout(15)->get($baseUrl . '/profesionales');
-
-            if (!$testResponse->successful()) {
-                // Try alternate endpoint
-                $testResponse = Http::withHeaders([
-                    'Authorization' => "Bearer {$apiToken}",
-                    'Accept' => 'application/json',
-                ])->timeout(15)->get($baseUrl . '/clinica');
-            }
+            ])->timeout(15)->get(self::BASE_URL . '/sucursales');
 
             if (!$testResponse->successful()) {
                 return response()->json([
@@ -65,21 +55,17 @@ class MedilinkController extends Controller
                 ], 422);
             }
 
-            // Extract clinic info
-            $responseData = $testResponse->json()['data'] ?? $testResponse->json() ?? [];
+            // Extract clinic info from branches
+            $branches = $testResponse->json()['data'] ?? $testResponse->json() ?? [];
             $clinicName = null;
-            if (is_array($responseData)) {
-                if (!empty($responseData['nombre'])) {
-                    $clinicName = $responseData['nombre'];
-                } elseif (!empty($responseData[0])) {
-                    $first = $responseData[0];
-                    $clinicName = $first['clinica_nombre'] ?? $first['nombre'] ?? null;
-                }
+            if (!empty($branches) && is_array($branches)) {
+                $first = is_array($branches[0] ?? null) ? $branches[0] : $branches;
+                $clinicName = $first['nombre'] ?? $first['name'] ?? null;
             }
 
         } catch (\Throwable $e) {
             return response()->json([
-                'error' => 'No se pudo conectar con Medilink. Verifica tu API Token y URL.',
+                'error' => 'No se pudo conectar con Medilink. Verifica tu API Token.',
             ], 422);
         }
 
@@ -96,8 +82,8 @@ class MedilinkController extends Controller
                 'access_token' => $apiToken,
                 'refresh_token' => null,
                 'token_expires_at' => null,
-                'scopes' => ['profesionales', 'citas', 'pacientes', 'fichas'],
-                'settings' => ['instance_url' => $baseUrl],
+                'scopes' => ['sucursales', 'profesionales', 'citas', 'pacientes', 'especialidades'],
+                'settings' => [],
                 'is_active' => true,
                 'last_sync_at' => now(),
             ]
@@ -181,6 +167,29 @@ class MedilinkController extends Controller
     // ==========================================
 
     /**
+     * Listar sucursales (branches/locations).
+     */
+    public function listBranches(Request $request)
+    {
+        $integration = $this->getIntegration($request);
+        if (!$integration) {
+            return response()->json(['error' => 'Medilink not connected'], 400);
+        }
+
+        try {
+            $response = $this->apiGet($integration, '/sucursales');
+            if (!$response->successful()) {
+                return response()->json(['error' => 'Failed to fetch branches'], 502);
+            }
+
+            return response()->json(['branches' => $response->json()['data'] ?? $response->json()]);
+        } catch (\Throwable $e) {
+            Log::error('[Medilink] List branches error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed'], 500);
+        }
+    }
+
+    /**
      * Listar profesionales/médicos.
      */
     public function listPractitioners(Request $request)
@@ -238,7 +247,7 @@ class MedilinkController extends Controller
 
         $validated = $request->validate([
             'practitioner_id' => 'nullable',
-            'specialty_id' => 'nullable',
+            'branch_id' => 'nullable',
             'date' => 'required|date_format:Y-m-d',
         ]);
 
@@ -247,8 +256,8 @@ class MedilinkController extends Controller
             if (!empty($validated['practitioner_id'])) {
                 $params['id_profesional'] = $validated['practitioner_id'];
             }
-            if (!empty($validated['specialty_id'])) {
-                $params['id_especialidad'] = $validated['specialty_id'];
+            if (!empty($validated['branch_id'])) {
+                $params['id_sucursal'] = $validated['branch_id'];
             }
 
             $response = $this->apiGet($integration, '/citas/disponibilidad', $params);
@@ -305,7 +314,7 @@ class MedilinkController extends Controller
 
         $validated = $request->validate([
             'practitioner_id' => 'required',
-            'specialty_id' => 'nullable',
+            'branch_id' => 'nullable',
             'date' => 'required|date_format:Y-m-d',
             'time' => 'required|string',
             'duration' => 'nullable|integer|min:10',
@@ -333,8 +342,8 @@ class MedilinkController extends Controller
                 'notas' => $validated['notes'] ?? '',
             ];
 
-            if (!empty($validated['specialty_id'])) {
-                $payload['id_especialidad'] = $validated['specialty_id'];
+            if (!empty($validated['branch_id'])) {
+                $payload['id_sucursal'] = $validated['branch_id'];
             }
 
             $response = $this->apiPost($integration, '/citas', $payload);
@@ -400,6 +409,18 @@ class MedilinkController extends Controller
                     ])->toArray();
             }
 
+            // Get branches
+            $branchesResponse = $this->apiGet($integration, '/sucursales');
+            $branches = [];
+            if ($branchesResponse->successful()) {
+                $branches = collect($branchesResponse->json()['data'] ?? $branchesResponse->json())
+                    ->map(fn($b) => [
+                        'id' => $b['id'] ?? null,
+                        'name' => $b['nombre'] ?? $b['name'] ?? '',
+                        'address' => $b['direccion'] ?? $b['address'] ?? '',
+                    ])->toArray();
+            }
+
             // Get specialties
             $specialtiesResponse = $this->apiGet($integration, '/especialidades');
             $specialties = [];
@@ -434,6 +455,7 @@ class MedilinkController extends Controller
                 'available' => true,
                 'provider' => 'medilink',
                 'practitioners' => $practitioners,
+                'branches' => $branches,
                 'specialties' => $specialties,
                 'upcoming_appointments' => $appointments,
             ]);
@@ -467,7 +489,7 @@ class MedilinkController extends Controller
 
         $validated = $request->validate([
             'practitioner_id' => 'required',
-            'specialty_id' => 'nullable',
+            'branch_id' => 'nullable',
             'date' => 'required|date_format:Y-m-d',
             'time' => 'required|string',
             'duration' => 'nullable|integer|min:10',
@@ -494,8 +516,8 @@ class MedilinkController extends Controller
             'notas' => ($validated['notes'] ?? '') . "\n[Agendado por WITHMIA Bot]",
         ];
 
-        if (!empty($validated['specialty_id'])) {
-            $payload['id_especialidad'] = $validated['specialty_id'];
+        if (!empty($validated['branch_id'])) {
+            $payload['id_sucursal'] = $validated['branch_id'];
         }
 
         try {
@@ -526,26 +548,21 @@ class MedilinkController extends Controller
             ->where('provider', self::PROVIDER)->first();
     }
 
-    private function getBaseUrl(CalendarIntegration $integration): string
-    {
-        return $integration->settings['instance_url'] ?? self::DEFAULT_BASE_URL;
-    }
-
     private function apiGet(CalendarIntegration $integration, string $endpoint, array $params = [])
     {
         return Http::withHeaders([
-            'Authorization' => "Bearer {$integration->access_token}",
+            'Authorization' => "Token {$integration->access_token}",
             'Accept' => 'application/json',
-        ])->timeout(15)->get($this->getBaseUrl($integration) . $endpoint, $params);
+        ])->timeout(15)->get(self::BASE_URL . $endpoint, $params);
     }
 
     private function apiPost(CalendarIntegration $integration, string $endpoint, array $data = [])
     {
         return Http::withHeaders([
-            'Authorization' => "Bearer {$integration->access_token}",
+            'Authorization' => "Token {$integration->access_token}",
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-        ])->timeout(15)->post($this->getBaseUrl($integration) . $endpoint, $data);
+        ])->timeout(15)->post(self::BASE_URL . $endpoint, $data);
     }
 
     private function formatIntegration(CalendarIntegration $integration): array

@@ -471,6 +471,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::post('/disconnect', [MedilinkController::class, 'disconnect']);
     Route::get('/status', [MedilinkController::class, 'status']);
     Route::put('/settings', [MedilinkController::class, 'updateSettings']);
+    Route::get('/branches', [MedilinkController::class, 'listBranches']);
     Route::get('/practitioners', [MedilinkController::class, 'listPractitioners']);
     Route::get('/specialties', [MedilinkController::class, 'listSpecialties']);
     Route::get('/availability', [MedilinkController::class, 'getAvailability']);
