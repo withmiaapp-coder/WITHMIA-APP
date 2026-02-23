@@ -288,9 +288,47 @@
 /* ============================================ */
 /* 📜 SCROLLBARS OPTIMIZADOS */
 /* ============================================ */
+
+/* Global scrollbar — dark mode aware */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.dark * {
+    scrollbar-color: rgba(100, 100, 120, 0.5) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.5);
+    border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.7);
+}
+
+.dark *::-webkit-scrollbar-thumb {
+    background: rgba(100, 100, 120, 0.5);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 100, 120, 0.7);
+}
+
+/* Theme-palette scrollbar — uses accent CSS var when palette active */
 .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.55 0.22 280) transparent;
+    scrollbar-color: var(--theme-accent, oklch(0.55 0.22 280)) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -303,12 +341,13 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: oklch(0.55 0.22 280);
+    background: var(--theme-accent, oklch(0.55 0.22 280));
     border-radius: 3px;
+    opacity: 0.7;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.50 0.24 280);
+    background: var(--theme-accent, oklch(0.50 0.24 280));
 }
 
 /* Ocultar scrollbar en miniaturas del lightbox */
