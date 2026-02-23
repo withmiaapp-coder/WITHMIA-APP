@@ -47,7 +47,8 @@ import {
   Settings,
   Package,
   GraduationCap,
-  CreditCard
+  CreditCard,
+  Palette
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -1285,15 +1286,22 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
           
           {/* Header Premium */}
           <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200 px-8 relative z-10 flex items-center" style={{ minHeight: '73px' }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               
               {/* Hero Greeting */}
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-6 min-w-0 flex-1">
                 <ClockDisplay firstName={safeUser.firstName} />
               </div>
               
               {/* Action Bar */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 flex-shrink-0">
+                <button
+                  onClick={() => handleNavigation('settings')}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-all duration-150"
+                  title="Personalizar apariencia"
+                >
+                  <Palette className="w-5 h-5" />
+                </button>
                 <NotificationBell />
               </div>
             </div>
