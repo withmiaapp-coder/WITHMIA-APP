@@ -8,6 +8,8 @@ return [
     'allowed_origins' => array_filter([
         env('APP_URL'),
         env('FRONTEND_URL'),
+        'https://withmia.com',
+        'https://www.withmia.com',
     ]),
 
     'allowed_origins_patterns' => [],

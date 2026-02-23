@@ -73,189 +73,320 @@ const steps = [
    STAGE VISUALS
    ═══════════════════════════════════════ */
 
+/* ═══════════════════════════════════════
+   STAGE 1 — Knowledge Base: Data ingestion pipeline
+   ═══════════════════════════════════════ */
 const KnowledgeBaseVisual = ({ accent }: { accent: string }) => (
-  <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-    <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center z-10" style={{ backgroundColor: `${accent}15`, border: `1px solid ${accent}30` }}>
-      <Database className="w-7 h-7" style={{ color: accent }} />
-      <div className="absolute inset-0 rounded-2xl animate-ping opacity-10" style={{ backgroundColor: accent }} />
-    </div>
-    {[
-      { icon: FileText, label: "PDF", delay: "0s", x: -80, y: -50 },
-      { icon: Globe, label: "URL", delay: "0.3s", x: 80, y: -40 },
-      { icon: Server, label: "SQL", delay: "0.6s", x: -70, y: 55 },
-      { icon: Type, label: "TXT", delay: "0.9s", x: 75, y: 50 },
-    ].map((item, i) => {
-      const Icon = item.icon;
-      return (
-        <div
-          key={i}
-          className="absolute flex flex-col items-center gap-1"
-          style={{
-            left: `calc(50% + ${item.x}px)`,
-            top: `calc(50% + ${item.y}px)`,
-            transform: "translate(-50%, -50%)",
-            animation: `ai-float 3s ease-in-out ${item.delay} infinite alternate`,
-          }}
-        >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: `${accent}0A`, border: `1px solid ${accent}18` }}>
-            <Icon className="w-4 h-4" style={{ color: `${accent}90` }} />
-          </div>
-          <span className="text-[8px] font-mono font-bold" style={{ color: `${accent}50` }}>{item.label}</span>
-        </div>
-      );
-    })}
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
-      {[
-        { x1: "50%", y1: "50%", x2: "28%", y2: "30%" },
-        { x1: "50%", y1: "50%", x2: "72%", y2: "33%" },
-        { x1: "50%", y1: "50%", x2: "30%", y2: "70%" },
-        { x1: "50%", y1: "50%", x2: "70%", y2: "68%" },
-      ].map((line, i) => (
-        <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke={accent} strokeOpacity={0.12} strokeWidth={1} strokeDasharray="4 4">
-          <animate attributeName="stroke-dashoffset" from="8" to="0" dur="1.5s" repeatCount="indefinite" />
-        </line>
-      ))}
-    </svg>
-  </div>
-);
+  <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-4">
+    {/* Ambient glow */}
+    <div className="absolute w-40 h-40 rounded-full blur-[60px] opacity-[0.1] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: accent }} />
 
-const ContextualVisual = ({ accent }: { accent: string }) => {
-  const nodes = [
-    { x: 50, y: 20, size: 8, main: true },
-    { x: 22, y: 42, size: 6 },
-    { x: 78, y: 42, size: 6 },
-    { x: 32, y: 70, size: 5 },
-    { x: 68, y: 70, size: 5 },
-    { x: 50, y: 50, size: 7, main: true },
-    { x: 12, y: 62, size: 4 },
-    { x: 88, y: 62, size: 4 },
-  ];
-  const connections = [[0,1],[0,2],[1,3],[2,4],[1,5],[2,5],[3,5],[4,5],[1,6],[2,7],[3,6],[4,7]];
-
-  return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      <div className="absolute w-32 h-32 rounded-full blur-3xl opacity-[0.08] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: accent }} />
-      <svg className="w-full h-full max-w-[220px] max-h-[200px]" viewBox="0 0 100 90">
-        <defs>
-          <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        </defs>
-        {connections.map(([a, b], i) => (
-          <line key={i} x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y} stroke={accent} strokeOpacity={0.15} strokeWidth={0.6}>
-            <animate attributeName="stroke-opacity" values="0.06;0.35;0.06" dur={`${2 + i * 0.3}s`} repeatCount="indefinite" />
-          </line>
-        ))}
-        {[0, 2, 4, 7].map((ci, i) => {
-          const [a, b] = connections[ci];
+    {/* Central database hub */}
+    <div className="relative flex flex-col items-center gap-6 w-full max-w-[260px]">
+      {/* Data sources row */}
+      <div className="flex items-center justify-center gap-3 w-full">
+        {[
+          { icon: FileText, label: "Documentos", ext: ".pdf" },
+          { icon: Globe, label: "URLs", ext: ".html" },
+          { icon: Server, label: "Databases", ext: ".sql" },
+          { icon: Type, label: "Texto", ext: ".txt" },
+        ].map((src, i) => {
+          const Icon = src.icon;
           return (
-            <circle key={`p${i}`} r="1" fill={accent} opacity={0.6} filter="url(#glow)">
-              <animateMotion dur={`${2 + i * 0.5}s`} repeatCount="indefinite" path={`M${nodes[a].x},${nodes[a].y} L${nodes[b].x},${nodes[b].y}`} />
-              <animate attributeName="opacity" values="0;0.7;0" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
-            </circle>
+            <div key={i} className="flex flex-col items-center gap-1.5" style={{ animation: `kb-fade-in 0.6s ease-out ${i * 0.15}s both` }}>
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center relative"
+                style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}20` }}
+              >
+                <Icon className="w-4.5 h-4.5" style={{ color: `${accent}80` }} />
+                {/* Pulse ring */}
+                <div className="absolute inset-0 rounded-xl" style={{ border: `1px solid ${accent}30`, animation: `kb-pulse ${2.5 + i * 0.3}s ease-in-out infinite` }} />
+              </div>
+              <span className="text-[7px] font-mono font-semibold tracking-wider uppercase" style={{ color: `${accent}50` }}>{src.ext}</span>
+            </div>
           );
         })}
-        {nodes.map((n, i) => (
+      </div>
+
+      {/* Data flow lines */}
+      <svg className="w-full h-8" viewBox="0 0 260 32" fill="none">
+        {[40, 100, 160, 220].map((x, i) => (
           <g key={i}>
-            <circle cx={n.x} cy={n.y} r={n.size} fill={accent} opacity={0.06}>
-              <animate attributeName="opacity" values="0.03;0.12;0.03" dur={`${3 + i * 0.3}s`} repeatCount="indefinite" />
+            <line x1={x} y1="0" x2="130" y2="30" stroke={accent} strokeOpacity={0.12} strokeWidth={1} />
+            {/* Animated particle */}
+            <circle r="2" fill={accent} opacity={0.6}>
+              <animateMotion dur={`${1.5 + i * 0.2}s`} repeatCount="indefinite" path={`M${x},0 L130,30`} />
+              <animate attributeName="opacity" values="0;0.8;0" dur={`${1.5 + i * 0.2}s`} repeatCount="indefinite" />
             </circle>
-            <circle cx={n.x} cy={n.y} r={n.size / 2} fill={accent} opacity={(n as any).main ? 0.4 : 0.2} filter="url(#glow)">
-              <animate attributeName="opacity" values={(n as any).main ? "0.2;0.55;0.2" : "0.1;0.3;0.1"} dur={`${2.5 + i * 0.4}s`} repeatCount="indefinite" />
-            </circle>
-            {(n as any).main && (
-              <circle cx={n.x} cy={n.y} r={n.size / 2 + 2} fill="none" stroke={accent} strokeOpacity={0.2}>
-                <animate attributeName="r" values={`${n.size / 2 + 1};${n.size / 2 + 5};${n.size / 2 + 1}`} dur="3s" repeatCount="indefinite" />
-                <animate attributeName="stroke-opacity" values="0.25;0.02;0.25" dur="3s" repeatCount="indefinite" />
-              </circle>
-            )}
           </g>
         ))}
-        <text x="50" y="13" textAnchor="middle" fill={accent} fillOpacity={0.5} fontSize="3.5" fontFamily="monospace" fontWeight="bold">intención</text>
-        <text x="50" y="60" textAnchor="middle" fill={accent} fillOpacity={0.5} fontSize="3.5" fontFamily="monospace" fontWeight="bold">contexto</text>
       </svg>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${accent}18`, border: `1px solid ${accent}30`, boxShadow: `0 0 20px ${accent}30` }}>
-        <Brain className="w-5 h-5" style={{ color: accent }} />
-      </div>
-    </div>
-  );
-};
 
-const HumanizedVisual = ({ accent }: { accent: string }) => (
-  <div className="relative w-full h-full flex flex-col items-center justify-center gap-2 px-6 overflow-hidden">
-    <div className="w-full max-w-[200px] space-y-2">
-      <div className="flex justify-end">
-        <div className="px-3 py-2 rounded-2xl rounded-br-md text-[10px] text-white/70 max-w-[140px]" style={{ backgroundColor: `${accent}15`, border: `1px solid ${accent}30` }}>
-          Hola, necesito agendar una hora para mañana
+      {/* Central processing hub */}
+      <div className="relative">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center relative z-10"
+          style={{ backgroundColor: `${accent}15`, border: `1px solid ${accent}30`, boxShadow: `0 0 30px ${accent}20` }}
+        >
+          <Database className="w-7 h-7" style={{ color: accent }} />
+        </div>
+        {/* Spinning ring */}
+        <div className="absolute -inset-3 rounded-2xl" style={{ border: `1px dashed ${accent}20`, animation: "kb-spin 12s linear infinite" }} />
+        {/* Status badge */}
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[7px] font-mono font-bold whitespace-nowrap" style={{ backgroundColor: `${accent}15`, border: `1px solid ${accent}25`, color: `${accent}90` }}>
+          RAG vectorizado
         </div>
       </div>
-      <div className="flex items-end gap-1.5">
-        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}15`, border: `1px solid ${accent}30` }}>
-          <Cpu className="w-3 h-3" style={{ color: accent }} />
-        </div>
-        <div className="px-3 py-2 rounded-2xl rounded-bl-md text-[10px] text-white/70 max-w-[150px]" style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="mb-1">¡Perfecto! 😊 Tengo disponibilidad mañana a las:</div>
-          <div className="space-y-0.5 text-[9px]" style={{ color: `${accent}90` }}>
-            <div>• 09:00 AM</div>
-            <div>• 11:30 AM</div>
-            <div>• 15:00 PM</div>
-          </div>
-        </div>
+
+      {/* Output indicator */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-xl mt-1" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}15` }}>
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent, animation: "kb-blink 2s ease-in-out infinite" }} />
+        <span className="text-[8px] font-mono" style={{ color: `${accent}55` }}>4 fuentes indexadas · 12,847 vectores</span>
       </div>
-      <div className="flex items-end gap-1.5">
-        <div className="w-6 h-6" />
-        <div className="px-3 py-2.5 rounded-2xl rounded-bl-md inline-flex gap-1" style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent, opacity: 0.4, animation: `ai-typing 1.2s ease-in-out ${i * 0.15}s infinite` }} />
-          ))}
-        </div>
-      </div>
-    </div>
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg mt-1" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}20` }}>
-      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
-      <span className="text-[8px] font-mono" style={{ color: `${accent}60` }}>Tono: empático · Idioma: ES · Confianza: 94%</span>
     </div>
   </div>
 );
 
-const OptimizationVisual = ({ accent }: { accent: string }) => (
-  <div className="relative w-full h-full flex flex-col items-center justify-center gap-2.5 px-6 overflow-hidden">
-    <div className="grid grid-cols-2 gap-2 w-full max-w-[200px]">
-      {[
-        { label: "Satisfacción", value: "94.2%", icon: TrendingUp, trend: "+2.1%" },
-        { label: "Resolución", value: "89%", icon: Zap, trend: "+5.3%" },
-        { label: "Tiempo resp.", value: "1.2s", icon: BarChart3, trend: "-0.4s" },
-        { label: "Precisión", value: "97%", icon: CheckCircle2, trend: "+1.8%" },
-      ].map((m, i) => {
-        const MIcon = m.icon;
-        return (
-          <div key={i} className="px-2.5 py-2 rounded-xl" style={{ backgroundColor: `${accent}12`, border: `1px solid ${accent}18` }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <MIcon className="w-3 h-3" style={{ color: `${accent}60` }} />
-              <span className="text-[8px] text-white/40 font-medium">{m.label}</span>
+/* ═══════════════════════════════════════
+   STAGE 2 — Contextual: Neural network graph
+   ═══════════════════════════════════════ */
+const ContextualVisual = ({ accent }: { accent: string }) => (
+  <div className="relative w-full h-full flex items-center justify-center overflow-hidden p-4">
+    <div className="absolute w-36 h-36 rounded-full blur-[50px] opacity-[0.08] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: accent }} />
+
+    <div className="relative w-full max-w-[260px] flex flex-col items-center gap-2">
+      {/* Input layer */}
+      <div className="flex items-center gap-2 w-full">
+        <div className="px-3 py-1.5 rounded-xl flex-1 text-[9px] font-mono" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}15`, color: `${accent}70` }}>
+          <span className="text-white/30">input:</span> "Necesito agendar una hora"
+        </div>
+      </div>
+
+      {/* Neural network SVG */}
+      <svg className="w-full h-[100px]" viewBox="0 0 260 100" fill="none">
+        <defs>
+          <filter id="nn-glow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        {/* Layer 1 — Input (3 nodes) */}
+        {[18, 48, 78].map((y, i) => (
+          <g key={`l1-${i}`}>
+            {/* Connections to layer 2 */}
+            {[12, 30, 48, 66, 84].map((y2, j) => (
+              <line key={j} x1="40" y1={y} x2="130" y2={y2} stroke={accent} strokeOpacity={0.06} strokeWidth={0.5}>
+                <animate attributeName="stroke-opacity" values="0.03;0.15;0.03" dur={`${2 + (i + j) * 0.2}s`} repeatCount="indefinite" />
+              </line>
+            ))}
+            <circle cx="40" cy={y} r="6" fill={accent} opacity={0.08} />
+            <circle cx="40" cy={y} r="3" fill={accent} opacity={0.4} filter="url(#nn-glow)">
+              <animate attributeName="opacity" values="0.2;0.6;0.2" dur={`${2 + i * 0.4}s`} repeatCount="indefinite" />
+            </circle>
+          </g>
+        ))}
+
+        {/* Layer 2 — Hidden (5 nodes) */}
+        {[12, 30, 48, 66, 84].map((y, i) => (
+          <g key={`l2-${i}`}>
+            {/* Connections to layer 3 */}
+            {[25, 48, 72].map((y3, j) => (
+              <line key={j} x1="130" y1={y} x2="220" y2={y3} stroke={accent} strokeOpacity={0.06} strokeWidth={0.5}>
+                <animate attributeName="stroke-opacity" values="0.03;0.15;0.03" dur={`${2.5 + (i + j) * 0.15}s`} repeatCount="indefinite" />
+              </line>
+            ))}
+            <circle cx="130" cy={y} r="5" fill={accent} opacity={0.06} />
+            <circle cx="130" cy={y} r="2.5" fill={accent} opacity={0.3} filter="url(#nn-glow)">
+              <animate attributeName="opacity" values="0.15;0.5;0.15" dur={`${1.8 + i * 0.3}s`} repeatCount="indefinite" />
+            </circle>
+          </g>
+        ))}
+
+        {/* Layer 3 — Output (3 nodes) */}
+        {[25, 48, 72].map((y, i) => (
+          <g key={`l3-${i}`}>
+            <circle cx="220" cy={y} r="6" fill={accent} opacity={0.08} />
+            <circle cx="220" cy={y} r="3" fill={accent} opacity={0.4} filter="url(#nn-glow)">
+              <animate attributeName="opacity" values="0.2;0.7;0.2" dur={`${2.2 + i * 0.3}s`} repeatCount="indefinite" />
+            </circle>
+          </g>
+        ))}
+
+        {/* Traveling particles */}
+        {[0, 1, 2, 3].map((i) => (
+          <circle key={`p${i}`} r="1.5" fill={accent} opacity={0.7} filter="url(#nn-glow)">
+            <animateMotion dur={`${2 + i * 0.5}s`} repeatCount="indefinite" path={`M40,${18 + i * 20} Q130,${48} 220,${25 + i * 16}`} />
+            <animate attributeName="opacity" values="0;0.9;0" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+          </circle>
+        ))}
+
+        {/* Layer labels */}
+        <text x="40" y="97" textAnchor="middle" fill={accent} fillOpacity={0.3} fontSize="6" fontFamily="monospace">entrada</text>
+        <text x="130" y="97" textAnchor="middle" fill={accent} fillOpacity={0.3} fontSize="6" fontFamily="monospace">proceso</text>
+        <text x="220" y="97" textAnchor="middle" fill={accent} fillOpacity={0.3} fontSize="6" fontFamily="monospace">salida</text>
+      </svg>
+
+      {/* Output analysis */}
+      <div className="flex items-center gap-2 w-full">
+        {[
+          { label: "Intención", value: "agendar", conf: "96%" },
+          { label: "Tono", value: "neutral", conf: "91%" },
+          { label: "Urgencia", value: "media", conf: "88%" },
+        ].map((item, i) => (
+          <div key={i} className="flex-1 px-2 py-1 rounded-lg text-center" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}12` }}>
+            <div className="text-[7px] font-mono uppercase tracking-wider" style={{ color: `${accent}40` }}>{item.label}</div>
+            <div className="text-[9px] font-semibold text-white/60">{item.value}</div>
+            <div className="text-[7px] font-mono" style={{ color: `${accent}60` }}>{item.conf}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════
+   STAGE 3 — Humanized: Live chat simulation
+   ═══════════════════════════════════════ */
+const HumanizedVisual = ({ accent }: { accent: string }) => (
+  <div className="relative w-full h-full flex flex-col items-center justify-center gap-2.5 px-5 overflow-hidden">
+    {/* Chat window frame */}
+    <div className="w-full max-w-[240px] rounded-xl overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      {/* Window header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.05]">
+        <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: `${accent}15` }}>
+          <Cpu className="w-2.5 h-2.5" style={{ color: accent }} />
+        </div>
+        <span className="text-[9px] font-semibold text-white/50">MIA · Asistente IA</span>
+        <div className="ml-auto flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />
+          <span className="text-[7px] text-emerald-400/50 font-mono">online</span>
+        </div>
+      </div>
+
+      {/* Chat messages */}
+      <div className="p-3 space-y-2.5">
+        {/* User message */}
+        <div className="flex justify-end" style={{ animation: "chat-msg 0.4s ease-out both" }}>
+          <div className="px-3 py-2 rounded-2xl rounded-br-md text-[9px] text-white/70 max-w-[160px]" style={{ backgroundColor: `${accent}12`, border: `1px solid ${accent}20` }}>
+            Hola, necesito agendar una hora para mañana
+          </div>
+        </div>
+
+        {/* AI processing indicator */}
+        <div className="flex items-start gap-1.5" style={{ animation: "chat-msg 0.4s ease-out 0.3s both" }}>
+          <div className="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${accent}12`, border: `1px solid ${accent}20` }}>
+            <Cpu className="w-2.5 h-2.5" style={{ color: accent }} />
+          </div>
+          <div>
+            <div className="px-3 py-2 rounded-2xl rounded-bl-md text-[9px] text-white/65 max-w-[150px]" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="mb-1.5">¡Perfecto! 😊 Tengo disponibilidad mañana:</div>
+              <div className="space-y-1">
+                {["09:00 AM", "11:30 AM", "15:00 PM"].map((time, i) => (
+                  <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}10` }}>
+                    <div className="w-1 h-1 rounded-full" style={{ backgroundColor: `${accent}60` }} />
+                    <span className="text-[8px] font-medium" style={{ color: `${accent}80` }}>{time}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[13px] font-bold font-mono text-white/80">{m.value}</span>
-              <span className="text-[8px] font-mono" style={{ color: accent }}>{m.trend}</span>
+            {/* Typing indicator */}
+            <div className="flex items-center gap-1 mt-1.5 px-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: accent, opacity: 0.3, animation: `ai-typing 1.2s ease-in-out ${i * 0.15}s infinite` }} />
+              ))}
+              <span className="text-[7px] font-mono ml-1" style={{ color: `${accent}30` }}>escribiendo...</span>
             </div>
           </div>
-        );
-      })}
+        </div>
+      </div>
     </div>
-    <div className="w-full max-w-[200px] h-12 rounded-xl relative overflow-hidden" style={{ backgroundColor: `${accent}12`, border: `1px solid ${accent}18` }}>
-      <svg className="w-full h-full" viewBox="0 0 200 48" preserveAspectRatio="none">
+
+    {/* Analysis bar */}
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg w-full max-w-[240px]" style={{ backgroundColor: `${accent}06`, border: `1px solid ${accent}12` }}>
+      <div className="flex items-center gap-1.5 flex-1">
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent, animation: "kb-blink 2s ease-in-out infinite" }} />
+        <span className="text-[7px] font-mono" style={{ color: `${accent}50` }}>Tono: empático</span>
+      </div>
+      <div className="w-px h-3 bg-white/[0.06]" />
+      <span className="text-[7px] font-mono" style={{ color: `${accent}50` }}>ES</span>
+      <div className="w-px h-3 bg-white/[0.06]" />
+      <span className="text-[7px] font-mono" style={{ color: `${accent}50` }}>94%</span>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════
+   STAGE 4 — Optimization: Live dashboard
+   ═══════════════════════════════════════ */
+const OptimizationVisual = ({ accent }: { accent: string }) => (
+  <div className="relative w-full h-full flex flex-col items-center justify-center gap-3 px-5 overflow-hidden">
+    {/* Dashboard frame */}
+    <div className="w-full max-w-[260px] rounded-xl overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.05]">
+        <div className="flex items-center gap-1.5">
+          <BarChart3 className="w-3 h-3" style={{ color: `${accent}60` }} />
+          <span className="text-[8px] font-semibold text-white/40">Panel de rendimiento</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />
+          <span className="text-[7px] text-white/25 font-mono">live</span>
+        </div>
+      </div>
+
+      {/* Metrics grid */}
+      <div className="grid grid-cols-2 gap-px bg-white/[0.03] p-2">
+        {[
+          { label: "Satisfacción", value: "94.2%", trend: "+2.1%", up: true },
+          { label: "Resolución", value: "89.0%", trend: "+5.3%", up: true },
+          { label: "Tiempo resp.", value: "1.2s", trend: "-0.4s", up: true },
+          { label: "Precisión", value: "97.1%", trend: "+1.8%", up: true },
+        ].map((m, i) => (
+          <div key={i} className="px-2.5 py-2 rounded-lg" style={{ backgroundColor: `${accent}06`, border: `1px solid ${accent}10` }}>
+            <div className="text-[7px] text-white/30 font-medium mb-1">{m.label}</div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[14px] font-bold font-mono text-white/80" style={{ animation: `opt-count 0.6s ease-out ${i * 0.1}s both` }}>{m.value}</span>
+              <span className="text-[7px] font-mono font-semibold" style={{ color: m.up ? "#34d399" : "#f87171" }}>
+                <TrendingUp className="w-2 h-2 inline-block mr-0.5" style={{ transform: m.up ? "none" : "rotate(180deg)" }} />
+                {m.trend}
+              </span>
+            </div>
+            {/* Mini progress bar */}
+            <div className="w-full h-[2px] rounded-full mt-1.5 bg-white/[0.04]">
+              <div className="h-full rounded-full" style={{ width: `${70 + i * 8}%`, backgroundColor: `${accent}40`, animation: `opt-bar 1.2s ease-out ${i * 0.15}s both` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Chart */}
+    <div className="w-full max-w-[260px] h-[50px] rounded-xl relative overflow-hidden px-3 py-2" style={{ backgroundColor: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[7px] font-mono text-white/25">Rendimiento 30d</span>
+        <span className="text-[7px] font-mono" style={{ color: `${accent}50` }}>↑ 12.4%</span>
+      </div>
+      <svg className="w-full h-[24px]" viewBox="0 0 260 24" preserveAspectRatio="none">
         <defs>
-          <linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={accent} stopOpacity={0.15} />
+          <linearGradient id={`optGrad`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={accent} stopOpacity={0.2} />
             <stop offset="100%" stopColor={accent} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <path d="M0,40 Q20,38 40,35 T80,28 T120,20 T160,15 T200,8" fill="none" stroke={accent} strokeOpacity={0.4} strokeWidth={1.5} />
-        <path d="M0,40 Q20,38 40,35 T80,28 T120,20 T160,15 T200,8 V48 H0 Z" fill="url(#cGrad)" />
+        <path d="M0,20 C20,18 40,16 60,15 C80,14 100,12 120,10 C140,9 160,7 180,5 C200,4 220,3 240,2 L260,1" fill="none" stroke={accent} strokeOpacity={0.5} strokeWidth={1.5}>
+          <animate attributeName="stroke-dasharray" values="0 500;500 0" dur="2s" fill="freeze" />
+        </path>
+        <path d="M0,20 C20,18 40,16 60,15 C80,14 100,12 120,10 C140,9 160,7 180,5 C200,4 220,3 240,2 L260,1 V24 H0 Z" fill={`url(#optGrad)`}>
+          <animate attributeName="opacity" values="0;1" dur="2s" fill="freeze" />
+        </path>
       </svg>
-      <div className="absolute bottom-1 right-2 text-[7px] font-mono" style={{ color: `${accent}50` }}>Últimos 30 días</div>
     </div>
-    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style={{ backgroundColor: `${accent}08`, border: `1px solid ${accent}20` }}>
-      <RefreshCw className="w-3 h-3 animate-spin" style={{ color: accent, animationDuration: "4s" }} />
-      <span className="text-[8px] font-mono" style={{ color: `${accent}60` }}>Modelo actualizado hace 3min</span>
+
+    {/* Status bar */}
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg w-full max-w-[260px]" style={{ backgroundColor: `${accent}06`, border: `1px solid ${accent}12` }}>
+      <RefreshCw className="w-2.5 h-2.5 animate-spin" style={{ color: `${accent}50`, animationDuration: "4s" }} />
+      <span className="text-[7px] font-mono" style={{ color: `${accent}45` }}>Auto-optimización activa · Modelo v3.2.1</span>
     </div>
   </div>
 );
@@ -485,8 +616,8 @@ export const AIShowcase = () => {
             </span>
 
             <div className="grid md:grid-cols-[1.1fr,1fr] gap-0">
-              {/* Text side */}
-              <div className="p-7 md:p-10 flex flex-col justify-center">
+              {/* Text side — LEFT */}
+              <div className="p-6 md:p-8 flex flex-col justify-center">
                 {/* Step badge */}
                 <div className="flex items-center gap-3 mb-5">
                   <div
@@ -536,13 +667,10 @@ export const AIShowcase = () => {
                 </div>
               </div>
 
-              {/* Vertical divider */}
-              <div className="md:border-l border-t md:border-t-0 border-white/[0.05]" />
-
-              {/* Visual side */}
-              <div className="p-6 md:p-8 flex items-center justify-center">
+              {/* Visual side — RIGHT */}
+              <div className="relative p-5 md:p-6 flex items-center justify-center md:border-l border-t md:border-t-0 border-white/[0.05]">
                 <div
-                  className="relative w-full h-[240px] md:h-[280px] rounded-2xl overflow-hidden transition-all duration-500"
+                  className="relative w-full h-[250px] md:h-[340px] rounded-2xl overflow-hidden transition-all duration-500"
                   style={{ backgroundColor: `${step.accent}04`, border: `1px solid ${step.accent}08` }}
                 >
                   <Visual accent={step.accent} />
@@ -550,8 +678,6 @@ export const AIShowcase = () => {
               </div>
             </div>
           </div>
-
-          {/* ── Navigation arrows ── */}
           <button
             onClick={goPrev}
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-300 hidden md:flex"
@@ -612,8 +738,14 @@ export const AIShowcase = () => {
       </div>
 
       <style>{`
-        @keyframes ai-float { 0% { transform: translate(-50%, -50%) translateY(0); } 100% { transform: translate(-50%, -50%) translateY(-6px); } }
         @keyframes ai-typing { 0%, 60%, 100% { opacity: 0.15; transform: translateY(0); } 30% { opacity: 0.6; transform: translateY(-3px); } }
+        @keyframes kb-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes kb-pulse { 0%, 100% { opacity: 0; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.15); } }
+        @keyframes kb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes kb-blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        @keyframes chat-msg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes opt-count { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes opt-bar { from { width: 0; } }
       `}</style>
     </section>
   );

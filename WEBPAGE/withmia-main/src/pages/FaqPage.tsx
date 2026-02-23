@@ -1,6 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import {
   Search,
   ChevronDown,
@@ -25,7 +25,26 @@ import {
   Users,
   Code,
   Headphones,
+  ArrowRight,
 } from "lucide-react";
+
+/* ── Reveal ── */
+const Reveal = ({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [v, setV] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setV(true), { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity .65s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .65s cubic-bezier(.16,1,.3,1) ${delay}ms` }}>
+      {children}
+    </div>
+  );
+};
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 1 – STATIC FAQ DATA (accordion)
@@ -450,140 +469,140 @@ const FaqPage = () => {
 
   /* ═══════════  RENDER  ═══════════ */
   return (
-    <div className="min-h-screen bg-[#030507]">
+    <div className="min-h-screen">
       <Navigation />
       <main className="pt-20">
 
         {/* ────────── HERO ────────── */}
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/10 via-transparent to-transparent" />
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-emerald-500/[0.02] rounded-full blur-[140px]" />
-          </div>
+          <div className="max-w-4xl mx-auto px-6 pt-24 pb-16">
+            <Reveal>
+              <div className="text-center">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/15 bg-amber-500/[0.04] mb-8">
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-400/70" />
+                  <span className="text-[11px] font-semibold text-amber-300/60 uppercase tracking-widest">
+                    Centro de Ayuda
+                  </span>
+                </div>
 
-          <div className="relative max-w-4xl mx-auto px-6 pt-24 pb-16 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] mb-8">
-              <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-xs font-medium text-white/50 tracking-wide">
-                Centro de Preguntas
-              </span>
-            </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.08] mb-6">
+                  Preguntas Frecuentes
+                  <br />
+                  <span className="text-gradient">& Sugerencias</span>
+                </h1>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-6">
-              Preguntas Frecuentes
-              <br />
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                & Sugerencias
-              </span>
-            </h1>
+                <p className="text-[16px] text-white/40 max-w-xl mx-auto leading-relaxed mb-10">
+                  Resuelve tus dudas al instante o comparte ideas para mejorar WITHMIA.
+                  Vota y comenta las sugerencias de la comunidad.
+                </p>
 
-            <p className="text-lg text-white/45 max-w-2xl mx-auto leading-relaxed mb-10">
-              Resuelve tus dudas al instante o comparte ideas para mejorar
-              WITHMIA. Vota y comenta las sugerencias de la comunidad.
-            </p>
-
-            {/* Tab switcher */}
-            <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.02]">
-              <button
-                onClick={() => setActiveTab("faq")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-semibold transition-all duration-300 ${
-                  activeTab === "faq"
-                    ? "bg-white/[0.08] text-white shadow-sm"
-                    : "text-white/30 hover:text-white/50"
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                Preguntas Frecuentes
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.06] text-white/30">
-                  {totalFaqItems}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("sugerencias")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-semibold transition-all duration-300 ${
-                  activeTab === "sugerencias"
-                    ? "bg-white/[0.08] text-white shadow-sm"
-                    : "text-white/30 hover:text-white/50"
-                }`}
-              >
-                <Lightbulb className="w-4 h-4" />
-                Sugerencias
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.06] text-white/30">
-                  {suggestions.length}
-                </span>
-              </button>
-            </div>
+                {/* Tab switcher */}
+                <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-white/[0.06] bg-white/[0.015]">
+                  <button
+                    onClick={() => setActiveTab("faq")}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-300 ${
+                      activeTab === "faq"
+                        ? "bg-white/[0.07] text-white"
+                        : "text-white/25 hover:text-white/45"
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Preguntas
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.05] text-white/25">
+                      {totalFaqItems}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("sugerencias")}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-300 ${
+                      activeTab === "sugerencias"
+                        ? "bg-white/[0.07] text-white"
+                        : "text-white/25 hover:text-white/45"
+                    }`}
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    Sugerencias
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/[0.05] text-white/25">
+                      {suggestions.length}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ────────── TAB: PREGUNTAS FRECUENTES ────────── */}
         {activeTab === "faq" && (
-          <section className="pb-24 border-t border-white/[0.04]">
-            <div className="max-w-4xl mx-auto px-6 pt-10">
+          <section className="py-20">
+            <div className="max-w-4xl mx-auto px-6">
               {/* Search + filter */}
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-10">
-                <div
-                  className={`relative flex-1 w-full flex items-center rounded-2xl border transition-all duration-300 ${
-                    faqSearchFocused
-                      ? "border-emerald-500/30 bg-white/[0.05] shadow-[0_0_30px_rgba(16,185,129,0.05)]"
-                      : "border-white/[0.08] bg-white/[0.03]"
-                  }`}
-                >
-                  <Search className="absolute left-5 w-4 h-4 text-white/25" />
-                  <input
-                    type="text"
-                    placeholder="Buscar en preguntas frecuentes..."
-                    value={faqSearch}
-                    onChange={(e) => setFaqSearch(e.target.value)}
-                    onFocus={() => setFaqSearchFocused(true)}
-                    onBlur={() => setFaqSearchFocused(false)}
-                    className="w-full pl-12 pr-5 py-3.5 bg-transparent text-white/80 placeholder-white/25 text-[14px] focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setActiveFaqCat("all")}
-                    className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
-                      activeFaqCat === "all"
-                        ? "bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-300"
-                        : "bg-white/[0.02] border border-white/[0.06] text-white/30 hover:text-white/50"
+              <Reveal>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-10">
+                  <div
+                    className={`relative flex-1 w-full flex items-center rounded-xl border transition-all duration-300 ${
+                      faqSearchFocused
+                        ? "border-amber-500/25 bg-white/[0.04]"
+                        : "border-white/[0.06] bg-white/[0.015]"
                     }`}
                   >
-                    Todos
-                  </button>
-                  {faqCategories.map((cat) => (
+                    <Search className="absolute left-4 w-4 h-4 text-white/20" />
+                    <input
+                      type="text"
+                      placeholder="Buscar en preguntas frecuentes..."
+                      value={faqSearch}
+                      onChange={(e) => setFaqSearch(e.target.value)}
+                      onFocus={() => setFaqSearchFocused(true)}
+                      onBlur={() => setFaqSearchFocused(false)}
+                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
                     <button
-                      key={cat.id}
-                      onClick={() => setActiveFaqCat(cat.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
-                        activeFaqCat === cat.id
-                          ? "bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-300"
-                          : "bg-white/[0.02] border border-white/[0.06] text-white/30 hover:text-white/50"
+                      onClick={() => setActiveFaqCat("all")}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                        activeFaqCat === "all"
+                          ? "bg-amber-500/[0.1] border border-amber-500/20 text-amber-300/80"
+                          : "bg-white/[0.015] border border-white/[0.05] text-white/25 hover:text-white/45"
                       }`}
                     >
-                      {cat.label}
+                      Todos
                     </button>
-                  ))}
+                    {faqCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setActiveFaqCat(cat.id)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                          activeFaqCat === cat.id
+                            ? "bg-amber-500/[0.1] border border-amber-500/20 text-amber-300/80"
+                            : "bg-white/[0.015] border border-white/[0.05] text-white/25 hover:text-white/45"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </Reveal>
 
               {/* FAQ Accordion */}
               {filteredFaqCategories.length > 0 ? (
-                <div className="space-y-10">
-                  {filteredFaqCategories.map((cat) => (
-                    <div key={cat.id}>
+                <div className="space-y-8">
+                  {filteredFaqCategories.map((cat, catIdx) => (
+                    <Reveal key={cat.id} delay={catIdx * 60}>
                       {/* Category header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-                          <cat.icon className="w-4 h-4 text-emerald-400/60" />
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className="w-7 h-7 rounded-md bg-amber-500/[0.06] border border-amber-500/10 flex items-center justify-center">
+                          <cat.icon className="w-3.5 h-3.5 text-amber-400/50" />
                         </div>
-                        <h2 className="text-[15px] font-semibold text-white/70">{cat.label}</h2>
-                        <span className="text-[11px] text-white/20">{cat.items.length} preguntas</span>
+                        <h2 className="text-[14px] font-semibold text-white/60">{cat.label}</h2>
+                        <span className="text-[10px] text-white/15">{cat.items.length}</span>
                       </div>
 
                       {/* Items */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {cat.items.map((item, idx) => {
                           const key = `${cat.id}-${idx}`;
                           const isOpen = expandedFaq === key;
@@ -592,45 +611,45 @@ const FaqPage = () => {
                               key={idx}
                               className={`rounded-xl border transition-all duration-300 overflow-hidden ${
                                 isOpen
-                                  ? "border-white/[0.1] bg-white/[0.03]"
-                                  : "border-white/[0.06] bg-white/[0.015] hover:bg-white/[0.025] hover:border-white/[0.08]"
+                                  ? "border-white/[0.08] bg-white/[0.025]"
+                                  : "border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.06]"
                               }`}
                             >
                               <button
                                 onClick={() => setExpandedFaq(isOpen ? null : key)}
-                                className="w-full flex items-center justify-between px-5 py-4 text-left"
+                                className="w-full flex items-center justify-between px-4 py-3.5 text-left"
                               >
-                                <span className="text-[14px] font-medium text-white/70 pr-4 leading-snug">
+                                <span className="text-[13px] font-medium text-white/60 pr-4 leading-snug">
                                   {item.q}
                                 </span>
                                 <ChevronDown
-                                  className={`w-4 h-4 text-white/15 shrink-0 transition-transform duration-300 ${
+                                  className={`w-3.5 h-3.5 text-white/12 shrink-0 transition-transform duration-300 ${
                                     isOpen ? "rotate-180" : ""
                                   }`}
                                 />
                               </button>
                               {isOpen && (
-                                <div className="px-5 pb-5 animate-in fade-in duration-200">
-                                  <p className="text-[13px] text-white/40 leading-relaxed">{item.a}</p>
+                                <div className="px-4 pb-4 animate-in fade-in duration-200">
+                                  <p className="text-[12px] text-white/35 leading-relaxed">{item.a}</p>
                                 </div>
                               )}
                             </div>
                           );
                         })}
                       </div>
-                    </div>
+                    </Reveal>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-16">
-                  <HelpCircle className="w-10 h-10 text-white/10 mx-auto mb-4" />
-                  <p className="text-white/30 text-sm mb-2">No se encontraron preguntas.</p>
+                  <HelpCircle className="w-8 h-8 text-white/8 mx-auto mb-3" />
+                  <p className="text-white/25 text-[13px] mb-2">No se encontraron preguntas.</p>
                   <button
                     onClick={() => {
                       setFaqSearch("");
                       setActiveFaqCat("all");
                     }}
-                    className="text-[12px] text-emerald-400/70 hover:text-emerald-300 transition-colors"
+                    className="text-[11px] text-amber-400/60 hover:text-amber-300 transition-colors"
                   >
                     Ver todas las preguntas
                   </button>
@@ -638,30 +657,34 @@ const FaqPage = () => {
               )}
 
               {/* CTA to suggestions */}
-              <div className="mt-12 p-6 rounded-2xl border border-white/[0.04] bg-white/[0.01] text-center">
-                <Lightbulb className="w-6 h-6 text-emerald-400/40 mx-auto mb-3" />
-                <p className="text-[14px] text-white/35 mb-3">
-                  ¿No encontraste lo que buscas? ¿Tienes una idea para mejorar WITHMIA?
-                </p>
-                <button
-                  onClick={() => setActiveTab("sugerencias")}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-[13px] transition-all hover:shadow-[0_0_25px_rgba(16,185,129,0.15)]"
-                >
-                  <Lightbulb className="w-3.5 h-3.5" />
-                  Enviar sugerencia
-                </button>
-              </div>
+              <Reveal delay={100}>
+                <div className="mt-12 p-6 rounded-xl border border-white/[0.04] bg-white/[0.01] text-center">
+                  <Lightbulb className="w-5 h-5 text-amber-400/30 mx-auto mb-2.5" />
+                  <p className="text-[13px] text-white/30 mb-3">
+                    ¿No encontraste lo que buscas? ¿Tienes una idea para mejorar WITHMIA?
+                  </p>
+                  <button
+                    onClick={() => setActiveTab("sugerencias")}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-[12px] transition-all hover:-translate-y-px"
+                    style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    Enviar sugerencia
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </Reveal>
 
-              {/* Need more help? → Soporte */}
-              <div className="mt-6 flex items-center justify-center gap-6 text-[12px] text-white/20">
-                <a href="/soporte" className="flex items-center gap-1.5 hover:text-emerald-400/60 transition-colors">
-                  <Headphones className="w-3.5 h-3.5" />
+              {/* Need more help? */}
+              <div className="mt-5 flex items-center justify-center gap-5 text-[11px] text-white/15">
+                <a href="/soporte" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
+                  <Headphones className="w-3 h-3" />
                   Contactar Soporte
                 </a>
-                <span className="text-white/[0.06]">|</span>
-                <a href="/ayuda" className="flex items-center gap-1.5 hover:text-emerald-400/60 transition-colors">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Centro de Ayuda
+                <span className="text-white/[0.05]">|</span>
+                <a href="/comunidad" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
+                  <Users className="w-3 h-3" />
+                  Comunidad Discord
                 </a>
               </div>
             </div>
@@ -670,107 +693,112 @@ const FaqPage = () => {
 
         {/* ────────── TAB: SUGERENCIAS ────────── */}
         {activeTab === "sugerencias" && (
-          <section ref={suggestionsRef} className="pb-24 border-t border-white/[0.04]">
-            <div className="max-w-4xl mx-auto px-6 pt-10">
+          <section ref={suggestionsRef} className="py-20">
+            <div className="max-w-4xl mx-auto px-6">
               {/* Search */}
-              <div className="mb-6">
-                <div
-                  className={`relative flex items-center rounded-2xl border transition-all duration-300 ${
-                    suggSearchFocused
-                      ? "border-emerald-500/30 bg-white/[0.05] shadow-[0_0_30px_rgba(16,185,129,0.05)]"
-                      : "border-white/[0.08] bg-white/[0.03]"
-                  }`}
-                >
-                  <Search className="absolute left-5 w-4 h-4 text-white/25" />
-                  <input
-                    type="text"
-                    placeholder="Buscar sugerencias..."
-                    value={suggSearch}
-                    onChange={(e) => setSuggSearch(e.target.value)}
-                    onFocus={() => setSuggSearchFocused(true)}
-                    onBlur={() => setSuggSearchFocused(false)}
-                    className="w-full pl-12 pr-5 py-3.5 bg-transparent text-white/80 placeholder-white/25 text-[14px] focus:outline-none"
-                  />
+              <Reveal>
+                <div className="mb-5">
+                  <div
+                    className={`relative flex items-center rounded-xl border transition-all duration-300 ${
+                      suggSearchFocused
+                        ? "border-amber-500/25 bg-white/[0.04]"
+                        : "border-white/[0.06] bg-white/[0.015]"
+                    }`}
+                  >
+                    <Search className="absolute left-4 w-4 h-4 text-white/20" />
+                    <input
+                      type="text"
+                      placeholder="Buscar sugerencias..."
+                      value={suggSearch}
+                      onChange={(e) => setSuggSearch(e.target.value)}
+                      onFocus={() => setSuggSearchFocused(true)}
+                      onBlur={() => setSuggSearchFocused(false)}
+                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
+              </Reveal>
 
               {/* Controls */}
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-                <div className="flex flex-wrap items-center gap-2">
-                  {suggCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveSuggCat(cat.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
-                        activeSuggCat === cat.id
-                          ? "bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-300"
-                          : "bg-white/[0.02] border border-white/[0.06] text-white/30 hover:text-white/50"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 p-1 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                    {suggSortOptions.map((sort) => (
+              <Reveal delay={60}>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-8">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {suggCategories.map((cat) => (
                       <button
-                        key={sort.id}
-                        onClick={() => setActiveSuggSort(sort.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                          activeSuggSort === sort.id
-                            ? "bg-white/[0.06] text-white/70"
-                            : "text-white/25 hover:text-white/45"
+                        key={cat.id}
+                        onClick={() => setActiveSuggCat(cat.id)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                          activeSuggCat === cat.id
+                            ? "bg-amber-500/[0.1] border border-amber-500/20 text-amber-300/80"
+                            : "bg-white/[0.015] border border-white/[0.05] text-white/25 hover:text-white/45"
                         }`}
                       >
-                        <sort.icon className="w-3 h-3" />
-                        {sort.label}
+                        {cat.label}
                       </button>
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setShowSuggForm(true);
-                      setSuggSubmitted(false);
-                    }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-[12px] transition-all hover:shadow-[0_0_25px_rgba(16,185,129,0.15)] hover:-translate-y-px shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Nueva sugerencia
-                  </button>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-white/[0.05] bg-white/[0.01]">
+                      {suggSortOptions.map((sort) => (
+                        <button
+                          key={sort.id}
+                          onClick={() => setActiveSuggSort(sort.id)}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-medium transition-all ${
+                            activeSuggSort === sort.id
+                              ? "bg-white/[0.05] text-white/60"
+                              : "text-white/20 hover:text-white/40"
+                          }`}
+                        >
+                          <sort.icon className="w-3 h-3" />
+                          {sort.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowSuggForm(true);
+                        setSuggSubmitted(false);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-semibold text-[11px] transition-all hover:-translate-y-px shrink-0"
+                      style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Nueva sugerencia
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </Reveal>
 
               {/* ── New suggestion form ── */}
               {showSuggForm && (
-                <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.03] mb-8 overflow-hidden">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-emerald-500/10">
-                    <h3 className="text-[14px] font-semibold text-white">
+                <div className="rounded-xl border border-amber-500/12 bg-amber-500/[0.02] mb-8 overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-amber-500/8">
+                    <h3 className="text-[13px] font-semibold text-white/70">
                       {suggSubmitted ? "¡Sugerencia publicada!" : "Enviar sugerencia"}
                     </h3>
                     <button
                       onClick={() => setShowSuggForm(false)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/[0.05] text-white/20 hover:text-white/50 transition-all"
+                      className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-white/[0.04] text-white/15 hover:text-white/40 transition-all"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
                   {suggSubmitted ? (
                     <div className="p-8 text-center">
-                      <div className="w-12 h-12 rounded-full bg-emerald-500/[0.1] border border-emerald-500/15 flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/[0.08] border border-emerald-500/12 flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400/80" />
                       </div>
-                      <p className="text-[13px] text-white/40">
+                      <p className="text-[12px] text-white/35">
                         Tu sugerencia fue publicada. La comunidad podrá votarla y comentarla.
                       </p>
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmitSuggestion} className="p-6 space-y-4">
+                    <form onSubmit={handleSubmitSuggestion} className="p-5 space-y-3.5">
                       <div>
-                        <label className="block text-[11px] text-white/30 uppercase tracking-wider mb-2">
+                        <label className="block text-[10px] text-white/25 uppercase tracking-wider mb-1.5">
                           Título de la sugerencia
                         </label>
                         <input
@@ -779,11 +807,11 @@ const FaqPage = () => {
                           value={newSuggTitle}
                           onChange={(e) => setNewSuggTitle(e.target.value)}
                           placeholder="Ej: Agregar soporte para Telegram"
-                          className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/80 placeholder-white/15 text-[14px] focus:outline-none focus:border-emerald-500/30 transition-colors"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] text-white/80 placeholder-white/12 text-[13px] focus:outline-none focus:border-amber-500/25 transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] text-white/30 uppercase tracking-wider mb-2">
+                        <label className="block text-[10px] text-white/25 uppercase tracking-wider mb-1.5">
                           Descripción (opcional)
                         </label>
                         <textarea
@@ -791,16 +819,16 @@ const FaqPage = () => {
                           onChange={(e) => setNewSuggDesc(e.target.value)}
                           rows={3}
                           placeholder="Describe tu idea con más detalle..."
-                          className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/80 placeholder-white/15 text-[14px] focus:outline-none focus:border-emerald-500/30 transition-colors resize-none leading-relaxed"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] text-white/80 placeholder-white/12 text-[13px] focus:outline-none focus:border-amber-500/25 transition-colors resize-none leading-relaxed"
                         />
                       </div>
 
                       <div className="flex items-end justify-between gap-4">
                         <div>
-                          <label className="block text-[11px] text-white/30 uppercase tracking-wider mb-2">
+                          <label className="block text-[10px] text-white/25 uppercase tracking-wider mb-1.5">
                             Tipo
                           </label>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {suggCategories
                               .filter((c) => c.id !== "todos")
                               .map((cat) => (
@@ -808,10 +836,10 @@ const FaqPage = () => {
                                   key={cat.id}
                                   type="button"
                                   onClick={() => setNewSuggCat(cat.id)}
-                                  className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
                                     newSuggCat === cat.id
-                                      ? "bg-emerald-500/[0.12] border border-emerald-500/25 text-emerald-300"
-                                      : "bg-white/[0.02] border border-white/[0.06] text-white/25 hover:text-white/40"
+                                      ? "bg-amber-500/[0.1] border border-amber-500/20 text-amber-300/80"
+                                      : "bg-white/[0.015] border border-white/[0.05] text-white/20 hover:text-white/35"
                                   }`}
                                 >
                                   {cat.label}
@@ -822,7 +850,8 @@ const FaqPage = () => {
 
                         <button
                           type="submit"
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-[13px] transition-all hover:shadow-[0_0_25px_rgba(16,185,129,0.15)] shrink-0"
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-[12px] transition-all hover:-translate-y-px shrink-0"
+                          style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
                         >
                           <Send className="w-3.5 h-3.5" />
                           Publicar
@@ -834,188 +863,189 @@ const FaqPage = () => {
               )}
 
               {/* ── Suggestions list ── */}
-              <div className="space-y-3">
-                {filteredSuggestions.map((sugg) => {
+              <div className="space-y-2">
+                {filteredSuggestions.map((sugg, sIdx) => {
                   const isExpanded = expandedSugg === sugg.id;
                   const catLabel = suggCategories.find((c) => c.id === sugg.category)?.label || sugg.category;
                   const st = statusConfig[sugg.status];
 
                   return (
-                    <div
-                      key={sugg.id}
-                      className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                        isExpanded
-                          ? "border-white/[0.1] bg-white/[0.03]"
-                          : "border-white/[0.06] bg-white/[0.015] hover:bg-white/[0.025] hover:border-white/[0.08]"
-                      }`}
-                    >
-                      <div className="flex">
-                        {/* Vote column */}
-                        <div className="flex flex-col items-center py-5 px-4 border-r border-white/[0.04] shrink-0">
-                          <button
-                            onClick={() => handleVote(sugg.id, 1)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                              sugg.userVote === 1
-                                ? "bg-emerald-500/[0.15] text-emerald-400"
-                                : "text-white/15 hover:text-white/40 hover:bg-white/[0.04]"
-                            }`}
-                          >
-                            <ArrowUp className="w-4 h-4" />
-                          </button>
-                          <span
-                            className={`text-[14px] font-bold my-1 ${
-                              sugg.userVote === 1
-                                ? "text-emerald-400"
-                                : sugg.userVote === -1
-                                ? "text-red-400/70"
-                                : "text-white/40"
-                            }`}
-                          >
-                            {sugg.votes}
-                          </span>
-                          <button
-                            onClick={() => handleVote(sugg.id, -1)}
-                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                              sugg.userVote === -1
-                                ? "bg-red-500/[0.15] text-red-400"
-                                : "text-white/15 hover:text-white/40 hover:bg-white/[0.04]"
-                            }`}
-                          >
-                            <ArrowDown className="w-4 h-4" />
-                          </button>
-                        </div>
+                    <Reveal key={sugg.id} delay={sIdx * 40}>
+                      <div
+                        className={`rounded-xl border transition-all duration-300 overflow-hidden ${
+                          isExpanded
+                            ? "border-white/[0.08] bg-white/[0.025]"
+                            : "border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.06]"
+                        }`}
+                      >
+                        <div className="flex">
+                          {/* Vote column */}
+                          <div className="flex flex-col items-center py-4 px-3 border-r border-white/[0.03] shrink-0">
+                            <button
+                              onClick={() => handleVote(sugg.id, 1)}
+                              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                                sugg.userVote === 1
+                                  ? "bg-amber-500/[0.12] text-amber-400"
+                                  : "text-white/12 hover:text-white/35 hover:bg-white/[0.03]"
+                              }`}
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <span
+                              className={`text-[13px] font-bold my-0.5 tabular-nums ${
+                                sugg.userVote === 1
+                                  ? "text-amber-400"
+                                  : sugg.userVote === -1
+                                  ? "text-red-400/60"
+                                  : "text-white/35"
+                              }`}
+                            >
+                              {sugg.votes}
+                            </span>
+                            <button
+                              onClick={() => handleVote(sugg.id, -1)}
+                              className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${
+                                sugg.userVote === -1
+                                  ? "bg-red-500/[0.12] text-red-400"
+                                  : "text-white/12 hover:text-white/35 hover:bg-white/[0.03]"
+                              }`}
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <button
-                            onClick={() => setExpandedSugg(isExpanded ? null : sugg.id)}
-                            className="w-full text-left px-5 py-5"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-2 mb-2">
-                                  <span className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06] text-white/25">
-                                    {catLabel}
-                                  </span>
-                                  <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${st.color}`}>
-                                    {st.label}
-                                  </span>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <button
+                              onClick={() => setExpandedSugg(isExpanded ? null : sugg.id)}
+                              className="w-full text-left px-4 py-4"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                    <span className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05] text-white/20">
+                                      {catLabel}
+                                    </span>
+                                    <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border ${st.color}`}>
+                                      {st.label}
+                                    </span>
+                                  </div>
+
+                                  <h3 className="text-[13px] sm:text-[14px] font-medium text-white/65 leading-snug pr-4">
+                                    {sugg.title}
+                                  </h3>
+
+                                  {sugg.description && (
+                                    <p className="text-[11px] text-white/20 mt-1 line-clamp-2 leading-relaxed">
+                                      {sugg.description}
+                                    </p>
+                                  )}
+
+                                  <div className="flex items-center gap-3.5 mt-2">
+                                    <span className="flex items-center gap-1 text-[10px] text-white/15">
+                                      <User className="w-2.5 h-2.5" />
+                                      {sugg.author}
+                                    </span>
+                                    <span className="flex items-center gap-1 text-[10px] text-white/12">
+                                      <Clock className="w-2.5 h-2.5" />
+                                      {new Date(sugg.date).toLocaleDateString("es-CL", {
+                                        day: "2-digit",
+                                        month: "short",
+                                      })}
+                                    </span>
+                                    <span className="flex items-center gap-1 text-[10px] text-white/12">
+                                      <MessageCircle className="w-2.5 h-2.5" />
+                                      {sugg.comments.length}
+                                    </span>
+                                  </div>
                                 </div>
+                                <ChevronDown
+                                  className={`w-3.5 h-3.5 text-white/12 shrink-0 mt-1 transition-transform duration-300 ${
+                                    isExpanded ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </div>
+                            </button>
 
-                                <h3 className="text-[14px] sm:text-[15px] font-medium text-white/75 leading-snug pr-4">
-                                  {sugg.title}
-                                </h3>
-
+                            {isExpanded && (
+                              <div className="px-4 pb-4 animate-in fade-in duration-200">
                                 {sugg.description && (
-                                  <p className="text-[12px] text-white/25 mt-1.5 line-clamp-2 leading-relaxed">
+                                  <p className="text-[12px] text-white/30 leading-relaxed mb-4">
                                     {sugg.description}
                                   </p>
                                 )}
 
-                                <div className="flex items-center gap-4 mt-2.5">
-                                  <span className="flex items-center gap-1 text-[11px] text-white/20">
-                                    <User className="w-3 h-3" />
-                                    {sugg.author}
-                                  </span>
-                                  <span className="flex items-center gap-1 text-[11px] text-white/15">
-                                    <Clock className="w-3 h-3" />
-                                    {new Date(sugg.date).toLocaleDateString("es-CL", {
-                                      day: "2-digit",
-                                      month: "short",
-                                    })}
-                                  </span>
-                                  <span className="flex items-center gap-1 text-[11px] text-white/15">
-                                    <MessageCircle className="w-3 h-3" />
-                                    {sugg.comments.length}
-                                  </span>
-                                </div>
-                              </div>
-                              <ChevronDown
-                                className={`w-4 h-4 text-white/15 shrink-0 mt-1 transition-transform duration-300 ${
-                                  isExpanded ? "rotate-180" : ""
-                                }`}
-                              />
-                            </div>
-                          </button>
-
-                          {isExpanded && (
-                            <div className="px-5 pb-5 animate-in fade-in duration-200">
-                              {sugg.description && (
-                                <p className="text-[13px] text-white/35 leading-relaxed mb-4">
-                                  {sugg.description}
-                                </p>
-                              )}
-
-                              {sugg.comments.length > 0 && (
-                                <div className="space-y-3 mb-4">
-                                  <p className="text-[11px] text-white/20 uppercase tracking-wider font-semibold">
-                                    Comentarios ({sugg.comments.length})
-                                  </p>
-                                  {sugg.comments.map((c) => (
-                                    <div key={c.id} className="flex gap-3 pl-4 border-l-2 border-white/[0.04]">
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span className="text-[12px] font-medium text-white/50">{c.author}</span>
-                                          <span className="text-[10px] text-white/15">
-                                            {new Date(c.date).toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}
-                                          </span>
+                                {sugg.comments.length > 0 && (
+                                  <div className="space-y-2.5 mb-4">
+                                    <p className="text-[10px] text-white/15 uppercase tracking-wider font-semibold">
+                                      Comentarios ({sugg.comments.length})
+                                    </p>
+                                    {sugg.comments.map((c) => (
+                                      <div key={c.id} className="flex gap-2.5 pl-3 border-l-2 border-white/[0.03]">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="text-[11px] font-medium text-white/40">{c.author}</span>
+                                            <span className="text-[9px] text-white/12">
+                                              {new Date(c.date).toLocaleDateString("es-CL", { day: "2-digit", month: "short" })}
+                                            </span>
+                                          </div>
+                                          <p className="text-[12px] text-white/30 leading-relaxed">{c.text}</p>
                                         </div>
-                                        <p className="text-[13px] text-white/35 leading-relaxed">{c.text}</p>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                                    ))}
+                                  </div>
+                                )}
 
-                              {commentingSugg === sugg.id ? (
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleAddComment(sugg.id)}
-                                    placeholder="Escribe un comentario..."
-                                    autoFocus
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/70 placeholder-white/15 text-[13px] focus:outline-none focus:border-emerald-500/30 transition-colors"
-                                  />
+                                {commentingSugg === sugg.id ? (
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={newComment}
+                                      onChange={(e) => setNewComment(e.target.value)}
+                                      onKeyDown={(e) => e.key === "Enter" && handleAddComment(sugg.id)}
+                                      placeholder="Escribe un comentario..."
+                                      autoFocus
+                                      className="flex-1 px-3.5 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02] text-white/70 placeholder-white/12 text-[12px] focus:outline-none focus:border-amber-500/20 transition-colors"
+                                    />
+                                    <button
+                                      onClick={() => handleAddComment(sugg.id)}
+                                      className="px-3 py-2 rounded-lg bg-amber-500/[0.08] border border-amber-500/15 text-amber-400/80 text-[11px] font-medium hover:bg-amber-500/[0.12] transition-all"
+                                    >
+                                      <Send className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => { setCommentingSugg(null); setNewComment(""); }}
+                                      className="px-2.5 py-2 rounded-lg border border-white/[0.04] text-white/15 hover:text-white/35 text-[11px] transition-all"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
-                                    onClick={() => handleAddComment(sugg.id)}
-                                    className="px-4 py-2.5 rounded-xl bg-emerald-500/[0.1] border border-emerald-500/20 text-emerald-400 text-[12px] font-medium hover:bg-emerald-500/[0.15] transition-all"
+                                    onClick={() => setCommentingSugg(sugg.id)}
+                                    className="flex items-center gap-1.5 text-[11px] text-white/15 hover:text-amber-400/50 transition-colors"
                                   >
-                                    <Send className="w-3.5 h-3.5" />
+                                    <MessageCircle className="w-3 h-3" />
+                                    Agregar comentario
                                   </button>
-                                  <button
-                                    onClick={() => { setCommentingSugg(null); setNewComment(""); }}
-                                    className="px-3 py-2.5 rounded-xl border border-white/[0.06] text-white/20 hover:text-white/40 text-[12px] transition-all"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setCommentingSugg(sugg.id)}
-                                  className="flex items-center gap-1.5 text-[12px] text-white/20 hover:text-emerald-400/60 transition-colors"
-                                >
-                                  <MessageCircle className="w-3.5 h-3.5" />
-                                  Agregar comentario
-                                </button>
-                              )}
-                            </div>
-                          )}
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Reveal>
                   );
                 })}
               </div>
 
               {filteredSuggestions.length === 0 && (
                 <div className="text-center py-16">
-                  <Lightbulb className="w-10 h-10 text-white/10 mx-auto mb-4" />
-                  <p className="text-white/30 text-sm mb-2">No se encontraron sugerencias.</p>
+                  <Lightbulb className="w-8 h-8 text-white/8 mx-auto mb-3" />
+                  <p className="text-white/25 text-[13px] mb-2">No se encontraron sugerencias.</p>
                   <button
                     onClick={() => { setSuggSearch(""); setActiveSuggCat("todos"); }}
-                    className="text-[12px] text-emerald-400/70 hover:text-emerald-300 transition-colors"
+                    className="text-[11px] text-amber-400/60 hover:text-amber-300 transition-colors"
                   >
                     Ver todas las sugerencias
                   </button>
@@ -1023,16 +1053,16 @@ const FaqPage = () => {
               )}
 
               {/* CTA */}
-              <div className="mt-12 p-6 rounded-2xl border border-white/[0.04] bg-white/[0.01] text-center">
-                <p className="text-[13px] text-white/25">
+              <div className="mt-10 p-5 rounded-xl border border-white/[0.03] bg-white/[0.008] text-center">
+                <p className="text-[12px] text-white/20">
                   ¿Necesitas ayuda directa?{" "}
                   <a
                     href="/soporte"
-                    className="text-emerald-400/60 hover:text-emerald-300 transition-colors font-medium"
+                    className="text-amber-400/50 hover:text-amber-300 transition-colors font-medium"
                   >
                     Crea un ticket de soporte
                   </a>{" "}
-                  y nuestro equipo te responderá en menos de 24 horas.
+                  y te responderemos en menos de 24 horas.
                 </p>
               </div>
             </div>

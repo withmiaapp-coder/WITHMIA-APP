@@ -3,9 +3,6 @@ import { Footer } from "@/components/Footer";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   ArrowRight,
-  ShieldCheck,
-  X,
-  Check,
   Clock,
   MessageSquare,
   TrendingDown,
@@ -25,8 +22,6 @@ import {
   Utensils,
   Target,
   AlertTriangle,
-  ChevronRight,
-  Star,
   Shield,
   Headphones,
 } from "lucide-react";
@@ -106,24 +101,27 @@ const stats = [
 ];
 
 const painPoints = [
-  { label: "Desarticulación operativa", description: "Datos desperdigados en hojas de cálculo, chats y formularios que no conversan entre sí.", icon: AlertTriangle, color: "#f59e0b" },
-  { label: "Barreras de acceso", description: "Soluciones genéricas y costosas que no se adaptan a cómo trabaja una PYME real.", icon: Shield, color: "#f43f5e" },
-  { label: "Dependencia humana", description: "Equipos respondiendo manualmente tareas repetitivas 24/7, con alto costo operativo.", icon: Users, color: "#a78bfa" },
+  {
+    label: "Canales fragmentados",
+    description: "WhatsApp, Instagram, Email, Web — cada canal es una isla. Sin historial unificado, tu equipo repite preguntas y pierde contexto entre conversaciones.",
+    icon: AlertTriangle, color: "#f59e0b",
+    stat: "73%", statLabel: "de PYMEs usa 3+ canales sin integrar",
+  },
+  {
+    label: "Herramientas que no escalan",
+    description: "Las soluciones enterprise cuestan +$500/mes y requieren implementaciones de semanas. Las gratuitas se quedan cortas al primer pico de demanda.",
+    icon: Shield, color: "#f43f5e",
+    stat: "$500+", statLabel: "USD/mes en soluciones enterprise",
+  },
+  {
+    label: "Atención 100% manual",
+    description: "Cada mensaje requiere un humano. Fuera de horario, feriados y fines de semana, tus leads se van a la competencia que sí responde.",
+    icon: Users, color: "#a78bfa",
+    stat: "6h", statLabel: "tiempo promedio de respuesta manual",
+  },
 ];
 
-const beforeItems = [
-  { icon: Clock, text: "Respondes en 6+ horas", detail: "El cliente ya le compró a tu competencia" },
-  { icon: MessageSquare, text: "Copias y pegas entre 5 apps", detail: "WhatsApp, Excel, email, Instagram, CRM…" },
-  { icon: TrendingDown, text: "Pierdes el 40% de leads", detail: "Nadie responde fuera de horario" },
-  { icon: Users, text: "Necesitas contratar más personal", detail: "Costos que suben, ventas que no" },
-];
 
-const afterItems = [
-  { icon: Zap, text: "Respuesta en <1 minuto, 24/7", detail: "IA que responde con contexto real" },
-  { icon: MessageSquare, text: "Todo en un solo panel", detail: "Todos los canales unificados" },
-  { icon: TrendingUp, text: "Capturas el 100% de leads", detail: "Nadie se queda sin respuesta" },
-  { icon: Users, text: "Escala sin contratar", detail: "Tu equipo se enfoca en cerrar ventas" },
-];
 
 const milestones = [
   { day: "Día 1", title: "Crea tu cuenta", description: "Regístrate gratis, conecta tu primer canal (WhatsApp, Instagram o Web) y configura tu perfil de negocio.", highlight: "10 minutos", status: "completed" as const },
@@ -191,14 +189,7 @@ const useCases = [
   },
 ];
 
-const pricingFeatures = [
-  "Asistente virtual 24/7",
-  "Hasta 1,000 conversaciones/mes",
-  "Integración WhatsApp + Web",
-  "Dashboard de métricas",
-  "Soporte prioritario",
-  "CRM integrado",
-];
+
 
 /* ─── Component ─── */
 const SolucionesPymes = () => {
@@ -222,21 +213,7 @@ const SolucionesPymes = () => {
             HERO — Aurora mesh, 2-column
             ══════════════════════════════════════════════════ */}
         <section className="relative overflow-hidden">
-          {/* Aurora mesh */}
-          <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            <div className="absolute top-[-15%] left-[10%] w-[700px] h-[700px] rounded-full bg-amber-500/[0.04] blur-[140px] animate-pulse" style={{ animationDuration: "6s" }} />
-            <div className="absolute bottom-[-10%] right-[5%] w-[600px] h-[600px] rounded-full bg-violet-500/[0.035] blur-[130px] animate-pulse" style={{ animationDuration: "8s" }} />
-            <div className="absolute top-[40%] right-[35%] w-[400px] h-[400px] rounded-full bg-cyan-500/[0.025] blur-[100px] animate-pulse" style={{ animationDuration: "7s" }} />
-            <div
-              className="absolute inset-0 opacity-[0.025]"
-              style={{
-                backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-                backgroundSize: "60px 60px",
-              }}
-            />
-          </div>
-
-          <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-24">
+          <div className="max-w-7xl mx-auto px-6 pt-28 pb-16">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left — Copy */}
               <Reveal>
@@ -334,52 +311,77 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            PROBLEM — Pain points with glass cards
+            PROBLEM — Pain points redesigned
             ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative" id="problema">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
+        <section className="pt-14 pb-24 relative" id="problema">
+          <div className="max-w-6xl mx-auto px-6">
 
-          <div className="max-w-6xl mx-auto px-6 relative">
+            {/* Header — left-aligned on desktop */}
             <Reveal>
-              <div className="text-center mb-20">
-                <p className="text-xs font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-4">
-                  Brecha en LATAM
-                </p>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-5">
-                  Las PYMEs operan digital, pero{" "}
-                  <span className="text-gradient">responden como en 1999</span>
+              <div className="max-w-2xl mb-14">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/15 bg-red-500/[0.04] mb-6">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  <span className="text-[11px] font-semibold text-red-400/80 uppercase tracking-widest">El problema real</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
+                  Operan digital, pero atienden{" "}
+                  <span className="text-gradient">como en 1999</span>
                 </h2>
-                <p className="text-white/35 max-w-2xl mx-auto leading-relaxed">
-                  La mayoría de negocios tiene WhatsApp, Instagram o web, pero todo funciona manual,
-                  fragmentado y sin contexto. Eso se traduce en horas perdidas, leads sin respuesta
-                  y equipos agotados.
+                <p className="text-[15px] text-white/35 leading-relaxed">
+                  Tu negocio ya tiene presencia digital. El problema no es estar — es responder.
+                  Cada mensaje sin contestar es un cliente que se fue a tu competencia.
                 </p>
               </div>
             </Reveal>
 
-            <div className="grid md:grid-cols-3 gap-5">
-              {painPoints.map((point, i) => (
-                <Reveal key={i} delay={i * 100}>
-                  <div className="group relative h-full p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 overflow-hidden">
-                    {/* Top accent line */}
-                    <div
-                      className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      style={{ background: `linear-gradient(90deg, transparent, ${point.color}40, transparent)` }}
-                    />
-                    {/* Watermark */}
-                    <span className="absolute top-3 right-4 text-[80px] font-bold text-white/[0.015] leading-none select-none pointer-events-none">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
+            {/* Impact strip */}
+            <Reveal delay={100}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+                {[
+                  { val: "40%", label: "de leads se pierden por demora", color: "#f43f5e" },
+                  { val: "6h", label: "respuesta promedio sin IA", color: "#f59e0b" },
+                  { val: "73%", label: "usa canales no integrados", color: "#a78bfa" },
+                  { val: "3x", label: "más caro operar manual vs IA", color: "#22d3ee" },
+                ].map((s, i) => (
+                  <div key={i} className="relative py-5 px-4 rounded-xl border border-white/[0.05] bg-white/[0.015] text-center overflow-hidden group hover:border-white/[0.1] transition-all duration-300">
+                    <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent 10%, ${s.color}25 50%, transparent 90%)` }} />
+                    <p className="text-2xl sm:text-3xl font-bold font-mono tabular-nums mb-1" style={{ color: s.color }}>{s.val}</p>
+                    <p className="text-[10px] sm:text-[11px] text-white/25 leading-tight uppercase tracking-wide">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
 
-                    <div className="relative">
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
-                        style={{ backgroundColor: `${point.color}10`, border: `1px solid ${point.color}20` }}
-                      >
-                        <point.icon className="w-5 h-5" style={{ color: point.color }} />
+            {/* Pain point cards */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {painPoints.map((point, i) => (
+                <Reveal key={i} delay={200 + i * 100}>
+                  <div className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden">
+                    {/* Stat callout on top */}
+                    <div className="px-6 pt-5 pb-3 border-b border-white/[0.04]">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold font-mono" style={{ color: point.color }}>{point.stat}</span>
+                        <span className="text-[10px] text-white/20 uppercase tracking-wider leading-tight">{point.statLabel}</span>
                       </div>
-                      <h3 className="text-base font-semibold text-white mb-2.5">{point.label}</h3>
-                      <p className="text-sm text-white/30 leading-relaxed">{point.description}</p>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6 relative">
+                      {/* Step number */}
+                      <span className="absolute top-4 right-5 text-[64px] font-bold leading-none select-none pointer-events-none" style={{ color: `${point.color}06` }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+
+                      <div className="flex items-center gap-3 mb-4">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                          style={{ backgroundColor: `${point.color}10`, border: `1px solid ${point.color}18` }}
+                        >
+                          <point.icon className="w-[18px] h-[18px]" style={{ color: point.color }} />
+                        </div>
+                        <h3 className="text-[15px] font-semibold text-white">{point.label}</h3>
+                      </div>
+                      <p className="text-[13px] text-white/30 leading-relaxed">{point.description}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -389,96 +391,98 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            BEFORE / AFTER — Split comparison
+            USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative overflow-hidden">
-          {/* Center glow divider */}
-          <div className="absolute top-[15%] bottom-[15%] left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-transparent via-amber-500/20 to-transparent hidden lg:block" />
-
+        <section className="py-24 relative overflow-hidden">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
-              <div className="text-center mb-20">
-                <p className="text-xs font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-4">
-                  La diferencia
-                </p>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-5">
-                  Sin WITHMIA <span className="text-white/20">vs</span>{" "}
-                  <span className="text-gradient">Con WITHMIA</span>
+              <div className="text-center mb-16">
+                <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
+                  <Sparkles className="w-4 h-4" />
+                  Casos de Uso
+                </div>
+                <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
+                  Una IA,{" "}
+                  <span className="text-gradient">todas las industrias</span>
                 </h2>
+                <p className="text-white/35 max-w-xl mx-auto">
+                  WITHMIA se adapta a tu negocio, no al revés.
+                </p>
               </div>
             </Reveal>
 
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* BEFORE */}
-              <Reveal delay={0}>
-                <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-sm text-red-400 font-medium mb-6">
-                    <X className="w-4 h-4" />
-                    Sin WITHMIA
-                  </div>
-                  <div className="space-y-3">
-                    {beforeItems.map((item, i) => {
-                      const Icon = item.icon;
-                      return (
-                        <Reveal key={i} delay={i * 80}>
-                          <div className="group flex items-start gap-4 p-5 rounded-2xl bg-red-500/[0.03] border border-red-500/[0.08] hover:border-red-500/20 transition-all duration-300">
-                            <div className="mt-0.5 p-2.5 rounded-xl bg-red-500/10 shrink-0 group-hover:scale-110 transition-transform duration-300">
-                              <Icon className="w-5 h-5 text-red-400" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-white mb-1">{item.text}</p>
-                              <p className="text-sm text-white/30">{item.detail}</p>
-                            </div>
-                          </div>
-                        </Reveal>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Reveal>
+            {/* Industry tabs */}
+            <Reveal delay={100}>
+              <div className="flex flex-wrap justify-center gap-2 mb-12">
+                {useCases.map((uc, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTab(i)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      i === activeTab
+                        ? "text-white border shadow-lg"
+                        : "bg-white/[0.02] border border-white/[0.06] text-white/40 hover:bg-white/[0.04] hover:text-white/60"
+                    }`}
+                    style={
+                      i === activeTab
+                        ? {
+                            backgroundColor: `${uc.color}12`,
+                            borderColor: `${uc.color}30`,
+                            color: uc.color,
+                            boxShadow: `0 0 25px ${uc.color}10`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <uc.icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{uc.industry}</span>
+                  </button>
+                ))}
+              </div>
+            </Reveal>
 
-              {/* AFTER */}
-              <Reveal delay={150}>
-                <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-400 font-medium mb-6">
-                    <Check className="w-4 h-4" />
-                    Con WITHMIA
-                  </div>
-                  <div className="space-y-3">
-                    {afterItems.map((item, i) => {
-                      const Icon = item.icon;
-                      return (
-                        <Reveal key={i} delay={i * 80 + 150}>
-                          <div className="group flex items-start gap-4 p-5 rounded-2xl bg-emerald-500/[0.03] border border-emerald-500/[0.08] hover:border-emerald-500/20 transition-all duration-300">
-                            <div className="mt-0.5 p-2.5 rounded-xl bg-emerald-500/10 shrink-0 group-hover:scale-110 transition-transform duration-300">
-                              <Icon className="w-5 h-5 text-emerald-400" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-white mb-1">{item.text}</p>
-                              <p className="text-sm text-white/30">{item.detail}</p>
-                            </div>
-                          </div>
-                        </Reveal>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Reveal>
-            </div>
+            {/* Content cards */}
+            <Reveal delay={150}>
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                {current.scenarios.map((scenario, i) => (
+                  <div
+                    key={`${activeTab}-${i}`}
+                    className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden"
+                    style={{
+                      animation: `fadeInUp 0.4s ease ${i * 0.1}s both`,
+                    }}
+                  >
+                    <div
+                      className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ background: `linear-gradient(90deg, transparent, ${current.color}40, transparent)` }}
+                    />
 
-            {/* Bottom CTA */}
-            <Reveal delay={300}>
-              <div className="text-center mt-16">
-                <a
-                  href="https://app.withmia.com"
-                  className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
-                  <span className="relative flex items-center gap-2">
-                    Quiero el después
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </a>
+                    <div className="relative">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                        style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
+                      >
+                        <scenario.icon className="w-[18px] h-[18px]" style={{ color: current.color }} />
+                      </div>
+                      <h3 className="text-[15px] font-semibold text-white mb-2">{scenario.title}</h3>
+                      <p className="text-[13px] text-white/30 leading-relaxed">{scenario.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+
+            {/* Result banner */}
+            <Reveal delay={200}>
+              <div
+                className="text-center py-4 px-5 rounded-xl border"
+                style={{
+                  background: `linear-gradient(135deg, ${current.color}06, ${current.color}03)`,
+                  borderColor: `${current.color}15`,
+                }}
+              >
+                <p className="text-[13px] text-white/35 mb-1">Resultados típicos en {current.industry}:</p>
+                <p className="text-base font-bold text-gradient">{current.result}</p>
               </div>
             </Reveal>
           </div>
@@ -650,211 +654,7 @@ const SolucionesPymes = () => {
           </div>
         </section>
 
-        {/* ══════════════════════════════════════════════════
-            USE CASES — Industry tabs
-            ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet-500/[0.025] rounded-full blur-[140px] pointer-events-none" />
 
-          <div className="max-w-6xl mx-auto px-6 relative">
-            <Reveal>
-              <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
-                  <Sparkles className="w-4 h-4" />
-                  Casos de Uso
-                </div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-5">
-                  Una IA,{" "}
-                  <span className="text-gradient">todas las industrias</span>
-                </h2>
-                <p className="text-white/35 max-w-xl mx-auto">
-                  WITHMIA se adapta a tu negocio, no al revés.
-                </p>
-              </div>
-            </Reveal>
-
-            {/* Industry tabs */}
-            <Reveal delay={100}>
-              <div className="flex flex-wrap justify-center gap-2 mb-14">
-                {useCases.map((uc, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      i === activeTab
-                        ? "text-white border shadow-lg"
-                        : "bg-white/[0.02] border border-white/[0.06] text-white/40 hover:bg-white/[0.04] hover:text-white/60"
-                    }`}
-                    style={
-                      i === activeTab
-                        ? {
-                            backgroundColor: `${uc.color}12`,
-                            borderColor: `${uc.color}30`,
-                            color: uc.color,
-                            boxShadow: `0 0 25px ${uc.color}10`,
-                          }
-                        : undefined
-                    }
-                  >
-                    <uc.icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{uc.industry}</span>
-                  </button>
-                ))}
-              </div>
-            </Reveal>
-
-            {/* Content cards */}
-            <Reveal delay={150}>
-              <div className="grid md:grid-cols-3 gap-5 mb-8">
-                {current.scenarios.map((scenario, i) => (
-                  <div
-                    key={`${activeTab}-${i}`}
-                    className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 overflow-hidden"
-                    style={{
-                      animation: `fadeInUp 0.4s ease ${i * 0.1}s both`,
-                    }}
-                  >
-                    {/* Top accent */}
-                    <div
-                      className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      style={{ background: `linear-gradient(90deg, transparent, ${current.color}40, transparent)` }}
-                    />
-                    {/* Hover glow */}
-                    <div
-                      className="absolute -top-16 -right-16 w-32 h-32 rounded-full blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                      style={{ backgroundColor: `${current.color}08` }}
-                    />
-
-                    <div className="relative">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-                        style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}20` }}
-                      >
-                        <scenario.icon className="w-5 h-5" style={{ color: current.color }} />
-                      </div>
-                      <h3 className="text-base font-semibold text-white mb-2">{scenario.title}</h3>
-                      <p className="text-sm text-white/30 leading-relaxed">{scenario.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-
-            {/* Result banner */}
-            <Reveal delay={200}>
-              <div
-                className="text-center p-5 rounded-2xl border backdrop-blur-sm"
-                style={{
-                  background: `linear-gradient(135deg, ${current.color}06, ${current.color}03)`,
-                  borderColor: `${current.color}15`,
-                }}
-              >
-                <p className="text-sm text-white/35 mb-1">Resultados típicos en {current.industry}:</p>
-                <p className="text-lg font-bold text-gradient">{current.result}</p>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════════════
-            PRICING — Glass card
-            ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/[0.03] rounded-full blur-[140px] pointer-events-none" />
-
-          <div className="max-w-lg mx-auto px-6 relative">
-            <Reveal>
-              <div className="text-center mb-16">
-                <p className="text-xs font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-4">
-                  Inversión
-                </p>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-5">
-                  Planes{" "}
-                  <span className="text-gradient">asequibles</span>{" "}
-                  para tu PYME
-                </h2>
-              </div>
-            </Reveal>
-
-            <Reveal delay={100}>
-              <div className="relative group">
-                {/* Glow behind card */}
-                <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/20 via-orange-500/10 to-violet-500/10 rounded-3xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-700" />
-
-                <div className="relative rounded-2xl border border-white/[0.1] bg-white/[0.03] backdrop-blur-sm overflow-hidden">
-                  {/* Badge */}
-                  <div className="absolute top-0 right-0">
-                    <div className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-black text-xs font-bold rounded-bl-xl">
-                      <Star className="w-3 h-3" />
-                      Más popular
-                    </div>
-                  </div>
-
-                  <div className="p-8 pt-10">
-                    <h3 className="text-2xl font-bold text-white mb-2">Plan PYME</h3>
-
-                    <div className="flex items-baseline gap-1 mb-8">
-                      <span className="text-4xl font-bold text-gradient">$18</span>
-                      <span className="text-white/30">/mes por canal</span>
-                    </div>
-
-                    <div className="space-y-3 mb-8">
-                      {pricingFeatures.map((feat, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 text-white/50"
-                        >
-                          <div className="w-5 h-5 rounded-full bg-amber-400/10 flex items-center justify-center shrink-0">
-                            <ShieldCheck className="w-3 h-3 text-amber-400" />
-                          </div>
-                          <span className="text-sm">{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <a
-                      href="https://app.withmia.com"
-                      className="group/btn relative w-full inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 overflow-hidden"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-700" />
-                      <span className="relative flex items-center gap-2">
-                        Comenzar prueba gratis
-                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                      </span>
-                    </a>
-                    <p className="text-xs text-white/20 text-center mt-4">
-                      No requiere tarjeta de crédito
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════════════
-            TRUST — Indicators strip
-            ══════════════════════════════════════════════════ */}
-        <Reveal>
-          <section className="py-8 border-y border-white/[0.04]">
-            <div className="max-w-5xl mx-auto px-6">
-              <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
-                {[
-                  { icon: Shield, text: "Sin permanencia" },
-                  { icon: Headphones, text: "Soporte prioritario" },
-                  { icon: Zap, text: "Setup en 10 minutos" },
-                  { icon: Target, text: "Pensado para PYMEs" },
-                  { icon: CheckCircle2, text: "Sin tarjeta requerida" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-white/20">
-                    <item.icon className="w-3.5 h-3.5 text-amber-400/30" />
-                    <span className="text-[11px] tracking-wide">{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        </Reveal>
 
         {/* ══════════════════════════════════════════════════
             CTA — Gradient mesh

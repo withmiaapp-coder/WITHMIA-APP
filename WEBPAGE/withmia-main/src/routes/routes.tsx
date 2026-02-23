@@ -19,6 +19,7 @@ const HelpCenter = lazy(() => import('@/pages/HelpCenter'));
 const Support = lazy(() => import('@/pages/Support'));
 const FaqPage = lazy(() => import('@/pages/FaqPage'));
 const Community = lazy(() => import('@/pages/Community'));
+const MyAccount = lazy(() => import('@/pages/MyAccount'));
 
 // Simple loading component
 const LoadingFallback = () => (
@@ -48,6 +49,7 @@ export const AppRoutes = () => {
         <Route path="/soporte" element={<Support />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/comunidad" element={<Community />} />
+        <Route path="/mi-cuenta" element={<MyAccount />} />
         <Route path="/inversores" element={<Investors />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

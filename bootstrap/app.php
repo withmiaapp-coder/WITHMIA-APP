@@ -56,10 +56,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return response(view('login')->render(), 200, ['Content-Type' => 'text/html']);
         });
 
-        // Log ALL unhandled errors to stderr for RoadRunner/Railway visibility
+        // CRITICAL: Return proper JSON for ALL API exceptions (prevents empty 500 with Octane/RoadRunner)
         $exceptions->render(function (\Throwable $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                \Illuminate\Support\Facades\Log::error('[WITHMIA] UNHANDLED EXCEPTION', [
+                \Illuminate\Support\Facades\Log::error('[WITHMIA] API EXCEPTION', [
                     'class' => get_class($e),
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
@@ -67,7 +67,14 @@ return Application::configure(basePath: dirname(__DIR__))
                     'path' => $request->path(),
                     'method' => $request->method(),
                 ]);
+
+                $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+                return response()->json([
+                    'success' => false,
+                    'error' => config('app.debug') ? $e->getMessage() : 'Server error',
+                    'error_class' => config('app.debug') ? get_class($e) : null,
+                ], $status);
             }
-            return null; // Let Laravel handle the response normally
+            return null; // Non-API: let Laravel handle normally
         });
     })->create();

@@ -379,16 +379,7 @@ Route::middleware('n8n.secret')->prefix('calendar-hub/bot')->group(function () {
 // PRODUCTS — CRUD + Integrations
 // ============================================================================
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
-    Route::get('/', function (\Illuminate\Http\Request $request) {
-        try {
-            return app(\App\Http\Controllers\Api\ProductController::class)->index($request);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('ROUTE-LEVEL products/ error', [
-                'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
-            ]);
-            return response()->json(['success' => false, 'error' => $e->getMessage(), 'products' => [], 'stats' => ['total' => 0, 'categories' => [], 'by_provider' => []], 'pagination' => ['total' => 0, 'per_page' => 50, 'current_page' => 1, 'last_page' => 1]], 200);
-        }
-    });
+    Route::get('/', [ProductController::class, 'index']);
     Route::post('/', [ProductController::class, 'store']);
     Route::get('/categories', [ProductController::class, 'categories']);
     Route::get('/{id}', [ProductController::class, 'show']);
@@ -399,16 +390,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('produ
 });
 
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
-    Route::get('/status', function (\Illuminate\Http\Request $request) {
-        try {
-            return app(\App\Http\Controllers\Api\ProductIntegrationController::class)->status($request);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('ROUTE-LEVEL product-integrations/status error', [
-                'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
-            ]);
-            return response()->json(['success' => false, 'error' => $e->getMessage(), 'integrations' => []], 200);
-        }
-    });
+    Route::get('/status', [ProductIntegrationController::class, 'status']);
     Route::post('/connect', [ProductIntegrationController::class, 'connect']);
     Route::post('/disconnect', [ProductIntegrationController::class, 'disconnect']);
     Route::post('/toggle-bot-access', [ProductIntegrationController::class, 'toggleBotAccess']);

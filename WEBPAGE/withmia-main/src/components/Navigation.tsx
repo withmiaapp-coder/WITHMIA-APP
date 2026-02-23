@@ -1,5 +1,5 @@
 import logo from "@/assets/logo-withmia.png";
-import { Menu, X, ChevronDown, MessageSquare, Bot, Plug, BarChart3, Code, Sparkles } from "lucide-react";
+import { Menu, X, ChevronDown, Bot, Plug, BarChart3, Code, Sparkles, MessageCircle, Users, Inbox, Zap } from "lucide-react";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,8 +13,8 @@ const productSections = {
     title: "PLATAFORMA",
     items: [
       {
-        icon: MessageSquare,
-        name: "WITHMIA Platform",
+        icon: Inbox,
+        name: "Withmia App",
         desc: "Inbox omnicanal con IA para todo tu equipo",
         path: "/plataforma",
       },
@@ -110,10 +110,41 @@ export const Navigation = () => {
                                 <button
                                   key={item.name}
                                   onClick={() => { setProductOpen(false); navigate(item.path); }}
-                                  className="w-full flex flex-col items-center text-center px-4 py-6 rounded-xl hover:bg-white/[0.04] transition-colors duration-200 group"
+                                  className="w-full flex flex-col items-center text-center px-4 py-5 rounded-xl hover:bg-white/[0.04] transition-colors duration-200 group"
                                 >
-                                  <div className="w-12 h-12 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center mb-4 group-hover:bg-white/[0.08] group-hover:border-white/[0.12] transition-all">
-                                    <item.icon className="w-5 h-5 text-white/50 group-hover:text-white/90 transition-colors" />
+                                  {/* Mini app preview */}
+                                  <div className="w-full max-w-[200px] h-[72px] rounded-xl bg-white/[0.03] border border-white/[0.07] mb-4 overflow-hidden group-hover:border-white/[0.12] transition-all relative">
+                                    {/* Mini sidebar */}
+                                    <div className="absolute left-0 top-0 bottom-0 w-8 border-r border-white/[0.05] flex flex-col items-center gap-2 pt-2.5">
+                                      <MessageCircle className="w-3 h-3 text-amber-400/60" />
+                                      <Users className="w-3 h-3 text-white/20" />
+                                      <Zap className="w-3 h-3 text-white/20" />
+                                    </div>
+                                    {/* Mini chat list */}
+                                    <div className="absolute left-8 top-0 bottom-0 right-0 flex flex-col p-2 gap-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <div className="w-4 h-4 rounded-full bg-amber-400/15 border border-amber-400/20 shrink-0" />
+                                        <div className="flex-1">
+                                          <div className="h-[3px] w-14 rounded bg-white/15" />
+                                          <div className="h-[2px] w-20 rounded bg-white/[0.06] mt-1" />
+                                        </div>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
+                                      </div>
+                                      <div className="flex items-center gap-1.5 opacity-50">
+                                        <div className="w-4 h-4 rounded-full bg-white/[0.06] border border-white/[0.06] shrink-0" />
+                                        <div className="flex-1">
+                                          <div className="h-[3px] w-12 rounded bg-white/10" />
+                                          <div className="h-[2px] w-16 rounded bg-white/[0.04] mt-1" />
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 opacity-30">
+                                        <div className="w-4 h-4 rounded-full bg-white/[0.04] border border-white/[0.04] shrink-0" />
+                                        <div className="flex-1">
+                                          <div className="h-[3px] w-10 rounded bg-white/[0.08]" />
+                                          <div className="h-[2px] w-14 rounded bg-white/[0.03] mt-1" />
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                   <p className="text-[15px] font-semibold text-white/85 group-hover:text-white transition-colors mb-1.5">{item.name}</p>
                                   <p className="text-xs text-white/30 leading-relaxed max-w-[200px]">{item.desc}</p>

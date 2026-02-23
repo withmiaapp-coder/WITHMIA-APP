@@ -23,9 +23,11 @@ class RailwayAuthToken
         }
         
         // Buscar token en múltiples lugares (orden de prioridad)
+        // Use ?: (elvis) instead of ?? so empty strings fall through to the next source
         $token = $request->query('auth_token') 
-            ?? $request->header('X-Railway-Auth-Token')
-            ?? $request->input('auth_token');
+            ?: $request->header('X-Railway-Auth-Token')
+            ?: $request->input('auth_token')
+            ?: null;
         
         if ($token) {
             $user = User::where('auth_token', $token)->first();

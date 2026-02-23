@@ -128,6 +128,11 @@ export const Footer = () => {
                     Comunidad
                   </a>
                 </li>
+                <li>
+                  <a href="/mi-cuenta" className="text-white/40 hover:text-white transition-colors">
+                    Mi Cuenta
+                  </a>
+                </li>
               </ul>
             </div>
 

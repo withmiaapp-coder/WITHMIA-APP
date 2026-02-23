@@ -229,16 +229,23 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
   // API helper
   const gcalApiFetch = useCallback(async (url: string, options: RequestInit = {}) => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('auth_token') || '';
-    const separator = url.includes('?') ? '&' : '?';
-    const fullUrl = `${url}${separator}auth_token=${token}`;
-    const res = await fetch(fullUrl, {
+    // Token comes from localStorage via window.fetch interceptor (X-Railway-Auth-Token)
+    const token = new URLSearchParams(window.location.search).get('auth_token') 
+      || localStorage.getItem('railway_auth_token') || '';
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
+    if (token) {
+      headers['X-Railway-Auth-Token'] = token;
+    }
+    // Only add Content-Type for requests with body
+    if (options.method && options.method !== 'GET' && options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+    const res = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Railway-Auth': token,
+        ...headers,
         ...(options.headers || {}),
       },
       credentials: 'include',

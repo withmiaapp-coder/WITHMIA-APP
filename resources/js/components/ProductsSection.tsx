@@ -54,21 +54,21 @@ interface Props {
 
 // ====== HELPERS ======
 function getAuthHeaders(): Record<string, string> {
+  // Token comes from localStorage via window.fetch interceptor (X-Railway-Auth-Token)
+  // Only add auth_token from URL if explicitly present
   const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('auth_token') || '';
-  return {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    'X-Railway-Auth': token,
+  const token = urlParams.get('auth_token') || localStorage.getItem('railway_auth_token') || '';
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
   };
+  if (token) {
+    headers['X-Railway-Auth-Token'] = token;
+  }
+  return headers;
 }
 
 async function apiFetch(url: string, options: RequestInit = {}) {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('auth_token') || '';
-  const separator = url.includes('?') ? '&' : '?';
-  const fullUrl = `${url}${separator}auth_token=${token}`;
-  const res = await fetch(fullUrl, {
+  const res = await fetch(url, {
     ...options,
     headers: { ...getAuthHeaders(), ...(options.headers || {}) },
     credentials: 'include',
@@ -631,13 +631,17 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
     }
     setUploadingImage(true);
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('auth_token') || '';
+      const token = new URLSearchParams(window.location.search).get('auth_token') 
+        || localStorage.getItem('railway_auth_token') || '';
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch(`/api/products/upload-image?auth_token=${token}`, {
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      if (token) {
+        headers['X-Railway-Auth-Token'] = token;
+      }
+      const res = await fetch('/api/products/upload-image', {
         method: 'POST',
-        headers: { 'X-Railway-Auth': token, 'Accept': 'application/json' },
+        headers,
         credentials: 'include',
         body: formData,
       });
