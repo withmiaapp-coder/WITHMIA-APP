@@ -24,6 +24,12 @@ import {
   AlertTriangle,
   Shield,
   Headphones,
+  XCircle,
+  MessageCircle,
+  PhoneOff,
+  Timer,
+  DollarSign,
+  Ban,
 } from "lucide-react";
 
 /* ─── Scroll‑reveal ─── */
@@ -94,30 +100,45 @@ const useCountUp = (end: number, duration = 1800) => {
 
 /* ─── Data ─── */
 const stats = [
-  { value: "24h", label: "Tiempo promedio de respuesta sin automatización", icon: Clock, color: "#f43f5e" },
+  { value: "5s", label: "Tiempo crítico — después de 5 min pierdes el 80% de leads", icon: Timer, color: "#f43f5e" },
   { value: "40%", label: "Oportunidades perdidas por respuestas tardías", icon: TrendingDown, color: "#f59e0b" },
   { value: "100x", label: "Más chances de cerrar si respondes en <5 min", icon: Zap, color: "#22d3ee" },
   { value: "391%", label: "Más conversiones respondiendo en <1 minuto", icon: TrendingUp, color: "#34d399" },
 ];
 
+/* ─── Lost lead timeline simulation ─── */
+const lostLeadTimeline = [
+  { time: "0:00", message: "Hola! Vi el anuncio, quiero cotizar 👋", type: "incoming" as const, status: "sent" as const },
+  { time: "0:02", message: "¿Tienen disponible para hoy?", type: "incoming" as const, status: "sent" as const },
+  { time: "0:15", message: "Bueno, cuando puedan me avisan...", type: "incoming" as const, status: "waiting" as const },
+  { time: "1:30", message: "¿Hola? ¿Alguien ahí? 🤔", type: "incoming" as const, status: "waiting" as const },
+  { time: "3:00", message: "Ya agenté con otra empresa. Gracias igual.", type: "incoming" as const, status: "lost" as const },
+];
+
 const painPoints = [
   {
-    label: "Canales fragmentados",
-    description: "WhatsApp, Instagram, Email, Web — cada canal es una isla. Sin historial unificado, tu equipo repite preguntas y pierde contexto entre conversaciones.",
-    icon: AlertTriangle, color: "#f59e0b",
-    stat: "73%", statLabel: "de PYMEs usa 3+ canales sin integrar",
+    label: "WhatsApp por un lado, Instagram por otro",
+    headline: "Canales\nfragmentados",
+    description: "Cada canal es una isla. Tu equipo salta entre apps, pierde contexto y repite las mismas preguntas. El cliente lo nota.",
+    icon: MessageCircle, color: "#f59e0b",
+    stat: "73%", statLabel: "usa 3+ canales sin integrar",
+    consequences: ["Historial perdido entre canales", "Respuestas duplicadas o contradictorias", "Cero visibilidad de métricas"],
   },
   {
-    label: "Herramientas que no escalan",
-    description: "Las soluciones enterprise cuestan +$500/mes y requieren implementaciones de semanas. Las gratuitas se quedan cortas al primer pico de demanda.",
-    icon: Shield, color: "#f43f5e",
+    label: "Pagas de más o te quedas corto",
+    headline: "Herramientas\nque no escalan",
+    description: "Las enterprise cuestan +$500/mes y necesitan implementaciones de semanas. Las gratuitas colapsan con el primer pico.",
+    icon: DollarSign, color: "#f43f5e",
     stat: "$500+", statLabel: "USD/mes en soluciones enterprise",
+    consequences: ["Implementaciones de semanas o meses", "Funciones que nunca usarás", "Sin soporte en español"],
   },
   {
-    label: "Atención 100% manual",
-    description: "Cada mensaje requiere un humano. Fuera de horario, feriados y fines de semana, tus leads se van a la competencia que sí responde.",
-    icon: Users, color: "#a78bfa",
-    stat: "6h", statLabel: "tiempo promedio de respuesta manual",
+    label: "Cada mensaje depende de un humano",
+    headline: "Atención 100%\nmanual",
+    description: "Fuera de horario, feriados, fines de semana — tus leads se van a la competencia que sí responde al instante.",
+    icon: PhoneOff, color: "#a78bfa",
+    stat: "6h", statLabel: "respuesta promedio sin automatización",
+    consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Costo creciente al escalar"],
   },
 ];
 
@@ -201,7 +222,7 @@ const SolucionesPymes = () => {
   const current = useCases[activeTab];
 
   const counterLeads = useCountUp(40, 1600);
-  const counterTime = useCountUp(24, 1400);
+  const counterTime = useCountUp(6, 1400);
   const counterConversion = useCountUp(391, 2000);
 
   return (
@@ -311,55 +332,142 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            PROBLEM — Pain points redesigned
+            PROBLEM — Immersive lost-lead narrative
             ══════════════════════════════════════════════════ */}
-        <section className="pt-14 pb-24 relative" id="problema">
-          <div className="max-w-6xl mx-auto px-6">
+        <section className="pt-14 pb-28 relative" id="problema">
+          {/* Subtle red ambient glow */}
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-500/[0.015] rounded-full blur-[120px] pointer-events-none" />
 
-            {/* Header — left-aligned on desktop */}
+          <div className="max-w-6xl mx-auto px-6 relative">
+
+            {/* Header */}
             <Reveal>
-              <div className="max-w-2xl mb-14">
+              <div className="text-center max-w-3xl mx-auto mb-16">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/15 bg-red-500/[0.04] mb-6">
                   <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                   <span className="text-[11px] font-semibold text-red-400/80 uppercase tracking-widest">El problema real</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-                  Operan digital, pero atienden{" "}
+                  Tu negocio opera digital, pero atiende{" "}
                   <span className="text-gradient">como en 1999</span>
                 </h2>
-                <p className="text-[15px] text-white/35 leading-relaxed">
-                  Tu negocio ya tiene presencia digital. El problema no es estar — es responder.
-                  Cada mensaje sin contestar es un cliente que se fue a tu competencia.
+                <p className="text-[15px] text-white/35 leading-relaxed max-w-2xl mx-auto">
+                  Tener presencia digital no alcanza. Si no respondes rápido, cada mensaje sin contestar 
+                  es un cliente que ya se fue a tu competencia.
                 </p>
               </div>
             </Reveal>
 
-            {/* Impact strip */}
-            <Reveal delay={100}>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-                {[
-                  { val: "40%", label: "de leads se pierden por demora", color: "#f43f5e" },
-                  { val: "6h", label: "respuesta promedio sin IA", color: "#f59e0b" },
-                  { val: "73%", label: "usa canales no integrados", color: "#a78bfa" },
-                  { val: "3x", label: "más caro operar manual vs IA", color: "#22d3ee" },
-                ].map((s, i) => (
-                  <div key={i} className="relative py-5 px-4 rounded-xl border border-white/[0.05] bg-white/[0.015] text-center overflow-hidden group hover:border-white/[0.1] transition-all duration-300">
-                    <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent 10%, ${s.color}25 50%, transparent 90%)` }} />
-                    <p className="text-2xl sm:text-3xl font-bold font-mono tabular-nums mb-1" style={{ color: s.color }}>{s.val}</p>
-                    <p className="text-[10px] sm:text-[11px] text-white/25 leading-tight uppercase tracking-wide">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
+            {/* ─── Two-column: Lost lead sim + Impact stats ─── */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-14">
 
-            {/* Pain point cards */}
+              {/* Left — Lost lead chat simulation */}
+              <Reveal delay={100}>
+                <div className="relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                  {/* Chat header */}
+                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/20 flex items-center justify-center">
+                      <MessageSquare className="w-3.5 h-3.5 text-green-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white/70">Lead desde Instagram</p>
+                      <p className="text-[10px] text-white/25">Lunes 10:32 AM</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/15">
+                      <XCircle className="w-3 h-3 text-red-400" />
+                      <span className="text-[10px] font-medium text-red-400">Perdido</span>
+                    </div>
+                  </div>
+
+                  {/* Chat messages */}
+                  <div className="p-5 space-y-3">
+                    {lostLeadTimeline.map((msg, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-3"
+                        style={{
+                          opacity: 1,
+                          animation: `fadeInUp 0.5s ease ${i * 0.15}s both`,
+                        }}
+                      >
+                        <span className="text-[10px] font-mono text-white/15 mt-2 shrink-0 w-8 text-right">{msg.time}</span>
+                        <div className={`flex-1 max-w-[85%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
+                          msg.status === "lost"
+                            ? "bg-red-500/[0.08] border border-red-500/15 text-red-300/70"
+                            : msg.status === "waiting"
+                            ? "bg-amber-500/[0.06] border border-amber-500/10 text-amber-200/50"
+                            : "bg-white/[0.04] border border-white/[0.06] text-white/50"
+                        }`}>
+                          {msg.message}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* "Nadie respondió" indicator */}
+                    <div className="flex items-center justify-center gap-2 pt-3 mt-2 border-t border-white/[0.04]">
+                      <Ban className="w-3.5 h-3.5 text-red-400/60" />
+                      <span className="text-[11px] text-red-400/50 font-medium">Nadie respondió · Lead perdido</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom stat */}
+                  <div className="px-5 py-4 bg-red-500/[0.03] border-t border-red-500/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-white/25">Esto pasa <span className="text-red-400 font-semibold">40% de las veces</span> sin automatización</span>
+                      <span className="text-[11px] font-mono text-red-400/60">—$$$</span>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* Right — Impact stats grid */}
+              <Reveal delay={200}>
+                <div className="grid grid-cols-2 gap-3 h-full">
+                  {[
+                    { val: "40%", label: "de leads se pierden por demora en responder", color: "#f43f5e", icon: TrendingDown },
+                    { val: "6h", label: "respuesta promedio de una PYME sin IA", color: "#f59e0b", icon: Clock },
+                    { val: "73%", label: "usa 3+ canales sin integrar entre sí", color: "#a78bfa", icon: AlertTriangle },
+                    { val: "3x", label: "más caro operar manualmente vs con IA", color: "#22d3ee", icon: DollarSign },
+                  ].map((s, i) => (
+                    <div
+                      key={i}
+                      className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 group overflow-hidden flex flex-col justify-between"
+                    >
+                      {/* Corner glow on hover */}
+                      <div
+                        className="absolute -top-8 -right-8 w-20 h-20 rounded-full blur-[35px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        style={{ backgroundColor: `${s.color}12` }}
+                      />
+
+                      <div className="relative">
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center mb-4"
+                          style={{ backgroundColor: `${s.color}10`, border: `1px solid ${s.color}18` }}
+                        >
+                          <s.icon className="w-4 h-4" style={{ color: s.color }} />
+                        </div>
+                        <p className="text-3xl sm:text-4xl font-bold font-mono tabular-nums mb-2" style={{ color: s.color }}>
+                          {s.val}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-white/30 leading-relaxed">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+            </div>
+
+            {/* ─── Pain point cards — expanded with consequences ─── */}
             <div className="grid md:grid-cols-3 gap-4">
               {painPoints.map((point, i) => (
-                <Reveal key={i} delay={200 + i * 100}>
-                  <div className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden">
-                    {/* Stat callout on top */}
-                    <div className="px-6 pt-5 pb-3 border-b border-white/[0.04]">
-                      <div className="flex items-baseline gap-2">
+                <Reveal key={i} delay={100 + i * 100}>
+                  <div className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 overflow-hidden">
+                    {/* Top colored accent line */}
+                    <div className="h-px" style={{ background: `linear-gradient(90deg, transparent 5%, ${point.color}30 50%, transparent 95%)` }} />
+
+                    {/* Stat header */}
+                    <div className="px-6 pt-5 pb-4 border-b border-white/[0.04]">
+                      <div className="flex items-baseline gap-3">
                         <span className="text-3xl font-bold font-mono" style={{ color: point.color }}>{point.stat}</span>
                         <span className="text-[10px] text-white/20 uppercase tracking-wider leading-tight">{point.statLabel}</span>
                       </div>
@@ -367,33 +475,60 @@ const SolucionesPymes = () => {
 
                     {/* Content */}
                     <div className="p-6 relative">
-                      {/* Step number */}
-                      <span className="absolute top-4 right-5 text-[64px] font-bold leading-none select-none pointer-events-none" style={{ color: `${point.color}06` }}>
+                      {/* Watermark */}
+                      <span className="absolute top-2 right-4 text-[56px] font-bold leading-none select-none pointer-events-none" style={{ color: `${point.color}05` }}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
 
-                      <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-3 mb-3">
                         <div
                           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
                           style={{ backgroundColor: `${point.color}10`, border: `1px solid ${point.color}18` }}
                         >
                           <point.icon className="w-[18px] h-[18px]" style={{ color: point.color }} />
                         </div>
-                        <h3 className="text-[15px] font-semibold text-white">{point.label}</h3>
+                        <div>
+                          <p className="text-[10px] text-white/20 uppercase tracking-wider mb-0.5">{point.label}</p>
+                          <h3 className="text-[15px] font-semibold text-white whitespace-pre-line leading-snug">{point.headline}</h3>
+                        </div>
                       </div>
-                      <p className="text-[13px] text-white/30 leading-relaxed">{point.description}</p>
+
+                      <p className="text-[13px] text-white/30 leading-relaxed mb-4">{point.description}</p>
+
+                      {/* Consequences list */}
+                      <div className="space-y-2">
+                        {point.consequences.map((c, ci) => (
+                          <div key={ci} className="flex items-start gap-2">
+                            <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400/40" />
+                            <span className="text-[12px] text-white/25 leading-relaxed">{c}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </Reveal>
               ))}
             </div>
+
+            {/* Transition CTA */}
+            <Reveal delay={400}>
+              <div className="flex justify-center mt-12">
+                <a
+                  href="#casos"
+                  className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-white/[0.02] text-white/40 hover:text-white hover:border-amber-500/20 hover:bg-amber-500/[0.04] transition-all duration-300 text-sm font-medium"
+                >
+                  ¿Cómo lo resuelve WITHMIA?
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
+            </Reveal>
           </div>
         </section>
 
         {/* ══════════════════════════════════════════════════
             USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
-        <section className="py-24 relative overflow-hidden">
+        <section className="py-24 relative overflow-hidden" id="casos">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">

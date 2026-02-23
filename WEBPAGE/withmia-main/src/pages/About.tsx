@@ -172,7 +172,7 @@ const About = () => {
                 <Heart className="w-4 h-4" />
                 <Heart className="w-4 h-4 absolute inset-0 animate-ping opacity-30" />
               </div>
-              With you, WITHMIA
+              Nosotros
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">

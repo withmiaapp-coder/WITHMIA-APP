@@ -183,41 +183,41 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     };
   }, [isOpen]);
 
-  const helpSubmenuItems: Array<{icon: React.ComponentType<{ className?: string }>; label: string; onClick: (() => void) | null; className: string; isDisabled: boolean}> = [
+  const helpSubmenuItems: Array<{icon: React.ComponentType<{ className?: string }>; label: string; href: string; className: string; isDisabled: boolean}> = [
     {
       icon: BookOpen,
       label: 'Centro de ayuda',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      href: 'https://withmia.com/ayuda',
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     },
     {
       icon: MessageCircle,
       label: 'Contactar soporte',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      href: 'https://withmia.com/soporte',
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     },
     {
       icon: FileText,
       label: 'Documentación',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      href: 'https://withmia.com/docs',
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     },
     {
       icon: MessageSquare,
       label: 'Preguntas frecuentes',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      href: 'https://withmia.com/faq',
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     },
     {
       icon: Users,
       label: 'Comunidad',
-      onClick: null,
-      className: 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
-      isDisabled: true
+      href: 'https://withmia.com/comunidad',
+      className: 'text-neutral-700 hover:bg-neutral-50',
+      isDisabled: false
     }
   ];
 
@@ -352,24 +352,20 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                         {helpSubmenuItems.map((subItem, subIndex) => {
                           const SubIcon = subItem.icon;
                           return (
-                            <button
+                            <a
                               key={subIndex}
+                              href={subItem.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               onClick={() => {
-                                if (subItem.onClick) {
-                                  subItem.onClick();
-                                  setIsOpen(false);
-                                  setShowHelpSubmenu(false);
-                                }
+                                setIsOpen(false);
+                                setShowHelpSubmenu(false);
                               }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 ${
-                                subItem.isDisabled 
-                                  ? 'text-neutral-400 cursor-not-allowed hover:bg-transparent' 
-                                  : 'text-neutral-700 hover:bg-neutral-50'
-                              }`}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${subItem.className}`}
                             >
                               <SubIcon className="w-4 h-4 text-neutral-500" />
                               <span className="text-sm font-medium">{subItem.label}</span>
-                            </button>
+                            </a>
                           );
                         })}
                       </div>

@@ -22,7 +22,6 @@ export const Footer = () => {
               Una plataforma inteligente con IA conversacional que potencia tus ventas y automatiza la atención de tu negocio.
             </p>
             <p className="text-sm font-medium tracking-wide">
-              <span className="text-white/30">With you,</span>{" "}
               <span className="text-white/70">WITHMIA</span>
             </p>
           </div>
@@ -126,11 +125,6 @@ export const Footer = () => {
                 <li>
                   <a href="/comunidad" className="text-white/40 hover:text-white transition-colors">
                     Comunidad
-                  </a>
-                </li>
-                <li>
-                  <a href="/mi-cuenta" className="text-white/40 hover:text-white transition-colors">
-                    Mi Cuenta
                   </a>
                 </li>
               </ul>
