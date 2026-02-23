@@ -197,22 +197,6 @@ class SubscriptionController extends Controller
      */
     public function webhook(Request $request)
     {
-        // Verify dLocal signature if secret is configured
-        $dlocalSecret = config('services.dlocal.webhook_secret');
-        if ($dlocalSecret) {
-            $signature = $request->header('X-DLocal-Signature') 
-                ?? $request->header('X-Webhook-Signature');
-            if (!$signature || !hash_equals(
-                hash_hmac('sha256', $request->getContent(), $dlocalSecret),
-                $signature
-            )) {
-                Log::warning('dLocal webhook: invalid signature', [
-                    'has_signature' => !empty($signature),
-                ]);
-                return response()->json(['error' => 'Invalid signature'], 403);
-            }
-        }
-
         $payload = $request->all();
 
         Log::info('dLocal GO webhook received', ['payload' => $payload]);
@@ -224,6 +208,41 @@ class SubscriptionController extends Controller
 
         if (!$companyId || !$paymentId) {
             return response()->json(['received' => true], 200);
+        }
+
+        // Verify payment with dLocal Go API before processing
+        $dlocalApiKey = config('services.dlocal.api_key');
+        $dlocalSecretKey = config('services.dlocal.secret_key');
+        $dlocalApiUrl = config('services.dlocal.api_url', 'https://api.dlocalgo.com');
+
+        if ($dlocalApiKey && $dlocalSecretKey) {
+            try {
+                $verifyResponse = Http::withHeaders([
+                    'Authorization' => "Bearer {$dlocalApiKey}:{$dlocalSecretKey}",
+                ])->get("{$dlocalApiUrl}/v1/payments/{$paymentId}");
+
+                if (!$verifyResponse->successful()) {
+                    Log::warning('dLocal GO webhook: payment verification failed', [
+                        'payment_id' => $paymentId,
+                        'http_status' => $verifyResponse->status(),
+                    ]);
+                    return response()->json(['error' => 'Payment verification failed'], 403);
+                }
+
+                $verifiedPayment = $verifyResponse->json();
+                $status = $verifiedPayment['status'] ?? $status;
+
+                Log::info('dLocal GO webhook: payment verified', [
+                    'payment_id' => $paymentId,
+                    'verified_status' => $status,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('dLocal GO webhook: API verification error', [
+                    'payment_id' => $paymentId,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue with webhook status as fallback if API is unreachable
+            }
         }
 
         $company = Company::find($companyId);
