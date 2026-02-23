@@ -41,7 +41,7 @@ class ProductIntegrationController extends Controller
         $integrations = ProductIntegration::where('company_id', $company->id)->get();
 
         $result = [];
-        foreach (['woocommerce', 'shopify', 'mercadolibre', 'custom_api'] as $provider) {
+        foreach (['woocommerce', 'shopify', 'mercadolibre', 'mysql_db', 'api_rest'] as $provider) {
             $integration = $integrations->firstWhere('provider', $provider);
             $productCount = Product::where('company_id', $company->id)->where('provider', $provider)->count();
 
@@ -99,15 +99,15 @@ class ProductIntegrationController extends Controller
                 'access_token' => 'required|string',
                 'user_id' => 'required|string',
             ],
-            'custom_api' => $request->input('connection_type') === 'mysql' ? [
-                'connection_type' => 'required|in:mysql',
+            'mysql_db' => [
                 'db_host' => 'required|string',
                 'db_port' => 'nullable|string',
                 'db_name' => 'required|string',
                 'db_user' => 'required|string',
                 'db_password' => 'required|string',
                 'db_table' => 'required|string',
-            ] : [
+            ],
+            'api_rest' => [
                 'api_url' => 'required|url',
                 'api_key' => 'nullable|string',
             ],
@@ -165,24 +165,23 @@ class ProductIntegrationController extends Controller
                 $data['access_token'] = $validated['access_token'];
                 $data['settings'] = ['user_id' => $validated['user_id']];
                 break;
-            case 'custom_api':
-                if (($validated['connection_type'] ?? '') === 'mysql') {
-                    $port = $validated['db_port'] ?? '3306';
-                    $data['store_url'] = "mysql://{$validated['db_host']}:{$port}/{$validated['db_name']}";
-                    $data['api_key'] = $validated['db_password'];
-                    $data['settings'] = [
-                        'connection_type' => 'mysql',
-                        'db_host' => $validated['db_host'],
-                        'db_port' => $port ?: '3306',
-                        'db_name' => $validated['db_name'],
-                        'db_user' => $validated['db_user'],
-                        'db_table' => $validated['db_table'],
-                    ];
-                } else {
-                    $data['store_url'] = $validated['api_url'];
-                    $data['api_key'] = $validated['api_key'] ?? null;
-                    $data['settings'] = ['connection_type' => 'api'];
-                }
+            case 'mysql_db':
+                $port = $validated['db_port'] ?? '3306';
+                $data['store_url'] = "mysql://{$validated['db_host']}:{$port}/{$validated['db_name']}";
+                $data['api_key'] = $validated['db_password'];
+                $data['settings'] = [
+                    'connection_type' => 'mysql',
+                    'db_host' => $validated['db_host'],
+                    'db_port' => $port ?: '3306',
+                    'db_name' => $validated['db_name'],
+                    'db_user' => $validated['db_user'],
+                    'db_table' => $validated['db_table'],
+                ];
+                break;
+            case 'api_rest':
+                $data['store_url'] = $validated['api_url'];
+                $data['api_key'] = $validated['api_key'] ?? null;
+                $data['settings'] = ['connection_type' => 'api'];
                 break;
         }
 
@@ -295,7 +294,8 @@ class ProductIntegrationController extends Controller
                 'woocommerce' => $this->syncWooCommerce($company, $integration),
                 'shopify' => $this->syncShopify($company, $integration),
                 'mercadolibre' => $this->syncMercadoLibre($company, $integration),
-                'custom_api' => $this->syncCustomApi($company, $integration),
+                'mysql_db' => $this->syncMysql($company, $integration),
+                'api_rest' => $this->syncApiRest($company, $integration),
                 default => throw new \Exception('Proveedor no soportado'),
             };
 
@@ -634,14 +634,8 @@ class ProductIntegrationController extends Controller
         return ['count' => count($allExternalIds), 'created' => $created, 'updated' => $updated];
     }
 
-    private function syncCustomApi(Company $company, ProductIntegration $integration): array
+    private function syncApiRest(Company $company, ProductIntegration $integration): array
     {
-        // Check if this is a MySQL connection
-        $settings = $integration->settings ?? [];
-        if (($settings['connection_type'] ?? '') === 'mysql') {
-            return $this->syncMysql($company, $integration);
-        }
-
         $apiUrl = $integration->store_url;
         if (!$apiUrl) {
             throw new \Exception('URL de API no configurada');
@@ -687,13 +681,13 @@ class ProductIntegrationController extends Controller
             }
 
             $existing = Product::where('company_id', $company->id)
-                ->where('provider', 'custom_api')
+                ->where('provider', 'api_rest')
                 ->where('external_id', $externalId)
                 ->first();
 
             $productData = [
                 'company_id' => $company->id,
-                'provider' => 'custom_api',
+                'provider' => 'api_rest',
                 'external_id' => $externalId,
                 'name' => $item['name'] ?? $item['title'] ?? $item['nombre'] ?? 'Sin nombre',
                 'description' => $item['description'] ?? $item['descripcion'] ?? null,
@@ -723,7 +717,7 @@ class ProductIntegrationController extends Controller
         }
 
         Product::where('company_id', $company->id)
-            ->where('provider', 'custom_api')
+            ->where('provider', 'api_rest')
             ->whereNotIn('external_id', $allExternalIds)
             ->delete();
 
@@ -764,19 +758,19 @@ class ProductIntegrationController extends Controller
                     ->get("https://api.mercadolibre.com/users/{$data['user_id']}");
                 return ['success' => $response->successful()];
 
-            case 'custom_api':
-                if (($data['connection_type'] ?? '') === 'mysql') {
-                    $port = $data['db_port'] ?? '3306';
-                    $dsn = "mysql:host={$data['db_host']};port={$port};dbname={$data['db_name']}";
-                    $pdo = new \PDO($dsn, $data['db_user'], $data['db_password'], [
-                        \PDO::ATTR_TIMEOUT => 10,
-                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                    ]);
-                    // Verify the table exists
-                    $stmt = $pdo->prepare('SELECT 1 FROM ' . $this->sanitizeTableName($data['db_table']) . ' LIMIT 1');
-                    $stmt->execute();
-                    return ['success' => true];
-                }
+            case 'mysql_db':
+                $port = $data['db_port'] ?? '3306';
+                $dsn = "mysql:host={$data['db_host']};port={$port};dbname={$data['db_name']}";
+                $pdo = new \PDO($dsn, $data['db_user'], $data['db_password'], [
+                    \PDO::ATTR_TIMEOUT => 10,
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                ]);
+                // Verify the table exists
+                $stmt = $pdo->prepare('SELECT 1 FROM ' . $this->sanitizeTableName($data['db_table']) . ' LIMIT 1');
+                $stmt->execute();
+                return ['success' => true];
+
+            case 'api_rest':
                 $headers = [];
                 if (!empty($data['api_key'])) {
                     $headers['Authorization'] = 'Bearer ' . $data['api_key'];
@@ -797,7 +791,8 @@ class ProductIntegrationController extends Controller
             'woocommerce' => 'WooCommerce',
             'shopify' => 'Shopify',
             'mercadolibre' => 'MercadoLibre',
-            'custom_api' => 'Base de datos / API',
+            'mysql_db' => 'Base de datos MySQL',
+            'api_rest' => 'API REST',
             default => $provider,
         };
     }
@@ -880,13 +875,13 @@ class ProductIntegrationController extends Controller
             }
 
             $existing = Product::where('company_id', $company->id)
-                ->where('provider', 'custom_api')
+                ->where('provider', 'mysql_db')
                 ->where('external_id', $externalId)
                 ->first();
 
             $productData = [
                 'company_id' => $company->id,
-                'provider' => 'custom_api',
+                'provider' => 'mysql_db',
                 'external_id' => $externalId,
                 'name' => $name,
                 'description' => $description,
@@ -914,7 +909,7 @@ class ProductIntegrationController extends Controller
         }
 
         Product::where('company_id', $company->id)
-            ->where('provider', 'custom_api')
+            ->where('provider', 'mysql_db')
             ->whereNotIn('external_id', $allExternalIds)
             ->delete();
 

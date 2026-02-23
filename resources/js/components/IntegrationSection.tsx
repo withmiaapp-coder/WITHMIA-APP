@@ -114,6 +114,23 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   const [agendaproConnecting, setAgendaproConnecting] = useState(false);
   const [agendaproError, setAgendaproError] = useState('');
 
+  // Dentalink state
+  const [dentalinkConnected, setDentalinkConnected] = useState(false);
+  const [dentalinkIntegration, setDentalinkIntegration] = useState<any>(null);
+  const [dentalinkLoading, setDentalinkLoading] = useState(true);
+  const [dentalinkApiKey, setDentalinkApiKey] = useState('');
+  const [dentalinkConnecting, setDentalinkConnecting] = useState(false);
+  const [dentalinkError, setDentalinkError] = useState('');
+
+  // Medilink state
+  const [medilinkConnected, setMedilinkConnected] = useState(false);
+  const [medilinkIntegration, setMedilinkIntegration] = useState<any>(null);
+  const [medilinkLoading, setMedilinkLoading] = useState(true);
+  const [medilinkApiKey, setMedilinkApiKey] = useState('');
+  const [medilinkInstanceUrl, setMedilinkInstanceUrl] = useState('');
+  const [medilinkConnecting, setMedilinkConnecting] = useState(false);
+  const [medilinkError, setMedilinkError] = useState('');
+
   // Product integrations state
   const [productIntegrations, setProductIntegrations] = useState<Record<string, any>>({});
   const [productIntegrationsLoading, setProductIntegrationsLoading] = useState(true);
@@ -168,7 +185,6 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   // Unified product provider state: { [providerId]: { fields: {fieldKey: value}, connecting: bool, error: string } }
   const [providerForms, setProviderForms] = useState<Record<string, { fields: Record<string, string>; connecting: boolean; error: string }>>({});
   const [syncingProductProvider, setSyncingProductProvider] = useState<string | null>(null);
-  const [customConnectionType, setCustomConnectionType] = useState<'api' | 'mysql'>('mysql');
 
   const getProviderForm = (id: string) => providerForms[id] || { fields: {}, connecting: false, error: '' };
   const setProviderField = (id: string, key: string, value: string) => setProviderForms(prev => ({ ...prev, [id]: { ...getProviderForm(id), ...prev[id], fields: { ...(prev[id]?.fields || {}), [key]: value } } }));
@@ -503,6 +519,115 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     } catch (err) { console.error('Error toggling AgendaPro bot access:', err); }
   }, [agendaproIntegration, gcalApiFetch]);
 
+  // ========== DENTALINK ==========
+  const loadDentalinkStatus = useCallback(async () => {
+    try {
+      setDentalinkLoading(true);
+      const data = await gcalApiFetch('/api/dentalink/status');
+      setDentalinkConnected(data.connected);
+      setDentalinkIntegration(data.integration);
+    } catch (err) { console.error('Error loading Dentalink status:', err); }
+    finally { setDentalinkLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectDentalink = useCallback(async () => {
+    if (!dentalinkApiKey) {
+      setDentalinkError('Ingresa tu API Token de Dentalink');
+      return;
+    }
+    setDentalinkConnecting(true);
+    setDentalinkError('');
+    try {
+      const data = await gcalApiFetch('/api/dentalink/connect', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: dentalinkApiKey }),
+      });
+      if (data.success) {
+        setDentalinkApiKey('');
+        await loadDentalinkStatus();
+        onIntegrationChange?.();
+      }
+    } catch (err: any) {
+      setDentalinkError('API Token inválido');
+    } finally { setDentalinkConnecting(false); }
+  }, [dentalinkApiKey, gcalApiFetch, loadDentalinkStatus, onIntegrationChange]);
+
+  const disconnectDentalink = useCallback(async () => {
+    if (!confirm('¿Desconectar Dentalink?')) return;
+    try {
+      await gcalApiFetch('/api/dentalink/disconnect', { method: 'POST' });
+      setDentalinkConnected(false);
+      setDentalinkIntegration(null);
+      onIntegrationChange?.();
+    } catch (err) { console.error('Error disconnecting Dentalink:', err); }
+  }, [gcalApiFetch, onIntegrationChange]);
+
+  const toggleDentalinkBotAccess = useCallback(async () => {
+    if (!dentalinkIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/dentalink/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !dentalinkIntegration.bot_access_enabled }),
+      });
+      setDentalinkIntegration(data.integration);
+    } catch (err) { console.error('Error toggling Dentalink bot access:', err); }
+  }, [dentalinkIntegration, gcalApiFetch]);
+
+  // ========== MEDILINK ==========
+  const loadMedilinkStatus = useCallback(async () => {
+    try {
+      setMedilinkLoading(true);
+      const data = await gcalApiFetch('/api/medilink/status');
+      setMedilinkConnected(data.connected);
+      setMedilinkIntegration(data.integration);
+    } catch (err) { console.error('Error loading Medilink status:', err); }
+    finally { setMedilinkLoading(false); }
+  }, [gcalApiFetch]);
+
+  const connectMedilink = useCallback(async () => {
+    if (!medilinkApiKey) {
+      setMedilinkError('Ingresa tu API Token de Medilink');
+      return;
+    }
+    setMedilinkConnecting(true);
+    setMedilinkError('');
+    try {
+      const data = await gcalApiFetch('/api/medilink/connect', {
+        method: 'POST',
+        body: JSON.stringify({ api_key: medilinkApiKey, instance_url: medilinkInstanceUrl || undefined }),
+      });
+      if (data.success) {
+        setMedilinkApiKey('');
+        setMedilinkInstanceUrl('');
+        await loadMedilinkStatus();
+        onIntegrationChange?.();
+      }
+    } catch (err: any) {
+      setMedilinkError('API Token o URL inválidos');
+    } finally { setMedilinkConnecting(false); }
+  }, [medilinkApiKey, medilinkInstanceUrl, gcalApiFetch, loadMedilinkStatus, onIntegrationChange]);
+
+  const disconnectMedilink = useCallback(async () => {
+    if (!confirm('¿Desconectar Medilink?')) return;
+    try {
+      await gcalApiFetch('/api/medilink/disconnect', { method: 'POST' });
+      setMedilinkConnected(false);
+      setMedilinkIntegration(null);
+      onIntegrationChange?.();
+    } catch (err) { console.error('Error disconnecting Medilink:', err); }
+  }, [gcalApiFetch, onIntegrationChange]);
+
+  const toggleMedilinkBotAccess = useCallback(async () => {
+    if (!medilinkIntegration) return;
+    try {
+      const data = await gcalApiFetch('/api/medilink/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ bot_access_enabled: !medilinkIntegration.bot_access_enabled }),
+      });
+      setMedilinkIntegration(data.integration);
+    } catch (err) { console.error('Error toggling Medilink bot access:', err); }
+  }, [medilinkIntegration, gcalApiFetch]);
+
   // ========== PRODUCT INTEGRATIONS ==========
   const loadProductIntegrations = useCallback(async () => {
     try {
@@ -597,9 +722,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     loadOutlookStatus();
     loadReservoStatus();
     loadAgendaproStatus();
+    loadDentalinkStatus();
+    loadMedilinkStatus();
     loadProductIntegrations();
     loadChatwootChannels();
-  }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadProductIntegrations]);
+  }, [loadGcalStatus, loadCalendlyStatus, loadOutlookStatus, loadReservoStatus, loadAgendaproStatus, loadDentalinkStatus, loadMedilinkStatus, loadProductIntegrations]);
 
   // Load Chatwoot channel statuses
   const loadChatwootChannels = useCallback(async () => {
@@ -853,7 +980,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     { id: 'outlook', name: 'Outlook Calendar', icon: CalendarDays, color: '#0078D4', description: 'Integra con Outlook Calendar' },
     { id: 'calendly', name: 'Calendly', icon: CalendarDays, color: '#006BFF', description: 'Agenda reuniones con Calendly' },
     { id: 'mercadolibre', name: 'MercadoLibre', icon: Store, color: '#FFE600', description: 'Conecta tu tienda MercadoLibre' },
-    { id: 'custom_api', name: 'Base de datos / API', icon: Database, color: '#0ea5e9', description: 'MySQL directo o endpoint REST' },
+    { id: 'mysql_db', name: 'Base de datos MySQL', icon: Database, color: '#00758F', description: 'Conecta directo a tu base de datos' },
+    { id: 'api_rest', name: 'API REST', icon: Globe, color: '#F59E0B', description: 'Conecta cualquier endpoint REST' },
+    { id: 'dentalink', name: 'Dentalink', icon: Calendar, color: '#00bcd4', description: 'Software de gestión dental' },
+    { id: 'medilink', name: 'Medilink', icon: Calendar, color: '#e91e63', description: 'Sistema de fichas médicas' },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -2202,6 +2332,196 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               )}
             </div>
 
+            {/* ==================== DENTALINK ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'dentalink' ? 'border-cyan-300 shadow-lg ring-1 ring-cyan-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'dentalink' ? null : 'dentalink')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #00bcd4, #00bcd4DD)' }}>
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Dentalink</h3>
+                    <p className="text-sm text-neutral-500">Software de gestión dental</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {dentalinkLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : dentalinkConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'dentalink' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'dentalink' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {dentalinkConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Dentalink conectado</span></div>
+                          {dentalinkIntegration?.provider_email && <span className="text-xs text-green-600">{dentalinkIntegration.provider_email}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${dentalinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{dentalinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas dentales automáticamente' : 'Activa para que WITHMIA agende en Dentalink'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={dentalinkIntegration?.bot_access_enabled || false} onChange={toggleDentalinkBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectDentalink} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-cyan-50 rounded-lg flex-shrink-0">
+                            <Calendar className="w-8 h-8 text-cyan-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Dentalink</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Integra Dentalink para que WITHMIA gestione citas dentales automáticamente.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por dentista</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar citas con pacientes</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples sucursales y tratamientos</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Token de Dentalink</label>
+                          <input
+                            type="password"
+                            value={dentalinkApiKey}
+                            onChange={(e) => setDentalinkApiKey(e.target.value)}
+                            placeholder="Tu API Token de Dentalink"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                          />
+                        </div>
+                        {dentalinkError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {dentalinkError}</p>}
+                        <button onClick={connectDentalink} disabled={dentalinkConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-cyan-300 text-neutral-700 hover:text-cyan-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                          {dentalinkConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Dentalink</>)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ==================== MEDILINK ==================== */}
+            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+              expandedTool === 'medilink' ? 'border-pink-300 shadow-lg ring-1 ring-pink-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+            }`}>
+              <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'medilink' ? null : 'medilink')}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #e91e63, #e91e63DD)' }}>
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Medilink</h3>
+                    <p className="text-sm text-neutral-500">Sistema de fichas médicas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {medilinkLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : medilinkConnected ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                  )}
+                  {expandedTool === 'medilink' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
+                </div>
+              </div>
+              {expandedTool === 'medilink' && (
+                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  {medilinkConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Medilink conectado</span></div>
+                          {medilinkIntegration?.provider_email && <span className="text-xs text-green-600">{medilinkIntegration.provider_email}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Bot className={`w-5 h-5 ${medilinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <div>
+                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
+                            <p className="text-sm text-neutral-500">{medilinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas médicas automáticamente' : 'Activa para que WITHMIA agende en Medilink'}</p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" checked={medilinkIntegration?.bot_access_enabled || false} onChange={toggleMedilinkBotAccess} className="sr-only peer" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex justify-end">
+                        <button onClick={disconnectMedilink} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2 bg-pink-50 rounded-lg flex-shrink-0">
+                            <Calendar className="w-8 h-8 text-pink-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Medilink</h4>
+                            <p className="text-sm text-neutral-500 mb-3">Integra Medilink para que WITHMIA gestione citas médicas automáticamente.</p>
+                            <ul className="text-xs text-neutral-500 space-y-1">
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por profesional</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar citas con pacientes</li>
+                              <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples especialidades médicas</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Token de Medilink</label>
+                          <input
+                            type="password"
+                            value={medilinkApiKey}
+                            onChange={(e) => setMedilinkApiKey(e.target.value)}
+                            placeholder="Tu API Token de Medilink"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">URL de tu instancia <span className="text-neutral-400 font-normal">(opcional)</span></label>
+                          <input
+                            type="text"
+                            value={medilinkInstanceUrl}
+                            onChange={(e) => setMedilinkInstanceUrl(e.target.value)}
+                            placeholder="https://api.medilink.cl/api/v1"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                          />
+                        </div>
+                        {medilinkError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {medilinkError}</p>}
+                        <button onClick={connectMedilink} disabled={medilinkConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-pink-300 text-neutral-700 hover:text-pink-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                          {medilinkConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Medilink</>)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* ==================== CALENDLY ==================== */}
             <div className={`bg-white rounded-xl border transition-all duration-200 ${
               expandedTool === 'calendly' ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
@@ -2624,29 +2944,36 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                   ],
                 },
                 {
-                  id: 'custom_api', name: customConnectionType === 'mysql' ? 'Base de datos MySQL' : 'API REST propia', icon: Database,
-                  gradient: 'linear-gradient(135deg, #0ea5e9, #0ea5e9DD)',
-                  subtitle: customConnectionType === 'mysql' ? 'Conecta directo a tu base de datos' : 'Conecta cualquier endpoint REST',
-                  fields: customConnectionType === 'mysql' ? [
+                  id: 'mysql_db', name: 'Base de datos MySQL', icon: Database,
+                  gradient: 'linear-gradient(135deg, #00758F, #00758FDD)',
+                  subtitle: 'Conecta directo a tu base de datos',
+                  fields: [
                     { key: 'db_host', label: 'Host del servidor', placeholder: 'Ej: mysql.miempresa.com o 192.168.1.100', hint: 'La dirección de tu servidor MySQL', type: 'text' },
                     { key: 'db_port', label: 'Puerto (opcional)', placeholder: '3306', hint: 'Normalmente es 3306', type: 'text' },
                     { key: 'db_name', label: 'Nombre de la base de datos', placeholder: 'Ej: mi_tienda', hint: '', type: 'text' },
                     { key: 'db_user', label: 'Usuario', placeholder: 'Ej: admin', hint: '', type: 'text' },
                     { key: 'db_password', label: 'Contraseña', placeholder: 'Contraseña del usuario MySQL', hint: '', type: 'password' },
                     { key: 'db_table', label: 'Tabla de productos', placeholder: 'Ej: productos, products, items', hint: 'La tabla donde están guardados tus productos', type: 'text' },
-                  ] : [
-                    { key: 'api_url', label: 'Link donde están tus productos', placeholder: 'Ej: https://misite.com/api/productos.php', hint: 'Debe devolver tus productos en formato JSON', type: 'text' },
-                    { key: 'api_key', label: 'Contraseña de la API (si tiene)', placeholder: 'Déjalo vacío si no requiere contraseña', hint: '', type: 'password' },
                   ],
-                  requiredFields: customConnectionType === 'mysql' ? ['db_host', 'db_name', 'db_user', 'db_password', 'db_table'] : ['api_url'],
-                  credentialMap: customConnectionType === 'mysql'
-                    ? { db_host: 'db_host', db_port: 'db_port', db_name: 'db_name', db_user: 'db_user', db_password: 'db_password', db_table: 'db_table' }
-                    : { api_url: 'api_url', api_key: 'api_key' },
-                  steps: customConnectionType === 'mysql' ? [
+                  requiredFields: ['db_host', 'db_name', 'db_user', 'db_password', 'db_table'],
+                  credentialMap: { db_host: 'db_host', db_port: 'db_port', db_name: 'db_name', db_user: 'db_user', db_password: 'db_password', db_table: 'db_table' },
+                  steps: [
                     'Pídele a tu programador los datos de acceso a MySQL',
                     'Necesitas: host, base de datos, usuario y contraseña',
                     'Indica la tabla donde están guardados tus productos',
-                  ] : [
+                  ],
+                },
+                {
+                  id: 'api_rest', name: 'API REST', icon: Globe,
+                  gradient: 'linear-gradient(135deg, #F59E0B, #F59E0BDD)',
+                  subtitle: 'Conecta cualquier endpoint REST',
+                  fields: [
+                    { key: 'api_url', label: 'Link donde están tus productos', placeholder: 'Ej: https://misite.com/api/productos.php', hint: 'Debe devolver tus productos en formato JSON', type: 'text' },
+                    { key: 'api_key', label: 'Contraseña de la API (si tiene)', placeholder: 'Déjalo vacío si no requiere contraseña', hint: '', type: 'password' },
+                  ],
+                  requiredFields: ['api_url'],
+                  credentialMap: { api_url: 'api_url', api_key: 'api_key' },
+                  steps: [
                     'Pídele a tu programador el link de tu API de productos',
                     'Si tiene contraseña/API Key, pégala abajo',
                     'Nosotros importamos todo automáticamente',
@@ -2725,33 +3052,6 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         ) : (
                           <div className="space-y-5">
-                            {/* Mode toggle for custom_api */}
-                            {prov.id === 'custom_api' && (
-                              <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
-                                <button
-                                  onClick={() => { setCustomConnectionType('mysql'); resetProviderFields('custom_api'); }}
-                                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                                    customConnectionType === 'mysql'
-                                      ? 'bg-white text-blue-700 shadow-sm'
-                                      : 'text-neutral-500 hover:text-neutral-700'
-                                  }`}
-                                >
-                                  <Database className="w-4 h-4" />
-                                  MySQL directo
-                                </button>
-                                <button
-                                  onClick={() => { setCustomConnectionType('api'); resetProviderFields('custom_api'); }}
-                                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                                    customConnectionType === 'api'
-                                      ? 'bg-white text-blue-700 shadow-sm'
-                                      : 'text-neutral-500 hover:text-neutral-700'
-                                  }`}
-                                >
-                                  <Globe className="w-4 h-4" />
-                                  API REST
-                                </button>
-                              </div>
-                            )}
                             {/* Step-by-step guide */}
                             <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl">
                               <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">¿Cómo lo hago?</p>
@@ -2807,7 +3107,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               </div>
                             )}
                             <button
-                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields, prov.id === 'custom_api' ? { connection_type: customConnectionType } : undefined)}
+                              onClick={() => connectProvider(prov.id, prov.credentialMap, prov.requiredFields)}
                               disabled={form.connecting}
                               className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-200/50"
                             >

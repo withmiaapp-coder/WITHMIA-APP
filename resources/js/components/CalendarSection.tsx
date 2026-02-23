@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 // ====== TIPOS ======
-type CalendarProvider = 'google' | 'outlook' | 'calendly' | 'reservo' | 'agendapro';
+type CalendarProvider = 'google' | 'outlook' | 'calendly' | 'reservo' | 'agendapro' | 'dentalink' | 'medilink';
 
 interface CalendarEvent {
   id: string;
@@ -117,6 +117,8 @@ const PROVIDER_COLORS: Record<CalendarProvider, string> = {
   calendly: '#006BFF',
   reservo: '#14b8a6',
   agendapro: '#6366f1',
+  dentalink: '#00bcd4',
+  medilink: '#e91e63',
 };
 
 const PROVIDER_NAMES: Record<CalendarProvider, string> = {
@@ -125,6 +127,8 @@ const PROVIDER_NAMES: Record<CalendarProvider, string> = {
   calendly: 'Calendly',
   reservo: 'Reservo',
   agendapro: 'AgendaPro',
+  dentalink: 'Dentalink',
+  medilink: 'Medilink',
 };
 
 function getEventColor(event: CalendarEvent, index: number): string {
@@ -159,6 +163,8 @@ export default function CalendarSection({ user, company }: Props) {
   const [calendlyConnecting, setCalendlyConnecting] = useState(false);
   const [reservoConnected, setReservoConnected] = useState(false);
   const [agendaproConnected, setAgendaproConnected] = useState(false);
+  const [dentalinkConnected, setDentalinkConnected] = useState(false);
+  const [medilinkConnected, setMedilinkConnected] = useState(false);
 
   // Panel de conexión
   const [showConnectPanel, setShowConnectPanel] = useState(false);
@@ -187,12 +193,14 @@ export default function CalendarSection({ user, company }: Props) {
     try {
       setLoading(true);
       // Cargar todos los proveedores en paralelo
-      const [googleRes, outlookRes, calendlyRes, reservoRes, agendaproRes] = await Promise.allSettled([
+      const [googleRes, outlookRes, calendlyRes, reservoRes, agendaproRes, dentalinkRes, medilinkRes] = await Promise.allSettled([
         apiFetch('/api/calendar/status'),
         apiFetch('/api/outlook/status'),
         apiFetch('/api/calendly/status'),
         apiFetch('/api/reservo/status'),
         apiFetch('/api/agendapro/status'),
+        apiFetch('/api/dentalink/status'),
+        apiFetch('/api/medilink/status'),
       ]);
 
       // Google Calendar
@@ -221,6 +229,14 @@ export default function CalendarSection({ user, company }: Props) {
       // AgendaPro
       if (agendaproRes.status === 'fulfilled') {
         setAgendaproConnected(agendaproRes.value.connected);
+      }
+      // Dentalink
+      if (dentalinkRes.status === 'fulfilled') {
+        setDentalinkConnected(dentalinkRes.value.connected);
+      }
+      // Medilink
+      if (medilinkRes.status === 'fulfilled') {
+        setMedilinkConnected(medilinkRes.value.connected);
       }
     } catch (err) {
       console.error('Error loading calendar status:', err);
@@ -545,7 +561,7 @@ export default function CalendarSection({ user, company }: Props) {
           method: 'DELETE',
         });
       } else {
-        // Calendly, Reservo, AgendaPro don't support delete from here
+        // Calendly, Reservo, AgendaPro, Dentalink, Medilink don't support delete from here
         return;
       }
       setSelectedEvent(null);
@@ -626,8 +642,8 @@ export default function CalendarSection({ user, company }: Props) {
   }
 
   // Cualquier proveedor conectado
-  const anyConnected = isConnected || outlookConnected || calendlyConnected || reservoConnected || agendaproConnected;
-  const connectedCount = [isConnected, outlookConnected, calendlyConnected, reservoConnected, agendaproConnected].filter(Boolean).length;
+  const anyConnected = isConnected || outlookConnected || calendlyConnected || reservoConnected || agendaproConnected || dentalinkConnected || medilinkConnected;
+  const connectedCount = [isConnected, outlookConnected, calendlyConnected, reservoConnected, agendaproConnected, dentalinkConnected, medilinkConnected].filter(Boolean).length;
 
   // ====== RENDER: SIEMPRE EL CALENDARIO ======
   return (
@@ -876,6 +892,44 @@ export default function CalendarSection({ user, company }: Props) {
                 <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Key</span>
               )}
             </div>
+
+            {/* Dentalink */}
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${dentalinkConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <CalendarIcon className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-neutral-800">Dentalink</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{dentalinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+              </div>
+              {dentalinkConnected ? (
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Token</span>
+              )}
+            </div>
+
+            {/* Medilink */}
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${medilinkConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <CalendarIcon className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-neutral-800">Medilink</p>
+                <p className="text-[11px] text-neutral-500 font-medium">{medilinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+              </div>
+              {medilinkConnected ? (
+                <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-bold text-emerald-700">Activo</span>
+                </div>
+              ) : (
+                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Token</span>
+              )}
+            </div>
           </div>
           {/* Tip de buenas prácticas */}
           <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg flex items-start gap-2">
@@ -919,7 +973,7 @@ export default function CalendarSection({ user, company }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-700">Conecta tu calendario</p>
-            <p className="text-xs text-neutral-400">Google, Outlook, Calendly, Reservo o AgendaPro</p>
+            <p className="text-xs text-neutral-400">Google, Outlook, Calendly, Reservo, AgendaPro, Dentalink o Medilink</p>
           </div>
           <button className="flex-shrink-0 px-4 py-2 bg-white border border-rose-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm">
             Ver opciones

@@ -73,7 +73,7 @@ class CalendarIntegration extends Model
     /**
      * Refrescar el access token usando el refresh token.
      * Soporta múltiples proveedores: google, outlook, calendly.
-     * Para proveedores con API key (reservo, agendapro) no se necesita refresh.
+     * Para proveedores con API key (reservo, agendapro, dentalink, medilink) no se necesita refresh.
      */
     public function refreshAccessToken(): ?string
     {
@@ -82,7 +82,7 @@ class CalendarIntegration extends Model
         }
 
         // Proveedores con API Key no necesitan refresh
-        if (in_array($this->provider, ['reservo', 'agendapro'])) {
+        if (in_array($this->provider, ['reservo', 'agendapro', 'dentalink', 'medilink'])) {
             return $this->access_token;
         }
 
@@ -157,7 +157,7 @@ class CalendarIntegration extends Model
      */
     public function isApiKeyProvider(): bool
     {
-        return in_array($this->provider, ['reservo', 'agendapro']);
+        return in_array($this->provider, ['reservo', 'agendapro', 'dentalink', 'medilink']);
     }
 
     /**

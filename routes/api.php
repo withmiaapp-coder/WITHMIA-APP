@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\CalendlyController;
 use App\Http\Controllers\Api\OutlookCalendarController;
 use App\Http\Controllers\Api\ReservoController;
 use App\Http\Controllers\Api\AgendaProController;
+use App\Http\Controllers\Api\DentalinkController;
+use App\Http\Controllers\Api\MedilinkController;
 use App\Http\Controllers\Api\CalendarHubController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductIntegrationController;
@@ -453,6 +455,45 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 Route::prefix('agendapro/bot')->group(function () {
     Route::get('/availability', [AgendaProController::class, 'botGetAvailability']);
     Route::post('/create-booking', [AgendaProController::class, 'botCreateBooking']);
+});
+
+// ============================================================================
+// 8g. DENTALINK INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('dentalink')->group(function () {
+    Route::post('/connect', [DentalinkController::class, 'connect']);
+    Route::post('/disconnect', [DentalinkController::class, 'disconnect']);
+    Route::get('/status', [DentalinkController::class, 'status']);
+    Route::put('/settings', [DentalinkController::class, 'updateSettings']);
+    Route::get('/branches', [DentalinkController::class, 'listBranches']);
+    Route::get('/dentists', [DentalinkController::class, 'listDentists']);
+    Route::get('/treatments', [DentalinkController::class, 'listTreatments']);
+    Route::get('/availability', [DentalinkController::class, 'getAvailability']);
+    Route::get('/appointments', [DentalinkController::class, 'listAppointments']);
+    Route::post('/appointments', [DentalinkController::class, 'createAppointment']);
+});
+Route::prefix('dentalink/bot')->group(function () {
+    Route::get('/availability', [DentalinkController::class, 'botGetAvailability']);
+    Route::post('/create-appointment', [DentalinkController::class, 'botCreateAppointment']);
+});
+
+// ============================================================================
+// 8h. MEDILINK INTEGRATION
+// ============================================================================
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('medilink')->group(function () {
+    Route::post('/connect', [MedilinkController::class, 'connect']);
+    Route::post('/disconnect', [MedilinkController::class, 'disconnect']);
+    Route::get('/status', [MedilinkController::class, 'status']);
+    Route::put('/settings', [MedilinkController::class, 'updateSettings']);
+    Route::get('/practitioners', [MedilinkController::class, 'listPractitioners']);
+    Route::get('/specialties', [MedilinkController::class, 'listSpecialties']);
+    Route::get('/availability', [MedilinkController::class, 'getAvailability']);
+    Route::get('/appointments', [MedilinkController::class, 'listAppointments']);
+    Route::post('/appointments', [MedilinkController::class, 'createAppointment']);
+});
+Route::prefix('medilink/bot')->group(function () {
+    Route::get('/availability', [MedilinkController::class, 'botGetAvailability']);
+    Route::post('/create-appointment', [MedilinkController::class, 'botCreateAppointment']);
 });
 
 // ============================================================================
