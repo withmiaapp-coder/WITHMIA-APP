@@ -109,30 +109,46 @@ const lostLeadTimeline = [
   { time: "13:30", message: "Ya reservé con otra empresa. Gracias.", status: "lost" as const },
 ];
 
+/* ─── "Síntomas" de que tu negocio está atrapado en el pasado ─── */
+const boomerSymptoms = [
+  "Respondes WhatsApp desde tu celular personal",
+  "Tu 'CRM' es un Excel con 47 pestañas",
+  "Los leads del fin de semana se contestan el lunes",
+  "Tu equipo copia y pega la misma respuesta 50 veces al día",
+  "Pagas por anuncios pero nadie contesta los mensajes que llegan",
+  "Si alguien se enferma, nadie atiende ese canal",
+];
+
 const painPoints = [
   {
-    label: "WhatsApp por un lado, Instagram por otro",
+    label: "Así se sentía tu competencia... antes de automatizar",
     headline: "Canales\nfragmentados",
-    description: "Cada canal es una isla. Tu equipo salta entre apps, pierde contexto y repite las mismas preguntas. El cliente lo nota.",
+    description: "WhatsApp por un lado, Instagram por otro, el correo olvidado. Tu equipo salta entre 5 apps mientras el cliente se aburre de esperar.",
     icon: MessageCircle, color: "#f59e0b",
     stat: "73%", statLabel: "usa 3+ canales sin integrar",
     consequences: ["Historial perdido entre canales", "Respuestas duplicadas o contradictorias", "Cero visibilidad de métricas"],
+    oldWay: "📋 Cuaderno + WhatsApp personal",
+    newWay: "🤖 Bandeja unificada con IA",
   },
   {
-    label: "Pagas de más o te quedas corto",
+    label: "El ahorro que crees tener te cuesta el triple",
     headline: "Herramientas\nque no escalan",
-    description: "Las enterprise cuestan +$500/mes y necesitan implementaciones de semanas. Las gratuitas colapsan con el primer pico.",
+    description: "'Para qué pagar si lo hago yo mismo'. Sí, y por eso pierdes 40% de tus leads mientras tu competencia los cierra en 5 segundos.",
     icon: DollarSign, color: "#f43f5e",
     stat: "$500+", statLabel: "USD/mes en soluciones enterprise",
-    consequences: ["Implementaciones de semanas o meses", "Funciones que nunca usarás", "Sin soporte en español"],
+    consequences: ["Perder leads = perder plata real", "Tiempo invertido que no escala", "Tu competencia ya automatizó"],
+    oldWay: "💸 'Lo hago yo, es gratis'",
+    newWay: "📈 IA que paga su propio costo",
   },
   {
-    label: "Cada mensaje depende de un humano",
-    headline: "Atención 100%\nmanual",
-    description: "Fuera de horario, feriados, fines de semana — tus leads se van a la competencia que sí responde al instante.",
+    label: "Tu negocio duerme mientras tus clientes compran",
+    headline: "Atención\n100% manual",
+    description: "Son las 11pm, un cliente quiere reservar. Tu teléfono está en silencio. A las 8am ya reservó con otro. Así todos los días.",
     icon: PhoneOff, color: "#a78bfa",
-    stat: "6h", statLabel: "respuesta promedio sin automatización",
-    consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Costo creciente al escalar"],
+    stat: "6h", statLabel: "respuesta promedio sin IA",
+    consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Cada empleado nuevo = +$800/mes"],
+    oldWay: "😴 'Mañana le contesto'",
+    newWay: "⚡ Respuesta en 5 segundos, 24/7",
   },
 ];
 
@@ -291,66 +307,66 @@ const SolucionesPymes = () => {
                 </div>
               </Reveal>
 
-              {/* Right — Phone mockup with lost lead */}
+              {/* Right — Phone mockup with lost lead (compact) */}
               <Reveal delay={200}>
                 <div className="flex justify-center lg:justify-end">
-                  <div className="relative w-[280px] sm:w-[300px]">
+                  <div className="relative w-[220px] sm:w-[240px]">
                     {/* Phone frame */}
-                    <div className="relative rounded-[2.5rem] border-[3px] border-white/[0.12] bg-[#0c0c14] shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_30px_rgba(0,0,0,0.3)] overflow-hidden">
+                    <div className="relative rounded-[2rem] border-[2.5px] border-white/[0.12] bg-[#0c0c14] shadow-[0_0_60px_rgba(0,0,0,0.5),inset_0_0_20px_rgba(0,0,0,0.3)] overflow-hidden">
                       
                       {/* Notch / Dynamic Island */}
-                      <div className="flex justify-center pt-3 pb-1">
-                        <div className="w-[90px] h-[26px] rounded-full bg-black border border-white/[0.06]" />
+                      <div className="flex justify-center pt-2 pb-0.5">
+                        <div className="w-[70px] h-[20px] rounded-full bg-black border border-white/[0.06]" />
                       </div>
 
                       {/* Status bar */}
-                      <div className="flex items-center justify-between px-7 pb-2">
-                        <span className="text-[10px] font-semibold text-white/50">10:32</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex gap-[2px]">
+                      <div className="flex items-center justify-between px-5 pb-1.5">
+                        <span className="text-[8px] font-semibold text-white/50">10:32</span>
+                        <div className="flex items-center gap-1">
+                          <div className="flex gap-[1.5px]">
                             {[1,2,3,4].map(b => (
-                              <div key={b} className={`w-[3px] rounded-sm ${b <= 3 ? 'bg-white/40' : 'bg-white/15'}`} style={{ height: `${6 + b * 2}px` }} />
+                              <div key={b} className={`w-[2px] rounded-sm ${b <= 3 ? 'bg-white/40' : 'bg-white/15'}`} style={{ height: `${4 + b * 1.5}px` }} />
                             ))}
                           </div>
-                          <span className="text-[9px] text-white/30 font-medium">5G</span>
-                          <div className="w-[22px] h-[10px] rounded-[2px] border border-white/30 relative">
-                            <div className="absolute inset-[1.5px] right-[5px] rounded-[1px] bg-white/40" />
+                          <span className="text-[7px] text-white/30 font-medium">5G</span>
+                          <div className="w-[18px] h-[8px] rounded-[2px] border border-white/30 relative">
+                            <div className="absolute inset-[1px] right-[4px] rounded-[1px] bg-white/40" />
                           </div>
                         </div>
                       </div>
 
                       {/* WhatsApp-style chat header */}
-                      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#1a1a2e]/80 border-y border-white/[0.04]">
-                        <div className="text-white/30 text-sm">←</div>
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-600/15 border border-emerald-500/20 flex items-center justify-center">
-                          <span className="text-[13px]">🏪</span>
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a2e]/80 border-y border-white/[0.04]">
+                        <div className="text-white/30 text-xs">←</div>
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-600/15 border border-emerald-500/20 flex items-center justify-center">
+                          <span className="text-[10px]">🏪</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-white/80">Tu Negocio</p>
-                          <p className="text-[10px] text-white/25">en línea</p>
+                          <p className="text-[11px] font-semibold text-white/80">Tu Negocio</p>
+                          <p className="text-[8px] text-white/25">en línea</p>
                         </div>
-                        <div className="flex items-center gap-3 text-white/25">
-                          <span className="text-[14px]">📞</span>
-                          <span className="text-[14px]">⋮</span>
+                        <div className="flex items-center gap-2 text-white/25">
+                          <span className="text-[11px]">📞</span>
+                          <span className="text-[11px]">⋮</span>
                         </div>
                       </div>
 
                       {/* Chat body */}
-                      <div className="relative bg-[#0b0b15] min-h-[300px]">
+                      <div className="relative bg-[#0b0b15]">
                         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1\' fill=\'white\'/%3E%3C/svg%3E")', backgroundSize: '40px 40px' }} />
 
-                        <div className="flex justify-center pt-4 pb-2">
-                          <span className="text-[10px] text-white/20 bg-white/[0.04] px-3 py-1 rounded-md font-medium">HOY</span>
+                        <div className="flex justify-center pt-2.5 pb-1.5">
+                          <span className="text-[8px] text-white/20 bg-white/[0.04] px-2.5 py-0.5 rounded-md font-medium">HOY</span>
                         </div>
 
-                        <div className="px-3 pb-4 space-y-1.5">
+                        <div className="px-2.5 pb-3 space-y-1">
                           {lostLeadTimeline.map((msg, i) => (
                             <div
                               key={i}
                               className="flex justify-start"
                               style={{ animation: `fadeInUp 0.5s ease ${i * 0.15}s both` }}
                             >
-                              <div className={`relative max-w-[82%] px-3 py-2 rounded-xl rounded-tl-sm text-[12px] leading-relaxed shadow-sm ${
+                              <div className={`relative max-w-[85%] px-2.5 py-1.5 rounded-lg rounded-tl-sm text-[10px] leading-snug shadow-sm ${
                                 msg.status === "lost"
                                   ? "bg-red-500/[0.12] border border-red-500/15 text-red-200/70"
                                   : msg.status === "waiting"
@@ -358,53 +374,53 @@ const SolucionesPymes = () => {
                                   : "bg-white/[0.06] border border-white/[0.06] text-white/55"
                               }`}>
                                 <p>{msg.message}</p>
-                                <div className="flex items-center justify-end gap-1 mt-0.5">
-                                  <span className="text-[9px] text-white/15">{msg.time}</span>
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="text-[7px] text-white/15">{msg.time}</span>
                                 </div>
                               </div>
                             </div>
                           ))}
 
-                          {/* Typing indicator that never resolves */}
+                          {/* Typing indicator */}
                           <div className="flex justify-end" style={{ animation: 'fadeInUp 0.5s ease 0.9s both' }}>
-                            <div className="bg-white/[0.04] border border-white/[0.05] rounded-xl rounded-tr-sm px-4 py-2.5 flex items-center gap-1">
-                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.2s' }} />
-                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1.2s' }} />
-                              <div className="w-[5px] h-[5px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.2s' }} />
+                            <div className="bg-white/[0.04] border border-white/[0.05] rounded-lg rounded-tr-sm px-3 py-2 flex items-center gap-1">
+                              <div className="w-[4px] h-[4px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.2s' }} />
+                              <div className="w-[4px] h-[4px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1.2s' }} />
+                              <div className="w-[4px] h-[4px] rounded-full bg-white/15 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.2s' }} />
                             </div>
                           </div>
 
-                          <div className="flex justify-center pt-3" style={{ animation: 'fadeInUp 0.5s ease 1.2s both' }}>
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/[0.08] border border-red-500/12">
-                              <Ban className="w-3 h-3 text-red-400/70" />
-                              <span className="text-[9px] text-red-300/60 font-semibold tracking-wide">NADIE RESPONDIÓ</span>
+                          <div className="flex justify-center pt-2" style={{ animation: 'fadeInUp 0.5s ease 1.2s both' }}>
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/[0.08] border border-red-500/12">
+                              <Ban className="w-2.5 h-2.5 text-red-400/70" />
+                              <span className="text-[8px] text-red-300/60 font-semibold tracking-wide">NADIE RESPONDIÓ</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Input bar */}
-                      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0c0c14] border-t border-white/[0.04]">
-                        <span className="text-white/15 text-sm">😊</span>
-                        <div className="flex-1 h-8 rounded-full bg-white/[0.04] border border-white/[0.05] flex items-center px-3">
-                          <span className="text-[11px] text-white/15">Escribe un mensaje...</span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-2 bg-[#0c0c14] border-t border-white/[0.04]">
+                        <span className="text-white/15 text-xs">😊</span>
+                        <div className="flex-1 h-6 rounded-full bg-white/[0.04] border border-white/[0.05] flex items-center px-2.5">
+                          <span className="text-[9px] text-white/15">Escribe un mensaje...</span>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-white/[0.04] flex items-center justify-center">
-                          <span className="text-white/15 text-sm">🎤</span>
+                        <div className="w-6 h-6 rounded-full bg-white/[0.04] flex items-center justify-center">
+                          <span className="text-white/15 text-xs">🎤</span>
                         </div>
                       </div>
 
                       {/* Home indicator */}
-                      <div className="flex justify-center py-2">
-                        <div className="w-[120px] h-[4px] rounded-full bg-white/[0.12]" />
+                      <div className="flex justify-center py-1.5">
+                        <div className="w-[90px] h-[3px] rounded-full bg-white/[0.12]" />
                       </div>
                     </div>
 
                     {/* Bottom badge */}
-                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/[0.08] border border-red-500/12 backdrop-blur-sm shadow-lg">
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/[0.08] border border-red-500/12 backdrop-blur-sm shadow-lg">
                         <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                        <span className="text-[11px] text-red-300/70 font-medium">Pasa el <span className="text-red-400 font-bold">40%</span> de las veces</span>
+                        <span className="text-[10px] text-red-300/70 font-medium">Pasa el <span className="text-red-400 font-bold">40%</span> de las veces</span>
                       </div>
                     </div>
                   </div>
@@ -415,58 +431,92 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            PROBLEM — Immersive lost-lead narrative
+            PROBLEM — Provocative "your business is stuck" section
             ══════════════════════════════════════════════════ */}
         <section className="pt-14 pb-28 relative" id="problema">
-          {/* Subtle red ambient glow */}
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-500/[0.015] rounded-full blur-[120px] pointer-events-none" />
+          {/* Red ambient glow */}
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.025] rounded-full blur-[140px] pointer-events-none" />
+          <div className="absolute bottom-40 right-0 w-[300px] h-[300px] bg-amber-500/[0.015] rounded-full blur-[100px] pointer-events-none" />
 
           <div className="max-w-6xl mx-auto px-6 relative">
 
-            {/* Header */}
+            {/* ─── Header — Provocative ─── */}
             <Reveal>
-              <div className="text-center max-w-3xl mx-auto mb-16">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/15 bg-red-500/[0.04] mb-6">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                  <span className="text-[11px] font-semibold text-red-400/80 uppercase tracking-widest">El problema real</span>
+              <div className="text-center max-w-3xl mx-auto mb-8">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] mb-6">
+                  <span className="text-sm">🚨</span>
+                  <span className="text-[11px] font-semibold text-red-400/90 uppercase tracking-widest">Alerta de realidad</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-                  Tu negocio opera digital, pero atiende{" "}
-                  <span className="text-gradient">como en 1999</span>
+                  Si tu negocio atiende así,{" "}
+                  <br className="hidden sm:block" />
+                  <span className="relative inline-block">
+                    <span className="text-red-400">ya estás perdiendo clientes</span>
+                    <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full bg-gradient-to-r from-red-500/60 to-red-500/0" />
+                  </span>
                 </h2>
-                <p className="text-[15px] text-white/35 leading-relaxed max-w-2xl mx-auto">
-                  Tener presencia digital no alcanza. Si no respondes rápido, cada mensaje sin contestar 
-                  es un cliente que ya se fue a tu competencia.
+                <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
+                  No es opinión. Son datos. Mientras lees esto, alguien te escribió y nadie contestó.
+                  <br />
+                  <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
                 </p>
               </div>
             </Reveal>
 
-            {/* ─── Impact stats grid — full width ─── */}
+            {/* ─── "¿Te sientes identificado?" Symptom checklist ─── */}
             <Reveal delay={100}>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-14">
+              <div className="max-w-2xl mx-auto mb-16">
+                <div className="rounded-2xl border border-red-500/10 bg-red-500/[0.02] p-6 sm:p-8">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/15 flex items-center justify-center">
+                      <AlertTriangle className="w-4 h-4 text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white/80">¿Te sientes identificado?</p>
+                      <p className="text-[11px] text-white/25">Si marcaste 3+, estás regalando clientes a tu competencia</p>
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2.5">
+                    {boomerSymptoms.map((symptom, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-red-500/15 hover:bg-red-500/[0.03] transition-all duration-300 group cursor-default"
+                      >
+                        <div className="w-4 h-4 mt-0.5 rounded border border-red-400/30 bg-red-500/[0.06] flex items-center justify-center shrink-0 group-hover:bg-red-500/20 group-hover:border-red-400/50 transition-all">
+                          <CheckCircle2 className="w-3 h-3 text-red-400/0 group-hover:text-red-400 transition-colors" />
+                        </div>
+                        <span className="text-[12px] text-white/35 group-hover:text-white/55 leading-relaxed transition-colors">{symptom}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* ─── Confrontational stats — "la cruda realidad" ─── */}
+            <Reveal delay={150}>
+              <div className="text-center mb-4">
+                <span className="text-[11px] text-white/20 uppercase tracking-widest font-semibold">La cruda realidad en números</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-16">
                 {[
-                  { val: "40%", label: "de leads se pierden por demora en responder", color: "#f43f5e", icon: TrendingDown },
-                  { val: "6h", label: "respuesta promedio de una PYME sin IA", color: "#f59e0b", icon: Clock },
-                  { val: "73%", label: "usa 3+ canales sin integrar entre sí", color: "#a78bfa", icon: AlertTriangle },
-                  { val: "3x", label: "más caro operar manualmente vs con IA", color: "#22d3ee", icon: DollarSign },
+                  { val: "40%", label: "de tus leads se pierden porque nadie contestó a tiempo", color: "#f43f5e", icon: TrendingDown, emoji: "💀" },
+                  { val: "6h", label: "tarda una PYME promedio en responder (tu cliente espera 5 min)", color: "#f59e0b", icon: Clock, emoji: "🐌" },
+                  { val: "73%", label: "de negocios tienen sus canales desconectados entre sí", color: "#a78bfa", icon: AlertTriangle, emoji: "🔌" },
+                  { val: "3x", label: "más caro es hacer todo manual vs. automatizar con IA", color: "#22d3ee", icon: DollarSign, emoji: "🔥" },
                 ].map((s, i) => (
                   <div
                     key={i}
-                    className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 group overflow-hidden"
+                    className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 group overflow-hidden"
                   >
-                    <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent 10%, ${s.color}25 50%, transparent 90%)` }} />
+                    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent 5%, ${s.color}40 50%, transparent 95%)` }} />
                     <div
-                      className="absolute -top-8 -right-8 w-20 h-20 rounded-full blur-[35px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                      style={{ backgroundColor: `${s.color}12` }}
+                      className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                      style={{ backgroundColor: `${s.color}15` }}
                     />
                     <div className="relative">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
-                        style={{ backgroundColor: `${s.color}10`, border: `1px solid ${s.color}18` }}
-                      >
-                        <s.icon className="w-4 h-4" style={{ color: s.color }} />
-                      </div>
-                      <p className="text-3xl font-bold font-mono tabular-nums mb-1.5" style={{ color: s.color }}>{s.val}</p>
+                      <span className="text-lg mb-2 block">{s.emoji}</span>
+                      <p className="text-3xl sm:text-4xl font-black font-mono tabular-nums mb-2" style={{ color: s.color }}>{s.val}</p>
                       <p className="text-[11px] text-white/30 leading-relaxed">{s.label}</p>
                     </div>
                   </div>
@@ -474,29 +524,32 @@ const SolucionesPymes = () => {
               </div>
             </Reveal>
 
-            {/* ─── Pain point cards — expanded with consequences ─── */}
+            {/* ─── Section divider ─── */}
+            <Reveal delay={200}>
+              <div className="text-center mb-10">
+                <p className="text-lg sm:text-xl font-bold text-white/60 mb-2">"Pero yo siempre lo he hecho así y me funciona"</p>
+                <p className="text-[13px] text-red-400/50 font-medium">— Dueño de negocio que perdió 4 de cada 10 clientes este mes</p>
+              </div>
+            </Reveal>
+
+            {/* ─── Pain point cards — with Old Way vs New Way ─── */}
             <div className="grid md:grid-cols-3 gap-4">
               {painPoints.map((point, i) => (
-                <Reveal key={i} delay={100 + i * 100}>
+                <Reveal key={i} delay={200 + i * 100}>
                   <div className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 overflow-hidden">
                     {/* Top colored accent line */}
-                    <div className="h-px" style={{ background: `linear-gradient(90deg, transparent 5%, ${point.color}30 50%, transparent 95%)` }} />
+                    <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent 5%, ${point.color}40 50%, transparent 95%)` }} />
 
                     {/* Stat header */}
                     <div className="px-6 pt-5 pb-4 border-b border-white/[0.04]">
                       <div className="flex items-baseline gap-3">
-                        <span className="text-3xl font-bold font-mono" style={{ color: point.color }}>{point.stat}</span>
+                        <span className="text-3xl font-black font-mono" style={{ color: point.color }}>{point.stat}</span>
                         <span className="text-[10px] text-white/20 uppercase tracking-wider leading-tight">{point.statLabel}</span>
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="p-6 relative">
-                      {/* Watermark */}
-                      <span className="absolute top-2 right-4 text-[56px] font-bold leading-none select-none pointer-events-none" style={{ color: `${point.color}05` }}>
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-
                       <div className="flex items-center gap-3 mb-3">
                         <div
                           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
@@ -513,7 +566,7 @@ const SolucionesPymes = () => {
                       <p className="text-[13px] text-white/30 leading-relaxed mb-4">{point.description}</p>
 
                       {/* Consequences list */}
-                      <div className="space-y-2">
+                      <div className="space-y-2 mb-5">
                         {point.consequences.map((c, ci) => (
                           <div key={ci} className="flex items-start gap-2">
                             <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400/40" />
@@ -521,22 +574,38 @@ const SolucionesPymes = () => {
                           </div>
                         ))}
                       </div>
+
+                      {/* Old Way vs New Way mini comparison */}
+                      <div className="border-t border-white/[0.04] pt-4 space-y-2">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.04] border border-red-500/[0.08]">
+                          <span className="text-[11px] text-red-400/60 line-through decoration-red-400/40">{point.oldWay}</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/[0.08]">
+                          <span className="text-[11px] text-emerald-400/80 font-medium">{point.newWay}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Reveal>
               ))}
             </div>
 
-            {/* Transition CTA */}
-            <Reveal delay={400}>
-              <div className="flex justify-center mt-12">
-                <a
-                  href="#casos"
-                  className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] bg-white/[0.02] text-white/40 hover:text-white hover:border-amber-500/20 hover:bg-amber-500/[0.04] transition-all duration-300 text-sm font-medium"
-                >
-                  ¿Cómo lo resuelve WITHMIA?
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </a>
+            {/* ─── Bottom provocation + CTA ─── */}
+            <Reveal delay={500}>
+              <div className="mt-14 text-center">
+                <div className="inline-block rounded-2xl border border-white/[0.06] bg-white/[0.02] px-8 py-6 max-w-xl">
+                  <p className="text-[15px] text-white/50 leading-relaxed mb-4">
+                    El dueño de negocio que dice <span className="text-red-400/80 font-semibold">"la tecnología no es para mí"</span> es el mismo que 
+                    después pregunta <span className="text-amber-400/80 font-semibold">"¿por qué bajaron las ventas?"</span>
+                  </p>
+                  <a
+                    href="#casos"
+                    className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-300 hover:text-white hover:border-amber-400/40 hover:from-amber-500/15 hover:to-orange-500/15 transition-all duration-300 text-sm font-semibold"
+                  >
+                    Ver cómo WITHMIA lo resuelve
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </a>
+                </div>
               </div>
             </Reveal>
           </div>

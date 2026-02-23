@@ -16,6 +16,8 @@ import CalendarSection from '../components/CalendarSection';
 import ProductsSection from '../components/ProductsSection';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
+import { ThemePicker } from '../components/ThemePicker';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents, useTeams } from "../hooks/useChatwoot";
 import { getDailyQuote, fetchDailyQuote } from '../utils/dailyQuotes';
@@ -47,8 +49,7 @@ import {
   Settings,
   Package,
   GraduationCap,
-  CreditCard,
-  Palette
+  CreditCard
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -550,7 +551,7 @@ function ClockDisplay({ firstName }: { firstName: string }) {
   );
 }
 
-export default function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents, isSuperAdmin, planInfo }: Props) {
+function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug, prefetchedTeams, prefetchedAgents, isSuperAdmin, planInfo }: Props) {
   
   // ====== REVERB WEBSOCKETS ======
   const { subscribe, leave } = useReverb();
@@ -1162,14 +1163,25 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     return '🌙';
   };
 
+  // Theme variables - useTheme is safe here because ThemeProvider wraps via DashboardWithTheme below
+  const { currentTheme } = useTheme();
+  const hasTheme = currentTheme && currentTheme.id !== 'default';
+
   return (
     <GlobalNotificationProvider inboxId={inboxId}>
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
-        {/* Sidebar Premium - MEJORADO: Mejor contraste */}
-        <div className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200/80 flex-shrink-0 shadow-xl shadow-slate-300/40 transition-all duration-150 ease-out relative`}>
+      <div className="flex h-screen overflow-hidden" style={{ background: hasTheme ? 'var(--theme-header-bg, #f8fafc)' : undefined }} >
+        {/* Sidebar Premium */}
+        <div 
+          className={`${sidebarCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 shadow-xl transition-all duration-150 ease-out relative`}
+          style={{
+            background: hasTheme ? 'var(--theme-sidebar-bg)' : 'white',
+            borderRight: hasTheme ? '1px solid var(--theme-sidebar-border)' : '1px solid rgb(226 232 240 / 0.8)',
+            boxShadow: hasTheme ? '4px 0 15px -3px rgba(0,0,0,0.08)' : undefined,
+          }}
+        >
           
           {/* Header del Sidebar — altura sincronizada con top header */}
-          <div className="px-4 border-b border-slate-200/70 flex items-center" style={{ minHeight: '73px' }}>
+          <div className="px-4 flex items-center" style={{ minHeight: '73px', borderBottom: hasTheme ? '1px solid var(--theme-sidebar-border)' : '1px solid rgb(226 232 240 / 0.7)' }}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'} w-full`}>
               <div className="relative cursor-pointer flex-shrink-0" onClick={() => setSidebarCollapsed(false)} title="Expandir sidebar">
                 <img
@@ -1190,36 +1202,60 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
 
           {/* Navigation Premium */}
           <nav className={`p-4 space-y-1 ${sidebarCollapsed ? 'px-2' : ''}`}>
-            {sidebarItems.map((item) => (
+            {sidebarItems.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
               <button
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
                 title={sidebarCollapsed ? item.label : ''}
-                className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg ${
-                  activeSection === item.id
-                    ? 'bg-gradient-to-r from-white to-white/95 shadow-lg shadow-white/30 opacity-100 border border-white/50'
-                    : 'hover:bg-white/60 hover:opacity-100'
+                className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg transition-all duration-150 ${
+                  !hasTheme ? (
+                    isActive
+                      ? 'bg-gradient-to-r from-white to-white/95 shadow-lg shadow-white/30 opacity-100 border border-white/50'
+                      : 'hover:bg-white/60 hover:opacity-100'
+                  ) : ''
                 }`}
+                style={hasTheme ? {
+                  background: isActive ? 'white' : undefined,
+                  boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.08)' : undefined,
+                  border: isActive ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+                } : undefined}
+                onMouseEnter={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = 'var(--theme-sidebar-hover)'; }}
+                onMouseLeave={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = ''; }}
               >
                 <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'}`}>
-                  <div className={`p-2 rounded-lg ${
-                    activeSection === item.id 
-                      ? `bg-gradient-to-r ${item.gradient} shadow-lg` 
-                      : 'bg-white/90 group-hover:bg-white/95'
-                  }`}>
-                    <item.icon className={`w-5 h-5 ${
-                      activeSection === item.id ? 'text-white' : 'text-neutral-500'
-                    }`} />
+                  <div 
+                    className={`p-2 rounded-lg ${
+                      !hasTheme ? (
+                        isActive 
+                          ? `bg-gradient-to-r ${item.gradient} shadow-lg` 
+                          : 'bg-white/90 group-hover:bg-white/95'
+                      ) : ''
+                    }`}
+                    style={hasTheme ? {
+                      background: isActive ? 'var(--theme-primary)' : 'rgba(255,255,255,0.7)',
+                      boxShadow: isActive ? '0 4px 12px var(--theme-accent-light)' : undefined,
+                    } : undefined}
+                  >
+                    <item.icon 
+                      className={`w-5 h-5 ${!hasTheme ? (isActive ? 'text-white' : 'text-neutral-500') : ''}`}
+                      style={hasTheme ? { color: isActive ? 'white' : 'var(--theme-secondary)' } : undefined}
+                    />
                   </div>
                   {!sidebarCollapsed && (
                     <div className="text-left">
-                      <span className={`font-semibold text-xs ${
-                        activeSection === item.id ? 'text-neutral-800' : 'text-neutral-600'
-                      }`}>
+                      <span 
+                        className={`font-semibold text-xs ${!hasTheme ? (isActive ? 'text-neutral-800' : 'text-neutral-600') : ''}`}
+                        style={hasTheme ? { color: isActive ? 'var(--theme-primary-dark)' : 'var(--theme-sidebar-text)' } : undefined}
+                      >
                         {item.label}
                       </span>
-                      {activeSection === item.id && (
-                        <div className="text-xs text-neutral-400 font-medium">Sección activa</div>
+                      {isActive && (
+                        <div 
+                          className={`text-xs font-medium ${!hasTheme ? 'text-neutral-400' : ''}`}
+                          style={hasTheme ? { color: 'var(--theme-secondary)' } : undefined}
+                        >Sección activa</div>
                       )}
                     </div>
                   )}
@@ -1240,7 +1276,8 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
                   </div>
                 )}
               </button>
-            ))}
+            );
+            })}
           </nav>
 
           {/* User Profile Premium con Menú Desplegable */}
@@ -1285,7 +1322,14 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
         <div className="flex-1 flex flex-col min-w-0">
           
           {/* Header Premium */}
-          <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200 px-8 relative z-10 flex items-center" style={{ minHeight: '73px' }}>
+          <header 
+            className="backdrop-blur-lg px-8 relative z-10 flex items-center"
+            style={{ 
+              minHeight: '73px',
+              background: hasTheme ? 'var(--theme-header-bg)' : 'rgba(255,255,255,0.8)',
+              borderBottom: hasTheme ? '1px solid var(--theme-header-border)' : '1px solid rgb(226 232 240)',
+            }}
+          >
             <div className="flex items-center justify-between w-full">
               
               {/* Hero Greeting */}
@@ -1295,13 +1339,7 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
               
               {/* Action Bar */}
               <div className="flex items-center space-x-3 flex-shrink-0">
-                <button
-                  onClick={() => handleNavigation('settings')}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-all duration-150"
-                  title="Personalizar apariencia"
-                >
-                  <Palette className="w-5 h-5" />
-                </button>
+                <ThemePicker />
                 <NotificationBell />
               </div>
             </div>
@@ -1425,6 +1463,17 @@ export default function Dashboard({ user, company, chatwoot, stats, onboardingDa
     </GlobalNotificationProvider>
   );
 }
+
+// Wrapper que provee ThemeProvider
+function DashboardWithTheme(props: Props) {
+  return (
+    <ThemeProvider>
+      <Dashboard {...props} />
+    </ThemeProvider>
+  );
+}
+
+export default DashboardWithTheme;
 
 // Componente separado para manejar toasts globales con navegación
 function GlobalNotificationToast({ activeSection, companySlug }: { activeSection: string; companySlug: string }) {
