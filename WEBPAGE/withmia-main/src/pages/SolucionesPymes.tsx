@@ -166,57 +166,69 @@ const milestones = [
 const useCases = [
   {
     industry: "Salud & Odontología", icon: Stethoscope, color: "#34d399",
+    tagline: "Tu recepcionista virtual que nunca descansa",
     scenarios: [
-      { title: "Agendamiento automático", description: "Pacientes agendan citas 24/7 directo desde WhatsApp.", icon: Calendar },
-      { title: "Seguimiento post-consulta", description: "Envía instrucciones y recuerda medicamentos automáticamente.", icon: MessageSquare },
-      { title: "Gestión de cancelaciones", description: "Ofrece horas libres a la lista de espera al instante.", icon: Users },
+      { title: "Agendamiento 24/7", description: "Pacientes agendan citas por WhatsApp a cualquier hora. WITHMIA verifica disponibilidad y confirma automáticamente.", icon: Calendar },
+      { title: "Seguimiento post-consulta", description: "Envía instrucciones de cuidado, recuerda medicamentos y detecta complicaciones. Escala al doctor si es necesario.", icon: MessageSquare },
+      { title: "Lista de espera activa", description: "Paciente cancela → WITHMIA llena la hora en minutos contactando a la lista de espera.", icon: Users },
     ],
-    result: "+182% citas agendadas · -60% no-shows",
+    result: "+182% citas agendadas",
+    result2: "-60% no-shows",
   },
   {
     industry: "E-commerce & Retail", icon: ShoppingCart, color: "#a78bfa",
+    tagline: "Tu vendedor estrella que atiende a todos a la vez",
     scenarios: [
-      { title: "Asesor de ventas 24/7", description: "Recomienda productos y guía al cliente hasta el checkout.", icon: MessageSquare },
-      { title: "Recuperación de carritos", description: "Detecta abandonos y envía incentivos personalizados.", icon: ShoppingCart },
-      { title: "Tracking de pedidos", description: "Responde estado de envío y gestiona cambios.", icon: BarChart3 },
+      { title: "Vendedor por WhatsApp", description: "Recomienda productos, muestra opciones según historial y envía link de pago. Todo en la misma conversación.", icon: MessageSquare },
+      { title: "Rescate de carritos", description: "Contacta a los 30 min del abandono con mensaje personalizado. Recupera hasta el 25% de ventas perdidas.", icon: ShoppingCart },
+      { title: "Tracking de pedidos", description: "Responde estado de envío en tiempo real, gestiona cambios de dirección y procesa devoluciones.", icon: BarChart3 },
     ],
-    result: "+45% conversión · -80% consultas repetitivas",
+    result: "+45% conversión",
+    result2: "-80% consultas repetitivas",
   },
   {
     industry: "Inmobiliaria", icon: Building2, color: "#22d3ee",
+    tagline: "Filtra leads reales y agenda visitas sin perder tiempo",
     scenarios: [
-      { title: "Calificación de leads", description: "Filtra interesados por presupuesto y zona automáticamente.", icon: Users },
-      { title: "Visitas programadas", description: "Coordina horarios entre compradores y corredores.", icon: Calendar },
-      { title: "Info de propiedades", description: "Envía fichas, fotos y precios de propiedades filtradas.", icon: MessageSquare },
+      { title: "Pre-calificación de leads", description: "Hace preguntas clave (presupuesto, zona, financiamiento), asigna score y pasa al corredor solo los leads serios.", icon: Users },
+      { title: "Coordinación de visitas", description: "Cruza disponibilidad, propone horarios, confirma y envía recordatorio con fotos de la propiedad.", icon: Calendar },
+      { title: "Catálogo por chat", description: "Filtra propiedades según criterios del cliente y envía fichas con fotos, precio y link a tour virtual.", icon: MessageSquare },
     ],
-    result: "-70% tiempo en leads fríos · +3x propiedades mostradas",
+    result: "-70% tiempo en leads fríos",
+    result2: "+3x visitas efectivas",
   },
   {
     industry: "Fitness & Bienestar", icon: Dumbbell, color: "#f59e0b",
+    tagline: "Más alumnos, menos abandono, cero papeleo",
     scenarios: [
-      { title: "Inscripción de alumnos", description: "Desde la primera consulta hasta el pago, todo automatizado.", icon: Users },
-      { title: "Horarios y disponibilidad", description: "Responde clases e instructores disponibles en tiempo real.", icon: Calendar },
-      { title: "Retención de miembros", description: "Detecta inactividad y envía mensajes de motivación.", icon: MessageSquare },
+      { title: "Inscripción por chat", description: "Explica planes, resuelve dudas, envía formulario y procesa pago. De consulta a alumno sin intervención.", icon: Users },
+      { title: "Reserva de clases", description: "Muestra clases con cupos en tiempo real, reserva y envía recordatorio. Si se cancela, ofrece alternativas.", icon: Calendar },
+      { title: "Anti-deserción", description: "Detecta inactividad, envía mensajes motivacionales y ofrece descuento de retención automáticamente.", icon: MessageSquare },
     ],
-    result: "+35% retención · 24/7 atención sin staff adicional",
+    result: "+35% retención",
+    result2: "Atención 24/7 sin staff extra",
   },
   {
     industry: "Educación", icon: GraduationCap, color: "#ec4899",
+    tagline: "Matrícula llena, secretaría libre",
     scenarios: [
-      { title: "Admisiones automatizadas", description: "Responde a prospectos y agenda entrevistas de forma autónoma.", icon: MessageSquare },
-      { title: "Soporte estudiantil", description: "Resuelve dudas sobre horarios, notas y trámites.", icon: Users },
-      { title: "Comunicación masiva", description: "Envía recordatorios de matrículas y eventos por WhatsApp.", icon: Calendar },
+      { title: "Admisiones sin fricción", description: "Verifica vacantes, explica el proceso, envía documentos y agenda entrevista. Tu equipo solo interviene al final.", icon: MessageSquare },
+      { title: "Soporte estudiantil", description: "Horarios, notas, certificados, justificaciones: todo al instante sin saturar la secretaría.", icon: Users },
+      { title: "Comunicación masiva", description: "Recordatorios de matrícula, reuniones, eventos. Segmentado por curso y con confirmación de lectura.", icon: Calendar },
     ],
-    result: "+50% admissions rate · -90% consultas repetitivas",
+    result: "+50% tasa de admisión",
+    result2: "-90% consultas repetitivas",
   },
   {
     industry: "Gastronomía", icon: Utensils, color: "#f97316",
+    tagline: "Más mesas llenas, menos llamadas perdidas",
     scenarios: [
-      { title: "Reservas automáticas", description: "Gestiona reservas y envía el menú del día por WhatsApp.", icon: Calendar },
-      { title: "Pedidos por chat", description: "Toma pedidos de delivery directamente desde la conversación.", icon: ShoppingCart },
-      { title: "Feedback y reseñas", description: "Solicita opiniones y gestiona reclamos en privado.", icon: MessageSquare },
+      { title: "Reservas por WhatsApp", description: "Verifica disponibilidad, confirma, envía menú del día y recuerda la reserva. Si no confirman, libera la mesa.", icon: Calendar },
+      { title: "Pedidos sin comisión", description: "Toma pedidos con personalizaciones, confirma dirección y procesa pago. Sin pagar 30% a apps de delivery.", icon: ShoppingCart },
+      { title: "Feedback inteligente", description: "Post-visita pide opinión. Positiva → invita reseña en Google. Negativa → escala al gerente en privado.", icon: MessageSquare },
     ],
-    result: "+40% reservas · Pedidos sin apps de terceros",
+    result: "+40% reservas directas",
+    result2: "0% comisión de delivery",
   },
 ];
 
@@ -244,7 +256,7 @@ const SolucionesPymes = () => {
             HERO — Aurora mesh, 2-column
             ══════════════════════════════════════════════════ */}
         <section className="relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 pt-28 pb-6">
+          <div className="max-w-7xl mx-auto px-6 pt-28 pb-10">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left — Copy */}
               <Reveal>
@@ -431,131 +443,9 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            PROBLEM — Provocative reality-check section
-            ══════════════════════════════════════════════════ */}
-        <section className="pt-4 pb-14 relative" id="problema">
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
-
-          <div className="max-w-6xl mx-auto px-6 relative">
-
-            {/* ─── Header ─── */}
-            <Reveal>
-              <div className="text-center max-w-3xl mx-auto mb-6">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] mb-6">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                  <span className="text-[11px] font-semibold text-red-400/90 uppercase tracking-widest">Alerta de realidad</span>
-                </div>
-                <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-                  Si tu negocio atiende así,{" "}
-                  <br className="hidden sm:block" />
-                  <span className="relative inline-block">
-                    <span className="text-red-400">ya estás perdiendo clientes</span>
-                    <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full bg-gradient-to-r from-red-500/60 to-red-500/0" />
-                  </span>
-                </h2>
-                <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
-                  No es opinión, son datos. Mientras lees esto, alguien te escribió y nadie contestó.{" "}
-                  <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
-                </p>
-              </div>
-            </Reveal>
-
-            {/* ─── Interactive diagnostic checklist ─── */}
-            <Reveal delay={100}>
-              {(() => {
-                const [checked, setChecked] = useState<Set<number>>(new Set());
-                const toggle = (i: number) => setChecked(prev => {
-                  const next = new Set(prev);
-                  next.has(i) ? next.delete(i) : next.add(i);
-                  return next;
-                });
-                const count = checked.size;
-                const verdict = count === 0
-                  ? { text: "Selecciona los que aplican a tu negocio", color: "text-white/25", bg: "" }
-                  : count <= 2
-                  ? { text: `${count}/6 — Podría ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
-                  : count <= 4
-                  ? { text: `${count}/6 — Tu competencia que automatizó te está quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
-                  : { text: `${count}/6 — Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
-
-                return (
-                  <div className="max-w-3xl mx-auto mb-16">
-                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 sm:p-8">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/15 flex items-center justify-center">
-                            <Target className="w-4 h-4 text-red-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-white/80">Diagnóstico rápido</p>
-                            <p className="text-[11px] text-white/25">¿Cuántos de estos síntomas tiene tu negocio?</p>
-                          </div>
-                        </div>
-                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${
-                          count > 0 ? "bg-red-500/[0.08] border-red-500/15" : "bg-transparent border-transparent"
-                        }`}>
-                          <span className={`text-lg font-black font-mono transition-colors duration-300 ${
-                            count > 0 ? "text-red-400" : "text-transparent"
-                          }`}>{count || 0}</span>
-                          <span className={`text-[10px] font-medium transition-colors duration-300 ${
-                            count > 0 ? "text-red-400/60" : "text-transparent"
-                          }`}>/6</span>
-                        </div>
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-2.5 mb-6">
-                        {boomerSymptoms.map((symptom, i) => {
-                          const isChecked = checked.has(i);
-                          return (
-                            <button
-                              key={i}
-                              onClick={() => toggle(i)}
-                              className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-300 ${
-                                isChecked
-                                  ? "bg-red-500/[0.06] border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]"
-                                  : "bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03]"
-                              }`}
-                            >
-                              <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                                isChecked
-                                  ? "bg-red-500/20 border-red-400/60"
-                                  : "border-white/[0.12] bg-transparent"
-                              }`}>
-                                {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-red-400" />}
-                              </div>
-                              <div className="flex items-start gap-2.5 min-w-0">
-                                <symptom.icon className={`w-4 h-4 mt-0.5 shrink-0 transition-colors duration-300 ${
-                                  isChecked ? "text-red-400/70" : "text-white/15"
-                                }`} />
-                                <span className={`text-[12.5px] leading-relaxed transition-colors duration-300 ${
-                                  isChecked ? "text-white/70" : "text-white/35"
-                                }`}>{symptom.text}</span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Dynamic verdict — fixed height to prevent layout shift */}
-                      <div className={`rounded-xl border px-4 py-3 min-h-[44px] flex items-center justify-center transition-all duration-500 ${
-                        count > 0 ? verdict.bg : "border-white/[0.04] bg-white/[0.01]"
-                      }`}>
-                        <p className={`text-[13px] font-medium text-center transition-colors duration-500 ${verdict.color}`}>
-                          {verdict.text}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════════════
             USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
-        <section className="py-14 relative overflow-hidden" id="casos">
+        <section className="pt-4 pb-14 relative overflow-hidden" id="casos">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-10">
@@ -568,14 +458,14 @@ const SolucionesPymes = () => {
                   <span className="text-gradient">todas las industrias</span>
                 </h2>
                 <p className="text-white/35 max-w-xl mx-auto">
-                  WITHMIA se adapta a tu negocio, no al revés.
+                  WITHMIA se adapta a tu negocio, no al revés. Así es como ayuda en cada rubro.
                 </p>
               </div>
             </Reveal>
 
             {/* Industry tabs */}
             <Reveal delay={100}>
-              <div className="flex flex-wrap justify-center gap-2 mb-8">
+              <div className="flex flex-wrap justify-center gap-2 mb-10">
                 {useCases.map((uc, i) => (
                   <button
                     key={i}
@@ -603,13 +493,20 @@ const SolucionesPymes = () => {
               </div>
             </Reveal>
 
+            {/* Industry header — tagline */}
+            <Reveal delay={120}>
+              <div className="text-center mb-6" key={`header-${activeTab}`} style={{ animation: 'fadeInUp 0.4s ease both' }}>
+                <p className="text-base sm:text-lg font-semibold text-white/70">{current.tagline}</p>
+              </div>
+            </Reveal>
+
             {/* Content cards */}
             <Reveal delay={150}>
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="grid md:grid-cols-3 gap-3 mb-5">
                 {current.scenarios.map((scenario, i) => (
                   <div
                     key={`${activeTab}-${i}`}
-                    className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden"
+                    className="group relative p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden"
                     style={{
                       animation: `fadeInUp 0.4s ease ${i * 0.1}s both`,
                     }}
@@ -621,30 +518,37 @@ const SolucionesPymes = () => {
 
                     <div className="relative">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                        className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300"
                         style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
                       >
-                        <scenario.icon className="w-[18px] h-[18px]" style={{ color: current.color }} />
+                        <scenario.icon className="w-4 h-4" style={{ color: current.color }} />
                       </div>
-                      <h3 className="text-[15px] font-semibold text-white mb-2">{scenario.title}</h3>
-                      <p className="text-[13px] text-white/30 leading-relaxed">{scenario.description}</p>
+                      <h3 className="text-sm font-semibold text-white mb-1.5">{scenario.title}</h3>
+                      <p className="text-[12px] text-white/30 leading-relaxed">{scenario.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </Reveal>
 
-            {/* Result banner */}
+            {/* Result banner — split metrics */}
             <Reveal delay={200}>
               <div
-                className="text-center py-4 px-5 rounded-xl border"
+                className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 py-5 px-6 rounded-xl border"
                 style={{
                   background: `linear-gradient(135deg, ${current.color}06, ${current.color}03)`,
                   borderColor: `${current.color}15`,
                 }}
               >
-                <p className="text-[13px] text-white/35 mb-1">Resultados típicos en {current.industry}:</p>
-                <p className="text-base font-bold text-gradient">{current.result}</p>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" style={{ color: current.color }} />
+                  <span className="text-base font-bold text-gradient">{current.result}</span>
+                </div>
+                <div className="hidden sm:block w-px h-5 bg-white/[0.08]" />
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" style={{ color: current.color }} />
+                  <span className="text-base font-bold text-gradient">{current.result2}</span>
+                </div>
               </div>
             </Reveal>
           </div>
@@ -816,34 +720,129 @@ const SolucionesPymes = () => {
           </div>
         </section>
 
-
-
         {/* ══════════════════════════════════════════════════
-            CTA — Gradient mesh
+            PROBLEM — Provocative reality-check section
             ══════════════════════════════════════════════════ */}
-        <section className="py-14 relative overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none" aria-hidden>
-            <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/[0.04] rounded-full blur-[130px]" />
-            <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[120px]" />
-          </div>
+        <section className="py-14 relative" id="problema">
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
 
-          <Reveal>
-            <div className="relative max-w-3xl mx-auto px-6 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-950/20 mb-8">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-medium text-amber-300/70">Empieza gratis</span>
+          <div className="max-w-6xl mx-auto px-6 relative">
+
+            {/* ─── Header ─── */}
+            <Reveal>
+              <div className="text-center max-w-3xl mx-auto mb-6">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] mb-6">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  <span className="text-[11px] font-semibold text-red-400/90 uppercase tracking-widest">Alerta de realidad</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
+                  Si tu negocio atiende así,{" "}
+                  <br className="hidden sm:block" />
+                  <span className="relative inline-block">
+                    <span className="text-red-400">ya estás perdiendo clientes</span>
+                    <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full bg-gradient-to-r from-red-500/60 to-red-500/0" />
+                  </span>
+                </h2>
+                <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
+                  No es opinión, son datos. Mientras lees esto, alguien te escribió y nadie contestó.{" "}
+                  <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
+                </p>
               </div>
+            </Reveal>
 
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-                Tu PYME no puede esperar{" "}
-                <span className="text-gradient">más</span>
-              </h2>
-              <p className="text-white/35 mb-10 max-w-xl mx-auto leading-relaxed">
-                Cada minuto sin WITHMIA es un lead que no contestas, una venta que pierdes
-                y un cliente que se va a la competencia.
-              </p>
+            {/* ─── Interactive diagnostic checklist ─── */}
+            <Reveal delay={100}>
+              {(() => {
+                const [checked, setChecked] = useState<Set<number>>(new Set());
+                const toggle = (i: number) => setChecked(prev => {
+                  const next = new Set(prev);
+                  next.has(i) ? next.delete(i) : next.add(i);
+                  return next;
+                });
+                const count = checked.size;
+                const verdict = count === 0
+                  ? { text: "Selecciona los que aplican a tu negocio", color: "text-white/25", bg: "" }
+                  : count <= 2
+                  ? { text: `${count}/6 — Podría ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
+                  : count <= 4
+                  ? { text: `${count}/6 — Tu competencia que automatizó te está quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
+                  : { text: `${count}/6 — Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                return (
+                  <div className="max-w-3xl mx-auto">
+                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 sm:p-8">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/15 flex items-center justify-center">
+                            <Target className="w-4 h-4 text-red-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-white/80">Diagnóstico rápido</p>
+                            <p className="text-[11px] text-white/25">¿Cuántos de estos síntomas tiene tu negocio?</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${
+                          count > 0 ? "bg-red-500/[0.08] border-red-500/15" : "bg-transparent border-transparent"
+                        }`}>
+                          <span className={`text-lg font-black font-mono transition-colors duration-300 ${
+                            count > 0 ? "text-red-400" : "text-transparent"
+                          }`}>{count || 0}</span>
+                          <span className={`text-[10px] font-medium transition-colors duration-300 ${
+                            count > 0 ? "text-red-400/60" : "text-transparent"
+                          }`}>/6</span>
+                        </div>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-2.5 mb-6">
+                        {boomerSymptoms.map((symptom, i) => {
+                          const isChecked = checked.has(i);
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => toggle(i)}
+                              className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-300 ${
+                                isChecked
+                                  ? "bg-red-500/[0.06] border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]"
+                                  : "bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03]"
+                              }`}
+                            >
+                              <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                isChecked
+                                  ? "bg-red-500/20 border-red-400/60"
+                                  : "border-white/[0.12] bg-transparent"
+                              }`}>
+                                {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-red-400" />}
+                              </div>
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <symptom.icon className={`w-4 h-4 mt-0.5 shrink-0 transition-colors duration-300 ${
+                                  isChecked ? "text-red-400/70" : "text-white/15"
+                                }`} />
+                                <span className={`text-[12.5px] leading-relaxed transition-colors duration-300 ${
+                                  isChecked ? "text-white/70" : "text-white/35"
+                                }`}>{symptom.text}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dynamic verdict */}
+                      <div className={`rounded-xl border px-4 py-3 min-h-[44px] flex items-center justify-center transition-all duration-500 ${
+                        count > 0 ? verdict.bg : "border-white/[0.04] bg-white/[0.01]"
+                      }`}>
+                        <p className={`text-[13px] font-medium text-center transition-colors duration-500 ${verdict.color}`}>
+                          {verdict.text}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Reveal>
+
+            {/* CTA buttons */}
+            <Reveal delay={200}>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
                 <a
                   href="https://app.withmia.com"
                   className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 overflow-hidden"
@@ -862,9 +861,10 @@ const SolucionesPymes = () => {
                   Hablar con ventas
                 </a>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </section>
+
 
       </main>
       <Footer />

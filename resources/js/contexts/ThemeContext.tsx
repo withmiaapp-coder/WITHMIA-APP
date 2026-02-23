@@ -19,134 +19,136 @@ export interface ThemeColors {
   previewRight: string;
 }
 
-// 16 paletas (4x4 grid) — diseñadas para armonía sobre fondo blanco
+// 16 paletas (4×4 grid) — Cada paleta diseñada a mano con armonía visual real.
+// primary = color dominante del sidebar/header/accents
+// secondary = color complementario para textos secundarios, badges, iconos inactivos
 export const THEME_PALETTES: ThemeColors[] = [
-  // Fila 1 — Azules
+  // ═══════════ Fila 1 — Azules & Neutros ═══════════
   {
-    id: 'royal-blue',
-    name: 'Azul Real',
-    primary: '#1a56db',
-    secondary: '#6b7280',
-    previewLeft: '#1a56db',
-    previewRight: '#6b7280',
+    id: 'indigo',
+    name: 'Índigo',
+    primary: '#4338ca',      // Índigo profundo — profesional, potente
+    secondary: '#6366f1',    // Índigo medio para acentos
+    previewLeft: '#4338ca',
+    previewRight: '#818cf8',
   },
   {
-    id: 'steel',
-    name: 'Acero',
-    primary: '#64748b',
-    secondary: '#94a3b8',
-    previewLeft: '#64748b',
-    previewRight: '#94a3b8',
+    id: 'cobalt',
+    name: 'Cobalto',
+    primary: '#1d4ed8',      // Azul puro — confianza, tecnología
+    secondary: '#3b82f6',    // Azul brillante como compañero
+    previewLeft: '#1d4ed8',
+    previewRight: '#60a5fa',
   },
   {
     id: 'ocean',
     name: 'Océano',
-    primary: '#2563eb',
-    secondary: '#475569',
-    previewLeft: '#2563eb',
-    previewRight: '#475569',
+    primary: '#0369a1',      // Azul océano — sereno, profesional
+    secondary: '#0ea5e9',    // Cyan claro
+    previewLeft: '#0369a1',
+    previewRight: '#38bdf8',
   },
   {
     id: 'slate',
     name: 'Pizarra',
-    primary: '#475569',
-    secondary: '#64748b',
-    previewLeft: '#475569',
-    previewRight: '#64748b',
+    primary: '#334155',      // Gris azulado oscuro — ejecutivo, sobrio
+    secondary: '#64748b',    // Gris medio
+    previewLeft: '#334155',
+    previewRight: '#94a3b8',
   },
 
-  // Fila 2 — Verdes y Teals
+  // ═══════════ Fila 2 — Verdes & Teals ═══════════
   {
-    id: 'sage',
-    name: 'Salvia',
-    primary: '#6b7f7b',
-    secondary: '#94a3b8',
-    previewLeft: '#6b7f7b',
-    previewRight: '#94a3b8',
+    id: 'emerald',
+    name: 'Esmeralda',
+    primary: '#059669',      // Verde esmeralda — crecimiento, éxito
+    secondary: '#34d399',    // Verde claro vibrante
+    previewLeft: '#059669',
+    previewRight: '#6ee7b7',
   },
   {
     id: 'teal',
     name: 'Turquesa',
-    primary: '#0d9488',
-    secondary: '#5eead4',
+    primary: '#0d9488',      // Teal — equilibrado, moderno
+    secondary: '#2dd4bf',    // Teal claro
     previewLeft: '#0d9488',
     previewRight: '#5eead4',
   },
   {
     id: 'forest',
     name: 'Bosque',
-    primary: '#15803d',
-    secondary: '#6b8f71',
-    previewLeft: '#15803d',
-    previewRight: '#6b8f71',
+    primary: '#166534',      // Verde bosque — naturaleza, estabilidad
+    secondary: '#22c55e',    // Verde brillante
+    previewLeft: '#166534',
+    previewRight: '#4ade80',
   },
   {
-    id: 'mint',
-    name: 'Menta',
-    primary: '#6ba39b',
-    secondary: '#a7c5c2',
-    previewLeft: '#6ba39b',
-    previewRight: '#a7c5c2',
+    id: 'sage',
+    name: 'Salvia',
+    primary: '#4d7c6f',      // Verde grisáceo — elegante, calmado
+    secondary: '#7fb5a5',    // Sage claro
+    previewLeft: '#4d7c6f',
+    previewRight: '#a7d5c8',
   },
 
-  // Fila 3 — Cálidos
-  {
-    id: 'olive',
-    name: 'Oliva',
-    primary: '#827717',
-    secondary: '#9e9d24',
-    previewLeft: '#827717',
-    previewRight: '#9e9d24',
-  },
+  // ═══════════ Fila 3 — Cálidos ═══════════
   {
     id: 'amber',
     name: 'Ámbar',
-    primary: '#b45309',
-    secondary: '#d97706',
+    primary: '#b45309',      // Ámbar — energía, calidez
+    secondary: '#f59e0b',    // Amarillo dorado
     previewLeft: '#b45309',
-    previewRight: '#d97706',
+    previewRight: '#fbbf24',
   },
   {
-    id: 'earth',
-    name: 'Tierra',
-    primary: '#78716c',
-    secondary: '#a8a29e',
-    previewLeft: '#78716c',
-    previewRight: '#a8a29e',
+    id: 'copper',
+    name: 'Cobre',
+    primary: '#9a3412',      // Cobre — premium, terroso
+    secondary: '#ea580c',    // Naranja fuego
+    previewLeft: '#9a3412',
+    previewRight: '#fb923c',
+  },
+  {
+    id: 'wine',
+    name: 'Vino',
+    primary: '#881337',      // Vino — sofisticado, lujoso
+    secondary: '#e11d48',    // Rosa intenso
+    previewLeft: '#881337',
+    previewRight: '#fb7185',
   },
   {
     id: 'rose',
     name: 'Rosa',
-    primary: '#be185d',
-    secondary: '#db2777',
+    primary: '#be185d',      // Rosa fuerte — creativo, moderno
+    secondary: '#f472b6',    // Rosa claro
     previewLeft: '#be185d',
-    previewRight: '#db2777',
+    previewRight: '#f9a8d4',
   },
 
-  // Fila 4 — Morados y especiales
+  // ═══════════ Fila 4 — Morados & Especial ═══════════
   {
-    id: 'mauve',
-    name: 'Malva',
-    primary: '#7e5bef',
-    secondary: '#a78bfa',
-    previewLeft: '#7e5bef',
-    previewRight: '#a78bfa',
-  },
-  {
-    id: 'plum',
-    name: 'Ciruela',
-    primary: '#7c3aed',
-    secondary: '#8b5cf6',
+    id: 'violet',
+    name: 'Violeta',
+    primary: '#7c3aed',      // Violeta — creativo, premium
+    secondary: '#a78bfa',    // Violeta claro
     previewLeft: '#7c3aed',
-    previewRight: '#8b5cf6',
+    previewRight: '#c4b5fd',
   },
   {
-    id: 'lavender',
-    name: 'Lavanda',
-    primary: '#8b5cf6',
-    secondary: '#c4b5fd',
-    previewLeft: '#8b5cf6',
-    previewRight: '#c4b5fd',
+    id: 'purple',
+    name: 'Púrpura',
+    primary: '#9333ea',      // Púrpura — lujo, innovación
+    secondary: '#c084fc',    // Púrpura claro
+    previewLeft: '#9333ea',
+    previewRight: '#d8b4fe',
+  },
+  {
+    id: 'fuchsia',
+    name: 'Fucsia',
+    primary: '#a21caf',      // Fucsia — audaz, llamativo
+    secondary: '#e879f9',    // Fucsia claro
+    previewLeft: '#a21caf',
+    previewRight: '#f0abfc',
   },
   // Último: Custom — color personalizado del usuario
   {
@@ -187,42 +189,124 @@ function hexToHSL(hex: string): { h: number; s: number; l: number } {
 }
 
 /**
- * Genera un tint natural: controla luminosidad Y saturación independientemente.
- * satRatio: 1 = saturación original, 0.3 = 30% de la saturación original.
- * Esto evita los pasteles artificiales de solo subir L.
+ * Genera un tint: mezcla el color con blanco.
+ * ratio=0 → blanco puro, ratio=1 → color original completo.
+ * Mucho más natural que solo mover L en HSL.
  */
-function tint(hex: string, lightness: number, satRatio: number = 1): string {
-  const { h, s } = hexToHSL(hex);
-  const newS = Math.round(Math.min(100, s * satRatio));
-  const newL = Math.min(100, Math.max(0, lightness));
-  return `hsl(${h}, ${newS}%, ${newL}%)`;
+function mixWithWhite(hex: string, ratio: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(255 + (r - 255) * ratio);
+  const ng = Math.round(255 + (g - 255) * ratio);
+  const nb = Math.round(255 + (b - 255) * ratio);
+  return `rgb(${nr}, ${ng}, ${nb})`;
 }
 
 /**
- * Genera un shade (oscurece) manteniendo la identidad de color.
+ * Mezcla el color con negro para oscurecer.
+ * ratio=0 → negro puro, ratio=1 → color original.
  */
-function shade(hex: string, lightness: number, satRatio: number = 1): string {
-  const { h, s } = hexToHSL(hex);
-  const newS = Math.round(Math.min(100, s * satRatio));
-  const newL = Math.max(0, Math.min(100, lightness));
-  return `hsl(${h}, ${newS}%, ${newL}%)`;
+function mixWithBlack(hex: string, ratio: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(r * ratio);
+  const ng = Math.round(g * ratio);
+  const nb = Math.round(b * ratio);
+  return `rgb(${nr}, ${ng}, ${nb})`;
 }
 
-function applyThemeColors(theme: ThemeColors | null) {
+/**
+ * Genera un color con opacidad sobre fondo blanco (para efectos glass).
+ */
+function withAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
   const root = document.documentElement;
 
   const allVars = [
     '--theme-primary', '--theme-primary-light', '--theme-primary-lighter', '--theme-primary-dark',
     '--theme-secondary', '--theme-secondary-light',
+    // Sidebar
     '--theme-sidebar-bg', '--theme-sidebar-text', '--theme-sidebar-hover',
     '--theme-sidebar-active-bg', '--theme-sidebar-active-text', '--theme-sidebar-border',
-    '--theme-header-bg', '--theme-header-border',
+    '--theme-sidebar-glass',
+    // Header
+    '--theme-header-bg', '--theme-header-border', '--theme-header-glass',
+    // Accent
     '--theme-accent', '--theme-accent-light',
+    // Badges
     '--theme-badge-bg', '--theme-badge-text', '--theme-badge-border',
+    // Icons
     '--theme-icon-inactive', '--theme-icon-inactive-bg',
+    // Content area
+    '--theme-content-bg', '--theme-content-card-bg', '--theme-content-card-border',
+    '--theme-content-card-shadow',
+    // Text
+    '--theme-text-primary', '--theme-text-secondary', '--theme-text-muted',
+    // Active nav gradient
+    '--theme-active-gradient-from', '--theme-active-gradient-to',
+    // Glass effect common
+    '--theme-glass-border', '--theme-glass-shadow',
   ];
 
+  // Handle pure dark mode (no theme selected) or reset
   if (!theme || theme.id === 'default') {
+    if (isDark) {
+      // Pure dark mode without a color palette — elegant dark navy inspired by withmia.com
+      root.setAttribute('data-theme', 'dark');
+      root.style.setProperty('--theme-primary', '#818cf8');          // Indigo claro — legible en dark
+      root.style.setProperty('--theme-primary-light', 'rgba(129,140,248,0.15)');
+      root.style.setProperty('--theme-primary-lighter', 'rgba(129,140,248,0.06)');
+      root.style.setProperty('--theme-primary-dark', '#a5b4fc');
+      root.style.setProperty('--theme-secondary', '#94a3b8');
+      root.style.setProperty('--theme-secondary-light', 'rgba(148,163,184,0.15)');
+      // Sidebar dark
+      root.style.setProperty('--theme-sidebar-bg', '#0f1219');
+      root.style.setProperty('--theme-sidebar-glass', 'rgba(255,255,255,0.02)');
+      root.style.setProperty('--theme-sidebar-text', '#cbd5e1');
+      root.style.setProperty('--theme-sidebar-hover', 'rgba(255,255,255,0.06)');
+      root.style.setProperty('--theme-sidebar-active-bg', 'rgba(255,255,255,0.08)');
+      root.style.setProperty('--theme-sidebar-active-text', '#f1f5f9');
+      root.style.setProperty('--theme-sidebar-border', 'rgba(255,255,255,0.06)');
+      // Header dark
+      root.style.setProperty('--theme-header-bg', '#0f1219');
+      root.style.setProperty('--theme-header-border', 'rgba(255,255,255,0.06)');
+      root.style.setProperty('--theme-header-glass', 'rgba(255,255,255,0.02)');
+      // Accent
+      root.style.setProperty('--theme-accent', '#818cf8');
+      root.style.setProperty('--theme-accent-light', 'rgba(129,140,248,0.2)');
+      // Badges
+      root.style.setProperty('--theme-badge-bg', 'rgba(255,255,255,0.06)');
+      root.style.setProperty('--theme-badge-text', '#cbd5e1');
+      root.style.setProperty('--theme-badge-border', 'rgba(255,255,255,0.08)');
+      // Icons
+      root.style.setProperty('--theme-icon-inactive', '#94a3b8');
+      root.style.setProperty('--theme-icon-inactive-bg', 'rgba(255,255,255,0.06)');
+      // Content
+      root.style.setProperty('--theme-content-bg', '#111827');
+      root.style.setProperty('--theme-content-card-bg', 'rgba(255,255,255,0.04)');
+      root.style.setProperty('--theme-content-card-border', 'rgba(255,255,255,0.06)');
+      root.style.setProperty('--theme-content-card-shadow', 'rgba(0,0,0,0.2)');
+      // Text
+      root.style.setProperty('--theme-text-primary', '#f1f5f9');
+      root.style.setProperty('--theme-text-secondary', '#94a3b8');
+      root.style.setProperty('--theme-text-muted', '#64748b');
+      // Active nav
+      root.style.setProperty('--theme-active-gradient-from', '#818cf8');
+      root.style.setProperty('--theme-active-gradient-to', '#6366f1');
+      // Glass
+      root.style.setProperty('--theme-glass-border', 'rgba(255,255,255,0.06)');
+      root.style.setProperty('--theme-glass-shadow', 'rgba(0,0,0,0.2)');
+      return;
+    }
+    // Light + no theme = completely reset
     allVars.forEach(v => root.style.removeProperty(v));
     root.removeAttribute('data-theme');
     return;
@@ -230,50 +314,158 @@ function applyThemeColors(theme: ThemeColors | null) {
 
   root.setAttribute('data-theme', theme.id);
 
-  const p = theme.primary;   // e.g. #1a56db → hsl(222, 80%, 48%)
+  const p = theme.primary;
   const sec = theme.secondary;
 
-  // ─── Primary variants ───────────────────────────────────────
+  if (isDark) {
+    // ═══════════════════════════════════════════════════════════
+    // DARK MODE with palette color — Deep backgrounds + tinted accents
+    // Inspired by withmia.com: #0d1017 bg, glass cards rgba(255,255,255,0.04)
+    // ═══════════════════════════════════════════════════════════
+
+    // Brighten the primary for dark mode readability
+    const pBright = mixWithWhite(p, 0.55);  // Lighter version for dark bg
+
+    root.style.setProperty('--theme-primary', pBright);
+    root.style.setProperty('--theme-primary-light', withAlpha(p, 0.15));
+    root.style.setProperty('--theme-primary-lighter', withAlpha(p, 0.06));
+    root.style.setProperty('--theme-primary-dark', mixWithWhite(p, 0.7));
+
+    root.style.setProperty('--theme-secondary', mixWithWhite(sec, 0.5));
+    root.style.setProperty('--theme-secondary-light', withAlpha(sec, 0.15));
+
+    // Sidebar — deep dark with subtle primary tint
+    root.style.setProperty('--theme-sidebar-bg', mixWithBlack(p, 0.08));    // Very dark tinted
+    root.style.setProperty('--theme-sidebar-glass', withAlpha(p, 0.03));
+    root.style.setProperty('--theme-sidebar-text', mixWithWhite(p, 0.6));
+    root.style.setProperty('--theme-sidebar-hover', withAlpha(p, 0.08));
+    root.style.setProperty('--theme-sidebar-active-bg', withAlpha(p, 0.12));
+    root.style.setProperty('--theme-sidebar-active-text', mixWithWhite(p, 0.8));
+    root.style.setProperty('--theme-sidebar-border', withAlpha(p, 0.08));
+
+    // Header — dark
+    root.style.setProperty('--theme-header-bg', mixWithBlack(p, 0.08));
+    root.style.setProperty('--theme-header-border', withAlpha(p, 0.08));
+    root.style.setProperty('--theme-header-glass', withAlpha(p, 0.03));
+
+    // Accent
+    root.style.setProperty('--theme-accent', pBright);
+    root.style.setProperty('--theme-accent-light', withAlpha(p, 0.2));
+
+    // Badges — subtle glass on dark
+    root.style.setProperty('--theme-badge-bg', withAlpha(p, 0.12));
+    root.style.setProperty('--theme-badge-text', mixWithWhite(p, 0.65));
+    root.style.setProperty('--theme-badge-border', withAlpha(p, 0.15));
+
+    // Icons
+    root.style.setProperty('--theme-icon-inactive', mixWithWhite(p, 0.45));
+    root.style.setProperty('--theme-icon-inactive-bg', withAlpha(p, 0.08));
+
+    // Content — dark background
+    root.style.setProperty('--theme-content-bg', mixWithBlack(p, 0.06));
+    root.style.setProperty('--theme-content-card-bg', 'rgba(255,255,255,0.04)');
+    root.style.setProperty('--theme-content-card-border', withAlpha(p, 0.08));
+    root.style.setProperty('--theme-content-card-shadow', 'rgba(0,0,0,0.2)');
+
+    // Text — light on dark
+    root.style.setProperty('--theme-text-primary', '#f1f5f9');
+    root.style.setProperty('--theme-text-secondary', mixWithWhite(p, 0.5));
+    root.style.setProperty('--theme-text-muted', mixWithWhite(p, 0.35));
+
+    // Active nav gradient
+    root.style.setProperty('--theme-active-gradient-from', pBright);
+    root.style.setProperty('--theme-active-gradient-to', mixWithWhite(sec, 0.5));
+
+    // Glass
+    root.style.setProperty('--theme-glass-border', withAlpha(p, 0.1));
+    root.style.setProperty('--theme-glass-shadow', 'rgba(0,0,0,0.25)');
+
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LIGHT MODE with palette color (existing logic)
+  // ═══════════════════════════════════════════════════════════
   root.style.setProperty('--theme-primary', p);
-  root.style.setProperty('--theme-primary-light', tint(p, 80, 0.5));
-  root.style.setProperty('--theme-primary-lighter', tint(p, 93, 0.35));
-  root.style.setProperty('--theme-primary-dark', shade(p, 30, 1));
+  root.style.setProperty('--theme-primary-light', mixWithWhite(p, 0.35));    // 35% del color
+  root.style.setProperty('--theme-primary-lighter', mixWithWhite(p, 0.12));  // Muy suave
+  root.style.setProperty('--theme-primary-dark', mixWithBlack(p, 0.7));      // 70% oscurecido
 
-  // ─── Secondary variants ────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // SECONDARY VARIANTS
+  // ═══════════════════════════════════════════════════════════
   root.style.setProperty('--theme-secondary', sec);
-  root.style.setProperty('--theme-secondary-light', tint(sec, 75, 0.5));
+  root.style.setProperty('--theme-secondary-light', mixWithWhite(sec, 0.4));
 
-  // ─── Sidebar ───────────────────────────────────────────────
-  // BG: visible tint — light enough for readability but clearly colored
-  root.style.setProperty('--theme-sidebar-bg', tint(p, 94, 0.4));
-  // Text: dark, retaining the hue so it feels intentional
-  root.style.setProperty('--theme-sidebar-text', shade(p, 22, 0.85));
-  // Hover: slightly deeper than bg
-  root.style.setProperty('--theme-sidebar-hover', tint(p, 89, 0.45));
-  // Active item
-  root.style.setProperty('--theme-sidebar-active-bg', 'white');
+  // ═══════════════════════════════════════════════════════════
+  // SIDEBAR — Glassmorphism elegante
+  // ═══════════════════════════════════════════════════════════
+  // BG: tinte muy sutil del color primario — parece casi blanco pero con identidad
+  root.style.setProperty('--theme-sidebar-bg', mixWithWhite(p, 0.06));
+  // Glass overlay para glassmorphism
+  root.style.setProperty('--theme-sidebar-glass', withAlpha(p, 0.04));
+  // Texto: oscuro con tinte del hue — se lee perfecto
+  root.style.setProperty('--theme-sidebar-text', mixWithBlack(p, 0.45));
+  // Hover: toque más visible del color
+  root.style.setProperty('--theme-sidebar-hover', mixWithWhite(p, 0.12));
+  // Active: blanco con glassmorphism
+  root.style.setProperty('--theme-sidebar-active-bg', 'rgba(255, 255, 255, 0.85)');
   root.style.setProperty('--theme-sidebar-active-text', p);
-  // Border: between bg and hover depth
-  root.style.setProperty('--theme-sidebar-border', tint(p, 87, 0.35));
+  // Border: sutil
+  root.style.setProperty('--theme-sidebar-border', mixWithWhite(p, 0.15));
 
-  // ─── Header ────────────────────────────────────────────────
-  root.style.setProperty('--theme-header-bg', tint(p, 96, 0.3));
-  root.style.setProperty('--theme-header-border', tint(p, 89, 0.3));
+  // ═══════════════════════════════════════════════════════════
+  // HEADER — Glass transparente
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-header-bg', mixWithWhite(p, 0.04));
+  root.style.setProperty('--theme-header-border', mixWithWhite(p, 0.1));
+  root.style.setProperty('--theme-header-glass', withAlpha(p, 0.03));
 
-  // ─── Accent ────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ACCENT
+  // ═══════════════════════════════════════════════════════════
   root.style.setProperty('--theme-accent', p);
-  root.style.setProperty('--theme-accent-light', tint(p, 85, 0.4));
+  root.style.setProperty('--theme-accent-light', mixWithWhite(p, 0.2));
 
-  // ─── Badges ────────────────────────────────────────────────
-  root.style.setProperty('--theme-badge-bg', tint(p, 90, 0.5));
-  root.style.setProperty('--theme-badge-text', shade(p, 28, 0.9));
-  root.style.setProperty('--theme-badge-border', tint(p, 82, 0.4));
+  // ═══════════════════════════════════════════════════════════
+  // BADGES — Legibles, con identidad de color clara
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-badge-bg', mixWithWhite(p, 0.15));
+  root.style.setProperty('--theme-badge-text', mixWithBlack(p, 0.55));
+  root.style.setProperty('--theme-badge-border', mixWithWhite(p, 0.25));
 
-  // ─── Icons ─────────────────────────────────────────────────
-  // Inactive icon uses the primary itself (recognizable color identity)
-  root.style.setProperty('--theme-icon-inactive', shade(p, 38, 0.8));
-  // Inactive icon background: visible tint, not washed out
-  root.style.setProperty('--theme-icon-inactive-bg', tint(p, 88, 0.5));
+  // ═══════════════════════════════════════════════════════════
+  // ICONS
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-icon-inactive', mixWithBlack(p, 0.6));
+  root.style.setProperty('--theme-icon-inactive-bg', mixWithWhite(p, 0.15));
+
+  // ═══════════════════════════════════════════════════════════
+  // CONTENT AREA
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-content-bg', mixWithWhite(p, 0.03));
+  root.style.setProperty('--theme-content-card-bg', 'rgba(255, 255, 255, 0.7)');
+  root.style.setProperty('--theme-content-card-border', mixWithWhite(p, 0.12));
+  root.style.setProperty('--theme-content-card-shadow', withAlpha(p, 0.06));
+
+  // ═══════════════════════════════════════════════════════════
+  // TEXT LEVELS
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-text-primary', mixWithBlack(p, 0.35));
+  root.style.setProperty('--theme-text-secondary', mixWithBlack(p, 0.5));
+  root.style.setProperty('--theme-text-muted', mixWithWhite(p, 0.45));
+
+  // ═══════════════════════════════════════════════════════════
+  // ACTIVE NAV GRADIENT — para el ícono activo del sidebar
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-active-gradient-from', p);
+  root.style.setProperty('--theme-active-gradient-to', sec);
+
+  // ═══════════════════════════════════════════════════════════
+  // GLASS EFFECTS — compartidos
+  // ═══════════════════════════════════════════════════════════
+  root.style.setProperty('--theme-glass-border', withAlpha(p, 0.1));
+  root.style.setProperty('--theme-glass-shadow', withAlpha(p, 0.08));
 }
 
 // ============================================================================
@@ -283,6 +475,7 @@ function applyThemeColors(theme: ThemeColors | null) {
 interface ThemeContextType {
   themeId: string;
   mode: ThemeMode;
+  isDark: boolean;
   currentTheme: ThemeColors | null;
   customColor: string | null;
   hasTheme: boolean;
@@ -295,6 +488,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({
   themeId: 'default',
   mode: 'light',
+  isDark: false,
   currentTheme: null,
   customColor: null,
   hasTheme: false,
@@ -341,6 +535,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  // Detect system dark mode preference
+  const [systemDark, setSystemDark] = useState(() => {
+    try {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  // Listen for system dark mode changes
+  useEffect(() => {
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+      mql.addEventListener('change', handler);
+      return () => mql.removeEventListener('change', handler);
+    } catch {}
+  }, []);
+
+  // Compute actual dark state
+  const isDark = mode === 'dark' || (mode === 'system' && systemDark);
+
   // Build current theme — for 'custom' id, generate palette from customColor
   const currentTheme: ThemeColors | null = (() => {
     if (themeId === 'custom' && customColor) {
@@ -348,16 +564,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         id: 'custom',
         name: 'Personalizado',
         primary: customColor,
-        secondary: tint(customColor, 60, 0.6),
+        secondary: mixWithWhite(customColor, 0.5),
         previewLeft: customColor,
-        previewRight: tint(customColor, 60, 0.6),
+        previewRight: mixWithWhite(customColor, 0.5),
       };
     }
     if (themeId === 'default') return null;
     return THEME_PALETTES.find(t => t.id === themeId) || null;
   })();
 
-  const hasTheme = themeId !== 'default' && currentTheme !== null;
+  // hasTheme is true when a palette is selected OR when dark mode is active (even without palette)
+  const hasTheme = isDark || (themeId !== 'default' && currentTheme !== null);
 
   const setThemeId = useCallback((id: string) => {
     setThemeIdState(id);
@@ -384,20 +601,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const resetTheme = useCallback(() => {
     setThemeIdState('default');
+    setModeState('light');
     setCustomColorState(null);
     try {
       localStorage.setItem(STORAGE_KEY_THEME, 'default');
+      localStorage.setItem(STORAGE_KEY_MODE, 'light');
       localStorage.removeItem(STORAGE_KEY_CUSTOM);
     } catch {}
   }, []);
 
-  // Apply theme whenever it changes
+  // Apply theme whenever it changes (including dark mode)
   useEffect(() => {
-    applyThemeColors(currentTheme);
-  }, [currentTheme?.id, currentTheme?.primary]);
+    applyThemeColors(currentTheme, isDark);
+  }, [currentTheme?.id, currentTheme?.primary, isDark]);
 
   return (
-    <ThemeContext.Provider value={{ themeId, mode, currentTheme, customColor, hasTheme, setThemeId, setMode, setCustomColor, resetTheme }}>
+    <ThemeContext.Provider value={{ themeId, mode, isDark, currentTheme, customColor, hasTheme, setThemeId, setMode, setCustomColor, resetTheme }}>
       {children}
     </ThemeContext.Provider>
   );

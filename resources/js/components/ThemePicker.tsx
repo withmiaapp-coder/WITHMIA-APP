@@ -9,7 +9,7 @@ const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
 ];
 
 export function ThemePicker() {
-  const { themeId, mode, customColor, setThemeId, setMode, setCustomColor, resetTheme } = useTheme();
+  const { themeId, mode, customColor, hasTheme, isDark, setThemeId, setMode, setCustomColor, resetTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -33,13 +33,45 @@ export function ThemePicker() {
   // Only preset palettes (exclude the 'custom' entry)
   const presetPalettes = THEME_PALETTES.filter(p => p.id !== 'custom');
 
+  // Dark-aware popover colors
+  const popoverBg = isDark ? '#1a1f2e' : 'white';
+  const popoverBorder = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
+  const tabBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
+  const tabActiveBg = isDark ? 'rgba(255,255,255,0.12)' : 'white';
+  const tabActiveText = isDark ? '#f1f5f9' : '#1f2937';
+  const tabInactiveText = isDark ? '#94a3b8' : '#6b7280';
+  const resetBg = isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb';
+  const resetHoverBg = isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6';
+  const resetText = isDark ? '#94a3b8' : '#4b5563';
+  const footerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
+  const footerText = isDark ? '#64748b' : '#6b7280';
+
   return (
     <div className="relative">
       {/* Trigger button */}
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-all duration-150"
+        className="p-2 rounded-lg transition-all duration-150"
+        style={{
+          color: hasTheme
+            ? isDark ? 'var(--theme-text-secondary)' : 'var(--theme-icon-inactive)'
+            : '#9ca3af',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = hasTheme
+            ? isDark ? 'rgba(255,255,255,0.08)' : 'var(--theme-sidebar-hover)'
+            : '#f3f4f6';
+          e.currentTarget.style.color = hasTheme
+            ? isDark ? '#f1f5f9' : 'var(--theme-primary)'
+            : '#4b5563';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '';
+          e.currentTarget.style.color = hasTheme
+            ? isDark ? 'var(--theme-text-secondary)' : 'var(--theme-icon-inactive)'
+            : '#9ca3af';
+        }}
         title="Personalizar colores"
         aria-label="Personalizar colores"
       >
@@ -52,15 +84,22 @@ export function ThemePicker() {
           {/* Overlay */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-          {/* Panel */}
+          {/* Panel — anchored to button with absolute positioning */}
           <div
             ref={panelRef}
-            className="fixed top-14 right-14 w-[280px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden"
-            style={{ animation: 'slideDown 0.15s ease-out' }}
+            className="absolute right-0 top-full mt-2 w-[280px] rounded-2xl shadow-2xl z-50 overflow-hidden"
+            style={{
+              animation: 'slideDown 0.15s ease-out',
+              background: popoverBg,
+              border: `1px solid ${popoverBorder}`,
+              boxShadow: isDark
+                ? '0 20px 60px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 20px 60px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.03)',
+            }}
           >
             {/* Mode tabs */}
             <div className="p-3 pb-2">
-              <div className="flex bg-gray-100 rounded-full p-1">
+              <div className="flex rounded-full p-1" style={{ background: tabBg }}>
                 {MODE_TABS.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = mode === tab.mode;
@@ -68,11 +107,12 @@ export function ThemePicker() {
                     <button
                       key={tab.mode}
                       onClick={() => setMode(tab.mode)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-full text-xs font-medium transition-all duration-150 ${
-                        isActive
-                          ? 'bg-white text-gray-800 shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-full text-xs font-medium transition-all duration-150"
+                      style={{
+                        background: isActive ? tabActiveBg : 'transparent',
+                        color: isActive ? tabActiveText : tabInactiveText,
+                        boxShadow: isActive ? (isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)') : 'none',
+                      }}
                     >
                       {isActive && <Check className="w-3 h-3" />}
                       <Icon className="w-3.5 h-3.5" />
@@ -94,7 +134,11 @@ export function ThemePicker() {
                       key={palette.id}
                       onClick={() => setThemeId(palette.id)}
                       className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
-                        isSelected ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                        isSelected
+                          ? isDark
+                            ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
+                            : 'ring-2 ring-offset-2 ring-gray-400'
+                          : ''
                       }`}
                       title={palette.name}
                       aria-label={palette.name}
@@ -120,7 +164,11 @@ export function ThemePicker() {
                 <button
                   onClick={() => colorInputRef.current?.click()}
                   className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
-                    themeId === 'custom' ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                    themeId === 'custom'
+                      ? isDark
+                        ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
+                        : 'ring-2 ring-offset-2 ring-gray-400'
+                      : ''
                   }`}
                   title="Color personalizado"
                   aria-label="Color personalizado"
@@ -161,11 +209,19 @@ export function ThemePicker() {
             <div className="px-3 pb-3">
               <button
                 onClick={() => resetTheme()}
-                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
-                  themeId === 'default'
-                    ? 'bg-gray-100 text-gray-400 cursor-default'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                }`}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all duration-150"
+                style={{
+                  background: themeId === 'default' ? tabBg : resetBg,
+                  color: themeId === 'default' ? tabInactiveText : resetText,
+                  cursor: themeId === 'default' ? 'default' : 'pointer',
+                  opacity: themeId === 'default' ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (themeId !== 'default') e.currentTarget.style.background = resetHoverBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = themeId === 'default' ? tabBg : resetBg;
+                }}
                 disabled={themeId === 'default'}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -174,12 +230,15 @@ export function ThemePicker() {
             </div>
 
             {/* Footer toggle */}
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-xs text-gray-500">Seguir colores del dispositivo</span>
+            <div
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ borderTop: `1px solid ${footerBorder}` }}
+            >
+              <span className="text-xs" style={{ color: footerText }}>Seguir colores del dispositivo</span>
               <button
                 onClick={() => setMode(mode === 'system' ? 'light' : 'system')}
                 className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${
-                  mode === 'system' ? 'bg-blue-500' : 'bg-gray-300'
+                  mode === 'system' ? 'bg-blue-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
                 }`}
               >
                 <span

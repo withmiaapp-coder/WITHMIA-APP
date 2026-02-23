@@ -511,6 +511,7 @@ function DashboardClock() {
 
 function ClockDisplay({ firstName }: { firstName: string }) {
   const { greeting, icon, date } = DashboardClock();
+  const { hasTheme, isDark } = useTheme();
   const [dailyQuote, setDailyQuote] = useState<DailyQuote>(getDailyQuote(date));
   const [isLoading, setIsLoading] = useState(true);
 
@@ -529,19 +530,43 @@ function ClockDisplay({ firstName }: { firstName: string }) {
     <div className="flex-1 min-w-0">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-0.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{
+              background: hasTheme
+                ? isDark ? 'rgba(255,255,255,0.06)' : 'var(--theme-primary-lighter)'
+                : 'linear-gradient(to bottom right, #fef3c7, #ffedd5)',
+            }}
+          >
             <span className="text-sm">💡</span>
           </div>
         </div>
         <div className={`min-w-0 transition-opacity duration-500 ${isLoading ? 'opacity-60' : 'opacity-100'}`}>
-          <p className="text-[13px] text-gray-700 font-medium italic leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={dailyQuote.quote}>
+          <p 
+            className="text-[13px] font-medium italic leading-snug" 
+            style={{ 
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              color: hasTheme ? 'var(--theme-text-primary)' : '#374151',
+            }} 
+            title={dailyQuote.quote}
+          >
             &ldquo;{dailyQuote.quote}&rdquo;
           </p>
-          <p className="text-[11px] text-gray-500 font-semibold mt-1">
-            — {dailyQuote.author} <span className="text-gray-300 mx-0.5">·</span> <span className="text-gray-400 font-normal">{dailyQuote.context}</span>
+          <p 
+            className="text-[11px] font-semibold mt-1"
+            style={{ color: hasTheme ? 'var(--theme-text-secondary)' : '#6b7280' }}
+          >
+            — {dailyQuote.author} <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#d1d5db' }} className="mx-0.5">·</span> <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af' }} className="font-normal">{dailyQuote.context}</span>
           </p>
           {dailyQuote.who && (
-            <p className="text-[11px] text-gray-400 font-normal mt-0.5 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={dailyQuote.who}>
+            <p 
+              className="text-[11px] font-normal mt-0.5 leading-snug" 
+              style={{ 
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af',
+              }} 
+              title={dailyQuote.who}
+            >
               {dailyQuote.who}
             </p>
           )}
@@ -1171,23 +1196,25 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
   };
 
   // Theme variables - useTheme is safe here because ThemeProvider wraps via DashboardWithTheme below
-  const { currentTheme, hasTheme } = useTheme();
+  const { currentTheme, hasTheme, isDark } = useTheme();
 
   return (
     <GlobalNotificationProvider inboxId={inboxId}>
-      <div className="flex h-screen overflow-hidden" style={{ background: hasTheme ? 'var(--theme-header-bg, #f8fafc)' : undefined }} >
-        {/* Sidebar Premium */}
+      <div className="flex h-screen overflow-hidden" style={{ background: hasTheme ? 'var(--theme-content-bg, #f8fafc)' : undefined }} >
+        {/* Sidebar Premium — Glassmorphism */}
         <div 
-          className={`${sidebarCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 shadow-xl transition-all duration-150 ease-out relative`}
+          className={`${sidebarCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 transition-all duration-150 ease-out relative`}
           style={{
             background: hasTheme ? 'var(--theme-sidebar-bg)' : 'white',
-            borderRight: hasTheme ? '1px solid var(--theme-sidebar-border)' : '1px solid rgb(226 232 240 / 0.8)',
-            boxShadow: hasTheme ? '4px 0 15px -3px rgba(0,0,0,0.08)' : undefined,
+            borderRight: hasTheme ? '1px solid var(--theme-glass-border)' : '1px solid rgb(226 232 240 / 0.8)',
+            boxShadow: hasTheme ? '4px 0 20px -4px var(--theme-glass-shadow)' : undefined,
+            backdropFilter: hasTheme ? 'blur(16px) saturate(1.2)' : undefined,
+            WebkitBackdropFilter: hasTheme ? 'blur(16px) saturate(1.2)' : undefined,
           }}
         >
           
           {/* Header del Sidebar — altura sincronizada con top header */}
-          <div className="px-4 flex items-center" style={{ minHeight: '73px', borderBottom: hasTheme ? '1px solid var(--theme-sidebar-border)' : '1px solid rgb(226 232 240 / 0.7)' }}>
+          <div className="px-4 flex items-center" style={{ minHeight: '73px', borderBottom: hasTheme ? '1px solid var(--theme-glass-border)' : '1px solid rgb(226 232 240 / 0.7)' }}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'} w-full`}>
               <div className="relative cursor-pointer flex-shrink-0" onClick={() => setSidebarCollapsed(false)} title="Expandir sidebar">
                 <img
@@ -1232,9 +1259,11 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                   ) : ''
                 }`}
                 style={hasTheme ? {
-                  background: isActive ? 'white' : undefined,
-                  boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.08)' : undefined,
-                  border: isActive ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+                  background: isActive ? 'var(--theme-sidebar-active-bg)' : undefined,
+                  boxShadow: isActive ? '0 4px 16px -2px var(--theme-glass-shadow)' : undefined,
+                  border: isActive ? '1px solid var(--theme-glass-border)' : '1px solid transparent',
+                  backdropFilter: isActive ? 'blur(8px)' : undefined,
+                  WebkitBackdropFilter: isActive ? 'blur(8px)' : undefined,
                 } : undefined}
                 onMouseEnter={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = 'var(--theme-sidebar-hover)'; }}
                 onMouseLeave={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = ''; }}
@@ -1262,7 +1291,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                     <div className="text-left">
                       <span 
                         className={`font-semibold text-xs ${!hasTheme ? (isActive ? 'text-neutral-800' : 'text-neutral-600') : ''}`}
-                        style={hasTheme ? { color: isActive ? 'var(--theme-primary-dark)' : 'var(--theme-sidebar-text)' } : undefined}
+                        style={hasTheme ? { color: isActive ? (isDark ? 'var(--theme-text-primary)' : 'var(--theme-primary-dark)') : 'var(--theme-sidebar-text)' } : undefined}
                       >
                         {item.label}
                       </span>

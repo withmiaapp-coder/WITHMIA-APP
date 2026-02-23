@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { Bell, X, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { useGlobalNotifications } from '@/contexts/GlobalNotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { router } from '@inertiajs/react';
 
 export const NotificationBell: React.FC = () => {
   const globalNotifications = useGlobalNotifications();
+  const { hasTheme, isDark } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   // Si no hay contexto de notificaciones, no renderizar nada o mostrar solo el ícono
   if (!globalNotifications) {
     return (
       <button
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors opacity-50 cursor-not-allowed"
+        className="relative p-2 rounded-lg transition-colors opacity-50 cursor-not-allowed"
+        style={{
+          color: hasTheme
+            ? isDark ? 'var(--theme-text-secondary)' : 'var(--theme-icon-inactive)'
+            : '#9ca3af',
+        }}
         aria-label="Notificaciones no disponibles"
         title="Sistema de notificaciones no disponible"
       >
@@ -57,12 +64,55 @@ export const NotificationBell: React.FC = () => {
     }));
   };
 
+  // Dark-aware panel colors
+  const panelBg = isDark ? '#1a1f2e' : 'white';
+  const panelBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
+  const headerBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(249,250,251,0.8)';
+  const headerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
+  const headerText = isDark ? '#f1f5f9' : '#1f2937';
+  const headerIconColor = isDark ? '#94a3b8' : '#4b5563';
+  const closeBtnHover = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(229,231,235,0.6)';
+  const actionBg1 = isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff';
+  const actionText1 = isDark ? '#60a5fa' : '#2563eb';
+  const actionBg2 = isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2';
+  const actionText2 = isDark ? '#f87171' : '#dc2626';
+  const itemHover = isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb';
+  const unreadBg = isDark ? 'rgba(59,130,246,0.06)' : 'rgba(219,234,254,0.3)';
+  const nameColor = isDark ? '#f1f5f9' : '#111827';
+  const nameReadColor = isDark ? '#94a3b8' : '#4b5563';
+  const messageColor = isDark ? '#94a3b8' : '#4b5563';
+  const timestampColor = isDark ? '#64748b' : '#6b7280';
+  const dividerColor = isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6';
+  const footerBg = isDark ? 'rgba(255,255,255,0.02)' : '#f9fafb';
+  const footerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb';
+  const footerText = isDark ? '#64748b' : '#6b7280';
+  const emptyColor = isDark ? '#64748b' : '#9ca3af';
+
   return (
     <div className="relative">
-      {/* Botón de campana */}
+      {/* Botón de campana — themed */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 rounded-lg transition-all duration-150"
+        style={{
+          color: hasTheme
+            ? isDark ? 'var(--theme-text-secondary)' : 'var(--theme-icon-inactive)'
+            : '#9ca3af',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = hasTheme
+            ? isDark ? 'rgba(255,255,255,0.08)' : 'var(--theme-sidebar-hover)'
+            : '#f3f4f6';
+          e.currentTarget.style.color = hasTheme
+            ? isDark ? '#f1f5f9' : 'var(--theme-primary)'
+            : '#4b5563';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '';
+          e.currentTarget.style.color = hasTheme
+            ? isDark ? 'var(--theme-text-secondary)' : 'var(--theme-icon-inactive)'
+            : '#9ca3af';
+        }}
         aria-label="Notificaciones"
       >
         <Bell className="w-5 h-5" />
@@ -82,14 +132,23 @@ export const NotificationBell: React.FC = () => {
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Panel */}
-          <div className="fixed top-14 right-4 w-96 max-h-[80vh] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col animate-slide-down">
+          {/* Panel — anchored to button */}
+          <div
+            className="absolute right-0 top-full mt-2 w-96 max-h-[80vh] rounded-xl shadow-2xl z-50 flex flex-col animate-slide-down"
+            style={{
+              background: panelBg,
+              border: `1px solid ${panelBorder}`,
+              boxShadow: isDark
+                ? '0 20px 60px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
+                : '0 20px 60px -12px rgba(0,0,0,0.15)',
+            }}
+          >
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 bg-gray-50/80">
+            <div className="p-4" style={{ borderBottom: `1px solid ${headerBorder}`, background: headerBg }}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-800">
-                  <Bell className="w-5 h-5 text-gray-600" />
-                  <h3 className="font-semibold text-base">Notificaciones</h3>
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5" style={{ color: headerIconColor }} />
+                  <h3 className="font-semibold text-base" style={{ color: headerText }}>Notificaciones</h3>
                   {unreadCount > 0 && (
                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
                       {unreadCount}
@@ -98,7 +157,10 @@ export const NotificationBell: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 hover:bg-gray-200/60 p-1.5 rounded-lg transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: headerIconColor }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = closeBtnHover; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -107,18 +169,20 @@ export const NotificationBell: React.FC = () => {
 
             {/* Acciones rápidas */}
             {notifications.length > 0 && (
-              <div className="p-3 border-b border-gray-200 flex gap-2">
+              <div className="p-3 flex gap-2" style={{ borderBottom: `1px solid ${headerBorder}` }}>
                 <button
                   onClick={markAllAsRead}
                   disabled={unreadCount === 0}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: actionBg1, color: actionText1 }}
                 >
                   <CheckCheck className="w-4 h-4" />
                   Marcar todas
                 </button>
                 <button
                   onClick={clearAll}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{ background: actionBg2, color: actionText2 }}
                 >
                   <Trash2 className="w-4 h-4" />
                   Limpiar todas
@@ -129,18 +193,22 @@ export const NotificationBell: React.FC = () => {
             {/* Lista de notificaciones */}
             <div className="flex-1 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                <div className="flex flex-col items-center justify-center h-40" style={{ color: emptyColor }}>
                   <Bell className="w-12 h-12 mb-2" />
                   <p className="text-sm">No hay notificaciones</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => (
+                <div>
+                  {notifications.map((notification, index) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !notification.read ? 'bg-blue-50/30' : ''
-                      }`}
+                      className="p-4 transition-colors cursor-pointer"
+                      style={{
+                        background: !notification.read ? unreadBg : 'transparent',
+                        borderBottom: index < notifications.length - 1 ? `1px solid ${dividerColor}` : 'none',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = !notification.read ? unreadBg : itemHover; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = !notification.read ? unreadBg : 'transparent'; }}
                       onClick={() => handleNotificationClick(notification.conversationId, notification.id, notification.read)}
                     >
                       <div className="flex items-start gap-3">
@@ -149,7 +217,7 @@ export const NotificationBell: React.FC = () => {
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold relative">
                             {notification.avatar || notification.name.charAt(0)}
                             {!notification.read && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full" style={{ border: `2px solid ${panelBg}` }} />
                             )}
                           </div>
                         </div>
@@ -157,9 +225,7 @@ export const NotificationBell: React.FC = () => {
                         {/* Contenido */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h4 className={`text-sm font-semibold truncate ${
-                              !notification.read ? 'text-gray-900' : 'text-gray-600'
-                            }`}>
+                            <h4 className="text-sm font-semibold truncate" style={{ color: !notification.read ? nameColor : nameReadColor }}>
                               {notification.name}
                             </h4>
                             <button
@@ -169,7 +235,8 @@ export const NotificationBell: React.FC = () => {
                                   markAsRead(notification.id);
                                 }
                               }}
-                              className="flex-shrink-0 ml-2 text-gray-400 hover:text-blue-600 transition-colors"
+                              className="flex-shrink-0 ml-2 transition-colors"
+                              style={{ color: isDark ? '#64748b' : '#9ca3af' }}
                               title="Marcar como leída"
                             >
                               {notification.read ? (
@@ -180,12 +247,12 @@ export const NotificationBell: React.FC = () => {
                             </button>
                           </div>
 
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                          <p className="text-sm line-clamp-2 mb-2" style={{ color: messageColor }}>
                             {notification.message}
                           </p>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs" style={{ color: timestampColor }}>
                               {formatTimestamp(notification.timestamp)}
                             </span>
                           </div>
@@ -198,8 +265,8 @@ export const NotificationBell: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-gray-200 bg-gray-50 text-center">
-              <p className="text-xs text-gray-500">
+            <div className="p-3 text-center" style={{ borderTop: `1px solid ${footerBorder}`, background: footerBg }}>
+              <p className="text-xs" style={{ color: footerText }}>
                 Mostrando {notifications.length} notificaciones
               </p>
             </div>
