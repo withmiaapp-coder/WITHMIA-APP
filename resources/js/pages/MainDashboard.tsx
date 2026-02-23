@@ -974,7 +974,8 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
   }, [sidebarCollapsed]);
 
   // Funcio�n para manejar navegacio�n (mantener embed dentro del dashboard)
-  // OPTIMIZADO: flushSync para forzar actualizacio�n COMPLETAMENTE so�ncrona
+  // OPTIMIZADO: transición elegante al cambiar secciones
+  const [sectionTransition, setSectionTransition] = useState(false);
   const handleNavigation = useCallback((itemId: string) => {
     // Prevenir clicks duplicados si ya estamos en esa seccio�n
     if (itemId === activeSection) return;
@@ -984,11 +985,17 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       localStorage.setItem('dashboardActiveSection', itemId);
     }
     
-    // flushSync fuerza a React a aplicar INMEDIATAMENTE este cambio
-    // Esto evita cualquier estado intermedio o parpadeo
-    flushSync(() => {
-      setActiveSection(itemId);
-    });
+    // Fade out → change section → fade in
+    setSectionTransition(true);
+    setTimeout(() => {
+      flushSync(() => {
+        setActiveSection(itemId);
+      });
+      // small delay to allow React to render the new section before fading in
+      requestAnimationFrame(() => {
+        setSectionTransition(false);
+      });
+    }, 150);
   }, [activeSection]);
 
   const safeUser = {
@@ -1164,8 +1171,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
   };
 
   // Theme variables - useTheme is safe here because ThemeProvider wraps via DashboardWithTheme below
-  const { currentTheme } = useTheme();
-  const hasTheme = currentTheme && currentTheme.id !== 'default';
+  const { currentTheme, hasTheme } = useTheme();
 
   return (
     <GlobalNotificationProvider inboxId={inboxId}>
@@ -1192,9 +1198,18 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
               </div>
               {!sidebarCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <h1 className="font-bold text-neutral-800 tracking-tight leading-tight truncate" style={{ fontSize: '14px' }}>{safeUser.company}</h1>
-                  <p className="text-neutral-600 font-semibold" style={{ fontSize: '11px' }}>{user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
-                  <p className="text-neutral-500 font-medium" style={{ fontSize: '9px' }}>WITH YOU, WITH<strong>MIA</strong> ®</p>
+                  <h1 
+                    className={`font-bold tracking-tight leading-tight truncate ${!hasTheme ? 'text-neutral-800' : ''}`}
+                    style={{ fontSize: '14px', ...(hasTheme ? { color: 'var(--theme-sidebar-text)' } : {}) }}
+                  >{safeUser.company}</h1>
+                  <p 
+                    className={`font-semibold ${!hasTheme ? 'text-neutral-600' : ''}`}
+                    style={{ fontSize: '11px', ...(hasTheme ? { color: 'var(--theme-secondary)' } : {}) }}
+                  >{user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Administrador' : 'Agente'}</p>
+                  <p 
+                    className={`font-medium ${!hasTheme ? 'text-neutral-500' : ''}`}
+                    style={{ fontSize: '9px', ...(hasTheme ? { color: 'var(--theme-secondary)', opacity: 0.7 } : {}) }}
+                  >WITH YOU, WITH<strong>MIA</strong> ®</p>
                 </div>
               )}
             </div>
@@ -1234,13 +1249,13 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                       ) : ''
                     }`}
                     style={hasTheme ? {
-                      background: isActive ? 'var(--theme-primary)' : 'rgba(255,255,255,0.7)',
+                      background: isActive ? 'var(--theme-primary)' : 'var(--theme-primary-lighter)',
                       boxShadow: isActive ? '0 4px 12px var(--theme-accent-light)' : undefined,
                     } : undefined}
                   >
                     <item.icon 
                       className={`w-5 h-5 ${!hasTheme ? (isActive ? 'text-white' : 'text-neutral-500') : ''}`}
-                      style={hasTheme ? { color: isActive ? 'white' : 'var(--theme-secondary)' } : undefined}
+                      style={hasTheme ? { color: isActive ? 'white' : 'var(--theme-icon-inactive)' } : undefined}
                     />
                   </div>
                   {!sidebarCollapsed && (
@@ -1262,16 +1277,26 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 </div>
                 
                 {!sidebarCollapsed && (item.count !== null && item.count !== undefined) && (
-                  <div className={`!flex !items-center !space-x-2 !bg-transparent !shadow-none ${
-                    activeSection === item.id ? '' : ''
-                  } transition-none transform-none`}>
-                    <span className="!text-xs !px-2 !py-1 !rounded-full !font-medium !bg-gray-100 !text-gray-600 !border !border-gray-200 !min-w-[24px] !h-6 !flex !items-center !justify-center !opacity-100 !transform-none">
+                  <div className={`!flex !items-center !space-x-2 !bg-transparent !shadow-none transition-none transform-none`}>
+                    <span 
+                      className={`!text-xs !px-2 !py-1 !rounded-full !font-medium !min-w-[24px] !h-6 !flex !items-center !justify-center !opacity-100 !transform-none ${
+                        !hasTheme ? '!bg-gray-100 !text-gray-600 !border !border-gray-200' : ''
+                      }`}
+                      style={hasTheme ? {
+                        background: 'var(--theme-badge-bg)',
+                        color: 'var(--theme-badge-text)',
+                        border: '1px solid var(--theme-badge-border)',
+                      } : undefined}
+                    >
                       {item.count}
                     </span>
                     {item.id !== 'insights' && item.id !== 'chats' && item.id !== 'people' && item.id !== 'calendar' && (
-                      <ChevronRight className={`w-5 h-5 text-slate-400 ${
-                        activeSection === item.id ? 'text-neutral-500 rotate-90' : 'group-hover:translate-x-0.5'
-                      }`} />
+                      <ChevronRight 
+                        className={`w-5 h-5 ${!hasTheme ? 'text-slate-400' : ''} ${
+                          activeSection === item.id ? (!hasTheme ? 'text-neutral-500' : '') + ' rotate-90' : 'group-hover:translate-x-0.5'
+                        }`}
+                        style={hasTheme ? { color: 'var(--theme-secondary)' } : undefined}
+                      />
                     )}
                   </div>
                 )}
@@ -1305,10 +1330,14 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
           {!sidebarCollapsed && (
             <div className="absolute bottom-22 inset-x-3">
               <div className="flex items-center justify-between px-2 py-1.5">
-                <p className="text-xs font-medium text-neutral-400">Versión 1.0.0</p>
+                <p 
+                  className={`text-xs font-medium ${!hasTheme ? 'text-neutral-400' : ''}`}
+                  style={hasTheme ? { color: 'var(--theme-secondary)', opacity: 0.6 } : undefined}
+                >Versión 1.0.0</p>
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="p-1 hover:bg-slate-100 rounded transition-all duration-200 text-neutral-400 hover:text-neutral-600"
+                  className={`p-1 rounded transition-all duration-200 ${!hasTheme ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}
+                  style={hasTheme ? { color: 'var(--theme-secondary)' } : undefined}
                   title="Contraer sidebar"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
@@ -1346,7 +1375,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
           </header>
 
           {/* Content Area */}
-          <main className="flex-1 overflow-hidden">
+          <main className={`flex-1 overflow-hidden transition-all duration-200 ease-out ${sectionTransition ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
             
             {/* Contenido Condicional */}
             {activeSection === 'chats' ? (

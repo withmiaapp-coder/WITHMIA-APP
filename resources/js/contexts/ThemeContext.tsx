@@ -148,10 +148,10 @@ export const THEME_PALETTES: ThemeColors[] = [
     previewLeft: '#8b5cf6',
     previewRight: '#c4b5fd',
   },
-  // Último: Default — blanco puro (sin tema)
+  // Último: Custom — color personalizado del usuario
   {
-    id: 'default',
-    name: 'Predeterminado',
+    id: 'custom',
+    name: 'Personalizado',
     primary: '#6b7280',
     secondary: '#9ca3af',
     previewLeft: '#6b7280',
@@ -201,24 +201,19 @@ function darken(hex: string, amount: number): string {
 function applyThemeColors(theme: ThemeColors | null) {
   const root = document.documentElement;
 
+  const allVars = [
+    '--theme-primary', '--theme-primary-light', '--theme-primary-lighter', '--theme-primary-dark',
+    '--theme-secondary', '--theme-secondary-light',
+    '--theme-sidebar-bg', '--theme-sidebar-text', '--theme-sidebar-hover',
+    '--theme-sidebar-active-bg', '--theme-sidebar-active-text', '--theme-sidebar-border',
+    '--theme-header-bg', '--theme-header-border',
+    '--theme-accent', '--theme-accent-light',
+    '--theme-badge-bg', '--theme-badge-text', '--theme-badge-border',
+    '--theme-icon-inactive',
+  ];
+
   if (!theme || theme.id === 'default') {
-    // Reset a default — remover todas las variables custom
-    root.style.removeProperty('--theme-primary');
-    root.style.removeProperty('--theme-primary-light');
-    root.style.removeProperty('--theme-primary-lighter');
-    root.style.removeProperty('--theme-primary-dark');
-    root.style.removeProperty('--theme-secondary');
-    root.style.removeProperty('--theme-secondary-light');
-    root.style.removeProperty('--theme-sidebar-bg');
-    root.style.removeProperty('--theme-sidebar-text');
-    root.style.removeProperty('--theme-sidebar-hover');
-    root.style.removeProperty('--theme-sidebar-active-bg');
-    root.style.removeProperty('--theme-sidebar-active-text');
-    root.style.removeProperty('--theme-sidebar-border');
-    root.style.removeProperty('--theme-header-bg');
-    root.style.removeProperty('--theme-header-border');
-    root.style.removeProperty('--theme-accent');
-    root.style.removeProperty('--theme-accent-light');
+    allVars.forEach(v => root.style.removeProperty(v));
     root.removeAttribute('data-theme');
     return;
   }
@@ -227,29 +222,37 @@ function applyThemeColors(theme: ThemeColors | null) {
 
   // Primary variants
   root.style.setProperty('--theme-primary', theme.primary);
-  root.style.setProperty('--theme-primary-light', lighten(theme.primary, 35));
-  root.style.setProperty('--theme-primary-lighter', lighten(theme.primary, 45));
+  root.style.setProperty('--theme-primary-light', lighten(theme.primary, 30));
+  root.style.setProperty('--theme-primary-lighter', lighten(theme.primary, 42));
   root.style.setProperty('--theme-primary-dark', darken(theme.primary, 10));
 
   // Secondary variants
   root.style.setProperty('--theme-secondary', theme.secondary);
-  root.style.setProperty('--theme-secondary-light', lighten(theme.secondary, 30));
+  root.style.setProperty('--theme-secondary-light', lighten(theme.secondary, 25));
 
-  // Sidebar
-  root.style.setProperty('--theme-sidebar-bg', lighten(theme.primary, 43));
-  root.style.setProperty('--theme-sidebar-text', darken(theme.primary, 15));
-  root.style.setProperty('--theme-sidebar-hover', lighten(theme.primary, 38));
+  // Sidebar — background más profundo y mejor contraste de texto
+  root.style.setProperty('--theme-sidebar-bg', lighten(theme.primary, 38));
+  root.style.setProperty('--theme-sidebar-text', darken(theme.primary, 25));
+  root.style.setProperty('--theme-sidebar-hover', lighten(theme.primary, 33));
   root.style.setProperty('--theme-sidebar-active-bg', 'white');
   root.style.setProperty('--theme-sidebar-active-text', theme.primary);
-  root.style.setProperty('--theme-sidebar-border', lighten(theme.primary, 35));
+  root.style.setProperty('--theme-sidebar-border', lighten(theme.primary, 30));
 
   // Header
-  root.style.setProperty('--theme-header-bg', lighten(theme.primary, 45));
-  root.style.setProperty('--theme-header-border', lighten(theme.primary, 35));
+  root.style.setProperty('--theme-header-bg', lighten(theme.primary, 42));
+  root.style.setProperty('--theme-header-border', lighten(theme.primary, 32));
 
   // Accent
   root.style.setProperty('--theme-accent', theme.primary);
-  root.style.setProperty('--theme-accent-light', lighten(theme.primary, 40));
+  root.style.setProperty('--theme-accent-light', lighten(theme.primary, 35));
+
+  // Badges — themed
+  root.style.setProperty('--theme-badge-bg', lighten(theme.primary, 35));
+  root.style.setProperty('--theme-badge-text', darken(theme.primary, 20));
+  root.style.setProperty('--theme-badge-border', lighten(theme.primary, 28));
+
+  // Icons
+  root.style.setProperty('--theme-icon-inactive', darken(theme.primary, 5));
 }
 
 // ============================================================================
@@ -260,16 +263,24 @@ interface ThemeContextType {
   themeId: string;
   mode: ThemeMode;
   currentTheme: ThemeColors | null;
+  customColor: string | null;
+  hasTheme: boolean;
   setThemeId: (id: string) => void;
   setMode: (mode: ThemeMode) => void;
+  setCustomColor: (color: string) => void;
+  resetTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   themeId: 'default',
   mode: 'light',
   currentTheme: null,
+  customColor: null,
+  hasTheme: false,
   setThemeId: () => {},
   setMode: () => {},
+  setCustomColor: () => {},
+  resetTheme: () => {},
 });
 
 export function useTheme() {
@@ -282,6 +293,7 @@ export function useTheme() {
 
 const STORAGE_KEY_THEME = 'withmia_theme_id';
 const STORAGE_KEY_MODE = 'withmia_theme_mode';
+const STORAGE_KEY_CUSTOM = 'withmia_theme_custom_color';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(() => {
@@ -300,7 +312,31 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const currentTheme = THEME_PALETTES.find(t => t.id === themeId) || null;
+  const [customColor, setCustomColorState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_CUSTOM) || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Build current theme — for 'custom' id, generate palette from customColor
+  const currentTheme: ThemeColors | null = (() => {
+    if (themeId === 'custom' && customColor) {
+      return {
+        id: 'custom',
+        name: 'Personalizado',
+        primary: customColor,
+        secondary: lighten(customColor, 15),
+        previewLeft: customColor,
+        previewRight: lighten(customColor, 15),
+      };
+    }
+    if (themeId === 'default') return null;
+    return THEME_PALETTES.find(t => t.id === themeId) || null;
+  })();
+
+  const hasTheme = themeId !== 'default' && currentTheme !== null;
 
   const setThemeId = useCallback((id: string) => {
     setThemeIdState(id);
@@ -316,13 +352,31 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  const setCustomColor = useCallback((color: string) => {
+    setCustomColorState(color);
+    setThemeIdState('custom');
+    try {
+      localStorage.setItem(STORAGE_KEY_CUSTOM, color);
+      localStorage.setItem(STORAGE_KEY_THEME, 'custom');
+    } catch {}
+  }, []);
+
+  const resetTheme = useCallback(() => {
+    setThemeIdState('default');
+    setCustomColorState(null);
+    try {
+      localStorage.setItem(STORAGE_KEY_THEME, 'default');
+      localStorage.removeItem(STORAGE_KEY_CUSTOM);
+    } catch {}
+  }, []);
+
   // Apply theme whenever it changes
   useEffect(() => {
     applyThemeColors(currentTheme);
-  }, [currentTheme]);
+  }, [currentTheme?.id, currentTheme?.primary]);
 
   return (
-    <ThemeContext.Provider value={{ themeId, mode, currentTheme, setThemeId, setMode }}>
+    <ThemeContext.Provider value={{ themeId, mode, currentTheme, customColor, hasTheme, setThemeId, setMode, setCustomColor, resetTheme }}>
       {children}
     </ThemeContext.Provider>
   );

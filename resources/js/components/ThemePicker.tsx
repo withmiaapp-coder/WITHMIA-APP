@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Palette, Sun, Moon, Monitor, Check, Pipette } from 'lucide-react';
+import { Palette, Sun, Moon, Monitor, Check, Pipette, RotateCcw } from 'lucide-react';
 import { useTheme, THEME_PALETTES, type ThemeMode } from '../contexts/ThemeContext';
 
 const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
@@ -9,10 +9,11 @@ const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
 ];
 
 export function ThemePicker() {
-  const { themeId, mode, setThemeId, setMode } = useTheme();
+  const { themeId, mode, customColor, setThemeId, setMode, setCustomColor, resetTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   // Close on outside click
   useEffect(() => {
@@ -28,6 +29,9 @@ export function ThemePicker() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
+
+  // Only preset palettes (exclude the 'custom' entry)
+  const presetPalettes = THEME_PALETTES.filter(p => p.id !== 'custom');
 
   return (
     <div className="relative">
@@ -80,54 +84,28 @@ export function ThemePicker() {
             </div>
 
             {/* Color grid */}
-            <div className="px-3 pb-3">
+            <div className="px-3 pb-2">
               <div className="grid grid-cols-4 gap-2.5">
-                {THEME_PALETTES.map((palette) => {
+                {presetPalettes.map((palette) => {
                   const isSelected = themeId === palette.id;
-                  const isDefault = palette.id === 'default';
 
                   return (
                     <button
                       key={palette.id}
-                      onClick={() => {
-                        setThemeId(palette.id);
-                      }}
+                      onClick={() => setThemeId(palette.id)}
                       className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
                         isSelected ? 'ring-2 ring-offset-2 ring-gray-400' : ''
                       }`}
                       title={palette.name}
                       aria-label={palette.name}
                     >
-                      {isDefault ? (
-                        /* Default: paint dropper icon */
-                        <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-200 to-gray-400 flex items-center justify-center">
-                          <Pipette className="w-4 h-4 text-white" />
-                        </div>
-                      ) : (
-                        /* Two-tone circle preview */
-                        <svg viewBox="0 0 40 40" className="w-full h-full">
-                          {/* Left half */}
-                          <path
-                            d="M20 0 A20 20 0 0 0 20 40 L20 0 Z"
-                            fill={palette.previewLeft}
-                          />
-                          {/* Right half */}
-                          <path
-                            d="M20 0 A20 20 0 0 1 20 40 L20 0 Z"
-                            fill={palette.previewRight}
-                          />
-                        </svg>
-                      )}
+                      {/* Two-tone circle preview */}
+                      <svg viewBox="0 0 40 40" className="w-full h-full">
+                        <path d="M20 0 A20 20 0 0 0 20 40 L20 0 Z" fill={palette.previewLeft} />
+                        <path d="M20 0 A20 20 0 0 1 20 40 L20 0 Z" fill={palette.previewRight} />
+                      </svg>
 
-                      {/* Checkmark for selected */}
-                      {isSelected && !isDefault && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                            <Check className="w-3 h-3 text-gray-700" />
-                          </div>
-                        </div>
-                      )}
-                      {isSelected && isDefault && (
+                      {isSelected && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
                             <Check className="w-3 h-3 text-gray-700" />
@@ -137,7 +115,62 @@ export function ThemePicker() {
                     </button>
                   );
                 })}
+
+                {/* Custom color picker — opens native color dialog */}
+                <button
+                  onClick={() => colorInputRef.current?.click()}
+                  className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
+                    themeId === 'custom' ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                  }`}
+                  title="Color personalizado"
+                  aria-label="Color personalizado"
+                >
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{
+                      background: themeId === 'custom' && customColor
+                        ? `linear-gradient(135deg, ${customColor}, ${customColor}88)`
+                        : 'conic-gradient(from 0deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff, #ff0000)',
+                    }}
+                  >
+                    <Pipette className="w-4 h-4 text-white drop-shadow-md" />
+                  </div>
+                  {themeId === 'custom' && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
+                        <Check className="w-3 h-3 text-gray-700" />
+                      </div>
+                    </div>
+                  )}
+                </button>
               </div>
+
+              {/* Hidden native color input */}
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={customColor || '#6366f1'}
+                onChange={(e) => setCustomColor(e.target.value)}
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            </div>
+
+            {/* Reset to default */}
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => resetTheme()}
+                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
+                  themeId === 'default'
+                    ? 'bg-gray-100 text-gray-400 cursor-default'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                }`}
+                disabled={themeId === 'default'}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Restablecer predeterminado
+              </button>
             </div>
 
             {/* Footer toggle */}

@@ -1,4 +1,4 @@
-import { Navigation } from "@/components/Navigation";
+﻿import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
@@ -109,14 +109,14 @@ const lostLeadTimeline = [
   { time: "13:30", message: "Ya reservé con otra empresa. Gracias.", status: "lost" as const },
 ];
 
-/* ─── "Síntomas" de que tu negocio está atrapado en el pasado ─── */
+/* ─── Síntomas de operación obsoleta ─── */
 const boomerSymptoms = [
-  "Respondes WhatsApp desde tu celular personal",
-  "Tu 'CRM' es un Excel con 47 pestañas",
-  "Los leads del fin de semana se contestan el lunes",
-  "Tu equipo copia y pega la misma respuesta 50 veces al día",
-  "Pagas por anuncios pero nadie contesta los mensajes que llegan",
-  "Si alguien se enferma, nadie atiende ese canal",
+  { text: "Respondes WhatsApp desde tu celular personal", icon: MessageCircle },
+  { text: "Tu 'CRM' es un Excel con 47 pestañas", icon: BarChart3 },
+  { text: "Los leads del fin de semana se contestan el lunes", icon: Calendar },
+  { text: "Tu equipo copia y pega la misma respuesta 50 veces al día", icon: Users },
+  { text: "Pagas por anuncios pero nadie contesta los mensajes", icon: DollarSign },
+  { text: "Si alguien falta, ese canal queda muerto", icon: PhoneOff },
 ];
 
 const painPoints = [
@@ -431,20 +431,18 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            PROBLEM — Provocative "your business is stuck" section
+            PROBLEM — Provocative reality-check section
             ══════════════════════════════════════════════════ */}
-        <section className="pt-14 pb-28 relative" id="problema">
-          {/* Red ambient glow */}
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.025] rounded-full blur-[140px] pointer-events-none" />
-          <div className="absolute bottom-40 right-0 w-[300px] h-[300px] bg-amber-500/[0.015] rounded-full blur-[100px] pointer-events-none" />
+        <section className="pt-14 pb-14 relative" id="problema">
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
 
           <div className="max-w-6xl mx-auto px-6 relative">
 
-            {/* ─── Header — Provocative ─── */}
+            {/* ─── Header ─── */}
             <Reveal>
-              <div className="text-center max-w-3xl mx-auto mb-8">
+              <div className="text-center max-w-3xl mx-auto mb-6">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] mb-6">
-                  <span className="text-sm">🚨</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                   <span className="text-[11px] font-semibold text-red-400/90 uppercase tracking-widest">Alerta de realidad</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
@@ -456,157 +454,100 @@ const SolucionesPymes = () => {
                   </span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
-                  No es opinión. Son datos. Mientras lees esto, alguien te escribió y nadie contestó.
-                  <br />
+                  No es opinión, son datos. Mientras lees esto, alguien te escribió y nadie contestó.{" "}
                   <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
                 </p>
               </div>
             </Reveal>
 
-            {/* ─── "¿Te sientes identificado?" Symptom checklist ─── */}
+            {/* ─── Interactive diagnostic checklist ─── */}
             <Reveal delay={100}>
-              <div className="max-w-2xl mx-auto mb-16">
-                <div className="rounded-2xl border border-red-500/10 bg-red-500/[0.02] p-6 sm:p-8">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/15 flex items-center justify-center">
-                      <AlertTriangle className="w-4 h-4 text-red-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white/80">¿Te sientes identificado?</p>
-                      <p className="text-[11px] text-white/25">Si marcaste 3+, estás regalando clientes a tu competencia</p>
-                    </div>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-2.5">
-                    {boomerSymptoms.map((symptom, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-red-500/15 hover:bg-red-500/[0.03] transition-all duration-300 group cursor-default"
-                      >
-                        <div className="w-4 h-4 mt-0.5 rounded border border-red-400/30 bg-red-500/[0.06] flex items-center justify-center shrink-0 group-hover:bg-red-500/20 group-hover:border-red-400/50 transition-all">
-                          <CheckCircle2 className="w-3 h-3 text-red-400/0 group-hover:text-red-400 transition-colors" />
-                        </div>
-                        <span className="text-[12px] text-white/35 group-hover:text-white/55 leading-relaxed transition-colors">{symptom}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Reveal>
+              {(() => {
+                const [checked, setChecked] = useState<Set<number>>(new Set());
+                const toggle = (i: number) => setChecked(prev => {
+                  const next = new Set(prev);
+                  next.has(i) ? next.delete(i) : next.add(i);
+                  return next;
+                });
+                const count = checked.size;
+                const verdict = count === 0
+                  ? { text: "Selecciona los que aplican a tu negocio", color: "text-white/25", bg: "" }
+                  : count <= 2
+                  ? { text: `${count}/6 — Podría ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
+                  : count <= 4
+                  ? { text: `${count}/6 — Tu competencia que automatizó te está quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
+                  : { text: `${count}/6 — Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
 
-            {/* ─── Confrontational stats — "la cruda realidad" ─── */}
-            <Reveal delay={150}>
-              <div className="text-center mb-4">
-                <span className="text-[11px] text-white/20 uppercase tracking-widest font-semibold">La cruda realidad en números</span>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-16">
-                {[
-                  { val: "40%", label: "de tus leads se pierden porque nadie contestó a tiempo", color: "#f43f5e", icon: TrendingDown, emoji: "💀" },
-                  { val: "6h", label: "tarda una PYME promedio en responder (tu cliente espera 5 min)", color: "#f59e0b", icon: Clock, emoji: "🐌" },
-                  { val: "73%", label: "de negocios tienen sus canales desconectados entre sí", color: "#a78bfa", icon: AlertTriangle, emoji: "🔌" },
-                  { val: "3x", label: "más caro es hacer todo manual vs. automatizar con IA", color: "#22d3ee", icon: DollarSign, emoji: "🔥" },
-                ].map((s, i) => (
-                  <div
-                    key={i}
-                    className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 group overflow-hidden"
-                  >
-                    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent 5%, ${s.color}40 50%, transparent 95%)` }} />
-                    <div
-                      className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                      style={{ backgroundColor: `${s.color}15` }}
-                    />
-                    <div className="relative">
-                      <span className="text-lg mb-2 block">{s.emoji}</span>
-                      <p className="text-3xl sm:text-4xl font-black font-mono tabular-nums mb-2" style={{ color: s.color }}>{s.val}</p>
-                      <p className="text-[11px] text-white/30 leading-relaxed">{s.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-
-            {/* ─── Section divider ─── */}
-            <Reveal delay={200}>
-              <div className="text-center mb-10">
-                <p className="text-lg sm:text-xl font-bold text-white/60 mb-2">"Pero yo siempre lo he hecho así y me funciona"</p>
-                <p className="text-[13px] text-red-400/50 font-medium">— Dueño de negocio que perdió 4 de cada 10 clientes este mes</p>
-              </div>
-            </Reveal>
-
-            {/* ─── Pain point cards — with Old Way vs New Way ─── */}
-            <div className="grid md:grid-cols-3 gap-4">
-              {painPoints.map((point, i) => (
-                <Reveal key={i} delay={200 + i * 100}>
-                  <div className="group relative h-full rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-500 overflow-hidden">
-                    {/* Top colored accent line */}
-                    <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent 5%, ${point.color}40 50%, transparent 95%)` }} />
-
-                    {/* Stat header */}
-                    <div className="px-6 pt-5 pb-4 border-b border-white/[0.04]">
-                      <div className="flex items-baseline gap-3">
-                        <span className="text-3xl font-black font-mono" style={{ color: point.color }}>{point.stat}</span>
-                        <span className="text-[10px] text-white/20 uppercase tracking-wider leading-tight">{point.statLabel}</span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-6 relative">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
-                          style={{ backgroundColor: `${point.color}10`, border: `1px solid ${point.color}18` }}
-                        >
-                          <point.icon className="w-[18px] h-[18px]" style={{ color: point.color }} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-white/20 uppercase tracking-wider mb-0.5">{point.label}</p>
-                          <h3 className="text-[15px] font-semibold text-white whitespace-pre-line leading-snug">{point.headline}</h3>
-                        </div>
-                      </div>
-
-                      <p className="text-[13px] text-white/30 leading-relaxed mb-4">{point.description}</p>
-
-                      {/* Consequences list */}
-                      <div className="space-y-2 mb-5">
-                        {point.consequences.map((c, ci) => (
-                          <div key={ci} className="flex items-start gap-2">
-                            <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-400/40" />
-                            <span className="text-[12px] text-white/25 leading-relaxed">{c}</span>
+                return (
+                  <div className="max-w-3xl mx-auto mb-16">
+                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 sm:p-8">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/15 flex items-center justify-center">
+                            <Target className="w-4 h-4 text-red-400" />
                           </div>
-                        ))}
+                          <div>
+                            <p className="text-sm font-semibold text-white/80">Diagnóstico rápido</p>
+                            <p className="text-[11px] text-white/25">¿Cuántos de estos síntomas tiene tu negocio?</p>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${
+                          count > 0 ? "bg-red-500/[0.08] border-red-500/15" : "bg-transparent border-transparent"
+                        }`}>
+                          <span className={`text-lg font-black font-mono transition-colors duration-300 ${
+                            count > 0 ? "text-red-400" : "text-transparent"
+                          }`}>{count || 0}</span>
+                          <span className={`text-[10px] font-medium transition-colors duration-300 ${
+                            count > 0 ? "text-red-400/60" : "text-transparent"
+                          }`}>/6</span>
+                        </div>
                       </div>
 
-                      {/* Old Way vs New Way mini comparison */}
-                      <div className="border-t border-white/[0.04] pt-4 space-y-2">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.04] border border-red-500/[0.08]">
-                          <span className="text-[11px] text-red-400/60 line-through decoration-red-400/40">{point.oldWay}</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/[0.08]">
-                          <span className="text-[11px] text-emerald-400/80 font-medium">{point.newWay}</span>
-                        </div>
+                      <div className="grid sm:grid-cols-2 gap-2.5 mb-6">
+                        {boomerSymptoms.map((symptom, i) => {
+                          const isChecked = checked.has(i);
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => toggle(i)}
+                              className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-300 ${
+                                isChecked
+                                  ? "bg-red-500/[0.06] border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]"
+                                  : "bg-white/[0.02] border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03]"
+                              }`}
+                            >
+                              <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                isChecked
+                                  ? "bg-red-500/20 border-red-400/60"
+                                  : "border-white/[0.12] bg-transparent"
+                              }`}>
+                                {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-red-400" />}
+                              </div>
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <symptom.icon className={`w-4 h-4 mt-0.5 shrink-0 transition-colors duration-300 ${
+                                  isChecked ? "text-red-400/70" : "text-white/15"
+                                }`} />
+                                <span className={`text-[12.5px] leading-relaxed transition-colors duration-300 ${
+                                  isChecked ? "text-white/70" : "text-white/35"
+                                }`}>{symptom.text}</span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Dynamic verdict — fixed height to prevent layout shift */}
+                      <div className={`rounded-xl border px-4 py-3 min-h-[44px] flex items-center justify-center transition-all duration-500 ${
+                        count > 0 ? verdict.bg : "border-white/[0.04] bg-white/[0.01]"
+                      }`}>
+                        <p className={`text-[13px] font-medium text-center transition-colors duration-500 ${verdict.color}`}>
+                          {verdict.text}
+                        </p>
                       </div>
                     </div>
                   </div>
-                </Reveal>
-              ))}
-            </div>
-
-            {/* ─── Bottom provocation + CTA ─── */}
-            <Reveal delay={500}>
-              <div className="mt-14 text-center">
-                <div className="inline-block rounded-2xl border border-white/[0.06] bg-white/[0.02] px-8 py-6 max-w-xl">
-                  <p className="text-[15px] text-white/50 leading-relaxed mb-4">
-                    El dueño de negocio que dice <span className="text-red-400/80 font-semibold">"la tecnología no es para mí"</span> es el mismo que 
-                    después pregunta <span className="text-amber-400/80 font-semibold">"¿por qué bajaron las ventas?"</span>
-                  </p>
-                  <a
-                    href="#casos"
-                    className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-300 hover:text-white hover:border-amber-400/40 hover:from-amber-500/15 hover:to-orange-500/15 transition-all duration-300 text-sm font-semibold"
-                  >
-                    Ver cómo WITHMIA lo resuelve
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </div>
-              </div>
+                );
+              })()}
             </Reveal>
           </div>
         </section>
@@ -614,10 +555,10 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
-        <section className="py-24 relative overflow-hidden" id="casos">
+        <section className="py-14 relative overflow-hidden" id="casos">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
-              <div className="text-center mb-16">
+              <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
                   <Sparkles className="w-4 h-4" />
                   Casos de Uso
@@ -634,7 +575,7 @@ const SolucionesPymes = () => {
 
             {/* Industry tabs */}
             <Reveal delay={100}>
-              <div className="flex flex-wrap justify-center gap-2 mb-12">
+              <div className="flex flex-wrap justify-center gap-2 mb-8">
                 {useCases.map((uc, i) => (
                   <button
                     key={i}
@@ -712,12 +653,12 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             TIMELINE — Tu primer mes
             ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative overflow-hidden">
+        <section className="py-14 relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/[0.025] rounded-full blur-[140px] pointer-events-none" />
 
           <div className="max-w-4xl mx-auto px-6 relative">
             <Reveal>
-              <div className="text-center mb-20">
+              <div className="text-center mb-14">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/20 bg-orange-950/20 mb-6">
                   <Rocket className="w-3.5 h-3.5 text-orange-400" />
                   <span className="text-xs font-medium text-orange-300/80 tracking-wide">Tu Primer Mes</span>
@@ -880,7 +821,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             CTA — Gradient mesh
             ══════════════════════════════════════════════════ */}
-        <section className="py-28 relative overflow-hidden">
+        <section className="py-14 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none" aria-hidden>
             <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/[0.04] rounded-full blur-[130px]" />
             <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[120px]" />
