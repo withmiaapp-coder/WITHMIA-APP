@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductIntegrationController;
 use App\Http\Controllers\Api\ProductHubController;
 use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\SupportTicketController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -65,6 +66,13 @@ Route::get('/health', function () {
 Route::post('/onboarding', [OnboardingApiController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('api.onboarding.store');
+
+// ============================================================================
+// 2b. SUPPORT TICKETS (público, throttled, sin auth)
+// ============================================================================
+Route::post('/support-tickets', [SupportTicketController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('api.support-tickets.store');
 
 // ============================================================================
 // 3. WEBHOOKS EXTERNOS (protegidos por HMAC/secret, sin auth de usuario)
@@ -335,7 +343,7 @@ Route::middleware('n8n.secret')->prefix('calendar-hub/bot')->group(function () {
 // ============================================================================
 // PRODUCTS — CRUD + Integrations
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
     Route::get('/', [ProductController::class, 'index']);
     Route::post('/', [ProductController::class, 'store']);
     Route::get('/categories', [ProductController::class, 'categories']);
@@ -346,7 +354,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
     Route::post('/upload-image', [ProductController::class, 'uploadImage']);
 });
 
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
     Route::get('/status', [ProductIntegrationController::class, 'status']);
     Route::post('/connect', [ProductIntegrationController::class, 'connect']);
     Route::post('/disconnect', [ProductIntegrationController::class, 'disconnect']);
@@ -355,7 +363,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix
 });
 
 // Sales — Dashboard endpoints (auth required)
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('sales')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('sales')->group(function () {
     Route::get('/stats', [SaleController::class, 'stats']);
     Route::get('/', [SaleController::class, 'index']);
     Route::patch('/{id}/status', [SaleController::class, 'updateStatus']);

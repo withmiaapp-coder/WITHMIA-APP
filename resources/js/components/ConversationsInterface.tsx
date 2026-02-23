@@ -545,8 +545,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     if (!text) return [];
     const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/gi;
     const matches = text.match(urlRegex) || [];
+    // Strip trailing punctuation that's part of surrounding text, not the URL
+    // e.g. "visit https://example.com/path." → "https://example.com/path"
+    const cleaned = matches.map(url => url.replace(/[.,;:!?)]+$/, ''));
     // Filtrar URLs de attachments que ya se muestran como media
-    return matches.filter(url => 
+    return cleaned.filter(url => 
       !url.match(/\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|webm|mp3|wav|pdf|doc)$/i) &&
       !url.includes('chatwoot') &&
       !url.includes('active_storage')
@@ -565,6 +568,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       // Usar fetch nativo sin credentials para evitar CORS conflict
       // (axios global tiene withCredentials=true que choca con Access-Control-Allow-Origin: *)
       const raw = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+      if (!raw.ok) {
+        // microlink returned 4xx/5xx — mark as error silently
+        setLinkPreviews(prev => ({ ...prev, [url]: { error: true, loading: false } }));
+        return;
+      }
       const responseData = await raw.json();
       
       if (responseData?.status === 'success' && responseData?.data) {
