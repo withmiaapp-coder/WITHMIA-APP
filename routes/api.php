@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\ProductIntegrationController;
 use App\Http\Controllers\Api\ProductHubController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SupportTicketController;
+use App\Http\Controllers\Api\ClientPortalController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -61,6 +62,33 @@ Route::get('/health', function () {
 });
 
 // ============================================================================
+// DIAGNOSTIC: Product tables check (temporary — remove once issue resolved)
+// ============================================================================
+Route::get('/diag/products', function () {
+    $result = ['timestamp' => now()->toIso8601String()];
+    try {
+        $result['db'] = 'connected';
+        $result['products_table'] = \Illuminate\Support\Facades\Schema::hasTable('products');
+        $result['product_integrations_table'] = \Illuminate\Support\Facades\Schema::hasTable('product_integrations');
+        if ($result['products_table']) {
+            $result['products_count'] = DB::table('products')->count();
+        }
+        if ($result['product_integrations_table']) {
+            $result['integrations_count'] = DB::table('product_integrations')->count();
+        }
+        // Test the exact controller path
+        $result['controller_exists'] = class_exists(\App\Http\Controllers\Api\ProductIntegrationController::class);
+        $result['model_product'] = class_exists(\App\Models\Product::class);
+        $result['model_integration'] = class_exists(\App\Models\ProductIntegration::class);
+    } catch (\Throwable $e) {
+        $result['error'] = $e->getMessage();
+        $result['error_class'] = get_class($e);
+        $result['error_file'] = $e->getFile() . ':' . $e->getLine();
+    }
+    return response()->json($result);
+});
+
+// ============================================================================
 // 2. ONBOARDING API (throttled, sin auth)
 // ============================================================================
 Route::post('/onboarding', [OnboardingApiController::class, 'store'])
@@ -73,6 +101,13 @@ Route::post('/onboarding', [OnboardingApiController::class, 'store'])
 Route::post('/support-tickets', [SupportTicketController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('api.support-tickets.store');
+
+// ============================================================================
+// 2c. CLIENT PORTAL (público, throttled, sin auth)
+// ============================================================================
+Route::post('/client-portal', [ClientPortalController::class, 'index'])
+    ->middleware('throttle:15,1')
+    ->name('api.client-portal');
 
 // ============================================================================
 // 3. WEBHOOKS EXTERNOS (protegidos por HMAC/secret, sin auth de usuario)
@@ -344,7 +379,16 @@ Route::middleware('n8n.secret')->prefix('calendar-hub/bot')->group(function () {
 // PRODUCTS — CRUD + Integrations
 // ============================================================================
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
-    Route::get('/', [ProductController::class, 'index']);
+    Route::get('/', function (\Illuminate\Http\Request $request) {
+        try {
+            return app(\App\Http\Controllers\Api\ProductController::class)->index($request);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ROUTE-LEVEL products/ error', [
+                'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+            ]);
+            return response()->json(['success' => false, 'error' => $e->getMessage(), 'products' => [], 'stats' => ['total' => 0, 'categories' => [], 'by_provider' => []], 'pagination' => ['total' => 0, 'per_page' => 50, 'current_page' => 1, 'last_page' => 1]], 200);
+        }
+    });
     Route::post('/', [ProductController::class, 'store']);
     Route::get('/categories', [ProductController::class, 'categories']);
     Route::get('/{id}', [ProductController::class, 'show']);
@@ -355,7 +399,16 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('produ
 });
 
 Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
-    Route::get('/status', [ProductIntegrationController::class, 'status']);
+    Route::get('/status', function (\Illuminate\Http\Request $request) {
+        try {
+            return app(\App\Http\Controllers\Api\ProductIntegrationController::class)->status($request);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ROUTE-LEVEL product-integrations/status error', [
+                'message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+            ]);
+            return response()->json(['success' => false, 'error' => $e->getMessage(), 'integrations' => []], 200);
+        }
+    });
     Route::post('/connect', [ProductIntegrationController::class, 'connect']);
     Route::post('/disconnect', [ProductIntegrationController::class, 'disconnect']);
     Route::post('/toggle-bot-access', [ProductIntegrationController::class, 'toggleBotAccess']);
