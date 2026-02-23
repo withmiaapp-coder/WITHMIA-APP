@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from "react";
+﻿import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   Activity,
   XCircle,
@@ -216,7 +216,7 @@ export const Heatmap247 = () => {
         </Reveal>
 
         <Reveal delay={100}>
-          <div className="max-w-3xl mx-auto overflow-x-auto pb-4">
+          <div className="max-w-3xl mx-auto overflow-hidden pb-4">
             {/* Hour labels */}
             <div className="grid min-w-[600px]" style={{ gridTemplateColumns: "44px repeat(24, 1fr)", gap: "2px" }}>
               <div />
@@ -240,8 +240,8 @@ export const Heatmap247 = () => {
                 {heatData[d].map((val, h) => (
                   <div
                     key={h}
-                    className={`aspect-square rounded-[3px] ${cellColor(val, d, h)} transition-all duration-200 hover:scale-[1.8] hover:z-10 cursor-crosshair`}
-                    title={`${day} ${String(h).padStart(2, "0")}:00 \u2014 ${val > 0 ? val + " msgs" : "sin actividad"} ${isTeamOnline(d, h) ? "\u2713 Cubierto" : "\u2717 Sin atender"}`}
+                    className={`aspect-square rounded-[3px] ${cellColor(val, d, h)} transition-colors duration-200 hover:brightness-150 hover:z-10 cursor-crosshair relative hover:ring-1 hover:ring-white/30`}
+                    title={`${day} ${String(h).padStart(2, "0")}:00  ${val > 0 ? val + " msgs" : "sin actividad"} ${isTeamOnline(d, h) ? "\u2713 Cubierto" : "\u2717 Sin atender"}`}
                   />
                 ))}
               </div>
@@ -336,7 +336,7 @@ export const LiveRevenueTicker = () => {
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/[0.08] border border-red-500/15 mb-6">
               <Activity className="w-4 h-4 text-red-400 animate-pulse" />
-              <span className="text-xs font-semibold text-red-400/90 uppercase tracking-widest">Simulaci&oacute;n en vivo</span>
+              <span className="text-xs font-semibold text-red-400/90 uppercase tracking-widest">Simulación en vivo</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
               Mientras lees esto,{" "}
@@ -377,7 +377,7 @@ export const LiveRevenueTicker = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white/50 truncate">
                       <span className="text-white/70 font-medium">{lead.name}</span>{" "}
-                      abandon&oacute; &mdash; {lead.biz}
+                      abandonó  {lead.biz}
                     </p>
                     <p className="text-[10px] text-white/20">Sin respuesta por +15 min</p>
                   </div>
@@ -387,7 +387,7 @@ export const LiveRevenueTicker = () => {
                 </div>
               ))}
               {leads.length === 0 && (
-                <div className="text-center py-10 text-white/15 text-sm">Esperando datos&hellip;</div>
+                <div className="text-center py-10 text-white/15 text-sm">Esperando datos</div>
               )}
             </div>
           </div>
@@ -410,16 +410,16 @@ export const LiveRevenueTicker = () => {
    4. DOMINO EFFECT — Chain reaction cascade
    ═══════════════════════════════════════════════════════ */
 const dominoNeg = [
-  { icon: MessageSquare, text: "Un mensaje sin responder", sub: "El cliente esperaba una cotizaci\u00f3n" },
-  { icon: ThumbsDown, text: "Rese\u00f1a negativa", sub: "\u201cNunca me contestaron\u201d \u2014 Google Reviews" },
-  { icon: TrendingDown, text: "Menos leads llegan", sub: "Tu reputaci\u00f3n online baja" },
-  { icon: DollarSign, text: "Ingresos caen", sub: "30% menos facturaci\u00f3n en 3 meses" },
+  { icon: MessageSquare, text: "Un mensaje sin responder", sub: "El cliente esperaba una cotización" },
+  { icon: ThumbsDown, text: "Reseña negativa", sub: "\"Nunca me contestaron\" — Google Reviews" },
+  { icon: TrendingDown, text: "Menos leads llegan", sub: "Tu reputación online baja" },
+  { icon: DollarSign, text: "Ingresos caen", sub: "30% menos facturación en 3 meses" },
   { icon: Users, text: "Recortes de personal", sub: "No hay presupuesto para el equipo" },
 ];
 const dominoPos = [
-  { icon: Zap, text: "Respuesta instant\u00e1nea", sub: "WITHMIA contesta en 5 segundos" },
-  { icon: Star, text: "Cliente satisfecho", sub: "\u201c\u00a1Qu\u00e9 r\u00e1pidos!\u201d \u2014 5 estrellas" },
-  { icon: Users, text: "M\u00e1s referidos", sub: "El boca a boca crece" },
+  { icon: Zap, text: "Respuesta instantánea", sub: "WITHMIA contesta en 5 segundos" },
+  { icon: Star, text: "Cliente satisfecho", sub: "\"¡Qué rápidos!\" — 5 estrellas" },
+  { icon: Users, text: "Más referidos", sub: "El boca a boca crece" },
   { icon: TrendingUp, text: "Ingresos suben", sub: "+45% en el primer trimestre" },
   { icon: Sparkles, text: "Crecimiento sostenido", sub: "Escalas sin sumar costos" },
 ];
@@ -431,14 +431,14 @@ export const DominoEffect = () => (
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/[0.08] border border-amber-500/15 mb-6">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-semibold text-amber-400/90 uppercase tracking-widest">Efecto domin&oacute;</span>
+            <span className="text-xs font-semibold text-amber-400/90 uppercase tracking-widest">Efecto dominó</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
             Un mensaje sin responder{" "}
             <span className="text-red-400">desata una cadena</span>
           </h2>
           <p className="text-white/35 max-w-xl mx-auto text-sm">
-            Todo comienza con un solo cliente ignorado. Mira c&oacute;mo termina.
+            Todo comienza con un solo cliente ignorado. Mira cómo termina.
           </p>
         </div>
       </Reveal>
@@ -508,33 +508,33 @@ export const DominoEffect = () => (
    ═══════════════════════════════════════════════════════ */
 const excuses = [
   {
-    front: "\u201cNo tenemos presupuesto\u201d",
-    back: "Pierdes $2.4M/a\u00f1o en leads no contestados. WITHMIA cuesta menos que un almuerzo diario.",
+    front: "\"No tenemos presupuesto\"",
+    back: "Pierdes $2.4M/año en leads no contestados. WITHMIA cuesta menos que un almuerzo diario.",
     rotation: -2, color: "#fef08a",
   },
   {
-    front: "\u201cMis clientes prefieren el trato humano\u201d",
-    back: "El 78% prefiere respuesta instant\u00e1nea antes que esperar por un humano. WITHMIA escala a humano cuando se necesita.",
+    front: "\"Mis clientes prefieren el trato humano\"",
+    back: "El 78% prefiere respuesta instantánea antes que esperar por un humano. WITHMIA escala a humano cuando se necesita.",
     rotation: 1.5, color: "#a5f3fc",
   },
   {
-    front: "\u201cYa tenemos WhatsApp\u201d",
-    back: "WhatsApp personal no tiene m\u00e9tricas, no escala, y si alguien falta, el canal muere. WITHMIA es WhatsApp con superpoderes.",
+    front: "\"Ya tenemos WhatsApp\"",
+    back: "WhatsApp personal no tiene métricas, no escala, y si alguien falta, el canal muere. WITHMIA es WhatsApp con superpoderes.",
     rotation: -1, color: "#c4b5fd",
   },
   {
-    front: "\u201cSomos muy chicos para IA\u201d",
-    back: "WITHMIA se dise\u00f1\u00f3 PARA PYMEs. Setup en 10 min, sin c\u00f3digo, sin departamento de IT.",
+    front: "\"Somos muy chicos para IA\"",
+    back: "WITHMIA se diseñó PARA PYMEs. Setup en 10 min, sin código, sin departamento de IT.",
     rotation: 2, color: "#fca5a5",
   },
   {
-    front: "\u201cLa IA se equivoca mucho\u201d",
-    back: "WITHMIA aprende TU negocio y escala a humano lo que no sabe. Precisi\u00f3n del 94% en el primer mes.",
+    front: "\"La IA se equivoca mucho\"",
+    back: "WITHMIA aprende TU negocio y escala a humano lo que no sabe. Precisión del 94% en el primer mes.",
     rotation: -1.5, color: "#86efac",
   },
   {
-    front: "\u201cDespu\u00e9s lo vemos\u201d",
-    back: "Cada mes que esperas, tu competencia que ya automatiz\u00f3 te quita m\u00e1s clientes. El costo de no actuar crece.",
+    front: "\"Después lo vemos\"",
+    back: "Cada mes que esperas, tu competencia que ya automatizó te quita más clientes. El costo de no actuar crece.",
     rotation: 1, color: "#fdba74",
   },
 ];
@@ -594,7 +594,7 @@ export const ExcuseWall = () => (
             <span className="text-xs font-semibold text-amber-400/90 uppercase tracking-widest">Muro de excusas</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-            \u00bfCu\u00e1l es la tuya?
+            ¿Cuál es la tuya?
           </h2>
           <p className="text-white/35 max-w-xl mx-auto text-sm">
             Toca cada nota para ver lo que los datos dicen.
@@ -630,7 +630,7 @@ const cleanFeatures = [
   { label: "Bandeja unificada", icon: MessageSquare },
   { label: "IA conversacional", icon: Brain },
   { label: "CRM integrado", icon: BarChart3 },
-  { label: "M\u00e9tricas en vivo", icon: Activity },
+  { label: "Métricas en vivo", icon: Activity },
   { label: "Multi-canal", icon: Globe },
   { label: "Automatizaciones", icon: Zap },
 ];
@@ -682,7 +682,7 @@ export const MessyStack = () => (
         {/* RIGHT: Clean WITHMIA */}
         <Reveal delay={200}>
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400/50 mb-4 text-center">Despu\u00e9s</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400/50 mb-4 text-center">Después</p>
             <div className="relative h-[320px] rounded-2xl border border-emerald-500/10 bg-emerald-500/[0.02] p-6 flex flex-col justify-center">
               {/* Central WITHMIA logo/label */}
               <div className="text-center mb-6">
@@ -751,7 +751,7 @@ export const ROICalculator = () => {
               Calcula <span className="text-gradient">tu retorno</span>
             </h2>
             <p className="text-white/35 max-w-xl mx-auto text-sm">
-              Mueve los controles y mira cu&aacute;nto podr&iacute;as ganar con WITHMIA.
+              Mueve los controles y mira cuánto podrías ganar con WITHMIA.
             </p>
           </div>
         </Reveal>
@@ -762,7 +762,7 @@ export const ROICalculator = () => {
             <div className="space-y-8 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-white/50">Mensajes por d&iacute;a</label>
+                  <label className="text-sm text-white/50">Mensajes por día</label>
                   <span className="text-lg font-bold text-white/80 font-mono">{msgs}</span>
                 </div>
                 <input
@@ -802,7 +802,7 @@ export const ROICalculator = () => {
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-white/50">Tasa de conversi&oacute;n actual</label>
+                  <label className="text-sm text-white/50">Tasa de conversión actual</label>
                   <span className="text-lg font-bold text-white/80 font-mono">{rate}%</span>
                 </div>
                 <input
@@ -838,7 +838,7 @@ export const ROICalculator = () => {
                   <p className="text-[10px] text-white/15">por mes</p>
                 </div>
                 <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest mb-1">Conversi&oacute;n</p>
+                  <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest mb-1">Conversión</p>
                   <p className="text-2xl font-bold text-violet-400 font-mono">{rate}% \u2192 {withMiaRate}%</p>
                   <p className="text-[10px] text-white/15">mejora proyectada</p>
                 </div>
@@ -870,9 +870,9 @@ export const ROICalculator = () => {
    ═══════════════════════════════════════════════════════ */
 const raceMetrics = [
   { label: "Velocidad de respuesta", without: 15, withMia: 95, unitWithout: "6 horas", unitWith: "5 seg" },
-  { label: "Tasa de conversi\u00f3n", without: 35, withMia: 80, unitWithout: "35%", unitWith: "80%" },
-  { label: "Satisfacci\u00f3n del cliente", without: 40, withMia: 92, unitWithout: "3.2\u2605", unitWith: "4.8\u2605" },
-  { label: "Cobertura horaria", without: 38, withMia: 100, unitWithout: "9h/d\u00eda", unitWith: "24/7" },
+  { label: "Tasa de conversión", without: 35, withMia: 80, unitWithout: "35%", unitWith: "80%" },
+  { label: "Satisfacción del cliente", without: 40, withMia: 92, unitWithout: "3.2", unitWith: "4.8" },
+  { label: "Cobertura horaria", without: 38, withMia: 100, unitWithout: "9h/día", unitWith: "24/7" },
 ];
 
 export const TheRace = () => {
@@ -956,7 +956,7 @@ export const TheRace = () => {
    ═══════════════════════════════════════════════════════ */
 const quizQuestions = [
   {
-    q: "\u00bfC\u00f3mo respondes los mensajes de clientes?",
+    q: "¿Cómo respondes los mensajes de clientes?",
     opts: [
       { label: "Desde mi celular personal cuando puedo", pts: 0 },
       { label: "Tengo a alguien dedicado en horario laboral", pts: 1 },
@@ -965,25 +965,25 @@ const quizQuestions = [
     ],
   },
   {
-    q: "\u00bfQu\u00e9 pasa con un mensaje a las 11pm?",
+    q: "¿Qué pasa con un mensaje a las 11pm?",
     opts: [
-      { label: "Se queda sin leer hasta ma\u00f1ana", pts: 0 },
-      { label: "Respuesta autom\u00e1tica gen\u00e9rica", pts: 1 },
-      { label: "Chatbot b\u00e1sico responde", pts: 2 },
+      { label: "Se queda sin leer hasta mañana", pts: 0 },
+      { label: "Respuesta automática genérica", pts: 1 },
+      { label: "Chatbot básico responde", pts: 2 },
       { label: "IA atiende y resuelve en tiempo real", pts: 3 },
     ],
   },
   {
-    q: "\u00bfC\u00f3mo mides la satisfacci\u00f3n del cliente?",
+    q: "¿Cómo mides la satisfacción del cliente?",
     opts: [
       { label: "No la mido", pts: 0 },
-      { label: "Rese\u00f1as en Google/redes", pts: 1 },
+      { label: "Reseñas en Google/redes", pts: 1 },
       { label: "Encuestas manuales", pts: 2 },
-      { label: "CSAT y NPS automatizados post-atenci\u00f3n", pts: 3 },
+      { label: "CSAT y NPS automatizados post-atención", pts: 3 },
     ],
   },
   {
-    q: "\u00bfQu\u00e9 canales atiendes?",
+    q: "¿Qué canales atiendes?",
     opts: [
       { label: "Solo WhatsApp personal", pts: 0 },
       { label: "WhatsApp + Instagram, pero separados", pts: 1 },
@@ -994,10 +994,10 @@ const quizQuestions = [
 ];
 
 const maturityLevels = [
-  { min: 0, max: 3, label: "Principiante", color: "#f43f5e", desc: "Tu negocio opera como en 2010. Cada d\u00eda pierdes clientes." },
-  { min: 4, max: 6, label: "B\u00e1sico", color: "#f59e0b", desc: "Tienes lo m\u00ednimo pero tu competencia ya te super\u00f3." },
-  { min: 7, max: 9, label: "Intermedio", color: "#22d3ee", desc: "Vas bien, pero a\u00fan hay brechas que te cuestan ventas." },
-  { min: 10, max: 12, label: "Avanzado", color: "#34d399", desc: "\u00a1Excelente! WITHMIA puede llevarte al siguiente nivel." },
+  { min: 0, max: 3, label: "Principiante", color: "#f43f5e", desc: "Tu negocio opera como en 2010. Cada día pierdes clientes." },
+  { min: 4, max: 6, label: "Básico", color: "#f59e0b", desc: "Tienes lo mínimo pero tu competencia ya te superó." },
+  { min: 7, max: 9, label: "Intermedio", color: "#22d3ee", desc: "Vas bien, pero aún hay brechas que te cuestan ventas." },
+  { min: 10, max: 12, label: "Avanzado", color: "#34d399", desc: "¡Excelente! WITHMIA puede llevarte al siguiente nivel." },
 ];
 
 export const MaturityQuiz = () => {
@@ -1015,11 +1015,11 @@ export const MaturityQuiz = () => {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/[0.08] border border-cyan-500/15 mb-6">
               <Target className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-semibold text-cyan-400/90 uppercase tracking-widest">Autoevaluaci&oacute;n</span>
+              <span className="text-xs font-semibold text-cyan-400/90 uppercase tracking-widest">Autoevaluación</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-              \u00bfQu\u00e9 tan digital es{" "}
-              <span className="text-gradient">tu atenci\u00f3n al cliente?</span>
+              ¿Qué tan digital es{" "}
+              <span className="text-gradient">tu atención al cliente?</span>
             </h2>
             <p className="text-white/35 max-w-xl mx-auto text-sm">
               4 preguntas. 30 segundos. Descubre tu nivel.
@@ -1142,14 +1142,14 @@ export const BoldGuarantee = () => (
               </div>
 
               <h2 className="relative text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight mb-4">
-                Si no ves resultados en 30 d&iacute;as,
+                Si no ves resultados en 30 días,
                 <br />
                 <span className="text-gradient">no pagas</span>
               </h2>
 
               <p className="relative text-sm text-white/35 leading-relaxed max-w-lg mx-auto mb-8">
                 Sin letra chica. Sin compromisos de permanencia. Prueba WITHMIA con tu negocio real
-                y si no mejoran tus m&eacute;tricas de atenci&oacute;n, cancelas sin costo.
+                y si no mejoran tus métricas de atención, cancelas sin costo.
               </p>
 
               {/* Trust points */}

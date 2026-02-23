@@ -4,14 +4,6 @@ import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   NumberDrama,
   Heatmap247,
-  LiveRevenueTicker,
-  DominoEffect,
-  ExcuseWall,
-  MessyStack,
-  ROICalculator,
-  TheRace,
-  MaturityQuiz,
-  BoldGuarantee,
 } from "@/components/pymes/PymesSections";
 import {
   ArrowRight,
@@ -664,14 +656,6 @@ const SolucionesPymes = () => {
             ══════════════════════════════════════════════════ */}
         <NumberDrama />
         <Heatmap247 />
-        <LiveRevenueTicker />
-        <DominoEffect />
-        <ExcuseWall />
-        <MessyStack />
-        <ROICalculator />
-        <TheRace />
-        <MaturityQuiz />
-        <BoldGuarantee />
 
         {/* ══════════════════════════════════════════════════
             PROBLEM — Provocative reality-check section

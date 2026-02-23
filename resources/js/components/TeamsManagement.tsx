@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import {
   Users,
@@ -26,6 +26,7 @@ import {
 import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
 import type { Agent } from '@/types/chatwoot';
 import { usePermissions } from '../hooks/usePermissions';
+import { useTheme } from '../contexts/ThemeContext';
 import MembersManagement from './MembersManagement';
 
 // Modal para crear/editar equipo
@@ -39,6 +40,20 @@ const TeamModal: React.FC<{
   const [description, setDescription] = useState('');
   const [allowAutoAssign, setAllowAutoAssign] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme, isDark]);
 
   useEffect(() => {
     if (team) {
@@ -71,10 +86,12 @@ const TeamModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in">
-        <div className="p-6 border-b border-gray-200">
+      <div className={`rounded-xl shadow-2xl w-full max-w-md animate-scale-in ${!t ? 'bg-white' : ''}`}
+        style={t ? { background: t.bg, borderColor: t.border, border: '1px solid' } : undefined}
+      >
+        <div className={`p-6 border-b ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">
+            <h2 className={`text-xl font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               {team ? 'Editar Equipo' : 'Crear Nuevo Equipo'}
             </h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -85,7 +102,7 @@ const TeamModal: React.FC<{
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-2">
+            <label className={`block text-sm font-medium mb-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Nombre del Equipo *
             </label>
             <input
@@ -93,13 +110,14 @@ const TeamModal: React.FC<{
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej: Ventas, Soporte, Marketing..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-gray-900 placeholder-gray-500 bg-white"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${!t ? 'text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
+              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-2">
+            <label className={`block text-sm font-medium mb-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Descripción
             </label>
             <textarea
@@ -107,7 +125,8 @@ const TeamModal: React.FC<{
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe el propósito de este equipo..."
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none text-gray-900 placeholder-gray-500 bg-white"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none ${!t ? 'text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
+              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
             />
           </div>
           
@@ -119,7 +138,7 @@ const TeamModal: React.FC<{
               onChange={(e) => setAllowAutoAssign(e.target.checked)}
               className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
             />
-            <label htmlFor="autoAssign" className="text-sm text-gray-800 font-medium">
+            <label htmlFor="autoAssign" className={`text-sm font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Permitir asignación automática de conversaciones
             </label>
           </div>
@@ -128,7 +147,8 @@ const TeamModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className={`px-4 py-2 rounded-lg transition-colors ${!t ? 'text-gray-700 bg-gray-100 hover:bg-gray-200' : ''}`}
+              style={t ? { color: t.text, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } : undefined}
             >
               Cancelar
             </button>
@@ -158,6 +178,20 @@ const AddMembersModal: React.FC<{
 }> = ({ isOpen, onClose, onAdd, availableAgents, currentMemberIds, loading }) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  const { hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme, isDark]);
 
   const agentsArray = Array.isArray(availableAgents) ? availableAgents : [];
   const filteredAgents = agentsArray.filter(agent => !currentMemberIds.includes(agent.id));
@@ -193,12 +227,14 @@ const AddMembersModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-scale-in max-h-[80vh] flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+      <div className={`rounded-xl shadow-2xl w-full max-w-md animate-scale-in max-h-[80vh] flex flex-col ${!t ? 'bg-white' : ''}`}
+        style={t ? { background: t.bg, border: '1px solid', borderColor: t.border } : undefined}
+      >
+        <div className={`p-6 border-b ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">Agregar Miembros</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
+            <h2 className={`text-xl font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>Agregar Miembros</h2>
+            <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : ''}`}>
+              <X className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined} />
             </button>
           </div>
         </div>
@@ -210,8 +246,8 @@ const AddMembersModal: React.FC<{
             </div>
           ) : filteredAgents.length === 0 ? (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No hay agentes disponibles para agregar</p>
+              <Users className={`w-12 h-12 mx-auto mb-3 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+              <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>No hay agentes disponibles para agregar</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -222,18 +258,21 @@ const AddMembersModal: React.FC<{
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${
                     selectedIds.includes(agent.id)
                       ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : !t ? 'border-gray-200 hover:border-gray-300' : ''
                   }`}
+                  style={!selectedIds.includes(agent.id) && t ? { borderColor: t.border, background: t.inputBg } : undefined}
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
-                      selectedIds.includes(agent.id) ? 'bg-emerald-500' : 'bg-gray-400'
-                    }`}>
+                      selectedIds.includes(agent.id) ? 'bg-emerald-500' : !t ? 'bg-gray-400' : ''
+                    }`}
+                      style={!selectedIds.includes(agent.id) && t ? { background: t.accent } : undefined}
+                    >
                       {agent.name?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-800">{agent.name || 'Sin nombre'}</p>
-                      <p className="text-sm text-gray-500">{agent.email}</p>
+                      <p className={`font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>{agent.name || 'Sin nombre'}</p>
+                      <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agent.email}</p>
                     </div>
                     {selectedIds.includes(agent.id) && (
                       <Check className="w-5 h-5 text-emerald-500" />
@@ -245,15 +284,16 @@ const AddMembersModal: React.FC<{
           )}
         </div>
         
-        <div className="p-6 border-t border-gray-200">
+        <div className={`p-6 border-t ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">
+            <span className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
               {selectedIds.length} seleccionado(s)
             </span>
             <div className="flex space-x-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className={`px-4 py-2 rounded-lg transition-colors ${!t ? 'text-gray-700 bg-gray-100 hover:bg-gray-200' : ''}`}
+                style={t ? { color: t.text, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } : undefined}
               >
                 Cancelar
               </button>
@@ -298,6 +338,22 @@ const InviteMemberModal: React.FC<{
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+    };
+  }, [hasTheme, isDark]);
 
   useEffect(() => {
     if (isOpen) {
@@ -338,9 +394,13 @@ const InviteMemberModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden">
+      <div className={`rounded-2xl shadow-2xl w-full max-w-md animate-scale-in overflow-hidden ${!t ? 'bg-white' : ''}`}
+        style={t ? { background: t.bg, border: '1px solid', borderColor: t.border } : undefined}
+      >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 p-5">
+        <div className={`p-5 ${!t ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600' : ''}`}
+          style={t ? { background: `linear-gradient(to right, var(--theme-accent), color-mix(in srgb, var(--theme-accent) 80%, #4338ca))` } : undefined}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -362,8 +422,8 @@ const InviteMemberModal: React.FC<{
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">¡Invitación Enviada!</h3>
-            <p className="text-gray-600 text-sm">Se ha enviado un correo a <strong>{email}</strong> con las instrucciones para unirse.</p>
+            <h3 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>¡Invitación Enviada!</h3>
+            <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Se ha enviado un correo a <strong>{email}</strong> con las instrucciones para unirse.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -375,63 +435,70 @@ const InviteMemberModal: React.FC<{
             )}
 
             {/* Gmail security notice */}
-            <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
-              <div className="p-1.5 bg-white rounded-lg shadow-sm border border-gray-100 flex-shrink-0">
+            <div className={`flex items-center gap-3 p-3 border rounded-xl ${!t ? 'bg-gray-50 border-gray-200' : ''}`}
+              style={t ? { background: isDark ? 'rgba(255,255,255,0.04)' : undefined, borderColor: t.border } : undefined}
+            >
+              <div className={`p-1.5 rounded-lg shadow-sm border flex-shrink-0 ${!t ? 'bg-white border-gray-100' : ''}`}
+                style={t ? { borderColor: t.border, background: t.inputBg } : undefined}
+              >
                 <GoogleIcon />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-gray-800">Solo cuentas de Google</p>
-                <p className="text-xs text-gray-500">Por seguridad, el acceso es exclusivamente mediante Google Sign-In.</p>
+                <p className={`text-xs font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>Solo cuentas de Google</p>
+                <p className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Por seguridad, el acceso es exclusivamente mediante Google Sign-In.</p>
               </div>
               <ShieldCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 Correo de Google <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="w-4 h-4 text-gray-400" />
+                  <Mail className={`w-4 h-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="usuario@gmail.com"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 bg-white text-sm"
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 bg-white' : 'placeholder-gray-500'}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
                   required
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nombre <span className="text-gray-400 text-xs font-normal">(opcional)</span>
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
+                Nombre <span className={`text-xs font-normal ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>(opcional)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="w-4 h-4 text-gray-400" />
+                  <User className={`w-4 h-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nombre del invitado"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder-gray-400 bg-white text-sm"
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 bg-white' : 'placeholder-gray-500'}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                   Rol
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white text-sm"
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
                 >
                   <option value="agent">Agente</option>
                   <option value="administrator">Administrador</option>
@@ -439,13 +506,14 @@ const InviteMemberModal: React.FC<{
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Equipo <span className="text-gray-400 text-xs font-normal">(opc.)</span>
+                <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
+                  Equipo <span className={`text-xs font-normal ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>(opc.)</span>
                 </label>
                 <select
                   value={teamId || ''}
                   onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 bg-white text-sm"
+                  className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
                 >
                   <option value="">Sin equipo</option>
                   {teams.map(team => (
@@ -456,9 +524,11 @@ const InviteMemberModal: React.FC<{
             </div>
 
             {/* Info box */}
-            <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-              <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-blue-700 leading-relaxed">
+            <div className={`flex items-start gap-2.5 p-3 border rounded-xl ${!t ? 'bg-blue-50 border-blue-100' : ''}`}
+              style={t ? { background: t.accentLight, borderColor: isDark ? 'transparent' : undefined } : undefined}
+            >
+              <Info className={`w-4 h-4 mt-0.5 flex-shrink-0 ${!t ? 'text-blue-500' : ''}`} style={t ? { color: t.accent } : undefined} />
+              <div className={`text-xs leading-relaxed ${!t ? 'text-blue-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 <p>El invitado recibirá un <strong>correo con un enlace</strong> para unirse. Deberá iniciar sesión con su cuenta de Google para aceptar la invitación.</p>
               </div>
             </div>
@@ -467,14 +537,16 @@ const InviteMemberModal: React.FC<{
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium"
+                className={`px-4 py-2.5 rounded-xl transition-colors text-sm font-medium ${!t ? 'text-gray-600 bg-gray-100 hover:bg-gray-200' : ''}`}
+                style={t ? { color: t.text, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } : undefined}
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving || !email.trim()}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium shadow-lg shadow-blue-500/25"
+                className={`px-5 py-2.5 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium shadow-lg ${!t ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/25' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -503,6 +575,39 @@ const TeamsManagement: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   
   const { isAdmin, hasPermission } = usePermissions();
+  const { hasTheme, isDark } = useTheme();
+
+  // ═══════════════════════════════════════════════════════════
+  // Theme styles memo — uses CSS variables from ThemeContext
+  // ═══════════════════════════════════════════════════════════
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      containerBg: 'var(--theme-content-bg)',
+      panelBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      panelBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      headerBg: 'var(--theme-header-bg)',
+      headerBorder: 'var(--theme-header-border)',
+      textPrimary: 'var(--theme-text-primary)',
+      textSecondary: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      cardBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      cardBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      cardHover: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-sidebar-hover)',
+      cardActive: isDark ? 'var(--theme-sidebar-active-bg)' : 'var(--theme-sidebar-active-bg)',
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      inputText: 'var(--theme-text-primary)',
+      buttonBg: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-content-card-bg)',
+      buttonBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      divider: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      iconColor: 'var(--theme-icon-inactive)',
+      dropdownBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      dropdownBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+    };
+  }, [hasTheme, isDark]);
   
   const { 
     teams, 
@@ -600,18 +705,22 @@ const TeamsManagement: React.FC = () => {
   );
 
   return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-white">
+    <div className={`w-full h-full flex flex-col ${!t ? 'bg-gradient-to-br from-gray-50 to-white' : ''}`}
+      style={t ? { background: t.containerBg } : undefined}
+    >
       
       {/* Header */}
-      <div className="p-6 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl flex-shrink-0">
+      <div className={`p-6 border-b backdrop-blur-xl flex-shrink-0 ${!t ? 'border-gray-200/60 bg-white/80' : ''}`}
+        style={t ? { background: t.headerBg, borderColor: t.headerBorder } : undefined}
+      >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Gestión de Equipos</h1>
-              <p className="text-gray-600">Administra equipos y miembros de tu empresa</p>
+              <h1 className={`text-2xl font-bold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Gestión de Equipos</h1>
+              <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Administra equipos y miembros de tu empresa</p>
             </div>
           </div>
           
@@ -642,7 +751,8 @@ const TeamsManagement: React.FC = () => {
             {(isAdmin || hasPermission('members.invite')) && (
               <button 
                 onClick={() => setShowInviteModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                className={`px-4 py-2 text-white rounded-lg transition-all duration-300 flex items-center space-x-2 shadow-lg ${!t ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 <Mail className="w-4 h-4" />
                 <span>Invitar</span>
@@ -682,10 +792,12 @@ const TeamsManagement: React.FC = () => {
             </div>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {pendingInvitations.map(inv => (
-                <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
+                <div key={inv.id} className={`flex items-center justify-between rounded-lg p-3 border ${!t ? 'bg-white border-amber-100' : ''}`}
+                  style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}
+                >
                   <div>
-                    <p className="font-medium text-gray-800">{inv.email}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className={`font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{inv.email}</p>
+                    <p className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                       {inv.role === 'administrator' ? 'Admin' : 'Agente'} • Expira: {new Date(inv.expires_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -713,11 +825,12 @@ const TeamsManagement: React.FC = () => {
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
           <input
             type="text"
             placeholder="Buscar equipos..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50 transition-all duration-300"
+            className={`w-full pl-10 pr-4 py-2 border rounded-lg transition-all duration-300 ${!t ? 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50' : 'placeholder-gray-500'}`}
+            style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -728,17 +841,19 @@ const TeamsManagement: React.FC = () => {
       <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         
         {/* Lista de Equipos */}
-        <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200/60 bg-white/60 backdrop-blur-xl overflow-y-auto">
+        <div className={`w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r backdrop-blur-xl overflow-y-auto ${!t ? 'border-gray-200/60 bg-white/60' : ''}`}
+          style={t ? { background: t.panelBg, borderColor: t.panelBorder } : undefined}
+        >
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center h-full">
               <Loader2 className="w-12 h-12 text-emerald-500 mb-4 animate-spin" />
-              <p className="text-gray-600">Cargando equipos...</p>
+              <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Cargando equipos...</p>
             </div>
           ) : filteredTeams.length === 0 ? (
             <div className="p-8 flex flex-col items-center justify-center h-full">
-              <Users className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay equipos creados</h3>
-              <p className="text-gray-500 mb-4 text-center">Crea tu primer equipo para comenzar a organizar a tu personal</p>
+              <Users className={`w-16 h-16 mb-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+              <h3 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>No hay equipos creados</h3>
+              <p className={`mb-4 text-center ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Crea tu primer equipo para comenzar a organizar a tu personal</p>
               <button
                 onClick={() => {
                   setEditingTeam(null);
@@ -760,9 +875,13 @@ const TeamsManagement: React.FC = () => {
                   }}
                   className={`p-4 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-md ${
                     selectedTeam?.id === team.id 
-                      ? 'bg-white border-2 border-emerald-400 shadow-lg' 
-                      : 'bg-white/80 border border-gray-200 hover:border-emerald-300'
+                      ? (!t ? 'bg-white border-2 border-emerald-400 shadow-lg' : 'border-2 shadow-lg')
+                      : (!t ? 'bg-white/80 border border-gray-200 hover:border-emerald-300' : 'border')
                   }`}
+                  style={t ? {
+                    background: selectedTeam?.id === team.id ? t.cardActive : t.cardBg,
+                    borderColor: selectedTeam?.id === team.id ? t.accent : t.cardBorder,
+                  } : undefined}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
@@ -770,8 +889,8 @@ const TeamsManagement: React.FC = () => {
                         <Users className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800">{team.name}</h3>
-                        <p className="text-sm text-gray-500">{team.members?.length || 0} miembros</p>
+                        <h3 className={`font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{team.name}</h3>
+                        <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{team.members?.length || 0} miembros</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -781,9 +900,9 @@ const TeamsManagement: React.FC = () => {
                           setEditingTeam(team);
                           setShowTeamModal(true);
                         }}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : ''}`}
                       >
-                        <Edit3 className="w-4 h-4 text-gray-500" />
+                        <Edit3 className={`w-4 h-4 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                       </button>
                       <button 
                         onClick={(e) => {
@@ -798,7 +917,7 @@ const TeamsManagement: React.FC = () => {
                   </div>
                   
                   {team.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{team.description}</p>
+                    <p className={`text-sm mb-3 line-clamp-2 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{team.description}</p>
                   )}
                   
                   {team.members && team.members.length > 0 && (
@@ -806,14 +925,17 @@ const TeamsManagement: React.FC = () => {
                       {team.members.slice(0, 4).map((member: TeamMember, index: number) => (
                         <div 
                           key={member.id || index} 
-                          className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white"
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 ${!t ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-white' : ''}`}
+                          style={t ? { background: t.accent, borderColor: t.panelBg } : undefined}
                           title={member.name}
                         >
                           {member.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                       ))}
                       {team.members.length > 4 && (
-                        <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-white">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 ${!t ? 'bg-gray-400 border-white' : ''}`}
+                          style={t ? { background: t.textMuted, borderColor: t.panelBg } : undefined}
+                        >
                           +{team.members.length - 4}
                         </div>
                       )}
@@ -826,23 +948,27 @@ const TeamsManagement: React.FC = () => {
         </div>
 
         {/* Detalles del Equipo */}
-        <div className="flex-1 bg-white/70 backdrop-blur-xl overflow-y-auto">
+        <div className={`flex-1 backdrop-blur-xl overflow-y-auto ${!t ? 'bg-white/70' : ''}`}
+          style={t ? { background: t.containerBg } : undefined}
+        >
           {selectedTeam ? (
             <div className="h-full flex flex-col">
               
               {/* Header del Equipo */}
-              <div className="p-6 border-b border-gray-200/60 bg-white/90 flex-shrink-0">
+              <div className={`p-6 border-b flex-shrink-0 ${!t ? 'border-gray-200/60 bg-white/90' : ''}`}
+                style={t ? { background: t.headerBg, borderColor: t.headerBorder } : undefined}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
                       <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-800">{selectedTeam.name}</h2>
+                      <h2 className={`text-2xl font-bold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{selectedTeam.name}</h2>
                       {selectedTeam.description && (
-                        <p className="text-gray-600">{selectedTeam.description}</p>
+                        <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{selectedTeam.description}</p>
                       )}
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className={`text-sm mt-1 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                         {selectedTeam.members?.length || 0} miembros • 
                         {selectedTeam.allow_auto_assign ? ' Auto-asignación activa' : ' Sin auto-asignación'}
                       </p>
@@ -851,7 +977,8 @@ const TeamsManagement: React.FC = () => {
                   
                   <button 
                     onClick={() => setShowAddMembersModal(true)}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                    className={`px-4 py-2 text-white rounded-lg transition-all duration-300 flex items-center space-x-2 shadow-lg ${!t ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : ''}`}
+                    style={t ? { background: t.accent } : undefined}
                   >
                     <UserPlus className="w-4 h-4" />
                     <span>Agregar Miembro</span>
@@ -861,13 +988,13 @@ const TeamsManagement: React.FC = () => {
 
               {/* Lista de Miembros */}
               <div className="flex-1 overflow-y-auto p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Miembros del Equipo</h3>
+                <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Miembros del Equipo</h3>
                 
                 {!selectedTeam.members || selectedTeam.members.length === 0 ? (
                   <div className="text-center py-12">
-                    <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-gray-700 mb-2">Sin miembros</h4>
-                    <p className="text-gray-500 mb-4">Este equipo aún no tiene miembros asignados</p>
+                    <Users className={`w-16 h-16 mx-auto mb-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                    <h4 className={`text-lg font-medium mb-2 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Sin miembros</h4>
+                    <p className={`mb-4 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Este equipo aún no tiene miembros asignados</p>
                     <button 
                       onClick={() => setShowAddMembersModal(true)}
                       className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all"
@@ -881,9 +1008,13 @@ const TeamsManagement: React.FC = () => {
                       const RoleIcon = getRoleIcon(member.role);
                       
                       return (
-                        <div key={member.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
+                        <div key={member.id} className={`border rounded-xl p-4 transition-all duration-300 ${!t ? 'bg-white border-gray-200 hover:shadow-md' : ''}`}
+                          style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}
+                        >
                           <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold shadow">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold shadow ${!t ? 'bg-gradient-to-r from-blue-500 to-blue-600' : ''}`}
+                              style={t ? { background: t.accent } : undefined}
+                            >
                               {member.avatar_url ? (
                                 <img src={member.avatar_url} alt={member.name} className="w-full h-full rounded-xl object-cover" />
                               ) : (
@@ -893,13 +1024,13 @@ const TeamsManagement: React.FC = () => {
                             
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-1">
-                                <h4 className="font-semibold text-gray-800">{member.name || 'Sin nombre'}</h4>
+                                <h4 className={`font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{member.name || 'Sin nombre'}</h4>
                                 <span className={`px-2 py-1 text-xs rounded-full flex items-center space-x-1 ${getRoleColor(member.role)}`}>
                                   <RoleIcon className="w-3 h-3" />
                                   <span className="capitalize">{member.role}</span>
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600">{member.email}</p>
+                              <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{member.email}</p>
                             </div>
                             
                             <button 
@@ -920,9 +1051,9 @@ const TeamsManagement: React.FC = () => {
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
-                <Users className="w-20 h-20 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Selecciona un Equipo</h3>
-                <p className="text-gray-500">Elige un equipo de la lista para ver sus detalles y miembros</p>
+                <Users className={`w-20 h-20 mx-auto mb-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                <h3 className={`text-xl font-semibold mb-2 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Selecciona un Equipo</h3>
+                <p className={`${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Elige un equipo de la lista para ver sus detalles y miembros</p>
               </div>
             </div>
           )}
@@ -952,20 +1083,23 @@ const TeamsManagement: React.FC = () => {
       {/* Confirmación de eliminación */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 animate-scale-in">
+          <div className={`rounded-xl shadow-2xl w-full max-w-sm p-6 animate-scale-in ${!t ? 'bg-white' : ''}`}
+            style={t ? { background: t.panelBg, border: '1px solid', borderColor: t.panelBorder } : undefined}
+          >
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-3 bg-red-100 rounded-full">
                 <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Eliminar Equipo</h3>
+              <h3 className={`text-lg font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Eliminar Equipo</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className={`mb-6 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>
               ¿Estás seguro de eliminar este equipo? Esta acción no se puede deshacer.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className={`px-4 py-2 rounded-lg transition-colors ${!t ? 'text-gray-700 bg-gray-100 hover:bg-gray-200' : ''}`}
+                style={t ? { color: t.textPrimary, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } : undefined}
               >
                 Cancelar
               </button>
