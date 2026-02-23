@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ProductIntegrationController extends Controller
 {
@@ -25,18 +26,26 @@ class ProductIntegrationController extends Controller
      */
     public function status(Request $request): JsonResponse
     {
-        $company = $this->getCompanyFromRequest($request);
-        if (!$company) {
-            return response()->json(['error' => 'No autorizado'], 401);
-        }
-
         try {
-            $integrations = ProductIntegration::where('company_id', $company->id)->get();
+            $company = $this->getCompanyFromRequest($request);
+            if (!$company) {
+                return response()->json(['error' => 'No autorizado'], 401);
+            }
+
+            // If tables don't exist yet, return empty defaults
+            $hasProducts = Schema::hasTable('products');
+            $hasIntegrations = Schema::hasTable('product_integrations');
+
+            $integrations = $hasIntegrations
+                ? ProductIntegration::where('company_id', $company->id)->get()
+                : collect();
 
             $result = [];
             foreach (['woocommerce', 'shopify', 'mercadolibre', 'mysql_db', 'api_rest'] as $provider) {
                 $integration = $integrations->firstWhere('provider', $provider);
-                $productCount = Product::where('company_id', $company->id)->where('provider', $provider)->count();
+                $productCount = $hasProducts
+                    ? Product::where('company_id', $company->id)->where('provider', $provider)->count()
+                    : 0;
 
                 $result[$provider] = [
                     'connected' => $integration?->is_connected ?? false,
@@ -50,11 +59,15 @@ class ProductIntegrationController extends Controller
             // Manual products count
             $result['manual'] = [
                 'connected' => true,
-                'products_count' => Product::where('company_id', $company->id)->where('provider', 'manual')->count(),
+                'products_count' => $hasProducts
+                    ? Product::where('company_id', $company->id)->where('provider', 'manual')->count()
+                    : 0,
             ];
 
             // Total
-            $result['total_products'] = Product::where('company_id', $company->id)->count();
+            $result['total_products'] = $hasProducts
+                ? Product::where('company_id', $company->id)->count()
+                : 0;
 
             return response()->json([
                 'success' => true,
@@ -63,7 +76,9 @@ class ProductIntegrationController extends Controller
         } catch (\Throwable $e) {
             Log::error('ProductIntegrationController@status error', [
                 'message' => $e->getMessage(),
-                'company_id' => $company->id,
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json([
                 'success' => false,

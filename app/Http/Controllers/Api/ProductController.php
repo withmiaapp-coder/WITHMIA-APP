@@ -9,6 +9,7 @@ use App\Traits\HasCompanyAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
@@ -19,12 +20,22 @@ class ProductController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $company = $this->getCompanyFromRequest($request);
-        if (!$company) {
-            return response()->json(['error' => 'No autorizado'], 401);
-        }
-
         try {
+            $company = $this->getCompanyFromRequest($request);
+            if (!$company) {
+                return response()->json(['error' => 'No autorizado'], 401);
+            }
+
+            // Verify table exists (migration may not have run)
+            if (!Schema::hasTable('products')) {
+                return response()->json([
+                    'success' => true,
+                    'products' => [],
+                    'pagination' => ['total' => 0, 'per_page' => 50, 'current_page' => 1, 'last_page' => 1],
+                    'stats' => ['total' => 0, 'categories' => [], 'by_provider' => []],
+                ]);
+            }
+
             $query = Product::where('company_id', $company->id);
 
             // Search
@@ -58,7 +69,6 @@ class ProductController extends Controller
             $query->orderBy($sortBy, $sortDir);
 
             // Get stats — use select()->distinct() for PostgreSQL compatibility
-            // (distinct('column') generates DISTINCT ON in PostgreSQL which requires ORDER BY)
             $totalProducts = Product::where('company_id', $company->id)->count();
             $categories = Product::where('company_id', $company->id)
                 ->whereNotNull('category')
@@ -93,7 +103,9 @@ class ProductController extends Controller
         } catch (\Throwable $e) {
             Log::error('ProductController@index error', [
                 'message' => $e->getMessage(),
-                'company_id' => $company->id,
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return response()->json([
                 'success' => false,
