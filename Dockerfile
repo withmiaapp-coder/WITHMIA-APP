@@ -31,12 +31,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
        pdo_pgsql pgsql zip gd intl bcmath exif pcntl opcache sockets \
     && pecl install redis && docker-php-ext-enable redis
 
-# Static binaries: ffmpeg (BtbN GitHub mirror, pinned release) + roadrunner
-# Split into separate RUN for better caching; --retry for transient failures
-RUN curl -sSL --retry 3 --retry-delay 5 \
-    https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-12-31-12-50/ffmpeg-n7.1-linux64-gpl-7.1.tar.xz \
-    | tar -xJ --strip-components=2 -C /usr/local/bin/ --wildcards '*/bin/ffmpeg' '*/bin/ffprobe'
+# ffmpeg from Debian repos (stable, no external release dependency)
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Roadrunner binary
 RUN curl -sSL --retry 3 --retry-delay 5 \
     https://github.com/roadrunner-server/roadrunner/releases/download/v2024.3.5/roadrunner-2024.3.5-linux-amd64.tar.gz \
     | tar -xz \
