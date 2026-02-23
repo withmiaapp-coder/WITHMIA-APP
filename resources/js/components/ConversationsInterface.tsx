@@ -562,12 +562,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
     setLinkPreviews(prev => ({ ...prev, [url]: { loading: true } }));
     
     try {
-      // Usar un servicio de metadata (openlinkpreview, microlink, etc.) o nuestro propio proxy
-      // AquÃ­ usamos una API pÃºblica gratuita
-      const response = await axios.get(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+      // Usar fetch nativo sin credentials para evitar CORS conflict
+      // (axios global tiene withCredentials=true que choca con Access-Control-Allow-Origin: *)
+      const raw = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+      const responseData = await raw.json();
       
-      if (response.data?.status === 'success' && response.data?.data) {
-        const data = response.data.data;
+      if (responseData?.status === 'success' && responseData?.data) {
+        const data = responseData.data;
         setLinkPreviews(prev => ({
           ...prev,
           [url]: {

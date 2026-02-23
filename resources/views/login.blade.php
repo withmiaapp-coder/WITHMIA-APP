@@ -369,19 +369,15 @@ async function handleCredentialResponse(response) {
         form.action = '/auth/google';
         form.style.display = 'none';
 
-        // Fetch CSRF token before submitting
+        // Get CSRF token from meta tag or cookie (no Sanctum endpoint needed)
         let csrfToken = '';
-        try {
-            const csrfResp = await fetch('/sanctum/csrf-cookie', { credentials: 'include' });
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            if (csrfMeta) {
-                csrfToken = csrfMeta.getAttribute('content');
-            } else {
-                // Extract from cookie
-                const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-                if (match) csrfToken = decodeURIComponent(match[1]);
-            }
-        } catch(e) { /* CSRF fetch optional — server may not require it for this route */ }
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            csrfToken = csrfMeta.getAttribute('content') || '';
+        } else {
+            const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+            if (match) csrfToken = decodeURIComponent(match[1]);
+        }
         
         const fields = {
             '_token': csrfToken,
