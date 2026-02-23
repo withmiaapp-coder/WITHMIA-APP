@@ -155,12 +155,12 @@ const painPoints = [
 
 
 const milestones = [
-  { day: "Día 1", title: "Crea tu cuenta", description: "Regístrate, conecta WhatsApp y configura tu negocio.", highlight: "10 min", icon: Rocket, status: "completed" as const },
-  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y políticas. WITHMIA aprende sola.", highlight: "Sin código", icon: Zap, status: "completed" as const },
-  { day: "Semana 1", title: "Primeras conversaciones", description: "WITHMIA atiende clientes reales. Tú supervisas y ajustas.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
-  { day: "Semana 2", title: "Automatización completa", description: "80% de consultas resueltas sola. Solo escala lo necesario.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
-  { day: "Semana 3", title: "Todos tus canales", description: "WhatsApp, Instagram, Facebook, Email — una sola bandeja.", highlight: "Omnicanal", icon: Users, status: "upcoming" as const },
-  { day: "Mes 1", title: "Resultados medibles", description: "Dashboard con métricas: respuestas, conversiones y ROI.", highlight: "ROI +", icon: BarChart3, status: "upcoming" as const },
+  { day: "Día 1", title: "Todo listo para operar", description: "Cuenta creada, canales conectados, dashboard activo. Ya eres omnicanal.", highlight: "10 min", icon: Rocket, status: "completed" as const },
+  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y políticas. WITHMIA aprende tu negocio.", highlight: "Sin código", icon: Zap, status: "completed" as const },
+  { day: "Semana 1", title: "Primeras conversaciones reales", description: "WITHMIA responde clientes reales. Tú supervisas y afinas el tono.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
+  { day: "Semana 2", title: "Automatización al 80%", description: "Resuelve la mayoría sola. Solo escala lo que realmente necesita a un humano.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
+  { day: "Semana 3", title: "Flujos avanzados", description: "Agendamiento, seguimientos post-venta y campañas automáticas activas.", highlight: "Avanzado", icon: Users, status: "upcoming" as const },
+  { day: "Mes 1", title: "ROI comprobado", description: "Compara tus métricas: más respuestas, más conversiones, menos tiempo perdido.", highlight: "Resultados", icon: BarChart3, status: "upcoming" as const },
 ];
 
 const useCases = [
@@ -648,12 +648,12 @@ const SolucionesPymes = () => {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            TIMELINE — Tu primer mes
+            TIMELINE — Tu primer mes — PLATFORMER
             ══════════════════════════════════════════════════ */}
         <section className="py-20 relative">
-          <div className="max-w-3xl mx-auto px-6 relative">
+          <div className="max-w-4xl mx-auto px-6 relative">
             <Reveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/20 bg-orange-950/20 mb-6">
                   <Rocket className="w-3.5 h-3.5 text-orange-400" />
                   <span className="text-xs font-medium text-orange-300/80 tracking-wide">Tu Primer Mes</span>
@@ -669,68 +669,251 @@ const SolucionesPymes = () => {
               </div>
             </Reveal>
 
-            {/* Editorial list — large numbers + inline content */}
-            <div className="space-y-0">
-              {milestones.map((m, i) => (
-                <Reveal key={i} delay={i * 60}>
-                  <div className={`group flex items-start gap-5 sm:gap-8 py-6 border-t transition-colors duration-300 ${
-                    m.status === 'current'
-                      ? 'border-amber-500/20'
-                      : 'border-white/[0.05]'
-                  } ${i === milestones.length - 1 ? 'border-b border-b-white/[0.05]' : ''}`}>
+            <Reveal delay={100}>
+              {/* Keyframes for character + effects */}
+              <style>{`
+                @keyframes miaJump {
+                  0%, 7% { left: 8.33%; bottom: 150px; }
+                  10% { left: 14%; bottom: 260px; }
+                  14%, 24% { left: 25%; bottom: 220px; }
+                  27% { left: 30%; bottom: 280px; }
+                  31%, 41% { left: 41.67%; bottom: 135px; }
+                  44% { left: 47%; bottom: 300px; }
+                  48%, 100% { left: 58.33%; bottom: 250px; }
+                }
+                @keyframes miaGentleFloat {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-6px); }
+                }
+                @keyframes starSpin {
+                  0%, 100% { transform: translateX(-50%) scale(1) rotate(0deg); opacity: 0.6; }
+                  50% { transform: translateX(-50%) scale(1.1) rotate(20deg); opacity: 1; }
+                }
+                @keyframes bgScroll {
+                  0% { background-position: 0 0; }
+                  100% { background-position: -200px 100px; }
+                }
+                @keyframes trailDot {
+                  0% { opacity: 0.5; transform: scale(1); }
+                  100% { opacity: 0; transform: scale(0); }
+                }
+                .platformer-scroll::-webkit-scrollbar { display: none; }
+                .platformer-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+              `}</style>
 
-                    {/* Large number */}
-                    <span className={`text-[2.5rem] sm:text-[3.5rem] font-bold leading-none tabular-nums tracking-tight select-none shrink-0 w-16 sm:w-20 text-right transition-colors duration-300 ${
-                      m.status === 'completed' ? 'text-amber-400/15' :
-                      m.status === 'current' ? 'text-amber-400/40' :
-                      'text-white/[0.04]'
-                    }`}>
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-
-                    {/* Content */}
-                    <div className="flex-1 pt-1 sm:pt-2.5">
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
-                        <span className={`text-[11px] font-mono font-semibold tracking-widest uppercase ${
-                          m.status === 'completed' ? 'text-amber-400/50' :
-                          m.status === 'current' ? 'text-amber-400' :
-                          'text-white/15'
-                        }`}>{m.day}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
-                          m.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400/60' :
-                          m.status === 'current' ? 'bg-amber-500/10 text-amber-400/80' :
-                          'bg-white/[0.03] text-white/15'
-                        }`}>{m.highlight}</span>
-                        {m.status === 'completed' && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/50" />
-                        )}
-                      </div>
-                      <h3 className={`text-lg font-semibold mb-0.5 transition-colors duration-300 ${
-                        m.status === 'current' ? 'text-white' :
-                        m.status === 'completed' ? 'text-white/60' :
-                        'text-white/30'
-                      }`}>{m.title}</h3>
-                      <p className={`text-[13px] leading-relaxed ${
-                        m.status === 'current' ? 'text-white/40' : 'text-white/20'
-                      }`}>{m.description}</p>
+              <div className="rounded-2xl border border-white/[0.06] bg-[#06060c] overflow-hidden shadow-2xl">
+                {/* HUD Top Bar */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
+                  <div className="flex items-center gap-1.5">
+                    {milestones.map((m, idx) => (
+                      <span key={idx} className={`text-[11px] ${
+                        m.status === 'completed' ? 'text-amber-400' :
+                        m.status === 'current' ? 'text-amber-400/50' :
+                        'text-white/[0.08]'
+                      }`}>{m.status === 'completed' ? '\u2605' : '\u2606'}</span>
+                    ))}
+                    <span className="text-[10px] text-white/20 font-mono ml-2">NIVEL 1: Tu Primer Mes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+                        style={{ width: '58%' }}
+                      />
                     </div>
+                    <span className="text-[10px] text-amber-400/50 font-mono">4/6</span>
+                  </div>
+                </div>
 
-                    {/* Icon */}
-                    <div className={`hidden sm:flex shrink-0 mt-2.5 w-9 h-9 rounded-lg items-center justify-center transition-all duration-300 ${
-                      m.status === 'completed' ? 'bg-white/[0.03] text-amber-400/30' :
-                      m.status === 'current' ? 'bg-amber-400/10 text-amber-400' :
-                      'bg-white/[0.02] text-white/10'
-                    }`}>
-                      <m.icon className="w-4 h-4" />
+                {/* Game World */}
+                <div className="relative h-[360px] sm:h-[380px] overflow-x-auto overflow-y-hidden platformer-scroll">
+                  {/* Starfield background */}
+                  <div
+                    className="absolute inset-0 opacity-40"
+                    style={{
+                      backgroundImage: `
+                        radial-gradient(1px 1px at 5% 15%, rgba(255,255,255,0.4) 1px, transparent 0),
+                        radial-gradient(1px 1px at 15% 65%, rgba(255,255,255,0.25) 1px, transparent 0),
+                        radial-gradient(1px 1px at 28% 30%, rgba(255,255,255,0.3) 1px, transparent 0),
+                        radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.2) 1px, transparent 0),
+                        radial-gradient(1px 1px at 55% 20%, rgba(255,255,255,0.35) 1px, transparent 0),
+                        radial-gradient(1px 1px at 65% 55%, rgba(255,255,255,0.2) 1px, transparent 0),
+                        radial-gradient(1px 1px at 78% 40%, rgba(255,255,255,0.3) 1px, transparent 0),
+                        radial-gradient(1px 1px at 88% 70%, rgba(255,255,255,0.25) 1px, transparent 0),
+                        radial-gradient(1px 1px at 95% 10%, rgba(255,255,255,0.2) 1px, transparent 0),
+                        radial-gradient(1.5px 1.5px at 35% 45%, rgba(245,158,11,0.3) 1px, transparent 0),
+                        radial-gradient(1.5px 1.5px at 72% 25%, rgba(245,158,11,0.2) 1px, transparent 0)
+                      `,
+                      animation: 'bgScroll 40s linear infinite',
+                    }}
+                  />
+
+                  {/* Ground line + glow */}
+                  <div className="absolute bottom-0 left-0 right-0">
+                    <div className="h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
+                    <div className="h-10 bg-gradient-to-t from-amber-950/10 to-transparent" />
+                  </div>
+
+                  {/* ─── Character (MIA) ─── */}
+                  <div
+                    className="absolute z-30"
+                    style={{
+                      left: '8.33%',
+                      bottom: '150px',
+                      marginLeft: '-18px',
+                      animation: 'miaJump 5s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                    }}
+                  >
+                    <div style={{ animation: 'miaGentleFloat 2s ease-in-out 5s infinite' }}>
+                      {/* Glow behind character */}
+                      <div className="absolute inset-0 w-9 h-9 rounded-full bg-amber-400/25 blur-xl" />
+                      {/* Character avatar */}
+                      <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-black font-extrabold text-[11px] shadow-[0_0_20px_rgba(245,158,11,0.5)] ring-2 ring-amber-400/20">
+                        M
+                      </div>
+                      {/* Shadow on ground */}
+                      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-5 h-1 rounded-full bg-black/30 blur-[2px]" />
                     </div>
                   </div>
-                </Reveal>
-              ))}
-            </div>
+
+                  {/* ─── Trail dots (left behind on completed) ─── */}
+                  {[
+                    { left: '8.33%', bottom: '143px', delay: '0.5s' },
+                    { left: '25%', bottom: '213px', delay: '1.5s' },
+                    { left: '41.67%', bottom: '128px', delay: '2.8s' },
+                  ].map((dot, di) => (
+                    <div
+                      key={di}
+                      className="absolute w-2 h-2 rounded-full bg-amber-400/30"
+                      style={{
+                        left: dot.left,
+                        bottom: dot.bottom,
+                        marginLeft: '-4px',
+                        animation: `trailDot 2s ease-out ${dot.delay} forwards`,
+                        opacity: 0,
+                        animationFillMode: 'both',
+                      }}
+                    />
+                  ))}
+
+                  {/* ─── Platforms ─── */}
+                  <div className="relative h-full flex min-w-[680px] sm:min-w-0">
+                    {milestones.map((m, i) => {
+                      const bottoms = [70, 140, 55, 170, 90, 150];
+                      const isCurrent = m.status === 'current';
+                      const isCompleted = m.status === 'completed';
+                      const isUpcoming = m.status === 'upcoming';
+
+                      return (
+                        <div key={i} className="flex-1 relative">
+                          <div
+                            className="absolute left-1.5 right-1.5 sm:left-2 sm:right-2"
+                            style={{ bottom: `${bottoms[i]}px` }}
+                          >
+                            {/* Floating star on completed platforms */}
+                            {isCompleted && (
+                              <div
+                                className="absolute -top-7 left-1/2 text-amber-400 text-base select-none pointer-events-none"
+                                style={{
+                                  animation: `starSpin 2.5s ease-in-out infinite`,
+                                  animationDelay: `${i * 300}ms`,
+                                }}
+                              >
+                                {'\u2605'}
+                              </div>
+                            )}
+
+                            {/* "?" block on upcoming platforms */}
+                            {isUpcoming && (
+                              <div className="absolute -top-9 left-1/2 -translate-x-1/2">
+                                <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center animate-pulse" style={{ animationDuration: '3s' }}>
+                                  <span className="text-white/20 text-sm font-bold">?</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Current platform glow ring */}
+                            {isCurrent && (
+                              <div className="absolute -inset-2 rounded-xl bg-amber-400/[0.04] border border-amber-400/10 -z-10 animate-pulse" style={{ animationDuration: '3s' }} />
+                            )}
+
+                            {/* Platform block */}
+                            <div className={`rounded-lg overflow-hidden transition-all duration-500 ${
+                              isCurrent ? 'shadow-[0_4px_30px_rgba(245,158,11,0.12)]' : ''
+                            }`}>
+                              {/* Platform top edge */}
+                              <div className={`h-[3px] ${
+                                isCurrent
+                                  ? 'bg-gradient-to-r from-amber-400 to-orange-500'
+                                  : isCompleted
+                                  ? 'bg-emerald-400/40'
+                                  : 'bg-white/[0.08]'
+                              }`} />
+                              {/* Platform content */}
+                              <div className={`px-2 py-2.5 sm:px-3 sm:py-3 text-center ${
+                                isCurrent
+                                  ? 'bg-gradient-to-b from-amber-500/[0.08] to-amber-500/[0.03]'
+                                  : isCompleted
+                                  ? 'bg-white/[0.025]'
+                                  : 'bg-white/[0.015]'
+                              }`}>
+                                <div className={`text-[9px] sm:text-[10px] font-mono font-bold tracking-wider uppercase mb-0.5 ${
+                                  isCurrent ? 'text-amber-400' :
+                                  isCompleted ? 'text-emerald-400/50' :
+                                  'text-white/10'
+                                }`}>{m.day}</div>
+                                <div className={`text-[10px] sm:text-[12px] font-semibold leading-tight ${
+                                  isCurrent ? 'text-white' :
+                                  isCompleted ? 'text-white/50' :
+                                  'text-white/20'
+                                }`}>{m.title}</div>
+                                <div className="mt-1.5">
+                                  <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${
+                                    isCurrent ? 'bg-amber-500/15 text-amber-400/70' :
+                                    isCompleted ? 'bg-emerald-500/10 text-emerald-400/40' :
+                                    'bg-white/[0.03] text-white/10'
+                                  }`}>{m.highlight}</span>
+                                </div>
+                              </div>
+                              {/* Platform ground texture */}
+                              <div
+                                className={`h-2 ${
+                                  isCurrent ? 'bg-amber-950/40' :
+                                  isCompleted ? 'bg-emerald-950/20' :
+                                  'bg-white/[0.025]'
+                                }`}
+                                style={{
+                                  backgroundImage: `repeating-linear-gradient(90deg, transparent, transparent 7px, ${
+                                    isCurrent ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)'
+                                  } 7px, ${
+                                    isCurrent ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)'
+                                  } 8px)`,
+                                }}
+                              />
+                            </div>
+
+                            {/* Support pillar */}
+                            <div
+                              className="absolute left-1/2 top-full w-px -translate-x-1/2"
+                              style={{
+                                height: `${bottoms[i]}px`,
+                                background: isCurrent
+                                  ? 'linear-gradient(to bottom, rgba(245,158,11,0.12), transparent)'
+                                  : 'linear-gradient(to bottom, rgba(255,255,255,0.03), transparent)',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </Reveal>
 
             {/* CTA */}
-            <Reveal delay={500}>
-              <div className="text-center mt-12">
+            <Reveal delay={600}>
+              <div className="text-center mt-10">
                 <a
                   href="https://app.withmia.com"
                   className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_40px_rgba(245,158,11,0.2)] hover:-translate-y-0.5 overflow-hidden"
