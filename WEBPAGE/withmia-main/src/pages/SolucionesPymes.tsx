@@ -244,7 +244,7 @@ const SolucionesPymes = () => {
             HERO — Aurora mesh, 2-column
             ══════════════════════════════════════════════════ */}
         <section className="relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6 pt-28 pb-16">
+          <div className="max-w-7xl mx-auto px-6 pt-28 pb-6">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left — Copy */}
               <Reveal>
@@ -433,7 +433,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             PROBLEM — Provocative reality-check section
             ══════════════════════════════════════════════════ */}
-        <section className="pt-14 pb-14 relative" id="problema">
+        <section className="pt-4 pb-14 relative" id="problema">
           <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
 
           <div className="max-w-6xl mx-auto px-6 relative">

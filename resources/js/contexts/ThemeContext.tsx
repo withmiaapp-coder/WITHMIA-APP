@@ -160,7 +160,7 @@ export const THEME_PALETTES: ThemeColors[] = [
 ];
 
 // ============================================================================
-// UTILITY — Generar CSS variables a partir de un tema
+// UTILITY — Sistema de color profesional con tints naturales
 // ============================================================================
 
 function hexToHSL(hex: string): { h: number; s: number; l: number } {
@@ -186,16 +186,26 @@ function hexToHSL(hex: string): { h: number; s: number; l: number } {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-function lighten(hex: string, amount: number): string {
-  const { h, s, l } = hexToHSL(hex);
-  const newL = Math.min(100, l + amount);
-  return `hsl(${h}, ${s}%, ${newL}%)`;
+/**
+ * Genera un tint natural: controla luminosidad Y saturación independientemente.
+ * satRatio: 1 = saturación original, 0.3 = 30% de la saturación original.
+ * Esto evita los pasteles artificiales de solo subir L.
+ */
+function tint(hex: string, lightness: number, satRatio: number = 1): string {
+  const { h, s } = hexToHSL(hex);
+  const newS = Math.round(Math.min(100, s * satRatio));
+  const newL = Math.min(100, Math.max(0, lightness));
+  return `hsl(${h}, ${newS}%, ${newL}%)`;
 }
 
-function darken(hex: string, amount: number): string {
-  const { h, s, l } = hexToHSL(hex);
-  const newL = Math.max(0, l - amount);
-  return `hsl(${h}, ${s}%, ${newL}%)`;
+/**
+ * Genera un shade (oscurece) manteniendo la identidad de color.
+ */
+function shade(hex: string, lightness: number, satRatio: number = 1): string {
+  const { h, s } = hexToHSL(hex);
+  const newS = Math.round(Math.min(100, s * satRatio));
+  const newL = Math.max(0, Math.min(100, lightness));
+  return `hsl(${h}, ${newS}%, ${newL}%)`;
 }
 
 function applyThemeColors(theme: ThemeColors | null) {
@@ -209,7 +219,7 @@ function applyThemeColors(theme: ThemeColors | null) {
     '--theme-header-bg', '--theme-header-border',
     '--theme-accent', '--theme-accent-light',
     '--theme-badge-bg', '--theme-badge-text', '--theme-badge-border',
-    '--theme-icon-inactive',
+    '--theme-icon-inactive', '--theme-icon-inactive-bg',
   ];
 
   if (!theme || theme.id === 'default') {
@@ -220,39 +230,50 @@ function applyThemeColors(theme: ThemeColors | null) {
 
   root.setAttribute('data-theme', theme.id);
 
-  // Primary variants
-  root.style.setProperty('--theme-primary', theme.primary);
-  root.style.setProperty('--theme-primary-light', lighten(theme.primary, 30));
-  root.style.setProperty('--theme-primary-lighter', lighten(theme.primary, 42));
-  root.style.setProperty('--theme-primary-dark', darken(theme.primary, 10));
+  const p = theme.primary;   // e.g. #1a56db → hsl(222, 80%, 48%)
+  const sec = theme.secondary;
 
-  // Secondary variants
-  root.style.setProperty('--theme-secondary', theme.secondary);
-  root.style.setProperty('--theme-secondary-light', lighten(theme.secondary, 25));
+  // ─── Primary variants ───────────────────────────────────────
+  root.style.setProperty('--theme-primary', p);
+  root.style.setProperty('--theme-primary-light', tint(p, 80, 0.5));
+  root.style.setProperty('--theme-primary-lighter', tint(p, 93, 0.35));
+  root.style.setProperty('--theme-primary-dark', shade(p, 30, 1));
 
-  // Sidebar — background más profundo y mejor contraste de texto
-  root.style.setProperty('--theme-sidebar-bg', lighten(theme.primary, 38));
-  root.style.setProperty('--theme-sidebar-text', darken(theme.primary, 25));
-  root.style.setProperty('--theme-sidebar-hover', lighten(theme.primary, 33));
+  // ─── Secondary variants ────────────────────────────────────
+  root.style.setProperty('--theme-secondary', sec);
+  root.style.setProperty('--theme-secondary-light', tint(sec, 75, 0.5));
+
+  // ─── Sidebar ───────────────────────────────────────────────
+  // BG: visible tint — light enough for readability but clearly colored
+  root.style.setProperty('--theme-sidebar-bg', tint(p, 94, 0.4));
+  // Text: dark, retaining the hue so it feels intentional
+  root.style.setProperty('--theme-sidebar-text', shade(p, 22, 0.85));
+  // Hover: slightly deeper than bg
+  root.style.setProperty('--theme-sidebar-hover', tint(p, 89, 0.45));
+  // Active item
   root.style.setProperty('--theme-sidebar-active-bg', 'white');
-  root.style.setProperty('--theme-sidebar-active-text', theme.primary);
-  root.style.setProperty('--theme-sidebar-border', lighten(theme.primary, 30));
+  root.style.setProperty('--theme-sidebar-active-text', p);
+  // Border: between bg and hover depth
+  root.style.setProperty('--theme-sidebar-border', tint(p, 87, 0.35));
 
-  // Header
-  root.style.setProperty('--theme-header-bg', lighten(theme.primary, 42));
-  root.style.setProperty('--theme-header-border', lighten(theme.primary, 32));
+  // ─── Header ────────────────────────────────────────────────
+  root.style.setProperty('--theme-header-bg', tint(p, 96, 0.3));
+  root.style.setProperty('--theme-header-border', tint(p, 89, 0.3));
 
-  // Accent
-  root.style.setProperty('--theme-accent', theme.primary);
-  root.style.setProperty('--theme-accent-light', lighten(theme.primary, 35));
+  // ─── Accent ────────────────────────────────────────────────
+  root.style.setProperty('--theme-accent', p);
+  root.style.setProperty('--theme-accent-light', tint(p, 85, 0.4));
 
-  // Badges — themed
-  root.style.setProperty('--theme-badge-bg', lighten(theme.primary, 35));
-  root.style.setProperty('--theme-badge-text', darken(theme.primary, 20));
-  root.style.setProperty('--theme-badge-border', lighten(theme.primary, 28));
+  // ─── Badges ────────────────────────────────────────────────
+  root.style.setProperty('--theme-badge-bg', tint(p, 90, 0.5));
+  root.style.setProperty('--theme-badge-text', shade(p, 28, 0.9));
+  root.style.setProperty('--theme-badge-border', tint(p, 82, 0.4));
 
-  // Icons
-  root.style.setProperty('--theme-icon-inactive', darken(theme.primary, 5));
+  // ─── Icons ─────────────────────────────────────────────────
+  // Inactive icon uses the primary itself (recognizable color identity)
+  root.style.setProperty('--theme-icon-inactive', shade(p, 38, 0.8));
+  // Inactive icon background: visible tint, not washed out
+  root.style.setProperty('--theme-icon-inactive-bg', tint(p, 88, 0.5));
 }
 
 // ============================================================================
@@ -327,9 +348,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         id: 'custom',
         name: 'Personalizado',
         primary: customColor,
-        secondary: lighten(customColor, 15),
+        secondary: tint(customColor, 60, 0.6),
         previewLeft: customColor,
-        previewRight: lighten(customColor, 15),
+        previewRight: tint(customColor, 60, 0.6),
       };
     }
     if (themeId === 'default') return null;

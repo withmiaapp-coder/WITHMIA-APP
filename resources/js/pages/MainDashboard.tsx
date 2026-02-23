@@ -1249,7 +1249,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                       ) : ''
                     }`}
                     style={hasTheme ? {
-                      background: isActive ? 'var(--theme-primary)' : 'var(--theme-primary-lighter)',
+                      background: isActive ? 'var(--theme-primary)' : 'var(--theme-icon-inactive-bg)',
                       boxShadow: isActive ? '0 4px 12px var(--theme-accent-light)' : undefined,
                     } : undefined}
                   >
