@@ -82,12 +82,7 @@ class AppServiceProvider extends ServiceProvider
         // Set default timezone
         date_default_timezone_set(config('app.timezone', 'UTC'));
         
-        // Disable observer en logout para mayor rapidez
-        if (request()->is('logout')) {
-            return;
-        }
-        
-        // Registrar Observers
+        // Registrar Observers (siempre activos, compatible con Octane)
         User::observe(UserObserver::class);
         WhatsAppInstance::observe(WhatsAppInstanceObserver::class);
         KnowledgeDocument::observe(KnowledgeDocumentObserver::class);

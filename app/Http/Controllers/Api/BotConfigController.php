@@ -38,13 +38,10 @@ class BotConfigController extends Controller
             'auth_check' => Auth::check(),
         ]);
         
-        // Si no hay usuario, intentar obtener el company_slug desde la referer URL
+        // Si no hay usuario autenticado, no es posible determinar la empresa
         if (!$companySlug && !$companyId) {
-            $referer = request()->header('Referer', '');
-            if (preg_match('/\/dashboard\/([a-z0-9\-]+)/', $referer, $matches)) {
-                $companySlug = $matches[1];
-                Log::debug('BotConfig - Got company_slug from referer', ['slug' => $companySlug]);
-            }
+            Log::warning('BotConfig - No authenticated user or company context');
+            return null;
         }
         
         // Si tenemos company_slug pero no company_id, buscar el company_id en la tabla companies

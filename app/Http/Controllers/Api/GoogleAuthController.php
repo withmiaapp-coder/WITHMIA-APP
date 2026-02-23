@@ -45,10 +45,8 @@ class GoogleAuthController extends Controller
 
                 }
             } else {
-                // Fallback to direct email/name (for testing)
-                $email = $request->input('email');
-                $name = $request->input('name', 'Usuario Google');
-
+                // No valid credential provided — reject
+                return response()->json(['success' => false, 'error' => 'Se requiere credencial de Google válida'], 400);
             }
 
             if (empty($email)) {

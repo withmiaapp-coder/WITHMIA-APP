@@ -197,6 +197,22 @@ class SubscriptionController extends Controller
      */
     public function webhook(Request $request)
     {
+        // Verify dLocal signature if secret is configured
+        $dlocalSecret = config('services.dlocal.webhook_secret');
+        if ($dlocalSecret) {
+            $signature = $request->header('X-DLocal-Signature') 
+                ?? $request->header('X-Webhook-Signature');
+            if (!$signature || !hash_equals(
+                hash_hmac('sha256', $request->getContent(), $dlocalSecret),
+                $signature
+            )) {
+                Log::warning('dLocal webhook: invalid signature', [
+                    'has_signature' => !empty($signature),
+                ]);
+                return response()->json(['error' => 'Invalid signature'], 403);
+            }
+        }
+
         $payload = $request->all();
 
         Log::info('dLocal GO webhook received', ['payload' => $payload]);

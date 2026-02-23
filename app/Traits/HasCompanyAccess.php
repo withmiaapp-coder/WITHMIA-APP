@@ -33,7 +33,7 @@ trait HasCompanyAccess
         if (!$user) {
             $authToken = $request->input('auth_token') ?? $request->header('X-Railway-Auth');
             if ($authToken) {
-                $user = User::where('remember_token', $authToken)->first();
+                $user = User::where('auth_token', $authToken)->first();
             }
         }
         return $user?->company;

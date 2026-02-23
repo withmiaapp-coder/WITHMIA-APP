@@ -4,12 +4,20 @@ namespace App\Console\Commands;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Models\KnowledgeDocument;
+use App\Models\WhatsAppInstance;
+use App\Models\CalendarIntegration;
+use App\Models\Product;
+use App\Models\ProductIntegration;
+use App\Models\Sale;
+use App\Models\Subscription;
+use App\Models\TeamInvitation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 class CleanupTestData extends Command
 {
-    protected $signature = 'cleanup:test-data {--keep-slug=withmia-nbm6qp : Company slug to keep}';
+    protected $signature = 'cleanup:test-data {--keep-slug=withmia-nbm6qp : Company slug to keep} {--force : Skip confirmation}';
     protected $description = 'Clean up test companies and users, keeping only the specified company';
 
     public function handle()
@@ -32,37 +40,43 @@ class CleanupTestData extends Command
         $companiesToDelete = Company::where('slug', '!=', $keepSlug)->get();
         
         $this->info("Found {$companiesToDelete->count()} companies to delete");
+
+        if (!$this->option('force') && !$this->confirm('Are you sure you want to delete these companies and their data?')) {
+            $this->info('Aborted.');
+            return 0;
+        }
         
         foreach ($companiesToDelete as $company) {
             $this->info("Deleting company: {$company->name} ({$company->slug})");
             
-            // Delete related data
-            DB::table('company_user')->where('company_id', $company->id)->delete();
-            DB::table('invitations')->where('company_id', $company->id)->delete();
-            DB::table('chatwoot_configs')->where('company_id', $company->id)->delete();
-            DB::table('evolution_instances')->where('company_id', $company->id)->delete();
-            DB::table('workflow_configs')->where('company_id', $company->id)->delete();
-            DB::table('whatsapp_connections')->where('company_id', $company->id)->delete();
-            DB::table('knowledge_documents')->where('company_id', $company->id)->delete();
-            DB::table('contacts')->where('company_id', $company->id)->delete();
-            DB::table('conversations')->where('company_id', $company->id)->delete();
+            // Delete related data using actual tables/models
+            KnowledgeDocument::where('company_id', $company->id)->delete();
+            WhatsAppInstance::where('company_id', $company->id)->delete();
+            CalendarIntegration::where('company_id', $company->id)->delete();
+            ProductIntegration::where('company_id', $company->id)->delete();
+            Product::where('company_id', $company->id)->delete();
+            Sale::where('company_id', $company->id)->delete();
+            Subscription::where('company_id', $company->id)->delete();
+            TeamInvitation::where('company_slug', $company->slug)->delete();
             
             // Delete company
-            $company->delete();
+            $company->forceDelete();
             
             $this->info("  ✓ Deleted");
         }
         
-        // Delete users that don't belong to the kept company
-        $usersToDelete = User::where('company_slug', '!=', $keepSlug)
-            ->orWhereNull('company_slug')
+        // Delete users that belong to deleted companies (NOT null company_slug — those could be superadmins)
+        $validSlugs = Company::pluck('slug')->toArray();
+        $usersToDelete = User::whereNotNull('company_slug')
+            ->whereNotIn('company_slug', $validSlugs)
             ->get();
-        $this->info("Found {$usersToDelete->count()} users to delete");
+
+        $this->info("Found {$usersToDelete->count()} orphaned users to delete");
         
         foreach ($usersToDelete as $user) {
             $this->info("Deleting user: {$user->email}");
             DB::table('sessions')->where('user_id', $user->id)->delete();
-            $user->delete();
+            $user->forceDelete();
             $this->info("  ✓ Deleted");
         }
         

@@ -53,6 +53,11 @@ class CacheAttachmentJob implements ShouldQueue
         private ?int $accountId,
     ) {}
 
+    /**
+     * Maximum file size to cache (25 MB). Larger files are skipped.
+     */
+    private const MAX_CACHE_SIZE = 25 * 1024 * 1024;
+
     public function handle(): void
     {
         try {
@@ -219,6 +224,16 @@ class CacheAttachmentJob implements ShouldQueue
 
             // ─── Resultado ───
             if ($body && strlen($body) >= 100) {
+                // Reject files exceeding max cache size
+                if (strlen($body) > self::MAX_CACHE_SIZE) {
+                    Log::warning('📦 [CacheAttachment] File too large, skipping cache', [
+                        'attachment_id' => $this->attachmentId,
+                        'size_mb' => round(strlen($body) / 1024 / 1024, 2),
+                        'max_mb' => self::MAX_CACHE_SIZE / 1024 / 1024,
+                    ]);
+                    return;
+                }
+
                 CachedAttachment::updateOrCreate(
                     ['attachment_id' => $this->attachmentId],
                     [

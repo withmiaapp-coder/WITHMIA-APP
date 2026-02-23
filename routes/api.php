@@ -134,10 +134,12 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(
 });
 
 // ============================================================================
-// 6a. CHATWOOT PROXY - Attachment (NO auth required, browser loads <img> directly)
+// 6a. CHATWOOT PROXY - Attachment (signed URL to prevent enumeration)
 // ============================================================================
 Route::prefix('chatwoot-proxy')->group(function () {
-    Route::get('/attachment/{attachmentId}', [ChatwootConversationController::class, 'proxyAttachment']);
+    Route::get('/attachment/{attachmentId}', [ChatwootConversationController::class, 'proxyAttachment'])
+        ->name('chatwoot.attachment')
+        ->middleware('signed');
 });
 
 // 6b. CHATWOOT PROXY (auth via RailwayAuthToken)

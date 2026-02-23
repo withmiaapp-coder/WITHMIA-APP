@@ -109,15 +109,14 @@ interface Conversation {
  * Para blob: URLs (previews locales/optimistas) las devuelve tal cual.
  */
 const resolveAttachmentUrl = (att: any): string => {
+  // Si el backend devuelve una URL firmada (proxy_url), usarla directamente
+  if (att?.proxy_url) {
+    return att.proxy_url;
+  }
   const rawUrl = att?.data_url || att?.file_url || att?.url || att?.thumb_url || '';
   // URLs locales de preview (blob:, data:) se usan directo
   if (!rawUrl || rawUrl.startsWith('blob:') || rawUrl.startsWith('data:')) {
     return rawUrl;
-  }
-  // Si tiene ID numérico válido, usar proxy (URLs permanentes que no expiran)
-  const attId = Number(att?.id);
-  if (attId > 0) {
-    return `/api/chatwoot-proxy/attachment/${attId}?v=2`;
   }
   // Fallback: proxy CORS para URLs de Chatwoot, o URL directa
   if (rawUrl.includes('chatwoot')) {

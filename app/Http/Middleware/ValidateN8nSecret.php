@@ -23,7 +23,7 @@ class ValidateN8nSecret
         
         $token = $request->header('X-N8N-Secret') ?? $request->input('secret_token') ?? $request->query('secret');
         
-        if (!$token || $token !== $configSecret) {
+        if (!$token || !hash_equals($configSecret, $token)) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 

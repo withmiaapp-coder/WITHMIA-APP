@@ -34,4 +34,9 @@ Broadcast::channel('inbox.{inboxId}', function ($user, $inboxId) {
     return $userInboxId == (int) $inboxId;
 });
 
+// Canal privado por empresa - WhatsApp status (QR codes, connection state)
+Broadcast::channel('company.{slug}.whatsapp', function ($user, $slug) {
+    return $user->company_slug === $slug;
+});
+
 

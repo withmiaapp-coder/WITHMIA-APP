@@ -457,13 +457,15 @@ class ChatwootConversationController extends Controller
                                     $ft = $apiAtt['file_type'] ?? 'file';
                                     // API returns file_type as string already
                                     $url = $apiAtt['data_url'] ?? $apiAtt['file_url'] ?? $apiAtt['external_url'] ?? $apiAtt['thumb_url'] ?? null;
+                                    $attId = $apiAtt['id'] ?? 0;
                                     return [
-                                        'id' => $apiAtt['id'] ?? 0,
+                                        'id' => $attId,
                                         'file_type' => $ft,
                                         'data_url' => $url,
                                         'file_url' => $url,
                                         'file_name' => $apiAtt['file_name'] ?? $apiAtt['fallback_title'] ?? basename($url ?? 'file'),
                                         'thumb_url' => $apiAtt['thumb_url'] ?? $url,
+                                        'proxy_url' => $attId > 0 ? \Illuminate\Support\Facades\URL::signedRoute('chatwoot.attachment', ['attachmentId' => $attId]) : null,
                                     ];
                                 })->toArray();
                             }
@@ -481,6 +483,7 @@ class ChatwootConversationController extends Controller
                                     'file_url' => $externalUrl,
                                     'file_name' => $fileName,
                                     'thumb_url' => $externalUrl,
+                                    'proxy_url' => $att->id > 0 ? \Illuminate\Support\Facades\URL::signedRoute('chatwoot.attachment', ['attachmentId' => $att->id]) : null,
                                 ];
                             })->toArray();
                         })

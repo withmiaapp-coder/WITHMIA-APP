@@ -136,6 +136,8 @@ class User extends Authenticatable
         'chatwoot_agent_id',
         'chatwoot_inbox_id',
         'chatwoot_agent_token',
+        'chatwoot_agent_role',
+        'onboarding_completed_at',
         'settings',
     ];
 
