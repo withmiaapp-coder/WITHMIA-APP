@@ -30,35 +30,46 @@ class ProductIntegrationController extends Controller
             return response()->json(['error' => 'No autorizado'], 401);
         }
 
-        $integrations = ProductIntegration::where('company_id', $company->id)->get();
+        try {
+            $integrations = ProductIntegration::where('company_id', $company->id)->get();
 
-        $result = [];
-        foreach (['woocommerce', 'shopify', 'mercadolibre', 'mysql_db', 'api_rest'] as $provider) {
-            $integration = $integrations->firstWhere('provider', $provider);
-            $productCount = Product::where('company_id', $company->id)->where('provider', $provider)->count();
+            $result = [];
+            foreach (['woocommerce', 'shopify', 'mercadolibre', 'mysql_db', 'api_rest'] as $provider) {
+                $integration = $integrations->firstWhere('provider', $provider);
+                $productCount = Product::where('company_id', $company->id)->where('provider', $provider)->count();
 
-            $result[$provider] = [
-                'connected' => $integration?->is_connected ?? false,
-                'bot_access_enabled' => $integration?->bot_access_enabled ?? false,
-                'products_count' => $productCount,
-                'last_sync_at' => $integration?->last_sync_at?->toISOString(),
-                'store_url' => $integration?->store_url,
+                $result[$provider] = [
+                    'connected' => $integration?->is_connected ?? false,
+                    'bot_access_enabled' => $integration?->bot_access_enabled ?? false,
+                    'products_count' => $productCount,
+                    'last_sync_at' => $integration?->last_sync_at?->toISOString(),
+                    'store_url' => $integration?->store_url,
+                ];
+            }
+
+            // Manual products count
+            $result['manual'] = [
+                'connected' => true,
+                'products_count' => Product::where('company_id', $company->id)->where('provider', 'manual')->count(),
             ];
+
+            // Total
+            $result['total_products'] = Product::where('company_id', $company->id)->count();
+
+            return response()->json([
+                'success' => true,
+                'integrations' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductIntegrationController@status error', [
+                'message' => $e->getMessage(),
+                'company_id' => $company->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al cargar integraciones: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Manual products count
-        $result['manual'] = [
-            'connected' => true,
-            'products_count' => Product::where('company_id', $company->id)->where('provider', 'manual')->count(),
-        ];
-
-        // Total
-        $result['total_products'] = Product::where('company_id', $company->id)->count();
-
-        return response()->json([
-            'success' => true,
-            'integrations' => $result,
-        ]);
     }
 
     // =============================================

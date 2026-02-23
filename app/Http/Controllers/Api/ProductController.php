@@ -24,69 +24,82 @@ class ProductController extends Controller
             return response()->json(['error' => 'No autorizado'], 401);
         }
 
-        $query = Product::where('company_id', $company->id);
+        try {
+            $query = Product::where('company_id', $company->id);
 
-        // Search
-        if ($search = $request->input('search')) {
-            $query->search($search);
+            // Search
+            if ($search = $request->input('search')) {
+                $query->search($search);
+            }
+
+            // Filter by provider
+            if ($provider = $request->input('provider')) {
+                $query->fromProvider($provider);
+            }
+
+            // Filter by category
+            if ($category = $request->input('category')) {
+                $query->where('category', $category);
+            }
+
+            // Filter by stock status
+            if ($stockStatus = $request->input('stock_status')) {
+                $query->where('stock_status', $stockStatus);
+            }
+
+            // Filter by active
+            if ($request->has('is_active')) {
+                $query->where('is_active', $request->boolean('is_active'));
+            }
+
+            // Sort
+            $sortBy = $request->input('sort_by', 'created_at');
+            $sortDir = $request->input('sort_dir', 'desc');
+            $query->orderBy($sortBy, $sortDir);
+
+            // Get stats — use select()->distinct() for PostgreSQL compatibility
+            // (distinct('column') generates DISTINCT ON in PostgreSQL which requires ORDER BY)
+            $totalProducts = Product::where('company_id', $company->id)->count();
+            $categories = Product::where('company_id', $company->id)
+                ->whereNotNull('category')
+                ->select('category')
+                ->distinct()
+                ->pluck('category')
+                ->sort()
+                ->values();
+
+            $providerCounts = Product::where('company_id', $company->id)
+                ->selectRaw('provider, count(*) as count')
+                ->groupBy('provider')
+                ->pluck('count', 'provider');
+
+            $products = $query->paginate($request->input('per_page', 50));
+
+            return response()->json([
+                'success' => true,
+                'products' => $products->items(),
+                'pagination' => [
+                    'total' => $products->total(),
+                    'per_page' => $products->perPage(),
+                    'current_page' => $products->currentPage(),
+                    'last_page' => $products->lastPage(),
+                ],
+                'stats' => [
+                    'total' => $totalProducts,
+                    'categories' => $categories,
+                    'by_provider' => $providerCounts,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@index error', [
+                'message' => $e->getMessage(),
+                'company_id' => $company->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al cargar productos: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Filter by provider
-        if ($provider = $request->input('provider')) {
-            $query->fromProvider($provider);
-        }
-
-        // Filter by category
-        if ($category = $request->input('category')) {
-            $query->where('category', $category);
-        }
-
-        // Filter by stock status
-        if ($stockStatus = $request->input('stock_status')) {
-            $query->where('stock_status', $stockStatus);
-        }
-
-        // Filter by active
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Sort
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortDir = $request->input('sort_dir', 'desc');
-        $query->orderBy($sortBy, $sortDir);
-
-        // Get stats
-        $totalProducts = Product::where('company_id', $company->id)->count();
-        $categories = Product::where('company_id', $company->id)
-            ->whereNotNull('category')
-            ->distinct('category')
-            ->pluck('category')
-            ->sort()
-            ->values();
-
-        $providerCounts = Product::where('company_id', $company->id)
-            ->selectRaw('provider, count(*) as count')
-            ->groupBy('provider')
-            ->pluck('count', 'provider');
-
-        $products = $query->paginate($request->input('per_page', 50));
-
-        return response()->json([
-            'success' => true,
-            'products' => $products->items(),
-            'pagination' => [
-                'total' => $products->total(),
-                'per_page' => $products->perPage(),
-                'current_page' => $products->currentPage(),
-                'last_page' => $products->lastPage(),
-            ],
-            'stats' => [
-                'total' => $totalProducts,
-                'categories' => $categories,
-                'by_provider' => $providerCounts,
-            ],
-        ]);
     }
 
     /**

@@ -211,8 +211,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     // --- Dashboard stats ---
     Route::get('/dashboard-stats', [ChatwootController::class, 'getDashboardStats']);
 
-    // --- Daily inspirational quote (OpenAI powered) ---
-    Route::get('/daily-quote', \App\Http\Controllers\Api\DailyQuoteController::class);
+    // --- Daily inspirational quote: moved to standalone /api/daily-quote below ---
 
     // --- Communication Channels: moved to standalone /api/channels/ group below ---
 
@@ -234,6 +233,11 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
     Route::delete('/invitations/{id}', [TeamInvitationController::class, 'cancel']);
     Route::post('/invitations/sync-chatwoot', [TeamInvitationController::class, 'syncUsersWithChatwoot']);
 
+});
+
+// Daily inspirational quote (standalone, auth via RailwayAuthToken)
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->group(function () {
+    Route::get('/daily-quote', \App\Http\Controllers\Api\DailyQuoteController::class);
 });
 
 // ============================================================================
