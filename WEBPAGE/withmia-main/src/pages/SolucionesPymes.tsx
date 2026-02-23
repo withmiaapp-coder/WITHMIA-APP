@@ -155,80 +155,110 @@ const painPoints = [
 
 
 const milestones = [
-  { day: "Día 1", title: "Crea tu cuenta", description: "Regístrate gratis, conecta tu primer canal (WhatsApp, Instagram o Web) y configura tu perfil de negocio.", highlight: "10 minutos", status: "completed" as const },
-  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube tu catálogo, FAQs y políticas. WITHMIA los procesa y aprende todo sobre tu negocio automáticamente.", highlight: "Sin código", status: "completed" as const },
-  { day: "Semana 1", title: "Primeras conversaciones", description: "WITHMIA empieza a atender clientes reales. Tú supervisas y ajustas respuestas desde el panel.", highlight: "100% supervisado", status: "completed" as const },
-  { day: "Semana 2", title: "Automatización completa", description: "WITHMIA maneja el 80% de consultas sola. Solo te escala las que requieren intervención humana.", highlight: "80% automático", status: "current" as const },
-  { day: "Semana 3", title: "Más canales conectados", description: "Agregas Facebook, Email, Chat Web. Todos los canales en una sola bandeja con CRM integrado.", highlight: "Omnicanal", status: "upcoming" as const },
-  { day: "Mes 1", title: "Resultados medibles", description: "Dashboard con métricas reales: tiempo de respuesta, conversiones, satisfacción y ROI de WITHMIA.", highlight: "ROI positivo", status: "upcoming" as const },
+  { day: "Día 1", title: "Crea tu cuenta", description: "Regístrate, conecta WhatsApp y configura tu negocio.", highlight: "10 min", icon: Rocket, status: "completed" as const },
+  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y políticas. WITHMIA aprende sola.", highlight: "Sin código", icon: Zap, status: "completed" as const },
+  { day: "Semana 1", title: "Primeras conversaciones", description: "WITHMIA atiende clientes reales. Tú supervisas y ajustas.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
+  { day: "Semana 2", title: "Automatización completa", description: "80% de consultas resueltas sola. Solo escala lo necesario.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
+  { day: "Semana 3", title: "Todos tus canales", description: "WhatsApp, Instagram, Facebook, Email — una sola bandeja.", highlight: "Omnicanal", icon: Users, status: "upcoming" as const },
+  { day: "Mes 1", title: "Resultados medibles", description: "Dashboard con métricas: respuestas, conversiones y ROI.", highlight: "ROI +", icon: BarChart3, status: "upcoming" as const },
 ];
 
 const useCases = [
   {
     industry: "Salud & Odontología", icon: Stethoscope, color: "#34d399",
     tagline: "Tu recepcionista virtual que nunca descansa",
-    scenarios: [
-      { title: "Agendamiento 24/7", description: "Pacientes agendan citas por WhatsApp a cualquier hora. WITHMIA verifica disponibilidad y confirma automáticamente.", icon: Calendar },
-      { title: "Seguimiento post-consulta", description: "Envía instrucciones de cuidado, recuerda medicamentos y detecta complicaciones. Escala al doctor si es necesario.", icon: MessageSquare },
-      { title: "Lista de espera activa", description: "Paciente cancela → WITHMIA llena la hora en minutos contactando a la lista de espera.", icon: Users },
+    chat: [
+      { from: "client", msg: "Hola, necesito una hora para limpieza dental 🦷" },
+      { from: "mia", msg: "¡Hola! 😊 Tengo disponibilidad mañana a las 10:00 o 16:30. ¿Cuál prefieres?" },
+      { from: "client", msg: "16:30 por favor" },
+      { from: "mia", msg: "✅ Listo! Cita agendada para mañana 16:30 con Dra. López. Te envié la dirección y preparaciones por WhatsApp." },
     ],
-    result: "+182% citas agendadas",
-    result2: "-60% no-shows",
+    features: [
+      { icon: Calendar, label: "Agenda citas 24/7" },
+      { icon: MessageSquare, label: "Seguimiento post-consulta" },
+      { icon: Users, label: "Lista de espera activa" },
+    ],
+    result: "+182% citas", result2: "-60% no-shows",
   },
   {
     industry: "E-commerce & Retail", icon: ShoppingCart, color: "#a78bfa",
     tagline: "Tu vendedor estrella que atiende a todos a la vez",
-    scenarios: [
-      { title: "Vendedor por WhatsApp", description: "Recomienda productos, muestra opciones según historial y envía link de pago. Todo en la misma conversación.", icon: MessageSquare },
-      { title: "Rescate de carritos", description: "Contacta a los 30 min del abandono con mensaje personalizado. Recupera hasta el 25% de ventas perdidas.", icon: ShoppingCart },
-      { title: "Tracking de pedidos", description: "Responde estado de envío en tiempo real, gestiona cambios de dirección y procesa devoluciones.", icon: BarChart3 },
+    chat: [
+      { from: "client", msg: "¿Tienen esta polera en talla M? 👕" },
+      { from: "mia", msg: "¡Sí! Disponible en azul y negro. Basado en tu última compra, te recomiendo la azul. ¿La agrego al carrito?" },
+      { from: "client", msg: "Dale, la azul" },
+      { from: "mia", msg: "✅ Agregada! Total: $19.990. Aquí tu link de pago 👉 Envío gratis por ser cliente frecuente 🎉" },
     ],
-    result: "+45% conversión",
-    result2: "-80% consultas repetitivas",
+    features: [
+      { icon: MessageSquare, label: "Vendedor por WhatsApp" },
+      { icon: ShoppingCart, label: "Rescate de carritos" },
+      { icon: BarChart3, label: "Tracking de pedidos" },
+    ],
+    result: "+45% conversión", result2: "-80% consultas",
   },
   {
     industry: "Inmobiliaria", icon: Building2, color: "#22d3ee",
-    tagline: "Filtra leads reales y agenda visitas sin perder tiempo",
-    scenarios: [
-      { title: "Pre-calificación de leads", description: "Hace preguntas clave (presupuesto, zona, financiamiento), asigna score y pasa al corredor solo los leads serios.", icon: Users },
-      { title: "Coordinación de visitas", description: "Cruza disponibilidad, propone horarios, confirma y envía recordatorio con fotos de la propiedad.", icon: Calendar },
-      { title: "Catálogo por chat", description: "Filtra propiedades según criterios del cliente y envía fichas con fotos, precio y link a tour virtual.", icon: MessageSquare },
+    tagline: "Filtra leads reales y agenda visitas automáticamente",
+    chat: [
+      { from: "client", msg: "Busco depto 2 dormitorios en Providencia, hasta 120M" },
+      { from: "mia", msg: "Encontré 3 opciones para ti 🏠 ¿Tienes pre-aprobación hipotecaria?" },
+      { from: "client", msg: "Sí, con Banco Estado" },
+      { from: "mia", msg: "Perfecto! Te agendé visita mañana 11:00 al depto de Av. Italia. Te envío fotos y ficha técnica 📋" },
     ],
-    result: "-70% tiempo en leads fríos",
-    result2: "+3x visitas efectivas",
+    features: [
+      { icon: Users, label: "Pre-califica leads" },
+      { icon: Calendar, label: "Coordina visitas" },
+      { icon: MessageSquare, label: "Catálogo por chat" },
+    ],
+    result: "-70% leads fríos", result2: "+3x visitas",
   },
   {
     industry: "Fitness & Bienestar", icon: Dumbbell, color: "#f59e0b",
     tagline: "Más alumnos, menos abandono, cero papeleo",
-    scenarios: [
-      { title: "Inscripción por chat", description: "Explica planes, resuelve dudas, envía formulario y procesa pago. De consulta a alumno sin intervención.", icon: Users },
-      { title: "Reserva de clases", description: "Muestra clases con cupos en tiempo real, reserva y envía recordatorio. Si se cancela, ofrece alternativas.", icon: Calendar },
-      { title: "Anti-deserción", description: "Detecta inactividad, envía mensajes motivacionales y ofrece descuento de retención automáticamente.", icon: MessageSquare },
+    chat: [
+      { from: "client", msg: "¿Cuánto sale el plan mensual? 💪" },
+      { from: "mia", msg: "Plan Full $29.990/mes — incluye todas las clases + acceso libre. ¿Quieres inscribirte?" },
+      { from: "client", msg: "Sí, quiero empezar" },
+      { from: "mia", msg: "✅ Inscripción lista! Tu primera clase es mañana — Yoga 7:00am. Te envié el link de pago y acceso al gimnasio 🏋️" },
     ],
-    result: "+35% retención",
-    result2: "Atención 24/7 sin staff extra",
+    features: [
+      { icon: Users, label: "Inscripción por chat" },
+      { icon: Calendar, label: "Reserva de clases" },
+      { icon: MessageSquare, label: "Anti-deserción" },
+    ],
+    result: "+35% retención", result2: "24/7 sin staff",
   },
   {
     industry: "Educación", icon: GraduationCap, color: "#ec4899",
     tagline: "Matrícula llena, secretaría libre",
-    scenarios: [
-      { title: "Admisiones sin fricción", description: "Verifica vacantes, explica el proceso, envía documentos y agenda entrevista. Tu equipo solo interviene al final.", icon: MessageSquare },
-      { title: "Soporte estudiantil", description: "Horarios, notas, certificados, justificaciones: todo al instante sin saturar la secretaría.", icon: Users },
-      { title: "Comunicación masiva", description: "Recordatorios de matrícula, reuniones, eventos. Segmentado por curso y con confirmación de lectura.", icon: Calendar },
+    chat: [
+      { from: "client", msg: "¿Tienen vacantes para 3° básico? 📚" },
+      { from: "mia", msg: "Sí, quedan 4 vacantes. El proceso incluye: formulario + entrevista. ¿Quieres que te envíe los documentos?" },
+      { from: "client", msg: "Por favor" },
+      { from: "mia", msg: "📄 Enviados! Te agendé entrevista para el jueves 15:00. Recibirás un recordatorio el día anterior." },
     ],
-    result: "+50% tasa de admisión",
-    result2: "-90% consultas repetitivas",
+    features: [
+      { icon: MessageSquare, label: "Admisiones automáticas" },
+      { icon: Users, label: "Soporte estudiantil" },
+      { icon: Calendar, label: "Comunicación masiva" },
+    ],
+    result: "+50% admisión", result2: "-90% consultas",
   },
   {
     industry: "Gastronomía", icon: Utensils, color: "#f97316",
     tagline: "Más mesas llenas, menos llamadas perdidas",
-    scenarios: [
-      { title: "Reservas por WhatsApp", description: "Verifica disponibilidad, confirma, envía menú del día y recuerda la reserva. Si no confirman, libera la mesa.", icon: Calendar },
-      { title: "Pedidos sin comisión", description: "Toma pedidos con personalizaciones, confirma dirección y procesa pago. Sin pagar 30% a apps de delivery.", icon: ShoppingCart },
-      { title: "Feedback inteligente", description: "Post-visita pide opinión. Positiva → invita reseña en Google. Negativa → escala al gerente en privado.", icon: MessageSquare },
+    chat: [
+      { from: "client", msg: "Mesa para 4, viernes 21h 🍝" },
+      { from: "mia", msg: "¡Reservado! Mesa junto a la ventana. ¿Quieres ver el menú del viernes?" },
+      { from: "client", msg: "Sí porfa" },
+      { from: "mia", msg: "🍽️ Aquí va! Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes a las 19h. ¡Buen provecho!" },
     ],
-    result: "+40% reservas directas",
-    result2: "0% comisión de delivery",
+    features: [
+      { icon: Calendar, label: "Reservas por WhatsApp" },
+      { icon: ShoppingCart, label: "Pedidos sin comisión" },
+      { icon: MessageSquare, label: "Feedback inteligente" },
+    ],
+    result: "+40% reservas", result2: "0% comisión",
   },
 ];
 
@@ -255,7 +285,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             HERO — Aurora mesh, 2-column
             ══════════════════════════════════════════════════ */}
-        <section className="relative overflow-hidden">
+        <section className="relative">
           <div className="max-w-7xl mx-auto px-6 pt-28 pb-10">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left — Copy */}
@@ -445,7 +475,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
-        <section className="pt-4 pb-14 relative overflow-hidden" id="casos">
+        <section className="pt-10 pb-14 relative" id="casos">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-10">
@@ -458,7 +488,7 @@ const SolucionesPymes = () => {
                   <span className="text-gradient">todas las industrias</span>
                 </h2>
                 <p className="text-white/35 max-w-xl mx-auto">
-                  WITHMIA se adapta a tu negocio, no al revés. Así es como ayuda en cada rubro.
+                  Mira cómo WITHMIA conversa con tus clientes en cada rubro.
                 </p>
               </div>
             </Reveal>
@@ -493,61 +523,124 @@ const SolucionesPymes = () => {
               </div>
             </Reveal>
 
-            {/* Industry header — tagline */}
-            <Reveal delay={120}>
-              <div className="text-center mb-6" key={`header-${activeTab}`} style={{ animation: 'fadeInUp 0.4s ease both' }}>
-                <p className="text-base sm:text-lg font-semibold text-white/70">{current.tagline}</p>
-              </div>
-            </Reveal>
-
-            {/* Content cards */}
+            {/* Two-column: Chat simulation + Features */}
             <Reveal delay={150}>
-              <div className="grid md:grid-cols-3 gap-3 mb-5">
-                {current.scenarios.map((scenario, i) => (
-                  <div
-                    key={`${activeTab}-${i}`}
-                    className="group relative p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 overflow-hidden"
-                    style={{
-                      animation: `fadeInUp 0.4s ease ${i * 0.1}s both`,
-                    }}
-                  >
+              <div
+                key={`uc-${activeTab}`}
+                className="grid lg:grid-cols-2 gap-6 items-stretch"
+                style={{ animation: 'fadeInUp 0.4s ease both' }}
+              >
+                {/* Left — Chat simulation */}
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+                  {/* Chat header */}
+                  <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06]" style={{ backgroundColor: `${current.color}08` }}>
                     <div
-                      className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      style={{ background: `linear-gradient(90deg, transparent, ${current.color}40, transparent)` }}
-                    />
-
-                    <div className="relative">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300"
-                        style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
-                      >
-                        <scenario.icon className="w-4 h-4" style={{ color: current.color }} />
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: `${current.color}15`, border: `1px solid ${current.color}25` }}
+                    >
+                      <current.icon className="w-4 h-4" style={{ color: current.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-white/80">{current.industry}</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[10px] text-white/30">WITHMIA activa</span>
                       </div>
-                      <h3 className="text-sm font-semibold text-white mb-1.5">{scenario.title}</h3>
-                      <p className="text-[12px] text-white/30 leading-relaxed">{scenario.description}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </Reveal>
 
-            {/* Result banner — split metrics */}
-            <Reveal delay={200}>
-              <div
-                className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 py-5 px-6 rounded-xl border"
-                style={{
-                  background: `linear-gradient(135deg, ${current.color}06, ${current.color}03)`,
-                  borderColor: `${current.color}15`,
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" style={{ color: current.color }} />
-                  <span className="text-base font-bold text-gradient">{current.result}</span>
+                  {/* Chat messages */}
+                  <div className="p-4 space-y-3 min-h-[260px]">
+                    {current.chat.map((msg, i) => (
+                      <div
+                        key={`${activeTab}-msg-${i}`}
+                        className={`flex ${msg.from === 'client' ? 'justify-start' : 'justify-end'}`}
+                        style={{ animation: `fadeInUp 0.35s ease ${i * 0.12}s both` }}
+                      >
+                        <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
+                          msg.from === 'client'
+                            ? 'bg-white/[0.06] border border-white/[0.06] text-white/60 rounded-tl-sm'
+                            : 'rounded-tr-sm text-white/80'
+                        }`}
+                          style={msg.from === 'mia' ? {
+                            backgroundColor: `${current.color}12`,
+                            border: `1px solid ${current.color}20`,
+                          } : undefined}
+                        >
+                          {msg.from === 'mia' && (
+                            <div className="flex items-center gap-1 mb-1">
+                              <Sparkles className="w-2.5 h-2.5" style={{ color: current.color }} />
+                              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: `${current.color}90` }}>WITHMIA</span>
+                            </div>
+                          )}
+                          {msg.msg}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Input bar */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
+                    <div className="flex-1 h-8 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center px-3">
+                      <span className="text-[11px] text-white/20">Escribe un mensaje...</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${current.color}15` }}>
+                      <ArrowRight className="w-3.5 h-3.5" style={{ color: current.color }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="hidden sm:block w-px h-5 bg-white/[0.08]" />
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4" style={{ color: current.color }} />
-                  <span className="text-base font-bold text-gradient">{current.result2}</span>
+
+                {/* Right — Features + Metrics */}
+                <div className="flex flex-col gap-4">
+                  {/* Tagline */}
+                  <div className="px-1">
+                    <p className="text-lg font-semibold text-white/80 mb-1">{current.tagline}</p>
+                    <p className="text-[12px] text-white/25">Lo que WITHMIA hace por ti en {current.industry.toLowerCase()}</p>
+                  </div>
+
+                  {/* Feature pills */}
+                  <div className="space-y-2.5 flex-1">
+                    {current.features.map((feat, i) => (
+                      <div
+                        key={`${activeTab}-feat-${i}`}
+                        className="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300"
+                        style={{ animation: `fadeInUp 0.35s ease ${i * 0.1 + 0.15}s both` }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300"
+                          style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
+                        >
+                          <feat.icon className="w-[18px] h-[18px]" style={{ color: current.color }} />
+                        </div>
+                        <span className="text-sm font-medium text-white/70">{feat.label}</span>
+                        <CheckCircle2 className="w-4 h-4 ml-auto shrink-0" style={{ color: `${current.color}60` }} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Metrics row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className="text-center py-4 rounded-xl border"
+                      style={{
+                        background: `linear-gradient(135deg, ${current.color}08, ${current.color}03)`,
+                        borderColor: `${current.color}18`,
+                      }}
+                    >
+                      <p className="text-xl font-bold text-gradient">{current.result}</p>
+                      <TrendingUp className="w-3.5 h-3.5 mx-auto mt-1" style={{ color: `${current.color}60` }} />
+                    </div>
+                    <div
+                      className="text-center py-4 rounded-xl border"
+                      style={{
+                        background: `linear-gradient(135deg, ${current.color}08, ${current.color}03)`,
+                        borderColor: `${current.color}18`,
+                      }}
+                    >
+                      <p className="text-xl font-bold text-gradient">{current.result2}</p>
+                      <Zap className="w-3.5 h-3.5 mx-auto mt-1" style={{ color: `${current.color}60` }} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </Reveal>
@@ -557,10 +650,8 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             TIMELINE — Tu primer mes
             ══════════════════════════════════════════════════ */}
-        <section className="py-14 relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/[0.025] rounded-full blur-[140px] pointer-events-none" />
-
-          <div className="max-w-4xl mx-auto px-6 relative">
+        <section className="py-20 relative">
+          <div className="max-w-3xl mx-auto px-6 relative">
             <Reveal>
               <div className="text-center mb-14">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/20 bg-orange-950/20 mb-6">
@@ -572,139 +663,74 @@ const SolucionesPymes = () => {
                   <span className="text-gradient">automático</span>{" "}
                   en 30 días
                 </h2>
-                <p className="text-white/35 max-w-xl mx-auto">
-                  No necesitas equipo técnico. Este es el camino real que siguen nuestros clientes.
+                <p className="text-white/35 max-w-lg mx-auto">
+                  Sin equipo técnico. Este es el camino real que siguen nuestros clientes.
                 </p>
               </div>
             </Reveal>
 
-            {/* Timeline */}
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px md:-translate-x-px overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-b from-amber-500/30 via-orange-500/15 to-transparent" />
-                {/* Animated light */}
-                <div
-                  className="absolute left-0 w-px h-20 bg-gradient-to-b from-transparent via-amber-400/60 to-transparent"
-                  style={{ animation: "scrollY 4s ease-in-out infinite" }}
-                />
-              </div>
+            {/* Editorial list — large numbers + inline content */}
+            <div className="space-y-0">
+              {milestones.map((m, i) => (
+                <Reveal key={i} delay={i * 60}>
+                  <div className={`group flex items-start gap-5 sm:gap-8 py-6 border-t transition-colors duration-300 ${
+                    m.status === 'current'
+                      ? 'border-amber-500/20'
+                      : 'border-white/[0.05]'
+                  } ${i === milestones.length - 1 ? 'border-b border-b-white/[0.05]' : ''}`}>
 
-              <div className="space-y-8">
-                {milestones.map((m, i) => {
-                  const isLeft = i % 2 === 0;
-                  return (
-                    <Reveal key={i} delay={i * 80}>
-                      <div className="relative">
-                        {/* Desktop layout */}
-                        <div className="hidden md:grid md:grid-cols-2 gap-8 items-center">
-                          <div className={isLeft ? "" : "order-2"}>
-                            <div
-                              className={`p-6 rounded-2xl transition-all duration-300 backdrop-blur-sm overflow-hidden relative group ${
-                                m.status === "current"
-                                  ? "bg-gradient-to-r from-amber-500/[0.08] to-orange-500/[0.08] border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.06)]"
-                                  : "bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]"
-                              } ${isLeft ? "text-right" : "text-left"}`}
-                            >
-                              {/* Watermark number */}
-                              <span className={`absolute ${isLeft ? "left-4" : "right-4"} top-2 text-[60px] font-bold text-white/[0.02] leading-none select-none pointer-events-none`}>
-                                {String(i + 1).padStart(2, "0")}
-                              </span>
+                    {/* Large number */}
+                    <span className={`text-[2.5rem] sm:text-[3.5rem] font-bold leading-none tabular-nums tracking-tight select-none shrink-0 w-16 sm:w-20 text-right transition-colors duration-300 ${
+                      m.status === 'completed' ? 'text-amber-400/15' :
+                      m.status === 'current' ? 'text-amber-400/40' :
+                      'text-white/[0.04]'
+                    }`}>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
 
-                              <div className={`flex items-center gap-2 mb-3 ${isLeft ? "justify-end" : ""}`}>
-                                <span className={`text-xs font-mono px-2.5 py-1 rounded-md ${
-                                  m.status === "current" ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-white/40"
-                                }`}>
-                                  {m.day}
-                                </span>
-                                <span className={`text-xs px-2.5 py-1 rounded-md font-medium ${
-                                  m.status === "completed" ? "bg-emerald-500/15 text-emerald-400" :
-                                  m.status === "current" ? "bg-amber-500/15 text-amber-400" :
-                                  "bg-white/[0.04] text-white/30"
-                                }`}>
-                                  {m.highlight}
-                                </span>
-                              </div>
-                              <h3 className="text-base font-semibold text-white mb-1.5">{m.title}</h3>
-                              <p className="text-xs text-white/35 leading-relaxed">{m.description}</p>
-                            </div>
-                          </div>
-                          <div className={isLeft ? "order-2" : ""} />
-                        </div>
-
-                        {/* Dot — desktop */}
-                        <div className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                            m.status === "completed"
-                              ? "bg-emerald-500/20 border-emerald-500/40"
-                              : m.status === "current"
-                              ? "bg-amber-500/20 border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.15)]"
-                              : "bg-white/[0.06] border-white/10"
-                          }`}>
-                            {m.status === "completed" ? (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                            ) : m.status === "current" ? (
-                              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                            ) : (
-                              <Clock className="w-3.5 h-3.5 text-white/30" />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Mobile layout */}
-                        <div className="md:hidden flex gap-4">
-                          <div className="relative z-10 shrink-0">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                              m.status === "completed"
-                                ? "bg-emerald-500/20 border-emerald-500/40"
-                                : m.status === "current"
-                                ? "bg-amber-500/20 border-amber-500/40"
-                                : "bg-white/[0.06] border-white/10"
-                            }`}>
-                              {m.status === "completed" ? (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                              ) : m.status === "current" ? (
-                                <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
-                              ) : (
-                                <Clock className="w-4 h-4 text-white/30" />
-                              )}
-                            </div>
-                          </div>
-                          <div
-                            className={`flex-1 p-5 rounded-2xl backdrop-blur-sm ${
-                              m.status === "current"
-                                ? "bg-gradient-to-r from-amber-500/[0.08] to-orange-500/[0.08] border border-amber-500/20"
-                                : "bg-white/[0.02] border border-white/[0.06]"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <span className={`text-xs font-mono px-2 py-1 rounded-md ${
-                                m.status === "current" ? "bg-amber-500/20 text-amber-400" : "bg-white/[0.06] text-white/40"
-                              }`}>
-                                {m.day}
-                              </span>
-                              <span className={`text-xs px-2 py-1 rounded-md ${
-                                m.status === "completed" ? "bg-emerald-500/15 text-emerald-400" :
-                                m.status === "current" ? "bg-amber-500/15 text-amber-400" :
-                                "bg-white/[0.04] text-white/30"
-                              }`}>
-                                {m.highlight}
-                              </span>
-                            </div>
-                            <h3 className="text-base font-semibold text-white mb-1">{m.title}</h3>
-                            <p className="text-xs text-white/35">{m.description}</p>
-                          </div>
-                        </div>
+                    {/* Content */}
+                    <div className="flex-1 pt-1 sm:pt-2.5">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                        <span className={`text-[11px] font-mono font-semibold tracking-widest uppercase ${
+                          m.status === 'completed' ? 'text-amber-400/50' :
+                          m.status === 'current' ? 'text-amber-400' :
+                          'text-white/15'
+                        }`}>{m.day}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
+                          m.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400/60' :
+                          m.status === 'current' ? 'bg-amber-500/10 text-amber-400/80' :
+                          'bg-white/[0.03] text-white/15'
+                        }`}>{m.highlight}</span>
+                        {m.status === 'completed' && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/50" />
+                        )}
                       </div>
-                    </Reveal>
-                  );
-                })}
-              </div>
+                      <h3 className={`text-lg font-semibold mb-0.5 transition-colors duration-300 ${
+                        m.status === 'current' ? 'text-white' :
+                        m.status === 'completed' ? 'text-white/60' :
+                        'text-white/30'
+                      }`}>{m.title}</h3>
+                      <p className={`text-[13px] leading-relaxed ${
+                        m.status === 'current' ? 'text-white/40' : 'text-white/20'
+                      }`}>{m.description}</p>
+                    </div>
+
+                    {/* Icon */}
+                    <div className={`hidden sm:flex shrink-0 mt-2.5 w-9 h-9 rounded-lg items-center justify-center transition-all duration-300 ${
+                      m.status === 'completed' ? 'bg-white/[0.03] text-amber-400/30' :
+                      m.status === 'current' ? 'bg-amber-400/10 text-amber-400' :
+                      'bg-white/[0.02] text-white/10'
+                    }`}>
+                      <m.icon className="w-4 h-4" />
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
             </div>
 
             {/* CTA */}
-            <Reveal delay={400}>
-              <div className="text-center mt-14">
+            <Reveal delay={500}>
+              <div className="text-center mt-12">
                 <a
                   href="https://app.withmia.com"
                   className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_40px_rgba(245,158,11,0.2)] hover:-translate-y-0.5 overflow-hidden"
@@ -724,8 +750,6 @@ const SolucionesPymes = () => {
             PROBLEM — Provocative reality-check section
             ══════════════════════════════════════════════════ */}
         <section className="py-14 relative" id="problema">
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-red-500/[0.02] rounded-full blur-[140px] pointer-events-none" />
-
           <div className="max-w-6xl mx-auto px-6 relative">
 
             {/* ─── Header ─── */}

@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
 import debugLog from '@/utils/debugLogger';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { Conversation, Message } from '@/types/chatwoot';
 import {
   TrendingUp,
@@ -93,6 +94,66 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   const [loadingStats, setLoadingStats] = useState(true);
   const [salesStats, setSalesStats] = useState<SalesStats | null>(null);
   const [loadingSales, setLoadingSales] = useState(true);
+
+  // Theme
+  const { hasTheme, isDark } = useTheme();
+
+  // ═══════════════════════════════════════════════════════════
+  // Reusable themed styles — applied via `style` props when hasTheme
+  // ═══════════════════════════════════════════════════════════
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      // Card / container
+      cardBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      cardBorder: isDark ? 'rgba(255,255,255,0.06)' : 'var(--theme-content-card-border)',
+      cardHoverShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px var(--theme-content-card-shadow)',
+      // Text
+      heading: 'var(--theme-text-primary)',
+      label: 'var(--theme-text-muted)',
+      value: 'var(--theme-text-primary)',
+      subtitle: 'var(--theme-text-muted)',
+      secondary: 'var(--theme-text-secondary)',
+      muted: 'var(--theme-text-muted)',
+      // SVG track
+      trackStroke: isDark ? '#1e293b' : '#f3f4f6',
+      // Section header icon bg (keep gradient, override for subtle glass in dark)
+      sectionIconBg: isDark ? 'rgba(255,255,255,0.08)' : undefined,
+      // Bars / progress
+      emptyBar: isDark ? 'rgba(255,255,255,0.04)' : undefined,
+      barTrack: isDark ? 'rgba(255,255,255,0.06)' : undefined,
+      // Tooltips
+      tooltipBg: isDark ? '#e2e8f0' : '#111827',
+      tooltipText: isDark ? '#0f172a' : '#ffffff',
+      // Badge / pill background
+      badgeBg: isDark ? 'rgba(255,255,255,0.06)' : undefined,
+      badgeBorder: isDark ? 'rgba(255,255,255,0.08)' : undefined,
+      // Hover row
+      rowHover: isDark ? 'rgba(255,255,255,0.04)' : undefined,
+      // Empty state
+      emptyBg: isDark ? 'rgba(255,255,255,0.04)' : undefined,
+      emptyIcon: isDark ? '#475569' : '#e5e7eb',
+      emptyText: isDark ? '#64748b' : '#9ca3af',
+      // Skeleton
+      skelBg: isDark ? 'rgba(255,255,255,0.04)' : undefined,
+      skelPulse: isDark ? 'rgba(255,255,255,0.08)' : undefined,
+      // Legend boxes (distribution)
+      legendAgent: isDark ? { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.15)' } : undefined,
+      legendClient: isDark ? { bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.15)' } : undefined,
+      // Sales empty cards
+      salesPreviewCard: isDark ? { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.04)' } : undefined,
+    };
+  }, [hasTheme, isDark]);
+
+  // Card style builder — used by every section container
+  const cardStyle = (extra?: React.CSSProperties): React.CSSProperties | undefined => {
+    if (!t) return extra;
+    return {
+      background: t.cardBg,
+      borderColor: t.cardBorder,
+      ...(extra || {}),
+    };
+  };
   
   // Cargar estadísticas reales del backend
   useEffect(() => {
@@ -412,7 +473,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     return (
       <div className="relative inline-flex items-center justify-center">
         <svg width={size} height={size} className="transform -rotate-90">
-          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#f3f4f6" strokeWidth={strokeWidth} />
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={t?.trackStroke || '#f3f4f6'} strokeWidth={strokeWidth} />
           <circle
             cx={size/2} cy={size/2} r={radius} fill="none"
             stroke={color} strokeWidth={strokeWidth}
@@ -422,8 +483,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-extrabold text-gray-900">{value}%</span>
-          {label && <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">{label}</span>}
+          <span className="text-2xl font-extrabold" style={t ? { color: t.value } : undefined}>{value}%</span>
+          {label && <span className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={t ? { color: t.label } : undefined}>{label}</span>}
         </div>
       </div>
     );
@@ -459,21 +520,23 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     delay?: number;
   }> = ({ title, value, icon, color, trend, subtitle, delay = 0 }) => (
     <div
-      className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-gray-100/60 hover:border-gray-200/80 transition-all duration-500 hover:shadow-xl hover:shadow-gray-200/40 hover:-translate-y-1"
-      style={{ animation: `fadeInUp 0.6s ease-out ${delay}ms both` }}
+      className={`group relative backdrop-blur-sm rounded-2xl p-5 border transition-all duration-500 hover:shadow-xl hover:-translate-y-1 ${!t ? 'bg-white/80 border-gray-100/60 hover:border-gray-200/80 hover:shadow-gray-200/40' : ''}`}
+      style={{ animation: `fadeInUp 0.6s ease-out ${delay}ms both`, ...cardStyle() }}
+      onMouseEnter={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = t.cardHoverShadow; }}
+      onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
     >
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/30 group-hover:via-white/0 group-hover:to-purple-50/20 transition-all duration-500 pointer-events-none" />
+      {!t && <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/30 group-hover:via-white/0 group-hover:to-purple-50/20 transition-all duration-500 pointer-events-none" />}
       <div className="relative flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.08em] mb-2">{title}</p>
-          <h3 className="text-[28px] font-extrabold text-gray-900 tracking-tight leading-none">{value}</h3>
+          <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.label } : undefined}>{title}</p>
+          <h3 className={`text-[28px] font-extrabold tracking-tight leading-none ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.value } : undefined}>{value}</h3>
           {trend && (
             <div className={`inline-flex items-center mt-2.5 text-xs font-semibold px-2 py-0.5 rounded-full ${trend.isUp ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
               {trend.isUp ? <ArrowUp className="w-3 h-3 mr-0.5" /> : <ArrowDown className="w-3 h-3 mr-0.5" />}
               {Math.abs(trend.value)}%
             </div>
           )}
-          {subtitle && <p className="text-[11px] text-gray-400 mt-1.5 font-medium">{subtitle}</p>}
+          {subtitle && <p className={`text-[11px] mt-1.5 font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>{subtitle}</p>}
         </div>
         <div className={`p-3 rounded-2xl ${color} shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
           {icon}
@@ -484,39 +547,41 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
   // Mostrar loading mientras carga las estadísticas
   if (loadingStats) {
+    const skelCard: React.CSSProperties | undefined = t ? { background: t.skelBg || 'rgba(255,255,255,0.04)', borderColor: t.cardBorder } : undefined;
+    const skelPulse: React.CSSProperties | undefined = t ? { background: t.skelPulse || 'rgba(255,255,255,0.08)' } : undefined;
     return (
       <div className="space-y-6">
         {/* Skeleton welcome banner */}
-        <div className="rounded-3xl bg-gradient-to-r from-slate-200 to-slate-100 p-8 animate-pulse">
-          <div className="h-4 w-20 bg-slate-300/60 rounded-full mb-3" />
-          <div className="h-8 w-56 bg-slate-300/60 rounded-lg mb-2" />
-          <div className="h-4 w-72 bg-slate-300/40 rounded-lg" />
+        <div className={`rounded-3xl p-8 animate-pulse ${!t ? 'bg-gradient-to-r from-slate-200 to-slate-100' : ''}`} style={t ? { background: t.skelBg || 'rgba(255,255,255,0.04)' } : undefined}>
+          <div className={`h-4 w-20 rounded-full mb-3 ${!t ? 'bg-slate-300/60' : ''}`} style={skelPulse} />
+          <div className={`h-8 w-56 rounded-lg mb-2 ${!t ? 'bg-slate-300/60' : ''}`} style={skelPulse} />
+          <div className={`h-4 w-72 rounded-lg ${!t ? 'bg-slate-300/40' : ''}`} style={skelPulse} />
         </div>
         {/* Skeleton metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-2xl bg-white border border-gray-100 p-5 animate-pulse">
+            <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
               <div className="flex justify-between">
                 <div className="space-y-3 flex-1">
-                  <div className="h-3 w-20 bg-gray-100 rounded-full" />
-                  <div className="h-8 w-16 bg-gray-100 rounded-lg" />
+                  <div className={`h-3 w-20 rounded-full ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
+                  <div className={`h-8 w-16 rounded-lg ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
                 </div>
-                <div className="w-11 h-11 bg-gray-100 rounded-2xl" />
+                <div className={`w-11 h-11 rounded-2xl ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
               </div>
             </div>
           ))}
         </div>
         {/* Skeleton secondary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="rounded-2xl bg-white border border-gray-100 p-6 flex items-center justify-center animate-pulse">
-            <div className="w-[130px] h-[130px] rounded-full border-[10px] border-gray-100" />
+          <div className={`rounded-2xl border p-6 flex items-center justify-center animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
+            <div className={`w-[130px] h-[130px] rounded-full border-[10px] ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.skelPulse || 'rgba(255,255,255,0.08)' } : undefined} />
           </div>
           <div className="lg:col-span-2 grid grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-2xl bg-white border border-gray-100 p-5 animate-pulse">
+              <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
                 <div className="space-y-3">
-                  <div className="h-3 w-24 bg-gray-100 rounded-full" />
-                  <div className="h-8 w-14 bg-gray-100 rounded-lg" />
+                  <div className={`h-3 w-24 rounded-full ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
+                  <div className={`h-8 w-14 rounded-lg ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
                 </div>
               </div>
             ))}
@@ -556,10 +621,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className={`text-xl font-extrabold tracking-tight ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>
               {getGreeting()}, {firstName} 👋
             </h2>
-            <p className="text-[13px] text-gray-400 font-medium">
+            <p className={`text-[13px] font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>
               {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · Panel de métricas
             </p>
           </div>
@@ -568,11 +633,15 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         {/* Quick stats pills */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Conversaciones', value: metrics.total, bg: 'bg-blue-50 text-blue-700 border-blue-100' },
-            { label: 'Abiertas', value: metrics.open, bg: 'bg-amber-50 text-amber-700 border-amber-100' },
-            { label: 'Resolución', value: `${metrics.resolutionRate}%`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+            { label: 'Conversaciones', value: metrics.total, bg: 'bg-blue-50 text-blue-700 border-blue-100', darkBg: 'rgba(59,130,246,0.1)', darkBorder: 'rgba(59,130,246,0.2)', darkText: '#93c5fd' },
+            { label: 'Abiertas', value: metrics.open, bg: 'bg-amber-50 text-amber-700 border-amber-100', darkBg: 'rgba(245,158,11,0.1)', darkBorder: 'rgba(245,158,11,0.2)', darkText: '#fcd34d' },
+            { label: 'Resolución', value: `${metrics.resolutionRate}%`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', darkBg: 'rgba(16,185,129,0.1)', darkBorder: 'rgba(16,185,129,0.2)', darkText: '#6ee7b7' },
           ].map((pill, i) => (
-            <div key={i} className={`px-3.5 py-1.5 rounded-xl border ${pill.bg} backdrop-blur-sm`}>
+            <div
+              key={i}
+              className={`px-3.5 py-1.5 rounded-xl border backdrop-blur-sm ${!t ? pill.bg : ''}`}
+              style={t ? { background: isDark ? pill.darkBg : undefined, borderColor: isDark ? pill.darkBorder : undefined, color: isDark ? pill.darkText : undefined } : undefined}
+            >
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{pill.label}</span>
               <p className="text-base font-extrabold leading-tight">{pill.value}</p>
             </div>
@@ -615,7 +684,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {/* ═══════════ PERFORMANCE + SECONDARY ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ animation: 'fadeInUp 0.6s ease-out 300ms both' }}>
         {/* Circular gauge */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 flex flex-col items-center justify-center hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border flex flex-col items-center justify-center transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <CircularProgress
             value={parseFloat(metrics.resolutionRate as string) || 0}
             size={130}
@@ -623,7 +692,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             color={parseFloat(metrics.resolutionRate as string) >= 70 ? '#10b981' : parseFloat(metrics.resolutionRate as string) >= 40 ? '#f59e0b' : '#ef4444'}
             label="Resolución"
           />
-          <p className="text-xs text-gray-400 mt-3 font-medium text-center">Tasa de resolución general</p>
+          <p className={`text-xs mt-3 font-medium text-center ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Tasa de resolución general</p>
         </div>
 
         {/* Secondary metrics */}
@@ -680,26 +749,26 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ animation: 'fadeInUp 0.6s ease-out 400ms both' }}>
         
         {/* Top Contactos */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
                 <Users className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-gray-900">Top Contactos</h3>
-                <p className="text-[11px] text-gray-400 font-medium">Más activos del período</p>
+                <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Top Contactos</h3>
+                <p className={`text-[11px] font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Más activos del período</p>
               </div>
             </div>
           </div>
           <div className="space-y-2">
             {metrics.topContacts.length === 0 ? (
               <div className="text-center py-10">
-                <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-7 h-7 text-gray-200" />
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3`} style={t ? { background: t.emptyBg || 'rgba(255,255,255,0.04)' } : undefined}>
+                  <Users className="w-7 h-7" style={t ? { color: t.emptyIcon } : { color: '#e5e7eb' }} />
                 </div>
-                <p className="text-sm font-medium text-gray-400">Sin datos aún</p>
-                <p className="text-xs text-gray-300 mt-1">Los contactos aparecerán aquí</p>
+                <p className={`text-sm font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.emptyText } : undefined}>Sin datos aún</p>
+                <p className={`text-xs mt-1 ${!t ? 'text-gray-300' : ''}`} style={t ? { color: t.muted } : undefined}>Los contactos aparecerán aquí</p>
               </div>
             ) : (
               metrics.topContacts.map((contact, index) => {
@@ -717,8 +786,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 return (
                   <div
                     key={index}
-                    className="group rounded-xl p-3 hover:bg-gray-50/80 transition-all duration-300"
-                    style={{ animation: `slideInRight 0.5s ease-out ${index * 80}ms both` }}
+                    className={`group rounded-xl p-3 transition-all duration-300 ${!t ? 'hover:bg-gray-50/80' : ''}`}
+                    style={{ animation: `slideInRight 0.5s ease-out ${index * 80}ms both`, ...(t ? { cursor: 'default' } : {}) }}
+                    onMouseEnter={(e) => { if (t && t.rowHover) (e.currentTarget as HTMLDivElement).style.background = t.rowHover; }}
+                    onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
@@ -727,12 +798,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-semibold text-gray-800 text-sm truncate">{contact.name}</span>
-                            <span className="text-gray-300 text-[11px] hidden sm:inline truncate">{contact.phone}</span>
+                            <span className={`font-semibold text-sm truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.heading } : undefined}>{contact.name}</span>
+                            <span className={`text-[11px] hidden sm:inline truncate ${!t ? 'text-gray-300' : ''}`} style={t ? { color: t.muted } : undefined}>{contact.phone}</span>
                           </div>
-                          <span className="font-bold text-gray-600 text-xs bg-gray-50 px-2 py-0.5 rounded-lg ml-2 flex-shrink-0">{contact.count} msgs</span>
+                          <span className={`font-bold text-xs px-2 py-0.5 rounded-lg ml-2 flex-shrink-0 ${!t ? 'text-gray-600 bg-gray-50' : ''}`} style={t ? { color: t.secondary, background: t.badgeBg || 'transparent' } : undefined}>{contact.count} msgs</span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                        <div className={`w-full rounded-full h-1.5 overflow-hidden ${!t ? 'bg-gray-100' : ''}`} style={t ? { background: t.barTrack || 'rgba(255,255,255,0.06)' } : undefined}>
                           <div
                             className={`bg-gradient-to-r ${c.bar} h-full rounded-full`}
                             style={{ width: `${percentage}%`, animation: 'growWidth 1s ease-out 0.3s both' }}
@@ -748,14 +819,14 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
 
         {/* Distribución de Mensajes - Donut Chart */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
               <MessageCircle className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900">Distribución de Mensajes</h3>
-              <p className="text-[11px] text-gray-400 font-medium">Agentes vs Clientes</p>
+              <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Distribución de Mensajes</h3>
+              <p className={`text-[11px] font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Agentes vs Clientes</p>
             </div>
           </div>
           
@@ -794,27 +865,27 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 );
               })()}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold text-gray-900">{metrics.totalMessages.toLocaleString()}</span>
-                <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total</span>
+                <span className={`text-2xl font-extrabold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.value } : undefined}>{metrics.totalMessages.toLocaleString()}</span>
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.label } : undefined}>Total</span>
               </div>
             </div>
             
             {/* Legend + Stats */}
             <div className="flex-1 space-y-3">
-              <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100/60 hover:bg-emerald-50 transition-colors">
+              <div className={`p-3 rounded-xl border transition-colors ${!t ? 'bg-emerald-50/60 border-emerald-100/60 hover:bg-emerald-50' : 'hover:opacity-90'}`} style={t?.legendAgent ? { background: t.legendAgent.bg, borderColor: t.legendAgent.border } : undefined}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
-                  <span className="text-xs font-semibold text-gray-600">Agentes</span>
+                  <span className={`text-xs font-semibold ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.secondary } : undefined}>Agentes</span>
                 </div>
                 <p className="text-xl font-extrabold text-emerald-600">{metrics.agentMessages.toLocaleString()}</p>
                 <p className="text-[10px] text-emerald-500 font-medium">
                   {metrics.totalMessages > 0 ? Math.round((metrics.agentMessages / metrics.totalMessages) * 100) : 0}% del total
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100/60 hover:bg-indigo-50 transition-colors">
+              <div className={`p-3 rounded-xl border transition-colors ${!t ? 'bg-indigo-50/60 border-indigo-100/60 hover:bg-indigo-50' : 'hover:opacity-90'}`} style={t?.legendClient ? { background: t.legendClient.bg, borderColor: t.legendClient.border } : undefined}>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-400" />
-                  <span className="text-xs font-semibold text-gray-600">Clientes</span>
+                  <span className={`text-xs font-semibold ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.secondary } : undefined}>Clientes</span>
                 </div>
                 <p className="text-xl font-extrabold text-indigo-600">{metrics.clientMessages.toLocaleString()}</p>
                 <p className="text-[10px] text-indigo-500 font-medium">
@@ -828,13 +899,13 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD POR HORA ═══════════ */}
       {timeRange === 'today' && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500" style={{ animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/20">
               <Clock className="w-4 h-4 text-white" />
             </div>
-            <h3 className="text-base font-bold text-gray-900">Actividad por Hora</h3>
-            <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">Hoy</span>
+            <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Actividad por Hora</h3>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${!t ? 'text-gray-400 bg-gray-50' : ''}`} style={t ? { color: t.muted, background: t.badgeBg || 'transparent' } : undefined}>Hoy</span>
           </div>
           <div className="flex items-end justify-between gap-0.5 h-40">
             {metrics.hourlyActivity.map((count, hour) => {
@@ -850,9 +921,9 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                         ? 'bg-gradient-to-t from-violet-600 to-violet-400 shadow-sm shadow-violet-300'
                         : count > 0
                         ? 'bg-gradient-to-t from-violet-400 to-violet-200 hover:from-violet-500 hover:to-violet-300'
-                        : 'bg-gray-50'
+                        : ''
                     }`}
-                    style={{ height: `${Math.max(height, count > 0 ? 6 : 2)}%` }}
+                    style={{ height: `${Math.max(height, count > 0 ? 6 : 2)}%`, ...(!isCurrentHour && count === 0 ? { background: t?.emptyBar || undefined } : {}) }}
                   >
                     {count > 0 && (
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -860,7 +931,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  <span className={`text-[10px] mt-1.5 ${isCurrentHour ? 'text-violet-600 font-bold' : 'text-gray-300'}`}>
+                  <span className={`text-[10px] mt-1.5 ${isCurrentHour ? 'text-violet-600 font-bold' : ''}`} style={!isCurrentHour && t ? { color: t.muted } : (!isCurrentHour ? undefined : undefined)}>
                     {hour % 3 === 0 ? `${hour}h` : ''}
                   </span>
                 </div>
@@ -872,13 +943,13 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD DIARIA ═══════════ */}
       {timeRange === 'week' && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500" style={{ animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20">
               <TrendingUp className="w-4 h-4 text-white" />
             </div>
-            <h3 className="text-base font-bold text-gray-900">Conversaciones por Día</h3>
-            <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">Última semana</span>
+            <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Conversaciones por Día</h3>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${!t ? 'text-gray-400 bg-gray-50' : ''}`} style={t ? { color: t.muted, background: t.badgeBg || 'transparent' } : undefined}>Última semana</span>
           </div>
           <div className="flex items-end justify-between gap-3 h-40">
             {metrics.dailyActivity.map((day, index) => {
@@ -894,9 +965,9 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                         ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-200'
                         : day.count > 0
                         ? 'bg-gradient-to-t from-indigo-400 to-indigo-200 hover:from-indigo-500 hover:to-indigo-300'
-                        : 'bg-gray-50'
+                        : ''
                     }`}
-                    style={{ height: `${Math.max(height, day.count > 0 ? 8 : 4)}%` }}
+                    style={{ height: `${Math.max(height, day.count > 0 ? 8 : 4)}%`, ...(!isToday && day.count === 0 ? { background: t?.emptyBar || undefined } : {}) }}
                   >
                     {day.count > 0 && (
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -904,7 +975,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  <span className={`text-xs mt-2 ${isToday ? 'text-indigo-600 font-bold' : 'text-gray-400'}`}>{day.day}</span>
+                  <span className={`text-xs mt-2 ${isToday ? 'text-indigo-600 font-bold' : ''}`} style={!isToday && t ? { color: t.muted } : (!isToday ? undefined : undefined)}>{day.day}</span>
                 </div>
               );
             })}
@@ -917,7 +988,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         <>
           {/* Empty state when no sales data */}
           {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
-            <div className="relative overflow-hidden rounded-2xl border border-gray-100/60 bg-white/80 backdrop-blur-sm">
+            <div className={`relative overflow-hidden rounded-2xl border backdrop-blur-sm ${!t ? 'border-gray-100/60 bg-white/80' : ''}`} style={cardStyle()}>
               {/* Subtle pattern */}
               <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '20px 20px' }} />
               
@@ -928,8 +999,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                     <ShoppingCart className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Ventas y Transacciones</h2>
-                    <p className="text-sm text-gray-400 font-medium">Seguimiento en tiempo real de tus ventas</p>
+                    <h2 className={`text-xl font-extrabold tracking-tight ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ventas y Transacciones</h2>
+                    <p className={`text-sm font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Seguimiento en tiempo real de tus ventas</p>
                   </div>
                 </div>
 
@@ -941,14 +1012,14 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                     { title: 'TICKET PROMEDIO', value: '$0', icon: <TrendingUp className="w-4 h-4" />, gradient: 'from-cyan-500 to-blue-600' },
                     { title: 'CONVERSIÓN', value: '0%', icon: <Link2 className="w-4 h-4" />, gradient: 'from-violet-500 to-purple-600' },
                   ].map((card, i) => (
-                    <div key={i} className="rounded-xl p-4 border border-gray-50 bg-gray-50/50">
+                    <div key={i} className={`rounded-xl p-4 border ${!t ? 'border-gray-50 bg-gray-50/50' : ''}`} style={t?.salesPreviewCard ? { background: t.salesPreviewCard.bg, borderColor: t.salesPreviewCard.border } : undefined}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{card.title}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${!t ? 'text-gray-300' : ''}`} style={t ? { color: t.muted } : undefined}>{card.title}</span>
                         <div className={`p-1.5 rounded-lg bg-gradient-to-br ${card.gradient} text-white opacity-30`}>
                           {card.icon}
                         </div>
                       </div>
-                      <p className="text-2xl font-extrabold text-gray-200">{card.value}</p>
+                      <p className={`text-2xl font-extrabold ${!t ? 'text-gray-200' : ''}`} style={t ? { color: t.muted } : undefined}>{card.value}</p>
                     </div>
                   ))}
                 </div>
@@ -974,8 +1045,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 <ShoppingCart className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Ventas y Transacciones</h2>
-                <p className="text-sm text-gray-400 font-medium">Seguimiento en tiempo real de tus ventas</p>
+                <h2 className={`text-xl font-extrabold tracking-tight ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ventas y Transacciones</h2>
+                <p className={`text-sm font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Seguimiento en tiempo real de tus ventas</p>
               </div>
             </div>
             {salesStats?.all_time?.total_sales > 0 && (
@@ -1038,12 +1109,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Productos */}
             {salesStats.top_products && salesStats.top_products.length > 0 && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                     <Package className="w-4 h-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-gray-900">Top Productos</h3>
+                  <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Top Productos</h3>
                 </div>
                 <div className="space-y-4">
                   {salesStats.top_products.slice(0, 5).map((product: SalesProduct, index: number) => {
@@ -1057,17 +1128,17 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center flex-shrink-0">
                               <span className="text-[10px] font-bold text-white">{index + 1}</span>
                             </div>
-                            <span className="font-semibold text-gray-800 truncate">{product.product_name}</span>
+                            <span className={`font-semibold truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.heading } : undefined}>{product.product_name}</span>
                             {product.product_category && (
-                              <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md font-medium">{product.product_category}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${!t ? 'text-gray-400 bg-gray-50' : ''}`} style={t ? { color: t.muted, background: t.badgeBg || 'transparent' } : undefined}>{product.product_category}</span>
                             )}
                           </div>
                           <div className="text-right ml-2 flex items-center gap-2">
-                            <span className="font-bold text-gray-700 text-xs">{formatCurrency(product.revenue, salesStats.currency)}</span>
-                            <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md">{product.units_sold} uds</span>
+                            <span className={`font-bold text-xs ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.secondary } : undefined}>{formatCurrency(product.revenue, salesStats.currency)}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${!t ? 'text-gray-400 bg-gray-50' : ''}`} style={t ? { color: t.muted, background: t.badgeBg || 'transparent' } : undefined}>{product.units_sold} uds</span>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
+                        <div className={`w-full rounded-full h-1.5 overflow-hidden ${!t ? 'bg-gray-50' : ''}`} style={t ? { background: t.barTrack || 'rgba(255,255,255,0.06)' } : undefined}>
                           <div
                             className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-700 ease-out"
                             style={{ width: `${percentage}%` }}
@@ -1082,26 +1153,29 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
             {/* Ventas Recientes */}
             {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
                     <ShoppingCart className="w-4 h-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-gray-900">Ventas Recientes</h3>
+                  <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ventas Recientes</h3>
                 </div>
                 <div className="space-y-1 max-h-80 overflow-y-auto">
                   {salesStats.recent_sales.slice(0, 10).map((sale: SaleEntry) => (
-                    <div key={sale.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-gray-50/80 transition-colors">
+                    <div key={sale.id} className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors ${!t ? 'hover:bg-gray-50/80' : ''}`}
+                      onMouseEnter={(e) => { if (t && t.rowHover) (e.currentTarget as HTMLDivElement).style.background = t.rowHover; }}
+                      onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                    >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{sale.product_name}</p>
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-0.5">
+                        <p className={`text-sm font-semibold truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.heading } : undefined}>{sale.product_name}</p>
+                        <div className={`flex items-center gap-1.5 text-[11px] mt-0.5 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>
                           {sale.customer_name && <span>{sale.customer_name}</span>}
                           {sale.customer_phone && <span>· {sale.customer_phone}</span>}
                           <span>· {sale.quantity}x</span>
                         </div>
                       </div>
                       <div className="text-right ml-3">
-                        <p className="text-sm font-bold text-gray-900">{sale.formatted_total}</p>
+                        <p className={`text-sm font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.value } : undefined}>{sale.formatted_total}</p>
                         <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md ${
                           sale.status_color === 'green' ? 'bg-emerald-50 text-emerald-600' :
                           sale.status_color === 'blue' ? 'bg-blue-50 text-blue-600' :
@@ -1119,12 +1193,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
           {/* Ventas por Día (gráfico de barras) */}
           {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-500">
+            <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                   <TrendingUp className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="text-base font-bold text-gray-900">Ingresos por Día</h3>
+                <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ingresos por Día</h3>
               </div>
               <div className="flex items-end justify-between gap-1 h-40">
                 {salesStats.daily_sales.map((day: DailySale, index: number) => {
@@ -1138,9 +1212,9 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                         className={`w-full rounded-md transition-all cursor-pointer relative group ${
                           day.revenue > 0
                             ? 'bg-gradient-to-t from-emerald-500 to-green-300 hover:from-emerald-600 hover:to-green-400'
-                            : 'bg-gray-50'
+                            : ''
                         }`}
-                        style={{ height: `${Math.max(height, day.revenue > 0 ? 6 : 2)}%` }}
+                        style={{ height: `${Math.max(height, day.revenue > 0 ? 6 : 2)}%`, ...(day.revenue === 0 ? { background: t?.emptyBar || undefined } : {}) }}
                       >
                         {day.revenue > 0 && (
                           <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -1148,7 +1222,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                           </div>
                         )}
                       </div>
-                      <span className="text-[10px] text-gray-400 mt-1.5 truncate w-full text-center">{dateLabel}</span>
+                      <span className={`text-[10px] mt-1.5 truncate w-full text-center ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>{dateLabel}</span>
                     </div>
                   );
                 })}

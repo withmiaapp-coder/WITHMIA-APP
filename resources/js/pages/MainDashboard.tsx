@@ -161,6 +161,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { hasTheme, isDark } = useTheme();
 
   // Reset logo error when logo_url changes
   useEffect(() => {
@@ -190,35 +191,35 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       icon: BookOpen,
       label: 'Centro de ayuda',
       href: 'https://withmia.com/ayuda',
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
       icon: MessageCircle,
       label: 'Contactar soporte',
       href: 'https://withmia.com/soporte',
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
       icon: FileText,
       label: 'Documentación',
       href: 'https://withmia.com/docs',
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
       icon: MessageSquare,
       label: 'Preguntas frecuentes',
       href: 'https://withmia.com/faq',
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
       icon: Users,
       label: 'Comunidad',
       href: 'https://withmia.com/comunidad',
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     }
   ];
@@ -228,14 +229,16 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       icon: Mail,
       label: user.email,
       onClick: null,
-      className: 'text-neutral-500 cursor-default hover:bg-transparent pointer-events-none',
+      className: isDark ? 'text-gray-400 cursor-default hover:bg-transparent pointer-events-none' : 'text-neutral-500 cursor-default hover:bg-transparent pointer-events-none',
       isEmail: true
     },
     {
       icon: Coffee,
       label: 'Perfil',
       onClick: onNavigateToProfile || null,
-      className: onNavigateToProfile ? 'text-neutral-700 hover:bg-neutral-50' : 'text-neutral-400 cursor-not-allowed hover:bg-transparent',
+      className: onNavigateToProfile
+        ? (isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50')
+        : (isDark ? 'text-gray-500 cursor-not-allowed hover:bg-transparent' : 'text-neutral-400 cursor-not-allowed hover:bg-transparent'),
       isDisabled: !onNavigateToProfile
     },
     {
@@ -247,7 +250,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
           setIsOpen(false);
         }
       },
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
@@ -259,14 +262,14 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
           setIsOpen(false);
         }
       },
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
     {
       icon: Heart,
       label: 'Ayuda',
       onClick: () => setShowHelpSubmenu(!showHelpSubmenu),
-      className: 'text-neutral-700 hover:bg-neutral-50',
+      className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       hasSubmenu: true
     },
     {
@@ -278,7 +281,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       onClick: () => {
         window.location.href = '/logout';
       },
-      className: 'text-red-600 hover:bg-red-50',
+      className: isDark ? 'text-red-400 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50',
       isDanger: true
     }
   ];
@@ -288,7 +291,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       {/* Dropdown Menu - Aparece ARRIBA */}
       {isOpen && (
         <div 
-          className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-2xl shadow-2xl border border-neutral-200 z-[100]"
+          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl shadow-2xl border z-[100] ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200'}`}
           style={{
             minWidth: isCollapsed ? '320px' : 'auto',
             animation: 'slideUpMenu 0.2s ease-out',
@@ -300,7 +303,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
             {menuItems.map((item, index) => {
               if (item.type === 'divider') {
                 return (
-                  <div key={`divider-${index}`} className="h-px bg-neutral-200 my-2 mx-3" />
+                  <div key={`divider-${index}`} className={`h-px my-2 mx-3 ${isDark ? 'bg-white/10' : 'bg-neutral-200'}`} />
                 );
               }
 
@@ -326,7 +329,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                   >
                     <div className="flex items-center gap-3">
                       {Icon && (
-                        <div className={`flex items-center justify-center ${item.isEmail ? 'text-neutral-400' : item.isDanger ? 'text-red-500' : 'text-neutral-600'}`}>
+                        <div className={`flex items-center justify-center ${item.isEmail ? (isDark ? 'text-gray-500' : 'text-neutral-400') : item.isDanger ? (isDark ? 'text-red-400' : 'text-red-500') : (isDark ? 'text-gray-400' : 'text-neutral-600')}`}>
                           <Icon className="w-5 h-5" />
                         </div>
                       )}
@@ -336,14 +339,14 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                     </div>
                     
                     {item.hasSubmenu && (
-                      <ChevronRight className="w-4 h-4 text-neutral-400" />
+                      <ChevronRight className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-neutral-400'}`} />
                     )}
                   </button>
 
                   {/* Submeno� de Ayuda */}
                   {item.hasSubmenu && showHelpSubmenu && (
                     <div 
-                      className="absolute left-full bg-white rounded-xl shadow-2xl border border-neutral-200 min-w-[220px] z-[9999]"
+                      className={`absolute left-full rounded-xl shadow-2xl border min-w-[220px] z-[9999] ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200'}`}
                       style={{ 
                         animation: 'slideInRight 0.2s ease-out',
                         top: '-30px',
@@ -365,7 +368,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                               }}
                               className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${subItem.className}`}
                             >
-                              <SubIcon className="w-4 h-4 text-neutral-500" />
+                              <SubIcon className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-neutral-500'}`} />
                               <span className="text-sm font-medium">{subItem.label}</span>
                             </a>
                           );
@@ -381,7 +384,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       )}
 
       {/* User Profile Button */}
-      <div className="bg-white p-3 rounded-xl border border-neutral-200 shadow-sm hover:shadow-md transition-all duration-200">
+      <div className={`p-3 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-neutral-200'}`}>
         <button 
           onClick={() => {
             if (isCollapsed) {
@@ -390,7 +393,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
               setIsOpen(!isOpen);
             }
           }}
-          className="flex items-center w-full hover:bg-neutral-50 rounded-lg px-2 py-1.5 transition-all duration-200"
+          className={`flex items-center w-full rounded-lg px-2 py-1.5 transition-all duration-200 ${isDark ? 'hover:bg-white/5' : 'hover:bg-neutral-50'}`}
         >
           {isCollapsed ? (
             // Versio�n compacta - solo avatar
@@ -437,7 +440,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
               </div>
               
               <div className="flex-1 min-w-0 text-left">
-                <p className="font-semibold text-neutral-800 truncate text-sm">
+                <p className={`font-semibold truncate text-sm ${isDark ? 'text-gray-200' : 'text-neutral-800'}`}>
                   {user.company}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -467,7 +470,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                   height="20" 
                   viewBox="0 0 20 20" 
                   fill="none" 
-                  className="text-neutral-400"
+                  className={isDark ? 'text-gray-500' : 'text-neutral-400'}
                 >
                   <circle cx="10" cy="5" r="1.5" fill="currentColor" />
                   <circle cx="10" cy="10" r="1.5" fill="currentColor" />
