@@ -640,7 +640,11 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             <div
               key={i}
               className={`px-3.5 py-1.5 rounded-xl border backdrop-blur-sm ${!t ? pill.bg : ''}`}
-              style={t ? { background: isDark ? pill.darkBg : undefined, borderColor: isDark ? pill.darkBorder : undefined, color: isDark ? pill.darkText : undefined } : undefined}
+              style={t ? {
+                background: isDark ? pill.darkBg : 'var(--theme-content-card-bg)',
+                borderColor: isDark ? pill.darkBorder : 'var(--theme-content-card-border)',
+                color: isDark ? pill.darkText : 'var(--theme-text-primary)',
+              } : undefined}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{pill.label}</span>
               <p className="text-base font-extrabold leading-tight">{pill.value}</p>

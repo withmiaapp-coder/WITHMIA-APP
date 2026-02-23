@@ -152,6 +152,73 @@ interface ConversationsInterfaceProps {
 
 const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ currentAgentId }) => {
   const { hasTheme, isDark } = useTheme();
+
+  // ═══════════════════════════════════════════════════════════
+  // Theme styles memo — uses CSS variables from ThemeContext
+  // When hasTheme=true, applies palette colors; when false, falls back to Tailwind defaults
+  // ═══════════════════════════════════════════════════════════
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      // Main containers
+      containerBg: isDark ? 'var(--theme-content-bg)' : 'var(--theme-content-bg)',
+      panelBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      panelBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      // Header
+      headerBg: isDark ? 'var(--theme-header-bg)' : 'var(--theme-header-bg)',
+      headerBorder: isDark ? 'var(--theme-header-border)' : 'var(--theme-header-border)',
+      // Text
+      textPrimary: 'var(--theme-text-primary)',
+      textSecondary: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      // Buttons / interactive
+      buttonBg: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-content-card-bg)',
+      buttonBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      buttonHoverBg: isDark ? 'var(--theme-sidebar-active-bg)' : 'rgba(255,255,255,0.9)',
+      // Input
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      inputText: 'var(--theme-text-primary)',
+      // Badges / tabs
+      badgeBg: isDark ? 'var(--theme-badge-bg)' : 'var(--theme-badge-bg)',
+      badgeText: isDark ? 'var(--theme-badge-text)' : 'var(--theme-badge-text)',
+      badgeBorder: isDark ? 'var(--theme-badge-border)' : 'var(--theme-badge-border)',
+      // Conversation cards
+      cardBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      cardHover: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-sidebar-hover)',
+      cardActive: isDark ? 'var(--theme-sidebar-active-bg)' : 'var(--theme-sidebar-active-bg)',
+      // Dropdown/popover
+      dropdownBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      dropdownBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      dropdownHover: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-sidebar-hover)',
+      // Chat area
+      chatBg: isDark ? 'var(--theme-content-bg)' : 'var(--theme-content-bg)',
+      chatHeaderBg: isDark ? 'var(--theme-header-bg)' : 'var(--theme-header-bg)',
+      chatHeaderBorder: isDark ? 'var(--theme-header-border)' : 'var(--theme-header-border)',
+      // Dividers
+      divider: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      // Icons
+      iconColor: isDark ? 'var(--theme-icon-inactive)' : 'var(--theme-icon-inactive)',
+      // Right panel
+      rightPanelBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      // Message bubbles (incoming)
+      incomingBubbleBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      incomingBubbleBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      // Accent colors (keep using blue for active tab / send button)
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme, isDark]);
+
+  // Helper to apply container/card themed styles
+  const themed = (base?: React.CSSProperties): React.CSSProperties | undefined => {
+    if (!t) return base;
+    return {
+      background: t.panelBg,
+      borderColor: t.panelBorder,
+      ...(base || {}),
+    };
+  };
+
   // 🏷️ Labels con colores reales (cache global compartido)
   useLabels(); // Solo para inicializar la carga de labels al montar
   const getLabelColor = (labelTitle: string): string => {
@@ -3474,24 +3541,28 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
   }
 
   return (
-    <div ref={containerRef} className={`flex h-full backdrop-blur-3xl border overflow-hidden ${isDark ? 'bg-[#0f1219]/80 border-white/10' : 'bg-white/10 border-white/20'}`}>
+    <div ref={containerRef} className={`flex h-full backdrop-blur-3xl border overflow-hidden ${!t ? 'bg-white/10 border-white/20' : ''}`}
+      style={t ? { background: t.containerBg, borderColor: t.panelBorder } : undefined}
+    >
       
       {/* Lista de Conversaciones - Panel Izquierdo */}
       <div 
-        className={`backdrop-blur-2xl flex flex-col shadow-sm border-r ${isDark ? 'bg-[#111827]/90 border-white/10' : 'bg-white/35 border-white/30'}`}
-        style={{ width: `${leftPanelWidth}%` }}
+        className={`backdrop-blur-2xl flex flex-col shadow-sm border-r ${!t ? 'bg-white/35 border-white/30' : ''}`}
+        style={{ width: `${leftPanelWidth}%`, ...(t ? { background: t.panelBg, borderColor: t.panelBorder } : {}) }}
       >
         
         {/* Header de Conversaciones */}
-        <div className={`p-4 border-b backdrop-blur-xl shadow-sm ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white/60 border-gray-200/40'}`}>
+        <div className={`p-4 border-b backdrop-blur-xl shadow-sm ${!t ? 'bg-white/60 border-gray-200/40' : ''}`}
+          style={t ? { background: t.headerBg, borderColor: t.headerBorder } : undefined}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg shadow-md">
                 <MessageCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className={`text-lg font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Conversaciones</h2>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <h2 className={`text-lg font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Conversaciones</h2>
+                <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                   {(conversations || []).length} de {totalConversations} {hasMorePages && '(m?s disponibles)'}
                 </p>
               </div>
@@ -3500,10 +3571,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               {/* FASE 3: Boton de filtros avanzados */}
               <button
                 onClick={() => setShowAdvancedFilters(true)}
-                className={`p-2 shadow-sm hover:shadow rounded-xl transition-all duration-300 backdrop-blur-sm border relative ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white/70 hover:bg-white/90 border-gray-200/30'}`}
+                className={`p-2 shadow-sm hover:shadow rounded-xl transition-all duration-300 backdrop-blur-sm border relative ${!t ? 'bg-white/70 hover:bg-white/90 border-gray-200/30' : ''}`}
+                style={t ? { background: t.buttonBg, borderColor: t.buttonBorder } : undefined}
                 title="Filtros avanzados (Ctrl+F)"
               >
-                <Filter className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`} />
+                <Filter className={`w-4 h-4 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined} />
                 {appliedFilters && (
                   appliedFilters.dateRange !== 'all' ||
                   (appliedFilters.status && appliedFilters.status.length > 0) ||
@@ -3522,18 +3594,22 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div className="relative" ref={settingsMenuRef}>
                 <button 
                   onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                  className={`p-2 shadow-sm hover:shadow rounded-xl transition-all duration-300 backdrop-blur-sm border ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white/70 hover:bg-white/90 border-gray-200/30'}`}
+                  className={`p-2 shadow-sm hover:shadow rounded-xl transition-all duration-300 backdrop-blur-sm border ${!t ? 'bg-white/70 hover:bg-white/90 border-gray-200/30' : ''}`}
+                  style={t ? { background: t.buttonBg, borderColor: t.buttonBorder } : undefined}
                   title="Configuración"
                 >
-                  <Settings className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`} />
+                  <Settings className={`w-4 h-4 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined} />
                 </button>
                 
                 {/* Menu desplegable */}
                 {isSettingsOpen && (
-                  <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border py-2 z-50 animate-fade-in ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
+                  <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border py-2 z-50 animate-fade-in ${!t ? 'bg-white border-gray-200' : ''}`}
+                    style={t ? { background: t.dropdownBg, borderColor: t.dropdownBorder } : undefined}
+                  >
                     <button
                       onClick={handleDownloadChat}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-100'}`}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2 ${!t ? 'text-gray-700 hover:bg-gray-100' : ''}`}
+                      style={t ? { color: t.textPrimary } : undefined}
                       disabled={!activeConversation}
                     >
                       <span></span>
@@ -3542,7 +3618,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
                     <button
                       onClick={handleDownloadAllConversations}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-100'}`}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2 ${!t ? 'text-gray-700 hover:bg-gray-100' : ''}`}
+                      style={t ? { color: t.textPrimary } : undefined}
                     >
                       <span></span>
                       <span>Descargar todas</span>
@@ -3559,12 +3636,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             {isSearching ? (
               <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 w-4 h-4 z-10 animate-spin" />
             ) : (
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 z-10 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
             )}
             <input
               type="text"
               placeholder="Buscar en todas las conversaciones"
-              className={`w-full pl-10 pr-10 py-2 border rounded-xl backdrop-blur-xl transition-all duration-300 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 ${isDark ? 'bg-white/5 border-white/10 text-gray-100 placeholder-gray-500 focus:bg-white/10' : 'bg-white/70 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:bg-white'}`}
+              className={`w-full pl-10 pr-10 py-2 border rounded-xl backdrop-blur-xl transition-all duration-300 focus:ring-2 focus:ring-blue-400/50 focus:border-blue-300 ${!t ? 'bg-white/70 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:bg-white' : 'placeholder-gray-500'}`}
+              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -3574,7 +3652,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   setSearchTerm('');
                   setSearchResults(null);
                 }}
-                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${!t ? 'text-gray-400 hover:text-gray-600' : ''}`}
+                style={t ? { color: t.textMuted } : undefined}
                 title="Limpiar busqueda"
               >
                 <X className="w-4 h-4" />
@@ -3584,7 +3663,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           
           {/* Indicador de resultados de búsqueda */}
           {searchTerm && searchTerm.length >= 2 && !isSearching && (
-            <div className={`mb-3 px-3 py-2.5 bg-gradient-to-r border rounded-xl text-xs font-semibold shadow-md backdrop-blur-sm ${isDark ? 'from-blue-900/30 to-blue-800/30 border-blue-700 text-blue-200' : 'from-blue-50 to-blue-100 border-blue-300 text-blue-800'}`}>
+            <div className={`mb-3 px-3 py-2.5 bg-gradient-to-r border rounded-xl text-xs font-semibold shadow-md backdrop-blur-sm ${!t ? 'from-blue-50 to-blue-100 border-blue-300 text-blue-800' : ''}`}
+              style={t ? { background: t.panelBg, borderColor: t.panelBorder, color: t.textPrimary } : undefined}
+            >
               {(filteredConversations || []).length === 0 ? (
                 <span>🔍 No se encontraron resultados para "{searchTerm}"</span>
               ) : (
@@ -3623,16 +3704,19 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 flex items-center space-x-1 ${
                   selectedFilter === filter.id
                     ? 'bg-blue-500 text-white shadow-md'
-                    : isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10' : 'bg-white/30 text-gray-700 hover:bg-white/50 border border-gray-200/50'
+                    : !t ? 'bg-white/30 text-gray-700 hover:bg-white/50 border border-gray-200/50' : 'border'
                 }`}
+                style={selectedFilter !== filter.id && t ? { background: t.buttonBg, borderColor: t.buttonBorder, color: t.textPrimary } : undefined}
               >
                 <span>{filter.icon}</span>
                 <span>{filter.label}</span>
                 <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
                   selectedFilter === filter.id 
                     ? 'bg-white/30 text-white' 
-                    : isDark ? 'bg-white/10 text-gray-400' : 'bg-gray-200 text-gray-600'
-                }`}>
+                    : !t ? 'bg-gray-200 text-gray-600' : ''
+                }`}
+                  style={selectedFilter !== filter.id && t ? { background: t.badgeBg, color: t.badgeText } : undefined}
+                >
                   {filter.count}
                 </span>
               </button>
@@ -3648,8 +3732,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         >
           {(filteredConversations || []).length === 0 ? (
             <div className="p-8 text-center">
-              <MessageCircle className={`w-12 h-12 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
-              <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <MessageCircle className={`w-12 h-12 mx-auto mb-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+              <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>
                 {searchTerm 
                   ? `No se encontraron resultados para "${searchTerm}"`
                   : 'No hay conversaciones'}
@@ -3687,9 +3771,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       transform: `translateY(${virtualRow.start}px)`
                     }}
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`p-4 border-b cursor-pointer transition-all duration-300 ${isDark ? 'border-white/5 hover:bg-white/5' : 'border-gray-100/40 hover:bg-blue-50/60'} ${
-                      activeConversation?.id === conversation.id ? (isDark ? 'bg-white/10 border-r-4 border-r-blue-500 shadow-inner' : 'bg-blue-50/80 border-r-4 border-r-blue-500 shadow-inner') : ''
-                    }`}
+                    className={`p-4 border-b cursor-pointer transition-all duration-300 ${!t ? 'border-gray-100/40 hover:bg-blue-50/60' : ''} ${
+                      activeConversation?.id === conversation.id ? 'border-r-4 border-r-blue-500 shadow-inner' : ''
+                    } ${activeConversation?.id === conversation.id && !t ? 'bg-blue-50/80' : ''}`}
+                    style={t ? { borderBottomColor: t.cardBorder, ...(activeConversation?.id === conversation.id ? { background: t.cardActive } : {}) } : undefined}
                   >
                     <div className="flex items-start space-x-3">
                       <div className="relative">
@@ -3724,7 +3809,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className={`font-semibold truncate ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>
+                          <h4 className={`font-semibold truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                             {searchTerm && conversation.contact?.name ? (() => {
                               const normName = normalizeText(conversation.contact.name);
                               const normSearch = normalizeText(searchTerm);
@@ -3736,10 +3821,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               return <>{before}<span className="bg-yellow-200 text-yellow-900 rounded px-0.5">{match}</span>{after}</>;
                             })() : conversation.contact.name}
                           </h4>
-                          <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{formatTimestamp(conversation.last_message.timestamp || 0)}</span>
+                          <span className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{formatTimestamp(conversation.last_message.timestamp || 0)}</span>
                         </div>
                         
-                        <p className={`text-sm truncate mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <p className={`text-sm truncate mb-2 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>
                           {searchTerm && (conversation._matchingMessage as Message | undefined)?.content ? (
                             // Mostrar mensaje que coincide con la búsqueda (estilo WhatsApp)
                             (() => {
@@ -3815,7 +3900,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           {conversationsLoading && hasMorePages && (conversations || []).length > 0 && (
             <div className="p-4 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-blue-500 mr-2" />
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Cargando más...</span>
+              <span className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Cargando más...</span>
             </div>
           )}
         </div>
@@ -3823,22 +3908,24 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
       {/* Divisor Redimensionable */}
       <div 
-        className={`w-1 cursor-col-resize transition-all duration-200 relative group ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-200/30 hover:bg-gray-300/50'}`}
+        className={`w-1 cursor-col-resize transition-all duration-200 relative group ${!t ? 'bg-gray-200/30 hover:bg-gray-300/50' : ''}`}
+        style={t ? { background: t.divider } : undefined}
         onMouseDown={() => setIsResizing(true)}
       >
         <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-gray-400/10" />
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="flex flex-col gap-1">
-            <div className={`w-0.5 h-1 rounded ${isDark ? 'bg-gray-500/70' : 'bg-gray-400/70'}`}></div>
-            <div className={`w-0.5 h-1 rounded ${isDark ? 'bg-gray-500/70' : 'bg-gray-400/70'}`}></div>
-            <div className={`w-0.5 h-1 rounded ${isDark ? 'bg-gray-500/70' : 'bg-gray-400/70'}`}></div>
+            <div className={`w-0.5 h-1 rounded ${!t ? 'bg-gray-400/70' : ''}`} style={t ? { background: t.textMuted } : undefined}></div>
+            <div className={`w-0.5 h-1 rounded ${!t ? 'bg-gray-400/70' : ''}`} style={t ? { background: t.textMuted } : undefined}></div>
+            <div className={`w-0.5 h-1 rounded ${!t ? 'bg-gray-400/70' : ''}`} style={t ? { background: t.textMuted } : undefined}></div>
           </div>
         </div>
       </div>
 
       {/* Chat Principal - Panel Central */}
       <div 
-        className={`flex-1 flex flex-col backdrop-blur-xl relative ${isDark ? 'bg-[#111827]/90' : 'bg-white/10'}`}
+        className={`flex-1 flex flex-col backdrop-blur-xl relative ${!t ? 'bg-white/10' : ''}`}
+        style={t ? { background: t.chatBg } : undefined}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -3857,26 +3944,27 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
         {/* 📎 MODAL PREVIEW DE ARCHIVO — estilo WhatsApp claro, solo panel derecho */}
         {stagedFile && !isUploadingFile && (
-          <div className={`absolute inset-0 z-[60] flex flex-col ${isDark ? 'bg-[#111827]' : 'bg-gray-50'}`}>
+          <div className={`absolute inset-0 z-[60] flex flex-col ${!t ? 'bg-gray-50' : ''}`} style={t ? { background: t.containerBg } : undefined}>
             {/* Header */}
-            <div className={`flex items-center justify-between px-4 py-3 border-b shadow-sm ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className={`flex items-center justify-between px-4 py-3 border-b shadow-sm ${!t ? 'bg-white border-gray-200' : ''}`} style={t ? { background: t.headerBg, borderColor: t.headerBorder } : undefined}>
               <button
                 type="button"
                 onClick={cancelStagedFile}
-                className={`p-2 rounded-full transition-colors ${isDark ? 'text-gray-400 hover:bg-white/10 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
+                className={`p-2 rounded-full transition-colors ${!t ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-800' : ''}`}
+                style={t ? { color: t.textMuted } : undefined}
                 title="Cancelar"
               >
                 <X className="w-6 h-6" />
               </button>
               <div className="text-center flex-1 min-w-0 px-4">
-                <p className={`text-sm truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{stagedFile.name}</p>
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{(stagedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className={`text-sm truncate font-medium ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{stagedFile.name}</p>
+                <p className={`text-xs ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{(stagedFile.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
               <div className="w-10" /> {/* Spacer para centrar */}
             </div>
 
             {/* Preview area */}
-            <div className={`flex-1 flex items-center justify-center p-6 overflow-hidden ${isDark ? 'bg-[#111827]' : 'bg-gray-50'}`}>
+            <div className={`flex-1 flex items-center justify-center p-6 overflow-hidden ${!t ? 'bg-gray-50' : ''}`} style={t ? { background: t.containerBg } : undefined}>
               {stagedFile.type.startsWith('image/') && stagedFilePreviewUrl ? (
                 <img
                   src={stagedFilePreviewUrl}
@@ -3890,7 +3978,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   className="max-w-full max-h-full rounded-lg shadow-lg"
                 />
               ) : (
-                <div className={`flex flex-col items-center gap-4 p-8 rounded-2xl shadow-md ${isDark ? 'bg-[#1a1f2e]' : 'bg-white'}`}>
+                <div className={`flex flex-col items-center gap-4 p-8 rounded-2xl shadow-md ${!t ? 'bg-white' : ''}`} style={t ? { background: t.panelBg } : undefined}>
                   <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${
                     stagedFile.type.includes('pdf') ? 'bg-red-50' :
                     stagedFile.type.startsWith('audio/') ? 'bg-green-50' :
@@ -3910,8 +3998,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <File className="w-12 h-12 text-gray-400" />
                     )}
                   </div>
-                  <p className={`text-lg font-medium text-center max-w-xs truncate ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{stagedFile.name}</p>
-                  <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <p className={`text-lg font-medium text-center max-w-xs truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{stagedFile.name}</p>
+                  <p className={`text-sm ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                     {stagedFile.type.split('/').pop()?.toUpperCase() || 'Archivo'} · {(stagedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -3919,7 +4007,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             </div>
 
             {/* Footer: caption + send */}
-            <div className={`px-4 py-3 border-t flex items-center gap-3 ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className={`px-4 py-3 border-t flex items-center gap-3 ${!t ? 'bg-white border-gray-200' : ''}`} style={t ? { background: t.headerBg, borderColor: t.headerBorder } : undefined}>
               <div className="flex-1">
                 <input
                   ref={fileCaptionInputRef}
@@ -3928,7 +4016,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   onChange={(e) => setFileCaption(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendStagedFile(); } }}
                   placeholder="Escribe un mensaje..."
-                  className={`w-full px-4 py-2.5 rounded-full outline-none focus:ring-1 focus:ring-blue-400 text-sm border ${isDark ? 'bg-[#111827] text-gray-100 placeholder-gray-500 border-white/10' : 'bg-gray-100 text-gray-800 placeholder-gray-400 border-gray-200'}`}
+                  className={`w-full px-4 py-2.5 rounded-full outline-none focus:ring-1 focus:ring-blue-400 text-sm border ${!t ? 'bg-gray-100 text-gray-800 placeholder-gray-400 border-gray-200' : 'placeholder-gray-500'}`}
+                  style={t ? { background: t.inputBg, color: t.inputText, borderColor: t.inputBorder } : undefined}
                 />
               </div>
               <button
@@ -3947,7 +4036,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           <>
             {/* Header del Chat */}
             <div 
-              className={`p-4 backdrop-blur-xl cursor-pointer transition-all duration-300 border-b ${isDark ? 'bg-white/[0.03] hover:bg-white/[0.05] border-white/10' : 'bg-white/50 hover:bg-white/60 border-gray-200/30'}`}
+              className={`p-4 backdrop-blur-xl cursor-pointer transition-all duration-300 border-b ${!t ? 'bg-white/50 hover:bg-white/60 border-gray-200/30' : ''}`}
+              style={t ? { background: t.chatHeaderBg, borderColor: t.chatHeaderBorder } : undefined}
               onClick={toggleRightPanel}
             >
               <div className="flex items-center justify-between">
@@ -3977,28 +4067,30 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     )}
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>{activeConversation.contact.name}</h3>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{activeConversation.contact.email}</p>
+                    <h3 className={`font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{activeConversation.contact.name}</h3>
+                    <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{activeConversation.contact.email}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                   {/*  B?SQUEDA EXPANDIBLE ELEGANTE */}
                   <div className={`flex items-center transition-all duration-300 ease-in-out ${
-                    showSearchBar ? (isDark ? 'bg-[#1a1f2e] rounded-lg shadow-lg px-3 py-1.5' : 'bg-white rounded-lg shadow-lg px-3 py-1.5') : ''
-                  }`}>
+                    showSearchBar ? (!t ? 'bg-white rounded-lg shadow-lg px-3 py-1.5' : 'rounded-lg shadow-lg px-3 py-1.5') : ''
+                  }`}
+                  style={showSearchBar && t ? { background: t.panelBg } : undefined}
+                  >
                     {!showSearchBar ? (
                       <button 
                         onClick={() => setShowSearchBar(true)}
-                        className={`p-2 rounded-lg transition-all duration-300 ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-white/20 hover:bg-white/30 text-gray-600'}`}
-                        title="Buscar en chat"
+                        className={`p-2 rounded-lg transition-all duration-300 ${!t ? 'bg-white/20 hover:bg-white/30 text-gray-600' : ''}`}
+                        style={t ? { background: t.buttonBg, color: t.iconColor } : undefined}
                       >
                         <Search className="w-4 h-4" />
                       </button>
 
                     ) : (
                       <>
-                        <Search className={`w-4 h-4 mr-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                        <Search className={`w-4 h-4 mr-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                         <input
                           type="text"
                           value={searchQuery}
@@ -4013,7 +4105,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             }
                           }}
                           placeholder="Buscar..."
-                          className={`outline-none text-sm bg-transparent w-32 md:w-48 animate-fadeIn ${isDark ? 'text-gray-100 placeholder:text-gray-500' : 'text-gray-900 placeholder:text-gray-500'}`}
+                          className={`outline-none text-sm bg-transparent w-32 md:w-48 animate-fadeIn ${!t ? 'text-gray-900 placeholder:text-gray-500' : 'placeholder:text-gray-500'}`}
+                          style={t ? { color: t.textPrimary } : undefined}
                           autoFocus
                         />
                         
@@ -4063,8 +4156,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     className={`p-2 rounded-lg transition-all duration-300 ${
                       mutedConversations.has(activeConversation.id)
                         ? 'bg-red-500 text-white shadow-lg' 
-                        : isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-white/20 hover:bg-white/30 text-gray-600'
+                        : !t ? 'bg-white/20 hover:bg-white/30 text-gray-600' : ''
                     }`}
+                    style={!mutedConversations.has(activeConversation.id) && t ? { background: t.buttonBg, color: t.iconColor } : undefined}
                     title={mutedConversations.has(activeConversation.id) ? 'Activar notificaciones' : 'Silenciar chat'}
                   >
                     {mutedConversations.has(activeConversation.id) ? (
@@ -4076,16 +4170,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   
                   <button 
                     onClick={handleOpenEditModal}
-                    className={`p-2 rounded-lg transition-all duration-300 ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-white/20 hover:bg-white/30 text-gray-600'}`}
-                    title="Editar contacto"
+                    className={`p-2 rounded-lg transition-all duration-300 ${!t ? 'bg-white/20 hover:bg-white/30 text-gray-600' : ''}`}
+                    style={t ? { background: t.buttonBg, color: t.iconColor } : undefined}
                   >
                     <UserPlus className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={toggleRightPanel}
-                    className={`p-2 rounded-lg transition-all duration-300 ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-white/20 hover:bg-white/30'}`}
+                    className={`p-2 rounded-lg transition-all duration-300 ${!t ? 'bg-white/20 hover:bg-white/30' : ''}`}
+                    style={t ? { background: t.buttonBg } : undefined}
                   >
-                    <MoreHorizontal className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+                    <MoreHorizontal className={`w-4 h-4 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                   </button>
                 </div>
               </div>
@@ -4202,7 +4297,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
             </div>
 
-            <div className={`h-[2px] relative group ${isDark ? 'bg-white/5' : 'bg-gray-200/30'}`}>
+            <div className={`h-[2px] relative group ${!t ? 'bg-gray-200/30' : ''}`} style={t ? { background: t.divider } : undefined}>
               <div className="absolute inset-x-0 -top-1 -bottom-1" />
             </div>
 
@@ -4211,8 +4306,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               className="flex-1 flex flex-col min-h-0 relative"
               style={{
                 backgroundImage: isDark 
-                  ? 'linear-gradient(rgba(17,24,39,0.92), rgba(17,24,39,0.92)), url(/fondo.webp)'
-                  : 'linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(/fondo.webp)',
+                  ? (t ? `linear-gradient(${t.chatBg}, ${t.chatBg}), url(/fondo.webp)` : 'linear-gradient(rgba(17,24,39,0.92), rgba(17,24,39,0.92)), url(/fondo.webp)')
+                  : (t ? `linear-gradient(${t.chatBg}, ${t.chatBg}), url(/fondo.webp)` : 'linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(/fondo.webp)'),
                 backgroundSize: 'cover, cover',
                 backgroundPosition: 'center, center',
                 backgroundRepeat: 'no-repeat, no-repeat',
@@ -4351,9 +4446,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         <button
                           data-menu-trigger
                           onClick={() => setMessageMenuOpen(messageMenuOpen === Number(message.id) ? null : Number(message.id))}
-                          className={`p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${isDark ? 'bg-gray-700/80 hover:bg-gray-600' : 'bg-white/80 hover:bg-white'}`}
+                          className={`p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${!t ? 'bg-white/80 hover:bg-white' : ''}`}
+                          style={t ? { background: t.buttonBg } : undefined}
                         >
-                          <ChevronDown className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+                          <ChevronDown className={`w-4 h-4 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                         </button>
                       )}
 
@@ -4366,8 +4462,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                               : 'ring-2 ring-yellow-200 !bg-yellow-50 !text-gray-900 shadow-md'
                             : message.sender === 'agent'
                             ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                            : isDark ? 'bg-[#1a1f2e] text-gray-100 border border-white/10 shadow-md shadow-black/20' : 'bg-white/80 text-gray-900 backdrop-blur-xl border border-gray-200/40 shadow-md shadow-gray-300/20'
+                            : !t ? 'bg-white/80 text-gray-900 backdrop-blur-xl border border-gray-200/40 shadow-md shadow-gray-300/20' : 'border shadow-md'
                         }`}
+                        style={message.sender !== 'agent' && !(messageSearchResults.length > 0 && messageSearchResults.includes(Number(message.id))) && t ? { background: t.incomingBubbleBg, borderColor: t.incomingBubbleBorder, color: t.textPrimary } : undefined}
                         id={`message-${message.id}`}
                       >
                         {/* Indicador de mensaje destacado */}
@@ -4658,54 +4755,62 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         <button
                           data-menu-trigger
                           onClick={() => setMessageMenuOpen(messageMenuOpen === Number(message.id) ? null : Number(message.id))}
-                          className={`p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${isDark ? 'bg-gray-700/80 hover:bg-gray-600' : 'bg-white/80 hover:bg-white'}`}
+                          className={`p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity ${!t ? 'bg-white/80 hover:bg-white' : ''}`}
+                          style={t ? { background: t.buttonBg } : undefined}
                         >
-                          <ChevronDown className={`w-4 h-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+                          <ChevronDown className={`w-4 h-4 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                         </button>
                       )}
 
                       {/* Menú Contextual */}
                       {messageMenuOpen === Number(message.id) && (
-                        <div data-context-menu className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 rounded-lg shadow-xl border py-1 min-w-[180px] animate-fade-in ${isDark ? 'bg-[#1a1f2e] border-white/10 text-gray-200' : 'bg-white border-gray-200 text-gray-800'}`}>
+                        <div data-context-menu className={`absolute ${index >= filteredMessages.length - 3 ? 'bottom-12' : 'top-12'} ${message.sender === 'agent' ? 'right-0' : 'left-0'} z-50 rounded-lg shadow-xl border py-1 min-w-[180px] animate-fade-in ${!t ? 'bg-white border-gray-200 text-gray-800' : ''}`}
+                          style={t ? { background: t.dropdownBg, borderColor: t.dropdownBorder, color: t.textPrimary } : undefined}
+                        >
                           <button
                             onClick={() => handleReplyToMessage(message)}
-                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-800 hover:bg-gray-100'}`}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${!t ? 'text-gray-800 hover:bg-gray-100' : ''}`}
+                            style={t ? { color: t.textPrimary } : undefined}
                           >
                             <Reply className="w-4 h-4" />
                             <span>Responder</span>
                           </button>
                           <button
                             onClick={() => handleStarMessage(Number(message.id))}
-                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-800 hover:bg-gray-100'}`}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${!t ? 'text-gray-800 hover:bg-gray-100' : ''}`}
+                            style={t ? { color: t.textPrimary } : undefined}
                           >
                             <Star className={`w-4 h-4 ${starredMessages.has(Number(message.id)) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                             <span>{starredMessages.has(Number(message.id)) ? 'Quitar destacado' : 'Destacar'}</span>
                           </button>
                           <button
                             onClick={() => handleCopyMessage(message.content || "")}
-                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-800 hover:bg-gray-100'}`}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${!t ? 'text-gray-800 hover:bg-gray-100' : ''}`}
+                            style={t ? { color: t.textPrimary } : undefined}
                           >
                             <Copy className="w-4 h-4" />
                             <span>Copiar</span>
                           </button>
                           <button
                             onClick={() => handleForwardMessage(message.content || "")}
-                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-800 hover:bg-gray-100'}`}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${!t ? 'text-gray-800 hover:bg-gray-100' : ''}`}
+                            style={t ? { color: t.textPrimary } : undefined}
                           >
                             <Copy className="w-4 h-4" />
                             <span>Copiar texto</span>
                           </button>
                           <button
                             onClick={() => handlePinMessage(message)}
-                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${isDark ? 'text-gray-200 hover:bg-white/5' : 'text-gray-800 hover:bg-gray-100'}`}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-2 ${!t ? 'text-gray-800 hover:bg-gray-100' : ''}`}
+                            style={t ? { color: t.textPrimary } : undefined}
                           >
                             <Pin className="w-4 h-4" />
                             <span>Fijar</span>
                           </button>
-                          <div className={`border-t my-1 ${isDark ? 'border-white/10' : 'border-gray-200'}`}></div>
+                          <div className={`border-t my-1 ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.divider } : undefined}></div>
                           <button
                             onClick={() => handleDeleteMessage(Number(message.id))}
-                            className={`w-full px-4 py-2 text-left text-sm text-red-600 flex items-center space-x-2 ${isDark ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
+                            className={`w-full px-4 py-2 text-left text-sm text-red-600 flex items-center space-x-2 ${!t ? 'hover:bg-red-50' : ''}`}
                           >
                             <Trash2 className="w-4 h-4" />
                             <span>Eliminar</span>
@@ -4725,7 +4830,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className={`backdrop-blur-xl rounded-2xl px-4 py-2 ${isDark ? 'bg-white/5 border border-white/10' : 'bg-white/30 border border-white/20'}`}>
+                  <div className={`backdrop-blur-xl rounded-2xl px-4 py-2 ${!t ? 'bg-white/30 border border-white/20' : 'border'}`} style={t ? { background: t.incomingBubbleBg, borderColor: t.incomingBubbleBorder } : undefined}>
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -4743,14 +4848,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             <div className="bg-transparent">
               {/*  BARRA DE RESPUESTA */}
               {replyingTo && (
-                <div className={`px-4 pt-3 pb-2 border-b ${isDark ? 'border-white/10 bg-blue-900/20' : 'border-white/20 bg-blue-50/50'}`}>
+                <div className={`px-4 pt-3 pb-2 border-b ${!t ? 'border-white/20 bg-blue-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.panelBg } : undefined}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1 border-l-4 border-blue-500 pl-3">
                       <div className="flex items-center space-x-2 mb-1">
-                        <Reply className={`w-3 h-3 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                        <span className={`text-xs font-semibold ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>Respondiendo a {replyingTo.sender_name}</span>
+                        <Reply className={`w-3 h-3 ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.accent } : undefined} />
+                        <span className={`text-xs font-semibold ${!t ? 'text-blue-800' : ''}`} style={t ? { color: t.accent } : undefined}>Respondiendo a {replyingTo.sender_name}</span>
                       </div>
-                      <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{replyingTo.content}</p>
+                      <p className={`text-sm truncate ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{replyingTo.content}</p>
                     </div>
                     <button
                       onClick={() => setReplyingTo(null)}
@@ -4764,7 +4869,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
               {/*  INDICADOR "ESCRIBIENDO..." */}
               {isContactTyping && (
-                <div className={`px-4 py-2 ${isDark ? 'bg-white/[0.02]' : 'bg-gray-50/50'}`}>
+                <div className={`px-4 py-2 ${!t ? 'bg-gray-50/50' : ''}`} style={t ? { background: t.panelBg } : undefined}>
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
@@ -4778,7 +4883,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
               {/* 📤 INDICADOR DE SUBIDA DE ARCHIVO */}
               {isUploadingFile && (
-                <div className={`px-4 py-3 border-b ${isDark ? 'bg-blue-900/20 border-blue-800/30' : 'bg-blue-50 border-blue-100'}`}>
+                <div className={`px-4 py-3 border-b ${!t ? 'bg-blue-50 border-blue-100' : ''}`} style={t ? { background: t.panelBg, borderColor: t.divider } : undefined}>
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -4796,7 +4901,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
               {/* 🎤 INDICADOR DE ENVÍO DE AUDIO */}
               {isSendingAudio && (
-                <div className={`px-4 py-3 border-b ${isDark ? 'bg-green-900/20 border-green-800/30' : 'bg-green-50 border-green-100'}`}>
+                <div className={`px-4 py-3 border-b ${!t ? 'bg-green-50 border-green-100' : ''}`} style={t ? { background: t.panelBg, borderColor: t.divider } : undefined}>
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
@@ -4810,11 +4915,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               <div className="px-3 py-2">
                 <form onSubmit={handleSendMessage} className="relative">
                   {/* Contenedor único estilo WhatsApp */}
-                  <div className={`flex items-center border rounded-full px-2 py-1 transition-all ${isDark ? 'bg-[#1a1f2e] border-white/10 focus-within:bg-[#1e2536] focus-within:border-white/20' : 'bg-white/90 border-gray-200/40 focus-within:bg-white focus-within:border-gray-300'}`}>
+                  <div className={`flex items-center border rounded-full px-2 py-1 transition-all ${!t ? 'bg-white/90 border-gray-200/40 focus-within:bg-white focus-within:border-gray-300' : ''}`}
+                    style={t ? { background: t.inputBg, borderColor: t.inputBorder } : undefined}
+                  >
                     
                     {/* 📎 BOTÓN PARA ADJUNTAR ARCHIVOS (dentro del input) */}
-                    <label className={`p-2 rounded-full transition-all cursor-pointer flex-shrink-0 ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
-                      <Paperclip className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                    <label className={`p-2 rounded-full transition-all cursor-pointer flex-shrink-0 ${!t ? 'hover:bg-gray-100' : ''}`}>
+                      <Paperclip className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                       <input
                         type="file"
                         className="hidden"
@@ -4835,17 +4942,17 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <button 
                         type="button"
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className={`p-2 rounded-full transition-all ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                        className={`p-2 rounded-full transition-all ${!t ? 'hover:bg-gray-100' : ''}`}
                       >
-                        <Smile className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                        <Smile className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                       </button>
                       {showEmojiPicker && (
                         <>
                         <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
-                        <div ref={emojiPickerRef} className={`absolute bottom-full left-0 mb-2 w-64 rounded-xl shadow-2xl border p-2 z-50 ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
-                          <div className={`flex items-center justify-between mb-1.5 pb-1.5 border-b ${isDark ? 'border-white/10' : 'border-gray-100'}`}>
-                            <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Emoticonos</span>
-                            <button type="button" onClick={() => setShowEmojiPicker(false)} className={`text-xs px-1 ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}>✕</button>
+                        <div ref={emojiPickerRef} className={`absolute bottom-full left-0 mb-2 w-64 rounded-xl shadow-2xl border p-2 z-50 ${!t ? 'bg-white border-gray-200' : ''}`} style={t ? { background: t.dropdownBg, borderColor: t.dropdownBorder } : undefined}>
+                          <div className={`flex items-center justify-between mb-1.5 pb-1.5 border-b ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.divider } : undefined}>
+                            <span className={`text-xs font-medium ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Emoticonos</span>
+                            <button type="button" onClick={() => setShowEmojiPicker(false)} className={`text-xs px-1 ${!t ? 'text-gray-400 hover:text-gray-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>✕</button>
                           </div>
                           <div className="grid grid-cols-8 gap-0 max-h-40 overflow-y-auto">
                             {['😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '😏', '😌', '😴', '🤤', '😷', '🤒', '🤕', '🤢', '🥵', '🥶', '😎', '🤩', '🥳', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👻', '😺', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💗', '💓', '💘', '💝', '💟', '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤙', '👋', '🙌', '👏', '🤝', '🙏', '💪', '🔥', '⭐', '✨', '🎉', '🎊', '💯', '✅', '🚀', '💬', '👀', '📎', '🎤', '📸', '💡', '⏰', '🎯', '🏆', '🌟', '💎'].map((emoji, i) => (
@@ -4853,7 +4960,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                 key={`${emoji}-${i}`}
                                 type="button"
                                 onClick={() => handleAddEmoji(emoji)}
-                                className={`text-lg rounded p-0.5 transition-colors text-center leading-none ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                                className={`text-lg rounded p-0.5 transition-colors text-center leading-none ${!t ? 'hover:bg-gray-100' : ''}`}
                               >
                                 {emoji}
                               </button>
@@ -4873,14 +4980,15 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         value={newMessage}
                         onChange={handleMessageInputChange}
                         placeholder={replyingTo ? "Escribe tu respuesta..." : "Escribe un mensaje... (/ para respuestas rápidas)"}
-                        className={`w-full px-3 py-2 bg-transparent outline-none ${isDark ? 'text-gray-100 placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'}`}
+                        className={`w-full px-3 py-2 bg-transparent outline-none ${!t ? 'text-gray-900 placeholder-gray-400' : 'placeholder-gray-500'}`}
+                        style={t ? { color: t.inputText } : undefined}
                         disabled={isTyping || isUploadingFile}
                       />
                       
                       {/* Popup de Respuestas Rápidas */}
                       {showCannedResponses && cannedResponses.length > 0 && (
-                        <div className={`absolute bottom-full left-0 right-0 mb-2 rounded-lg shadow-xl border max-h-48 overflow-y-auto z-50 ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
-                          <div className={`px-3 py-2 border-b text-xs font-medium sticky top-0 ${isDark ? 'border-white/10 text-gray-400 bg-[#1a1f2e]' : 'border-gray-100 text-gray-500 bg-white'}`}>
+                        <div className={`absolute bottom-full left-0 right-0 mb-2 rounded-lg shadow-xl border max-h-48 overflow-y-auto z-50 ${!t ? 'bg-white border-gray-200' : ''}`} style={t ? { background: t.dropdownBg, borderColor: t.dropdownBorder } : undefined}>
+                          <div className={`px-3 py-2 border-b text-xs font-medium sticky top-0 ${!t ? 'border-gray-100 text-gray-500 bg-white' : ''}`} style={t ? { borderColor: t.divider, color: t.textMuted, background: t.dropdownBg } : undefined}>
                             Respuestas rápidas — escribe / para filtrar
                           </div>
                           {cannedResponses
@@ -4890,17 +4998,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                                 key={response.id}
                                 type="button"
                                 onClick={() => handleSelectCannedResponse(response)}
-                                className={`w-full px-3 py-2 text-left transition-colors border-b last:border-0 ${isDark ? 'hover:bg-white/5 border-white/5' : 'hover:bg-blue-50 border-gray-50'}`}
+                                className={`w-full px-3 py-2 text-left transition-colors border-b last:border-0 ${!t ? 'hover:bg-blue-50 border-gray-50' : ''}`}
+                                style={t ? { borderColor: t.divider } : undefined}
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>/{response.short_code}</span>
-                                  <span className={`text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{response.content}</span>
+                                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${!t ? 'bg-gray-100 text-gray-600' : ''}`} style={t ? { background: t.badgeBg, color: t.badgeText } : undefined}>/{response.short_code}</span>
+                                  <span className={`text-sm truncate ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{response.content}</span>
                                 </div>
                               </button>
                             ))
                           }
                           {cannedResponses.filter(r => !cannedFilter || r.short_code.toLowerCase().includes(cannedFilter) || r.content.toLowerCase().includes(cannedFilter)).length === 0 && (
-                            <div className={`px-3 py-2 text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No hay coincidencias</div>
+                            <div className={`px-3 py-2 text-xs text-center ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>No hay coincidencias</div>
                           )}
                         </div>
                       )}
@@ -4911,10 +5020,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       <button 
                         type="button"
                         onMouseDown={handleStartRecording}
-                        className={`p-2 rounded-full transition-all flex-shrink-0 ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                        className={`p-2 rounded-full transition-all flex-shrink-0 ${!t ? 'hover:bg-gray-100' : ''}`}
                         title="Mantén presionado para grabar"
                       >
-                        <Mic className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                        <Mic className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.iconColor } : undefined} />
                       </button>
                     ) : (
                       <button 
@@ -4955,8 +5064,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   className="w-40 h-40 mx-auto hover:scale-110 transition-transform duration-300"
                 />
               </div>
-              <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Selecciona una conversación</h3>
-              <p className={`${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Elige una conversación para empezar a chatear</p>
+              <h3 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Selecciona una conversación</h3>
+              <p className={`${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Elige una conversación para empezar a chatear</p>
             </div>
           </div>
         )}
@@ -4969,27 +5078,29 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
           onClick={(e) => { if (e.target === e.currentTarget) setShowMediaGallery(false); }}
         >
           <div 
-            className={`rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden ${isDark ? 'bg-[#1a1f2e]' : 'bg-white'}`}
+            className={`rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden ${!t ? 'bg-white' : ''}`}
+            style={t ? { background: t.panelBg } : undefined}
             style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
           >
-            <div className={`p-4 border-b flex items-center justify-between ${isDark ? 'border-white/10 bg-[#111827]' : 'border-gray-200 bg-gray-50'}`}>
-              <h3 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>Multimedia compartida</h3>
+            <div className={`p-4 border-b flex items-center justify-between ${!t ? 'border-gray-200 bg-gray-50' : ''}`} style={t ? { borderColor: t.headerBorder, background: t.headerBg } : undefined}>
+              <h3 className={`text-lg font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Multimedia compartida</h3>
               <button
                 onClick={() => setShowMediaGallery(false)}
-                className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-200'}`}
+                className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-200' : ''}`}
               >
-                <X className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                <X className={`w-5 h-5 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.iconColor } : undefined} />
               </button>
             </div>
             
-            <div className={`p-4 border-b flex space-x-2 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className={`p-4 border-b flex space-x-2 ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.divider } : undefined}>
               <button
                 onClick={() => setMediaFilter('all')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   mediaFilter === 'all' 
                     ? 'bg-gray-800 text-white' 
-                    : isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
+                style={mediaFilter !== 'all' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
               >
                 Todo
               </button>
@@ -4998,10 +5109,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'images' 
                     ? 'bg-gray-800 text-white' 
-                    : isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
+                style={mediaFilter !== 'images' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
               >
-                <ImageIcon className="w-4 h-4" />
                 <span>Imágenes</span>
               </button>
               <button
@@ -5009,10 +5120,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'files' 
                     ? 'bg-gray-800 text-white' 
-                    : isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
+                style={mediaFilter !== 'files' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
               >
-                <File className="w-4 h-4" />
                 <span>Archivos</span>
               </button>
               <button
@@ -5020,8 +5131,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'links' 
                     ? 'bg-gray-800 text-white' 
-                    : isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
+                style={mediaFilter !== 'links' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
               >
                 <FileText className="w-4 h-4" />
                 <span>Enlaces</span>
@@ -5441,14 +5553,16 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
       {/* Panel Derecho - Informacion del Contacto */}
       {isRightPanelVisible && (
-        <div className={`w-80 backdrop-blur-2xl p-4 space-y-6 animate-slide-in-right relative ${isDark ? 'bg-[#111827]/90' : 'bg-white/20'}`}>
+        <div className={`w-80 backdrop-blur-2xl p-4 space-y-6 animate-slide-in-right relative ${!t ? 'bg-white/20' : ''}`} style={t ? { background: t.rightPanelBg } : undefined}>
           <button
             onClick={toggleRightPanel}
-            className={`absolute top-3 left-3 p-1.5 rounded-lg transition-all duration-300 group z-10 ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-white/10 hover:bg-white/30'}`}
+            className={`absolute top-3 left-3 p-1.5 rounded-lg transition-all duration-300 group z-10 ${!t ? 'bg-white/10 hover:bg-white/30' : ''}`}
+            style={t ? { background: t.buttonBg } : undefined}
             title="Cerrar panel"
           >
             <svg 
-              className={`w-4 h-4 transition-colors ${isDark ? 'text-gray-400 group-hover:text-gray-200' : 'text-gray-500 group-hover:text-gray-700'}`} 
+              className={`w-4 h-4 transition-colors ${!t ? 'text-gray-500 group-hover:text-gray-700' : ''}`}
+              style={t ? { color: t.iconColor } : undefined} 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -5479,13 +5593,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 >
                   {formatAvatar(activeConversation.contact.avatar, activeConversation.contact.name)}
                 </div>
-                <h3 className={`font-bold ${isDark ? 'text-gray-100' : 'text-gray-800'}`}>{activeConversation.contact.name}</h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{activeConversation.contact.email}</p>
-                <p className={`text-sm font-medium mt-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{activeConversation.contact.phone_number}</p>
+                <h3 className={`font-bold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{activeConversation.contact.name}</h3>
+                <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>{activeConversation.contact.email}</p>
+                <p className={`text-sm font-medium mt-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{activeConversation.contact.phone_number}</p>
               </div>
 
               <div>
-                <h4 className={`font-semibold mb-3 flex items-center ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                <h4 className={`font-semibold mb-3 flex items-center ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                   <Tag className="w-4 h-4 mr-2" />
                   Etiquetas
                 </h4>
@@ -5525,8 +5639,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   className={`w-full p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center ${
                     showMediaGallery 
                       ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg' 
-                      : isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-white/20 hover:bg-white/30 text-gray-700'
+                      : !t ? 'bg-white/20 hover:bg-white/30 text-gray-700' : ''
                   }`}
+                  style={!showMediaGallery && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
                 >
                   <Grid className="w-4 h-4 mr-2" />
                   {showMediaGallery ? 'Ocultar Multimedia' : 'Ver Multimedia Compartida'}
@@ -5543,8 +5658,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   className={`w-full p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center ${
                     showNotes 
                       ? 'bg-gray-700 text-white shadow-md' 
-                      : isDark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-white/20 hover:bg-white/30 text-gray-700'
+                      : !t ? 'bg-white/20 hover:bg-white/30 text-gray-700' : ''
                   }`}
+                  style={!showNotes && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   {showNotes ? 'Ocultar Notas' : 'Notas del contacto'}
@@ -5560,7 +5676,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         onChange={(e) => setNewNoteText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleCreateNote()}
                         placeholder="Escribir nota..."
-                        className={`flex-1 px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 ${isDark ? 'bg-[#1a1f2e] border-white/10 text-gray-100 placeholder-gray-500 focus:border-white/20 focus:ring-white/10' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-gray-500 focus:ring-gray-400'}`}
+                        className={`flex-1 px-3 py-2 text-xs border rounded-lg outline-none focus:ring-1 ${!t ? 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-gray-500 focus:ring-gray-400' : 'placeholder-gray-500'}`}
+                        style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
                       />
                       <button
                         onClick={handleCreateNote}
@@ -5577,8 +5694,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         <p className="text-xs text-gray-400 text-center py-2">Sin notas</p>
                       ) : (
                         contactNotes.map(note => (
-                          <div key={note.id} className={`border rounded-lg p-2.5 group/note ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/70 border-gray-200/60'}`}>
-                            <p className={`text-xs whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{note.content}</p>
+                          <div key={note.id} className={`border rounded-lg p-2.5 group/note ${!t ? 'bg-white/70 border-gray-200/60' : ''}`} style={t ? { background: t.panelBg, borderColor: t.cardBorder } : undefined}>
+                            <p className={`text-xs whitespace-pre-wrap ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{note.content}</p>
                             <div className="flex items-center justify-between mt-1.5">
                               <span className="text-[10px] text-gray-400">
                                 {note.user?.name || 'Agente'} · {note.created_at ? new Date(note.created_at * 1000).toLocaleDateString() : ''}
@@ -5599,10 +5716,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
 
               {/* 🔀 HERRAMIENTAS ADMIN */}
-              <div className={`pt-2 border-t ${isDark ? 'border-white/10' : 'border-gray-200/30'}`}>
+              <div className={`pt-2 border-t ${!t ? 'border-gray-200/30' : ''}`} style={t ? { borderColor: t.divider } : undefined}>
                 <button
                   onClick={handleDeleteConversation}
-                  className={`w-full p-2.5 rounded-lg text-sm font-medium text-red-600 transition-all duration-300 flex items-center justify-center gap-2 ${isDark ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
+                  className={`w-full p-2.5 rounded-lg text-sm font-medium text-red-600 transition-all duration-300 flex items-center justify-center gap-2 ${!t ? 'hover:bg-red-50' : ''}`}
                 >
                   <Trash2 className="w-4 h-4" />
                   Eliminar conversación
@@ -5612,7 +5729,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
             </>
           ) : (
-            <div className={`text-center ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            <div className={`text-center ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
               <User className={`w-12 h-12 mx-auto mb-3 opacity-50`} />
               <p>Selecciona una conversación para ver detalles</p>
             </div>
@@ -5623,7 +5740,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       {/* Modal de progreso de descarga */}
       {isDownloadModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className={`rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-fade-in ${isDark ? 'bg-[#1a1f2e]' : 'bg-white'}`}>
+          <div className={`rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-fade-in ${!t ? 'bg-white' : ''}`} style={t ? { background: t.panelBg } : undefined}>
             <div className="text-center">
               {/* Ícono según fase */}
               <div className="mb-6">
@@ -5643,7 +5760,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </div>
 
               {/* Título según fase */}
-              <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <h3 className={`text-2xl font-bold mb-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                 {downloadPhase === 'fetching' && 'Descargando...'}
                 {downloadPhase === 'processing' && 'Procesando...'}
                 {downloadPhase === 'generating' && 'Generando Excel...'}
@@ -5652,20 +5769,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               </h3>
 
               {/* Status */}
-              <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={`mb-6 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>
                 {downloadStatus}
               </p>
 
               {/* Barra de progreso */}
               {downloadPhase !== 'error' && (
                 <div className="mb-4">
-                  <div className={`w-full rounded-full h-3 overflow-hidden ${isDark ? 'bg-white/10' : 'bg-gray-200'}`}>
+                  <div className={`w-full rounded-full h-3 overflow-hidden ${!t ? 'bg-gray-200' : ''}`} style={t ? { background: t.buttonBg } : undefined}>
                     <div 
                       className="bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-300 ease-out"
                       style={{ width: `${downloadProgress}%` }}
                     />
                   </div>
-                  <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{downloadProgress}%</p>
+                  <p className={`text-sm mt-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{downloadProgress}%</p>
                 </div>
               )}
 
@@ -5685,20 +5802,20 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       {/* Modal de editar contacto */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className={`rounded-2xl shadow-2xl max-w-md w-full border animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200'}`}>
+          <div className={`rounded-2xl shadow-2xl max-w-md w-full border animate-in fade-in zoom-in duration-200 ${!t ? 'bg-white border-gray-200' : ''}`} style={t ? { background: t.panelBg, borderColor: t.panelBorder } : undefined}>
             {/* Header */}
-            <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className={`flex items-center justify-between p-6 border-b ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.divider } : undefined}>
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
                   <UserPlus className="w-5 h-5 text-white" />
                 </div>
-                <h3 className={`text-xl font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>Editar Contacto</h3>
+                <h3 className={`text-xl font-semibold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Editar Contacto</h3>
               </div>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
-                className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : ''}`}
               >
-                <X className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                <X className={`w-5 h-5 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.iconColor } : undefined} />
               </button>
             </div>
 
@@ -5706,7 +5823,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
             <div className="p-6 space-y-4">
               {/* Campo Nombre */}
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                <label className={`block text-sm font-semibold mb-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                   Nombre completo
                 </label>
                 <input
@@ -5714,13 +5831,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Ej: Juan Pérez"
-                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDark ? 'bg-[#111827] border-white/10 text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'}`}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${!t ? 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400' : 'placeholder:text-gray-500'}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
                 />
               </div>
 
               {/* Campo Teléfono */}
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                <label className={`block text-sm font-semibold mb-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                   Teléfono
                 </label>
                 <input
@@ -5728,13 +5846,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
                   placeholder="Ej: +56 9 1234 5678"
-                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDark ? 'bg-[#111827] border-white/10 text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'}`}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${!t ? 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400' : 'placeholder:text-gray-500'}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
                 />
               </div>
 
               {/* Campo Email */}
               <div>
-                <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                <label className={`block text-sm font-semibold mb-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
                   Correo electrónico
                 </label>
                 <input
@@ -5742,16 +5861,18 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                   placeholder="Ej: correo@ejemplo.com"
-                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDark ? 'bg-[#111827] border-white/10 text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400'}`}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${!t ? 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400' : 'placeholder:text-gray-500'}`}
+                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
                 />
               </div>
             </div>
 
             {/* Footer */}
-            <div className={`flex items-center justify-end space-x-3 p-6 border-t rounded-b-2xl ${isDark ? 'bg-[#111827]/50 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+            <div className={`flex items-center justify-end space-x-3 p-6 border-t rounded-b-2xl ${!t ? 'bg-gray-50 border-gray-200' : ''}`} style={t ? { background: t.headerBg, borderColor: t.divider } : undefined}>
               <button
                 onClick={() => setIsEditModalOpen(false)}
-                className={`px-4 py-2.5 rounded-lg transition-colors font-medium ${isDark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-800 hover:bg-gray-200'}`}
+                className={`px-4 py-2.5 rounded-lg transition-colors font-medium ${!t ? 'text-gray-800 hover:bg-gray-200' : ''}`}
+                style={t ? { color: t.textPrimary } : undefined}
               >
                 Cancelar
               </button>
