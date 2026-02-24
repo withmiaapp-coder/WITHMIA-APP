@@ -3513,10 +3513,12 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   if (conversationsLoading && (conversations || []).length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-white/20 backdrop-blur-2xl">
+      <div className={`h-full flex items-center justify-center backdrop-blur-2xl ${!t ? 'bg-white/20' : ''}`}
+        style={t ? { background: t.containerBg } : undefined}
+      >
         <div className="flex items-center space-x-3">
           <Loader2 className={`w-6 h-6 animate-spin ${!t ? 'text-blue-500' : ''}`} style={t ? { color: t.accent } : undefined} />
-          <span className="text-gray-600">Cargando conversaciones...</span>
+          <span className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Cargando conversaciones...</span>
         </div>
       </div>
     );
@@ -3524,11 +3526,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
 
   if (conversationsError) {
     return (
-      <div className="h-full flex items-center justify-center bg-white/20 backdrop-blur-2xl">
+      <div className={`h-full flex items-center justify-center backdrop-blur-2xl ${!t ? 'bg-white/20' : ''}`}
+        style={t ? { background: t.containerBg } : undefined}
+      >
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error de Conexión</h3>
-          <p className="text-gray-600 mb-4">No se pudieron cargar las conversaciones</p>
+          <h3 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Error de Conexión</h3>
+          <p className={`mb-4 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>No se pudieron cargar las conversaciones</p>
           <button 
             onClick={() => fetchUpdatedConversations()}
             className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center space-x-2 mx-auto ${!t ? 'bg-blue-500 hover:bg-blue-600' : ''}`}

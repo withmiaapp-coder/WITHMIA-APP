@@ -2,7 +2,6 @@
 import { Footer } from "@/components/Footer";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
-  NumberDrama,
   Heatmap247,
 } from "@/components/pymes/PymesSections";
 import {
@@ -476,6 +475,8 @@ const SolucionesPymes = () => {
           </div>
         </section>
 
+        <Heatmap247 />
+
         {/* ══════════════════════════════════════════════════
             USE CASES — Industry tabs
             ══════════════════════════════════════════════════ */}
@@ -650,12 +651,6 @@ const SolucionesPymes = () => {
             </Reveal>
           </div>
         </section>
-
-        {/* ══════════════════════════════════════════════════
-            10 NEW INNOVATIVE SECTIONS
-            ══════════════════════════════════════════════════ */}
-        <NumberDrama />
-        <Heatmap247 />
 
         {/* ══════════════════════════════════════════════════
             PROBLEM — Provocative reality-check section
