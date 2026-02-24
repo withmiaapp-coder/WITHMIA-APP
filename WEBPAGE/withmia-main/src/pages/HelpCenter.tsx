@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useMemo } from "react";
 import {
   Search,
@@ -232,6 +233,8 @@ const HelpCenter = () => {
       </div>
 
       <Navigation />
+
+      <SEO title="Centro de Ayuda" description="Centro de ayuda de WITHMIA. Guías, tutoriales en video y respuestas rápidas para sacar el máximo provecho de la plataforma." path="/ayuda" />
 
       <main className="pt-20 relative z-[1]">
 

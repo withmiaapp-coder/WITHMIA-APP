@@ -1,6 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, type ReactNode } from "react";
+import { Reveal } from "@/hooks/useAnimations";
 import {
   ArrowRight,
   Users,
@@ -90,6 +92,7 @@ const Community = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
+      <SEO title="Comunidad" description="Únete a la comunidad WITHMIA. Comparte experiencias, aprende de otros usuarios y accede a recursos exclusivos." path="/comunidad" />
       <main className="pt-20">
 
         {/* ════════════ HERO ════════════ */}

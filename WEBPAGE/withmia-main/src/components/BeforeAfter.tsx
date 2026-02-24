@@ -1,4 +1,5 @@
 import { X, Check, ArrowRight, Clock, MessageSquare, TrendingDown, TrendingUp, Zap, Users } from "lucide-react";
+import { trackCTAClick } from "@/lib/analytics";
 
 const beforeItems = [
   { icon: Clock, text: "Respondes en 6+ horas", detail: "El cliente ya le compró a tu competencia" },
@@ -85,7 +86,7 @@ export const BeforeAfter = () => {
 
         {/* Bottom CTA */}
         <div className="text-center mt-14">
-          <a href="https://app.withmia.com">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick("quiero_el_despues", "before_after")}>
             <button className="group inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold shadow-[0_4px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
               Quiero el después
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

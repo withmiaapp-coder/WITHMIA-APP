@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useScrollReveal } from "@/hooks/useAnimations";
 import {
   Check,
   Sparkles,
@@ -19,6 +20,8 @@ import {
   Clock,
   BadgeCheck,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
 
 /* ═══════════════════════════════════════════════════════════
    PRICING LOGIC (mirrors SubscriptionController.php)
@@ -86,23 +89,6 @@ const faqs = [
     a: "Tus datos se conservan por 30 días después de cancelar. Puedes exportarlos en cualquier momento antes de ese plazo.",
   },
 ];
-
-/* ─── Scroll-reveal hook ─── */
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); obs.disconnect(); } },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return { ref, isVisible };
-}
 
 /* ─── Animated number ─── */
 function AnimatedPrice({ value, duration = 600 }: { value: number; duration?: number }) {
@@ -371,6 +357,7 @@ export const Pricing = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-3 mt-10 max-w-md mx-auto">
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick('comenzar_gratis', 'pricing_card', 'https://app.withmia.com')}
                     className="relative flex items-center justify-center gap-2 w-full sm:flex-1 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
                   >
                     {/* Shimmer sweep */}
@@ -380,12 +367,13 @@ export const Pricing = () => {
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </a>
-                  <a
-                    href="/contacto"
+                  <Link
+                    to="/contacto"
+                    onClick={() => trackCTAClick('agendar_demo', 'pricing_card', '/contacto')}
                     className="flex items-center justify-center w-full sm:flex-1 px-6 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
                   >
                     Agendar demo
-                  </a>
+                  </Link>
                 </div>
                 <p className="text-[11px] text-white/20 text-center mt-4">
                   Sin tarjeta de crédito · Cancela cuando quieras · Setup en 5 minutos
@@ -589,6 +577,7 @@ export const Pricing = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <a
                   href="https://app.withmia.com"
+                  onClick={() => trackCTAClick('comenzar_gratis', 'pricing_bottom', 'https://app.withmia.com')}
                   className="relative flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -597,12 +586,13 @@ export const Pricing = () => {
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </a>
-                <a
-                  href="/contacto"
+                <Link
+                  to="/contacto"
+                  onClick={() => trackCTAClick('hablar_ventas', 'pricing_bottom', '/contacto')}
                   className="flex items-center justify-center px-8 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
                 >
                   Hablar con ventas
-                </a>
+                </Link>
               </div>
 
               {/* Trust strip */}

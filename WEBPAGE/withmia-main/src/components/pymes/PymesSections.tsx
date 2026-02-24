@@ -1,4 +1,6 @@
 ﻿import { useEffect, useState, useRef, type ReactNode } from "react";
+import { trackCTAClick } from "@/lib/analytics";
+import { Reveal } from "@/hooks/useAnimations";
 import {
   Activity,
   XCircle,
@@ -37,45 +39,6 @@ import {
   Notebook,
   Headphones,
 } from "lucide-react";
-
-/* ═══════════════════════════════════════════════════════
-   Shared: Scroll-reveal wrapper
-   ═══════════════════════════════════════════════════════ */
-const Reveal = ({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setV(true),
-      { threshold: 0.12 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: v ? 1 : 0,
-        transform: v ? "translateY(0)" : "translateY(32px)",
-        transition: `opacity .7s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .7s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  );
-};
 
 /* ═══════════════════════════════════════════════════════
    1. NUMBER DRAMA — Kinetic before/after stats
@@ -1093,6 +1056,7 @@ export const MaturityQuiz = () => {
                 {totalScore < 10 && (
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick("mejorar_puntaje", "pymes_quiz")}
                     className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold text-sm hover:shadow-[0_0_30px_rgba(245,158,11,0.2)] transition-all"
                   >
                     Mejorar mi puntaje con WITHMIA
@@ -1168,6 +1132,7 @@ export const BoldGuarantee = () => (
 
               <a
                 href="https://app.withmia.com"
+                onClick={() => trackCTAClick("empezar_gratis_pymes", "pymes_cta")}
                 className="relative inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 group/btn overflow-hidden"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-700" />

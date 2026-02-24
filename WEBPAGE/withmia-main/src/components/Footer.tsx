@@ -1,5 +1,6 @@
 import logo from "@/assets/logo-withmia.png";
 import { Instagram, Linkedin, Youtube, Facebook } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -35,29 +36,29 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="/plataforma" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/plataforma" className="text-white/40 hover:text-white transition-colors">
                     Plataforma
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/pymes" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/pymes" className="text-white/40 hover:text-white transition-colors">
                     PYMEs
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/precios" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/precios" className="text-white/40 hover:text-white transition-colors">
                     Precios
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/integraciones" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/integraciones" className="text-white/40 hover:text-white transition-colors">
                     Integraciones
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/api" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/api" className="text-white/40 hover:text-white transition-colors">
                     API
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -69,29 +70,29 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="/nosotros" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/nosotros" className="text-white/40 hover:text-white transition-colors">
                     Nosotros
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/contacto" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/contacto" className="text-white/40 hover:text-white transition-colors">
                     Contacto
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/inversores" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/inversores" className="text-white/40 hover:text-white transition-colors">
                     Financiamiento e Inversión
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/privacidad" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/privacidad" className="text-white/40 hover:text-white transition-colors">
                     Políticas de Privacidad
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/terminos" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/terminos" className="text-white/40 hover:text-white transition-colors">
                     Términos y Condiciones
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -103,29 +104,29 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="/ayuda" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/ayuda" className="text-white/40 hover:text-white transition-colors">
                     Centro de Ayuda
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/soporte" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/soporte" className="text-white/40 hover:text-white transition-colors">
                     Contactar Soporte
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/docs" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/docs" className="text-white/40 hover:text-white transition-colors">
                     Documentación
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/faq" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/faq" className="text-white/40 hover:text-white transition-colors">
                     Preguntas Frecuentes
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/comunidad" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/comunidad" className="text-white/40 hover:text-white transition-colors">
                     Comunidad
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -171,8 +172,8 @@ export const Footer = () => {
               <p className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-4">
                 Financiamiento e Inversión
               </p>
-              <a
-                href="/inversores"
+              <Link
+                to="/inversores"
                 className="inline-flex items-center gap-3 px-5 py-3 rounded-xl border border-emerald-500/15 bg-emerald-950/10 hover:border-emerald-400/30 hover:bg-emerald-950/20 hover:shadow-[0_0_30px_rgba(52,211,153,0.06)] transition-all duration-500 group"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-emerald-400/60 group-hover:text-emerald-400 transition-colors duration-500" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -184,7 +185,7 @@ export const Footer = () => {
                 <svg viewBox="0 0 20 20" className="w-4 h-4 text-white/20 group-hover:text-emerald-400/60 group-hover:translate-x-0.5 transition-all duration-500" fill="currentColor">
                   <path fillRule="evenodd" d="M5 10a.75.75 0 01.75-.75h6.638L10.23 7.29a.75.75 0 111.04-1.08l3.5 3.25a.75.75 0 010 1.08l-3.5 3.25a.75.75 0 11-1.04-1.08l2.158-1.96H5.75A.75.75 0 015 10z" clipRule="evenodd" />
                 </svg>
-              </a>
+              </Link>
             </div>
 
             {/* Powered by */}

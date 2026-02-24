@@ -1,6 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Shield, Lock, Eye, Database, Globe, UserCheck, Bell, Server, Trash2, Mail, FileText } from "lucide-react";
 
 /* ── Section metadata ── */
@@ -79,6 +81,8 @@ const Privacy = () => {
       </div>
 
       <Navigation />
+
+      <SEO title="Política de Privacidad" description="Política de privacidad de WITHMIA. Cómo protegemos tus datos personales y los de tus clientes con estándares de seguridad empresarial." path="/privacidad" />
 
       <main className="pt-20 relative z-[1]">
 
@@ -162,10 +166,10 @@ const Privacy = () => {
 
                   {/* Related links */}
                   <div className="mt-6 pt-4 border-t border-white/[0.04]">
-                    <a href="/terminos" className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-white/25 hover:text-amber-400/70 transition-colors">
+                    <Link to="/terminos" className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-white/25 hover:text-amber-400/70 transition-colors">
                       <FileText className="w-3.5 h-3.5" />
                       Términos y Condiciones
-                    </a>
+                    </Link>
                   </div>
                 </nav>
               </aside>
@@ -511,17 +515,17 @@ const Privacy = () => {
               <div className="pt-6">
                 <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-8" />
                 <div className="flex flex-wrap items-center gap-4 text-[13px]">
-                  <a href="/terminos" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                  <Link to="/terminos" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                     Términos y Condiciones
-                  </a>
+                  </Link>
                   <span className="text-white/10">·</span>
-                  <a href="/contacto" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                  <Link to="/contacto" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                     Contacto
-                  </a>
+                  </Link>
                   <span className="text-white/10">·</span>
-                  <a href="/docs" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                  <Link to="/docs" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                     Documentación
-                  </a>
+                  </Link>
                 </div>
               </div>
 

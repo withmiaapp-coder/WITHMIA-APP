@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -14,6 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
+import { trackFormSubmit, trackCTAClick } from "@/lib/analytics";
+import { useScrollReveal } from "@/hooks/useAnimations";
 import {
   ArrowRight,
   Mail,
@@ -29,23 +33,6 @@ import {
   CheckCircle2,
   ExternalLink,
 } from "lucide-react";
-
-/* ─── Scroll-reveal ─── */
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setV(true); obs.disconnect(); } },
-      { threshold: 0.12, rootMargin: "0px 0px -30px 0px" }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return { ref, isVisible: v };
-}
 
 /* ─── Form schema ─── */
 const formSchema = z.object({
@@ -77,8 +64,8 @@ const contactChannels = [
   {
     icon: MessageSquare,
     title: "WhatsApp",
-    value: "+56 9 1234 5678",
-    href: "https://wa.me/56912345678",
+    value: "+56 9 XXXX XXXX",
+    href: "https://wa.me/569XXXXXXXX",
     desc: "Respuesta inmediata",
     color: "emerald",
   },
@@ -119,8 +106,22 @@ const Contact = () => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log({ ...values, interest: selectedInterest });
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const payload = { ...values, interest: selectedInterest };
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "https://app.withmia.com";
+      await fetch(`${apiUrl}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // Silently fail — still show success to user
+    }
+
+    trackFormSubmit("contact", { interest: selectedInterest || "none" });
+
     toast({
       title: "Mensaje enviado",
       description: "Nos pondremos en contacto contigo pronto.",
@@ -133,6 +134,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen relative">
+      <SEO title="Contacto" description="Contacta al equipo de WITHMIA. Agenda una demo, solicita soporte o resuelve tus dudas sobre nuestra plataforma de IA conversacional." path="/contacto" />
       <Navigation />
       <main className="pt-20 relative overflow-hidden">
 
@@ -352,9 +354,9 @@ const Contact = () => {
 
                             <p className="text-[11px] text-white/15 text-center">
                               Al enviar, aceptas nuestra{" "}
-                              <a href="/privacidad" className="text-white/25 hover:text-white/40 underline">
+                              <Link to="/privacidad" className="text-white/25 hover:text-white/40 underline">
                                 política de privacidad
-                              </a>
+                              </Link>
                             </p>
                           </form>
                         </Form>
@@ -455,6 +457,7 @@ const Contact = () => {
                   </div>
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick("crear_cuenta_sidebar", "contact")}
                     className="flex items-center justify-center gap-2 w-full px-5 py-2.5 rounded-xl border border-amber-500/20 text-[13px] font-medium text-amber-400 hover:bg-amber-500/10 transition-all group"
                   >
                     Crear cuenta gratis
@@ -496,6 +499,7 @@ const Contact = () => {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick("probar_gratis_bottom", "contact")}
                     className="relative flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -504,12 +508,12 @@ const Contact = () => {
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </a>
-                  <a
-                    href="/precios"
+                  <Link
+                    to="/precios"
                     className="flex items-center justify-center px-8 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
                   >
                     Ver precios
-                  </a>
+                  </Link>
                 </div>
 
                 {/* Trust strip */}

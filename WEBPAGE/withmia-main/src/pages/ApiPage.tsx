@@ -1,6 +1,10 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
+import { Reveal, useCountUp } from "@/hooks/useAnimations";
 import {
   Terminal,
   ArrowRight,
@@ -28,72 +32,6 @@ import {
   Play,
   Hash,
 } from "lucide-react";
-
-/* ─── Scroll‑reveal wrapper ─── */
-const Reveal = ({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setVisible(true),
-      { threshold: 0.12 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(24px)",
-        transition: `opacity .65s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .65s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
-/* ─── Animated counter ─── */
-const useCountUp = (end: number, duration = 1800) => {
-  const [val, setVal] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting && !started.current) {
-          started.current = true;
-          const t0 = performance.now();
-          const tick = (now: number) => {
-            const p = Math.min((now - t0) / duration, 1);
-            setVal(Math.round(end * p));
-            if (p < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [end, duration]);
-  return { val, ref };
-};
 
 /* ─── Data ─── */
 const endpoints = [
@@ -186,6 +124,7 @@ const ApiPage = () => {
 
   return (
     <div className="min-h-screen api-page">
+      <SEO title="API" description="API REST de WITHMIA. Endpoints para mensajes, conversaciones, contactos y webhooks. Documentación completa con ejemplos." path="/api" />
       <Navigation />
       <main className="pt-20">
 
@@ -457,6 +396,7 @@ const ApiPage = () => {
                 </a>
                 <a
                   href="https://app.withmia.com"
+                  onClick={() => trackCTAClick("obtener_api_key_hero", "api_page")}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/[0.15] text-sm font-medium transition-all duration-300 hover:bg-white/[0.02]"
                 >
                   <Key className="w-3.5 h-3.5" />
@@ -482,9 +422,9 @@ const ApiPage = () => {
                     Endpoints
                   </h2>
                 </div>
-                <a href="/docs" className="hidden sm:flex items-center gap-1.5 text-[12px] font-medium text-amber-400/60 hover:text-amber-300 transition-colors">
+                <Link to="/docs" className="hidden sm:flex items-center gap-1.5 text-[12px] font-medium text-amber-400/60 hover:text-amber-300 transition-colors">
                   Full reference <ArrowRight className="w-3 h-3" />
-                </a>
+                </Link>
               </div>
             </Reveal>
 
@@ -980,6 +920,7 @@ const ApiPage = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <a
                   href="https://app.withmia.com"
+                  onClick={() => trackCTAClick("get_api_key_bottom", "api_page")}
                   className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-black text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_40px_rgba(245,158,11,0.2)] overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />

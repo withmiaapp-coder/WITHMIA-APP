@@ -1,5 +1,6 @@
 ﻿import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   Heatmap247,
@@ -34,72 +35,9 @@ import {
   DollarSign,
   Ban,
 } from "lucide-react";
-
-/* ─── Scroll‑reveal ─── */
-const Reveal = ({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setV(true),
-      { threshold: 0.12 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: v ? 1 : 0,
-        transform: v ? "translateY(0)" : "translateY(32px)",
-        transition: `opacity .7s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .7s cubic-bezier(.16,1,.3,1) ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
-/* ─── Animated counter ─── */
-const useCountUp = (end: number, duration = 1800) => {
-  const [val, setVal] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting && !started.current) {
-          started.current = true;
-          const t0 = performance.now();
-          const tick = (now: number) => {
-            const p = Math.min((now - t0) / duration, 1);
-            setVal(Math.round(end * p));
-            if (p < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [end, duration]);
-  return { val, ref };
-};
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
+import { Reveal, useCountUp } from "@/hooks/useAnimations";
 
 /* ─── Data ─── */
 
@@ -312,6 +250,7 @@ const SolucionesPymes = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO title="Soluciones para PYMEs" description="WITHMIA para pequeñas y medianas empresas. Automatiza WhatsApp, Instagram y más con IA desde $29/mes. Sin código, sin complicaciones." path="/pymes" />
       <Navigation />
       <main className="pt-20">
 
@@ -347,6 +286,7 @@ const SolucionesPymes = () => {
                 <div className="flex flex-wrap gap-4 mb-12">
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick('comenzar_prueba_gratis', 'pymes_hero', 'https://app.withmia.com')}
                     className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 overflow-hidden"
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
@@ -750,6 +690,7 @@ const SolucionesPymes = () => {
                     <div className="mt-8 pt-6 border-t border-white/[0.05]">
                       <a
                         href="https://app.withmia.com"
+                        onClick={() => trackCTAClick('probar_negocio', 'pymes_use_case', 'https://app.withmia.com')}
                         className="group inline-flex items-center gap-2 text-[13px] font-semibold transition-colors duration-300"
                         style={{ color: `${current.color}90` }}
                       >
@@ -887,6 +828,7 @@ const SolucionesPymes = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
                 <a
                   href="https://app.withmia.com"
+                  onClick={() => trackCTAClick('comenzar_ahora_gratis', 'pymes_final_cta', 'https://app.withmia.com')}
                   className="group relative inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-black font-semibold transition-all duration-300 hover:shadow-[0_0_50px_rgba(245,158,11,0.25)] hover:-translate-y-0.5 overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
@@ -895,13 +837,14 @@ const SolucionesPymes = () => {
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </a>
-                <a
-                  href="/contacto"
+                <Link
+                  to="/contacto"
+                  onClick={() => trackCTAClick('hablar_ventas', 'pymes_final_cta', '/contacto')}
                   className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/[0.1] text-white/70 hover:text-white hover:border-white/[0.2] font-medium transition-all duration-300 hover:bg-white/[0.03]"
                 >
                   <Headphones className="w-4 h-4" />
                   Hablar con ventas
-                </a>
+                </Link>
               </div>
             </Reveal>
           </div>

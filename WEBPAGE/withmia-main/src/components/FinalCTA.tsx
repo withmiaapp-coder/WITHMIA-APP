@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
 
 export const FinalCTA = () => {
   return (
@@ -30,17 +32,17 @@ export const FinalCTA = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <a href="https://app.withmia.com">
+              <a href="https://app.withmia.com" onClick={() => trackCTAClick('comenzar_gratis', 'final_cta', 'https://app.withmia.com')}>
                 <Button variant="hero" size="default" className="text-sm px-6 py-3">
                   Comenzar gratis ahora
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </a>
-              <a href="/contacto">
+              <Link to="/contacto" onClick={() => trackCTAClick('hablar_experto', 'final_cta', '/contacto')}>
                 <Button variant="glass" size="default" className="text-sm">
                   Hablar con un experto
                 </Button>
-              </a>
+              </Link>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-6 pt-2">

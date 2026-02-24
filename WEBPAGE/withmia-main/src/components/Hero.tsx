@@ -1,5 +1,7 @@
 import { ArrowRight, CalendarCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
 
 const channels = [
   { name: "WhatsApp", icon: "/icons/whatsapp.webp", size: 24 },
@@ -92,6 +94,7 @@ function ParticleCanvas() {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none z-[2]"
+      aria-hidden="true"
     />
   );
 }
@@ -103,7 +106,7 @@ export const Hero = () => {
       <div className="absolute inset-0">
         <img
           src="/Banner%20web%20withmia.webp"
-          alt=""
+          alt="WITHMIA plataforma omnicanal con IA"
           className="w-full h-full object-cover object-center"
         />
         {/* Dark overlay for text readability */}
@@ -149,18 +152,18 @@ export const Hero = () => {
           className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
           style={{ animationDelay: "240ms" }}
         >
-          <a href="https://app.withmia.com">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick('comenzar_ahora', 'hero', 'https://app.withmia.com')}>
             <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
               <ArrowRight className="w-4 h-4" />
               Comenzar ahora
             </button>
           </a>
-          <a href="/contacto">
+          <Link to="/contacto" onClick={() => trackCTAClick('agenda_demo', 'hero', '/contacto')}>
             <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
               <CalendarCheck className="w-4 h-4" />
               Agenda una demo
             </button>
-          </a>
+          </Link>
         </div>
 
         {/* Channel icons */}

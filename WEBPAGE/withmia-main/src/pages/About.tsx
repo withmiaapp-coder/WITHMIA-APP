@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useState, useEffect, useRef } from "react";
 import {
   Rocket,
@@ -19,23 +20,9 @@ import {
   Layers,
   TrendingUp,
 } from "lucide-react";
-
-/* ─── Scroll-reveal ─── */
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setV(true); obs.disconnect(); } },
-      { threshold: 0.12, rootMargin: "0px 0px -30px 0px" }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return { ref, isVisible: v };
-}
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
+import { useScrollReveal } from "@/hooks/useAnimations";
 
 /* ─── Animated counter ─── */
 function useCountUp(target: number, duration = 1800, start = false) {
@@ -148,6 +135,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen relative">
+      <SEO title="Nosotros" description="Conoce al equipo detrás de WITHMIA. Nuestra misión es democratizar la IA conversacional para potenciar negocios de todos los tamaños." path="/nosotros" />
       <Navigation />
       <main className="pt-20 relative overflow-hidden">
 
@@ -443,6 +431,7 @@ const About = () => {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <a
                     href="https://app.withmia.com"
+                    onClick={() => trackCTAClick('comenzar_ahora', 'about_cta', 'https://app.withmia.com')}
                     className="relative flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -451,12 +440,13 @@ const About = () => {
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </a>
-                  <a
-                    href="/contacto"
+                  <Link
+                    to="/contacto"
+                    onClick={() => trackCTAClick('contactar_equipo', 'about_cta', '/contacto')}
                     className="flex items-center justify-center px-8 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
                   >
                     Contactar al equipo
-                  </a>
+                  </Link>
                 </div>
 
                 {/* Trust strip */}

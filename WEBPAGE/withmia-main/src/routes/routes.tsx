@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Route, Routes, Navigate } from 'react-router-dom';
 
 // Lazy load components
 const Index = lazy(() => import('@/pages/Index'));
@@ -35,9 +35,11 @@ export const AppRoutes = () => {
         <Route path="/" element={<Index />} />
         <Route path="/contacto" element={<Contact />} />
         <Route path="/plataforma" element={<Solutions />} />
-        <Route path="/soluciones" element={<Solutions />} />
+        {/* Canonical: /plataforma — redirect /soluciones */}
+        <Route path="/soluciones" element={<Navigate to="/plataforma" replace />} />
         <Route path="/pymes" element={<SolucionesPymes />} />
-        <Route path="/soluciones/pymes" element={<SolucionesPymes />} />
+        {/* Canonical: /pymes — redirect /soluciones/pymes */}
+        <Route path="/soluciones/pymes" element={<Navigate to="/pymes" replace />} />
         <Route path="/integraciones" element={<IntegrationsPage />} />
         <Route path="/api" element={<ApiPage />} />
         <Route path="/docs" element={<DocumentationPage />} />

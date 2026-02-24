@@ -1080,12 +1080,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     <div className={`h-full overflow-y-auto p-8 scrollbar-thin scrollbar-track-transparent ${!t ? 'scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400' : ''}`}
       style={t ? { background: t.containerBg } : undefined}
     >
+      {t && <style>{`
+        .int-toggle { background-color: ${isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db'} !important; }
+        .peer:checked ~ .int-toggle { background-color: var(--theme-accent) !important; }
+        .peer:focus ~ .int-toggle { --tw-ring-color: color-mix(in srgb, var(--theme-accent) 20%, transparent) !important; }
+      `}</style>}
       <div className="max-w-4xl mx-auto pb-8">
         
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-2">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-gray-500 to-slate-600 shadow-lg">
+            <div className={`p-2 rounded-lg shadow-lg ${!t ? 'bg-gradient-to-r from-gray-500 to-slate-600' : ''}`} style={t ? { background: t.accent } : undefined}>
               <Plug className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -1098,7 +1103,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         {/* Canales de Comunicación */}
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <MessageCircle className="w-5 h-5 text-purple-600" />
+            <MessageCircle className={`w-5 h-5 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
             <h2 className={`text-xl font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Canales de Comunicación</h2>
           </div>
           
@@ -1163,15 +1168,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     {!isConnected && (
                       <div className="mb-6">
                         <div className="flex items-center gap-2 mb-4">
-                          <Database className="w-5 h-5 text-purple-600" />
+                          <Database className={`w-5 h-5 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                           <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Configuración de Sincronización</h4>
-                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Antes de conectar</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${!t ? 'bg-purple-100 text-purple-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}>Antes de conectar</span>
                         </div>
                         
                         <div className={`p-4 rounded-lg border shadow-sm ${!t ? 'bg-white border-purple-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <RefreshCw className="w-5 h-5 text-purple-500" />
+                              <RefreshCw className={`w-5 h-5 ${!t ? 'text-purple-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                               <div>
                                 <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Importar Historial de Mensajes</p>
                                 <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Desactiva para conexión instantánea</p>
@@ -1184,7 +1189,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 onChange={(e) => handleSettingChange('syncFullHistory', e.target.checked)}
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                              <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                             </label>
                           </div>
                           
@@ -1200,7 +1205,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 <select
                                   value={localSettings.daysLimitImportMessages}
                                   onChange={(e) => handleSettingChange('daysLimitImportMessages', parseInt(e.target.value))}
-                                  className={`px-3 py-2 border rounded-lg text-sm font-medium ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700' : ''} focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                                  className={`px-3 py-2 border rounded-lg text-sm font-medium ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:ring-purple-500' : ''} focus:outline-none focus:ring-2 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text, '--tw-ring-color': t.accent } as React.CSSProperties : undefined}
                                 >
                                   <option value={3}>3 días ⚡ Rápido</option>
                                   <option value={7}>7 días</option>
@@ -1212,8 +1217,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </div>
                           )}
                           
-                          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-xs text-blue-700 flex items-center gap-1">
+                          <div className={`mt-3 p-2 border rounded-lg ${!t ? 'bg-blue-50 border-blue-200' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 10%, transparent)`, borderColor: `color-mix(in srgb, ${t.accent} 25%, transparent)` } : undefined}>
+                            <p className={`text-xs flex items-center gap-1 ${!t ? 'text-blue-700' : ''}`} style={t ? { color: t.accent } : undefined}>
                               <AlertCircle className="w-3 h-3" />
                               {localSettings.syncFullHistory 
                                 ? `Se importarán ${localSettings.daysLimitImportMessages} días de mensajes al escanear el QR`
@@ -1227,7 +1232,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={handleSaveSettings}
                               disabled={isUpdatingSettings}
-                              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400' : 'disabled:opacity-50'}`}
+                              style={t ? { background: t.accent } : undefined}
                             >
                               {isUpdatingSettings ? (
                                 <>
@@ -1273,7 +1279,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       
                       {isConnected && (
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                           <div className="flex items-center gap-2 text-green-700">
                             <Check className="w-4 h-4" />
                             <span className="text-sm font-medium">WhatsApp conectado y funcionando</span>
@@ -1307,7 +1313,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               onChange={(e) => handleSettingChange('rejectCall', e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                           </label>
                         </div>
 
@@ -1327,7 +1333,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               onChange={(e) => handleSettingChange('groupsIgnore', e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                           </label>
                         </div>
 
@@ -1347,7 +1353,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               onChange={(e) => handleSettingChange('alwaysOnline', e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                           </label>
                         </div>
 
@@ -1367,7 +1373,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               onChange={(e) => handleSettingChange('readMessages', e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                           </label>
                         </div>
 
@@ -1387,7 +1393,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               onChange={(e) => handleSettingChange('readStatus', e.target.checked)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                           </label>
                         </div>
                       </div>
@@ -1398,7 +1404,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <button
                             onClick={handleSaveSettings}
                             disabled={isUpdatingSettings}
-                            className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className={`px-6 py-2.5 text-white font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400' : 'disabled:opacity-50'}`}
+                            style={t ? { background: t.accent } : undefined}
                           >
                             {isUpdatingSettings ? (
                               <>
@@ -1428,7 +1435,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <div>
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
-                              <Globe className="w-5 h-5 text-indigo-600" />
+                              <Globe className={`w-5 h-5 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                               <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
@@ -1440,7 +1447,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               Desconectar
                             </button>
                           </div>
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                             <div className="flex items-center gap-2 text-green-700">
                               <Check className="w-4 h-4" />
                               <span className="text-sm font-medium">Widget de chat activo y funcionando</span>
@@ -1472,17 +1479,18 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <p className="text-xs text-neutral-400">Pega este código antes de la etiqueta <code className="bg-neutral-200 px-1 rounded">&lt;/body&gt;</code> en tu sitio web.</p>
 
                             {/* WordPress plugin download */}
-                            <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                            <div className={`p-4 rounded-lg ${!t ? 'bg-indigo-50 border border-indigo-200' : 'border'}`} style={t ? { background: t.expandedBg, borderColor: t.cardBorder } : undefined}>
                               <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <Globe className="w-4 h-4 text-indigo-600" />
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-indigo-100' : ''}`} style={t ? { background: t.cardBg } : undefined}>
+                                  <Globe className={`w-4 h-4 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                                 </div>
                                 <div className="flex-1">
-                                  <p className="text-sm font-semibold text-indigo-800 mb-1">¿Usas WordPress?</p>
-                                  <p className="text-xs text-indigo-600 mb-2">Instala nuestro plugin y configura todo desde tu panel de WordPress, sin tocar código.</p>
+                                  <p className={`text-sm font-semibold mb-1 ${!t ? 'text-indigo-800' : ''}`} style={t ? { color: t.text } : undefined}>¿Usas WordPress?</p>
+                                  <p className={`text-xs mb-2 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined}>Instala nuestro plugin y configura todo desde tu panel de WordPress, sin tocar código.</p>
                                   <a
                                     href="/plugins/withmia-chatweb/download"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                                    style={t ? { background: t.accent } : undefined}
                                     download
                                   >
                                     <Download className="w-3.5 h-3.5" />
@@ -1542,7 +1550,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                   type="checkbox"
                                   checked={widgetConfig[opt.key]}
                                   onChange={(e) => setWidgetConfig(p => ({ ...p, [opt.key]: e.target.checked }))}
-                                  className="mt-0.5 w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                  className={`mt-0.5 w-4 h-4 rounded border-neutral-300 ${!t ? 'text-indigo-600 focus:ring-indigo-500' : ''}`}
+                                  style={t ? { accentColor: t.accent } : undefined}
                                 />
                                 <div>
                                   <span className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{opt.label}</span>
@@ -1660,7 +1669,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                       }
                                     }}
                                     disabled={!newSuggestedQ.trim()}
-                                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${!t ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200' : 'border'}`}
+                                    style={t ? { background: t.expandedBg, color: t.accent, borderColor: t.cardBorder } : undefined}
                                   >
                                     + Agregar
                                   </button>
@@ -1674,14 +1684,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Live Preview Toggle */}
-                        <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <div className={`flex items-center justify-between p-3 rounded-lg ${!t ? 'bg-indigo-50 border border-indigo-200' : 'border'}`} style={t ? { background: t.expandedBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-2">
-                            <Eye className="w-4 h-4 text-indigo-600" />
-                            <span className="text-sm font-medium text-indigo-700">Vista previa del widget</span>
+                            <Eye className={`w-4 h-4 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
+                            <span className={`text-sm font-medium ${!t ? 'text-indigo-700' : ''}`} style={t ? { color: t.accent } : undefined}>Vista previa del widget</span>
                           </div>
                           <button
                             onClick={() => setShowWidgetPreview(!showWidgetPreview)}
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                            className={`px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                            style={t ? { background: t.accent } : undefined}
                           >
                             {showWidgetPreview ? 'Ocultar' : 'Mostrar'}
                           </button>
@@ -1747,7 +1758,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     ) : (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Globe className="w-5 h-5 text-indigo-600" />
+                          <Globe className={`w-5 h-5 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                           <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Configurar Widget de Chat Web</h4>
                         </div>
                         <p className={`text-sm mb-4 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente. Compatible con WordPress, Shopify, Wix y cualquier sitio web.</p>
@@ -1808,17 +1819,18 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         )}
 
                         {/* WordPress plugin download */}
-                        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                        <div className={`p-4 rounded-xl ${!t ? 'bg-indigo-50 border border-indigo-200' : 'border'}`} style={t ? { background: t.expandedBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Download className="w-4.5 h-4.5 text-indigo-600" />
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-indigo-100' : ''}`} style={t ? { background: t.cardBg } : undefined}>
+                              <Download className={`w-4.5 h-4.5 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-semibold text-indigo-800 mb-1">¿Usas WordPress?</p>
-                              <p className="text-xs text-indigo-600 mb-2">Instala nuestro plugin y configura el chat desde tu panel de WordPress sin tocar código.</p>
+                              <p className={`text-sm font-semibold mb-1 ${!t ? 'text-indigo-800' : ''}`} style={t ? { color: t.text } : undefined}>¿Usas WordPress?</p>
+                              <p className={`text-xs mb-2 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined}>Instala nuestro plugin y configura el chat desde tu panel de WordPress sin tocar código.</p>
                               <a
                                 href="/plugins/withmia-chatweb/download"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                                style={t ? { background: t.accent } : undefined}
                                 download
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -1836,7 +1848,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             welcome_tagline: webChatTagline,
                           })}
                           disabled={channelConnecting === 'web-chat' || !webChatUrl}
-                          className="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-indigo-300 disabled:to-purple-300 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+                          className={`w-full px-6 py-3 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 ${!t ? 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-indigo-300 disabled:to-purple-300' : 'disabled:opacity-50'}`}
+                          style={t ? { background: t.accent } : undefined}
                         >
                           {channelConnecting === 'web-chat' ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Creando widget...</>
@@ -1848,7 +1861,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
 
                     {channelSuccess('web-chat') && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                      <div className={`mt-3 p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-green-50 border-green-200 text-green-600' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)', color: isDark ? 'rgb(74,222,128)' : 'rgb(22,163,74)' } : undefined}>
                         <Check className="w-4 h-4" />
                         {channelSuccess('web-chat')}
                       </div>
@@ -1877,7 +1890,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               Desconectar
                             </button>
                           </div>
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                             <div className="flex items-center gap-2 text-green-700">
                               <Check className="w-4 h-4" />
                               <span className="text-sm font-medium">Email conectado y funcionando</span>
@@ -2023,7 +2036,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
 
                     {channelSuccess('email') && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                      <div className={`mt-3 p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-green-50 border-green-200 text-green-600' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)', color: isDark ? 'rgb(74,222,128)' : 'rgb(22,163,74)' } : undefined}>
                         <Check className="w-4 h-4" />
                         {channelSuccess('email')}
                       </div>
@@ -2052,7 +2065,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               Desconectar
                             </button>
                           </div>
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                             <div className="flex items-center gap-2 text-green-700">
                               <Check className="w-4 h-4" />
                               <span className="text-sm font-medium">Instagram conectado y funcionando</span>
@@ -2107,7 +2120,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
 
                     {channelSuccess('instagram') && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                      <div className={`mt-3 p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-green-50 border-green-200 text-green-600' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)', color: isDark ? 'rgb(74,222,128)' : 'rgb(22,163,74)' } : undefined}>
                         <Check className="w-4 h-4" />
                         {channelSuccess('instagram')}
                       </div>
@@ -2136,7 +2149,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               Desconectar
                             </button>
                           </div>
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                             <div className="flex items-center gap-2 text-green-700">
                               <Check className="w-4 h-4" />
                               <span className="text-sm font-medium">Messenger conectado y funcionando</span>
@@ -2186,7 +2199,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
 
                     {channelSuccess('messenger') && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                      <div className={`mt-3 p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-green-50 border-green-200 text-green-600' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)', color: isDark ? 'rgb(74,222,128)' : 'rgb(22,163,74)' } : undefined}>
                         <Check className="w-4 h-4" />
                         {channelSuccess('messenger')}
                       </div>
@@ -2215,7 +2228,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               Desconectar
                             </button>
                           </div>
-                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                             <div className="flex items-center gap-2 text-green-700">
                               <Check className="w-4 h-4" />
                               <span className="text-sm font-medium">WhatsApp Cloud API conectado y funcionando</span>
@@ -2275,7 +2288,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     )}
 
                     {channelSuccess('whatsapp-api') && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-600 flex items-center gap-2">
+                      <div className={`mt-3 p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-green-50 border-green-200 text-green-600' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)', color: isDark ? 'rgb(74,222,128)' : 'rgb(22,163,74)' } : undefined}>
                         <Check className="w-4 h-4" />
                         {channelSuccess('whatsapp-api')}
                       </div>
@@ -2291,7 +2304,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         {/* Herramientas */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Settings className="w-5 h-5 text-purple-600" />
+            <Settings className={`w-5 h-5 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
             <h2 className={`text-xl font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Herramientas</h2>
           </div>
 
@@ -2310,8 +2323,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== AGENDAPRO ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'agendapro' ? 'border-teal-300 shadow-lg ring-1 ring-teal-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'agendapro'
+                ? !t ? 'border-teal-300 shadow-lg ring-1 ring-teal-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'agendapro' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'agendapro' ? null : 'agendapro')}>
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl shadow-md border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
@@ -2335,7 +2351,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {agendaproConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">AgendaPro conectado</span></div>
                           {agendaproIntegration?.provider_email && <span className="text-xs text-green-600">{agendaproIntegration.provider_email}</span>}
@@ -2343,7 +2359,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${agendaproIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (agendaproIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: agendaproIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agendaproIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en AgendaPro'}</p>
@@ -2351,7 +2367,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={agendaproIntegration?.bot_access_enabled || false} onChange={toggleAgendaproBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2400,8 +2416,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== DENTALINK ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'dentalink' ? 'border-cyan-300 shadow-lg ring-1 ring-cyan-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'dentalink'
+                ? !t ? 'border-cyan-300 shadow-lg ring-1 ring-cyan-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'dentalink' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'dentalink' ? null : 'dentalink')}>
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #00bcd4, #00bcd4DD)' }}>
@@ -2425,7 +2444,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {dentalinkConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Dentalink conectado</span></div>
                           {dentalinkIntegration?.provider_email && <span className="text-xs text-green-600">{dentalinkIntegration.provider_email}</span>}
@@ -2433,7 +2452,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${dentalinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (dentalinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: dentalinkIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{dentalinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas dentales automáticamente' : 'Activa para que WITHMIA agende en Dentalink'}</p>
@@ -2441,7 +2460,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={dentalinkIntegration?.bot_access_enabled || false} onChange={toggleDentalinkBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2490,8 +2509,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== MEDILINK ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'medilink' ? 'border-pink-300 shadow-lg ring-1 ring-pink-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'medilink'
+                ? !t ? 'border-pink-300 shadow-lg ring-1 ring-pink-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'medilink' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'medilink' ? null : 'medilink')}>
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #e91e63, #e91e63DD)' }}>
@@ -2515,7 +2537,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {medilinkConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Medilink conectado</span></div>
                           {medilinkIntegration?.provider_email && <span className="text-xs text-green-600">{medilinkIntegration.provider_email}</span>}
@@ -2523,7 +2545,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${medilinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (medilinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: medilinkIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{medilinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas médicas automáticamente' : 'Activa para que WITHMIA agende en Medilink'}</p>
@@ -2531,7 +2553,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={medilinkIntegration?.bot_access_enabled || false} onChange={toggleMedilinkBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2580,8 +2602,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== CALENDLY ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'calendly' ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'calendly'
+                ? !t ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'calendly' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'calendly' ? null : 'calendly')}>
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #006BFF, #006BFFDD)' }}>
@@ -2605,7 +2630,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {calendlyConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Calendly conectado</span></div>
                           {calendlyIntegration?.provider_email && <span className="text-xs text-green-600">{calendlyIntegration.provider_email}</span>}
@@ -2613,7 +2638,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${calendlyIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (calendlyIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: calendlyIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{calendlyIntegration?.bot_access_enabled ? 'WITHMIA puede enviar links de agendamiento' : 'Activa para que WITHMIA agende vía Calendly'}</p>
@@ -2621,7 +2646,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={calendlyIntegration?.bot_access_enabled || false} onChange={toggleCalendlyBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2658,9 +2683,10 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             {/* ==================== GOOGLE CALENDAR ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'calendar'
-                ? 'border-rose-300 shadow-lg ring-1 ring-rose-100'
-                : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+                ? !t ? 'border-rose-300 shadow-lg ring-1 ring-rose-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'calendar' ? t.accent : t.cardBorder } : undefined}>
               <div
                 className="flex items-center justify-between p-4 cursor-pointer"
                 onClick={() => setExpandedTool(expandedTool === 'calendar' ? null : 'calendar')}
@@ -2698,7 +2724,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {gcalConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700">
                             <Check className="w-4 h-4" />
@@ -2711,7 +2737,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${gcalIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (gcalIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: gcalIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
@@ -2721,7 +2747,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={gcalIntegration?.bot_access_enabled || false} onChange={toggleGcalBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2764,8 +2790,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== OUTLOOK CALENDAR ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'outlook' ? 'border-blue-400 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'outlook'
+                ? !t ? 'border-blue-400 shadow-lg ring-1 ring-blue-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'outlook' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'outlook' ? null : 'outlook')}>
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #0078D4, #0078D4DD)' }}>
@@ -2789,7 +2818,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {outlookConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Outlook Calendar conectado</span></div>
                           {outlookIntegration?.provider_email && <span className="text-xs text-green-600">{outlookIntegration.provider_email}</span>}
@@ -2797,7 +2826,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${outlookIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (outlookIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: outlookIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{outlookIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}</p>
@@ -2805,7 +2834,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={outlookIntegration?.bot_access_enabled || false} onChange={toggleOutlookBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -2848,8 +2877,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
             {/* ==================== RESERVO ==================== */}
             <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-              expandedTool === 'reservo' ? 'border-amber-300 shadow-lg ring-1 ring-amber-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-            }`}>
+              expandedTool === 'reservo'
+                ? !t ? 'border-amber-300 shadow-lg ring-1 ring-amber-100' : 'shadow-lg'
+                : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+            }`}
+            style={t ? { background: t.cardBg, borderColor: expandedTool === 'reservo' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'reservo' ? null : 'reservo')}>
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl shadow-md bg-gradient-to-br from-teal-400 to-teal-600 overflow-hidden flex items-center justify-center">
@@ -2873,7 +2905,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {reservoConnected ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">Reservo conectado</span></div>
                           {reservoIntegration?.provider_email && <span className="text-xs text-green-600">{reservoIntegration.provider_email}.reservo.cl</span>}
@@ -2881,7 +2913,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 ${reservoIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                          <Bot className={`w-5 h-5 ${!t ? (reservoIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: reservoIntegration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                           <div>
                             <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
                             <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{reservoIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en Reservo'}</p>
@@ -2889,7 +2921,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" checked={reservoIntegration?.bot_access_enabled || false} onChange={toggleReservoBotAccess} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`}></div>
                         </label>
                       </div>
                       <div className="flex justify-end">
@@ -3047,8 +3079,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 return (
                   <div key={prov.id} className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
-                    isExpanded ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-                  }`}>
+                    isExpanded
+                      ? !t ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'shadow-lg'
+                      : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+                  }`}
+                  style={t ? { background: t.cardBg, borderColor: isExpanded ? t.accent : t.cardBorder } : undefined}>
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(isExpanded ? null : prov.id)}>
                       <div className="flex items-center gap-4">
@@ -3075,7 +3110,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                         {isConnected ? (
                           <div className="space-y-4">
-                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className={`p-3 border rounded-lg ${!t ? 'bg-green-50 border-green-200' : ''}`} style={t ? { background: isDark ? 'rgba(34,197,94,0.1)' : 'rgb(240,253,244)', borderColor: isDark ? 'rgba(34,197,94,0.3)' : 'rgb(187,247,208)' } : undefined}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-green-700"><Check className="w-4 h-4" /><span className="text-sm font-medium">{prov.name} conectado</span></div>
                                 <div className="flex items-center gap-2">
@@ -3086,7 +3121,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </div>
                             <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                               <div className="flex items-center gap-3">
-                                <Bot className={`w-5 h-5 ${integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+                                <Bot className={`w-5 h-5 ${!t ? (integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400') : ''}`} style={t ? { color: integration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
                                 <div>
                                   <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Que WITHMIA use estos productos</p>
                                   <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{integration?.bot_access_enabled ? 'WITHMIA recomienda estos productos a tus clientes' : 'Activa para que WITHMIA recomiende tus productos'}</p>
@@ -3094,7 +3129,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               </div>
                               <label className="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" checked={integration?.bot_access_enabled || false} onChange={() => toggleProductBotAccess(prov.id)} className="sr-only peer" />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600" />
+                                <div className={`w-11 h-6 ${!t ? 'bg-gray-200 peer-focus:ring-purple-100 peer-checked:bg-purple-600' : 'int-toggle'} peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all`} />
                               </label>
                             </div>
                             <div className="flex justify-between items-center">
@@ -3110,30 +3145,30 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         ) : (
                           <div className="space-y-5">
                             {/* Step-by-step guide */}
-                            <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-xl">
-                              <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">¿Cómo lo hago?</p>
+                            <div className={`p-4 border rounded-xl ${!t ? 'bg-blue-50/60 border-blue-100' : ''}`} style={t ? { background: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(239,246,255,0.6)', borderColor: isDark ? 'rgba(59,130,246,0.2)' : 'rgb(219,234,254)' } : undefined}>
+                              <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${!t ? 'text-blue-700' : ''}`} style={t ? { color: isDark ? 'rgb(96,165,250)' : 'rgb(29,78,216)' } : undefined}>¿Cómo lo hago?</p>
                               <div className="space-y-2.5">
                                 {prov.steps.map((step, i) => (
                                   <div key={i} className="flex items-start gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
-                                    <p className="text-sm text-blue-800 leading-relaxed">{step}</p>
+                                    <span className={`flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center mt-0.5 ${!t ? 'bg-blue-500' : ''}`} style={t ? { background: t.accent } : undefined}>{i + 1}</span>
+                                    <p className={`text-sm leading-relaxed ${!t ? 'text-blue-800' : ''}`} style={t ? { color: isDark ? 'rgb(147,197,253)' : 'rgb(30,64,175)' } : undefined}>{step}</p>
                                   </div>
                                 ))}
                               </div>
                             </div>
                             {/* Plugin download CTA for WooCommerce */}
                             {prov.id === 'woocommerce' && (
-                              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                              <div className={`p-4 border rounded-xl ${!t ? 'bg-purple-50 border-purple-200' : ''}`} style={t ? { background: t.accent + '15', borderColor: t.accent + '30' } : undefined}>
                                 <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Download className="w-4 h-4 text-purple-600" />
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-purple-100' : ''}`} style={t ? { background: t.accent + '20' } : undefined}>
+                                    <Download className={`w-4 h-4 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                                   </div>
                                   <div className="flex-1">
-                                    <p className="text-sm font-semibold text-purple-800 mb-1">Plugin WITHMIA para WooCommerce</p>
-                                    <p className="text-xs text-purple-600 mb-2">Instala nuestro plugin en WordPress para sincronizar productos, generar carritos por URL, rastrear carritos abandonados y más.</p>
+                                    <p className={`text-sm font-semibold mb-1 ${!t ? 'text-purple-800' : ''}`} style={t ? { color: t.text } : undefined}>Plugin WITHMIA para WooCommerce</p>
+                                    <p className={`text-xs mb-2 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined}>Instala nuestro plugin en WordPress para sincronizar productos, generar carritos por URL, rastrear carritos abandonados y más.</p>
                                     <a
                                       href="/plugins/withmia-for-woocommerce/download"
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors ${!t ? 'bg-purple-600 hover:bg-purple-700' : ''}`} style={t ? { background: t.accent } : undefined}
                                       download
                                     >
                                       <Download className="w-3.5 h-3.5" />
@@ -3166,7 +3201,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => connectProvider(prov.id, prov.credentialMap as unknown as Record<string, string>, prov.requiredFields)}
                               disabled={form.connecting}
-                              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-200/50"
+                              className={`w-full py-3 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${!t ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-200/50' : ''}`} style={t ? { background: t.accent } : undefined}
                             >
                               {form.connecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar {prov.name}</>)}
                             </button>

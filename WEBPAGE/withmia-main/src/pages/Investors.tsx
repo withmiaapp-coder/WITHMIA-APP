@@ -1,6 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState } from "react";
+import { trackFormSubmit } from "@/lib/analytics";
 import { TrendingUp, Globe, Users, Zap, Shield, BarChart3, ArrowRight, Mail, Building2, User, MessageSquare, CheckCircle2, Rocket, GraduationCap, Target, DollarSign, Calendar, Award, Lightbulb } from "lucide-react";
 
 const Investors = () => {
@@ -17,6 +19,7 @@ const Investors = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    trackFormSubmit("investor_interest", { company: formData.company });
     const subject = encodeURIComponent("Interés de Inversión — WITHMIA");
     const body = encodeURIComponent(
       `Nombre: ${formData.name}\nEmpresa: ${formData.company}\nEmail: ${formData.email}\n\nMensaje:\n${formData.message}`
@@ -27,6 +30,7 @@ const Investors = () => {
   return (
     <div className="min-h-screen bg-[#030507]">
       <Navigation />
+      <SEO title="Inversores" description="Invierte en WITHMIA. Información para inversores sobre nuestra visión, tracción, mercado y oportunidades de financiamiento." path="/inversores" />
       <main className="pt-20">
 
         {/* ── HERO ── */}

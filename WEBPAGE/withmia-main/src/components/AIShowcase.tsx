@@ -18,6 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { trackCTAClick } from "@/lib/analytics";
+import { Reveal } from "@/hooks/useAnimations";
 
 /* ═══════════════════════════════════════
    AI Pipeline steps
@@ -394,24 +396,6 @@ const OptimizationVisual = ({ accent }: { accent: string }) => (
 const stageVisuals = [KnowledgeBaseVisual, ContextualVisual, HumanizedVisual, OptimizationVisual];
 
 /* ═══════════════════════════════════════
-   Scroll-reveal helper
-   ═══════════════════════════════════════ */
-const Reveal = ({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [vis, setVis] = useState(false);
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold: 0.1 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className={`transition-all duration-[800ms] ease-out ${vis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
-      {children}
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════
    AUTO-ADVANCE INTERVAL (ms)
    ═══════════════════════════════════════ */
 const AUTO_INTERVAL = 6000;
@@ -727,7 +711,7 @@ export const AIShowcase = () => {
           <p className="text-[13px] text-white/30 mb-5">
             Todo este motor trabaja 24/7, sin pausas, sin errores humanos.
           </p>
-          <a href="https://app.withmia.com">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick("ver_ia_accion", "ai_showcase")}>
             <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(167,139,250,0.35)]">
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               <span className="relative">Ver la IA en acción</span>

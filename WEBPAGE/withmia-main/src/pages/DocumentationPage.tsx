@@ -1,6 +1,9 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
 import {
   Search, BookOpen, Code, Layers, MessageSquare,
   ArrowRight, ArrowLeft, ChevronRight, Terminal, FileText,
@@ -1825,6 +1828,8 @@ const DocumentationPage = () => {
 
       <Navigation />
 
+      <SEO title="Documentación" description="Documentación técnica de WITHMIA. Guías de inicio rápido, referencia de API, webhooks, integraciones y mejores prácticas." path="/docs" />
+
       {/* Scroll Progress — fixed at very top */}
       <div className={`fixed top-0 left-0 right-0 z-[60] h-[2px] transition-opacity duration-300 ${scrollProgress > 1 ? 'opacity-100' : 'opacity-0'}`}>
         <div
@@ -1901,12 +1906,12 @@ const DocumentationPage = () => {
               />
             ))}
             <div className="mt-6 pt-4 border-t border-white/[0.04] space-y-1">
-              <a href="/api" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+              <Link to="/api" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
                 <Terminal className="w-4 h-4" />
                 API Interactiva
                 <ExternalLink className="w-3 h-3 ml-auto" />
-              </a>
-              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+              </Link>
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" onClick={() => trackCTAClick("ir_dashboard_docs", "docs")} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
                 <Play className="w-4 h-4" />
                 Ir al Dashboard
                 <ExternalLink className="w-3 h-3 ml-auto" />
@@ -1958,7 +1963,7 @@ const DocumentationPage = () => {
                   <p className="text-[15px] text-white/35 leading-relaxed">
                     Cubre todo, desde la configuración inicial hasta el uso avanzado de la API.
                     Es un trabajo en constante evolución y todas las{" "}
-                    <a href="/contacto" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20">contribuciones</a>{" "}
+                    <Link to="/contacto" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20">contribuciones</Link>{" "}
                     son bienvenidas.
                   </p>
                 </div>
@@ -2055,7 +2060,7 @@ const DocumentationPage = () => {
               </ul>
 
               <Callout variant="tip" title="Tip">
-                Si prefieres explorar sin instalar nada, usa la API interactiva en <a href="/api" className="text-emerald-400/70 hover:text-emerald-400 underline underline-offset-2 decoration-emerald-400/20">/api</a> — puedes probar todos los endpoints desde tu navegador.
+                Si prefieres explorar sin instalar nada, usa la API interactiva en <Link to="/api" className="text-emerald-400/70 hover:text-emerald-400 underline underline-offset-2 decoration-emerald-400/20">/api</Link> — puedes probar todos los endpoints desde tu navegador.
               </Callout>
 
               {/* Step 1 */}
@@ -2171,7 +2176,7 @@ const DocumentationPage = () => {
                   {i === 0 && (
                     <Callout variant="info" title="En desarrollo">
                       La documentación detallada de esta sección se está ampliando. Para consultas específicas,{" "}
-                      <a href="/contacto" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 decoration-cyan-400/20">contacta a nuestro equipo</a>.
+                      <Link to="/contacto" className="text-cyan-400/70 hover:text-cyan-400 underline underline-offset-2 decoration-cyan-400/20">contacta a nuestro equipo</Link>.
                     </Callout>
                   )}
                 </div>
@@ -2213,9 +2218,9 @@ const DocumentationPage = () => {
                 <a href="#" className="flex items-center gap-1.5 text-white/15 hover:text-white/40 transition-colors">
                   <FileText className="w-3 h-3" /> Editar esta página
                 </a>
-                <a href="/contacto" className="flex items-center gap-1.5 text-white/20 hover:text-amber-400/70 transition-colors">
+                <Link to="/contacto" className="flex items-center gap-1.5 text-white/20 hover:text-amber-400/70 transition-colors">
                   ¿Necesitas ayuda? <ArrowUpRight className="w-3 h-3" />
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -2244,12 +2249,12 @@ const DocumentationPage = () => {
             </nav>
 
             <div className="mt-8 pt-4 border-t border-white/[0.04] space-y-2">
-              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-amber-400/60 transition-colors">
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" onClick={() => trackCTAClick("chat_soporte_ia_docs", "docs")} className="flex items-center gap-2 text-[11px] text-white/20 hover:text-amber-400/60 transition-colors">
                 <Sparkles className="w-3 h-3" /> Chat con soporte IA
               </a>
-              <a href="/contacto" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors">
+              <Link to="/contacto" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors">
                 <Headphones className="w-3 h-3" /> Contactar soporte
-              </a>
+              </Link>
             </div>
           </div>
         </aside>

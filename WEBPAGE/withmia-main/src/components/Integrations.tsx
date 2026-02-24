@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { trackCTAClick } from "@/lib/analytics";
 import {
   Terminal,
   Database,
@@ -859,6 +860,7 @@ export const Integrations = () => {
                 href="https://app.withmia.com/docs"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackCTAClick("ver_documentacion_api", "integrations")}
                 className="inline-flex items-center gap-2 text-[12px] font-semibold text-amber-400 hover:text-amber-300 transition-all group px-5 py-2.5 rounded-xl bg-amber-400/[0.06] border border-amber-400/15 hover:bg-amber-400/[0.12] hover:border-amber-400/30 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)] shrink-0"
               >
                 Ver documentación

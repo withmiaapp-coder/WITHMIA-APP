@@ -1,5 +1,7 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
+import { trackFormSubmit } from "@/lib/analytics";
 import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 import {
   User as UserIcon,
@@ -102,27 +104,12 @@ interface PortalData {
 }
 
 /* ── Constants ── */
-const GOOGLE_CLIENT_ID = "870525180915-5reas32antlqnj9ie3gadpr7n28prk0e.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const API_URL = import.meta.env.VITE_API_URL || "https://app.withmia.com";
-const APP_URL = "https://app.withmia.com";
+const APP_URL = import.meta.env.VITE_APP_URL || "https://app.withmia.com";
 
-/* ── Reveal ── */
-const Reveal = ({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setV(true), { threshold: 0.1 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className={className} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity .65s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .65s cubic-bezier(.16,1,.3,1) ${delay}ms` }}>
-      {children}
-    </div>
-  );
-};
+/* ── Reveal (shared) ── */
+import { Reveal } from "@/hooks/useAnimations";
 
 /* ── Google icon ── */
 const GoogleIcon = () => (
@@ -310,6 +297,7 @@ const MyAccount = () => {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.message || "Error");
       setSubmitSuccess(true);
+      trackFormSubmit("support_ticket_account", { category });
       setSubject("");
       setDescription("");
       setCategory("General");
@@ -339,6 +327,7 @@ const MyAccount = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
+      <SEO title="Mi Cuenta" description="Gestiona tu cuenta de WITHMIA. Perfil, suscripción, facturación y configuración." path="/mi-cuenta" noindex />
       <main className="pt-20">
 
         {/* ── HERO ── */}
@@ -406,7 +395,7 @@ const MyAccount = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     {user.picture ? (
-                      <img src={user.picture} alt="" className="w-10 h-10 rounded-full border border-white/[0.08]" />
+                      <img src={user.picture} alt="Foto de perfil" className="w-10 h-10 rounded-full border border-white/[0.08]" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-amber-500/[0.08] border border-amber-500/15 flex items-center justify-center">
                         <span className="text-sm font-bold text-amber-400/60">{user.email.charAt(0).toUpperCase()}</span>
@@ -479,7 +468,7 @@ const MyAccount = () => {
                         <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-5">
                           <div className="flex items-center gap-4 mb-5">
                             {user.picture ? (
-                              <img src={user.picture} alt="" className="w-14 h-14 rounded-full border-2 border-white/[0.06]" />
+                              <img src={user.picture} alt="Foto de perfil" className="w-14 h-14 rounded-full border-2 border-white/[0.06]" />
                             ) : (
                               <div className="w-14 h-14 rounded-full bg-amber-500/[0.08] border-2 border-amber-500/15 flex items-center justify-center">
                                 <span className="text-lg font-bold text-amber-400/60">{user.email.charAt(0).toUpperCase()}</span>
@@ -531,7 +520,7 @@ const MyAccount = () => {
                           <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-5">
                             <div className="flex items-center gap-3 mb-3">
                               {portalData.company.logo ? (
-                                <img src={portalData.company.logo} alt="" className="w-10 h-10 rounded-lg border border-white/[0.06] object-cover" />
+                                <img src={portalData.company.logo} alt="Logo de la empresa" className="w-10 h-10 rounded-lg border border-white/[0.06] object-cover" />
                               ) : (
                                 <div className="w-10 h-10 rounded-lg bg-amber-500/[0.06] border border-amber-500/15 flex items-center justify-center">
                                   <Building2 className="w-4 h-4 text-amber-400/50" />

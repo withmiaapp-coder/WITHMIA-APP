@@ -1,6 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import {
   FileText, CheckCircle2, Monitor, UserCog, CreditCard, ShieldAlert,
   Copyright, Lock, Server, Code2, Scale, XCircle, PenLine, Gavel,
@@ -88,6 +90,8 @@ const Terms = () => {
 
       <Navigation />
 
+      <SEO title="Términos y Condiciones" description="Términos y condiciones de uso de WITHMIA. Conoce tus derechos y responsabilidades al usar nuestra plataforma de IA conversacional." path="/terminos" />
+
       <main className="pt-20 relative z-[1]">
 
         {/* ── HERO ── */}
@@ -139,10 +143,10 @@ const Terms = () => {
 
                   {/* Related links */}
                   <div className="mt-6 pt-4 border-t border-white/[0.04]">
-                    <a href="/privacidad" className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-white/25 hover:text-amber-400/70 transition-colors">
+                    <Link to="/privacidad" className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-white/25 hover:text-amber-400/70 transition-colors">
                       <Lock className="w-3.5 h-3.5" />
                       Política de Privacidad
-                    </a>
+                    </Link>
                   </div>
                 </nav>
               </aside>
@@ -281,9 +285,9 @@ const Terms = () => {
                     </div>
                     <p>
                       El tratamiento de datos personales se rige por nuestra{" "}
-                      <a href="/privacidad" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20 transition-colors">
+                      <Link to="/privacidad" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20 transition-colors">
                         Política de Privacidad
-                      </a>
+                      </Link>
                       , que forma parte integral de estos Términos. WITHMIA se compromete a:
                     </p>
                     <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
@@ -473,17 +477,17 @@ const Terms = () => {
                   <div className="pt-6">
                     <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-8" />
                     <div className="flex flex-wrap items-center gap-4 text-[13px]">
-                      <a href="/privacidad" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                      <Link to="/privacidad" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                         Política de Privacidad
-                      </a>
+                      </Link>
                       <span className="text-white/10">·</span>
-                      <a href="/contacto" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                      <Link to="/contacto" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                         Contacto
-                      </a>
+                      </Link>
                       <span className="text-white/10">·</span>
-                      <a href="/docs" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
+                      <Link to="/docs" className="text-white/30 hover:text-amber-400/70 transition-colors underline underline-offset-2 decoration-white/10 hover:decoration-amber-400/20">
                         Documentación
-                      </a>
+                      </Link>
                     </div>
                   </div>
 

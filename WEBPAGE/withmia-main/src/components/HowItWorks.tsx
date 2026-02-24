@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { trackCTAClick } from "@/lib/analytics";
 
 const steps = [
   {
@@ -60,7 +61,7 @@ export const HowItWorks = () => {
 
         {/* CTA */}
         <div className="text-center">
-          <a href="https://app.withmia.com">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick('comenzar_gratis', 'how_it_works', 'https://app.withmia.com')}>
             <Button variant="hero" size="lg">
               Comenzar gratis
               <ArrowRight className="ml-1 w-4 h-4" />

@@ -1,7 +1,8 @@
 import logo from "@/assets/logo-withmia.png";
 import { Menu, X, ChevronDown, Bot, Plug, BarChart3, Code, Sparkles, MessageCircle, Users, Inbox, Zap } from "lucide-react";
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
 
 const menuItems = [
   { label: "Precios", path: "/precios" },
@@ -67,6 +68,13 @@ export const Navigation = () => {
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 pointer-events-none">
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="pointer-events-auto sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-amber-500 focus:text-black focus:font-semibold focus:text-sm focus:outline-none"
+      >
+        Saltar al contenido
+      </a>
       {/* Floating nav bar */}
       <nav
         className="pointer-events-auto mx-4 sm:mx-8 lg:mx-auto max-w-6xl mt-4 rounded-2xl bg-background/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.35)]"
@@ -74,13 +82,13 @@ export const Navigation = () => {
           <div className="px-5 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
-              <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
+              <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
                 <img src={logo} alt="WITHMIA" className="w-9 h-9" />
                 <span className="text-lg font-bold tracking-tight text-white">
                   WITH<span className="font-extrabold">MIA</span>
                   <sup className="text-[0.45em] font-normal ml-0.5">®</sup>
                 </span>
-              </a>
+              </Link>
 
               {/* Desktop links — center */}
               <div className="hidden lg:flex items-center gap-7">
@@ -188,6 +196,7 @@ export const Navigation = () => {
                           <p className="text-xs text-white/30">¿Quieres verlo en acción?</p>
                           <a
                             href="https://app.withmia.com"
+                            onClick={() => trackCTAClick("probar_gratis_menu", "navigation")}
                             className="text-xs font-medium text-amber-400/80 hover:text-amber-300 transition-colors"
                           >
                             Probar gratis →
@@ -211,13 +220,13 @@ export const Navigation = () => {
 
               {/* Right side — login + CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <a
-                  href="/mi-cuenta"
+                <Link
+                  to="/mi-cuenta"
                   className="text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
                 >
                   Mi Cuenta
-                </a>
-                <a href="https://app.withmia.com">
+                </Link>
+                <a href="https://app.withmia.com" onClick={() => trackCTAClick("comenzar_ahora_nav", "navigation")}>
                   <button className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold shadow-[0_2px_12px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300">
                     Comenzar Ahora
                   </button>
@@ -272,15 +281,16 @@ export const Navigation = () => {
                     {item.label}
                   </button>
                 ))}
-                <a
-                  href="/mi-cuenta"
+                <Link
+                  to="/mi-cuenta"
                   className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Mi Cuenta
-                </a>
+                </Link>
                 <a
                   href="https://app.withmia.com"
+                  onClick={() => trackCTAClick("comenzar_ahora_mobile", "navigation")}
                   className="w-full mt-2"
                 >
                   <button className="w-full px-5 py-3 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold shadow-[0_2px_12px_rgba(245,158,11,0.3)] transition-all duration-300">

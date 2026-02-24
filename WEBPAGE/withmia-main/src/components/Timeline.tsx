@@ -1,4 +1,5 @@
 import { Rocket, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { trackCTAClick } from "@/lib/analytics";
 
 const milestones = [
   {
@@ -183,6 +184,7 @@ export const Timeline = () => {
         <div className="text-center mt-10">
           <a
             href="https://app.withmia.com"
+            onClick={() => trackCTAClick("empezar_dia1", "timeline")}
           >
             <button className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
               Empezar mi Día 1

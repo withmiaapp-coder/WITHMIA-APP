@@ -1,6 +1,10 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
+import { FaqJsonLd } from "@/components/JsonLd";
 import { useEffect, useState, useMemo, useRef, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { Reveal } from "@/hooks/useAnimations";
 import {
   Search,
   ChevronDown,
@@ -471,6 +475,12 @@ const FaqPage = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
+      <SEO title="Preguntas Frecuentes" description="Preguntas frecuentes sobre WITHMIA. Todo lo que necesitas saber sobre nuestra plataforma de IA conversacional, precios, integraciones y más." path="/faq" />
+      <FaqJsonLd
+        faqs={faqCategories.flatMap((cat) =>
+          cat.items.map((item) => ({ question: item.q, answer: item.a }))
+        )}
+      />
       <main className="pt-20">
 
         {/* ────────── HERO ────────── */}
@@ -677,15 +687,15 @@ const FaqPage = () => {
 
               {/* Need more help? */}
               <div className="mt-5 flex items-center justify-center gap-5 text-[11px] text-white/15">
-                <a href="/soporte" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
+                <Link to="/soporte" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
                   <Headphones className="w-3 h-3" />
                   Contactar Soporte
-                </a>
+                </Link>
                 <span className="text-white/[0.05]">|</span>
-                <a href="/comunidad" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
+                <Link to="/comunidad" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
                   <Users className="w-3 h-3" />
                   Comunidad Discord
-                </a>
+                </Link>
               </div>
             </div>
           </section>

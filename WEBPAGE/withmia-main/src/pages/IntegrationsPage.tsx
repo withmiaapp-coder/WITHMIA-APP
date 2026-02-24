@@ -1,6 +1,10 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
 import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
+import { trackCTAClick } from "@/lib/analytics";
+import { Reveal } from "@/hooks/useAnimations";
 import {
   ArrowRight,
   CalendarCheck,
@@ -23,41 +27,6 @@ import {
   Clock,
   Shield,
 } from "lucide-react";
-
-/* ═══════════════════════════════════════════
-   Scroll-reveal helper
-   ═══════════════════════════════════════════ */
-const Reveal = ({
-  children,
-  className = "",
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [vis, setVis] = useState(false);
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVis(true); },
-      { threshold: 0.08 }
-    );
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={`transition-all duration-[800ms] ease-out ${
-        vis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-      } ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
-};
 
 /* ═══════════════════════════════════════════
    Data
@@ -260,6 +229,7 @@ const IntegrationsPage = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO title="Integraciones" description="Conecta WITHMIA con WhatsApp, Instagram, Facebook, Gmail, Google Calendar y más. Integración nativa con tus herramientas favoritas." path="/integraciones" />
       <Navigation />
       <main>
         {/* ══════════════════════════════════════
@@ -309,19 +279,19 @@ const IntegrationsPage = () => {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                  <a href="https://app.withmia.com">
+                  <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_integraciones", "integrations_page")}>
                     <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
                       <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                       <span className="relative">Probar gratis 14 días</span>
                       <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </a>
-                  <a href="/contacto">
+                  <Link to="/contacto">
                     <button className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
                       Ver documentación API
                       <ExternalLink className="w-3.5 h-3.5 text-white/40" />
                     </button>
-                  </a>
+                  </Link>
                 </div>
 
                 <p className="text-[11px] text-white/20 tracking-wide">
@@ -933,18 +903,18 @@ const IntegrationsPage = () => {
 
                     {/* Right actions */}
                     <div className="flex flex-col gap-3 shrink-0 w-full sm:w-auto">
-                      <a href="/api">
+                      <Link to="/api">
                         <button className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
                           Conoce sobre nuestra API
                           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </button>
-                      </a>
-                      <a href="/docs">
+                      </Link>
+                      <Link to="/docs">
                         <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/[0.08] text-[13px] text-white/40 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
                           Documentación
                           <ArrowRight className="w-3 h-3" />
                         </button>
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>

@@ -1,22 +1,37 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter } from "react-router-dom";
 import { AppRoutes } from "./routes/routes";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ScrollToTop } from "./components/ScrollToTop";
+import { useEffect } from "react";
+import { captureUTMParams, initScrollTracking } from "./lib/analytics";
 
-const queryClient = new QueryClient();
+const App = () => {
+  useEffect(() => {
+    captureUTMParams();
+    const cleanup = initScrollTracking();
+    return cleanup;
+  }, []);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <HelmetProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ErrorBoundary>
+            <ScrollToTop />
+            <div id="main-content">
+              <AppRoutes />
+            </div>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </TooltipProvider>
+    </HelmetProvider>
+  );
+};
 
 export default App;

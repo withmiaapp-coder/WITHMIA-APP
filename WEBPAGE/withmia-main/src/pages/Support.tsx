@@ -1,5 +1,8 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
+import { SEO } from "@/components/SEO";
+import { trackFormSubmit } from "@/lib/analytics";
+import { Reveal } from "@/hooks/useAnimations";
 import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 import {
   Headphones,
@@ -20,26 +23,8 @@ interface GoogleUser {
   picture?: string;
 }
 
-/* ── Google Client ID (same as login.html) ── */
-const GOOGLE_CLIENT_ID = "870525180915-5reas32antlqnj9ie3gadpr7n28prk0e.apps.googleusercontent.com";
-
-/* ── Reveal ── */
-const Reveal = ({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [v, setV] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setV(true), { threshold: 0.1 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className={className} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity .65s cubic-bezier(.16,1,.3,1) ${delay}ms, transform .65s cubic-bezier(.16,1,.3,1) ${delay}ms` }}>
-      {children}
-    </div>
-  );
-};
+/* ── Google Client ID (from env) ── */
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 /* ── Google icon ── */
 const GoogleIcon = () => (
@@ -114,7 +99,7 @@ const Support = () => {
       sessionStorage.setItem("support_user", JSON.stringify(googleUser));
       setLoginError("");
     } catch (err: any) {
-      console.error("Google Sign-In error:", err);
+      // Error handled via UI state
       setLoginError("Error al iniciar sesión con Google. Intenta de nuevo.");
     }
   }, []);
@@ -191,11 +176,12 @@ const Support = () => {
       }
 
       setSubmitted(true);
+      trackFormSubmit("support_ticket", { category });
       setSubject("");
       setDescription("");
       setCategory("General");
     } catch (err: any) {
-      console.error("Ticket submit error:", err);
+      // Error handled via UI state
       setSubmitError(err.message || "Error al enviar el ticket. Intenta de nuevo.");
     } finally {
       setSubmitting(false);
@@ -205,6 +191,7 @@ const Support = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
+      <SEO title="Soporte" description="Contacta al equipo de soporte de WITHMIA. Ayuda técnica rápida por chat, email o teléfono. Tiempo de respuesta promedio: 2 horas." path="/soporte" />
       <main className="pt-20">
 
         {/* ── HERO ── */}
@@ -287,7 +274,7 @@ const Support = () => {
                       {user.picture ? (
                         <img
                           src={user.picture}
-                          alt=""
+                          alt="Foto de perfil del usuario"
                           className="w-7 h-7 rounded-full border border-white/[0.06]"
                         />
                       ) : (

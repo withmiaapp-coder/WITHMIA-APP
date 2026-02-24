@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Calculator, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { trackCTAClick } from "@/lib/analytics";
 
 export const ROICalculator = () => {
   const [leads, setLeads] = useState(100);
@@ -150,6 +151,7 @@ export const ROICalculator = () => {
 
             <a
               href="https://app.withmia.com"
+              onClick={() => trackCTAClick("capturar_ingresos_roi", "roi_calculator")}
               className="block"
             >
               <button className="w-full py-3 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.3)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
