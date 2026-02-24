@@ -471,7 +471,7 @@ const IntegrationsPage = () => {
         </section>
 
         {/* ══════════════════════════════════════
-            INTEGRACIONES — Bento showcase
+            INTEGRACIONES — Live system visualization
             ══════════════════════════════════════ */}
         <section className="py-8 md:py-12 px-4 relative overflow-hidden">
 
@@ -490,79 +490,218 @@ const IntegrationsPage = () => {
               </p>
             </Reveal>
 
-            {/* Bento grid — asymmetric layout */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {integrationCategories.map((cat, ci) => (
-                <Reveal
-                  key={cat.id}
-                  delay={ci * 50}
-                  className={ci === 0 ? "md:row-span-2" : ""}
-                >
-                  <div
-                    className="relative h-full rounded-2xl border border-white/[0.05] overflow-hidden group"
-                    style={{ background: `linear-gradient(160deg, ${cat.accent}04, transparent 40%)` }}
-                  >
-                    {/* Top accent */}
+            {/* === LIVE SYSTEM VISUALIZATION === */}
+            <Reveal delay={40}>
+              <div className="relative rounded-2xl border border-white/[0.06] bg-[#07070d] overflow-hidden">
+                {/* Top bar — simulated system header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.05] bg-white/[0.01]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
+                    </div>
+                    <span className="text-[10px] font-mono text-white/20">withmia.integrations.dashboard</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse" style={{ animationDuration: "2s" }} />
+                    <span className="text-[9px] font-mono text-emerald-400/50 uppercase tracking-wider">Sistema activo</span>
+                  </div>
+                </div>
+
+                {/* Main content — split layout */}
+                <div className="grid lg:grid-cols-[1fr_340px]">
+                  {/* LEFT — Integration node map */}
+                  <div className="relative p-6 md:p-8 min-h-[420px]">
+                    {/* Background grid */}
                     <div
-                      className="absolute top-0 left-0 right-0 h-px"
-                      style={{ background: `linear-gradient(90deg, transparent, ${cat.accent}18, transparent)` }}
+                      className="absolute inset-0 opacity-[0.03]"
+                      style={{
+                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)",
+                        backgroundSize: "24px 24px",
+                      }}
                     />
 
-                    <div className="p-6 md:p-7">
-                      {/* Category header */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: `${cat.accent}12`, border: `1px solid ${cat.accent}20` }}
-                          >
-                            <span className="text-[12px]">
-                              {cat.id === "productividad" && "📅"}
-                              {cat.id === "salud" && "🏥"}
-                              {cat.id === "ecommerce" && "🛒"}
-                              {cat.id === "desarrollo" && "⚡"}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className="text-[14px] font-bold text-white/80">{cat.label}</h3>
-                            <p className="text-[10px] text-white/20">{cat.items.length} integración{cat.items.length > 1 ? "es" : ""}</p>
-                          </div>
+                    {/* Center hub */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                      <div className="relative">
+                        <div className="absolute -inset-6 rounded-full bg-violet-500/[0.04] animate-pulse" style={{ animationDuration: "4s" }} />
+                        <div className="absolute -inset-12 rounded-full border border-violet-500/[0.04]" />
+                        <div className="absolute -inset-20 rounded-full border border-white/[0.02]" />
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/15 to-amber-500/10 border border-white/[0.1] flex items-center justify-center overflow-hidden">
+                          <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-9 h-9 object-contain pointer-events-none" />
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
-                          <span className="text-[8px] font-mono text-emerald-400/40 uppercase tracking-wider">Activo</span>
+                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                          <span className="text-[8px] font-mono text-violet-400/40 tracking-wider">ORQUESTADOR</span>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Integration items */}
-                      <div className={`space-y-2 ${ci === 0 ? "" : ""}`}>
-                        {cat.items.map((item) => {
-                          const Icon = item.icon;
+                    {/* SVG connections */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
+                      <defs>
+                        {integrationCategories.flatMap(cat => cat.items).map((item, i) => (
+                          <linearGradient key={`lg${i}`} id={`intg-line-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor={item.color} stopOpacity="0.15" />
+                            <stop offset="50%" stopColor={item.color} stopOpacity="0.35" />
+                            <stop offset="100%" stopColor={item.color} stopOpacity="0.05" />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      {/* Animated connection lines from center to each integration position */}
+                      {(() => {
+                        const allItems = integrationCategories.flatMap(cat => cat.items);
+                        const total = allItems.length;
+                        return allItems.map((item, i) => {
+                          const angle = (360 / total) * i - 90;
+                          const rad = (angle * Math.PI) / 180;
+                          const cx = 50;
+                          const cy = 50;
+                          const r = 36;
+                          const ex = cx + r * Math.cos(rad);
+                          const ey = cy + r * Math.sin(rad);
                           return (
-                            <div
-                              key={item.name}
-                              className="flex items-center gap-3.5 p-3 rounded-xl bg-white/[0.015] border border-white/[0.03] hover:border-white/[0.08] hover:bg-white/[0.03] transition-all duration-300 cursor-default"
-                            >
-                              <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                                style={{ backgroundColor: `${item.color}0c`, border: `1px solid ${item.color}12` }}
-                              >
-                                <Icon className="w-3.5 h-3.5" style={{ color: `${item.color}aa` }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[12px] font-semibold text-white/70 truncate">{item.name}</p>
-                                <p className="text-[10px] text-white/20 truncate">{item.desc}</p>
-                              </div>
-                              <ArrowRight className="w-3 h-3 text-white/10 shrink-0" />
-                            </div>
+                            <g key={`conn${i}`}>
+                              <line
+                                x1={`${cx}%`} y1={`${cy}%`}
+                                x2={`${ex}%`} y2={`${ey}%`}
+                                stroke={item.color}
+                                strokeWidth="0.5"
+                                strokeOpacity="0.08"
+                              />
+                              <line
+                                x1={`${cx}%`} y1={`${cy}%`}
+                                x2={`${ex}%`} y2={`${ey}%`}
+                                stroke={`url(#intg-line-${i})`}
+                                strokeWidth="1"
+                                strokeDasharray="3 5"
+                                className="intg-flow-line"
+                                style={{ animationDelay: `${i * 0.4}s` }}
+                              />
+                            </g>
                           );
-                        })}
+                        });
+                      })()}
+                    </svg>
+
+                    {/* Integration nodes positioned in a circle */}
+                    {(() => {
+                      const allItems = integrationCategories.flatMap(cat =>
+                        cat.items.map(item => ({...item, catAccent: cat.accent, catLabel: cat.label}))
+                      );
+                      const total = allItems.length;
+                      return allItems.map((item, i) => {
+                        const angle = (360 / total) * i - 90;
+                        const rad = (angle * Math.PI) / 180;
+                        const r = 36;
+                        const x = 50 + r * Math.cos(rad);
+                        const y = 50 + r * Math.sin(rad);
+                        const Icon = item.icon;
+                        return (
+                          <div
+                            key={item.name}
+                            className="absolute z-10 group"
+                            style={{
+                              left: `${x}%`,
+                              top: `${y}%`,
+                              transform: "translate(-50%, -50%)",
+                            }}
+                          >
+                            <div className="relative flex flex-col items-center gap-1.5">
+                              {/* Pulse ring */}
+                              <div
+                                className="absolute -inset-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                style={{ background: `radial-gradient(circle, ${item.color}10, transparent 70%)` }}
+                              />
+                              <div
+                                className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                                style={{
+                                  backgroundColor: `${item.color}0c`,
+                                  border: `1px solid ${item.color}18`,
+                                }}
+                              >
+                                <Icon className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: `${item.color}bb` }} />
+                              </div>
+                              <span className="text-[8px] md:text-[9px] font-semibold text-white/30 group-hover:text-white/70 transition-colors whitespace-nowrap">
+                                {item.name}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* RIGHT — Live event feed */}
+                  <div className="border-t lg:border-t-0 lg:border-l border-white/[0.05] bg-white/[0.008]">
+                    {/* Feed header */}
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04]">
+                      <span className="text-[10px] font-mono text-white/25 uppercase tracking-wider">Actividad en tiempo real</span>
+                      <span className="text-[9px] font-mono text-white/15">hace 2s</span>
+                    </div>
+
+                    {/* Simulated events */}
+                    <div className="divide-y divide-white/[0.03]">
+                      {[
+                        { action: "Cita confirmada", source: "AgendaPro", target: "WhatsApp", color: "#3B82F6", time: "ahora" },
+                        { action: "Pedido recibido", source: "Shopify", target: "Email", color: "#96BF48", time: "12s" },
+                        { action: "Paciente agendado", source: "Dentalink", target: "WhatsApp", color: "#22D3EE", time: "34s" },
+                        { action: "Pregunta respondida", source: "MercadoLibre", target: "IA Bot", color: "#FFE600", time: "1m" },
+                        { action: "Reunión creada", source: "Calendly", target: "Google Cal", color: "#006BFF", time: "2m" },
+                        { action: "Webhook recibido", source: "API REST", target: "Sistema", color: "#F59E0B", time: "3m" },
+                        { action: "Carrito abandonado", source: "WooCommerce", target: "WhatsApp", color: "#9B5C8F", time: "4m" },
+                        { action: "Sync completado", source: "Google Calendar", target: "Outlook", color: "#4285F4", time: "5m" },
+                      ].map((evt, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-3 px-5 py-3.5 group hover:bg-white/[0.01] transition-colors intg-event-row"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        >
+                          <div
+                            className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                            style={{ backgroundColor: evt.color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] text-white/50 font-medium truncate">
+                              {evt.action}
+                            </p>
+                            <p className="text-[9px] text-white/20 truncate">
+                              {evt.source} <span className="text-white/10 mx-1">→</span> {evt.target}
+                            </p>
+                          </div>
+                          <span className="text-[8px] font-mono text-white/15 shrink-0 mt-0.5">
+                            {evt.time}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Feed footer */}
+                    <div className="px-5 py-3 border-t border-white/[0.04] flex items-center justify-between">
+                      <span className="text-[9px] text-white/15">12 integraciones conectadas</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-1 h-1 rounded-full bg-emerald-400/50" />
+                        <span className="text-[8px] font-mono text-emerald-400/40">OK</span>
                       </div>
                     </div>
                   </div>
-                </Reveal>
-              ))}
-            </div>
+                </div>
+
+                {/* Bottom status bar */}
+                <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/[0.04] bg-white/[0.01]">
+                  <div className="flex items-center gap-4">
+                    {integrationCategories.map((cat) => (
+                      <div key={cat.id} className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.accent }} />
+                        <span className="text-[9px] text-white/20 font-medium">{cat.label}</span>
+                        <span className="text-[8px] text-white/10 font-mono">{cat.items.length}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-[8px] font-mono text-white/10">v2.4.1</span>
+                </div>
+              </div>
+            </Reveal>
 
             {/* How it works — Premium 3-step flow */}
             <Reveal delay={80} className="mt-24">
@@ -719,16 +858,16 @@ const IntegrationsPage = () => {
 
                     {/* Right actions */}
                     <div className="flex flex-col gap-3 shrink-0 w-full sm:w-auto">
-                      <a href="/contacto">
+                      <a href="/api">
                         <button className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
-                          Solicitar integración
+                          Conoce sobre nuestra API
                           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </button>
                       </a>
-                      <a href="https://app.withmia.com/docs" target="_blank" rel="noopener noreferrer">
+                      <a href="/docs">
                         <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/[0.08] text-[13px] text-white/40 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
-                          Documentación API
-                          <ExternalLink className="w-3 h-3" />
+                          Documentación
+                          <ArrowRight className="w-3 h-3" />
                         </button>
                       </a>
                     </div>
@@ -809,6 +948,22 @@ const IntegrationsPage = () => {
           10% { opacity: 1; }
           90% { opacity: 1; }
           100% { left: 100%; opacity: 0; }
+        }
+
+        .intg-flow-line {
+          animation: intg-dash-flow 2.5s linear infinite;
+        }
+        @keyframes intg-dash-flow {
+          from { stroke-dashoffset: 16; }
+          to { stroke-dashoffset: 0; }
+        }
+
+        .intg-event-row {
+          animation: intg-event-fade 0.6s ease-out both;
+        }
+        @keyframes intg-event-fade {
+          from { opacity: 0; transform: translateX(8px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
     </div>

@@ -5,7 +5,7 @@ import { useTheme, THEME_PALETTES, type ThemeMode } from '../contexts/ThemeConte
 const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
   { mode: 'light', label: 'Claro', icon: Sun },
   { mode: 'dark', label: 'Oscuro', icon: Moon },
-  { mode: 'system', label: 'Dispositivo', icon: Monitor },
+  { mode: 'system', label: 'Auto', icon: Monitor },
 ];
 
 export function ThemePicker() {
@@ -84,10 +84,10 @@ export function ThemePicker() {
           {/* Overlay */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-          {/* Panel — anchored to button with absolute positioning */}
+          {/* Panel */}
           <div
             ref={panelRef}
-            className="absolute right-0 top-full mt-2 w-[280px] rounded-2xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[296px] rounded-2xl z-50"
             style={{
               animation: 'slideDown 0.15s ease-out',
               background: popoverBg,
@@ -97,9 +97,16 @@ export function ThemePicker() {
                 : '0 20px 60px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.03)',
             }}
           >
+            {/* Section: Apariencia label */}
+            <div className="px-4 pt-3.5 pb-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: tabInactiveText }}>
+                Apariencia
+              </span>
+            </div>
+
             {/* Mode tabs */}
-            <div className="p-3 pb-2">
-              <div className="flex rounded-full p-1" style={{ background: tabBg }}>
+            <div className="px-3 pb-2.5">
+              <div className="flex rounded-lg p-0.5 gap-0.5" style={{ background: tabBg }}>
                 {MODE_TABS.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = mode === tab.mode;
@@ -107,25 +114,34 @@ export function ThemePicker() {
                     <button
                       key={tab.mode}
                       onClick={() => setMode(tab.mode)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-full text-xs font-medium transition-all duration-150"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-[11px] font-semibold transition-all duration-150 whitespace-nowrap overflow-hidden"
                       style={{
                         background: isActive ? tabActiveBg : 'transparent',
                         color: isActive ? tabActiveText : tabInactiveText,
-                        boxShadow: isActive ? (isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)') : 'none',
+                        boxShadow: isActive ? (isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.08)') : 'none',
                       }}
                     >
-                      {isActive && <Check className="w-3 h-3" />}
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{tab.label}</span>
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{tab.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
+            {/* Divider */}
+            <div className="mx-3 mb-2.5" style={{ height: 1, background: footerBorder }} />
+
+            {/* Section: Colores label */}
+            <div className="px-4 pb-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: tabInactiveText }}>
+                Color
+              </span>
+            </div>
+
             {/* Color grid */}
-            <div className="px-3 pb-2">
-              <div className="grid grid-cols-4 gap-2.5">
+            <div className="px-3 pb-3">
+              <div className="grid grid-cols-5 gap-2">
                 {presetPalettes.map((palette) => {
                   const isSelected = themeId === palette.id;
 
@@ -151,8 +167,8 @@ export function ThemePicker() {
 
                       {isSelected && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                            <Check className="w-3 h-3 text-gray-700" />
+                          <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
+                            <Check className="w-2.5 h-2.5 text-gray-700" />
                           </div>
                         </div>
                       )}
@@ -181,12 +197,12 @@ export function ThemePicker() {
                         : 'conic-gradient(from 0deg, #ff0000, #ff8800, #ffff00, #00ff00, #0088ff, #8800ff, #ff0000)',
                     }}
                   >
-                    <Pipette className="w-4 h-4 text-white drop-shadow-md" />
+                    <Pipette className="w-3.5 h-3.5 text-white drop-shadow-md" />
                   </div>
                   {themeId === 'custom' && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                        <Check className="w-3 h-3 text-gray-700" />
+                      <div className="w-4 h-4 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
+                        <Check className="w-2.5 h-2.5 text-gray-700" />
                       </div>
                     </div>
                   )}
@@ -205,48 +221,48 @@ export function ThemePicker() {
               />
             </div>
 
-            {/* Reset to default */}
-            <div className="px-3 pb-3">
+            {/* Footer: Reset + System toggle */}
+            <div
+              className="px-3 py-2.5 flex items-center justify-between gap-3"
+              style={{ borderTop: `1px solid ${footerBorder}` }}
+            >
+              {/* Reset button */}
               <button
                 onClick={() => resetTheme()}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all duration-150"
+                className="flex items-center gap-1.5 text-[11px] font-medium transition-colors duration-150 whitespace-nowrap shrink-0"
                 style={{
-                  background: themeId === 'default' ? tabBg : resetBg,
                   color: themeId === 'default' ? tabInactiveText : resetText,
                   cursor: themeId === 'default' ? 'default' : 'pointer',
-                  opacity: themeId === 'default' ? 0.5 : 1,
+                  opacity: themeId === 'default' ? 0.4 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (themeId !== 'default') e.currentTarget.style.background = resetHoverBg;
+                  if (themeId !== 'default') e.currentTarget.style.opacity = '0.7';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = themeId === 'default' ? tabBg : resetBg;
+                  e.currentTarget.style.opacity = themeId === 'default' ? '0.4' : '1';
                 }}
                 disabled={themeId === 'default'}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Restablecer predeterminado
+                <RotateCcw className="w-3 h-3 shrink-0" />
+                Restablecer
               </button>
-            </div>
 
-            {/* Footer toggle */}
-            <div
-              className="px-4 py-3 flex items-center justify-between"
-              style={{ borderTop: `1px solid ${footerBorder}` }}
-            >
-              <span className="text-xs" style={{ color: footerText }}>Seguir colores del dispositivo</span>
-              <button
-                onClick={() => setMode(mode === 'system' ? 'light' : 'system')}
-                className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${
-                  mode === 'system' ? 'bg-blue-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                    mode === 'system' ? 'translate-x-4' : 'translate-x-0'
+              {/* System mode toggle */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] whitespace-nowrap" style={{ color: footerText }}>Auto</span>
+                <button
+                  onClick={() => setMode(mode === 'system' ? 'light' : 'system')}
+                  className={`relative w-8 h-[18px] rounded-full transition-colors duration-200 shrink-0 ${
+                    mode === 'system' ? 'bg-blue-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`absolute top-[2px] left-[2px] w-[14px] h-[14px] bg-white rounded-full shadow transition-transform duration-200 ${
+                      mode === 'system' ? 'translate-x-[14px]' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </>
