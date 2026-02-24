@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import ConversationsInterface from '../components/ConversationsInterface';
 import TeamsManagement from '../components/TeamsManagement';
@@ -161,7 +161,21 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { hasTheme, isDark } = useTheme();
+  const { hasTheme, isDark, currentTheme } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
 
   // Reset logo error when logo_url changes
   useEffect(() => {
@@ -291,15 +305,16 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       {/* Dropdown Menu - Aparece ARRIBA */}
       {isOpen && (
         <div 
-          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl shadow-2xl border z-[100] ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200'}`}
+          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl shadow-2xl border z-[100] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200') : ''}`}
           style={{
             minWidth: isCollapsed ? '320px' : 'auto',
             animation: 'slideUpMenu 0.2s ease-out',
-            overflow: 'visible'
+            overflow: 'hidden',
+            ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
           }}
         >
           {/* Lista de opciones */}
-          <div className="py-2 relative" style={{ overflow: 'visible' }}>
+          <div className="py-2">
             {menuItems.map((item, index) => {
               if (item.type === 'divider') {
                 return (
@@ -339,41 +354,45 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                     </div>
                     
                     {item.hasSubmenu && (
-                      <ChevronRight className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-neutral-400'}`} />
+                      <ChevronRight 
+                        className={`w-4 h-4 transition-transform duration-200 ${isDark ? 'text-gray-500' : 'text-neutral-400'}`}
+                        style={{ transform: showHelpSubmenu ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                      />
                     )}
                   </button>
 
-                  {/* Submeno� de Ayuda */}
+                  {/* Submenú de Ayuda - inline expandable */}
                   {item.hasSubmenu && showHelpSubmenu && (
                     <div 
-                      className={`absolute left-full rounded-xl shadow-2xl border min-w-[220px] z-[9999] ${isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200'}`}
+                      className={`overflow-hidden ${!t ? (isDark ? 'bg-white/[0.03]' : 'bg-neutral-50/50') : ''}`}
                       style={{ 
-                        animation: 'slideInRight 0.2s ease-out',
-                        top: '-30px',
-                        marginLeft: '4px'
+                        animation: 'slideDown 0.2s ease-out',
+                        ...(t ? { backgroundColor: t.itemBg } : {})
                       }}
                     >
-                      <div className="py-2">
-                        {helpSubmenuItems.map((subItem, subIndex) => {
-                          const SubIcon = subItem.icon;
-                          return (
-                            <a
-                              key={subIndex}
-                              href={subItem.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => {
-                                setIsOpen(false);
-                                setShowHelpSubmenu(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${subItem.className}`}
-                            >
-                              <SubIcon className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-neutral-500'}`} />
-                              <span className="text-sm font-medium">{subItem.label}</span>
-                            </a>
-                          );
-                        })}
-                      </div>
+                      {helpSubmenuItems.map((subItem, subIndex) => {
+                        const SubIcon = subItem.icon;
+                        return (
+                          <a
+                            key={subIndex}
+                            href={subItem.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => {
+                              setIsOpen(false);
+                              setShowHelpSubmenu(false);
+                            }}
+                            className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
+                            style={t ? { color: t.textSec } : undefined}
+                          >
+                            <SubIcon 
+                              className="w-4 h-4"
+                              style={t ? { color: t.textMuted } : undefined}
+                            />
+                            <span className="text-sm font-medium">{subItem.label}</span>
+                          </a>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -384,7 +403,10 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       )}
 
       {/* User Profile Button */}
-      <div className={`p-3 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-neutral-200'}`}>
+      <div 
+        className={`p-3 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${!t ? (isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-neutral-200') : ''}`}
+        style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
+      >
         <button 
           onClick={() => {
             if (isCollapsed) {

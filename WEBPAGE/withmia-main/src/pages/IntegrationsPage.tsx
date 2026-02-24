@@ -15,9 +15,7 @@ import {
   Database,
   CheckCircle2,
   Search,
-  Sparkles,
   ExternalLink,
-  Layers,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════
@@ -437,207 +435,135 @@ const IntegrationsPage = () => {
         </section>
 
         {/* ══════════════════════════════════════
-            INTEGRACIONES — Professional marketplace
+            INTEGRACIONES — Clean table layout
             ══════════════════════════════════════ */}
         <section className="py-20 md:py-28 px-4 relative overflow-hidden">
-          {/* Subtle divider */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] max-w-xl h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-          <div className="max-w-6xl mx-auto relative">
-            {/* Header */}
-            <Reveal className="mb-14">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400/15 to-orange-500/15 border border-amber-400/20 flex items-center justify-center">
-                      <Layers className="w-3.5 h-3.5 text-amber-400/70" />
-                    </div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/60">Integraciones</p>
-                  </div>
-                  <h2 className="text-2xl md:text-[2.5rem] font-bold tracking-tight text-white leading-[1.1] mb-4">
-                    Conecta las herramientas
-                    <span className="text-gradient"> que ya usas</span>
-                  </h2>
-                  <p className="text-[14px] text-white/35 max-w-lg leading-relaxed">
-                    Agendamiento, e-commerce y más. WITHMIA se integra con las plataformas más usadas en LATAM.
-                  </p>
-                </div>
+          <div className="max-w-5xl mx-auto relative">
+            {/* Header — centered, minimal */}
+            <Reveal className="text-center mb-16">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/50 mb-5">Ecosistema de integraciones</p>
+              <h2 className="text-2xl md:text-[2.5rem] font-bold tracking-tight text-white leading-[1.1] mb-5">
+                Tu stack completo,
+                <span className="text-gradient"> conectado</span>
+              </h2>
+              <p className="text-[14px] text-white/30 max-w-md mx-auto leading-relaxed">
+                Agendamiento, e-commerce, salud y desarrollo. Todo sincronizado con WITHMIA en tiempo real.
+              </p>
+            </Reveal>
 
-                {/* Search — right-aligned on desktop */}
-                <div className="relative w-full md:w-72 shrink-0">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+            {/* Filter bar — inline pills + search */}
+            <Reveal delay={60} className="mb-8">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex items-center gap-1.5 flex-1 overflow-x-auto pb-1 scrollbar-none">
+                  {tags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setActiveTag(tag)}
+                      className={`px-4 py-2 rounded-lg text-[12px] font-medium whitespace-nowrap transition-all duration-300 ${
+                        activeTag === tag
+                          ? "bg-white/[0.08] text-white"
+                          : "text-white/25 hover:text-white/50 hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative w-full sm:w-56 shrink-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/15" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar integración..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] focus:bg-white/[0.04] transition-all duration-300"
+                    placeholder="Buscar..."
+                    className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05] text-[12px] text-white placeholder:text-white/15 focus:outline-none focus:border-white/[0.12] transition-all duration-300"
                   />
                 </div>
               </div>
             </Reveal>
 
-            {/* Category tabs */}
-            <Reveal delay={60} className="mb-10">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {tags.map((tag) => {
-                  const count = tag === "Todos" ? integrations.length : integrations.filter(i => i.tag === tag).length;
+            {/* Table-style integration list */}
+            <Reveal delay={100}>
+              {/* Column headers */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto] gap-6 px-5 py-3 mb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15">Integración</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15 w-24 text-center">Categoría</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15 w-20 text-right">Estado</span>
+              </div>
+
+              <div className="border border-white/[0.05] rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+                {filtered.map((item) => {
+                  const Icon = item.icon;
                   return (
-                    <button
-                      key={tag}
-                      onClick={() => setActiveTag(tag)}
-                      className={`group flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium whitespace-nowrap transition-all duration-300 ${
-                        activeTag === tag
-                          ? "bg-white/[0.08] text-white border border-white/[0.12]"
-                          : "text-white/30 hover:text-white/55 hover:bg-white/[0.02] border border-transparent"
-                      }`}
+                    <div
+                      key={item.name}
+                      className="group grid sm:grid-cols-[1fr_auto_auto] gap-4 sm:gap-6 items-center px-5 py-4 transition-colors duration-300 hover:bg-white/[0.02] cursor-pointer"
                     >
-                      {tag}
-                      <span className={`text-[10px] font-mono transition-colors duration-300 ${
-                        activeTag === tag ? "text-amber-400/70" : "text-white/15 group-hover:text-white/25"
-                      }`}>{count}</span>
-                    </button>
+                      {/* Left: icon + name + desc */}
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-400 group-hover:scale-105"
+                          style={{
+                            backgroundColor: `${item.color}0c`,
+                            border: `1px solid ${item.color}15`,
+                          }}
+                        >
+                          <Icon className="w-[17px] h-[17px]" style={{ color: `${item.color}aa` }} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-[13px] font-semibold text-white/75 group-hover:text-white transition-colors duration-300 mb-0.5">
+                            {item.name}
+                          </h3>
+                          <p className="text-[11px] text-white/20 leading-relaxed truncate group-hover:text-white/30 transition-colors duration-300">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Center: category tag */}
+                      <span
+                        className="text-[10px] font-medium px-2.5 py-1 rounded-md w-24 text-center whitespace-nowrap"
+                        style={{ backgroundColor: `${item.color}08`, color: `${item.color}60` }}
+                      >
+                        {item.tag}
+                      </span>
+
+                      {/* Right: status */}
+                      <div className="flex items-center justify-end gap-2 w-20">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
+                        <span className="text-[10px] text-white/20 font-medium">Activa</span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
+
+              {filtered.length === 0 && (
+                <div className="text-center py-16 border border-white/[0.05] rounded-2xl">
+                  <Search className="w-5 h-5 text-white/10 mx-auto mb-3" />
+                  <p className="text-white/25 text-sm mb-1">Sin resultados</p>
+                  <button
+                    onClick={() => { setSearch(""); setActiveTag("Todos"); }}
+                    className="text-amber-400/50 text-[11px] mt-1 hover:text-amber-400 transition-colors"
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
             </Reveal>
 
-            {/* Integration cards — Category-grouped 3-column grid */}
-            {(() => {
-              const categories = activeTag === "Todos"
-                ? [...new Set(filtered.map(i => i.tag))]
-                : [activeTag];
-
-              return categories.map((cat) => {
-                const items = filtered.filter(i => i.tag === cat);
-                if (items.length === 0) return null;
-
-                const catColorMap: Record<string, string> = {
-                  "Productividad": "#8B5CF6",
-                  "Salud": "#22D3EE",
-                  "E-commerce": "#F59E0B",
-                  "Desarrollo": "#10B981",
-                };
-                const catColor = catColorMap[cat] || "#8B5CF6";
-
-                return (
-                  <Reveal key={cat} className="mb-10 last:mb-0">
-                    {/* Category label (only when showing all) */}
-                    {activeTag === "Todos" && (
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: catColor }} />
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.15em]" style={{ color: `${catColor}90` }}>
-                          {cat}
-                        </span>
-                        <div className="flex-1 h-px bg-white/[0.04]" />
-                        <span className="text-[10px] text-white/15 font-mono">{items.length}</span>
-                      </div>
-                    )}
-
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {items.map((item, i) => {
-                        const Icon = item.icon;
-                        return (
-                          <div
-                            key={item.name}
-                            className="group relative p-5 rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.025]"
-                            style={{ border: "1px solid rgba(255,255,255,0.05)" }}
-                          >
-                            {/* Top glow line on hover */}
-                            <div
-                              className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                              style={{ background: `linear-gradient(90deg, transparent, ${item.color}40, transparent)` }}
-                            />
-
-                            {/* Header row */}
-                            <div className="flex items-start justify-between mb-4">
-                              <div
-                                className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110"
-                                style={{
-                                  backgroundColor: `${item.color}0e`,
-                                  border: `1px solid ${item.color}18`,
-                                  
-                                }}
-                              >
-                                <Icon className="w-[18px] h-[18px]" style={{ color: `${item.color}bb` }} />
-                              </div>
-                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/[0.06] border border-emerald-500/[0.08]">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 animate-pulse" style={{ animationDuration: "3s" }} />
-                                <span className="text-[9px] text-emerald-400/50 font-medium">Activa</span>
-                              </div>
-                            </div>
-
-                            {/* Name + tag */}
-                            <div className="flex items-center gap-2.5 mb-2">
-                              <h3 className="text-[14px] font-bold text-white/80 group-hover:text-white transition-colors duration-300">
-                                {item.name}
-                              </h3>
-                            </div>
-
-                            {/* Description */}
-                            <p className="text-[12px] text-white/25 leading-[1.7] mb-5 group-hover:text-white/35 transition-colors duration-500">
-                              {item.desc}
-                            </p>
-
-                            {/* Footer */}
-                            <div className="flex items-center justify-between pt-3.5 border-t border-white/[0.04]">
-                              <span
-                                className="text-[9px] font-semibold uppercase tracking-[0.12em] px-2 py-0.5 rounded"
-                                style={{ backgroundColor: `${item.color}08`, color: `${item.color}55` }}
-                              >
-                                {item.tag}
-                              </span>
-                              <span className="text-[11px] text-white/20 group-hover:text-amber-400/60 transition-colors duration-300 flex items-center gap-1.5 cursor-pointer">
-                                Conectar
-                                <ArrowRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Reveal>
-                );
-              });
-            })()}
-
-            {filtered.length === 0 && (
-              <div className="text-center py-20">
-                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-5 h-5 text-white/15" />
-                </div>
-                <p className="text-white/30 text-sm font-medium mb-1">Sin resultados</p>
-                <p className="text-white/15 text-[12px] mb-4">No se encontraron integraciones con ese filtro.</p>
-                <button
-                  onClick={() => { setSearch(""); setActiveTag("Todos"); }}
-                  className="text-amber-400/60 text-[12px] font-medium hover:text-amber-400 transition-colors underline underline-offset-2 decoration-amber-400/20"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            )}
-
-            {/* CTA — Request integration */}
-            <Reveal delay={100}>
-              <div className="mt-16 text-center">
-                <div className="inline-flex flex-col sm:flex-row items-center gap-4 p-6 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-violet-400/60" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[13px] text-white/60 font-medium">
-                        ¿No encuentras tu herramienta?
-                      </p>
-                      <p className="text-[11px] text-white/25">Desarrollamos integraciones personalizadas para tu negocio.</p>
-                    </div>
-                  </div>
-                  <a href="/contacto">
-                    <button className="px-5 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08] text-[12px] text-white/60 font-medium hover:bg-white/[0.08] hover:text-white/80 hover:border-white/[0.12] transition-all duration-300 whitespace-nowrap">
-                      Solicitar integración
-                    </button>
-                  </a>
-                </div>
+            {/* Bottom note */}
+            <Reveal delay={120}>
+              <div className="flex items-center justify-between mt-8 px-1">
+                <p className="text-[11px] text-white/15">
+                  {filtered.length} integración{filtered.length !== 1 ? "es" : ""} disponible{filtered.length !== 1 ? "s" : ""}
+                </p>
+                <a href="/contacto" className="text-[11px] text-white/25 hover:text-amber-400/70 transition-colors duration-300 flex items-center gap-1.5">
+                  ¿No encuentras tu herramienta?
+                  <ArrowRight className="w-3 h-3" />
+                </a>
               </div>
             </Reveal>
           </div>
