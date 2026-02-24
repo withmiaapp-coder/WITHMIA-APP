@@ -258,7 +258,9 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
         <div className={`p-6 border-b flex-shrink-0 ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg">
+              <div className={`p-2 rounded-lg ${!t ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : ''}`}
+                style={t ? { background: t.accent } : undefined}
+              >
                 <UserCog className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -274,13 +276,17 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
 
         {/* Messages */}
         {error && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
+          <div className={`mx-6 mt-4 p-3 border rounded-lg flex items-center space-x-2 ${!t ? 'bg-red-50 border-red-200 text-red-700' : ''}`}
+            style={t ? { background: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', borderColor: isDark ? 'rgba(239,68,68,0.2)' : '#fecaca', color: isDark ? '#fca5a5' : '#b91c1c' } : undefined}
+          >
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
         {success && (
-          <div className="mx-6 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2 text-green-700">
+          <div className={`mx-6 mt-4 p-3 border rounded-lg flex items-center space-x-2 ${!t ? 'bg-green-50 border-green-200 text-green-700' : ''}`}
+            style={t ? { background: isDark ? 'rgba(16,185,129,0.1)' : '#ecfdf5', borderColor: isDark ? 'rgba(16,185,129,0.2)' : '#bbf7d0', color: isDark ? '#6ee7b7' : '#15803d' } : undefined}
+          >
             <Check className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm">{success}</span>
           </div>
@@ -318,9 +324,13 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                     >
                       <div className="flex items-center space-x-4">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-medium ${
-                          isSuperAdmin ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
-                          isCurrentAdmin ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-green-500'
-                        }`}>
+                          !t ? (
+                            isSuperAdmin ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+                            isCurrentAdmin ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-emerald-500 to-green-500'
+                          ) : ''
+                        }`}
+                          style={t ? { background: isSuperAdmin ? (isDark ? '#f59e0b' : '#f59e0b') : t.accent } : undefined}
+                        >
                           {member.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div>
@@ -340,7 +350,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                             : isCurrentAdmin 
                               ? 'bg-purple-100 text-purple-700' 
                               : 'bg-emerald-100 text-emerald-700'
-                        ) : ''}`} style={t ? { background: t.accentLight, color: t.accent } : undefined}>
+                        ) : ''}`} style={t ? { background: isSuperAdmin ? (isDark ? 'rgba(245,158,11,0.15)' : '#fef3c7') : t.accentLight, color: isSuperAdmin ? (isDark ? '#fcd34d' : '#b45309') : t.accent } : undefined}>
                           {isSuperAdmin ? 'Super Admin' : isCurrentAdmin ? 'Administrador' : 'Agente'}
                         </span>
                         {hasChanges(member.id) && (
@@ -525,7 +535,8 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                                 saveChanges(member.id);
                               }}
                               disabled={saving === member.id}
-                              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all flex items-center space-x-2 disabled:opacity-50"
+                              className={`px-4 py-2 text-white rounded-lg transition-all flex items-center space-x-2 disabled:opacity-50 ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+                              style={t ? { background: t.accent } : undefined}
                             >
                               {saving === member.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -94,8 +94,8 @@ const TeamModal: React.FC<{
             <h2 className={`text-xl font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               {team ? 'Editar Equipo' : 'Crear Nuevo Equipo'}
             </h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
+            <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : ''}`}>
+              <X className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined} />
             </button>
           </div>
         </div>
@@ -110,8 +110,8 @@ const TeamModal: React.FC<{
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej: Ventas, Soporte, Marketing..."
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${!t ? 'text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
-              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${!t ? 'focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
+              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text, '--tw-ring-color': t.accent } as React.CSSProperties : undefined}
               required
             />
           </div>
@@ -125,8 +125,8 @@ const TeamModal: React.FC<{
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe el propósito de este equipo..."
               rows={3}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all resize-none ${!t ? 'text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
-              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all resize-none ${!t ? 'focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 placeholder-gray-500 bg-white border-gray-300' : 'placeholder-gray-500'}`}
+              style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text, '--tw-ring-color': t.accent } as React.CSSProperties : undefined}
             />
           </div>
           
@@ -136,7 +136,8 @@ const TeamModal: React.FC<{
               id="autoAssign"
               checked={allowAutoAssign}
               onChange={(e) => setAllowAutoAssign(e.target.checked)}
-              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              className={`w-4 h-4 border-gray-300 rounded ${!t ? 'text-emerald-600 focus:ring-emerald-500' : ''}`}
+              style={t ? { accentColor: 'var(--theme-accent)' } as React.CSSProperties : undefined}
             />
             <label htmlFor="autoAssign" className={`text-sm font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Permitir asignación automática de conversaciones
@@ -155,7 +156,8 @@ const TeamModal: React.FC<{
             <button
               type="submit"
               disabled={saving || !name.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className={`px-4 py-2 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+              style={t ? { background: t.accent } : undefined}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{team ? 'Guardar Cambios' : 'Crear Equipo'}</span>
@@ -242,7 +244,7 @@ const AddMembersModal: React.FC<{
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+            <Loader2 className={`w-8 h-8 animate-spin ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.accent } : undefined} />
             </div>
           ) : filteredAgents.length === 0 ? (
             <div className="text-center py-8">
@@ -257,16 +259,19 @@ const AddMembersModal: React.FC<{
                   onClick={() => toggleAgent(agent.id)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${
                     selectedIds.includes(agent.id)
-                      ? 'border-emerald-500 bg-emerald-50'
+                      ? (!t ? 'border-emerald-500 bg-emerald-50' : '')
                       : !t ? 'border-gray-200 hover:border-gray-300' : ''
                   }`}
-                  style={!selectedIds.includes(agent.id) && t ? { borderColor: t.border, background: t.inputBg } : undefined}
+                  style={selectedIds.includes(agent.id) && t
+                    ? { borderColor: t.accent, background: isDark ? 'rgba(255,255,255,0.06)' : 'var(--theme-accent-light)' }
+                    : (!selectedIds.includes(agent.id) && t ? { borderColor: t.border, background: t.inputBg } : undefined)
+                  }
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
-                      selectedIds.includes(agent.id) ? 'bg-emerald-500' : !t ? 'bg-gray-400' : ''
+                      selectedIds.includes(agent.id) ? (!t ? 'bg-emerald-500' : '') : !t ? 'bg-gray-400' : ''
                     }`}
-                      style={!selectedIds.includes(agent.id) && t ? { background: t.accent } : undefined}
+                      style={t ? { background: t.accent } : undefined}
                     >
                       {agent.name?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
@@ -275,7 +280,7 @@ const AddMembersModal: React.FC<{
                       <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agent.email}</p>
                     </div>
                     {selectedIds.includes(agent.id) && (
-                      <Check className="w-5 h-5 text-emerald-500" />
+                      <Check className={`w-5 h-5 ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                     )}
                   </div>
                 </div>
@@ -300,7 +305,8 @@ const AddMembersModal: React.FC<{
               <button
                 onClick={handleSubmit}
                 disabled={saving || selectedIds.length === 0}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className={`px-4 py-2 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>Agregar</span>
@@ -408,7 +414,7 @@ const InviteMemberModal: React.FC<{
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white">Invitar Miembro</h2>
-                <p className="text-blue-100 text-xs">Añade un nuevo integrante a tu equipo</p>
+                <p className="text-white/70 text-xs">Añade un nuevo integrante a tu equipo</p>
               </div>
             </div>
             <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
@@ -419,8 +425,10 @@ const InviteMemberModal: React.FC<{
         
         {success ? (
           <div className="p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-8 h-8 text-green-600" />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${!t ? 'bg-green-100' : ''}`}
+              style={t ? { background: isDark ? 'rgba(16,185,129,0.15)' : '#dcfce7' } : undefined}
+            >
+              <Check className={`w-8 h-8 ${!t ? 'text-green-600' : ''}`} style={t ? { color: isDark ? '#6ee7b7' : '#16a34a' } : undefined} />
             </div>
             <h3 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>¡Invitación Enviada!</h3>
             <p className={`text-sm ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Se ha enviado un correo a <strong>{email}</strong> con las instrucciones para unirse.</p>
@@ -428,7 +436,9 @@ const InviteMemberModal: React.FC<{
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2 text-red-700">
+              <div className={`p-3 border rounded-xl flex items-center space-x-2 ${!t ? 'bg-red-50 border-red-200 text-red-700' : ''}`}
+                style={t ? { background: isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2', borderColor: isDark ? 'rgba(239,68,68,0.2)' : '#fecaca', color: isDark ? '#fca5a5' : '#b91c1c' } : undefined}
+              >
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
@@ -447,7 +457,7 @@ const InviteMemberModal: React.FC<{
                 <p className={`text-xs font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>Solo cuentas de Google</p>
                 <p className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Por seguridad, el acceso es exclusivamente mediante Google Sign-In.</p>
               </div>
-              <ShieldCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <ShieldCheck className={`w-4 h-4 flex-shrink-0 ${!t ? 'text-green-500' : ''}`} style={t ? { color: isDark ? '#6ee7b7' : '#22c55e' } : undefined} />
             </div>
             
             <div>
@@ -682,6 +692,14 @@ const TeamsManagement: React.FC = () => {
   };
 
   const getRoleColor = (role: string) => {
+    if (t) {
+      // When themed, use theme-aware colors
+      switch (role) {
+        case 'administrator': return isDark ? 'text-purple-300 bg-purple-500/15' : 'text-purple-600 bg-purple-100';
+        case 'supervisor': return isDark ? 'text-blue-300 bg-blue-500/15' : 'text-blue-600 bg-blue-100';
+        default: return isDark ? 'text-gray-300 bg-gray-500/15' : 'text-gray-600 bg-gray-100';
+      }
+    }
     switch (role) {
       case 'administrator': return 'text-purple-600 bg-purple-100';
       case 'supervisor': return 'text-blue-600 bg-blue-100';
@@ -715,7 +733,9 @@ const TeamsManagement: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+            <div className={`p-2 rounded-lg shadow-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`}
+              style={t ? { background: t.accent } : undefined}
+            >
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -729,7 +749,8 @@ const TeamsManagement: React.FC = () => {
             {pendingInvitations.length > 0 && (
               <button 
                 onClick={() => setShowInvitationsPanel(!showInvitationsPanel)}
-                className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-all flex items-center space-x-2"
+                className={`px-3 py-2 rounded-lg transition-all flex items-center space-x-2 ${!t ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : ''}`}
+                style={t ? { background: isDark ? 'rgba(245,158,11,0.15)' : '#fef3c7', color: isDark ? '#fcd34d' : '#b45309' } : undefined}
               >
                 <Clock className="w-4 h-4" />
                 <span>{pendingInvitations.length} pendiente{pendingInvitations.length > 1 ? 's' : ''}</span>
@@ -740,7 +761,8 @@ const TeamsManagement: React.FC = () => {
             {isAdmin && (
               <button 
                 onClick={() => setShowMembersManagement(true)}
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                className={`px-4 py-2 text-white rounded-lg transition-all duration-300 flex items-center space-x-2 shadow-lg ${!t ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 <UserCog className="w-4 h-4" />
                 <span>Administrar</span>
@@ -766,7 +788,8 @@ const TeamsManagement: React.FC = () => {
                   setEditingTeam(null);
                   setShowTeamModal(true);
                 }}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-300 flex items-center space-x-2 shadow-lg"
+                className={`px-4 py-2 text-white rounded-lg transition-all duration-300 flex items-center space-x-2 shadow-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 <Plus className="w-4 h-4" />
                 <span>Crear Equipo</span>
@@ -777,15 +800,20 @@ const TeamsManagement: React.FC = () => {
 
         {/* Panel de invitaciones pendientes */}
         {showInvitationsPanel && pendingInvitations.length > 0 && (
-          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className={`mb-4 border rounded-xl p-4 ${!t ? 'bg-amber-50 border-amber-200' : ''}`}
+            style={t ? { background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb', borderColor: isDark ? 'rgba(245,158,11,0.2)' : '#fde68a' } : undefined}
+          >
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-amber-800 flex items-center space-x-2">
+              <h3 className={`font-semibold flex items-center space-x-2 ${!t ? 'text-amber-800' : ''}`}
+                style={t ? { color: isDark ? '#fcd34d' : '#92400e' } : undefined}
+              >
                 <Clock className="w-4 h-4" />
                 <span>Invitaciones Pendientes</span>
               </h3>
               <button 
                 onClick={() => setShowInvitationsPanel(false)}
-                className="text-amber-600 hover:text-amber-800"
+                className={`${!t ? 'text-amber-600 hover:text-amber-800' : ''}`}
+                style={t ? { color: isDark ? '#fcd34d' : '#d97706' } : undefined}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -793,7 +821,7 @@ const TeamsManagement: React.FC = () => {
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {pendingInvitations.map(inv => (
                 <div key={inv.id} className={`flex items-center justify-between rounded-lg p-3 border ${!t ? 'bg-white border-amber-100' : ''}`}
-                  style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}
+                  style={t ? { background: t.cardBg, borderColor: isDark ? 'rgba(245,158,11,0.15)' : '#fef3c7' } : undefined}
                 >
                   <div>
                     <p className={`font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{inv.email}</p>
@@ -804,7 +832,8 @@ const TeamsManagement: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={() => resendInvitation(inv.id)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className={`p-1.5 rounded-lg transition-colors ${!t ? 'text-blue-600 hover:bg-blue-50' : ''}`}
+                      style={t ? { color: t.accent } : undefined}
                       title="Reenviar"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -829,8 +858,8 @@ const TeamsManagement: React.FC = () => {
           <input
             type="text"
             placeholder="Buscar equipos..."
-            className={`w-full pl-10 pr-4 py-2 border rounded-lg transition-all duration-300 ${!t ? 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50' : 'placeholder-gray-500'}`}
-            style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText } : undefined}
+            className={`w-full pl-10 pr-4 py-2 border rounded-lg transition-all duration-300 ${!t ? 'bg-white border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50' : 'placeholder-gray-500 focus:ring-2'}`}
+            style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.inputText, '--tw-ring-color': t.accent } as React.CSSProperties : undefined}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -846,7 +875,7 @@ const TeamsManagement: React.FC = () => {
         >
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center h-full">
-              <Loader2 className="w-12 h-12 text-emerald-500 mb-4 animate-spin" />
+              <Loader2 className={`w-12 h-12 mb-4 animate-spin ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.accent } : undefined} />
               <p className={`${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSecondary } : undefined}>Cargando equipos...</p>
             </div>
           ) : filteredTeams.length === 0 ? (
@@ -859,7 +888,8 @@ const TeamsManagement: React.FC = () => {
                   setEditingTeam(null);
                   setShowTeamModal(true);
                 }}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all duration-200 shadow-lg"
+                className={`px-4 py-2 text-white rounded-lg transition-all duration-200 shadow-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+                style={t ? { background: t.accent } : undefined}
               >
                 Crear primer equipo
               </button>
@@ -876,7 +906,7 @@ const TeamsManagement: React.FC = () => {
                   className={`p-4 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-md ${
                     selectedTeam?.id === team.id 
                       ? (!t ? 'bg-white border-2 border-emerald-400 shadow-lg' : 'border-2 shadow-lg')
-                      : (!t ? 'bg-white/80 border border-gray-200 hover:border-emerald-300' : 'border')
+                      : (!t ? 'bg-white/80 border border-gray-200 hover:border-emerald-300' : 'border hover:shadow-md')
                   }`}
                   style={t ? {
                     background: selectedTeam?.id === team.id ? t.cardActive : t.cardBg,
@@ -885,7 +915,9 @@ const TeamsManagement: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+                      <div className={`p-2 rounded-lg shadow-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`}
+                        style={t ? { background: t.accent } : undefined}
+                      >
                         <Users className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -960,7 +992,9 @@ const TeamsManagement: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-4">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+                    <div className={`p-2 rounded-lg shadow-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`}
+                      style={t ? { background: t.accent } : undefined}
+                    >
                       <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -997,7 +1031,8 @@ const TeamsManagement: React.FC = () => {
                     <p className={`mb-4 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Este equipo aún no tiene miembros asignados</p>
                     <button 
                       onClick={() => setShowAddMembersModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg hover:from-emerald-600 hover:to-green-600 transition-all"
+                      className={`px-4 py-2 text-white rounded-lg transition-all ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600' : ''}`}
+                      style={t ? { background: t.accent } : undefined}
                     >
                       Agregar primer miembro
                     </button>
@@ -1087,8 +1122,10 @@ const TeamsManagement: React.FC = () => {
             style={t ? { background: t.panelBg, border: '1px solid', borderColor: t.panelBorder } : undefined}
           >
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-red-100 rounded-full">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+              <div className={`p-3 rounded-full ${!t ? 'bg-red-100' : ''}`}
+                style={t ? { background: isDark ? 'rgba(239,68,68,0.15)' : '#fee2e2' } : undefined}
+              >
+                <AlertCircle className={`w-6 h-6 ${!t ? 'text-red-600' : ''}`} style={t ? { color: isDark ? '#fca5a5' : '#dc2626' } : undefined} />
               </div>
               <h3 className={`text-lg font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Eliminar Equipo</h3>
             </div>

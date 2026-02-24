@@ -170,6 +170,30 @@ const pipelineSteps = [
   { icon: CheckCircle2, label: "Respuesta", desc: "200 OK JSON", color: "#34d399" },
 ];
 
+const webhookEvents = [
+  { event: "message.received", desc: "Nuevo mensaje entrante en cualquier canal", color: "#3b82f6" },
+  { event: "message.delivered", desc: "Mensaje entregado exitosamente al destinatario", color: "#34d399" },
+  { event: "message.failed", desc: "Error en el envío del mensaje", color: "#f43f5e" },
+  { event: "conversation.created", desc: "Nueva conversación iniciada por un contacto", color: "#a78bfa" },
+  { event: "conversation.assigned", desc: "Conversación asignada a un agente o equipo", color: "#f59e0b" },
+  { event: "contact.updated", desc: "Datos del contacto actualizados", color: "#22d3ee" },
+  { event: "channel.status", desc: "Cambio de estado en un canal conectado", color: "#6366f1" },
+  { event: "bot.handoff", desc: "Bot transfiere conversación a agente humano", color: "#ec4899" },
+];
+
+const WEBHOOK_PAYLOAD = `{
+  "event": "message.received",
+  "timestamp": "2026-02-24T14:32:01Z",
+  "data": {
+    "id": "msg_8xK2p4q...",
+    "channel": "whatsapp",
+    "from": "+56912345678",
+    "text": "Hola, necesito agendar",
+    "conversation_id": "conv_3fR9..."
+  },
+  "signature": "sha256=a1b2c3d4..."
+}`;
+
 /* ─── Component ─── */
 const ApiPage = () => {
   useEffect(() => {
@@ -350,6 +374,7 @@ const ApiPage = () => {
                           <span className="text-cyan-400/70">{`"Tu cita fue confirmada ✅"`}</span>
                           {"\n"}
                           <span className="text-cyan-400/50">{"  }"}&apos;</span>
+                          <span className="api-cursor" />
                         </code>
                       </pre>
 
@@ -893,6 +918,27 @@ const ApiPage = () => {
 
       </main>
       <Footer />
+
+      {/* ── Styles ── */}
+      <style>{`
+        @keyframes scrollX {
+          0% { left: -20%; }
+          100% { left: 100%; }
+        }
+        @keyframes api-cursor-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .api-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 14px;
+          background: #f59e0b;
+          margin-left: 2px;
+          animation: api-cursor-blink 1.2s step-end infinite;
+          vertical-align: text-bottom;
+        }
+      `}</style>
     </div>
   );
 };
