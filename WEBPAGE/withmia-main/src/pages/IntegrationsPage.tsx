@@ -169,8 +169,8 @@ const OrbitingLogos = () => {
       {/* Center hub */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-amber-500/20 border border-white/10 flex items-center justify-center backdrop-blur-sm">
-            <Plug className="w-8 h-8 md:w-10 md:h-10 text-white/60" />
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-amber-500/20 border border-white/10 flex items-center justify-center backdrop-blur-sm overflow-hidden">
+            <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-14 h-14 md:w-16 md:h-16 object-contain" />
           </div>
           {/* Pulsing ring */}
           <div className="absolute -inset-3 rounded-2xl border border-violet-400/20 animate-ping" style={{ animationDuration: "3s" }} />
@@ -347,43 +347,6 @@ const IntegrationsPage = () => {
               <Reveal delay={200} className="flex justify-center md:justify-end">
                 <OrbitingLogos />
               </Reveal>
-            </div>
-
-            {/* ── Metrics strip ── */}
-            <div
-              ref={metricsRef}
-              className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mt-16"
-            >
-              {[
-                { icon: MessageSquare, value: countChannels, suffix: "", label: "Canales nativos", color: "#a78bfa" },
-                { icon: Plug, value: countIntegrations, suffix: "+", label: "Integraciones", color: "#f59e0b" },
-                { icon: Shield, value: countUptime, suffix: ".9%", label: "Uptime SLA", color: "#34d399" },
-                { icon: Activity, value: countLatency, suffix: "ms", prefix: "<",label: "Latencia", color: "#22d3ee" },
-              ].map((m, i) => {
-                const MIcon = m.icon;
-                return (
-                  <Reveal key={i} delay={300 + i * 80}>
-                    <div className="group relative flex items-center gap-4 py-5 px-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300">
-                      <div
-                        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                        style={{ background: `radial-gradient(circle at 30% 50%, ${m.color}08, transparent 70%)` }}
-                      />
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${m.color}10`, border: `1px solid ${m.color}18` }}
-                      >
-                        <MIcon className="w-[18px] h-[18px]" style={{ color: m.color }} />
-                      </div>
-                      <div>
-                        <p className="text-xl md:text-2xl font-extrabold text-white leading-none mb-0.5 font-mono tabular-nums">
-                          {(m as any).prefix ?? ""}{m.value}{m.suffix}
-                        </p>
-                        <p className="text-[11px] text-white/35 font-medium">{m.label}</p>
-                      </div>
-                    </div>
-                  </Reveal>
-                );
-              })}
             </div>
           </div>
         </section>

@@ -299,11 +299,9 @@
     scrollbar-color: rgba(100, 100, 120, 0.5) transparent;
 }
 
-/* Native <select> dropdown options — dark mode aware */
-.dark select,
-.dark select option {
-    background-color: var(--theme-content-card-bg, #1e1e2e);
-    color: var(--theme-text-primary, #e0e0e0);
+/* Native <select> dropdown — dark mode aware */
+.dark select {
+    color-scheme: dark;
 }
 
 *::-webkit-scrollbar {

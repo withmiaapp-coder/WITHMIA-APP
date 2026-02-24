@@ -595,7 +595,6 @@ export default function Entrenamiento({
 
             {/* Decorative elements */}
             <div className="absolute -top-4 -right-4 w-20 h-20 bg-violet-500/10 rounded-full blur-xl"></div>
-            <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-purple-500/10 rounded-full blur-xl"></div>
           </div>
         </div>
 
