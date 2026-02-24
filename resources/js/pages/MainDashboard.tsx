@@ -475,7 +475,10 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                     />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
+                  <div 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${!t ? 'bg-neutral-800' : ''}`}
+                    style={t ? { background: 'var(--theme-primary)' } : undefined}
+                  >
                     <span className="text-base font-bold text-white">
                       {user.firstName.charAt(0).toUpperCase()}
                     </span>
@@ -496,7 +499,10 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                     onError={() => setLogoError(true)}
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br from-purple-500 to-purple-700">
+                  <div 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${!t ? 'bg-neutral-800' : ''}`}
+                    style={t ? { background: 'var(--theme-primary)' } : undefined}
+                  >
                     <span className="text-base font-bold text-white">
                       {user.firstName.charAt(0).toUpperCase()}
                     </span>
@@ -1160,7 +1166,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Inicio', 
       icon: Sparkles, 
       count: null,
-      gradient: 'from-amber-500 to-yellow-500',
       permission: 'sidebar.dashboard'
     },
     // Conversaciones - todos
@@ -1169,7 +1174,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Conversaciones', 
       icon: MessageCircle, 
       count: (conversations || []).filter(c => c.status === "open").length,
-      gradient: 'from-blue-500 to-indigo-500',
       permission: 'sidebar.chats'
     },
     // Equipo - todos
@@ -1178,7 +1182,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Equipo', 
       icon: Users, 
       count: teams && teams.length > 0 ? teams.length : null,
-      gradient: 'from-emerald-500 to-green-500',
       permission: 'sidebar.teams'
     },
     // Integraciones - solo admin por defecto
@@ -1187,7 +1190,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Integración', 
       icon: Lightbulb, 
       count: integrationsCount,
-      gradient: 'from-gray-500 to-slate-600',
       permission: 'sidebar.integrations'
     },
     // Conocimientos - solo admin por defecto
@@ -1196,7 +1198,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Conocimientos', 
       icon: BookOpen, 
       count: null,
-      gradient: 'from-cyan-500 to-blue-500',
       permission: 'sidebar.knowledge'
     },
     // Entrenamiento - solo admin por defecto
@@ -1205,7 +1206,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Entrenamiento', 
       icon: GraduationCap, 
       count: null,
-      gradient: 'from-violet-500 to-purple-500',
       permission: 'sidebar.training'
     },
     // Calendario - solo admin por defecto
@@ -1214,7 +1214,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Calendario', 
       icon: Calendar, 
       count: null,
-      gradient: 'from-rose-500 to-pink-500',
       permission: 'sidebar.calendar'
     },
     // Productos - solo admin por defecto
@@ -1223,7 +1222,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Productos', 
       icon: Package, 
       count: null,
-      gradient: 'from-orange-500 to-red-500',
       permission: 'sidebar.products'
     },
     // Admin Panel - SOLO para super-admin (controlado desde el servidor)
@@ -1232,7 +1230,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Admin',
       icon: Shield,
       count: null,
-      gradient: 'from-purple-600 to-indigo-600',
       permission: 'superadmin'
     }] : [])
   ];
@@ -1337,10 +1334,10 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
               >
                 <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-4'}`}>
                   <div 
-                    className={`p-2 rounded-lg ${
+                    className={`p-2 rounded-lg transition-colors duration-150 ${
                       !hasTheme ? (
                         isActive 
-                          ? `bg-gradient-to-r ${item.gradient} shadow-md` 
+                          ? 'bg-neutral-800 shadow-md' 
                           : 'bg-neutral-100 group-hover:bg-neutral-200/80'
                       ) : ''
                     }`}

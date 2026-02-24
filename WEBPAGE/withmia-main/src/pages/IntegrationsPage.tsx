@@ -490,104 +490,140 @@ const IntegrationsPage = () => {
               </p>
             </Reveal>
 
-            {/* === LIVE SYSTEM VISUALIZATION === */}
+            {/* === LIVE SYSTEM VISUALIZATION — Enhanced === */}
             <Reveal delay={40}>
-              <div className="relative rounded-2xl border border-white/[0.06] bg-[#07070d] overflow-hidden">
-                {/* Top bar — simulated system header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.05] bg-white/[0.01]">
+              <div className="relative rounded-2xl border border-white/[0.06] bg-[#060610] overflow-hidden intg-dashboard">
+                {/* Ambient glows behind dashboard */}
+                <div className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-violet-600/[0.04] rounded-full blur-[120px] pointer-events-none intg-glow-drift" />
+                <div className="absolute bottom-0 right-0 w-[350px] h-[300px] bg-amber-500/[0.03] rounded-full blur-[100px] pointer-events-none intg-glow-drift-2" />
+                <div className="absolute top-0 left-1/2 w-[300px] h-[200px] bg-cyan-400/[0.02] rounded-full blur-[80px] pointer-events-none" />
+
+                {/* Top bar — system header */}
+                <div className="relative flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-white/[0.015]">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]/60" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]/60" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]/60" />
                     </div>
-                    <span className="text-[10px] font-mono text-white/20">withmia.integrations.dashboard</span>
+                    <div className="h-3 w-px bg-white/[0.06]" />
+                    <span className="text-[10px] font-mono text-white/25">withmia.integrations.dashboard</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse" style={{ animationDuration: "2s" }} />
-                    <span className="text-[9px] font-mono text-emerald-400/50 uppercase tracking-wider">Sistema activo</span>
+                  <div className="flex items-center gap-4">
+                    <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.04]">
+                      <div className="w-1 h-1 rounded-full bg-emerald-400/80 intg-status-dot" />
+                      <span className="text-[8px] font-mono text-white/25">latency: 23ms</span>
+                    </div>
+                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-400/[0.06] border border-emerald-400/10">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 intg-status-dot" />
+                      <span className="text-[9px] font-mono text-emerald-400/60 font-medium uppercase tracking-wider">En línea</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Main content — split layout */}
-                <div className="grid lg:grid-cols-[1fr_340px]">
+                <div className="grid lg:grid-cols-[1fr_360px]">
                   {/* LEFT — Integration node map */}
-                  <div className="relative p-6 md:p-8 min-h-[420px]">
-                    {/* Background grid */}
-                    <div
-                      className="absolute inset-0 opacity-[0.03]"
-                      style={{
-                        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)",
-                        backgroundSize: "24px 24px",
-                      }}
-                    />
+                  <div className="relative p-6 md:p-8 min-h-[480px] md:min-h-[520px]">
+                    {/* Animated dot grid */}
+                    <div className="absolute inset-0 intg-dot-grid" />
 
-                    {/* Center hub */}
+                    {/* Center hub — enhanced */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                       <div className="relative">
-                        <div className="absolute -inset-6 rounded-full bg-violet-500/[0.04] animate-pulse" style={{ animationDuration: "4s" }} />
-                        <div className="absolute -inset-12 rounded-full border border-violet-500/[0.04]" />
-                        <div className="absolute -inset-20 rounded-full border border-white/[0.02]" />
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/15 to-amber-500/10 border border-white/[0.1] flex items-center justify-center overflow-hidden">
-                          <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-9 h-9 object-contain pointer-events-none" />
+                        {/* Outer expanding rings */}
+                        <div className="absolute -inset-[70px] rounded-full border border-white/[0.015] intg-ring-spin" />
+                        <div className="absolute -inset-[50px] rounded-full border border-violet-500/[0.04] intg-ring-spin-reverse" />
+                        <div className="absolute -inset-[30px] rounded-full border border-violet-400/[0.06]" />
+
+                        {/* Pulse rings */}
+                        <div className="absolute -inset-8 rounded-full intg-pulse-ring" style={{ border: "1px solid rgba(139,92,246,0.08)" }} />
+                        <div className="absolute -inset-14 rounded-full intg-pulse-ring" style={{ border: "1px solid rgba(139,92,246,0.04)", animationDelay: "1.5s" }} />
+
+                        {/* Core glow */}
+                        <div className="absolute -inset-5 rounded-2xl bg-gradient-to-br from-violet-500/[0.12] to-amber-500/[0.06] blur-xl intg-core-breathe" />
+
+                        {/* Hub box */}
+                        <div className="relative w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl bg-gradient-to-br from-violet-500/20 via-[#0a0a15] to-amber-500/15 border border-white/[0.12] flex items-center justify-center overflow-hidden">
+                          <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-10 h-10 md:w-11 md:h-11 object-contain pointer-events-none" />
                         </div>
-                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                          <span className="text-[8px] font-mono text-violet-400/40 tracking-wider">ORQUESTADOR</span>
+
+                        {/* Label */}
+                        <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap flex flex-col items-center gap-0.5">
+                          <span className="text-[9px] font-bold text-violet-400/50 tracking-[0.15em] uppercase">WITHMIA</span>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1 h-1 rounded-full bg-emerald-400/70 intg-status-dot" />
+                            <span className="text-[7px] font-mono text-emerald-400/40">LIVE</span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* SVG connections */}
+                    {/* SVG layer — connections + particles */}
                     <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
                       <defs>
                         {integrationCategories.flatMap(cat => cat.items).map((item, i) => (
                           <linearGradient key={`lg${i}`} id={`intg-line-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor={item.color} stopOpacity="0.15" />
-                            <stop offset="50%" stopColor={item.color} stopOpacity="0.35" />
+                            <stop offset="0%" stopColor={item.color} stopOpacity="0.05" />
+                            <stop offset="30%" stopColor={item.color} stopOpacity="0.4" />
+                            <stop offset="70%" stopColor={item.color} stopOpacity="0.4" />
                             <stop offset="100%" stopColor={item.color} stopOpacity="0.05" />
                           </linearGradient>
                         ))}
+                        <filter id="intg-particle-glow">
+                          <feGaussianBlur stdDeviation="2" />
+                        </filter>
                       </defs>
-                      {/* Animated connection lines from center to each integration position */}
+
+                      {/* Connection lines + flowing particles */}
                       {(() => {
                         const allItems = integrationCategories.flatMap(cat => cat.items);
                         const total = allItems.length;
                         return allItems.map((item, i) => {
                           const angle = (360 / total) * i - 90;
                           const rad = (angle * Math.PI) / 180;
-                          const cx = 50;
-                          const cy = 50;
-                          const r = 36;
+                          const cx = 50, cy = 50, r = 36;
                           const ex = cx + r * Math.cos(rad);
                           const ey = cy + r * Math.sin(rad);
+                          const pathId = `intg-path-${i}`;
                           return (
                             <g key={`conn${i}`}>
+                              {/* Base line */}
                               <line
-                                x1={`${cx}%`} y1={`${cy}%`}
-                                x2={`${ex}%`} y2={`${ey}%`}
-                                stroke={item.color}
-                                strokeWidth="0.5"
-                                strokeOpacity="0.08"
+                                x1={`${cx}%`} y1={`${cy}%`} x2={`${ex}%`} y2={`${ey}%`}
+                                stroke={item.color} strokeWidth="0.5" strokeOpacity="0.06"
                               />
+                              {/* Animated dashed line */}
                               <line
-                                x1={`${cx}%`} y1={`${cy}%`}
-                                x2={`${ex}%`} y2={`${ey}%`}
+                                x1={`${cx}%`} y1={`${cy}%`} x2={`${ex}%`} y2={`${ey}%`}
                                 stroke={`url(#intg-line-${i})`}
-                                strokeWidth="1"
-                                strokeDasharray="3 5"
+                                strokeWidth="1.2" strokeDasharray="4 6"
                                 className="intg-flow-line"
-                                style={{ animationDelay: `${i * 0.4}s` }}
+                                style={{ animationDelay: `${i * 0.3}s` }}
                               />
+                              {/* Flowing particle */}
+                              <path id={pathId} d={`M ${cx}% ${cy}% L ${ex}% ${ey}%`} fill="none" stroke="none" />
+                              <circle r="2" fill={item.color} fillOpacity="0.7" filter="url(#intg-particle-glow)">
+                                <animateMotion dur={`${2 + (i % 3) * 0.5}s`} repeatCount="indefinite" begin={`${i * 0.25}s`}>
+                                  <mpath href={`#${pathId}`} />
+                                </animateMotion>
+                                <animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur={`${2 + (i % 3) * 0.5}s`} repeatCount="indefinite" begin={`${i * 0.25}s`} />
+                                <animate attributeName="r" values="1;2.5;2.5;1" dur={`${2 + (i % 3) * 0.5}s`} repeatCount="indefinite" begin={`${i * 0.25}s`} />
+                              </circle>
                             </g>
                           );
                         });
                       })()}
+
+                      {/* Category orbit rings */}
+                      <circle cx="50%" cy="50%" r="18%" fill="none" stroke="white" strokeWidth="0.3" strokeOpacity="0.02" strokeDasharray="2 8" className="intg-ring-spin" />
+                      <circle cx="50%" cy="50%" r="28%" fill="none" stroke="white" strokeWidth="0.3" strokeOpacity="0.015" strokeDasharray="3 10" className="intg-ring-spin-reverse" />
                     </svg>
 
-                    {/* Integration nodes positioned in a circle */}
+                    {/* Integration nodes — positioned in circle */}
                     {(() => {
                       const allItems = integrationCategories.flatMap(cat =>
-                        cat.items.map(item => ({...item, catAccent: cat.accent, catLabel: cat.label}))
+                        cat.items.map(item => ({ ...item, catAccent: cat.accent, catLabel: cat.label }))
                       );
                       const total = allItems.length;
                       return allItems.map((item, i) => {
@@ -600,31 +636,45 @@ const IntegrationsPage = () => {
                         return (
                           <div
                             key={item.name}
-                            className="absolute z-10 group"
+                            className="absolute z-10 group intg-node-appear"
                             style={{
                               left: `${x}%`,
                               top: `${y}%`,
                               transform: "translate(-50%, -50%)",
+                              animationDelay: `${0.1 + i * 0.06}s`,
                             }}
                           >
                             <div className="relative flex flex-col items-center gap-1.5">
-                              {/* Pulse ring */}
+                              {/* Hover glow */}
                               <div
-                                className="absolute -inset-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                style={{ background: `radial-gradient(circle, ${item.color}10, transparent 70%)` }}
+                                className="absolute -inset-3 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                style={{ background: `radial-gradient(circle, ${item.color}18, transparent 70%)` }}
                               />
+                              {/* Soft permanent glow */}
                               <div
-                                className="relative w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                                className="absolute -inset-1 rounded-xl blur-md intg-node-glow"
+                                style={{ backgroundColor: `${item.color}08`, animationDelay: `${i * 0.5}s` }}
+                              />
+                              {/* Node box */}
+                              <div
+                                className="relative w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-115 group-hover:-translate-y-0.5"
                                 style={{
-                                  backgroundColor: `${item.color}0c`,
-                                  border: `1px solid ${item.color}18`,
+                                  backgroundColor: `${item.color}0e`,
+                                  border: `1px solid ${item.color}20`,
+                                  boxShadow: `0 0 20px ${item.color}08`,
                                 }}
                               >
-                                <Icon className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: `${item.color}bb` }} />
+                                <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: `${item.color}cc` }} />
                               </div>
-                              <span className="text-[8px] md:text-[9px] font-semibold text-white/30 group-hover:text-white/70 transition-colors whitespace-nowrap">
+                              {/* Name label */}
+                              <span className="text-[8px] md:text-[9px] font-bold text-white/25 group-hover:text-white/80 transition-colors duration-300 whitespace-nowrap tracking-wide">
                                 {item.name}
                               </span>
+                              {/* Active dot */}
+                              <div
+                                className="absolute top-0 right-0 w-2 h-2 rounded-full border border-[#060610]"
+                                style={{ backgroundColor: `${item.color}90` }}
+                              />
                             </div>
                           </div>
                         );
@@ -633,72 +683,101 @@ const IntegrationsPage = () => {
                   </div>
 
                   {/* RIGHT — Live event feed */}
-                  <div className="border-t lg:border-t-0 lg:border-l border-white/[0.05] bg-white/[0.008]">
+                  <div className="border-t lg:border-t-0 lg:border-l border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-transparent">
                     {/* Feed header */}
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04]">
-                      <span className="text-[10px] font-mono text-white/25 uppercase tracking-wider">Actividad en tiempo real</span>
-                      <span className="text-[9px] font-mono text-white/15">hace 2s</span>
+                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.05]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60 intg-status-dot" />
+                        <span className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.12em]">Actividad en tiempo real</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.04]">
+                        <div className="w-1 h-1 rounded-full bg-emerald-400/60 intg-status-dot" />
+                        <span className="text-[8px] font-mono text-white/20">stream</span>
+                      </div>
                     </div>
 
-                    {/* Simulated events */}
-                    <div className="divide-y divide-white/[0.03]">
+                    {/* Events */}
+                    <div className="divide-y divide-white/[0.025] max-h-[400px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {[
-                        { action: "Cita confirmada", source: "AgendaPro", target: "WhatsApp", color: "#3B82F6", time: "ahora" },
-                        { action: "Pedido recibido", source: "Shopify", target: "Email", color: "#96BF48", time: "12s" },
-                        { action: "Paciente agendado", source: "Dentalink", target: "WhatsApp", color: "#22D3EE", time: "34s" },
-                        { action: "Pregunta respondida", source: "MercadoLibre", target: "IA Bot", color: "#FFE600", time: "1m" },
-                        { action: "Reunión creada", source: "Calendly", target: "Google Cal", color: "#006BFF", time: "2m" },
-                        { action: "Webhook recibido", source: "API REST", target: "Sistema", color: "#F59E0B", time: "3m" },
-                        { action: "Carrito abandonado", source: "WooCommerce", target: "WhatsApp", color: "#9B5C8F", time: "4m" },
-                        { action: "Sync completado", source: "Google Calendar", target: "Outlook", color: "#4285F4", time: "5m" },
-                      ].map((evt, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-3 px-5 py-3.5 group hover:bg-white/[0.01] transition-colors intg-event-row"
-                          style={{ animationDelay: `${i * 0.15}s` }}
-                        >
+                        { action: "Cita confirmada", source: "AgendaPro", target: "WhatsApp", color: "#3B82F6", time: "ahora", icon: CalendarCheck },
+                        { action: "Pedido #4821 recibido", source: "Shopify", target: "Email", color: "#96BF48", time: "12s", icon: ShoppingCart },
+                        { action: "Paciente agendado", source: "Dentalink", target: "WhatsApp", color: "#22D3EE", time: "34s", icon: Stethoscope },
+                        { action: "Pregunta respondida", source: "MercadoLibre", target: "IA Bot", color: "#FFE600", time: "1m", icon: ShoppingCart },
+                        { action: "Reunión programada", source: "Calendly", target: "Google Calendar", color: "#006BFF", time: "2m", icon: CalendarDays },
+                        { action: "Webhook procesado", source: "API REST", target: "Pipeline IA", color: "#F59E0B", time: "3m", icon: Webhook },
+                        { action: "Carrito abandonado", source: "WooCommerce", target: "WhatsApp", color: "#9B5C8F", time: "4m", icon: Code2 },
+                        { action: "Sync bidireccional", source: "Google Calendar", target: "Outlook", color: "#4285F4", time: "5m", icon: Calendar },
+                      ].map((evt, i) => {
+                        const EvtIcon = evt.icon;
+                        return (
                           <div
-                            className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                            style={{ backgroundColor: evt.color }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] text-white/50 font-medium truncate">
-                              {evt.action}
-                            </p>
-                            <p className="text-[9px] text-white/20 truncate">
-                              {evt.source} <span className="text-white/10 mx-1">→</span> {evt.target}
-                            </p>
+                            key={i}
+                            className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-white/[0.015] transition-all duration-300 intg-event-row group"
+                            style={{ animationDelay: `${i * 0.12}s` }}
+                          >
+                            {/* Event icon */}
+                            <div
+                              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:scale-105"
+                              style={{
+                                backgroundColor: `${evt.color}0c`,
+                                border: `1px solid ${evt.color}15`,
+                              }}
+                            >
+                              <EvtIcon className="w-3 h-3" style={{ color: `${evt.color}90` }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="text-[11px] text-white/55 font-semibold truncate group-hover:text-white/75 transition-colors">
+                                  {evt.action}
+                                </p>
+                                {i === 0 && (
+                                  <span className="shrink-0 text-[7px] font-bold text-amber-400/60 bg-amber-400/[0.08] px-1.5 py-px rounded tracking-wider uppercase">Nuevo</span>
+                                )}
+                              </div>
+                              <p className="text-[9px] text-white/20 truncate">
+                                <span className="text-white/30">{evt.source}</span>
+                                <span className="text-white/10 mx-1.5">→</span>
+                                <span className="text-white/25">{evt.target}</span>
+                              </p>
+                            </div>
+                            <span className="text-[8px] font-mono text-white/15 shrink-0 mt-1 tabular-nums">
+                              {evt.time}
+                            </span>
                           </div>
-                          <span className="text-[8px] font-mono text-white/15 shrink-0 mt-0.5">
-                            {evt.time}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
-                    {/* Feed footer */}
-                    <div className="px-5 py-3 border-t border-white/[0.04] flex items-center justify-between">
-                      <span className="text-[9px] text-white/15">12 integraciones conectadas</span>
-                      <div className="flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-emerald-400/50" />
-                        <span className="text-[8px] font-mono text-emerald-400/40">OK</span>
+                    {/* Feed footer — throughput */}
+                    <div className="px-5 py-3 border-t border-white/[0.05] flex items-center justify-between bg-white/[0.008]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[9px] text-white/20 font-medium">12 conectadas</span>
+                        <div className="h-3 w-px bg-white/[0.06]" />
+                        <span className="text-[8px] font-mono text-white/15">2.4k msg/h</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 intg-status-dot" />
+                        <span className="text-[8px] font-mono text-emerald-400/50 font-bold">ALL OK</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom status bar */}
-                <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/[0.04] bg-white/[0.01]">
-                  <div className="flex items-center gap-4">
+                {/* Bottom status bar — enhanced */}
+                <div className="flex flex-wrap items-center justify-between px-5 py-2.5 border-t border-white/[0.05] bg-white/[0.012]">
+                  <div className="flex items-center gap-3 sm:gap-5">
                     {integrationCategories.map((cat) => (
                       <div key={cat.id} className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.accent }} />
-                        <span className="text-[9px] text-white/20 font-medium">{cat.label}</span>
-                        <span className="text-[8px] text-white/10 font-mono">{cat.items.length}</span>
+                        <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: `${cat.accent}70` }} />
+                        <span className="text-[9px] text-white/25 font-medium hidden sm:inline">{cat.label}</span>
+                        <span className="text-[8px] text-white/15 font-mono bg-white/[0.03] px-1.5 py-px rounded">{cat.items.length}</span>
                       </div>
                     ))}
                   </div>
-                  <span className="text-[8px] font-mono text-white/10">v2.4.1</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[8px] font-mono text-white/10">uptime: 99.98%</span>
+                    <span className="text-[8px] font-mono text-white/10">v2.4.1</span>
+                  </div>
                 </div>
               </div>
             </Reveal>

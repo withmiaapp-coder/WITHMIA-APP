@@ -1843,7 +1843,7 @@ const DocumentationPage = () => {
           border-r border-white/[0.04] bg-[hsl(var(--background))]/80 lg:bg-transparent backdrop-blur-xl lg:backdrop-blur-none
           transition-transform duration-300 lg:transition-none
           ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent
+          [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
         `}>
           <nav className="px-4 py-4">
             {/* Search */}
