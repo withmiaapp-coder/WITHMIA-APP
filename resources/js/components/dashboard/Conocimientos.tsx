@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import debugLog from '@/utils/debugLogger';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   BookOpen,
   Upload,
@@ -98,6 +99,24 @@ export default function Conocimientos({
   user,
   company,
 }: ConocimientosProps) {
+  const { currentTheme, hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      contentBg: 'var(--theme-content-bg)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      hoverBg: isDark ? 'rgba(255,255,255,0.05)' : undefined,
+      itemBg: isDark ? 'rgba(255,255,255,0.03)' : undefined,
+    };
+  }, [hasTheme, isDark]);
+
   const [selectedCategory, setSelectedCategory] = useState("historia");
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
@@ -478,8 +497,8 @@ export default function Conocimientos({
           <BookOpen className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-800">Conocimientos</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conocimientos</h1>
+          <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
             Base de conocimiento y documentación de tu empresa
           </p>
         </div>
@@ -625,43 +644,44 @@ export default function Conocimientos({
         </div>
 
         {/* Right: Memory Panel */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-lg flex flex-col max-h-[400px]">
+        <div className={`rounded-xl p-5 border shadow-lg flex flex-col max-h-[400px] ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}>
           <div className="flex items-center gap-3 mb-4">
-            <Brain className="w-5 h-5 text-cyan-600" />
+            <Brain className="w-5 h-5" style={t ? { color: t.accent } : { color: '#0891b2' }} />
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-neutral-800">Memoria de WITHMIA</h3>
-              <p className="text-xs text-neutral-400">
+              <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Memoria de WITHMIA</h3>
+              <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 Fragmentos de conocimiento almacenados
               </p>
             </div>
             <button
               onClick={fetchQdrantPoints}
               disabled={loadingPoints}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : 'hover:opacity-80'}`}
               title="Refrescar"
             >
-              <RefreshCw className={`w-4 h-4 text-gray-600 ${loadingPoints ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loadingPoints ? 'animate-spin' : ''}`} style={t ? { color: t.textSec } : { color: '#4b5563' }} />
             </button>
           </div>
 
           {/* Edit Fragment Modal */}
           {editingPoint && (
-            <div className="mb-4 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
+            <div className={`mb-4 p-3 rounded-lg border ${!t ? 'bg-cyan-50 border-cyan-200' : ''}`} style={t ? { background: t.accentLight, borderColor: t.cardBorder } : undefined}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-cyan-800">
+                <span className={`text-sm font-medium ${!t ? 'text-cyan-800' : ''}`} style={t ? { color: t.accent } : undefined}>
                   Editando fragmento
                 </span>
                 <button
                   onClick={() => { setEditingPoint(null); setEditPayload(''); }}
-                  className="p-1 hover:bg-cyan-100 rounded"
+                  className={`p-1 rounded ${!t ? 'hover:bg-cyan-100' : 'hover:opacity-80'}`}
                 >
-                  <X className="w-4 h-4 text-cyan-600" />
+                  <X className="w-4 h-4" style={t ? { color: t.accent } : { color: '#0891b2' }} />
                 </button>
               </div>
               <textarea
                 value={editPayload}
                 onChange={(e) => setEditPayload(e.target.value)}
-                className="w-full h-40 text-sm p-3 border border-cyan-200 rounded bg-white text-gray-800 resize-none leading-relaxed"
+                className={`w-full h-40 text-sm p-3 border rounded resize-none leading-relaxed ${!t ? 'border-cyan-200 bg-white text-gray-800' : ''}`}
+                style={t ? { background: t.contentBg, borderColor: t.cardBorder, color: t.text } : undefined}
                 placeholder="Escribe aquí el contenido del fragmento de conocimiento..."
               />
               <div className="flex justify-end gap-2 mt-2">
@@ -689,14 +709,14 @@ export default function Conocimientos({
           <div className="flex-1 overflow-y-auto space-y-2">
             {loadingPoints ? (
               <div className="text-center py-6">
-                <Loader className="w-8 h-8 mx-auto text-cyan-500 animate-spin mb-2" />
-                <p className="text-gray-500 text-sm">Cargando memoria...</p>
+                <Loader className="w-8 h-8 mx-auto animate-spin mb-2" style={t ? { color: t.accent } : { color: '#06b6d4' }} />
+                <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>Cargando memoria...</p>
               </div>
             ) : qdrantPoints.length === 0 ? (
               <div className="text-center py-6">
-                <Brain className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500 text-sm">WITHMIA aún no tiene memoria</p>
-                <p className="text-xs text-gray-400">Sube documentos para que aprenda</p>
+                <Brain className="w-10 h-10 mx-auto mb-2" style={t ? { color: t.textMuted } : { color: '#d1d5db' }} />
+                <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>WITHMIA aún no tiene memoria</p>
+                <p className={`text-xs ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Sube documentos para que aprenda</p>
               </div>
             ) : (
               qdrantPoints.map((point) => {
@@ -725,28 +745,29 @@ export default function Conocimientos({
                 return (
                   <div
                     key={point.id}
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-cyan-200 transition-colors"
+                    className={`p-3 rounded-lg border transition-colors ${!t ? 'bg-gray-50 border-gray-100 hover:border-cyan-200' : ''}`}
+                    style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}
                   >
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => setExpandedPointId(isExpanded ? null : point.id)}
-                        className="p-1 hover:bg-gray-200 rounded mt-0.5"
+                        className={`p-1 rounded mt-0.5 ${!t ? 'hover:bg-gray-200' : 'hover:opacity-80'}`}
                       >
                         {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-gray-500" />
+                          <ChevronUp className="w-4 h-4" style={t ? { color: t.textMuted } : { color: '#6b7280' }} />
                         ) : (
-                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                          <ChevronDown className="w-4 h-4" style={t ? { color: t.textMuted } : { color: '#6b7280' }} />
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <FileText className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-700 truncate font-medium" title={source}>
+                          <span className={`text-sm truncate font-medium ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined} title={source}>
                             {source.length > 25 ? source.slice(0, 25) + '...' : source}
                           </span>
                         </div>
                         {isExpanded && (
-                          <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border max-h-32 overflow-y-auto">
+                          <div className={`mt-2 text-xs p-2 rounded border max-h-32 overflow-y-auto ${!t ? 'text-gray-600 bg-white' : ''}`} style={t ? { color: t.textSec, background: t.contentBg, borderColor: t.cardBorder } : undefined}>
                             <pre className="whitespace-pre-wrap font-mono text-[11px]">
                               {content ? content.slice(0, 500) + (content.length > 500 ? '...' : '') : 'Sin contenido de texto'}
                             </pre>
@@ -782,7 +803,7 @@ export default function Conocimientos({
           </div>
           
           {qdrantPoints.length > 0 && (
-            <div className="mt-3 pt-3 border-t text-xs text-gray-400 text-center">
+            <div className={`mt-3 pt-3 border-t text-xs text-center ${!t ? 'text-gray-400' : ''}`} style={t ? { borderColor: t.cardBorder, color: t.textMuted } : undefined}>
               {qdrantPoints.length} fragmento{qdrantPoints.length !== 1 ? 's' : ''} de conocimiento
             </div>
           )}
@@ -792,10 +813,10 @@ export default function Conocimientos({
       {/* Two Column Layout - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Document Upload Section */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg flex flex-col">
+        <div className={`rounded-xl p-6 border shadow-lg flex flex-col ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}>
           <div className="flex items-center gap-3 mb-6">
-            <Upload className="w-6 h-6 text-cyan-600" />
-            <h2 className="text-xl font-bold text-neutral-800">
+            <Upload className="w-6 h-6" style={t ? { color: t.accent } : { color: '#0891b2' }} />
+            <h2 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Subir Documentos
             </h2>
           </div>
@@ -809,21 +830,25 @@ export default function Conocimientos({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  className={`p-3 rounded-lg border-2 transition-all ${!t ? (
                     isSelected
                       ? "border-cyan-500 bg-cyan-50"
                       : "border-gray-200 hover:border-gray-300"
-                  }`}
+                  ) : ''}`}
+                  style={t ? {
+                    borderColor: isSelected ? t.accent : t.cardBorder,
+                    background: isSelected ? t.accentLight : t.contentBg
+                  } : undefined}
                 >
                   <Icon
-                    className={`w-5 h-5 mx-auto mb-1 ${
-                      isSelected ? "text-cyan-600" : "text-gray-400"
-                    }`}
+                    className={`w-5 h-5 mx-auto mb-1`}
+                    style={t ? { color: isSelected ? t.accent : t.textMuted } : { color: isSelected ? '#0891b2' : '#9ca3af' }}
                   />
                   <div
-                    className={`text-xs font-medium text-center ${
+                    className={`text-xs font-medium text-center ${!t ? (
                       isSelected ? "text-cyan-700" : "text-gray-600"
-                    }`}
+                    ) : ''}`}
+                    style={t ? { color: isSelected ? t.accent : t.textSec } : undefined}
                   >
                     {cat.label}
                   </div>
@@ -840,24 +865,27 @@ export default function Conocimientos({
               setIsDragging(true);
             }}
             onDragLeave={() => setIsDragging(false)}
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${!t ? (
               isDragging
                 ? "border-cyan-500 bg-cyan-50"
                 : "border-gray-300 hover:border-gray-400 bg-gray-50"
-            }`}
+            ) : ''}`}
+            style={t ? {
+              borderColor: isDragging ? t.accent : t.cardBorder,
+              background: isDragging ? t.accentLight : t.itemBg
+            } : undefined}
           >
             <Upload
-              className={`w-12 h-12 mx-auto mb-3 ${
-                isDragging ? "text-cyan-500" : "text-gray-400"
-              }`}
+              className={`w-12 h-12 mx-auto mb-3`}
+              style={t ? { color: isDragging ? t.accent : t.textMuted } : { color: isDragging ? '#06b6d4' : '#9ca3af' }}
             />
-            <p className="text-sm font-medium text-gray-700 mb-1">
+            <p className={`text-sm font-medium mb-1 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
               Arrastra archivos aquí o haz clic para seleccionar
             </p>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className={`text-xs mb-4 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
               Tipos soportados: PDF, TXT, DOCX, MD (máximo 10MB)
             </p>
-            <label className="inline-block px-4 py-2 bg-cyan-600 text-white text-sm rounded-lg hover:bg-cyan-700 cursor-pointer transition-colors">
+            <label className={`inline-block px-4 py-2 text-sm rounded-lg cursor-pointer transition-colors ${!t ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'text-white'}`} style={t ? { background: t.accent } : undefined}>
               Seleccionar Archivos
               <input
                 type="file"
@@ -873,12 +901,12 @@ export default function Conocimientos({
           {uploadingFiles.length > 0 && (
             <div className="mt-4 space-y-2">
               {uploadingFiles.map((fileId) => (
-                <div key={fileId} className="bg-gray-50 rounded-lg p-3">
+                <div key={fileId} className={`rounded-lg p-3 ${!t ? 'bg-gray-50' : ''}`} style={t ? { background: t.itemBg } : undefined}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className={`text-xs font-medium ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                       {fileId.split("-")[0]}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                       {uploadProgress[fileId] || 0}%
                     </span>
                   </div>
@@ -895,21 +923,20 @@ export default function Conocimientos({
         </div>
 
         {/* Right Column - Documents List */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg flex flex-col">
+        <div className={`rounded-xl p-6 border shadow-lg flex flex-col ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}>
           <div className="flex items-center gap-3 mb-6">
-            <FileText className="w-6 h-6 text-cyan-600" />
-            <h2 className="text-xl font-bold text-neutral-800">
+            <FileText className="w-6 h-6" style={t ? { color: t.accent } : { color: '#0891b2' }} />
+            <h2 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
               Documentos Subidos
             </h2>
             <button
               onClick={fetchDocuments}
               disabled={loadingDocuments}
-              className="ml-auto p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className={`ml-auto p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : 'hover:opacity-80'}`}
             >
               <RefreshCw
-                className={`w-5 h-5 text-gray-600 ${
-                  loadingDocuments ? "animate-spin" : ""
-                }`}
+                className={`w-5 h-5 ${loadingDocuments ? "animate-spin" : ""}`}
+                style={t ? { color: t.textSec } : { color: '#4b5563' }}
               />
             </button>
           </div>
@@ -917,14 +944,14 @@ export default function Conocimientos({
           <div className="flex-1 min-h-[300px]">
             {loadingDocuments ? (
               <div className="text-center py-8">
-                <Loader className="w-10 h-10 mx-auto text-cyan-500 animate-spin mb-3" />
-                <p className="text-gray-500 text-sm">Cargando documentos...</p>
+                <Loader className="w-10 h-10 mx-auto animate-spin mb-3" style={t ? { color: t.accent } : { color: '#06b6d4' }} />
+                <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>Cargando documentos...</p>
               </div>
             ) : documents.length === 0 ? (
               <div className="text-center py-8">
-                <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500 text-sm">No hay documentos en esta categoría</p>
-                <p className="text-xs text-gray-400">
+                <FileText className="w-12 h-12 mx-auto mb-3" style={t ? { color: t.textMuted } : { color: '#d1d5db' }} />
+                <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>No hay documentos en esta categoría</p>
+                <p className={`text-xs ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                   Sube tu primer documento para comenzar
                 </p>
               </div>
@@ -933,13 +960,14 @@ export default function Conocimientos({
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className={`flex items-center justify-between p-3 rounded-lg transition-colors ${!t ? 'bg-gray-50 hover:bg-gray-100' : ''}`}
+                    style={t ? { background: t.itemBg, borderBottom: `1px solid ${t.cardBorder}` } : undefined}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="w-6 h-6 text-cyan-600 flex-shrink-0" />
+                      <FileText className="w-6 h-6 flex-shrink-0" style={t ? { color: t.accent } : { color: '#0891b2' }} />
                       <div className="min-w-0">
-                        <p className="font-medium text-gray-800 text-sm truncate">{doc.filename}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className={`font-medium text-sm truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>{doc.filename}</p>
+                        <p className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                           Subido:{" "}
                           {new Date(doc.uploaded_at).toLocaleDateString("es-ES")}
                           {doc.chunks_created &&
