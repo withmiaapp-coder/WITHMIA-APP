@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   MessageCircle, 
   Mail, 
@@ -40,6 +40,7 @@ import {
   Smartphone,
   Download,
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface IntegrationInfo {
   id: number;
@@ -106,6 +107,26 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   onIntegrationChange,
   onNavigateToProducts,
 }) => {
+  const { hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      containerBg: 'var(--theme-content-bg)',
+      cardBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      cardBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      headerBg: isDark ? 'rgba(255,255,255,0.03)' : 'var(--theme-content-card-bg)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      expandedBg: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(248,250,252,0.5)',
+      accent: 'var(--theme-accent)',
+      divider: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+    };
+  }, [hasTheme, isDark]);
+
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState({
     ...whatsAppSettings,
@@ -1056,7 +1077,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
+    <div className={`h-full overflow-y-auto p-8 scrollbar-thin scrollbar-track-transparent ${!t ? 'scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400' : ''}`}
+      style={t ? { background: t.containerBg } : undefined}
+    >
       <div className="max-w-4xl mx-auto pb-8">
         
         {/* Header */}
@@ -1066,8 +1089,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               <Plug className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-neutral-800">Integraciones</h1>
-              <p className="text-neutral-500">Conecta tus canales de comunicación y herramientas</p>
+              <h1 className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Integraciones</h1>
+              <p className={`${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Conecta tus canales de comunicación y herramientas</p>
             </div>
           </div>
         </div>
@@ -1076,18 +1099,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-4">
             <MessageCircle className="w-5 h-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-neutral-800">Canales de Comunicación</h2>
+            <h2 className={`text-xl font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Canales de Comunicación</h2>
           </div>
           
           <div className="space-y-3">
             {channels.map((channel) => (
               <div 
                 key={channel.id}
-                className={`bg-white rounded-xl border transition-all duration-200 ${
+                className={`rounded-xl border transition-all duration-200 ${
                   expandedChannel === channel.id 
-                    ? 'border-purple-300 shadow-lg ring-1 ring-purple-100' 
-                    : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-                }`}
+                    ? !t ? 'border-purple-300 shadow-lg ring-1 ring-purple-100' : 'shadow-lg'
+                    : !t ? 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md' : 'shadow-sm hover:shadow-md'
+                } ${!t ? 'bg-white' : ''}`}
+                style={t ? { background: t.cardBg, borderColor: expandedChannel === channel.id ? t.accent : t.cardBorder } : undefined}
               >
                 {/* Channel Header */}
                 <div 
@@ -1116,8 +1140,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     
                     {/* Info */}
                     <div>
-                      <h3 className="font-semibold text-neutral-800">{channel.name}</h3>
-                      <p className="text-sm text-neutral-500">{channel.description}</p>
+                      <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{channel.name}</h3>
+                      <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{channel.description}</p>
                     </div>
                   </div>
 
@@ -1125,32 +1149,32 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     {getStatusBadge(channel.status)}
                     {channel.available && (
                       expandedChannel === channel.id 
-                        ? <ChevronDown className="w-5 h-5 text-neutral-400" />
-                        : <ChevronRight className="w-5 h-5 text-neutral-400" />
+                        ? <ChevronDown className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                        : <ChevronRight className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                     )}
                   </div>
                 </div>
 
                 {/* Expanded Content - WhatsApp */}
                 {expandedChannel === channel.id && channel.id === 'whatsapp' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     
                     {/* PRE-CONNECTION: Show sync settings BEFORE connecting */}
                     {!isConnected && (
                       <div className="mb-6">
                         <div className="flex items-center gap-2 mb-4">
                           <Database className="w-5 h-5 text-purple-600" />
-                          <h4 className="font-medium text-neutral-700">Configuración de Sincronización</h4>
+                          <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Configuración de Sincronización</h4>
                           <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Antes de conectar</span>
                         </div>
                         
-                        <div className="p-4 bg-white rounded-lg border border-purple-200 shadow-sm">
+                        <div className={`p-4 rounded-lg border shadow-sm ${!t ? 'bg-white border-purple-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <RefreshCw className="w-5 h-5 text-purple-500" />
                               <div>
-                                <p className="font-medium text-neutral-700">Importar Historial de Mensajes</p>
-                                <p className="text-sm text-neutral-500">Desactiva para conexión instantánea</p>
+                                <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Importar Historial de Mensajes</p>
+                                <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Desactiva para conexión instantánea</p>
                               </div>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
@@ -1176,7 +1200,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 <select
                                   value={localSettings.daysLimitImportMessages}
                                   onChange={(e) => handleSettingChange('daysLimitImportMessages', parseInt(e.target.value))}
-                                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  className={`px-3 py-2 border rounded-lg text-sm font-medium ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700' : ''} focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                                 >
                                   <option value={3}>3 días ⚡ Rápido</option>
                                   <option value={7}>7 días</option>
@@ -1227,7 +1251,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <QrCode className="w-5 h-5 text-neutral-600" />
-                          <h4 className="font-medium text-neutral-700">Conexión</h4>
+                          <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                         </div>
                         {isConnected ? (
                           <button
@@ -1263,17 +1287,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <div>
                       <div className="flex items-center gap-2 mb-4">
                         <Settings className="w-5 h-5 text-neutral-600" />
-                        <h4 className="font-medium text-neutral-700">Comportamiento</h4>
+                        <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Comportamiento</h4>
                       </div>
 
                       <div className="space-y-4">
                         {/* Rechazar Llamadas */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-3">
-                            <Phone className="w-5 h-5 text-neutral-500" />
+                            <Phone className={`w-5 h-5 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                             <div>
-                              <p className="font-medium text-neutral-700">Rechazar Llamadas</p>
-                              <p className="text-sm text-neutral-500">Rechazar todas las llamadas entrantes</p>
+                              <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Rechazar Llamadas</p>
+                              <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Rechazar todas las llamadas entrantes</p>
                             </div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1288,12 +1312,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Ignorar Grupos */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-3">
-                            <Users className="w-5 h-5 text-neutral-500" />
+                            <Users className={`w-5 h-5 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                             <div>
-                              <p className="font-medium text-neutral-700">Ignorar Grupos</p>
-                              <p className="text-sm text-neutral-500">Ignorar todos los mensajes de grupos</p>
+                              <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Ignorar Grupos</p>
+                              <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Ignorar todos los mensajes de grupos</p>
                             </div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1308,12 +1332,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Siempre Online */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-3">
-                            <Zap className="w-5 h-5 text-neutral-500" />
+                            <Zap className={`w-5 h-5 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                             <div>
-                              <p className="font-medium text-neutral-700">Siempre Online</p>
-                              <p className="text-sm text-neutral-500">Permanecer siempre en línea</p>
+                              <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Siempre Online</p>
+                              <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Permanecer siempre en línea</p>
                             </div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1328,12 +1352,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Ver Mensajes */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-3">
-                            <Eye className="w-5 h-5 text-neutral-500" />
+                            <Eye className={`w-5 h-5 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                             <div>
-                              <p className="font-medium text-neutral-700">Ver Mensajes</p>
-                              <p className="text-sm text-neutral-500">Marcar todos los mensajes como leídos</p>
+                              <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Ver Mensajes</p>
+                              <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Marcar todos los mensajes como leídos</p>
                             </div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1348,12 +1372,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {/* Ver Estado */}
-                        <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                        <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                           <div className="flex items-center gap-3">
-                            <Eye className="w-5 h-5 text-neutral-500" />
+                            <Eye className={`w-5 h-5 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                             <div>
-                              <p className="font-medium text-neutral-700">Ver Estado</p>
-                              <p className="text-sm text-neutral-500">Marcar todos los estados como vistos</p>
+                              <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Ver Estado</p>
+                              <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Marcar todos los estados como vistos</p>
                             </div>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
@@ -1397,7 +1421,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 {/* Expanded Content - Web Chat Widget */}
                 {expandedChannel === channel.id && channel.id === 'web-chat' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     {chatwootChannels['web-chat'] ? (
                       <div className="space-y-6">
                         {/* Connection Status */}
@@ -1405,7 +1429,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <Globe className="w-5 h-5 text-indigo-600" />
-                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
                               onClick={() => { if (confirm('¿Desconectar el widget de chat web?')) disconnectChannel('web-chat'); }}
@@ -1432,9 +1456,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="space-y-3">
                             <div className="flex items-center gap-2">
                               <Code className="w-5 h-5 text-neutral-600" />
-                              <h4 className="font-medium text-neutral-700">Usa WITHMIA Webchat en tu sitio web</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Usa WITHMIA Webchat en tu sitio web</h4>
                             </div>
-                            <p className="text-sm text-neutral-500">Copia y pega el siguiente script en tu sitio web para activar el Webchat.</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Copia y pega el siguiente script en tu sitio web para activar el Webchat.</p>
                             <div className="relative">
                               <pre className="bg-neutral-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap font-mono">{widgetScript}</pre>
                               <button
@@ -1474,13 +1498,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <div className="space-y-4">
                           <div className="flex items-center gap-2">
                             <Settings className="w-5 h-5 text-neutral-600" />
-                            <h4 className="font-medium text-neutral-700">Configuraciones</h4>
+                            <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Configuraciones</h4>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Agent Name */}
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre del agente</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Nombre del agente</label>
                               <input
                                 type="text"
                                 value={widgetConfig.agentName}
@@ -1493,7 +1517,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                             {/* Agent Icon */}
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">URL del ícono del agente</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>URL del ícono del agente</label>
                               <input
                                 type="url"
                                 value={widgetConfig.agentIconUrl}
@@ -1513,7 +1537,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               { key: 'askForName' as const, label: 'Solicitar nombre del usuario', desc: 'Pedir el nombre del usuario antes de iniciar el chat.' },
                               { key: 'darkTheme' as const, label: 'Tema oscuro', desc: 'Usar el tema oscuro para el webchat.' },
                             ].map((opt) => (
-                              <label key={opt.key} className="flex items-start gap-3 p-3 bg-white border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors">
+                              <label key={opt.key} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${!t ? 'bg-white border-neutral-200 hover:bg-neutral-50' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                                 <input
                                   type="checkbox"
                                   checked={widgetConfig[opt.key]}
@@ -1521,7 +1545,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                   className="mt-0.5 w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 <div>
-                                  <span className="text-sm font-medium text-neutral-700">{opt.label}</span>
+                                  <span className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{opt.label}</span>
                                   <p className="text-xs text-neutral-400 mt-0.5">{opt.desc}</p>
                                 </div>
                               </label>
@@ -1531,7 +1555,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {/* Colors */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Color primario</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Color primario</label>
                               <div className="flex items-center gap-2">
                                 <input type="color" value={widgetConfig.primaryColor}
                                   onChange={(e) => setWidgetConfig(p => ({ ...p, primaryColor: e.target.value }))}
@@ -1542,7 +1566,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                               </div>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Color secundario</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Color secundario</label>
                               <div className="flex items-center gap-2">
                                 <input type="color" value={widgetConfig.secondaryColor || '#000000'}
                                   onChange={(e) => setWidgetConfig(p => ({ ...p, secondaryColor: e.target.value }))}
@@ -1557,7 +1581,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                           {/* Language */}
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Idioma</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Idioma</label>
                             <select
                               value={widgetConfig.language}
                               onChange={(e) => setWidgetConfig(p => ({ ...p, language: e.target.value }))}
@@ -1573,7 +1597,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                           {/* Chat With Us Text */}
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Texto del botón de chat</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Texto del botón de chat</label>
                             <input
                               type="text"
                               value={widgetConfig.chatWithUsText}
@@ -1586,13 +1610,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {/* Position */}
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Posición X del botón</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Posición X del botón</label>
                               <input type="number" value={widgetConfig.xPosition}
                                 onChange={(e) => setWidgetConfig(p => ({ ...p, xPosition: parseInt(e.target.value) || 20 }))}
                                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-neutral-700 mb-1">Posición Y del botón</label>
+                              <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Posición Y del botón</label>
                               <input type="number" value={widgetConfig.yPosition}
                                 onChange={(e) => setWidgetConfig(p => ({ ...p, yPosition: parseInt(e.target.value) || 20 }))}
                                 className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 outline-none" />
@@ -1601,7 +1625,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                           {/* Suggested Questions */}
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">Preguntas sugeridas</label>
+                            <label className={`block text-sm font-medium mb-2 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Preguntas sugeridas</label>
                             <p className="text-xs text-neutral-400 mb-2">Las preguntas que se mostrarán en el webchat. Máximo 4.</p>
                             <div className="space-y-2">
                               {widgetConfig.suggestedQuestions.map((q, i) => (
@@ -1665,7 +1689,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                         {/* Widget Preview */}
                         {showWidgetPreview && (
-                          <div className="relative border-2 border-dashed border-neutral-300 rounded-xl p-4 bg-white min-h-[350px]">
+                          <div className={`relative border-2 border-dashed rounded-xl p-4 min-h-[350px] ${!t ? 'border-neutral-300 bg-white' : ''}`} style={t ? { borderColor: t.cardBorder, background: t.inputBg } : undefined}>
                             <p className="text-xs text-neutral-400 mb-2">Vista previa (solo visual, no funcional)</p>
                             {/* Floating Button Preview */}
                             <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
@@ -1724,13 +1748,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Globe className="w-5 h-5 text-indigo-600" />
-                          <h4 className="font-semibold text-neutral-800">Configurar Widget de Chat Web</h4>
+                          <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Configurar Widget de Chat Web</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente. Compatible con WordPress, Shopify, Wix y cualquier sitio web.</p>
+                        <p className={`text-sm mb-4 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Agrega un widget de chat en vivo a tu sitio web para que tus visitantes puedan escribirte directamente. Compatible con WordPress, Shopify, Wix y cualquier sitio web.</p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">URL de tu sitio web *</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>URL de tu sitio web *</label>
                             <input
                               type="url"
                               value={webChatUrl}
@@ -1740,7 +1764,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>
                               <Palette className="w-3.5 h-3.5 inline mr-1" />
                               Color del widget
                             </label>
@@ -1751,11 +1775,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 onChange={(e) => { setWebChatColor(e.target.value); setWidgetConfig(p => ({ ...p, primaryColor: e.target.value })); }}
                                 className="w-10 h-10 rounded-lg border border-neutral-300 cursor-pointer"
                               />
-                              <span className="text-sm text-neutral-500">{webChatColor}</span>
+                              <span className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{webChatColor}</span>
                             </div>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Título de bienvenida</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Título de bienvenida</label>
                             <input
                               type="text"
                               value={webChatTitle}
@@ -1765,7 +1789,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Subtítulo</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Subtítulo</label>
                             <input
                               type="text"
                               value={webChatTagline}
@@ -1834,7 +1858,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 {/* Expanded Content - Email / Gmail */}
                 {expandedChannel === channel.id && channel.id === 'gmail' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     {chatwootChannels['email'] ? (
                       <div className="space-y-5">
                         {/* Connection Status */}
@@ -1842,7 +1866,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <Mail className="w-5 h-5 text-red-500" />
-                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
                               onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
@@ -1868,13 +1892,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Mail className="w-5 h-5 text-red-500" />
-                          <h4 className="font-semibold text-neutral-800">Conectar Email</h4>
+                          <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conectar Email</h4>
                         </div>
-                        <p className="text-sm text-neutral-500 mb-4">Conecta tu correo electrónico para recibir y responder emails como conversaciones.</p>
+                        <p className={`text-sm mb-4 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Conecta tu correo electrónico para recibir y responder emails como conversaciones.</p>
 
                         {/* Provider selector */}
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-2">Proveedor de correo</label>
+                          <label className={`block text-sm font-medium mb-2 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Proveedor de correo</label>
                           <div className="grid grid-cols-3 gap-2">
                             {[
                               { id: 'gmail', label: 'Gmail', imap: 'imap.gmail.com', smtp: 'smtp.gmail.com', imapPort: 993, smtpPort: 587 },
@@ -1896,8 +1920,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                     ? 'border-red-400 bg-red-50 text-red-700'
                                     : emailForm.imap_address !== 'imap.gmail.com' && emailForm.imap_address !== 'outlook.office365.com' && provider.id === 'custom'
                                       ? 'border-red-400 bg-red-50 text-red-700'
-                                      : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'
+                                      : `border-neutral-200 text-neutral-600 hover:border-neutral-300 ${!t ? 'bg-white' : ''}`
                                 }`}
+                                style={!t ? undefined : { background: t.inputBg, borderColor: t.cardBorder }}
                               >
                                 {provider.label}
                               </button>
@@ -1907,7 +1932,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Dirección de email *</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Dirección de email *</label>
                             <input
                               type="email"
                               value={emailForm.email}
@@ -1918,7 +1943,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Contraseña de aplicación *</label>
+                            <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Contraseña de aplicación *</label>
                             <input type="password" value={emailForm.imap_password}
                               onChange={(e) => setEmailForm(p => ({ ...p, imap_password: e.target.value, smtp_password: e.target.value }))}
                               placeholder="Contraseña de app"
@@ -1940,33 +1965,33 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {/* Show IMAP/SMTP fields only for custom provider */}
                           {emailForm.imap_address !== 'imap.gmail.com' && emailForm.imap_address !== 'outlook.office365.com' && (
                             <>
-                              <div className="p-4 bg-white border border-neutral-200 rounded-lg">
-                                <h5 className="text-sm font-semibold text-neutral-700 mb-3">📥 IMAP (recepción)</h5>
+                              <div className={`p-4 border rounded-lg ${!t ? 'bg-white border-neutral-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
+                                <h5 className={`text-sm font-semibold mb-3 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>📥 IMAP (recepción)</h5>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <label className="block text-xs text-neutral-500 mb-1">Servidor</label>
+                                    <label className={`block text-xs mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Servidor</label>
                                     <input type="text" value={emailForm.imap_address} onChange={(e) => setEmailForm(p => ({ ...p, imap_address: e.target.value }))}
                                       placeholder="imap.tudominio.com"
                                       className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
                                   </div>
                                   <div>
-                                    <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                    <label className={`block text-xs mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Puerto</label>
                                     <input type="number" value={emailForm.imap_port} onChange={(e) => setEmailForm(p => ({ ...p, imap_port: parseInt(e.target.value) || 993 }))}
                                       className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
                                   </div>
                                 </div>
                               </div>
-                              <div className="p-4 bg-white border border-neutral-200 rounded-lg">
-                                <h5 className="text-sm font-semibold text-neutral-700 mb-3">📤 SMTP (envío)</h5>
+                              <div className={`p-4 border rounded-lg ${!t ? 'bg-white border-neutral-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
+                                <h5 className={`text-sm font-semibold mb-3 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>📤 SMTP (envío)</h5>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <label className="block text-xs text-neutral-500 mb-1">Servidor</label>
+                                    <label className={`block text-xs mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Servidor</label>
                                     <input type="text" value={emailForm.smtp_address} onChange={(e) => setEmailForm(p => ({ ...p, smtp_address: e.target.value }))}
                                       placeholder="smtp.tudominio.com"
                                       className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
                                   </div>
                                   <div>
-                                    <label className="block text-xs text-neutral-500 mb-1">Puerto</label>
+                                    <label className={`block text-xs mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Puerto</label>
                                     <input type="number" value={emailForm.smtp_port} onChange={(e) => setEmailForm(p => ({ ...p, smtp_port: parseInt(e.target.value) || 587 }))}
                                       className="w-full px-2.5 py-1.5 border border-neutral-300 rounded text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" />
                                   </div>
@@ -2008,7 +2033,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 {/* Expanded Content - Instagram */}
                 {expandedChannel === channel.id && channel.id === 'instagram' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     {chatwootChannels['instagram'] ? (
                       <div className="space-y-5">
                         {/* Connection Status */}
@@ -2016,7 +2041,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <svg className="w-5 h-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
                               onClick={() => { if (confirm('¿Desconectar Instagram?')) disconnectChannel('instagram'); }}
@@ -2042,9 +2067,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                           <AtSign className="w-5 h-5 text-pink-500" />
-                          <h4 className="font-semibold text-neutral-800">Conectar Instagram Direct</h4>
+                          <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conectar Instagram Direct</h4>
                         </div>
-                        <p className="text-sm text-neutral-500">
+                        <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                           Conecta tu cuenta de Instagram Business para que MIA reciba y responda mensajes directos automáticamente.
                         </p>
 
@@ -2092,7 +2117,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 {/* Expanded Content - Facebook Messenger */}
                 {expandedChannel === channel.id && channel.id === 'messenger' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     {chatwootChannels['messenger'] ? (
                       <div className="space-y-5">
                         {/* Connection Status */}
@@ -2100,7 +2125,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.2 5.42 3.15 7.2.17.15.27.37.28.6l.06 1.87c.02.56.6.93 1.11.7l2.09-.82c.18-.07.38-.09.56-.05.86.24 1.78.37 2.75.37 5.64 0 10-4.13 10-9.7S17.64 2 12 2z"/></svg>
-                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
                               onClick={() => { if (confirm('¿Desconectar Facebook Messenger?')) disconnectChannel('messenger'); }}
@@ -2126,9 +2151,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                           <Send className="w-5 h-5 text-blue-500" />
-                          <h4 className="font-semibold text-neutral-800">Conectar Facebook Messenger</h4>
+                          <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conectar Facebook Messenger</h4>
                         </div>
-                        <p className="text-sm text-neutral-500">
+                        <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                           Conecta tu Página de Facebook para que MIA reciba y responda mensajes de Messenger automáticamente.
                         </p>
 
@@ -2171,7 +2196,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                 {/* Expanded Content - WhatsApp Cloud API */}
                 {expandedChannel === channel.id && channel.id === 'whatsapp-api' && (
-                  <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                  <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                     {chatwootChannels['whatsapp-api'] ? (
                       <div className="space-y-5">
                         {/* Connection Status */}
@@ -2179,7 +2204,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-2">
                               <Smartphone className="w-5 h-5 text-emerald-600" />
-                              <h4 className="font-medium text-neutral-700">Conexión</h4>
+                              <h4 className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conexión</h4>
                             </div>
                             <button
                               onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
@@ -2205,9 +2230,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-1">
                           <Smartphone className="w-5 h-5 text-emerald-600" />
-                          <h4 className="font-semibold text-neutral-800">Conectar WhatsApp Cloud API</h4>
+                          <h4 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conectar WhatsApp Cloud API</h4>
                         </div>
-                        <p className="text-sm text-neutral-500">
+                        <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                           Usa la API oficial de Meta para WhatsApp Business. Conecta tu número verificado sin escanear QR.
                         </p>
 
@@ -2267,11 +2292,11 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Settings className="w-5 h-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-neutral-800">Herramientas</h2>
+            <h2 className={`text-xl font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Herramientas</h2>
           </div>
 
           {/* Tip de buenas prácticas */}
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200/60 rounded-xl flex items-start gap-2.5">
+          <div className={`mb-4 p-3 border rounded-xl flex items-start gap-2.5 ${!t ? 'bg-amber-50 border-amber-200/60' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs text-amber-800 font-medium mb-0.5">Conecta solo lo que uses</p>
@@ -2284,17 +2309,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
           <div className="space-y-3">
 
             {/* ==================== AGENDAPRO ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'agendapro' ? 'border-teal-300 shadow-lg ring-1 ring-teal-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'agendapro' ? null : 'agendapro')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md bg-white border border-slate-200">
+                  <div className={`p-3 rounded-xl shadow-md border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                     <img src="/icons/agendapro-icon.svg" alt="AgendaPro" className="w-5 h-5 object-contain" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">AgendaPro</h3>
-                    <p className="text-sm text-neutral-500">Gestión de citas con AgendaPro</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>AgendaPro</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Gestión de citas con AgendaPro</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2307,7 +2332,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'agendapro' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {agendaproConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2316,12 +2341,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {agendaproIntegration?.provider_email && <span className="text-xs text-green-600">{agendaproIntegration.provider_email}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${agendaproIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{agendaproIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en AgendaPro'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agendaproIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en AgendaPro'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2335,15 +2360,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-teal-50 rounded-lg flex-shrink-0">
                             <Calendar className="w-8 h-8 text-teal-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu AgendaPro</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Integra AgendaPro para que WITHMIA gestione citas y reservas automáticamente.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu AgendaPro</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra AgendaPro para que WITHMIA gestione citas y reservas automáticamente.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por servicio</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear reservas automáticamente</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples sucursales y profesionales</li>
@@ -2353,17 +2378,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Key de AgendaPro</label>
+                          <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>API Key de AgendaPro</label>
                           <input
                             type="password"
                             value={agendaproApiKey}
                             onChange={(e) => setAgendaproApiKey(e.target.value)}
                             placeholder="Tu API Key de AgendaPro"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                         </div>
                         {agendaproError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {agendaproError}</p>}
-                        <button onClick={connectAgendapro} disabled={agendaproConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-teal-300 text-neutral-700 hover:text-teal-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button onClick={connectAgendapro} disabled={agendaproConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-teal-300 text-neutral-700 hover:text-teal-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                           {agendaproConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar AgendaPro</>)}
                         </button>
                       </div>
@@ -2374,7 +2399,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== DENTALINK ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'dentalink' ? 'border-cyan-300 shadow-lg ring-1 ring-cyan-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'dentalink' ? null : 'dentalink')}>
@@ -2383,8 +2408,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Dentalink</h3>
-                    <p className="text-sm text-neutral-500">Software de gestión dental</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Dentalink</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Software de gestión dental</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2397,7 +2422,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'dentalink' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {dentalinkConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2406,12 +2431,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {dentalinkIntegration?.provider_email && <span className="text-xs text-green-600">{dentalinkIntegration.provider_email}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${dentalinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{dentalinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas dentales automáticamente' : 'Activa para que WITHMIA agende en Dentalink'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{dentalinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas dentales automáticamente' : 'Activa para que WITHMIA agende en Dentalink'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2425,15 +2450,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-cyan-50 rounded-lg flex-shrink-0">
                             <Calendar className="w-8 h-8 text-cyan-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Dentalink</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Integra Dentalink para que WITHMIA gestione citas dentales automáticamente.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Dentalink</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra Dentalink para que WITHMIA gestione citas dentales automáticamente.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por dentista</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar citas con pacientes</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples sucursales y tratamientos</li>
@@ -2443,17 +2468,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Token de Dentalink</label>
+                          <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>API Token de Dentalink</label>
                           <input
                             type="password"
                             value={dentalinkApiKey}
                             onChange={(e) => setDentalinkApiKey(e.target.value)}
                             placeholder="Tu API Token de Dentalink"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                         </div>
                         {dentalinkError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {dentalinkError}</p>}
-                        <button onClick={connectDentalink} disabled={dentalinkConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-cyan-300 text-neutral-700 hover:text-cyan-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button onClick={connectDentalink} disabled={dentalinkConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-cyan-300 text-neutral-700 hover:text-cyan-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                           {dentalinkConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Dentalink</>)}
                         </button>
                       </div>
@@ -2464,7 +2489,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== MEDILINK ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'medilink' ? 'border-pink-300 shadow-lg ring-1 ring-pink-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'medilink' ? null : 'medilink')}>
@@ -2473,8 +2498,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Medilink</h3>
-                    <p className="text-sm text-neutral-500">Sistema de fichas médicas</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Medilink</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Sistema de fichas médicas</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2487,7 +2512,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'medilink' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {medilinkConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2496,12 +2521,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {medilinkIntegration?.provider_email && <span className="text-xs text-green-600">{medilinkIntegration.provider_email}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${medilinkIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{medilinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas médicas automáticamente' : 'Activa para que WITHMIA agende en Medilink'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{medilinkIntegration?.bot_access_enabled ? 'WITHMIA puede agendar citas médicas automáticamente' : 'Activa para que WITHMIA agende en Medilink'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2515,15 +2540,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-pink-50 rounded-lg flex-shrink-0">
                             <Calendar className="w-8 h-8 text-pink-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Medilink</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Integra Medilink para que WITHMIA gestione citas médicas automáticamente.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Medilink</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra Medilink para que WITHMIA gestione citas médicas automáticamente.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad por profesional</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar citas con pacientes</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Múltiples especialidades médicas</li>
@@ -2533,17 +2558,17 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Token de Medilink</label>
+                          <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>API Token de Medilink</label>
                           <input
                             type="password"
                             value={medilinkApiKey}
                             onChange={(e) => setMedilinkApiKey(e.target.value)}
                             placeholder="Tu API Token de Medilink"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                         </div>
                         {medilinkError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {medilinkError}</p>}
-                        <button onClick={connectMedilink} disabled={medilinkConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-pink-300 text-neutral-700 hover:text-pink-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button onClick={connectMedilink} disabled={medilinkConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-pink-300 text-neutral-700 hover:text-pink-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                           {medilinkConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Medilink</>)}
                         </button>
                       </div>
@@ -2554,7 +2579,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== CALENDLY ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'calendly' ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'calendly' ? null : 'calendly')}>
@@ -2563,8 +2588,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Calendly</h3>
-                    <p className="text-sm text-neutral-500">Agenda reuniones con Calendly</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Calendly</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Agenda reuniones con Calendly</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2577,7 +2602,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'calendly' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {calendlyConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2586,12 +2611,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {calendlyIntegration?.provider_email && <span className="text-xs text-green-600">{calendlyIntegration.provider_email}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${calendlyIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{calendlyIntegration?.bot_access_enabled ? 'WITHMIA puede enviar links de agendamiento' : 'Activa para que WITHMIA agende vía Calendly'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{calendlyIntegration?.bot_access_enabled ? 'WITHMIA puede enviar links de agendamiento' : 'Activa para que WITHMIA agende vía Calendly'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2605,15 +2630,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
                             <CalendarDays className="w-8 h-8 text-blue-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Calendly</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Integra Calendly para que WITHMIA envíe links de agendamiento a tus clientes automáticamente.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Calendly</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra Calendly para que WITHMIA envíe links de agendamiento a tus clientes automáticamente.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Links de agendamiento personalizados</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Tipos de evento configurables</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sincronización automática</li>
@@ -2621,7 +2646,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
                       </div>
-                      <button onClick={connectCalendly} disabled={calendlyConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-300 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      <button onClick={connectCalendly} disabled={calendlyConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-blue-300 text-neutral-700 hover:text-blue-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                         {calendlyConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Calendly</>)}
                       </button>
                     </div>
@@ -2631,7 +2656,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== GOOGLE CALENDAR ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'calendar'
                 ? 'border-rose-300 shadow-lg ring-1 ring-rose-100'
                 : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
@@ -2645,8 +2670,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Google Calendar</h3>
-                    <p className="text-sm text-neutral-500">Integra con Google Calendar para agendar citas</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Google Calendar</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra con Google Calendar para agendar citas</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2670,7 +2695,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'calendar' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {gcalConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2684,12 +2709,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${gcalIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               {gcalIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}
                             </p>
                           </div>
@@ -2707,7 +2732,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-rose-50 rounded-lg flex-shrink-0">
                             <svg className="w-8 h-8" viewBox="0 0 24 24">
@@ -2718,9 +2743,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </svg>
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Google Calendar</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu calendario para que WITHMIA consulte disponibilidad y agende citas.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Google Calendar</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Sincroniza tu calendario para que WITHMIA consulte disponibilidad y agende citas.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Ver disponibilidad en tiempo real</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Agendar reuniones automáticamente</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sincronización bidireccional</li>
@@ -2728,7 +2753,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
                       </div>
-                      <button onClick={connectGoogleCalendar} disabled={gcalConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-rose-300 text-neutral-700 hover:text-rose-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      <button onClick={connectGoogleCalendar} disabled={gcalConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-rose-300 text-neutral-700 hover:text-rose-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                         {gcalConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Google</>)}
                       </button>
                     </div>
@@ -2738,7 +2763,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== OUTLOOK CALENDAR ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'outlook' ? 'border-blue-400 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'outlook' ? null : 'outlook')}>
@@ -2747,8 +2772,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Outlook Calendar</h3>
-                    <p className="text-sm text-neutral-500">Integra con Outlook/Microsoft Calendar</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Outlook Calendar</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra con Outlook/Microsoft Calendar</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2761,7 +2786,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'outlook' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {outlookConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2770,12 +2795,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {outlookIntegration?.provider_email && <span className="text-xs text-green-600">{outlookIntegration.provider_email}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${outlookIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{outlookIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{outlookIntegration?.bot_access_enabled ? 'WITHMIA puede consultar y crear eventos' : 'Activa para que WITHMIA agende citas'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2789,7 +2814,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
                             <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
@@ -2799,9 +2824,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </svg>
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Outlook Calendar</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Sincroniza tu calendario de Microsoft para que WITHMIA agende citas automáticamente.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Outlook Calendar</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Sincroniza tu calendario de Microsoft para que WITHMIA agende citas automáticamente.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Ver disponibilidad en tiempo real</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear eventos automáticamente</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Microsoft 365 y Outlook.com</li>
@@ -2809,7 +2834,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           </div>
                         </div>
                       </div>
-                      <button onClick={connectOutlook} disabled={outlookConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-blue-400 text-neutral-700 hover:text-blue-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                      <button onClick={connectOutlook} disabled={outlookConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-blue-400 text-neutral-700 hover:text-blue-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                         {outlookConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>) : (<><Link2 className="w-4 h-4" /> Conectar con Microsoft</>)}
                       </button>
                       {outlookError && (
@@ -2822,7 +2847,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             </div>
 
             {/* ==================== RESERVO ==================== */}
-            <div className={`bg-white rounded-xl border transition-all duration-200 ${
+            <div className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
               expandedTool === 'reservo' ? 'border-amber-300 shadow-lg ring-1 ring-amber-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
             }`}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'reservo' ? null : 'reservo')}>
@@ -2831,8 +2856,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     <img src="/icons/reservo.webp" alt="Reservo" className="w-5 h-auto object-contain brightness-0 invert" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-neutral-800">Reservo</h3>
-                    <p className="text-sm text-neutral-500">Sistema de reservas y citas</p>
+                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Reservo</h3>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Sistema de reservas y citas</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -2845,7 +2870,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
               </div>
               {expandedTool === 'reservo' && (
-                <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                   {reservoConnected ? (
                     <div className="space-y-4">
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2854,12 +2879,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {reservoIntegration?.provider_email && <span className="text-xs text-green-600">{reservoIntegration.provider_email}.reservo.cl</span>}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-center gap-3">
                           <Bot className={`w-5 h-5 ${reservoIntegration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                           <div>
-                            <p className="font-medium text-neutral-700">Acceso de WITHMIA</p>
-                            <p className="text-sm text-neutral-500">{reservoIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en Reservo'}</p>
+                            <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Acceso de WITHMIA</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{reservoIntegration?.bot_access_enabled ? 'WITHMIA puede crear reservas automáticamente' : 'Activa para que WITHMIA agende en Reservo'}</p>
                           </div>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -2873,15 +2898,15 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-4 bg-white rounded-lg border border-slate-200">
+                      <div className={`p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start gap-4">
                           <div className="p-2 bg-amber-50 rounded-lg flex-shrink-0">
                             <Calendar className="w-8 h-8 text-amber-600" />
                           </div>
                           <div>
-                            <h4 className="font-medium text-neutral-800 mb-1">Conecta tu Reservo</h4>
-                            <p className="text-sm text-neutral-500 mb-3">Integra Reservo para que WITHMIA gestione reservas y citas de tus clientes.</p>
-                            <ul className="text-xs text-neutral-500 space-y-1">
+                            <h4 className={`font-medium mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu Reservo</h4>
+                            <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Integra Reservo para que WITHMIA gestione reservas y citas de tus clientes.</p>
+                            <ul className={`text-xs space-y-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Consultar disponibilidad</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Crear reservas automáticamente</li>
                               <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Gestión de servicios</li>
@@ -2891,28 +2916,28 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">Subdominio de Reservo</label>
+                          <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Subdominio de Reservo</label>
                           <input
                             type="text"
                             value={reservoSubdomain}
                             onChange={(e) => setReservoSubdomain(e.target.value)}
                             placeholder="tu-negocio"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                           <p className="text-xs text-neutral-400 mt-1">tu-negocio.reservo.cl</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-neutral-700 mb-1">API Key</label>
+                          <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>API Key</label>
                           <input
                             type="password"
                             value={reservoApiKey}
                             onChange={(e) => setReservoApiKey(e.target.value)}
                             placeholder="Tu API Key de Reservo"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                         </div>
                         {reservoError && <p className="text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {reservoError}</p>}
-                        <button onClick={connectReservo} disabled={reservoConnecting} className="w-full py-3 bg-white border-2 border-slate-200 hover:border-amber-300 text-neutral-700 hover:text-amber-600 font-medium rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button onClick={connectReservo} disabled={reservoConnecting} className={`w-full py-3 border-2 font-medium rounded-lg ${!t ? 'bg-white border-slate-200 hover:border-amber-300 text-neutral-700 hover:text-amber-600' : 'hover:opacity-80'} transition-all flex items-center justify-center gap-2 disabled:opacity-50`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                           {reservoConnecting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Verificando...</>) : (<><Link2 className="w-4 h-4" /> Conectar Reservo</>)}
                         </button>
                       </div>
@@ -3021,7 +3046,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 const iconTextColor = prov.id === 'mercadolibre' ? 'text-neutral-800' : 'text-white';
 
                 return (
-                  <div key={prov.id} className={`bg-white rounded-xl border transition-all duration-200 ${
+                  <div key={prov.id} className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white' : ''} ${
                     isExpanded ? 'border-blue-300 shadow-lg ring-1 ring-blue-100' : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
                   }`}>
                     {/* Header */}
@@ -3031,8 +3056,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           <ProvIcon className={`w-5 h-5 ${iconTextColor}`} />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-neutral-800">{prov.name}</h3>
-                          <p className="text-sm text-neutral-500">{isConnected ? `${integration.products_count || 0} productos sincronizados` : prov.subtitle}</p>
+                          <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{prov.name}</h3>
+                          <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{isConnected ? `${integration.products_count || 0} productos sincronizados` : prov.subtitle}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -3047,7 +3072,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
 
                     {/* Expanded content */}
                     {isExpanded && (
-                      <div className="border-t border-slate-100 p-6 bg-slate-50/50">
+                      <div className={`border-t p-6 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.divider, background: t.expandedBg } : undefined}>
                         {isConnected ? (
                           <div className="space-y-4">
                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -3059,12 +3084,12 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                            <div className={`flex items-center justify-between p-4 rounded-lg border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
                               <div className="flex items-center gap-3">
                                 <Bot className={`w-5 h-5 ${integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
                                 <div>
-                                  <p className="font-medium text-neutral-700">Que WITHMIA use estos productos</p>
-                                  <p className="text-sm text-neutral-500">{integration?.bot_access_enabled ? 'WITHMIA recomienda estos productos a tus clientes' : 'Activa para que WITHMIA recomiende tus productos'}</p>
+                                  <p className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Que WITHMIA use estos productos</p>
+                                  <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{integration?.bot_access_enabled ? 'WITHMIA recomienda estos productos a tus clientes' : 'Activa para que WITHMIA recomiende tus productos'}</p>
                                 </div>
                               </div>
                               <label className="relative inline-flex items-center cursor-pointer">
@@ -3074,7 +3099,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             </div>
                             <div className="flex justify-between items-center">
                               <button onClick={() => syncProductProvider(prov.id)} disabled={syncingProductProvider === prov.id}
-                                className="px-4 py-2 bg-white border border-slate-200 hover:border-slate-400 text-neutral-700 text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50">
+                                className={`px-4 py-2 border ${!t ? 'bg-white border-slate-200 hover:border-slate-400 text-neutral-700' : ''} text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50`}
+                                style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                                 <RefreshCw className={`w-4 h-4 ${syncingProductProvider === prov.id ? 'animate-spin' : ''}`} />
                                 {syncingProductProvider === prov.id ? 'Actualizando...' : 'Actualizar productos'}
                               </button>
@@ -3120,13 +3146,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <div className="space-y-3">
                               {prov.fields.map(field => (
                                 <div key={field.key}>
-                                  <label className="block text-sm font-medium text-neutral-700 mb-1">{field.label}</label>
+                                  <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{field.label}</label>
                                   <input
                                     type={field.type}
                                     value={form.fields[field.key] || ''}
                                     onChange={e => setProviderField(prov.id, field.key, e.target.value)}
                                     placeholder={field.placeholder}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3.5 py-2.5 border rounded-xl text-sm placeholder-neutral-400 ${!t ? 'bg-white border-slate-300 text-neutral-800' : ''} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                                   />
                                   {field.hint && <p className="text-xs text-neutral-400 mt-1 ml-1">{field.hint}</p>}
                                 </div>
