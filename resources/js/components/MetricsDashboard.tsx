@@ -108,6 +108,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       cardBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
       cardBorder: isDark ? 'rgba(255,255,255,0.06)' : 'var(--theme-content-card-border)',
       cardHoverShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px var(--theme-content-card-shadow)',
+      // Accent / icon background — follows the theme primary
+      accent: 'var(--theme-primary)',
+      accentLight: 'var(--theme-accent-light)',
+      accentShadow: isDark ? '0 4px 14px rgba(0,0,0,0.3)' : '0 4px 14px var(--theme-accent-light)',
       // Text
       heading: 'var(--theme-text-primary)',
       label: 'var(--theme-text-muted)',
@@ -117,8 +121,6 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       muted: 'var(--theme-text-muted)',
       // SVG track
       trackStroke: isDark ? '#1e293b' : '#f3f4f6',
-      // Section header icon bg (keep gradient, override for subtle glass in dark)
-      sectionIconBg: isDark ? 'rgba(255,255,255,0.08)' : undefined,
       // Bars / progress
       emptyBar: isDark ? 'rgba(255,255,255,0.04)' : undefined,
       barTrack: isDark ? 'rgba(255,255,255,0.06)' : undefined,
@@ -137,11 +139,15 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       // Skeleton
       skelBg: isDark ? 'rgba(255,255,255,0.04)' : undefined,
       skelPulse: isDark ? 'rgba(255,255,255,0.08)' : undefined,
-      // Legend boxes (distribution)
-      legendAgent: isDark ? { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.15)' } : undefined,
-      legendClient: isDark ? { bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.15)' } : undefined,
+      // Legend boxes (distribution) — themed
+      legendAgent: { bg: isDark ? 'rgba(255,255,255,0.04)' : 'color-mix(in srgb, var(--theme-primary) 8%, transparent)', border: isDark ? 'rgba(255,255,255,0.08)' : 'color-mix(in srgb, var(--theme-primary) 15%, transparent)' },
+      legendClient: { bg: isDark ? 'rgba(255,255,255,0.03)' : 'color-mix(in srgb, var(--theme-primary) 5%, transparent)', border: isDark ? 'rgba(255,255,255,0.06)' : 'color-mix(in srgb, var(--theme-primary) 10%, transparent)' },
       // Sales empty cards
-      salesPreviewCard: isDark ? { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.04)' } : undefined,
+      salesPreviewCard: isDark ? { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.04)' } : { bg: 'color-mix(in srgb, var(--theme-primary) 3%, white)', border: 'color-mix(in srgb, var(--theme-primary) 8%, transparent)' },
+      // Insight pills
+      insightBg: isDark ? 'rgba(255,255,255,0.04)' : 'color-mix(in srgb, var(--theme-primary) 6%, white)',
+      insightBorder: isDark ? 'rgba(255,255,255,0.08)' : 'color-mix(in srgb, var(--theme-primary) 12%, transparent)',
+      insightDot: 'var(--theme-primary)',
     };
   }, [hasTheme, isDark]);
 
@@ -525,20 +531,26 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       onMouseEnter={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = t.cardHoverShadow; }}
       onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
     >
-      {!t && <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/40 group-hover:via-white/0 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none" />}
+      {!t && <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-gray-50/40 group-hover:via-white/0 group-hover:to-gray-50/30 transition-all duration-500 pointer-events-none" />}
+      {t && <div className="absolute inset-0 rounded-2xl transition-all duration-500 pointer-events-none opacity-0 group-hover:opacity-100" style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${t.accent} 6%, transparent), transparent, color-mix(in srgb, ${t.accent} 4%, transparent))` }} />}
       <div className="relative flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.label } : undefined}>{title}</p>
           <h3 className={`text-[28px] font-extrabold tracking-tight leading-none ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.value } : undefined}>{value}</h3>
           {trend && (
-            <div className={`inline-flex items-center mt-2.5 text-xs font-semibold px-2 py-0.5 rounded-full ${trend.isUp ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+            <div className={`inline-flex items-center mt-2.5 text-xs font-semibold px-2 py-0.5 rounded-full ${!t ? (trend.isUp ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50') : ''}`}
+              style={t ? { color: trend.isUp ? (isDark ? '#6ee7b7' : '#047857') : (isDark ? '#fca5a5' : '#dc2626'), background: trend.isUp ? (isDark ? 'rgba(16,185,129,0.12)' : '#ecfdf5') : (isDark ? 'rgba(239,68,68,0.12)' : '#fef2f2') } : undefined}
+            >
               {trend.isUp ? <ArrowUp className="w-3 h-3 mr-0.5" /> : <ArrowDown className="w-3 h-3 mr-0.5" />}
               {Math.abs(trend.value)}%
             </div>
           )}
           {subtitle && <p className={`text-[11px] mt-1.5 font-medium ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>{subtitle}</p>}
         </div>
-        <div className={`p-3 rounded-2xl ${color} shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
+        <div
+          className={`p-3 rounded-2xl shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500 ${!t ? color : ''}`}
+          style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+        >
           {icon}
         </div>
       </div>
@@ -617,7 +629,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         style={{ animation: 'fadeIn 0.6s ease-out' }}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+          <div
+            className={`p-2.5 rounded-2xl shadow-lg ${!t ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20' : ''}`}
+            style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+          >
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -633,17 +648,17 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         {/* Quick stats pills */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: 'Conversaciones', value: metrics.total, bg: 'bg-blue-50 text-blue-700 border-blue-100', darkBg: 'rgba(59,130,246,0.1)', darkBorder: 'rgba(59,130,246,0.2)', darkText: '#93c5fd' },
-            { label: 'Abiertas', value: metrics.open, bg: 'bg-amber-50 text-amber-700 border-amber-100', darkBg: 'rgba(245,158,11,0.1)', darkBorder: 'rgba(245,158,11,0.2)', darkText: '#fcd34d' },
-            { label: 'Resolución', value: `${metrics.resolutionRate}%`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', darkBg: 'rgba(16,185,129,0.1)', darkBorder: 'rgba(16,185,129,0.2)', darkText: '#6ee7b7' },
+            { label: 'Conversaciones', value: metrics.total, bg: 'bg-blue-50 text-blue-700 border-blue-100' },
+            { label: 'Abiertas', value: metrics.open, bg: 'bg-amber-50 text-amber-700 border-amber-100' },
+            { label: 'Resolución', value: `${metrics.resolutionRate}%`, bg: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
           ].map((pill, i) => (
             <div
               key={i}
               className={`px-3.5 py-1.5 rounded-xl border backdrop-blur-sm ${!t ? pill.bg : ''}`}
               style={t ? {
-                background: isDark ? pill.darkBg : 'var(--theme-content-card-bg)',
-                borderColor: isDark ? pill.darkBorder : 'var(--theme-content-card-border)',
-                color: isDark ? pill.darkText : 'var(--theme-text-primary)',
+                background: t.insightBg,
+                borderColor: t.insightBorder,
+                color: isDark ? 'var(--theme-text-primary)' : 'var(--theme-text-primary)',
               } : undefined}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{pill.label}</span>
@@ -732,17 +747,22 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           {generateInsights().map((insight, i) => (
             <div
               key={i}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${!t ? (
                 insight.type === 'success' ? 'bg-emerald-50/80 text-emerald-700 border-emerald-100' :
                 insight.type === 'warning' ? 'bg-amber-50/80 text-amber-700 border-amber-100' :
                 'bg-blue-50/80 text-blue-700 border-blue-100'
-              }`}
-              style={{ animation: `slideInRight 0.5s ease-out ${600 + i * 100}ms both` }}
+              ) : ''}`}
+              style={{
+                animation: `slideInRight 0.5s ease-out ${600 + i * 100}ms both`,
+                ...(t ? { background: t.insightBg, borderColor: t.insightBorder, color: t.secondary } : {})
+              }}
             >
-              <span className={`w-2 h-2 rounded-full ${
+              <span className={`w-2 h-2 rounded-full ${!t ? (
                 insight.type === 'success' ? 'bg-emerald-500' :
                 insight.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-              }`} />
+              ) : ''}`}
+                style={t ? { background: t.insightDot } : undefined}
+              />
               {insight.text}
             </div>
           ))}
@@ -756,7 +776,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+              <div
+                className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20' : ''}`}
+                style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+              >
                 <Users className="w-4 h-4 text-white" />
               </div>
               <div>
@@ -778,14 +801,17 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               metrics.topContacts.map((contact, index) => {
                 const maxCount = metrics.topContacts[0].count;
                 const percentage = (contact.count / maxCount) * 100;
-                const colors = [
+                // When themed, all contacts use the accent color with varying opacity
+                const defaultColors = [
                   { gradient: 'from-blue-500 to-indigo-500', bar: 'from-blue-500 to-indigo-400' },
                   { gradient: 'from-violet-500 to-purple-500', bar: 'from-violet-500 to-purple-400' },
                   { gradient: 'from-emerald-500 to-teal-500', bar: 'from-emerald-500 to-teal-400' },
                   { gradient: 'from-amber-500 to-orange-500', bar: 'from-amber-500 to-orange-400' },
                   { gradient: 'from-rose-500 to-pink-500', bar: 'from-rose-500 to-pink-400' },
                 ];
-                const c = colors[index] || colors[0];
+                const c = defaultColors[index] || defaultColors[0];
+                const opacities = [1, 0.85, 0.7, 0.55, 0.45];
+                const contactOpacity = opacities[index] || 0.4;
                 
                 return (
                   <div
@@ -796,7 +822,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                     onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 ${!t ? `bg-gradient-to-br ${c.gradient}` : ''}`}
+                        style={t ? { background: t.accent, opacity: contactOpacity, boxShadow: t.accentShadow } : undefined}
+                      >
                         <span className="text-xs font-bold text-white">{index + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -809,8 +838,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                         </div>
                         <div className={`w-full rounded-full h-1.5 overflow-hidden ${!t ? 'bg-gray-100' : ''}`} style={t ? { background: t.barTrack || 'rgba(255,255,255,0.06)' } : undefined}>
                           <div
-                            className={`bg-gradient-to-r ${c.bar} h-full rounded-full`}
-                            style={{ width: `${percentage}%`, animation: 'growWidth 1s ease-out 0.3s both' }}
+                            className={`h-full rounded-full ${!t ? `bg-gradient-to-r ${c.bar}` : ''}`}
+                            style={{ width: `${percentage}%`, animation: 'growWidth 1s ease-out 0.3s both', ...(t ? { background: t.accent, opacity: contactOpacity } : {}) }}
                           />
                         </div>
                       </div>
@@ -825,7 +854,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         {/* Distribución de Mensajes - Donut Chart */}
         <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+            <div
+              className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20' : ''}`}
+              style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+            >
               <MessageCircle className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -878,21 +910,21 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             <div className="flex-1 space-y-3">
               <div className={`p-3 rounded-xl border transition-colors ${!t ? 'bg-emerald-50/60 border-emerald-100/60 hover:bg-emerald-50' : 'hover:opacity-90'}`} style={t?.legendAgent ? { background: t.legendAgent.bg, borderColor: t.legendAgent.border } : undefined}>
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
+                  <div className={`w-3 h-3 rounded-full ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-400' : ''}`} style={t ? { background: t.accent } : undefined} />
                   <span className={`text-xs font-semibold ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.secondary } : undefined}>Agentes</span>
                 </div>
-                <p className="text-xl font-extrabold text-emerald-600">{metrics.agentMessages.toLocaleString()}</p>
-                <p className="text-[10px] text-emerald-500 font-medium">
+                <p className={`text-xl font-extrabold ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.heading } : undefined}>{metrics.agentMessages.toLocaleString()}</p>
+                <p className={`text-[10px] font-medium ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.muted } : undefined}>
                   {metrics.totalMessages > 0 ? Math.round((metrics.agentMessages / metrics.totalMessages) * 100) : 0}% del total
                 </p>
               </div>
               <div className={`p-3 rounded-xl border transition-colors ${!t ? 'bg-indigo-50/60 border-indigo-100/60 hover:bg-indigo-50' : 'hover:opacity-90'}`} style={t?.legendClient ? { background: t.legendClient.bg, borderColor: t.legendClient.border } : undefined}>
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-400" />
+                  <div className={`w-3 h-3 rounded-full ${!t ? 'bg-gradient-to-r from-indigo-500 to-violet-400' : ''}`} style={t ? { background: t.accent, opacity: 0.6 } : undefined} />
                   <span className={`text-xs font-semibold ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.secondary } : undefined}>Clientes</span>
                 </div>
-                <p className="text-xl font-extrabold text-indigo-600">{metrics.clientMessages.toLocaleString()}</p>
-                <p className="text-[10px] text-indigo-500 font-medium">
+                <p className={`text-xl font-extrabold ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.heading } : undefined}>{metrics.clientMessages.toLocaleString()}</p>
+                <p className={`text-[10px] font-medium ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.muted } : undefined}>
                   {metrics.totalMessages > 0 ? Math.round((metrics.clientMessages / metrics.totalMessages) * 100) : 0}% del total
                 </p>
               </div>
@@ -905,7 +937,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {timeRange === 'today' && (
         <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/20">
+            <div
+              className={`p-2 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/20' : ''}`}
+              style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+            >
               <Clock className="w-4 h-4 text-white" />
             </div>
             <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Actividad por Hora</h3>
@@ -921,13 +956,15 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 <div key={hour} className="flex-1 flex flex-col items-center">
                   <div 
                     className={`w-full rounded-t-md transition-all cursor-pointer relative group ${
-                      isCurrentHour
-                        ? 'bg-gradient-to-t from-violet-600 to-violet-400 shadow-sm shadow-violet-300'
-                        : count > 0
-                        ? 'bg-gradient-to-t from-violet-400 to-violet-200 hover:from-violet-500 hover:to-violet-300'
-                        : ''
+                      !t ? (
+                        isCurrentHour
+                          ? 'bg-gradient-to-t from-violet-600 to-violet-400 shadow-sm shadow-violet-300'
+                          : count > 0
+                          ? 'bg-gradient-to-t from-violet-400 to-violet-200 hover:from-violet-500 hover:to-violet-300'
+                          : ''
+                      ) : ''
                     }`}
-                    style={{ height: `${Math.max(height, count > 0 ? 6 : 2)}%`, ...(!isCurrentHour && count === 0 ? { background: t?.emptyBar || undefined } : {}) }}
+                    style={{ height: `${Math.max(height, count > 0 ? 6 : 2)}%`, ...(t && count > 0 ? { background: t.accent, opacity: isCurrentHour ? 1 : 0.55, boxShadow: isCurrentHour ? t.accentShadow : undefined } : (!isCurrentHour && count === 0 ? { background: t?.emptyBar || undefined } : {})) }}
                   >
                     {count > 0 && (
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -935,7 +972,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  <span className={`text-[10px] mt-1.5 ${isCurrentHour ? 'text-violet-600 font-bold' : ''}`} style={!isCurrentHour && t ? { color: t.muted } : (!isCurrentHour ? undefined : undefined)}>
+                  <span className={`text-[10px] mt-1.5 ${!t && isCurrentHour ? 'text-violet-600 font-bold' : ''}`} style={t ? { color: isCurrentHour ? t.accent : t.muted, fontWeight: isCurrentHour ? 700 : undefined } : undefined}>
                     {hour % 3 === 0 ? `${hour}h` : ''}
                   </span>
                 </div>
@@ -949,7 +986,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {timeRange === 'week' && (
         <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20">
+            <div
+              className={`p-2 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/20' : ''}`}
+              style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+            >
               <TrendingUp className="w-4 h-4 text-white" />
             </div>
             <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Conversaciones por Día</h3>
@@ -965,13 +1005,15 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div 
                     className={`w-full rounded-lg transition-all cursor-pointer relative group ${
-                      isToday
-                        ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-200'
-                        : day.count > 0
-                        ? 'bg-gradient-to-t from-indigo-400 to-indigo-200 hover:from-indigo-500 hover:to-indigo-300'
-                        : ''
+                      !t ? (
+                        isToday
+                          ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-md shadow-indigo-200'
+                          : day.count > 0
+                          ? 'bg-gradient-to-t from-indigo-400 to-indigo-200 hover:from-indigo-500 hover:to-indigo-300'
+                          : ''
+                      ) : ''
                     }`}
-                    style={{ height: `${Math.max(height, day.count > 0 ? 8 : 4)}%`, ...(!isToday && day.count === 0 ? { background: t?.emptyBar || undefined } : {}) }}
+                    style={{ height: `${Math.max(height, day.count > 0 ? 8 : 4)}%`, ...(t && day.count > 0 ? { background: t.accent, opacity: isToday ? 1 : 0.55, boxShadow: isToday ? t.accentShadow : undefined } : (!isToday && day.count === 0 ? { background: t?.emptyBar || undefined } : {})) }}
                   >
                     {day.count > 0 && (
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
@@ -979,7 +1021,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  <span className={`text-xs mt-2 ${isToday ? 'text-indigo-600 font-bold' : ''}`} style={!isToday && t ? { color: t.muted } : (!isToday ? undefined : undefined)}>{day.day}</span>
+                  <span className={`text-xs mt-2 ${!t && isToday ? 'text-indigo-600 font-bold' : ''}`} style={t ? { color: isToday ? t.accent : t.muted, fontWeight: isToday ? 700 : undefined } : undefined}>{day.day}</span>
                 </div>
               );
             })}
@@ -999,7 +1041,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               <div className="relative p-8">
                 {/* Section Header */}
                 <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                  <div
+                    className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20' : ''}`}
+                    style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+                  >
                     <ShoppingCart className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -1011,15 +1056,18 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 {/* Preview Metric Cards (zeroed out) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
                   {[
-                    { title: 'VENTAS', value: '0', icon: <ShoppingCart className="w-4 h-4" />, gradient: 'from-emerald-500 to-green-600' },
-                    { title: 'INGRESOS', value: '$0', icon: <DollarSign className="w-4 h-4" />, gradient: 'from-green-500 to-teal-600' },
-                    { title: 'TICKET PROMEDIO', value: '$0', icon: <TrendingUp className="w-4 h-4" />, gradient: 'from-cyan-500 to-blue-600' },
-                    { title: 'CONVERSIÓN', value: '0%', icon: <Link2 className="w-4 h-4" />, gradient: 'from-violet-500 to-purple-600' },
+                    { title: 'VENTAS', value: '0', icon: <ShoppingCart className="w-4 h-4" /> },
+                    { title: 'INGRESOS', value: '$0', icon: <DollarSign className="w-4 h-4" /> },
+                    { title: 'TICKET PROMEDIO', value: '$0', icon: <TrendingUp className="w-4 h-4" /> },
+                    { title: 'CONVERSIÓN', value: '0%', icon: <Link2 className="w-4 h-4" /> },
                   ].map((card, i) => (
                     <div key={i} className={`rounded-xl p-4 border ${!t ? 'border-gray-50 bg-gray-50/50' : ''}`} style={t?.salesPreviewCard ? { background: t.salesPreviewCard.bg, borderColor: t.salesPreviewCard.border } : undefined}>
                       <div className="flex items-center justify-between mb-2">
                         <span className={`text-[10px] font-bold uppercase tracking-widest ${!t ? 'text-gray-300' : ''}`} style={t ? { color: t.muted } : undefined}>{card.title}</span>
-                        <div className={`p-1.5 rounded-lg bg-gradient-to-br ${card.gradient} text-white opacity-30`}>
+                        <div
+                          className={`p-1.5 rounded-lg text-white opacity-30 ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600' : ''}`}
+                          style={t ? { background: t.accent } : undefined}
+                        >
                           {card.icon}
                         </div>
                       </div>
@@ -1030,9 +1078,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
                 {/* CTA */}
                 <div className="text-center">
-                  <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-50/80 border border-emerald-100/80">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-sm font-medium text-emerald-700">
+                  <div
+                    className={`inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border ${!t ? 'bg-emerald-50/80 border-emerald-100/80' : ''}`}
+                    style={t ? { background: t.insightBg, borderColor: t.insightBorder } : undefined}
+                  >
+                    <div className={`w-2 h-2 rounded-full animate-pulse ${!t ? 'bg-emerald-400' : ''}`} style={t ? { background: t.accent } : undefined} />
+                    <span className={`text-sm font-medium ${!t ? 'text-emerald-700' : ''}`} style={t ? { color: t.secondary } : undefined}>
                       Las ventas aparecerán aquí cuando tus clientes usen los enlaces de pago
                     </span>
                   </div>
@@ -1045,7 +1096,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           {/* Header de Ventas con datos */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+              <div
+                className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20' : ''}`}
+                style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+              >
                 <ShoppingCart className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -1054,9 +1108,11 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
               </div>
             </div>
             {salesStats?.all_time?.total_sales > 0 && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50/80 rounded-xl border border-emerald-100/80">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm font-semibold text-emerald-700">
+              <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border ${!t ? 'bg-emerald-50/80 border-emerald-100/80' : ''}`}
+                style={t ? { background: t.insightBg, borderColor: t.insightBorder } : undefined}
+              >
+                <CheckCircle2 className={`w-4 h-4 ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.accent } : undefined} />
+                <span className={`text-sm font-semibold ${!t ? 'text-emerald-700' : ''}`} style={t ? { color: t.secondary } : undefined}>
                   {salesStats.all_time.total_sales} ventas totales
                 </span>
               </div>
@@ -1115,7 +1171,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             {salesStats.top_products && salesStats.top_products.length > 0 && (
               <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                  <div
+                    className={`p-2 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20' : ''}`}
+                    style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+                  >
                     <Package className="w-4 h-4 text-white" />
                   </div>
                   <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Top Productos</h3>
@@ -1129,7 +1188,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       <div key={index} className="group">
                         <div className="flex items-center justify-between text-sm mb-1.5">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center flex-shrink-0">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600' : ''}`}
+                              style={t ? { background: t.accent } : undefined}
+                            >
                               <span className="text-[10px] font-bold text-white">{index + 1}</span>
                             </div>
                             <span className={`font-semibold truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.heading } : undefined}>{product.product_name}</span>
@@ -1144,8 +1206,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                         </div>
                         <div className={`w-full rounded-full h-1.5 overflow-hidden ${!t ? 'bg-gray-50' : ''}`} style={t ? { background: t.barTrack || 'rgba(255,255,255,0.06)' } : undefined}>
                           <div
-                            className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-700 ease-out"
-                            style={{ width: `${percentage}%` }}
+                            className={`h-full rounded-full transition-all duration-700 ease-out ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-400' : ''}`}
+                            style={{ width: `${percentage}%`, ...(t ? { background: t.accent } : {}) }}
                           />
                         </div>
                       </div>
@@ -1159,7 +1221,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
               <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+                  <div
+                    className={`p-2 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-blue-500/20' : ''}`}
+                    style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+                  >
                     <ShoppingCart className="w-4 h-4 text-white" />
                   </div>
                   <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ventas Recientes</h3>
@@ -1181,12 +1246,27 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                       <div className="text-right ml-3">
                         <p className={`text-sm font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.value } : undefined}>{sale.formatted_total}</p>
                         <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                          sale.status_color === 'green' ? 'bg-emerald-50 text-emerald-600' :
-                          sale.status_color === 'blue' ? 'bg-blue-50 text-blue-600' :
-                          sale.status_color === 'yellow' ? 'bg-amber-50 text-amber-600' :
-                          sale.status_color === 'red' ? 'bg-red-50 text-red-600' :
-                          'bg-gray-50 text-gray-500'
-                        }`}>{sale.status_label}</span>
+                          !t ? (
+                            sale.status_color === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                            sale.status_color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                            sale.status_color === 'yellow' ? 'bg-amber-50 text-amber-600' :
+                            sale.status_color === 'red' ? 'bg-red-50 text-red-600' :
+                            'bg-gray-50 text-gray-500'
+                          ) : ''
+                        }`}
+                        style={t ? {
+                          color: sale.status_color === 'green' ? (isDark ? '#6ee7b7' : '#059669') :
+                                 sale.status_color === 'blue' ? (isDark ? '#93c5fd' : '#2563eb') :
+                                 sale.status_color === 'yellow' ? (isDark ? '#fcd34d' : '#d97706') :
+                                 sale.status_color === 'red' ? (isDark ? '#fca5a5' : '#dc2626') :
+                                 t.muted,
+                          background: sale.status_color === 'green' ? (isDark ? 'rgba(16,185,129,0.12)' : '#ecfdf5') :
+                                     sale.status_color === 'blue' ? (isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff') :
+                                     sale.status_color === 'yellow' ? (isDark ? 'rgba(245,158,11,0.12)' : '#fffbeb') :
+                                     sale.status_color === 'red' ? (isDark ? 'rgba(239,68,68,0.12)' : '#fef2f2') :
+                                     (isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb')
+                        } : undefined}
+                        >{sale.status_label}</span>
                       </div>
                     </div>
                   ))}
@@ -1199,7 +1279,10 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
             <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
               <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                <div
+                  className={`p-2 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20' : ''}`}
+                  style={t ? { background: t.accent, boxShadow: t.accentShadow } : undefined}
+                >
                   <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <h3 className={`text-base font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.heading } : undefined}>Ingresos por Día</h3>
@@ -1214,11 +1297,11 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                     <div key={index} className="flex-1 flex flex-col items-center">
                       <div 
                         className={`w-full rounded-md transition-all cursor-pointer relative group ${
-                          day.revenue > 0
+                          !t && day.revenue > 0
                             ? 'bg-gradient-to-t from-emerald-500 to-green-300 hover:from-emerald-600 hover:to-green-400'
                             : ''
                         }`}
-                        style={{ height: `${Math.max(height, day.revenue > 0 ? 6 : 2)}%`, ...(day.revenue === 0 ? { background: t?.emptyBar || undefined } : {}) }}
+                        style={{ height: `${Math.max(height, day.revenue > 0 ? 6 : 2)}%`, ...(t && day.revenue > 0 ? { background: t.accent, opacity: 0.8 } : (day.revenue === 0 ? { background: t?.emptyBar || undefined } : {})) }}
                       >
                         {day.revenue > 0 && (
                           <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">

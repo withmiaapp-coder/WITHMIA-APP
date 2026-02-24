@@ -696,28 +696,26 @@ const IntegrationsPage = () => {
                       </div>
                     </div>
 
-                    {/* Events */}
-                    <div className="divide-y divide-white/[0.025] max-h-[400px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    {/* Events — compact, no scroll needed */}
+                    <div className="divide-y divide-white/[0.025]">
                       {[
                         { action: "Cita confirmada", source: "AgendaPro", target: "WhatsApp", color: "#3B82F6", time: "ahora", icon: CalendarCheck },
-                        { action: "Pedido #4821 recibido", source: "Shopify", target: "Email", color: "#96BF48", time: "12s", icon: ShoppingCart },
+                        { action: "Pedido #4821", source: "Shopify", target: "Email", color: "#96BF48", time: "12s", icon: ShoppingCart },
                         { action: "Paciente agendado", source: "Dentalink", target: "WhatsApp", color: "#22D3EE", time: "34s", icon: Stethoscope },
                         { action: "Pregunta respondida", source: "MercadoLibre", target: "IA Bot", color: "#FFE600", time: "1m", icon: ShoppingCart },
-                        { action: "Reunión programada", source: "Calendly", target: "Google Calendar", color: "#006BFF", time: "2m", icon: CalendarDays },
+                        { action: "Reunión programada", source: "Calendly", target: "Google Cal", color: "#006BFF", time: "2m", icon: CalendarDays },
                         { action: "Webhook procesado", source: "API REST", target: "Pipeline IA", color: "#F59E0B", time: "3m", icon: Webhook },
-                        { action: "Carrito abandonado", source: "WooCommerce", target: "WhatsApp", color: "#9B5C8F", time: "4m", icon: Code2 },
-                        { action: "Sync bidireccional", source: "Google Calendar", target: "Outlook", color: "#4285F4", time: "5m", icon: Calendar },
                       ].map((evt, i) => {
                         const EvtIcon = evt.icon;
                         return (
                           <div
                             key={i}
-                            className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-white/[0.015] transition-all duration-300 intg-event-row group"
+                            className="flex items-center gap-3 px-5 py-2.5 hover:bg-white/[0.015] transition-all duration-300 intg-event-row group"
                             style={{ animationDelay: `${i * 0.12}s` }}
                           >
                             {/* Event icon */}
                             <div
-                              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-all duration-300 group-hover:scale-105"
+                              className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105"
                               style={{
                                 backgroundColor: `${evt.color}0c`,
                                 border: `1px solid ${evt.color}15`,
@@ -726,21 +724,19 @@ const IntegrationsPage = () => {
                               <EvtIcon className="w-3 h-3" style={{ color: `${evt.color}90` }} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <p className="text-[11px] text-white/55 font-semibold truncate group-hover:text-white/75 transition-colors">
-                                  {evt.action}
-                                </p>
+                              <p className="text-[11px] text-white/55 font-semibold truncate group-hover:text-white/75 transition-colors leading-tight">
+                                {evt.action}
                                 {i === 0 && (
-                                  <span className="shrink-0 text-[7px] font-bold text-amber-400/60 bg-amber-400/[0.08] px-1.5 py-px rounded tracking-wider uppercase">Nuevo</span>
+                                  <span className="ml-2 text-[7px] font-bold text-amber-400/60 bg-amber-400/[0.08] px-1.5 py-px rounded tracking-wider uppercase align-middle">Nuevo</span>
                                 )}
-                              </div>
-                              <p className="text-[9px] text-white/20 truncate">
+                              </p>
+                              <p className="text-[9px] text-white/20 truncate leading-tight">
                                 <span className="text-white/30">{evt.source}</span>
-                                <span className="text-white/10 mx-1.5">→</span>
+                                <span className="text-white/10 mx-1">→</span>
                                 <span className="text-white/25">{evt.target}</span>
                               </p>
                             </div>
-                            <span className="text-[8px] font-mono text-white/15 shrink-0 mt-1 tabular-nums">
+                            <span className="text-[8px] font-mono text-white/15 shrink-0 tabular-nums">
                               {evt.time}
                             </span>
                           </div>
@@ -1029,20 +1025,110 @@ const IntegrationsPage = () => {
           100% { left: 100%; opacity: 0; }
         }
 
+        /* ── Dashboard enhanced animations ── */
+        .intg-dashboard {
+          background: linear-gradient(180deg, #060610 0%, #08081a 50%, #060610 100%);
+        }
+
         .intg-flow-line {
-          animation: intg-dash-flow 2.5s linear infinite;
+          animation: intg-dash-flow 2s linear infinite;
         }
         @keyframes intg-dash-flow {
-          from { stroke-dashoffset: 16; }
+          from { stroke-dashoffset: 20; }
           to { stroke-dashoffset: 0; }
         }
 
         .intg-event-row {
-          animation: intg-event-fade 0.6s ease-out both;
+          animation: intg-event-fade 0.5s ease-out both;
         }
         @keyframes intg-event-fade {
-          from { opacity: 0; transform: translateX(8px); }
+          from { opacity: 0; transform: translateX(12px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Status dot pulse */
+        .intg-status-dot {
+          animation: intg-status-pulse 2s ease-in-out infinite;
+        }
+        @keyframes intg-status-pulse {
+          0%, 100% { opacity: 0.6; box-shadow: 0 0 0 0 currentColor; }
+          50% { opacity: 1; box-shadow: 0 0 6px 2px currentColor; }
+        }
+
+        /* Core hub breathing glow */
+        .intg-core-breathe {
+          animation: intg-breathe 4s ease-in-out infinite;
+        }
+        @keyframes intg-breathe {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.15); }
+        }
+
+        /* Pulse rings expanding from hub */
+        .intg-pulse-ring {
+          animation: intg-pulse-expand 3.5s ease-out infinite;
+        }
+        @keyframes intg-pulse-expand {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          70% { opacity: 0.15; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* Orbit ring slow spin */
+        .intg-ring-spin {
+          animation: intg-spin 40s linear infinite;
+          transform-origin: center;
+        }
+        .intg-ring-spin-reverse {
+          animation: intg-spin 50s linear infinite reverse;
+          transform-origin: center;
+        }
+        @keyframes intg-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        /* Node appear animation */
+        .intg-node-appear {
+          animation: intg-node-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+        @keyframes intg-node-pop {
+          from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Node glow breathing */
+        .intg-node-glow {
+          animation: intg-glow-breathe 3s ease-in-out infinite;
+        }
+        @keyframes intg-glow-breathe {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.8; }
+        }
+
+        /* Ambient glow drifts */
+        .intg-glow-drift {
+          animation: intg-glow-move 12s ease-in-out infinite alternate;
+        }
+        .intg-glow-drift-2 {
+          animation: intg-glow-move 16s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes intg-glow-move {
+          0% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-45%, -55%) scale(1.15); }
+          100% { transform: translate(-55%, -45%) scale(0.9); }
+        }
+
+        /* Dot grid with subtle animation */
+        .intg-dot-grid {
+          background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+          background-size: 28px 28px;
+          animation: intg-grid-shimmer 8s ease-in-out infinite alternate;
+        }
+        @keyframes intg-grid-shimmer {
+          0% { opacity: 0.45; }
+          50% { opacity: 0.7; }
+          100% { opacity: 0.45; }
         }
       `}</style>
     </div>
