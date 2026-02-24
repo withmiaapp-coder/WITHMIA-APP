@@ -1320,11 +1320,11 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
                 title={sidebarCollapsed ? item.label : ''}
-                className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg transition-all duration-150 ${
+                className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg transition-colors duration-150 ${
                   !hasTheme ? (
                     isActive
-                      ? 'bg-neutral-100 shadow-sm opacity-100 border border-neutral-200/60'
-                      : 'hover:bg-neutral-50 hover:opacity-100'
+                      ? 'bg-neutral-100 shadow-sm border border-neutral-200/60'
+                      : 'hover:bg-neutral-50 border border-transparent'
                   ) : ''
                 }`}
                 style={hasTheme ? {

@@ -258,8 +258,6 @@ const IntegrationsPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [expandedCat, setExpandedCat] = useState<string>("productividad");
-
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -473,13 +471,13 @@ const IntegrationsPage = () => {
         </section>
 
         {/* ══════════════════════════════════════
-            INTEGRACIONES — Premium expanded showcase
+            INTEGRACIONES — Bento showcase
             ══════════════════════════════════════ */}
         <section className="py-8 md:py-12 px-4 relative overflow-hidden">
 
           <div className="max-w-6xl mx-auto relative">
             {/* Section header */}
-            <Reveal className="text-center mb-16">
+            <Reveal className="text-center mb-14">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/50 mb-5">Ecosistema de integraciones</p>
               <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight leading-[1.12] mb-5">
                 Cada herramienta que necesitas,{" "}
@@ -492,167 +490,78 @@ const IntegrationsPage = () => {
               </p>
             </Reveal>
 
-            {/* Category navigation + expanded content */}
-            <div className="grid lg:grid-cols-[280px_1fr] gap-8">
-              {/* Left sidebar — category navigation */}
-              <Reveal className="lg:sticky lg:top-28 lg:self-start">
-                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-none">
-                  {integrationCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setExpandedCat(cat.id)}
-                      className={`group relative flex items-center gap-3.5 px-5 py-4 rounded-xl text-left whitespace-nowrap lg:whitespace-normal transition-all duration-400 shrink-0 lg:shrink ${
-                        expandedCat === cat.id
-                          ? "bg-white/[0.05] border border-white/[0.08]"
-                          : "border border-transparent hover:bg-white/[0.02] hover:border-white/[0.04]"
-                      }`}
-                    >
-                      {/* Active indicator */}
-                      <div
-                        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full transition-all duration-400 ${
-                          expandedCat === cat.id ? "opacity-100" : "opacity-0"
-                        }`}
-                        style={{ backgroundColor: cat.accent }}
-                      />
+            {/* Bento grid — asymmetric layout */}
+            <div className="grid md:grid-cols-2 gap-4">
+              {integrationCategories.map((cat, ci) => (
+                <Reveal
+                  key={cat.id}
+                  delay={ci * 50}
+                  className={ci === 0 ? "md:row-span-2" : ""}
+                >
+                  <div
+                    className="relative h-full rounded-2xl border border-white/[0.05] overflow-hidden group"
+                    style={{ background: `linear-gradient(160deg, ${cat.accent}04, transparent 40%)` }}
+                  >
+                    {/* Top accent */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-px"
+                      style={{ background: `linear-gradient(90deg, transparent, ${cat.accent}18, transparent)` }}
+                    />
 
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-400"
-                        style={{
-                          backgroundColor: expandedCat === cat.id ? `${cat.accent}15` : "rgba(255,255,255,0.03)",
-                          border: `1px solid ${expandedCat === cat.id ? `${cat.accent}25` : "rgba(255,255,255,0.05)"}`,
-                        }}
-                      >
-                        <span className="text-[13px]">
-                          {cat.id === "productividad" && "📅"}
-                          {cat.id === "salud" && "🏥"}
-                          {cat.id === "ecommerce" && "🛒"}
-                          {cat.id === "desarrollo" && "⚡"}
-                        </span>
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className={`text-[13px] font-semibold transition-colors duration-300 ${expandedCat === cat.id ? "text-white" : "text-white/40"}`}>
-                          {cat.label}
-                        </p>
-                        <p className={`text-[10px] transition-colors duration-300 ${expandedCat === cat.id ? "text-white/30" : "text-white/15"}`}>
-                          {cat.items.length} integración{cat.items.length > 1 ? "es" : ""}
-                        </p>
-                      </div>
-
-                      {expandedCat === cat.id && (
-                        <div className="hidden lg:block ml-auto">
-                          <ArrowRight className="w-3.5 h-3.5 text-white/20" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </Reveal>
-
-              {/* Right — expanded integration cards */}
-              <div>
-                {integrationCategories.map((cat) => {
-                  if (cat.id !== expandedCat) return null;
-                  return (
-                    <div key={cat.id}>
+                    <div className="p-6 md:p-7">
                       {/* Category header */}
-                      <Reveal>
-                        <div className="mb-8">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-1.5 h-6 rounded-full" style={{ background: `linear-gradient(to bottom, ${cat.accent}, transparent)` }} />
-                            <h3 className="text-lg md:text-xl font-bold text-white">{cat.label}</h3>
-                            <div className="flex-1 h-px bg-white/[0.04]" />
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 animate-pulse" style={{ animationDuration: "3s" }} />
-                              <span className="text-[9px] font-mono text-emerald-400/50 uppercase tracking-wider">
-                                {cat.items.length} activas
-                              </span>
-                            </div>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: `${cat.accent}12`, border: `1px solid ${cat.accent}20` }}
+                          >
+                            <span className="text-[12px]">
+                              {cat.id === "productividad" && "📅"}
+                              {cat.id === "salud" && "🏥"}
+                              {cat.id === "ecommerce" && "🛒"}
+                              {cat.id === "desarrollo" && "⚡"}
+                            </span>
                           </div>
-                          <p className="text-[13px] text-white/25 leading-relaxed pl-[18px]">{cat.description}</p>
+                          <div>
+                            <h3 className="text-[14px] font-bold text-white/80">{cat.label}</h3>
+                            <p className="text-[10px] text-white/20">{cat.items.length} integración{cat.items.length > 1 ? "es" : ""}</p>
+                          </div>
                         </div>
-                      </Reveal>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
+                          <span className="text-[8px] font-mono text-emerald-400/40 uppercase tracking-wider">Activo</span>
+                        </div>
+                      </div>
 
-                      {/* Integration cards */}
-                      <div className="space-y-4">
-                        {cat.items.map((item, i) => {
+                      {/* Integration items */}
+                      <div className={`space-y-2 ${ci === 0 ? "" : ""}`}>
+                        {cat.items.map((item) => {
                           const Icon = item.icon;
                           return (
-                            <Reveal key={item.name} delay={i * 60}>
+                            <div
+                              key={item.name}
+                              className="flex items-center gap-3.5 p-3 rounded-xl bg-white/[0.015] border border-white/[0.03] hover:border-white/[0.08] hover:bg-white/[0.03] transition-all duration-300 cursor-default"
+                            >
                               <div
-                                className="group relative p-6 rounded-2xl border border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.08] transition-all duration-500"
+                                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: `${item.color}0c`, border: `1px solid ${item.color}12` }}
                               >
-                                {/* Top accent line on hover */}
-                                <div
-                                  className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                  style={{ background: `linear-gradient(90deg, transparent, ${item.color}30, transparent)` }}
-                                />
-
-                                <div className="flex flex-col sm:flex-row sm:items-start gap-5">
-                                  {/* Icon */}
-                                  <div
-                                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-105"
-                                    style={{
-                                      backgroundColor: `${item.color}0c`,
-                                      border: `1px solid ${item.color}15`,
-                                    }}
-                                  >
-                                    <Icon className="w-5 h-5" style={{ color: `${item.color}bb` }} />
-                                  </div>
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-3">
-                                        <h4 className="text-[15px] font-bold text-white/80 group-hover:text-white transition-colors duration-300">
-                                          {item.name}
-                                        </h4>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-400/[0.06] border border-emerald-400/10">
-                                          <div className="w-1 h-1 rounded-full bg-emerald-400/60" />
-                                          <span className="text-[8px] text-emerald-400/50 font-medium uppercase tracking-wider">Conectada</span>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <p className="text-[12px] text-white/25 leading-[1.7] mb-4 group-hover:text-white/35 transition-colors duration-500 max-w-lg">
-                                      {item.desc}
-                                    </p>
-
-                                    {/* Feature pills */}
-                                    <div className="flex flex-wrap gap-2">
-                                      {item.features.map((feat, fi) => (
-                                        <div
-                                          key={fi}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-400 group-hover:bg-white/[0.03]"
-                                          style={{
-                                            backgroundColor: `${item.color}05`,
-                                            border: `1px solid ${item.color}0a`,
-                                          }}
-                                        >
-                                          <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: `${item.color}50` }} />
-                                          <span className="text-[10px] text-white/35 font-medium">{feat}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {/* Right side — connect action */}
-                                  <div className="sm:self-center shrink-0">
-                                    <div className="flex items-center gap-1.5 text-[11px] text-white/15 group-hover:text-amber-400/60 transition-colors duration-300 cursor-pointer">
-                                      <span className="font-medium">Conectar</span>
-                                      <ArrowRight className="w-3.5 h-3.5 -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                                    </div>
-                                  </div>
-                                </div>
+                                <Icon className="w-3.5 h-3.5" style={{ color: `${item.color}aa` }} />
                               </div>
-                            </Reveal>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[12px] font-semibold text-white/70 truncate">{item.name}</p>
+                                <p className="text-[10px] text-white/20 truncate">{item.desc}</p>
+                              </div>
+                              <ArrowRight className="w-3 h-3 text-white/10 shrink-0" />
+                            </div>
                           );
                         })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                </Reveal>
+              ))}
             </div>
 
             {/* How it works — Premium 3-step flow */}
