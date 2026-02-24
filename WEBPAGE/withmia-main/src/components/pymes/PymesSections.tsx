@@ -196,7 +196,7 @@ export const Heatmap247 = () => {
   };
 
   return (
-    <section className="py-20 relative">
+    <section className="pt-10 pb-6 relative">
       <div className="max-w-5xl mx-auto px-6">
         <Reveal>
           <div className="text-center mb-12">

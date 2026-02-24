@@ -171,10 +171,10 @@ const useCases = [
     industry: "Salud & Odontología", icon: Stethoscope, color: "#34d399",
     tagline: "Tu recepcionista virtual que nunca descansa",
     chat: [
-      { from: "client", msg: "Hola, necesito una hora para limpieza dental 🦷" },
-      { from: "mia", msg: "¡Hola! 😊 Tengo disponibilidad mañana a las 10:00 o 16:30. ¿Cuál prefieres?" },
-      { from: "client", msg: "16:30 por favor" },
-      { from: "mia", msg: "✅ Listo! Cita agendada para mañana 16:30 con Dra. López. Te envié la dirección y preparaciones por WhatsApp." },
+      { from: "client", msg: "Hola, necesito agendar una limpieza dental 🦷" },
+      { from: "mia", msg: "¡Hola! Tengo hora mañana a las 10:00 o 16:30. ¿Cuál te acomoda?" },
+      { from: "client", msg: "A las 16:30 porfa" },
+      { from: "mia", msg: "✅ Agendado mañana 16:30 con Dra. López. Te envío dirección por WhatsApp." },
     ],
     features: [
       { icon: Calendar, label: "Agenda citas 24/7" },
@@ -188,9 +188,9 @@ const useCases = [
     tagline: "Tu vendedor estrella que atiende a todos a la vez",
     chat: [
       { from: "client", msg: "¿Tienen esta polera en talla M? 👕" },
-      { from: "mia", msg: "¡Sí! Disponible en azul y negro. Basado en tu última compra, te recomiendo la azul. ¿La agrego al carrito?" },
-      { from: "client", msg: "Dale, la azul" },
-      { from: "mia", msg: "✅ Agregada! Total: $19.990. Aquí tu link de pago 👉 Envío gratis por ser cliente frecuente 🎉" },
+      { from: "mia", msg: "¡Sí! Disponible en azul y negro. Por tu historial, te recomiendo la azul." },
+      { from: "client", msg: "Dale, quiero la azul" },
+      { from: "mia", msg: "✅ Agregada al carrito. Total: $19.990 con envío gratis. Aquí tu link de pago 👉" },
     ],
     features: [
       { icon: MessageSquare, label: "Vendedor por WhatsApp" },
@@ -203,10 +203,10 @@ const useCases = [
     industry: "Inmobiliaria", icon: Building2, color: "#22d3ee",
     tagline: "Filtra leads reales y agenda visitas automáticamente",
     chat: [
-      { from: "client", msg: "Busco depto 2 dormitorios en Providencia, hasta 120M" },
-      { from: "mia", msg: "Encontré 3 opciones para ti 🏠 ¿Tienes pre-aprobación hipotecaria?" },
+      { from: "client", msg: "Busco depto 2D en Providencia, hasta 120M 🏠" },
+      { from: "mia", msg: "Tengo 3 opciones que calzan perfecto. ¿Tienes pre-aprobación hipotecaria?" },
       { from: "client", msg: "Sí, con Banco Estado" },
-      { from: "mia", msg: "Perfecto! Te agendé visita mañana 11:00 al depto de Av. Italia. Te envío fotos y ficha técnica 📋" },
+      { from: "mia", msg: "✅ Visita agendada mañana 11:00 en Av. Italia. Te envío fotos y ficha técnica 📋" },
     ],
     features: [
       { icon: Users, label: "Pre-califica leads" },
@@ -219,10 +219,10 @@ const useCases = [
     industry: "Fitness & Bienestar", icon: Dumbbell, color: "#f59e0b",
     tagline: "Más alumnos, menos abandono, cero papeleo",
     chat: [
-      { from: "client", msg: "¿Cuánto sale el plan mensual? 💪" },
-      { from: "mia", msg: "Plan Full $29.990/mes — incluye todas las clases + acceso libre. ¿Quieres inscribirte?" },
+      { from: "client", msg: "¿Cuánto sale el plan mensual del gym? 💪" },
+      { from: "mia", msg: "Plan Full $29.990/mes con todas las clases y acceso libre. ¿Te inscribo?" },
       { from: "client", msg: "Sí, quiero empezar" },
-      { from: "mia", msg: "✅ Inscripción lista! Tu primera clase es mañana — Yoga 7:00am. Te envié el link de pago y acceso al gimnasio 🏋️" },
+      { from: "mia", msg: "✅ Listo! Tu primera clase es mañana, Yoga 7:00am. Te envío link de pago 🏋️" },
     ],
     features: [
       { icon: Users, label: "Inscripción por chat" },
@@ -235,10 +235,10 @@ const useCases = [
     industry: "Educación", icon: GraduationCap, color: "#ec4899",
     tagline: "Matrícula llena, secretaría libre",
     chat: [
-      { from: "client", msg: "¿Tienen vacantes para 3° básico? 📚" },
-      { from: "mia", msg: "Sí, quedan 4 vacantes. El proceso incluye: formulario + entrevista. ¿Quieres que te envíe los documentos?" },
-      { from: "client", msg: "Por favor" },
-      { from: "mia", msg: "📄 Enviados! Te agendé entrevista para el jueves 15:00. Recibirás un recordatorio el día anterior." },
+      { from: "client", msg: "¿Tienen vacantes para tercero básico? 📚" },
+      { from: "mia", msg: "Sí, quedan 4 vacantes. Necesitas formulario + entrevista. ¿Te los envío?" },
+      { from: "client", msg: "Sí, por favor envíalos" },
+      { from: "mia", msg: "📄 Enviados! Entrevista agendada jueves 15:00. Te recordaré el día anterior." },
     ],
     features: [
       { icon: MessageSquare, label: "Admisiones automáticas" },
@@ -251,10 +251,10 @@ const useCases = [
     industry: "Gastronomía", icon: Utensils, color: "#f97316",
     tagline: "Más mesas llenas, menos llamadas perdidas",
     chat: [
-      { from: "client", msg: "Mesa para 4, viernes 21h 🍝" },
+      { from: "client", msg: "Quiero reservar mesa para 4, viernes 21h 🍝" },
       { from: "mia", msg: "¡Reservado! Mesa junto a la ventana. ¿Quieres ver el menú del viernes?" },
-      { from: "client", msg: "Sí porfa" },
-      { from: "mia", msg: "🍽️ Aquí va! Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes a las 19h. ¡Buen provecho!" },
+      { from: "client", msg: "Sí, me interesa verlo" },
+      { from: "mia", msg: "🍽️ Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes!" },
     ],
     features: [
       { icon: Calendar, label: "Reservas por WhatsApp" },
@@ -276,7 +276,7 @@ const SolucionesPymes = () => {
   const [activeTab, setActiveTab] = useState(0);
   const current = useCases[activeTab];
 
-  /* ─── Chat simulation (progressive reveal + loop) ─── */
+  /* ─── Chat simulation (progressive reveal + auto-cycle industries) ─── */
   const [visibleMsgs, setVisibleMsgs] = useState(0);
   const [typingSender, setTypingSender] = useState<"client" | "mia" | null>(null);
 
@@ -286,30 +286,23 @@ const SolucionesPymes = () => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const chat = useCases[activeTab].chat;
 
-    const runSequence = (startDelay: number) => {
-      let delay = startDelay;
-      chat.forEach((msg, i) => {
-        // show typing indicator
-        timers.push(setTimeout(() => setTypingSender(msg.from as "client" | "mia"), delay));
-        // typing duration — MIA types longer than client
-        const typingMs = msg.from === "mia" ? 900 + msg.msg.length * 6 : 500 + msg.msg.length * 4;
-        delay += typingMs;
-        // reveal message
-        timers.push(setTimeout(() => {
-          setTypingSender(null);
-          setVisibleMsgs(i + 1);
-        }, delay));
-        delay += 350; // pause between messages
-      });
-      // after all messages shown, wait then restart
+    let delay = 700;
+    chat.forEach((msg, i) => {
+      timers.push(setTimeout(() => setTypingSender(msg.from as "client" | "mia"), delay));
+      const typingMs = msg.from === "mia" ? 900 + msg.msg.length * 6 : 500 + msg.msg.length * 4;
+      delay += typingMs;
       timers.push(setTimeout(() => {
-        setVisibleMsgs(0);
         setTypingSender(null);
-        runSequence(800);
-      }, delay + 3500));
-    };
+        setVisibleMsgs(i + 1);
+      }, delay));
+      delay += 350;
+    });
 
-    runSequence(700);
+    // After conversation ends, advance to next industry
+    timers.push(setTimeout(() => {
+      setActiveTab(prev => (prev + 1) % useCases.length);
+    }, delay + 3000));
+
     return () => timers.forEach(t => clearTimeout(t));
   }, [activeTab]);
 
@@ -327,7 +320,7 @@ const SolucionesPymes = () => {
             ══════════════════════════════════════════════════ */}
         <section className="relative">
           <div className="max-w-7xl mx-auto px-6 pt-28 pb-10">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
               {/* Left — Copy */}
               <Reveal>
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-950/30 mb-8">
@@ -517,7 +510,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             USE CASES — Industry showcase (professional)
             ══════════════════════════════════════════════════ */}
-        <section className="py-20 relative" id="casos">
+        <section className="pt-8 pb-10 relative" id="casos">
           <div className="max-w-7xl mx-auto px-6">
             {/* Header */}
             <Reveal>
@@ -634,13 +627,46 @@ const SolucionesPymes = () => {
                   {/* Col 2 — Chat simulation (center, largest) */}
                   <div className="p-6 sm:p-8 flex flex-col" style={{ backgroundColor: `${current.color}03` }}>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Conversación en vivo</p>
-                    <div className="space-y-3 flex-1 min-h-[260px]">
-                      {current.chat.slice(0, visibleMsgs).map((msg, i) => (
+                    <div className="space-y-3 flex-1 relative">
+                      {current.chat.map((msg, i) => (
                         <div
                           key={`${activeTab}-msg-${i}`}
-                          className={`flex ${msg.from === "client" ? "justify-start" : "justify-end"}`}
-                          style={{ animation: "fadeInUp 0.3s ease both" }}
+                          className={`flex ${msg.from === "client" ? "justify-start" : "justify-end"} transition-all duration-300 relative`}
+                          style={{
+                            opacity: i < visibleMsgs ? 1 : 0,
+                            transform: i < visibleMsgs ? "translateY(0)" : "translateY(6px)",
+                          }}
                         >
+                          {/* Typing indicator overlaying the next message to appear */}
+                          {typingSender && i === visibleMsgs && (
+                            <div
+                              className={`absolute inset-0 flex ${typingSender === "client" ? "justify-start" : "justify-end"} items-start z-10`}
+                            >
+                              <div
+                                className={`px-4 py-3 rounded-2xl flex items-center gap-1 ${
+                                  typingSender === "client"
+                                    ? "bg-white/[0.05] border border-white/[0.06] rounded-tl-md"
+                                    : "rounded-tr-md"
+                                }`}
+                                style={{
+                                  animation: "fadeInUp 0.2s ease both",
+                                  ...(typingSender === "mia"
+                                    ? {
+                                        backgroundColor: `${current.color}0d`,
+                                        border: `1px solid ${current.color}18`,
+                                      }
+                                    : {}),
+                                }}
+                              >
+                                {typingSender === "mia" && (
+                                  <Sparkles className="w-3 h-3 mr-1.5" style={{ color: current.color }} />
+                                )}
+                                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "0ms" }} />
+                                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "150ms" }} />
+                                <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "300ms" }} />
+                              </div>
+                            </div>
+                          )}
                           <div
                             className={`max-w-[85%] px-4 py-3 text-[13px] leading-relaxed ${
                               msg.from === "client"
@@ -671,37 +697,6 @@ const SolucionesPymes = () => {
                           </div>
                         </div>
                       ))}
-
-                      {/* Typing indicator */}
-                      {typingSender && (
-                        <div
-                          className={`flex ${typingSender === "client" ? "justify-start" : "justify-end"}`}
-                          style={{ animation: "fadeInUp 0.2s ease both" }}
-                        >
-                          <div
-                            className={`px-4 py-3 rounded-2xl flex items-center gap-1 ${
-                              typingSender === "client"
-                                ? "bg-white/[0.05] border border-white/[0.06] rounded-tl-md"
-                                : "rounded-tr-md"
-                            }`}
-                            style={
-                              typingSender === "mia"
-                                ? {
-                                    backgroundColor: `${current.color}0d`,
-                                    border: `1px solid ${current.color}18`,
-                                  }
-                                : undefined
-                            }
-                          >
-                            {typingSender === "mia" && (
-                              <Sparkles className="w-3 h-3 mr-1.5" style={{ color: current.color }} />
-                            )}
-                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "0ms" }} />
-                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "150ms" }} />
-                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "300ms" }} />
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Input */}
@@ -772,7 +767,7 @@ const SolucionesPymes = () => {
         {/* ══════════════════════════════════════════════════
             PROBLEM — Provocative reality-check section
             ══════════════════════════════════════════════════ */}
-        <section className="py-14 relative" id="problema">
+        <section className="pt-8 pb-14 relative" id="problema">
           <div className="max-w-6xl mx-auto px-6 relative">
 
             {/* ─── Header ─── */}

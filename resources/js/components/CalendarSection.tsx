@@ -21,6 +21,7 @@ import {
   Video,
   Link2,
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ====== TIPOS ======
 type CalendarProvider = 'google' | 'outlook' | 'calendly' | 'reservo' | 'agendapro' | 'dentalink' | 'medilink';
@@ -200,6 +201,24 @@ export default function CalendarSection({ user, company }: Props) {
 
   // Errores
   const [error, setError] = useState<string | null>(null);
+
+  // Theme
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      contentBg: 'var(--theme-content-bg)',
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      inputBg: 'var(--theme-input-bg)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
 
   // ====== CARGAR ESTADO DE INTEGRACIÓN (TODOS LOS PROVEEDORES) ======
   const loadIntegrationStatus = useCallback(async () => {
@@ -646,8 +665,8 @@ export default function CalendarSection({ user, company }: Props) {
   // ====== LOADING ======
   if (loading) {
     return (
-      <div className="min-h-[700px] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-400">
+      <div className="min-h-[700px] flex items-center justify-center" style={t ? { backgroundColor: t.contentBg } : undefined}>
+        <div className="flex items-center gap-3" style={t ? { color: t.textMuted } : undefined}>
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="text-sm">Cargando calendario...</span>
         </div>
@@ -661,9 +680,9 @@ export default function CalendarSection({ user, company }: Props) {
 
   // ====== RENDER: SIEMPRE EL CALENDARIO ======
   return (
-    <div className="min-h-[700px] flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="min-h-[700px] flex flex-col" style={{ height: 'calc(100vh - 56px)', ...(t ? { backgroundColor: t.contentBg } : {}) }}>
       {/* Header */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
+      <div className={`px-6 py-3 border-b flex-shrink-0 ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl">
@@ -671,7 +690,7 @@ export default function CalendarSection({ user, company }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-neutral-800">Calendario</h1>
+                <h1 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Calendario</h1>
                 {anyConnected && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -680,7 +699,7 @@ export default function CalendarSection({ user, company }: Props) {
                 )}
               </div>
               {isConnected && integration?.provider_email && (
-                <p className="text-[11px] text-neutral-400">{integration.provider_email}</p>
+                <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{integration.provider_email}</p>
               )}
             </div>
           </div>
@@ -690,11 +709,16 @@ export default function CalendarSection({ user, company }: Props) {
               <>
                 <button
                   onClick={toggleBotAccess}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${!t ? (
                     integration?.bot_access_enabled
                       ? 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
                       : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
-                  }`}
+                  ) : 'border'}`}
+                  style={t ? {
+                    backgroundColor: integration?.bot_access_enabled ? t.accentLight : t.itemBg,
+                    color: integration?.bot_access_enabled ? t.accent : t.textMuted,
+                    borderColor: t.cardBorder,
+                  } : undefined}
                   title={integration?.bot_access_enabled ? 'WITHMIA tiene acceso al calendario' : 'Activar acceso de WITHMIA'}
                 >
                   <Bot className="w-3.5 h-3.5" />
@@ -703,7 +727,8 @@ export default function CalendarSection({ user, company }: Props) {
 
                 <button
                   onClick={() => setShowSettingsPanel(!showSettingsPanel)}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600"
+                  className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}
+                  style={t ? { color: t.textMuted } : undefined}
                 >
                   <Settings className="w-4 h-4" />
                 </button>
@@ -714,7 +739,8 @@ export default function CalendarSection({ user, company }: Props) {
               <button
                 onClick={loadEvents}
                 disabled={loadingEvents}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
+                className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${!t ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}
+                style={t ? { color: t.textMuted } : undefined}
               >
                 <RefreshCw className={`w-4 h-4 ${loadingEvents ? 'animate-spin' : ''}`} />
               </button>
@@ -722,7 +748,8 @@ export default function CalendarSection({ user, company }: Props) {
 
             <button
               onClick={() => setShowConnectPanel(!showConnectPanel)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg hover:border-rose-300 hover:shadow-sm transition-all text-xs font-medium text-neutral-600 hover:text-rose-600"
+              className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg transition-all text-xs font-medium ${!t ? 'bg-white border-slate-200 hover:border-rose-300 hover:shadow-sm text-neutral-600 hover:text-rose-600' : ''}`}
+              style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
             >
               <Link2 className="w-3.5 h-3.5" />
               {anyConnected ? 'Integraciones' : 'Conectar calendario'}
@@ -732,9 +759,14 @@ export default function CalendarSection({ user, company }: Props) {
               onClick={() => { setCreateDate(new Date()); setShowCreateModal(true); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
                 isConnected
-                  ? 'bg-rose-500 text-white hover:bg-rose-600'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  ? (!t ? 'bg-rose-500 text-white hover:bg-rose-600' : '')
+                  : (!t ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'cursor-not-allowed')
               }`}
+              style={t ? (
+                isConnected
+                  ? { backgroundColor: t.accent, color: '#fff' }
+                  : { backgroundColor: t.itemBg, color: t.textMuted }
+              ) : undefined}
               disabled={!isConnected}
               title={!isConnected ? 'Conecta un calendario primero' : 'Crear evento'}
             >
@@ -746,31 +778,39 @@ export default function CalendarSection({ user, company }: Props) {
 
         {/* Navigation */}
         <div className="flex items-center justify-between mt-2.5">          <div className="flex items-center gap-2">
-            <button onClick={() => navigateMonth(-1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors">
-              <ChevronLeft className="w-4.5 h-4.5 text-neutral-500" />
+            <button onClick={() => navigateMonth(-1)} className={`p-1 rounded-md transition-colors ${!t ? 'hover:bg-slate-100' : ''}`}>
+              <ChevronLeft className="w-4.5 h-4.5" style={t ? { color: t.textSec } : undefined} />
             </button>
-            <h2 className="text-base font-semibold text-neutral-800 min-w-[180px] text-center">
+            <h2 className={`text-base font-semibold min-w-[180px] text-center ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
               {viewMode === 'day'
                 ? `${dayNamesFull[currentDate.getDay()]} ${currentDate.getDate()} de ${monthNames[currentDate.getMonth()]}`
                 : `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`
               }
             </h2>
-            <button onClick={() => navigateMonth(1)} className="p-1 hover:bg-slate-100 rounded-md transition-colors">
-              <ChevronRight className="w-4.5 h-4.5 text-neutral-500" />
+            <button onClick={() => navigateMonth(1)} className={`p-1 rounded-md transition-colors ${!t ? 'hover:bg-slate-100' : ''}`}>
+              <ChevronRight className="w-4.5 h-4.5" style={t ? { color: t.textSec } : undefined} />
             </button>
-            <button onClick={goToToday} className="px-2.5 py-1 text-[11px] font-medium text-neutral-500 hover:text-neutral-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors ml-1">
+            <button onClick={goToToday} className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ml-1 ${!t ? 'text-neutral-500 hover:text-neutral-700 bg-slate-100 hover:bg-slate-200' : ''}`}
+              style={t ? { backgroundColor: t.itemBg, color: t.textSec } : undefined}>
               Hoy
             </button>
           </div>
 
-          <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
+          <div className={`flex items-center gap-0.5 rounded-lg p-0.5 ${!t ? 'bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
             {(['month', 'week', 'day'] as const).map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
-                  viewMode === mode ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'
+                  viewMode === mode
+                    ? (!t ? 'bg-white text-neutral-800 shadow-sm' : 'shadow-sm')
+                    : (!t ? 'text-neutral-400 hover:text-neutral-600' : '')
                 }`}
+                style={t ? (
+                  viewMode === mode
+                    ? { backgroundColor: t.cardBg, color: t.text }
+                    : { color: t.textMuted }
+                ) : undefined}
               >
                 {mode === 'month' ? 'Mes' : mode === 'week' ? 'Semana' : 'Día'}
               </button>
@@ -781,17 +821,17 @@ export default function CalendarSection({ user, company }: Props) {
 
       {/* Multi-Provider Connection Panel */}
       {showConnectPanel && (
-        <div className="mx-4 mt-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+        <div className={`mx-4 mt-3 p-4 border rounded-xl shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-neutral-700">Conectar calendario</h3>
-            <button onClick={() => setShowConnectPanel(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-              <X className="w-4 h-4 text-neutral-400" />
+            <h3 className={`text-sm font-semibold ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conectar calendario</h3>
+            <button onClick={() => setShowConnectPanel(false)} className={`p-1 rounded-lg ${!t ? 'hover:bg-slate-100' : ''}`}>
+              <X className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} />
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Google Calendar */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${isConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-rose-400 hover:shadow-md'}`}>
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${isConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200 hover:border-rose-400 hover:shadow-md' : '')}`} style={t && !isConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                 <svg className="w-6 h-6" viewBox="0 0 48 48">
                   <path d="M34 42H14c-4.4 0-8-3.6-8-8V14c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v20c0 4.4-3.6 8-8 8z" fill="#FFF"/>
                   <path d="M34 6H14C9.6 6 6 9.6 6 14v20c0 4.4 3.6 8 8 8h20c4.4 0 8-3.6 8-8V14c0-4.4-3.6-8-8-8zm-4 32H18c-2.2 0-4-1.8-4-4V18h20v16c0 2.2-1.8 4-4 4z" fill="#1E88E5"/>
@@ -802,8 +842,8 @@ export default function CalendarSection({ user, company }: Props) {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Google Calendar</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{isConnected ? 'Conectado' : 'Sincroniza eventos'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Google Calendar</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{isConnected ? 'Conectado' : 'Sincroniza eventos'}</p>
               </div>
               {isConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -819,7 +859,7 @@ export default function CalendarSection({ user, company }: Props) {
             </div>
 
             {/* Outlook Calendar */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${outlookConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-sky-400 hover:shadow-md'}`}>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${outlookConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200 hover:border-sky-400 hover:shadow-md' : '')}`} style={t && !outlookConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
               <div className="w-10 h-10 rounded-xl bg-[#0078D4] flex items-center justify-center flex-shrink-0 shadow-sm">
                 <svg className="w-6 h-6" viewBox="0 0 32 32">
                   <path d="M19.484 7.937v5.477l1.916 1.205a.076.076 0 00.069 0L28 10.169V8.375A1.398 1.398 0 0026.625 7H19.484z" fill="#0364B8"/>
@@ -829,8 +869,8 @@ export default function CalendarSection({ user, company }: Props) {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Outlook</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{outlookConnected ? 'Conectado' : 'Microsoft Calendar'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Outlook</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{outlookConnected ? 'Conectado' : 'Microsoft Calendar'}</p>
               </div>
               {outlookConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -846,15 +886,15 @@ export default function CalendarSection({ user, company }: Props) {
             </div>
 
             {/* Calendly */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${calendlyConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-[#006BFF] hover:shadow-md'}`}>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${calendlyConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200 hover:border-[#006BFF] hover:shadow-md' : '')}`} style={t && !calendlyConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
               <div className="w-10 h-10 rounded-xl bg-[#006BFF] flex items-center justify-center flex-shrink-0 shadow-sm">
                 <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
                   <path d="M22.195 17.891c-1.027 1.777-2.88 2.779-4.965 2.779-1.174 0-2.32-.328-3.305-.948a6.453 6.453 0 01-2.395-2.586 6.66 6.66 0 01-.035-6.058 6.39 6.39 0 012.322-2.635A6.239 6.239 0 0117.123 7.5c2.123 0 3.98 1.005 5.003 2.77l3.36-1.93C23.72 5.29 20.695 3.5 17.123 3.5c-1.97 0-3.884.534-5.536 1.545a10.481 10.481 0 00-3.806 4.22 10.708 10.708 0 00.051 9.757 10.494 10.494 0 003.738 4.143A10.175 10.175 0 0017.124 24.7c3.538 0 6.564-1.801 8.36-4.87z" fill="#FFF"/>
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Calendly</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{calendlyConnected ? 'Conectado' : 'Agendamiento online'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Calendly</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{calendlyConnected ? 'Conectado' : 'Agendamiento online'}</p>
               </div>
               {calendlyConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -870,13 +910,13 @@ export default function CalendarSection({ user, company }: Props) {
             </div>
 
             {/* Reservo */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${reservoConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${reservoConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200' : '')}`} style={t && !reservoConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
                 <img src="/icons/reservo.webp" alt="Reservo" className="w-8 h-auto object-contain brightness-0 invert" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Reservo</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{reservoConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Reservo</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{reservoConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {reservoConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -884,18 +924,18 @@ export default function CalendarSection({ user, company }: Props) {
                   <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Key</span>
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${!t ? 'text-neutral-500 bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>API Key</span>
               )}
             </div>
 
             {/* AgendaPro */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${agendaproConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
-              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${agendaproConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200' : '')}`} style={t && !agendaproConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                 <img src="/icons/agendapro-icon.svg" alt="AgendaPro" className="w-7 h-7 object-contain" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">AgendaPro</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{agendaproConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>AgendaPro</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agendaproConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {agendaproConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -903,18 +943,18 @@ export default function CalendarSection({ user, company }: Props) {
                   <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Key</span>
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${!t ? 'text-neutral-500 bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>API Key</span>
               )}
             </div>
 
             {/* Dentalink */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${dentalinkConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${dentalinkConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200' : '')}`} style={t && !dentalinkConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <CalendarIcon className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Dentalink</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{dentalinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Dentalink</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{dentalinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {dentalinkConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -922,18 +962,18 @@ export default function CalendarSection({ user, company }: Props) {
                   <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Token</span>
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${!t ? 'text-neutral-500 bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>API Token</span>
               )}
             </div>
 
             {/* Medilink */}
-            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${medilinkConnected ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}`}>
+            <div className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all ${medilinkConnected ? (!t ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/40') : (!t ? 'bg-white border-slate-200' : '')}`} style={t && !medilinkConnected ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <CalendarIcon className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-neutral-800">Medilink</p>
-                <p className="text-[11px] text-neutral-500 font-medium">{medilinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
+                <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Medilink</p>
+                <p className={`text-[11px] font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{medilinkConnected ? 'Conectado' : 'Ir a Integraciones'}</p>
               </div>
               {medilinkConnected ? (
                 <div className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 rounded-full border border-emerald-200">
@@ -941,26 +981,28 @@ export default function CalendarSection({ user, company }: Props) {
                   <span className="text-[11px] font-bold text-emerald-700">Activo</span>
                 </div>
               ) : (
-                <span className="text-[11px] text-neutral-500 font-semibold bg-slate-100 px-2.5 py-1 rounded-lg">API Token</span>
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${!t ? 'text-neutral-500 bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>API Token</span>
               )}
             </div>
           </div>
           {/* Tip de buenas prácticas */}
-          <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200/60 rounded-lg flex items-start gap-2">
+          <div className={`mt-3 p-2.5 border rounded-lg flex items-start gap-2 ${!t ? 'bg-amber-50 border-amber-200/60' : ''}`} style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
             <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-amber-700 leading-relaxed">
+            <p className={`text-[11px] leading-relaxed ${!t ? 'text-amber-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
               <span className="font-semibold">Recomendación:</span> Conecta solo el servicio de calendario que uses activamente en tu negocio. Tener múltiples proveedores activos puede generar eventos duplicados o conflictos de disponibilidad.
             </p>
           </div>
           {!anyConnected && (
-            <p className="text-[11px] text-neutral-400 mt-2 text-center">Conecta un proveedor para sincronizar eventos y permitir que WITHMIA agende citas por ti</p>
+            <p className={`text-[11px] mt-2 text-center ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Conecta un proveedor para sincronizar eventos y permitir que WITHMIA agende citas por ti</p>
           )}
         </div>
       )}
 
       {/* Banner cuando no hay nada conectado y el panel cerrado */}
       {!anyConnected && !showConnectPanel && (
-        <div className="mx-4 mt-3 p-3 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-xl flex items-center gap-3 cursor-pointer hover:shadow-sm transition-all" onClick={() => setShowConnectPanel(true)}>
+        <div className={`mx-4 mt-3 p-3 border rounded-xl flex items-center gap-3 cursor-pointer transition-all ${!t ? 'bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200/60 hover:shadow-sm' : ''}`}
+          style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
+          onClick={() => setShowConnectPanel(true)}>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <div className="w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center shadow-sm">
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -986,10 +1028,11 @@ export default function CalendarSection({ user, company }: Props) {
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-700">Conecta tu calendario</p>
-            <p className="text-xs text-neutral-400">Google, Outlook, Calendly, Reservo, AgendaPro, Dentalink o Medilink</p>
+            <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Conecta tu calendario</p>
+            <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Google, Outlook, Calendly, Reservo, AgendaPro, Dentalink o Medilink</p>
           </div>
-          <button className="flex-shrink-0 px-4 py-2 bg-white border border-rose-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-all shadow-sm">
+          <button className={`flex-shrink-0 px-4 py-2 border rounded-lg text-xs font-semibold transition-all shadow-sm ${!t ? 'bg-white border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300' : ''}`}
+            style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder, color: t.accent } : undefined}>
             Ver opciones
           </button>
         </div>
@@ -1023,9 +1066,9 @@ export default function CalendarSection({ user, company }: Props) {
         {viewMode === 'month' ? (
           <div className="h-full flex flex-col">
             {/* Day headers */}
-            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80">
+            <div className={`grid grid-cols-7 border-b ${!t ? 'border-slate-200 bg-slate-50/80' : ''}`} style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
               {dayNames.map(day => (
-                <div key={day} className="py-2 text-center text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                <div key={day} className={`py-2 text-center text-[11px] font-semibold uppercase tracking-wider ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                   {day}
                 </div>
               ))}
@@ -1041,9 +1084,15 @@ export default function CalendarSection({ user, company }: Props) {
                 return (
                   <div
                     key={idx}
-                    className={`border-b border-r border-slate-100 p-1 min-h-[90px] cursor-pointer hover:bg-slate-50/80 transition-colors ${
-                      !currentMo ? 'bg-slate-50/40' : 'bg-white'
+                    className={`border-b border-r p-1 min-h-[90px] cursor-pointer transition-colors ${
+                      !t
+                        ? (!currentMo ? 'bg-slate-50/40 border-slate-100 hover:bg-slate-50/80' : 'bg-white border-slate-100 hover:bg-slate-50/80')
+                        : ''
                     }`}
+                    style={t ? {
+                      backgroundColor: currentMo ? t.cardBg : t.itemBg,
+                      borderColor: t.cardBorder,
+                    } : undefined}
                     onClick={() => {
                       if (isConnected) {
                         setCreateDate(day);
@@ -1053,11 +1102,15 @@ export default function CalendarSection({ user, company }: Props) {
                   >
                     <div className={`text-xs font-medium mb-0.5 w-6 h-6 flex items-center justify-center rounded-full ${
                       today
-                        ? 'bg-rose-500 text-white'
+                        ? (!t ? 'bg-rose-500 text-white' : '')
                         : currentMo
-                          ? 'text-neutral-700'
-                          : 'text-neutral-300'
-                    }`}>
+                          ? (!t ? 'text-neutral-700' : '')
+                          : (!t ? 'text-neutral-300' : '')
+                    }`} style={t ? (
+                      today
+                        ? { backgroundColor: t.accent, color: '#fff' }
+                        : { color: currentMo ? t.text : t.textMuted }
+                    ) : undefined}>
                       {day.getDate()}
                     </div>
 
@@ -1083,7 +1136,7 @@ export default function CalendarSection({ user, company }: Props) {
                         </div>
                       ))}
                       {dayEvents.length > 3 && (
-                        <div className="text-[10px] text-neutral-400 font-medium pl-1">+{dayEvents.length - 3} más</div>
+                        <div className={`text-[10px] font-medium pl-1 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>+{dayEvents.length - 3} más</div>
                       )}
                     </div>
                   </div>
@@ -1109,8 +1162,8 @@ export default function CalendarSection({ user, company }: Props) {
 
         {/* Loading overlay */}
         {loadingEvents && (
-          <div className="absolute inset-0 bg-white/50 flex items-center justify-center pointer-events-none">
-            <Loader2 className="w-6 h-6 animate-spin text-rose-400" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={t ? { backgroundColor: `color-mix(in srgb, ${t.contentBg} 50%, transparent)` } : undefined}>
+            <Loader2 className="w-6 h-6 animate-spin" style={t ? { color: t.accent } : undefined} />
           </div>
         )}
       </div>
@@ -1144,6 +1197,17 @@ function WeekView({ currentDate, events, onEventClick, onSlotClick }: {
   onEventClick: (e: CalendarEvent) => void;
   onSlotClick: (date: Date) => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textMuted: 'var(--theme-text-muted)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
   const weekStart = new Date(currentDate);
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
@@ -1165,12 +1229,12 @@ function WeekView({ currentDate, events, onEventClick, onSlotClick }: {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid grid-cols-[50px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50/80 sticky top-0 z-10">
+      <div className={`grid grid-cols-[50px_repeat(7,1fr)] border-b sticky top-0 z-10 ${!t ? 'border-slate-200 bg-slate-50/80' : ''}`} style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
         <div className="py-2" />
         {days.map((day, i) => (
-          <div key={i} className={`py-2 text-center border-l border-slate-100 ${todayCheck(day) ? 'bg-rose-50/50' : ''}`}>
-            <div className="text-[10px] text-neutral-400 font-medium uppercase">{dayLabels[i]}</div>
-            <div className={`text-base font-semibold ${todayCheck(day) ? 'text-rose-600' : 'text-neutral-700'}`}>{day.getDate()}</div>
+          <div key={i} className={`py-2 text-center border-l ${!t ? 'border-slate-100' : ''} ${todayCheck(day) ? (!t ? 'bg-rose-50/50' : '') : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
+            <div className={`text-[10px] font-medium uppercase ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{dayLabels[i]}</div>
+            <div className={`text-base font-semibold ${!t ? (todayCheck(day) ? 'text-rose-600' : 'text-neutral-700') : ''}`} style={t ? { color: t.text } : undefined}>{day.getDate()}</div>
           </div>
         ))}
       </div>
@@ -1179,7 +1243,7 @@ function WeekView({ currentDate, events, onEventClick, onSlotClick }: {
         <div className="grid grid-cols-[50px_repeat(7,1fr)]">
           {hours.map(hour => (
             <React.Fragment key={hour}>
-              <div className="h-12 text-right pr-2 text-[10px] text-neutral-400 border-b border-slate-50">
+              <div className={`h-12 text-right pr-2 text-[10px] border-b ${!t ? 'text-neutral-400 border-slate-50' : ''}`} style={t ? { color: t.textMuted, borderColor: t.cardBorder } : undefined}>
                 {hour.toString().padStart(2, '0')}:00
               </div>
               {days.map((day, dayIdx) => {
@@ -1187,7 +1251,8 @@ function WeekView({ currentDate, events, onEventClick, onSlotClick }: {
                 return (
                   <div
                     key={dayIdx}
-                    className="h-12 border-l border-b border-slate-100 relative cursor-pointer hover:bg-rose-50/20 transition-colors"
+                    className={`h-12 border-l border-b relative cursor-pointer transition-colors ${!t ? 'border-slate-100 hover:bg-rose-50/20' : ''}`}
+                    style={t ? { borderColor: t.cardBorder } : undefined}
                     onClick={() => { const d = new Date(day); d.setHours(hour); onSlotClick(d); }}
                   >
                     {hourEvents.map((event, eIdx) => (
@@ -1221,6 +1286,16 @@ function DayView({ currentDate, events, onEventClick, onSlotClick }: {
   onEventClick: (e: CalendarEvent) => void;
   onSlotClick: (date: Date) => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+    };
+  }, [hasTheme, isDark]);
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const dateStr = currentDate.toISOString().split('T')[0];
   const dayEvents = events.filter(e => (e.start?.split('T')[0] || '') === dateStr);
@@ -1231,8 +1306,8 @@ function DayView({ currentDate, events, onEventClick, onSlotClick }: {
         {hours.map(hour => {
           const hourEvents = dayEvents.filter(e => new Date(e.start).getHours() === hour);
           return (
-            <div key={hour} className="flex border-b border-slate-100">
-              <div className="w-16 py-3 text-right pr-3 text-xs text-neutral-400 flex-shrink-0">
+            <div key={hour} className={`flex border-b ${!t ? 'border-slate-100' : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
+              <div className={`w-16 py-3 text-right pr-3 text-xs flex-shrink-0 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 {hour.toString().padStart(2, '0')}:00
               </div>
               <div
@@ -1250,8 +1325,8 @@ function DayView({ currentDate, events, onEventClick, onSlotClick }: {
                     onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-neutral-800 truncate">{event.title}</div>
-                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                      <div className={`font-medium text-sm truncate ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{event.title}</div>
+                      <div className={`text-[11px] mt-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                         {formatTimeStr(event.start)} - {formatTimeStr(event.end)}
                       </div>
                     </div>
@@ -1273,6 +1348,18 @@ function EventDetailModal({ event, onClose, onDelete }: {
   onClose: () => void;
   onDelete: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
   const providerColor = PROVIDER_COLORS[event.provider] || '#4285f4';
   const providerName = PROVIDER_NAMES[event.provider] || 'Calendario';
   const canDelete = event.provider === 'google' || event.provider === 'outlook';
@@ -1364,7 +1451,7 @@ function EventDetailModal({ event, onClose, onDelete }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[420px] mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+      <div className={`rounded-2xl shadow-2xl w-full max-w-[420px] mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()} style={t ? { backgroundColor: t.cardBg } : undefined}>
         {/* Color header bar */}
         <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${providerColor}, ${providerColor}88)` }} />
 
@@ -1375,28 +1462,28 @@ function EventDetailModal({ event, onClose, onDelete }: {
               <ProviderIcon />
               <span>{providerName}</span>
             </div>
-            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors group">
+            <button onClick={onClose} className={`p-1.5 rounded-full transition-colors group ${!t ? 'hover:bg-slate-100' : ''}`}>
               <X className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 transition-colors" />
             </button>
           </div>
 
           {/* Title */}
-          <h3 className="text-[17px] font-bold text-neutral-900 leading-snug mb-4">{event.title}</h3>
+          <h3 className={`text-[17px] font-bold leading-snug mb-4 ${!t ? 'text-neutral-900' : ''}`} style={t ? { color: t.text } : undefined}>{event.title}</h3>
 
           {/* Date & Time */}
           <div className="space-y-2.5">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CalendarIcon className="w-4 h-4 text-neutral-400" />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                <CalendarIcon className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-neutral-800">{formatFullDate(event.start)}</p>
+                <p className={`text-[13px] font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{formatFullDate(event.start)}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-[12px] text-neutral-500">
+                  <p className={`text-[12px] ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
                     {event.allDay ? 'Todo el día' : `${formatTimeStr(event.start)} – ${formatTimeStr(event.end)}`}
                   </p>
                   {duration && (
-                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-medium text-neutral-400">{duration}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${!t ? 'bg-slate-100 text-neutral-400' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>{duration}</span>
                   )}
                 </div>
               </div>
@@ -1405,10 +1492,10 @@ function EventDetailModal({ event, onClose, onDelete }: {
             {/* Location */}
             {event.location && (
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-neutral-400" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                  <MapPin className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} />
                 </div>
-                <p className="text-[13px] text-neutral-600 flex-1 min-w-0 truncate">{event.location}</p>
+                <p className={`text-[13px] flex-1 min-w-0 truncate ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>{event.location}</p>
               </div>
             )}
 
@@ -1428,11 +1515,11 @@ function EventDetailModal({ event, onClose, onDelete }: {
             {/* Attendees */}
             {event.attendees.length > 0 && (
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Users className="w-4 h-4 text-neutral-400" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                  <Users className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1.5">
-                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">{event.attendees.length} participante{event.attendees.length > 1 ? 's' : ''}</p>
+                  <p className={`text-[11px] font-semibold uppercase tracking-wider ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{event.attendees.length} participante{event.attendees.length > 1 ? 's' : ''}</p>
                   {event.attendees.map((a, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
@@ -1440,8 +1527,8 @@ function EventDetailModal({ event, onClose, onDelete }: {
                         {(a.name || a.email).charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-[12px] text-neutral-700 truncate block">{a.name || a.email}</span>
-                        {a.name && <span className="text-[10px] text-neutral-400 truncate block">{a.email}</span>}
+                        <span className={`text-[12px] truncate block ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{a.name || a.email}</span>
+                        {a.name && <span className={`text-[10px] truncate block ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{a.email}</span>}
                       </div>
                       {a.status === 'accepted' && (
                         <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0" title="Aceptado">
@@ -1471,14 +1558,14 @@ function EventDetailModal({ event, onClose, onDelete }: {
 
             {/* Description */}
             {event.description && (
-              <div className="pt-2 mt-1 border-t border-slate-100">
+              <div className={`pt-2 mt-1 border-t ${!t ? 'border-slate-100' : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <svg className="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                    <svg className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M4 6h16M4 10h16M4 14h10M4 18h7" strokeLinecap="round" />
                     </svg>
                   </div>
-                  <p className="text-[12px] text-neutral-500 leading-relaxed whitespace-pre-line flex-1">{event.description}</p>
+                  <p className={`text-[12px] leading-relaxed whitespace-pre-line flex-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>{event.description}</p>
                 </div>
               </div>
             )}
@@ -1486,7 +1573,7 @@ function EventDetailModal({ event, onClose, onDelete }: {
         </div>
 
         {/* Action footer */}
-        <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between bg-slate-50/60">
+        <div className={`border-t px-5 py-3 flex items-center justify-between ${!t ? 'border-slate-100 bg-slate-50/60' : ''}`} style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
           {canDelete ? (
             <button onClick={onDelete}
               className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[12px] font-medium px-3 py-1.5 hover:bg-red-50 rounded-lg transition-all">
@@ -1513,6 +1600,20 @@ function CreateEventModal({ initialDate, onSubmit, onClose }: {
   onSubmit: (data: CreateEventData) => void;
   onClose: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      inputBg: 'var(--theme-input-bg)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -1545,67 +1646,76 @@ function CreateEventModal({ initialDate, onSubmit, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+      <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()} style={t ? { backgroundColor: t.cardBg } : undefined}>
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-neutral-800">Nuevo evento</h3>
-              <button type="button" onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-neutral-400" />
+              <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Nuevo evento</h3>
+              <button type="button" onClick={onClose} className={`p-1 rounded-lg ${!t ? 'hover:bg-slate-100' : ''}`}>
+                <X className="w-5 h-5" style={t ? { color: t.textMuted } : undefined} />
               </button>
             </div>
 
             <div className="space-y-4">
               <input type="text" placeholder="Título del evento" value={title} onChange={e => setTitle(e.target.value)}
-                className="w-full px-4 py-3 text-lg font-medium border-0 border-b-2 border-slate-200 focus:border-rose-500 focus:ring-0 placeholder:text-neutral-300 text-neutral-800"
+                className={`w-full px-4 py-3 text-lg font-medium border-0 border-b-2 focus:ring-0 ${!t ? 'border-slate-200 focus:border-rose-500 placeholder:text-neutral-300 text-neutral-800' : 'placeholder:opacity-50'}`}
+                style={t ? { borderColor: t.cardBorder, color: t.text, backgroundColor: 'transparent' } : undefined}
                 autoFocus required />
 
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={allDay} onChange={e => setAllDay(e.target.checked)}
                   className="rounded border-slate-300 text-rose-500 focus:ring-rose-500" />
-                <span className="text-neutral-600">Todo el día</span>
+                <span className={`${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Todo el día</span>
               </label>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-neutral-500 mb-1 block">Inicio</label>
+                  <label className={`text-xs font-medium mb-1 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Inicio</label>
                   <input type={allDay ? 'date' : 'datetime-local'} value={allDay ? startDate.slice(0, 10) : startDate}
                     onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500" required />
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${!t ? 'border-slate-200 text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500' : ''}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                    required />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-neutral-500 mb-1 block">Fin</label>
+                  <label className={`text-xs font-medium mb-1 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Fin</label>
                   <input type={allDay ? 'date' : 'datetime-local'} value={allDay ? endDate.slice(0, 10) : endDate}
                     onChange={e => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500" required />
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${!t ? 'border-slate-200 text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500' : ''}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                    required />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <MapPin className="w-3.5 h-3.5 text-neutral-400" />
-                  <label className="text-xs font-medium text-neutral-500">Ubicación</label>
+                  <label className={`text-xs font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Ubicación</label>
                 </div>
                 <input type="text" placeholder="Agregar ubicación" value={location} onChange={e => setLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder:text-neutral-300" />
+                  className={`w-full px-3 py-2 border rounded-lg text-sm ${!t ? 'border-slate-200 text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                  style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-500 mb-1 block">Descripción</label>
+                <label className={`text-xs font-medium mb-1 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Descripción</label>
                 <textarea placeholder="Agregar detalles del evento..." value={description} onChange={e => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder:text-neutral-300 resize-none" />
+                  className={`w-full px-3 py-2 border rounded-lg text-sm resize-none ${!t ? 'border-slate-200 text-neutral-700 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                  style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 px-6 py-3 flex justify-end gap-2 bg-slate-50/50">
+          <div className={`border-t px-6 py-3 flex justify-end gap-2 ${!t ? 'border-slate-100 bg-slate-50/50' : ''}`} style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
             <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-slate-100 rounded-lg transition-colors">
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${!t ? 'text-neutral-500 hover:bg-slate-100' : ''}`}
+              style={t ? { color: t.textSec } : undefined}>
               Cancelar
             </button>
             <button type="submit" disabled={!title.trim() || submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+              className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${!t ? 'bg-rose-500 hover:bg-rose-600' : ''}`}
+              style={t ? { backgroundColor: t.accent, color: '#fff' } : undefined}>
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               Crear evento
             </button>
@@ -1625,26 +1735,41 @@ function SettingsPanel({ integration, calendars, selectedCalendar, onSelectCalen
   onDisconnect: () => void;
   onClose: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
+
   return (
-    <div className="absolute top-0 right-0 w-72 h-full bg-white border-l border-slate-200 shadow-xl z-20 overflow-y-auto">
+    <div className={`absolute top-0 right-0 w-72 h-full border-l shadow-xl z-20 overflow-y-auto ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-neutral-800 text-sm">Configuración</h3>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg">
-            <X className="w-4 h-4 text-neutral-400" />
+          <h3 className={`font-bold text-sm ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Configuración</h3>
+          <button onClick={onClose} className={`p-1 rounded-lg ${!t ? 'hover:bg-slate-100' : ''}`}>
+            <X className="w-4 h-4" style={t ? { color: t.textMuted } : undefined} />
           </button>
         </div>
 
         {/* Account */}
         <div className="mb-5">
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Cuenta</p>
-          <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg">
+          <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Cuenta</p>
+          <div className={`flex items-center gap-3 p-2.5 rounded-lg ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
             <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center">
               <Globe className="w-3.5 h-3.5 text-rose-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-neutral-700 truncate">{integration?.provider_email || 'Google Calendar'}</p>
-              <p className="text-[10px] text-neutral-400">
+              <p className={`text-xs font-medium truncate ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{integration?.provider_email || 'Google Calendar'}</p>
+              <p className={`text-[10px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 {integration?.created_at ? new Date(integration.created_at).toLocaleDateString('es-CL') : ''}
               </p>
             </div>
@@ -1654,17 +1779,24 @@ function SettingsPanel({ integration, calendars, selectedCalendar, onSelectCalen
         {/* Calendar Selection */}
         {calendars.length > 0 && (
           <div className="mb-5">
-            <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Calendario activo</p>
+            <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Calendario activo</p>
             <div className="space-y-1">
               {calendars.map(cal => (
                 <button key={cal.id} onClick={() => onSelectCalendar(cal.id)}
                   className={`w-full flex items-center gap-2.5 p-2 rounded-lg text-left transition-all ${
-                    selectedCalendar === cal.id ? 'bg-rose-50 border border-rose-200' : 'hover:bg-slate-50 border border-transparent'
-                  }`}>
+                    selectedCalendar === cal.id
+                      ? (!t ? 'bg-rose-50 border border-rose-200' : 'border')
+                      : (!t ? 'hover:bg-slate-50 border border-transparent' : 'border border-transparent')
+                  }`}
+                  style={t ? (
+                    selectedCalendar === cal.id
+                      ? { backgroundColor: t.accentLight, borderColor: t.accent }
+                      : {}
+                  ) : undefined}>
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cal.backgroundColor }}></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-neutral-700 truncate">{cal.summary}</p>
-                    {cal.primary && <span className="text-[9px] text-neutral-400">Principal</span>}
+                    <p className={`text-xs font-medium truncate ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{cal.summary}</p>
+                    {cal.primary && <span className={`text-[9px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Principal</span>}
                   </div>
                   {selectedCalendar === cal.id && <Check className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />}
                 </button>
@@ -1675,25 +1807,30 @@ function SettingsPanel({ integration, calendars, selectedCalendar, onSelectCalen
 
         {/* Bot Access */}
         <div className="mb-5">
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Acceso de WITHMIA</p>
+          <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Acceso de WITHMIA</p>
           <button onClick={onToggleBotAccess}
             className={`w-full flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-              integration?.bot_access_enabled ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-200'
-            }`}>
-            <Bot className={`w-4 h-4 ${integration?.bot_access_enabled ? 'text-purple-500' : 'text-neutral-400'}`} />
+              !t ? (integration?.bot_access_enabled ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-200') : ''
+            }`}
+            style={t ? {
+              backgroundColor: integration?.bot_access_enabled ? t.accentLight : t.itemBg,
+              borderColor: t.cardBorder,
+            } : undefined}>
+            <Bot className="w-4 h-4" style={t ? { color: integration?.bot_access_enabled ? t.accent : t.textMuted } : undefined} />
             <div className="flex-1 text-left">
-              <p className="text-xs font-medium text-neutral-700">
+              <p className={`text-xs font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 {integration?.bot_access_enabled ? 'Bot habilitado' : 'Bot deshabilitado'}
               </p>
-              <p className="text-[10px] text-neutral-400">
+              <p className={`text-[10px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 {integration?.bot_access_enabled
                   ? 'WITHMIA puede consultar y crear eventos'
                   : 'Activa para que WITHMIA agende citas'}
               </p>
             </div>
-            <div className={`w-9 h-5 rounded-full relative transition-colors ${
+            <div className={`w-9 h-5 rounded-full relative transition-colors ${!t ? (
               integration?.bot_access_enabled ? 'bg-purple-500' : 'bg-slate-300'
-            }`}>
+            ) : ''}`}
+              style={t ? { backgroundColor: integration?.bot_access_enabled ? t.accent : t.cardBorder } : undefined}>
               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
                 integration?.bot_access_enabled ? 'translate-x-4' : 'translate-x-0.5'
               }`}></div>
@@ -1702,7 +1839,7 @@ function SettingsPanel({ integration, calendars, selectedCalendar, onSelectCalen
         </div>
 
         {/* Disconnect */}
-        <div className="pt-3 border-t border-slate-100">
+        <div className={`pt-3 border-t ${!t ? 'border-slate-100' : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
           <button onClick={onDisconnect}
             className="w-full flex items-center gap-2 justify-center p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium">
             <Unlink className="w-3.5 h-3.5" />
