@@ -14,8 +14,16 @@ import {
   Webhook,
   Database,
   CheckCircle2,
-  Sparkles,
   ExternalLink,
+  Zap,
+  RefreshCw,
+  Bell,
+  Bot,
+  Link2,
+  BarChart3,
+  Clock,
+  Shield,
+  Globe,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════
@@ -114,65 +122,60 @@ const integrations = [
 ];
 
 /* ═══════════════════════════════════════════
-   Constellation geometry
+   Integration categories — expanded data
    ═══════════════════════════════════════════ */
-const ECO = { W: 700, H: 450, CX: 350, CY: 225 };
-const CH_R = 95;
-const INT_R = 200;
-const RING_RADII = [28, 55, 95, 145, 200];
-const NUM_STRANDS = 20;
+const integrationCategories = [
+  {
+    id: "productividad",
+    label: "Productividad",
+    accent: "#3B82F6",
+    description: "Agenda, citas y reuniones sincronizadas automáticamente desde cualquier canal.",
+    items: [
+      { name: "AgendaPro", desc: "Citas y reservas automáticas sincronizadas con tu calendario profesional.", icon: CalendarCheck, color: "#3B82F6", features: ["Reservas desde WhatsApp", "Confirmación automática", "Recordatorios IA"] },
+      { name: "Calendly", desc: "Reuniones automáticas con links de agendamiento directo desde el chat.", icon: CalendarDays, color: "#006BFF", features: ["Links en chat", "Zona horaria auto", "Sync bidireccional"] },
+      { name: "Google Calendar", desc: "Sincronización bidireccional de eventos, recordatorios y disponibilidad.", icon: Calendar, color: "#4285F4", features: ["Eventos sincronizados", "Disponibilidad real-time", "Multi-calendario"] },
+      { name: "Outlook", desc: "Microsoft Calendar integrado para gestionar agenda desde cualquier canal.", icon: Mail, color: "#0078D4", features: ["Microsoft 365", "Teams integrado", "Agenda compartida"] },
+      { name: "Reservo", desc: "Sistema de reservas online conectado directamente a tus canales.", icon: CalendarRange, color: "#10B981", features: ["Reservas online", "Pagos integrados", "Notificaciones auto"] },
+    ],
+  },
+  {
+    id: "salud",
+    label: "Salud",
+    accent: "#22D3EE",
+    description: "Gestión de pacientes, citas médicas y recordatorios clínicos automatizados.",
+    items: [
+      { name: "Dentalink", desc: "Gestión de pacientes para clínicas dentales con recordatorios automáticos.", icon: Stethoscope, color: "#22D3EE", features: ["Ficha paciente", "Recordatorios SMS", "Agenda clínica"] },
+      { name: "Medilink", desc: "Plataforma médica integrada para agendar, confirmar y recordar citas.", icon: Stethoscope, color: "#F43F5E", features: ["Historial médico", "Confirmación cita", "Seguimiento post-consulta"] },
+    ],
+  },
+  {
+    id: "ecommerce",
+    label: "E-commerce",
+    accent: "#F59E0B",
+    description: "Productos, pedidos y atención al cliente de tu tienda conectados a tu inbox.",
+    items: [
+      { name: "Shopify", desc: "Sincroniza productos, pedidos y notificaciones de tu tienda Shopify.", icon: ShoppingCart, color: "#96BF48", features: ["Catálogo sync", "Estado de pedido", "Abandono de carrito"] },
+      { name: "WooCommerce", desc: "Conecta tu tienda WordPress con alertas de pedidos y seguimiento.", icon: Code2, color: "#9B5C8F", features: ["WordPress nativo", "Tracking pedidos", "Stock alerts"] },
+      { name: "MercadoLibre", desc: "Gestiona preguntas y ventas de MercadoLibre desde tu inbox unificado.", icon: ShoppingCart, color: "#FFE600", features: ["Respuesta preguntas", "Gestión ventas", "Reputación auto"] },
+    ],
+  },
+  {
+    id: "desarrollo",
+    label: "Desarrollo",
+    accent: "#10B981",
+    description: "APIs, webhooks y bases de datos para integraciones 100% personalizadas.",
+    items: [
+      { name: "API REST", desc: "Endpoints personalizados y webhooks para integraciones a medida.", icon: Webhook, color: "#F59E0B", features: ["RESTful API", "Webhooks real-time", "Rate limiting"] },
+      { name: "MySQL", desc: "Conecta bases de datos para consultas automáticas y actualización de registros.", icon: Database, color: "#00758F", features: ["Queries automáticas", "CRUD operations", "Data sync"] },
+    ],
+  },
+];
 
-const pgStrandAngles = Array.from({ length: NUM_STRANDS }, (_, i) =>
-  (Math.PI * 2 * i) / NUM_STRANDS - Math.PI / 2
-);
-
-const pgChNodes = channels.map((ch, i) => {
-  const a = (Math.PI * 2 * i) / channels.length - Math.PI / 2;
-  return { ...ch, x: ECO.CX + CH_R * Math.cos(a), y: ECO.CY + CH_R * Math.sin(a), a };
-});
-
-const pgIntShortDescs: Record<string, string> = {
-  "AgendaPro": "Citas y reservas",
-  "Calendly": "Reuniones automáticas",
-  "Google Calendar": "Agenda sincronizada",
-  "Outlook": "Microsoft Calendar",
-  "Reservo": "Reservas online",
-  "Dentalink": "Clínicas dentales",
-  "Medilink": "Gestión médica",
-  "Shopify": "E-commerce sync",
-  "WooCommerce": "Tienda WordPress",
-  "MercadoLibre": "Marketplace",
-  "API REST": "Webhooks custom",
-  "MySQL": "Base de datos",
-};
-
-const pgIntNodes = integrations.map((int, i) => {
-  const a = (Math.PI * 2 * i) / integrations.length - Math.PI / 2 + Math.PI / 12;
-  return { ...int, x: ECO.CX + INT_R * Math.cos(a), y: ECO.CY + INT_R * Math.sin(a), a };
-});
-
-const pgRingPaths = RING_RADII.map((baseR, ri) =>
-  Array.from({ length: NUM_STRANDS + 1 }, (_, i) => {
-    const a = pgStrandAngles[i % NUM_STRANDS];
-    const wobble = Math.sin(a * 3 + ri * 1.7) * (baseR * 0.025);
-    const r = baseR + wobble;
-    return `${i === 0 ? "M" : "L"} ${(ECO.CX + r * Math.cos(a)).toFixed(1)} ${(ECO.CY + r * Math.sin(a)).toFixed(1)}`;
-  }).join(" ") + " Z"
-);
-
-const pgKnots = RING_RADII.flatMap((baseR, ri) =>
-  pgStrandAngles.map(a => {
-    const wobble = Math.sin(a * 3 + ri * 1.7) * (baseR * 0.025);
-    const r = baseR + wobble;
-    return { x: +(ECO.CX + r * Math.cos(a)).toFixed(1), y: +(ECO.CY + r * Math.sin(a)).toFixed(1) };
-  })
-);
-
-const mobileGroups = [
-  { label: "Productividad", items: integrations.filter(i => i.tag === "Productividad"), accent: "#3B82F6" },
-  { label: "Salud", items: integrations.filter(i => i.tag === "Salud"), accent: "#F43F5E" },
-  { label: "E-commerce", items: integrations.filter(i => i.tag === "E-commerce"), accent: "#F59E0B" },
-  { label: "Desarrollo", items: integrations.filter(i => i.tag === "Desarrollo"), accent: "#10B981" },
+const platformStats = [
+  { value: "18+", label: "Conectores nativos", icon: Link2 },
+  { value: "99.9%", label: "SLA Uptime", icon: Shield },
+  { value: "<200ms", label: "Latencia p95", icon: Clock },
+  { value: "2.4M+", label: "Mensajes/mes", icon: BarChart3 },
 ];
 
 /* ═══════════════════════════════════════════
@@ -272,19 +275,7 @@ const IntegrationsPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [hoveredCh, setHoveredCh] = useState<number | null>(null);
-  const [hoveredInt, setHoveredInt] = useState<number | null>(null);
-  const ecoRef = useRef<HTMLDivElement>(null);
-  const [ecoVisible, setEcoVisible] = useState(false);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setEcoVisible(true); },
-      { threshold: 0.05 }
-    );
-    if (ecoRef.current) obs.observe(ecoRef.current);
-    return () => obs.disconnect();
-  }, []);
+  const [expandedCat, setExpandedCat] = useState<string>("productividad");
 
   return (
     <div className="min-h-screen">
@@ -501,135 +492,308 @@ const IntegrationsPage = () => {
         {/* ══════════════════════════════════════
             INTEGRACIONES — Clean table layout
             ══════════════════════════════════════ */}
-        <section className="py-20 md:py-28 px-4 relative overflow-hidden">
+        <section ref={ecoRef} className="py-16 md:py-24 px-4 relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] max-w-xl h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[150px] pointer-events-none" />
 
-          <div className="max-w-5xl mx-auto relative">
-            {/* Header — centered, minimal */}
-            <Reveal className="text-center mb-16">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/50 mb-5">Ecosistema de integraciones</p>
-              <h2 className="text-2xl md:text-[2.5rem] font-bold tracking-tight text-white leading-[1.1] mb-5">
-                Tu stack completo,
-                <span className="text-gradient"> conectado</span>
+          <div className="max-w-6xl mx-auto relative">
+            {/* Header */}
+            <Reveal className="text-center mb-8 md:mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500/15 to-amber-500/15 border border-violet-500/20 text-xs text-violet-300 font-semibold mb-5 backdrop-blur-sm">
+                <Sparkles className="w-3.5 h-3.5" />
+                Ecosistema completo
+              </div>
+              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight leading-[1.15] mb-4">
+                Tu stack completo,{" "}
+                <span className="text-gradient">conectado</span>
               </h2>
-              <p className="text-[14px] text-white/30 max-w-md mx-auto leading-relaxed">
-                Agendamiento, e-commerce, salud y desarrollo. Todo sincronizado con WITHMIA en tiempo real.
+              <p className="text-[14px] md:text-[15px] text-white/35 max-w-lg mx-auto leading-relaxed">
+                Canales de mensajería, agendas, CRMs e integraciones custom
+                <br className="hidden sm:block" />
+                orquestadas por IA en tiempo real.
               </p>
             </Reveal>
 
-            {/* Filter bar — inline pills + search */}
-            <Reveal delay={60} className="mb-8">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex items-center gap-1.5 flex-1 overflow-x-auto pb-1 scrollbar-none">
-                  {tags.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => setActiveTag(tag)}
-                      className={`px-4 py-2 rounded-lg text-[12px] font-medium whitespace-nowrap transition-all duration-300 ${
-                        activeTag === tag
-                          ? "bg-white/[0.08] text-white"
-                          : "text-white/25 hover:text-white/50 hover:bg-white/[0.03]"
-                      }`}
-                    >
-                      {tag}
-                    </button>
+            {/* ── Desktop Constellation ── */}
+            <div className="relative mb-6">
+              <div
+                className={`hidden md:block relative w-full transition-opacity duration-1000 ${ecoVisible ? "opacity-100" : "opacity-0"}`}
+                style={{ aspectRatio: "700 / 450" }}
+              >
+                {/* SVG Web Layer */}
+                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 700 450" fill="none" preserveAspectRatio="xMidYMid meet">
+                  <defs>
+                    <radialGradient id="ecoCenter" cx="50%" cy="50%" r="42%">
+                      <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.05" />
+                      <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+                    </radialGradient>
+                    {pgChNodes.map((ch, i) => (
+                      <linearGradient key={`eg${i}`} id={`ecoG${i}`} x1="350" y1="225" x2={ch.x} y2={ch.y} gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor={ch.color} stopOpacity="0.45" />
+                      </linearGradient>
+                    ))}
+                    <filter id="ecoGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="2" result="blur" />
+                      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                  </defs>
+
+                  {/* Background center glow */}
+                  <circle cx="350" cy="225" r="210" fill="url(#ecoCenter)" />
+
+                  {/* Concentric web rings */}
+                  {pgRingPaths.map((d, i) => {
+                    const colors = ['#a78bfa', '#818cf8', '#6366f1', '#c084fc', '#f59e0b'];
+                    return (
+                      <path
+                        key={`pr${i}`}
+                        d={d}
+                        stroke={colors[i]}
+                        strokeWidth={i === 4 ? 0.5 : 0.3}
+                        strokeOpacity={0.03 + i * 0.01}
+                        fill="none"
+                      />
+                    );
+                  })}
+
+                  {/* Radial strands */}
+                  {pgStrandAngles.map((a, i) => (
+                    <line
+                      key={`ps${i}`}
+                      x1={350 + 12 * Math.cos(a)} y1={225 + 12 * Math.sin(a)}
+                      x2={350 + 215 * Math.cos(a)} y2={225 + 215 * Math.sin(a)}
+                      stroke="white"
+                      strokeWidth={i % 4 === 0 ? 0.3 : 0.15}
+                      strokeOpacity={i % 4 === 0 ? 0.05 : 0.025}
+                    />
                   ))}
-                </div>
-                <div className="relative w-full sm:w-56 shrink-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/15" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar..."
-                    className="w-full pl-9 pr-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05] text-[12px] text-white placeholder:text-white/15 focus:outline-none focus:border-white/[0.12] transition-all duration-300"
-                  />
-                </div>
-              </div>
-            </Reveal>
 
-            {/* Table-style integration list */}
-            <Reveal delay={100}>
-              {/* Column headers */}
-              <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto] gap-6 px-5 py-3 mb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15">Integración</span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15 w-24 text-center">Categoría</span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/15 w-20 text-right">Estado</span>
-              </div>
+                  {/* Knots at intersections */}
+                  {pgKnots.map((k, i) => (
+                    <circle
+                      key={`pk${i}`}
+                      cx={k.x} cy={k.y}
+                      r={i % 5 === 0 ? 1 : 0.6}
+                      fill="white"
+                      fillOpacity={i % 5 === 0 ? 0.07 : 0.025}
+                      style={i % 7 === 0 ? { animation: `ecoPulse ${3 + (i % 4)}s ease-in-out infinite`, animationDelay: `${(i * 0.3) % 5}s` } : undefined}
+                    />
+                  ))}
 
-              <div className="border border-white/[0.05] rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-                {filtered.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.name}
-                      className="group grid sm:grid-cols-[1fr_auto_auto] gap-4 sm:gap-6 items-center px-5 py-4 transition-colors duration-300 hover:bg-white/[0.02] cursor-pointer"
-                    >
-                      {/* Left: icon + name + desc */}
-                      <div className="flex items-center gap-4 min-w-0">
+                  {/* Center pulsing beacon */}
+                  <circle cx="350" cy="225" r="8" fill="#a78bfa" fillOpacity="0.04">
+                    <animate attributeName="r" values="6;12;6" dur="3s" repeatCount="indefinite" />
+                    <animate attributeName="fill-opacity" values="0.04;0.08;0.04" dur="3s" repeatCount="indefinite" />
+                  </circle>
+
+                  {/* Center → Channel connection lines */}
+                  {pgChNodes.map((ch, i) => (
+                    <g key={`cl${i}`}>
+                      <line
+                        x1="350" y1="225" x2={ch.x} y2={ch.y}
+                        stroke={ch.color}
+                        strokeWidth={hoveredCh === i ? 2 : 1}
+                        strokeOpacity={hoveredCh === i ? 0.06 : 0.02}
+                        className="transition-all duration-300"
+                      />
+                      <line
+                        x1="350" y1="225" x2={ch.x} y2={ch.y}
+                        stroke={`url(#ecoG${i})`}
+                        strokeWidth={hoveredCh === i ? 1.2 : 0.6}
+                        strokeOpacity={hoveredCh === i ? 0.5 : 0.18}
+                        strokeDasharray="3 4"
+                        className="transition-all duration-300"
+                        style={{ animation: `ecoDash 3.5s linear infinite`, animationDelay: `${i * 0.5}s` }}
+                      />
+                    </g>
+                  ))}
+
+                  {/* Integration → nearest channel curved connections */}
+                  {pgIntNodes.map((node, i) => {
+                    let minD = Infinity, nearest = pgChNodes[0];
+                    pgChNodes.forEach(ch => {
+                      const d = Math.hypot(ch.x - node.x, ch.y - node.y);
+                      if (d < minD) { minD = d; nearest = ch; }
+                    });
+                    const mx = ((node.x + nearest.x) / 2) * 0.88 + 350 * 0.12;
+                    const my = ((node.y + nearest.y) / 2) * 0.88 + 225 * 0.12;
+                    return (
+                      <path
+                        key={`ip${i}`}
+                        d={`M ${node.x.toFixed(1)} ${node.y.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${nearest.x.toFixed(1)} ${nearest.y.toFixed(1)}`}
+                        stroke={node.color}
+                        strokeWidth={hoveredInt === i ? 0.8 : 0.35}
+                        strokeOpacity={hoveredInt === i ? 0.35 : 0.08}
+                        fill="none"
+                        strokeDasharray="2 4"
+                        className="transition-all duration-300"
+                        style={{ animation: `ecoDash 5s linear infinite`, animationDelay: `${i * 0.3}s` }}
+                      />
+                    );
+                  })}
+
+                  {/* Data flow particles along center→channel paths */}
+                  {pgChNodes.map((ch, i) => (
+                    <g key={`fp${i}`}>
+                      <path id={`ef${i}`} d={`M 350 225 L ${ch.x} ${ch.y}`} fill="none" stroke="none" />
+                      <circle r="1.5" fill={ch.color} fillOpacity="0.5">
+                        <animateMotion dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`}>
+                          <mpath href={`#ef${i}`} />
+                        </animateMotion>
+                        <animate attributeName="fill-opacity" values="0;0.5;0.5;0" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
+                        <animate attributeName="r" values="0.5;1.5;1.5;0.5" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
+                      </circle>
+                    </g>
+                  ))}
+                </svg>
+
+                {/* Center hub node (WITHMIA logo) */}
+                <div className="absolute z-20" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
+                  <div className="relative">
+                    <div className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-violet-500/[0.05] to-amber-500/[0.03] animate-pulse" style={{ animationDuration: '4s' }} />
+                    <div className="relative w-[60px] h-[60px] lg:w-[68px] lg:h-[68px] rounded-2xl bg-gradient-to-br from-violet-500/20 via-[#0a0a12] to-amber-500/15 border border-white/[0.12] flex items-center justify-center overflow-hidden">
+                      <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-[40px] h-[40px] lg:w-[46px] lg:h-[46px] object-contain pointer-events-none" />
+                    </div>
+                    <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-[3px] rounded-full bg-emerald-400/[0.08] border border-emerald-400/20">
+                      <div className="w-[5px] h-[5px] rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[7px] font-mono text-emerald-400/90 font-bold tracking-wider">LIVE</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Channel nodes (inner ring) */}
+                {pgChNodes.map((ch, i) => (
+                  <div
+                    key={`cn${i}`}
+                    className="absolute z-10 group cursor-default"
+                    style={{ left: `${(ch.x / 700) * 100}%`, top: `${(ch.y / 450) * 100}%`, transform: "translate(-50%, -50%)" }}
+                    onMouseEnter={() => setHoveredCh(i)}
+                    onMouseLeave={() => setHoveredCh(null)}
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="relative">
                         <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-400 group-hover:scale-105"
+                          className="absolute -inset-1.5 rounded-xl transition-opacity duration-300"
+                          style={{ background: `radial-gradient(circle, ${ch.color}15, transparent 70%)`, opacity: hoveredCh === i ? 1 : 0 }}
+                        />
+                        <div
+                          className="relative w-[44px] h-[44px] lg:w-[50px] lg:h-[50px] rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
                           style={{
-                            backgroundColor: `${item.color}0c`,
-                            border: `1px solid ${item.color}15`,
+                            backgroundColor: hoveredCh === i ? `${ch.color}18` : `${ch.color}0c`,
+                            border: `1px solid ${hoveredCh === i ? `${ch.color}45` : `${ch.color}15`}`,
                           }}
                         >
-                          <Icon className="w-[17px] h-[17px]" style={{ color: `${item.color}aa` }} />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-[13px] font-semibold text-white/75 group-hover:text-white transition-colors duration-300 mb-0.5">
-                            {item.name}
-                          </h3>
-                          <p className="text-[11px] text-white/20 leading-relaxed truncate group-hover:text-white/30 transition-colors duration-300">
-                            {item.desc}
-                          </p>
+                          <img
+                            src={ch.image}
+                            alt={ch.name}
+                            className="w-[19px] h-[19px] lg:w-[22px] lg:h-[22px] object-contain"
+                            style={(ch as any).invert ? { filter: "brightness(0) invert(1)" } : undefined}
+                          />
                         </div>
                       </div>
-
-                      {/* Center: category tag */}
-                      <span
-                        className="text-[10px] font-medium px-2.5 py-1 rounded-md w-24 text-center whitespace-nowrap"
-                        style={{ backgroundColor: `${item.color}08`, color: `${item.color}60` }}
-                      >
-                        {item.tag}
+                      <span className={`text-[9px] font-bold tracking-wide transition-colors duration-200 ${hoveredCh === i ? "text-white/80" : "text-white/35"}`}>
+                        {ch.name}
                       </span>
+                    </div>
+                  </div>
+                ))}
 
-                      {/* Right: status */}
-                      <div className="flex items-center justify-end gap-2 w-20">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
-                        <span className="text-[10px] text-white/20 font-medium">Activa</span>
+                {/* Integration nodes (outer ring) */}
+                {pgIntNodes.map((node, i) => {
+                  const Icon = node.icon;
+                  const cosA = Math.cos(node.a);
+                  const isLeft = cosA < -0.2;
+                  return (
+                    <div
+                      key={`in${i}`}
+                      className={`absolute z-10 group cursor-default transition-all duration-500 ${ecoVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
+                      style={{
+                        left: `${(node.x / 700) * 100}%`,
+                        top: `${(node.y / 450) * 100}%`,
+                        transform: "translate(-50%, -50%)",
+                        transitionDelay: `${150 + i * 50}ms`,
+                      }}
+                      onMouseEnter={() => setHoveredInt(i)}
+                      onMouseLeave={() => setHoveredInt(null)}
+                    >
+                      <div className={`flex items-center gap-2 ${isLeft ? "flex-row-reverse" : ""}`}>
+                        <div className="relative">
+                          <div
+                            className="absolute -inset-1 rounded-lg transition-opacity duration-300"
+                            style={{ background: `radial-gradient(circle, ${node.color}12, transparent 70%)`, opacity: hoveredInt === i ? 1 : 0 }}
+                          />
+                          <div
+                            className="relative w-[34px] h-[34px] lg:w-[38px] lg:h-[38px] rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+                            style={{
+                              backgroundColor: hoveredInt === i ? `${node.color}14` : `${node.color}0a`,
+                              border: `1px solid ${hoveredInt === i ? `${node.color}40` : `${node.color}12`}`,
+                            }}
+                          >
+                            <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" style={{ color: node.color }} />
+                          </div>
+                        </div>
+                        <div className={`min-w-0 ${isLeft ? "text-right" : ""}`}>
+                          <p className="text-[10px] font-bold text-white/45 group-hover:text-white/90 whitespace-nowrap transition-colors leading-tight">
+                            {node.name}
+                          </p>
+                          <p className="text-[8px] text-white/15 group-hover:text-white/40 whitespace-nowrap transition-colors">
+                            {pgIntShortDescs[node.name]}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {filtered.length === 0 && (
-                <div className="text-center py-16 border border-white/[0.05] rounded-2xl">
-                  <Search className="w-5 h-5 text-white/10 mx-auto mb-3" />
-                  <p className="text-white/25 text-sm mb-1">Sin resultados</p>
-                  <button
-                    onClick={() => { setSearch(""); setActiveTag("Todos"); }}
-                    className="text-amber-400/50 text-[11px] mt-1 hover:text-amber-400 transition-colors"
-                  >
-                    Limpiar filtros
-                  </button>
+              {/* ── Mobile — grouped cards ── */}
+              <div className="md:hidden space-y-4">
+                <div className="flex justify-center gap-2 mb-3">
+                  {channels.map((ch, i) => (
+                    <div
+                      key={i}
+                      className="w-11 h-11 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${ch.color}0c`, border: `1px solid ${ch.color}15` }}
+                    >
+                      <img
+                        src={ch.image}
+                        alt={ch.name}
+                        className="w-4 h-4 object-contain"
+                        style={(ch as any).invert ? { filter: "brightness(0) invert(1)" } : undefined}
+                      />
+                    </div>
+                  ))}
                 </div>
-              )}
-            </Reveal>
-
-            {/* Bottom note */}
-            <Reveal delay={120}>
-              <div className="flex items-center justify-between mt-8 px-1">
-                <p className="text-[11px] text-white/15">
-                  {filtered.length} integración{filtered.length !== 1 ? "es" : ""} disponible{filtered.length !== 1 ? "s" : ""}
-                </p>
-                <a href="/contacto" className="text-[11px] text-white/25 hover:text-amber-400/70 transition-colors duration-300 flex items-center gap-1.5">
-                  ¿No encuentras tu herramienta?
-                  <ArrowRight className="w-3 h-3" />
-                </a>
+                {mobileGroups.map((group) => (
+                  <div key={group.label} className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3.5">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-0.5 h-3 rounded-full" style={{ background: `linear-gradient(to bottom, ${group.accent}80, transparent)` }} />
+                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.15em]">{group.label}</span>
+                      </div>
+                      <span className="text-[7px] font-mono text-emerald-400/50">{group.items.length} activos</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.name} className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01]">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${item.color}0c`, border: `1px solid ${item.color}12` }}>
+                              <Icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold text-white/70 truncate">{item.name}</p>
+                              <p className="text-[8px] text-white/20 truncate">{pgIntShortDescs[item.name]}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </Reveal>
+            </div>
           </div>
         </section>
 
@@ -696,6 +860,11 @@ const IntegrationsPage = () => {
         @keyframes ecoDash {
           from { stroke-dashoffset: 7; }
           to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes ecoPulse {
+          0%, 100% { opacity: 0.04; transform: scale(1); }
+          50% { opacity: 0.12; transform: scale(1.3); }
         }
 
         @keyframes intg-pipeline-flow {

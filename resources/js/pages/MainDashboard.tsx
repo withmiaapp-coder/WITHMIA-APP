@@ -161,7 +161,9 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [helpMenuPos, setHelpMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ bottom: number; left: number; width: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
   const { hasTheme, isDark, currentTheme } = useTheme();
 
@@ -187,7 +189,13 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
   // Cerrar al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Check if click is outside both the trigger and the fixed dropdown
+      const isOutside = dropdownRef.current && !dropdownRef.current.contains(target);
+      // Also check if the click is on the fixed dropdown itself (which is outside dropdownRef)
+      const fixedMenu = document.querySelector('[data-user-menu-dropdown]');
+      const isOnFixedMenu = fixedMenu && fixedMenu.contains(target);
+      if (isOutside && !isOnFixedMenu) {
         setIsOpen(false);
         setShowHelpSubmenu(false);
       }
@@ -317,12 +325,15 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Dropdown Menu - Aparece ARRIBA */}
-      {isOpen && (
+      {/* Dropdown Menu - FIXED para evitar stacking context del sidebar */}
+      {isOpen && menuPos && (
         <div 
-          className={`absolute bottom-full left-0 right-0 mb-2 rounded-2xl shadow-2xl border z-[100] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200') : ''}`}
+          data-user-menu-dropdown
+          className={`fixed rounded-2xl shadow-2xl border z-[9999] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200') : ''}`}
           style={{
-            minWidth: isCollapsed ? '320px' : 'auto',
+            width: isCollapsed ? 320 : menuPos.width,
+            left: isCollapsed ? menuPos.left : menuPos.left,
+            bottom: window.innerHeight - menuPos.bottom + 8,
             animation: 'slideUpMenu 0.2s ease-out',
             overflow: 'visible',
             ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
@@ -423,6 +434,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
 
       {/* User Profile Button */}
       <div 
+        ref={triggerRef}
         className={`p-3 rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${!t ? (isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-neutral-200') : ''}`}
         style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
       >
@@ -431,7 +443,12 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
             if (isCollapsed) {
               onToggleCollapse();
             } else {
+              if (!isOpen && triggerRef.current) {
+                const rect = triggerRef.current.getBoundingClientRect();
+                setMenuPos({ bottom: rect.top, left: rect.left, width: rect.width });
+              }
               setIsOpen(!isOpen);
+              setShowHelpSubmenu(false);
             }
           }}
           className={`flex items-center w-full rounded-lg px-2 py-1.5 transition-all duration-200 ${isDark ? 'hover:bg-white/5' : 'hover:bg-neutral-50'}`}
