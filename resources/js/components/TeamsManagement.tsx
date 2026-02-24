@@ -45,12 +45,12 @@ const TeamModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      bg: isDark ? '#1e1e2e' : '#ffffff',
       border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
-      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
-      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       accent: 'var(--theme-accent)',
     };
   }, [hasTheme, isDark]);
@@ -185,12 +185,12 @@ const AddMembersModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
-      border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      bg: isDark ? '#1e1e2e' : '#ffffff',
+      border: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
       textMuted: 'var(--theme-text-muted)',
-      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
       accent: 'var(--theme-accent)',
     };
   }, [hasTheme, isDark]);
@@ -349,13 +349,13 @@ const InviteMemberModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
-      border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      bg: isDark ? '#1e1e2e' : '#ffffff',
+      border: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
       textMuted: 'var(--theme-text-muted)',
-      inputBg: isDark ? 'rgba(255,255,255,0.04)' : 'var(--theme-content-card-bg)',
-      inputBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
+      inputBorder: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       accent: 'var(--theme-accent)',
       accentLight: 'var(--theme-accent-light)',
     };
@@ -1119,7 +1119,7 @@ const TeamsManagement: React.FC = () => {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className={`rounded-xl shadow-2xl w-full max-w-sm p-6 animate-scale-in ${!t ? 'bg-white' : ''}`}
-            style={t ? { background: t.panelBg, border: '1px solid', borderColor: t.panelBorder } : undefined}
+            style={t ? { background: isDark ? '#1e1e2e' : '#ffffff', border: '1px solid', borderColor: isDark ? t.panelBorder : '#e5e7eb' } : undefined}
           >
             <div className="flex items-center space-x-3 mb-4">
               <div className={`p-3 rounded-full ${!t ? 'bg-red-100' : ''}`}

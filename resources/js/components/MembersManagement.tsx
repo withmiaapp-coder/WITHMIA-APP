@@ -86,14 +86,14 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      modalBg: 'var(--theme-content-card-bg)',
-      border: 'var(--theme-content-card-border)',
+      modalBg: isDark ? '#1e1e2e' : '#ffffff',
+      border: isDark ? 'var(--theme-content-card-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
       textMuted: 'var(--theme-text-muted)',
-      hoverBg: isDark ? 'rgba(255,255,255,0.05)' : undefined,
-      expandedBg: isDark ? 'rgba(255,255,255,0.03)' : undefined,
-      inputBg: 'var(--theme-content-bg)',
+      hoverBg: isDark ? 'rgba(255,255,255,0.05)' : '#f9fafb',
+      expandedBg: isDark ? 'rgba(255,255,255,0.03)' : '#f9fafb',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb',
       accent: 'var(--theme-accent)',
       accentLight: 'var(--theme-accent-light)',
     };
