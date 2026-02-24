@@ -492,22 +492,6 @@ const IntegrationsPage = () => {
               </p>
             </Reveal>
 
-            {/* Platform stats strip */}
-            <Reveal delay={60} className="mb-16">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {platformStats.map((stat, i) => {
-                  const Icon = stat.icon;
-                  return (
-                    <div key={i} className="text-center p-5 rounded-2xl border border-white/[0.04] bg-white/[0.015] group hover:border-white/[0.08] transition-all duration-500">
-                      <Icon className="w-4 h-4 text-white/15 mx-auto mb-3 group-hover:text-amber-400/50 transition-colors duration-500" />
-                      <p className="text-xl md:text-2xl font-bold text-white/80 font-mono tracking-tight mb-1">{stat.value}</p>
-                      <p className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">{stat.label}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </Reveal>
-
             {/* Category navigation + expanded content */}
             <div className="grid lg:grid-cols-[280px_1fr] gap-8">
               {/* Left sidebar — category navigation */}
@@ -671,67 +655,174 @@ const IntegrationsPage = () => {
               </div>
             </div>
 
-            {/* How it works — 3-step flow */}
-            <Reveal delay={80} className="mt-20">
-              <div className="text-center mb-12">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400/40 mb-4">Cómo funciona</p>
-                <h3 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+            {/* How it works — Premium 3-step flow */}
+            <Reveal delay={80} className="mt-24">
+              <div className="text-center mb-14">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-violet-400/40 mb-4">Implementación</p>
+                <h3 className="text-xl md:text-2xl font-bold text-white tracking-tight mb-3">
                   Conecta en <span className="text-gradient">3 pasos</span>
                 </h3>
+                <p className="text-[13px] text-white/20 max-w-md mx-auto leading-relaxed">
+                  Sin código, sin fricción. De cero a producción en menos de 5 minutos.
+                </p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6 mb-12">
-                {[
-                  { step: "01", title: "Selecciona", desc: "Elige la integración que necesitas desde tu panel de WITHMIA.", icon: Zap },
-                  { step: "02", title: "Autoriza", desc: "Conecta tu cuenta con OAuth o API key. Sin código, sin configuración compleja.", icon: RefreshCw },
-                  { step: "03", title: "Automatiza", desc: "La IA orquesta flujos entre canales e integraciones automáticamente.", icon: Bot },
-                ].map((s, i) => (
-                  <div key={i} className="relative p-6 rounded-2xl border border-white/[0.04] bg-white/[0.01] group hover:border-white/[0.07] transition-all duration-500">
-                    {/* Step number */}
-                    <span className="text-[40px] font-black text-white/[0.03] absolute top-4 right-5 font-mono leading-none select-none">{s.step}</span>
+              <div className="relative">
+                {/* Connecting timeline (desktop) */}
+                <div className="hidden md:block absolute top-[52px] left-[16.6%] right-[16.6%] h-px">
+                  <div className="w-full h-full bg-gradient-to-r from-violet-500/10 via-amber-400/15 to-emerald-400/10" />
+                  {/* Animated pulse along the line */}
+                  <div className="absolute top-0 left-0 w-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" style={{ animation: "intg-timeline-flow 3s ease-in-out infinite" }} />
+                </div>
 
-                    <s.icon className="w-5 h-5 text-violet-400/40 mb-4 group-hover:text-violet-400/70 transition-colors duration-500" />
-                    <h4 className="text-[14px] font-bold text-white/70 mb-2 group-hover:text-white transition-colors duration-300">{s.title}</h4>
-                    <p className="text-[12px] text-white/20 leading-[1.7] group-hover:text-white/30 transition-colors duration-500">{s.desc}</p>
+                <div className="grid md:grid-cols-3 gap-5">
+                  {[
+                    {
+                      step: "01",
+                      title: "Selecciona",
+                      desc: "Elige la integración desde tu panel. Filtros por industria y categoría para encontrar exactamente lo que necesitas.",
+                      icon: Zap,
+                      accent: "#8B5CF6",
+                      detail: "Panel de control",
+                    },
+                    {
+                      step: "02",
+                      title: "Autoriza",
+                      desc: "Conecta con OAuth 2.0 o API key. Un clic, sin configuración manual, sin necesidad de desarrolladores.",
+                      icon: RefreshCw,
+                      accent: "#F59E0B",
+                      detail: "OAuth / API Key",
+                    },
+                    {
+                      step: "03",
+                      title: "Automatiza",
+                      desc: "La IA orquesta flujos entre todos tus canales e integraciones. Escala sin intervención humana.",
+                      icon: Bot,
+                      accent: "#10B981",
+                      detail: "IA Orquestadora",
+                    },
+                  ].map((s, i) => (
+                    <div key={i} className="relative group">
+                      {/* Step circle on timeline */}
+                      <div className="flex justify-center mb-6">
+                        <div className="relative">
+                          <div
+                            className="w-[42px] h-[42px] rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110"
+                            style={{
+                              background: `linear-gradient(135deg, ${s.accent}18, ${s.accent}08)`,
+                              border: `1.5px solid ${s.accent}25`,
+                            }}
+                          >
+                            <s.icon className="w-4.5 h-4.5 transition-colors duration-500" style={{ color: `${s.accent}90` }} />
+                          </div>
+                          {/* Pulse ring on hover */}
+                          <div
+                            className="absolute -inset-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                            style={{ border: `1px solid ${s.accent}15` }}
+                          />
+                          {/* Step badge */}
+                          <div
+                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold font-mono"
+                            style={{
+                              backgroundColor: `${s.accent}20`,
+                              color: `${s.accent}cc`,
+                              border: `1px solid ${s.accent}30`,
+                            }}
+                          >
+                            {s.step}
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* Connecting line (not last) */}
-                    {i < 2 && (
-                      <div className="hidden md:block absolute top-1/2 -right-3 w-6 h-px bg-white/[0.06]" />
-                    )}
-                  </div>
-                ))}
+                      {/* Card */}
+                      <div
+                        className="relative p-6 rounded-2xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] hover:border-white/[0.08] transition-all duration-500 text-center"
+                      >
+                        {/* Top accent */}
+                        <div
+                          className="absolute top-0 left-8 right-8 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                          style={{ background: `linear-gradient(90deg, transparent, ${s.accent}25, transparent)` }}
+                        />
+
+                        <h4 className="text-[15px] font-bold text-white/75 mb-2 group-hover:text-white transition-colors duration-300">
+                          {s.title}
+                        </h4>
+                        <p className="text-[12px] text-white/20 leading-[1.8] mb-4 group-hover:text-white/35 transition-colors duration-500">
+                          {s.desc}
+                        </p>
+
+                        {/* Detail tag */}
+                        <div
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider"
+                          style={{
+                            backgroundColor: `${s.accent}08`,
+                            color: `${s.accent}70`,
+                            border: `1px solid ${s.accent}12`,
+                          }}
+                        >
+                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: `${s.accent}80` }} />
+                          {s.detail}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </Reveal>
 
-            {/* Bottom CTA */}
-            <Reveal delay={100}>
-              <div className="relative rounded-2xl border border-white/[0.05] bg-white/[0.015] p-8 md:p-10 overflow-hidden">
-                {/* Gradient accent */}
+            {/* Bottom CTA — enterprise grade */}
+            <Reveal delay={100} className="mt-16">
+              <div className="relative rounded-2xl border border-white/[0.05] bg-gradient-to-br from-white/[0.02] to-white/[0.005] overflow-hidden">
+                {/* Top accent line */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
-                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[300px] h-[200px] bg-amber-500/[0.04] rounded-full blur-[80px] pointer-events-none" />
+                {/* Ambient glow */}
+                <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-amber-500/[0.03] rounded-full blur-[100px] pointer-events-none" />
+                <div className="absolute -bottom-16 -right-16 w-[200px] h-[200px] bg-violet-500/[0.03] rounded-full blur-[80px] pointer-events-none" />
 
-                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="text-center md:text-left">
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                      ¿No encuentras tu herramienta?
-                    </h3>
-                    <p className="text-[13px] text-white/30 max-w-md">
-                      Desarrollamos integraciones custom para tu negocio. API REST, webhooks bidireccionales y conectores a medida.
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-                    <a href="/contacto">
-                      <button className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
-                        Solicitar integración
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </button>
-                    </a>
-                    <a href="https://app.withmia.com/docs" target="_blank" rel="noopener noreferrer">
-                      <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] text-[13px] text-white/50 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
-                        Ver API Docs
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    </a>
+                <div className="relative p-8 md:p-12">
+                  <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                    {/* Left content */}
+                    <div className="flex-1 text-center lg:text-left">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/[0.06] border border-amber-400/10 mb-5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60 animate-pulse" style={{ animationDuration: "2.5s" }} />
+                        <span className="text-[9px] font-semibold text-amber-400/60 uppercase tracking-wider">Integraciones custom</span>
+                      </div>
+                      <h3 className="text-lg md:text-2xl font-bold text-white mb-3 tracking-tight">
+                        ¿No encuentras tu herramienta?
+                      </h3>
+                      <p className="text-[13px] text-white/30 max-w-lg leading-relaxed mb-4">
+                        Nuestro equipo desarrolla integraciones a medida. API REST documentada, webhooks bidireccionales con retry automático y conectores enterprise.
+                      </p>
+                      {/* Trust signals */}
+                      <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                        {[
+                          { label: "API REST", icon: Webhook },
+                          { label: "OAuth 2.0", icon: Shield },
+                          { label: "Webhooks", icon: RefreshCw },
+                        ].map((t, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[10px] text-white/20">
+                            <t.icon className="w-3 h-3 text-white/15" />
+                            <span>{t.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right actions */}
+                    <div className="flex flex-col gap-3 shrink-0 w-full sm:w-auto">
+                      <a href="/contacto">
+                        <button className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
+                          Solicitar integración
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </a>
+                      <a href="https://app.withmia.com/docs" target="_blank" rel="noopener noreferrer">
+                        <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/[0.08] text-[13px] text-white/40 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
+                          Documentación API
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -755,21 +846,21 @@ const IntegrationsPage = () => {
           pointer-events: none;
         }
         .intg-aurora-1 {
-          width: 550px; height: 550px;
-          top: -200px; left: -80px;
-          background: radial-gradient(circle, rgba(167,139,250,0.12), transparent 70%);
+          width: 500px; height: 500px;
+          top: -250px; left: -80px;
+          background: radial-gradient(circle, rgba(167,139,250,0.08), transparent 70%);
           animation: intg-drift-1 18s ease-in-out infinite alternate;
         }
         .intg-aurora-2 {
-          width: 450px; height: 450px;
-          top: 100px; right: -150px;
-          background: radial-gradient(circle, rgba(245,158,11,0.08), transparent 70%);
+          width: 400px; height: 400px;
+          top: -50px; right: -150px;
+          background: radial-gradient(circle, rgba(245,158,11,0.05), transparent 70%);
           animation: intg-drift-2 22s ease-in-out infinite alternate;
         }
         .intg-aurora-3 {
-          width: 400px; height: 400px;
-          top: 250px; left: 40%;
-          background: radial-gradient(circle, rgba(34,211,238,0.06), transparent 70%);
+          width: 350px; height: 350px;
+          top: 50px; left: 40%;
+          background: radial-gradient(circle, rgba(34,211,238,0.03), transparent 70%);
           animation: intg-drift-3 20s ease-in-out infinite alternate;
         }
 
@@ -802,6 +893,13 @@ const IntegrationsPage = () => {
         @keyframes intg-pipeline-flow {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(400%); }
+        }
+
+        @keyframes intg-timeline-flow {
+          0% { left: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { left: 100%; opacity: 0; }
         }
       `}</style>
     </div>

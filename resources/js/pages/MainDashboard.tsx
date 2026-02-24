@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { flushSync } from 'react-dom';
+import { flushSync, createPortal } from 'react-dom';
 import ConversationsInterface from '../components/ConversationsInterface';
 import TeamsManagement from '../components/TeamsManagement';
 import WhatsAppQRModal from '../components/WhatsAppQRModal';
@@ -195,10 +195,12 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
       const target = event.target as Node;
       // Check if click is outside both the trigger and the fixed dropdown
       const isOutside = dropdownRef.current && !dropdownRef.current.contains(target);
-      // Also check if the click is on the fixed dropdown itself (which is outside dropdownRef)
+      // Also check if the click is on the portal-rendered dropdown or help submenu
       const fixedMenu = document.querySelector('[data-user-menu-dropdown]');
+      const helpSubmenu = document.querySelector('[data-user-help-submenu]');
       const isOnFixedMenu = fixedMenu && fixedMenu.contains(target);
-      if (isOutside && !isOnFixedMenu) {
+      const isOnHelpSubmenu = helpSubmenu && helpSubmenu.contains(target);
+      if (isOutside && !isOnFixedMenu && !isOnHelpSubmenu) {
         setIsOpen(false);
         setShowHelpSubmenu(false);
       }
@@ -328,8 +330,8 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Dropdown Menu - FIXED para evitar stacking context del sidebar */}
-      {isOpen && menuPos && (
+      {/* Dropdown Menu - Portal to body to escape sidebar stacking context */}
+      {isOpen && menuPos && createPortal(
         <div 
           data-user-menu-dropdown
           className={`fixed rounded-2xl shadow-2xl border z-[9999] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-neutral-200') : ''}`}
@@ -389,50 +391,53 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                       />
                     )}
                   </button>
-
-                  {/* Submenú de Ayuda - flyout a la derecha con position fixed */}
-                  {item.hasSubmenu && showHelpSubmenu && helpMenuPos && (
-                    <div 
-                      className={`fixed rounded-xl shadow-2xl border min-w-[220px] z-[9999] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200') : ''}`}
-                      style={{ 
-                        animation: 'slideInRight 0.2s ease-out',
-                        top: helpMenuPos.top,
-                        left: helpMenuPos.left,
-                        ...(t ? { backgroundColor: t.dropdownBg, borderColor: t.dropdownBorder } : {})
-                      }}
-                    >
-                      <div className="py-2">
-                        {helpSubmenuItems.map((subItem, subIndex) => {
-                          const SubIcon = subItem.icon;
-                          return (
-                            <a
-                              key={subIndex}
-                              href={subItem.href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => {
-                                setIsOpen(false);
-                                setShowHelpSubmenu(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
-                              style={t ? { color: t.textSec } : undefined}
-                            >
-                              <SubIcon 
-                                className="w-4 h-4"
-                                style={t ? { color: t.textMuted } : undefined}
-                              />
-                              <span className="text-sm font-medium">{subItem.label}</span>
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Submenú de Ayuda - Portal to body */}
+      {showHelpSubmenu && helpMenuPos && createPortal(
+        <div 
+          data-user-help-submenu
+          className={`fixed rounded-xl shadow-2xl border min-w-[220px] z-[10000] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200') : ''}`}
+          style={{ 
+            animation: 'slideInRight 0.2s ease-out',
+            top: helpMenuPos.top,
+            left: helpMenuPos.left,
+            ...(t ? { backgroundColor: t.dropdownBg, borderColor: t.dropdownBorder } : {})
+          }}
+        >
+          <div className="py-2">
+            {helpSubmenuItems.map((subItem, subIndex) => {
+              const SubIcon = subItem.icon;
+              return (
+                <a
+                  key={subIndex}
+                  href={subItem.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setShowHelpSubmenu(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
+                  style={t ? { color: t.textSec } : undefined}
+                >
+                  <SubIcon 
+                    className="w-4 h-4"
+                    style={t ? { color: t.textMuted } : undefined}
+                  />
+                  <span className="text-sm font-medium">{subItem.label}</span>
+                </a>
+              );
+            })}
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* User Profile Button */}
