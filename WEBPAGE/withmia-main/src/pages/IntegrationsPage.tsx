@@ -14,7 +14,7 @@ import {
   Webhook,
   Database,
   CheckCircle2,
-  Search,
+  Sparkles,
   ExternalLink,
 } from "lucide-react";
 
@@ -113,7 +113,67 @@ const integrations = [
   { name: "MySQL", desc: "Conecta bases de datos para consultas automáticas y actualización de registros.", icon: Database, tag: "Desarrollo", color: "#00758F" },
 ];
 
-const tags = ["Todos", "Productividad", "Salud", "E-commerce", "Desarrollo"];
+/* ═══════════════════════════════════════════
+   Constellation geometry
+   ═══════════════════════════════════════════ */
+const ECO = { W: 700, H: 450, CX: 350, CY: 225 };
+const CH_R = 95;
+const INT_R = 200;
+const RING_RADII = [28, 55, 95, 145, 200];
+const NUM_STRANDS = 20;
+
+const pgStrandAngles = Array.from({ length: NUM_STRANDS }, (_, i) =>
+  (Math.PI * 2 * i) / NUM_STRANDS - Math.PI / 2
+);
+
+const pgChNodes = channels.map((ch, i) => {
+  const a = (Math.PI * 2 * i) / channels.length - Math.PI / 2;
+  return { ...ch, x: ECO.CX + CH_R * Math.cos(a), y: ECO.CY + CH_R * Math.sin(a), a };
+});
+
+const pgIntShortDescs: Record<string, string> = {
+  "AgendaPro": "Citas y reservas",
+  "Calendly": "Reuniones automáticas",
+  "Google Calendar": "Agenda sincronizada",
+  "Outlook": "Microsoft Calendar",
+  "Reservo": "Reservas online",
+  "Dentalink": "Clínicas dentales",
+  "Medilink": "Gestión médica",
+  "Shopify": "E-commerce sync",
+  "WooCommerce": "Tienda WordPress",
+  "MercadoLibre": "Marketplace",
+  "API REST": "Webhooks custom",
+  "MySQL": "Base de datos",
+};
+
+const pgIntNodes = integrations.map((int, i) => {
+  const a = (Math.PI * 2 * i) / integrations.length - Math.PI / 2 + Math.PI / 12;
+  return { ...int, x: ECO.CX + INT_R * Math.cos(a), y: ECO.CY + INT_R * Math.sin(a), a };
+});
+
+const pgRingPaths = RING_RADII.map((baseR, ri) =>
+  Array.from({ length: NUM_STRANDS + 1 }, (_, i) => {
+    const a = pgStrandAngles[i % NUM_STRANDS];
+    const wobble = Math.sin(a * 3 + ri * 1.7) * (baseR * 0.025);
+    const r = baseR + wobble;
+    return `${i === 0 ? "M" : "L"} ${(ECO.CX + r * Math.cos(a)).toFixed(1)} ${(ECO.CY + r * Math.sin(a)).toFixed(1)}`;
+  }).join(" ") + " Z"
+);
+
+const pgKnots = RING_RADII.flatMap((baseR, ri) =>
+  pgStrandAngles.map(a => {
+    const wobble = Math.sin(a * 3 + ri * 1.7) * (baseR * 0.025);
+    const r = baseR + wobble;
+    return { x: +(ECO.CX + r * Math.cos(a)).toFixed(1), y: +(ECO.CY + r * Math.sin(a)).toFixed(1) };
+  })
+);
+
+const mobileGroups = [
+  { label: "Productividad", items: integrations.filter(i => i.tag === "Productividad"), accent: "#3B82F6" },
+  { label: "Salud", items: integrations.filter(i => i.tag === "Salud"), accent: "#F43F5E" },
+  { label: "E-commerce", items: integrations.filter(i => i.tag === "E-commerce"), accent: "#F59E0B" },
+  { label: "Desarrollo", items: integrations.filter(i => i.tag === "Desarrollo"), accent: "#10B981" },
+];
 
 /* ═══════════════════════════════════════════
    Orbiting logos (visual for hero)
@@ -212,15 +272,19 @@ const IntegrationsPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  const [activeTag, setActiveTag] = useState("Todos");
-  const [search, setSearch] = useState("");
-  const filtered = integrations.filter((i) => {
-    const matchTag = activeTag === "Todos" || i.tag === activeTag;
-    const matchSearch =
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.desc.toLowerCase().includes(search.toLowerCase());
-    return matchTag && matchSearch;
-  });
+  const [hoveredCh, setHoveredCh] = useState<number | null>(null);
+  const [hoveredInt, setHoveredInt] = useState<number | null>(null);
+  const ecoRef = useRef<HTMLDivElement>(null);
+  const [ecoVisible, setEcoVisible] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setEcoVisible(true); },
+      { threshold: 0.05 }
+    );
+    if (ecoRef.current) obs.observe(ecoRef.current);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -627,6 +691,11 @@ const IntegrationsPage = () => {
         @keyframes orbit-float {
           0% { transform: translate(-50%, -50%) translateY(0); }
           100% { transform: translate(-50%, -50%) translateY(-8px); }
+        }
+
+        @keyframes ecoDash {
+          from { stroke-dashoffset: 7; }
+          to { stroke-dashoffset: 0; }
         }
 
         @keyframes intg-pipeline-flow {

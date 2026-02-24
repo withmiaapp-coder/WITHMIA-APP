@@ -520,12 +520,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     delay?: number;
   }> = ({ title, value, icon, color, trend, subtitle, delay = 0 }) => (
     <div
-      className={`group relative backdrop-blur-sm rounded-2xl p-5 border transition-all duration-500 hover:shadow-xl hover:-translate-y-1 ${!t ? 'bg-white/80 border-gray-100/60 hover:border-gray-200/80 hover:shadow-gray-200/40' : ''}`}
+      className={`group relative rounded-2xl p-5 border transition-all duration-500 hover:shadow-xl hover:-translate-y-1 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:border-gray-300 hover:shadow-gray-300/30' : ''}`}
       style={{ animation: `fadeInUp 0.6s ease-out ${delay}ms both`, ...cardStyle() }}
       onMouseEnter={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = t.cardHoverShadow; }}
       onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.boxShadow = ''; }}
     >
-      {!t && <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/30 group-hover:via-white/0 group-hover:to-purple-50/20 transition-all duration-500 pointer-events-none" />}
+      {!t && <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 via-white/0 to-gray-50/0 group-hover:from-blue-50/40 group-hover:via-white/0 group-hover:to-purple-50/30 transition-all duration-500 pointer-events-none" />}
       <div className="relative flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className={`text-[11px] font-bold uppercase tracking-[0.08em] mb-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.label } : undefined}>{title}</p>
@@ -560,7 +560,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         {/* Skeleton metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
+            <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-200/80 shadow-sm' : ''}`} style={skelCard}>
               <div className="flex justify-between">
                 <div className="space-y-3 flex-1">
                   <div className={`h-3 w-20 rounded-full ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
@@ -573,12 +573,12 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
         {/* Skeleton secondary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className={`rounded-2xl border p-6 flex items-center justify-center animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
+          <div className={`rounded-2xl border p-6 flex items-center justify-center animate-pulse ${!t ? 'bg-white border-gray-200/80 shadow-sm' : ''}`} style={skelCard}>
             <div className={`w-[130px] h-[130px] rounded-full border-[10px] ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.skelPulse || 'rgba(255,255,255,0.08)' } : undefined} />
           </div>
           <div className="lg:col-span-2 grid grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-100' : ''}`} style={skelCard}>
+              <div key={i} className={`rounded-2xl border p-5 animate-pulse ${!t ? 'bg-white border-gray-200/80 shadow-sm' : ''}`} style={skelCard}>
                 <div className="space-y-3">
                   <div className={`h-3 w-24 rounded-full ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
                   <div className={`h-8 w-14 rounded-lg ${!t ? 'bg-gray-100' : ''}`} style={skelPulse} />
@@ -688,7 +688,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {/* ═══════════ PERFORMANCE + SECONDARY ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ animation: 'fadeInUp 0.6s ease-out 300ms both' }}>
         {/* Circular gauge */}
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border flex flex-col items-center justify-center transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border flex flex-col items-center justify-center transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <CircularProgress
             value={parseFloat(metrics.resolutionRate as string) || 0}
             size={130}
@@ -753,7 +753,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ animation: 'fadeInUp 0.6s ease-out 400ms both' }}>
         
         {/* Top Contactos */}
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
@@ -790,7 +790,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 return (
                   <div
                     key={index}
-                    className={`group rounded-xl p-3 transition-all duration-300 ${!t ? 'hover:bg-gray-50/80' : ''}`}
+                    className={`group rounded-xl p-3 transition-all duration-300 ${!t ? 'hover:bg-gray-100/80' : ''}`}
                     style={{ animation: `slideInRight 0.5s ease-out ${index * 80}ms both`, ...(t ? { cursor: 'default' } : {}) }}
                     onMouseEnter={(e) => { if (t && t.rowHover) (e.currentTarget as HTMLDivElement).style.background = t.rowHover; }}
                     onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
@@ -823,7 +823,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         </div>
 
         {/* Distribución de Mensajes - Donut Chart */}
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
               <MessageCircle className="w-4 h-4 text-white" />
@@ -903,7 +903,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD POR HORA ═══════════ */}
       {timeRange === 'today' && (
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/20">
               <Clock className="w-4 h-4 text-white" />
@@ -947,7 +947,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
       {/* ═══════════ ACTIVIDAD DIARIA ═══════════ */}
       {timeRange === 'week' && (
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={{...cardStyle(), animation: 'fadeInUp 0.6s ease-out 500ms both' }}>
           <div className="flex items-center gap-3 mb-5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-500/20">
               <TrendingUp className="w-4 h-4 text-white" />
@@ -992,7 +992,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
         <>
           {/* Empty state when no sales data */}
           {(!salesStats || (salesStats.metrics.links_generated === 0 && salesStats.all_time.total_sales === 0)) ? (
-            <div className={`relative overflow-hidden rounded-2xl border backdrop-blur-sm ${!t ? 'border-gray-100/60 bg-white/80' : ''}`} style={cardStyle()}>
+            <div className={`relative overflow-hidden rounded-2xl border backdrop-blur-sm ${!t ? 'border-gray-200/80 bg-white shadow-sm' : ''}`} style={cardStyle()}>
               {/* Subtle pattern */}
               <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #10b981 1px, transparent 0)', backgroundSize: '20px 20px' }} />
               
@@ -1113,7 +1113,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Productos */}
             {salesStats.top_products && salesStats.top_products.length > 0 && (
-              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                     <Package className="w-4 h-4 text-white" />
@@ -1157,7 +1157,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
             {/* Ventas Recientes */}
             {salesStats.recent_sales && salesStats.recent_sales.length > 0 && (
-              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+              <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
                     <ShoppingCart className="w-4 h-4 text-white" />
@@ -1166,7 +1166,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 </div>
                 <div className="space-y-1 max-h-80 overflow-y-auto">
                   {salesStats.recent_sales.slice(0, 10).map((sale: SaleEntry) => (
-                    <div key={sale.id} className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors ${!t ? 'hover:bg-gray-50/80' : ''}`}
+                    <div key={sale.id} className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors ${!t ? 'hover:bg-gray-100/80' : ''}`}
                       onMouseEnter={(e) => { if (t && t.rowHover) (e.currentTarget as HTMLDivElement).style.background = t.rowHover; }}
                       onMouseLeave={(e) => { if (t) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                     >
@@ -1197,7 +1197,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
           {/* Ventas por Día (gráfico de barras) */}
           {salesStats.daily_sales && salesStats.daily_sales.length > 1 && (
-            <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white/80 border-gray-100/60 hover:shadow-xl hover:shadow-gray-200/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
+            <div className={`backdrop-blur-sm rounded-2xl p-6 border transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
                   <TrendingUp className="w-4 h-4 text-white" />

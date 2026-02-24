@@ -160,7 +160,9 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
   const [isOpen, setIsOpen] = useState(false);
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [helpMenuPos, setHelpMenuPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const helpBtnRef = useRef<HTMLButtonElement>(null);
   const { hasTheme, isDark, currentTheme } = useTheme();
 
   const t = useMemo(() => {
@@ -282,7 +284,20 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     {
       icon: Heart,
       label: 'Ayuda',
-      onClick: () => setShowHelpSubmenu(!showHelpSubmenu),
+      onClick: () => {
+        if (!showHelpSubmenu && helpBtnRef.current) {
+          const rect = helpBtnRef.current.getBoundingClientRect();
+          const menuHeight = 5 * 44; // 5 items × ~44px
+          let top = rect.top;
+          // Si se sale por arriba de la pantalla, ajustar
+          if (top + menuHeight > window.innerHeight) {
+            top = window.innerHeight - menuHeight - 8;
+          }
+          if (top < 8) top = 8;
+          setHelpMenuPos({ top, left: rect.right + 6 });
+        }
+        setShowHelpSubmenu(!showHelpSubmenu);
+      },
       className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       hasSubmenu: true
     },
@@ -309,7 +324,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
           style={{
             minWidth: isCollapsed ? '320px' : 'auto',
             animation: 'slideUpMenu 0.2s ease-out',
-            overflow: 'hidden',
+            overflow: 'visible',
             ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
           }}
         >
@@ -330,6 +345,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                   className="relative"
                 >
                   <button
+                    ref={item.hasSubmenu ? helpBtnRef : undefined}
                     onClick={() => {
                       if (item.onClick) {
                         item.onClick();
@@ -355,44 +371,47 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                     
                     {item.hasSubmenu && (
                       <ChevronRight 
-                        className={`w-4 h-4 transition-transform duration-200 ${isDark ? 'text-gray-500' : 'text-neutral-400'}`}
-                        style={{ transform: showHelpSubmenu ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                        className={`w-4 h-4 ${isDark ? 'text-gray-500' : 'text-neutral-400'}`}
                       />
                     )}
                   </button>
 
-                  {/* Submenú de Ayuda - inline expandable */}
-                  {item.hasSubmenu && showHelpSubmenu && (
+                  {/* Submenú de Ayuda - flyout a la derecha con position fixed */}
+                  {item.hasSubmenu && showHelpSubmenu && helpMenuPos && (
                     <div 
-                      className={`overflow-hidden ${!t ? (isDark ? 'bg-white/[0.03]' : 'bg-neutral-50/50') : ''}`}
+                      className={`fixed rounded-xl shadow-2xl border min-w-[220px] z-[9999] ${!t ? (isDark ? 'bg-[#1a1f2e] border-white/10' : 'bg-white border-gray-200') : ''}`}
                       style={{ 
-                        animation: 'slideDown 0.2s ease-out',
-                        ...(t ? { backgroundColor: t.itemBg } : {})
+                        animation: 'slideInRight 0.2s ease-out',
+                        top: helpMenuPos.top,
+                        left: helpMenuPos.left,
+                        ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
                       }}
                     >
-                      {helpSubmenuItems.map((subItem, subIndex) => {
-                        const SubIcon = subItem.icon;
-                        return (
-                          <a
-                            key={subIndex}
-                            href={subItem.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => {
-                              setIsOpen(false);
-                              setShowHelpSubmenu(false);
-                            }}
-                            className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
-                            style={t ? { color: t.textSec } : undefined}
-                          >
-                            <SubIcon 
-                              className="w-4 h-4"
-                              style={t ? { color: t.textMuted } : undefined}
-                            />
-                            <span className="text-sm font-medium">{subItem.label}</span>
-                          </a>
-                        );
-                      })}
+                      <div className="py-2">
+                        {helpSubmenuItems.map((subItem, subIndex) => {
+                          const SubIcon = subItem.icon;
+                          return (
+                            <a
+                              key={subIndex}
+                              href={subItem.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => {
+                                setIsOpen(false);
+                                setShowHelpSubmenu(false);
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
+                              style={t ? { color: t.textSec } : undefined}
+                            >
+                              <SubIcon 
+                                className="w-4 h-4"
+                                style={t ? { color: t.textMuted } : undefined}
+                              />
+                              <span className="text-sm font-medium">{subItem.label}</span>
+                            </a>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1225,16 +1244,16 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
 
   return (
     <GlobalNotificationProvider inboxId={inboxId}>
-      <div className="flex h-screen overflow-hidden" style={{ background: hasTheme ? 'var(--theme-content-bg, #f8fafc)' : undefined }} >
+      <div className="flex h-screen overflow-hidden" style={{ background: hasTheme ? 'var(--theme-content-bg, #f8fafc)' : '#f1f5f9' }} >
         {/* Sidebar Premium — Glassmorphism */}
         <div 
           className={`${sidebarCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 transition-all duration-150 ease-out relative`}
           style={{
             background: hasTheme ? 'var(--theme-sidebar-bg)' : 'white',
             borderRight: hasTheme ? '1px solid var(--theme-glass-border)' : '1px solid rgb(226 232 240 / 0.8)',
-            boxShadow: hasTheme ? '4px 0 20px -4px var(--theme-glass-shadow)' : undefined,
-            backdropFilter: hasTheme ? 'blur(16px) saturate(1.2)' : undefined,
-            WebkitBackdropFilter: hasTheme ? 'blur(16px) saturate(1.2)' : undefined,
+            boxShadow: hasTheme ? '2px 0 12px -4px var(--theme-glass-shadow)' : '1px 0 8px -2px rgba(0,0,0,0.05)',
+            backdropFilter: hasTheme ? 'blur(12px)' : undefined,
+            WebkitBackdropFilter: hasTheme ? 'blur(12px)' : undefined,
           }}
         >
           
@@ -1279,16 +1298,14 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg transition-all duration-150 ${
                   !hasTheme ? (
                     isActive
-                      ? 'bg-gradient-to-r from-white to-white/95 shadow-lg shadow-white/30 opacity-100 border border-white/50'
-                      : 'hover:bg-white/60 hover:opacity-100'
+                      ? 'bg-neutral-100 shadow-sm opacity-100 border border-neutral-200/60'
+                      : 'hover:bg-neutral-50 hover:opacity-100'
                   ) : ''
                 }`}
                 style={hasTheme ? {
                   background: isActive ? 'var(--theme-sidebar-active-bg)' : undefined,
-                  boxShadow: isActive ? '0 4px 16px -2px var(--theme-glass-shadow)' : undefined,
+                  boxShadow: isActive ? '0 2px 8px -2px var(--theme-glass-shadow)' : undefined,
                   border: isActive ? '1px solid var(--theme-glass-border)' : '1px solid transparent',
-                  backdropFilter: isActive ? 'blur(8px)' : undefined,
-                  WebkitBackdropFilter: isActive ? 'blur(8px)' : undefined,
                 } : undefined}
                 onMouseEnter={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = 'var(--theme-sidebar-hover)'; }}
                 onMouseLeave={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = ''; }}
@@ -1298,8 +1315,8 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                     className={`p-2 rounded-lg ${
                       !hasTheme ? (
                         isActive 
-                          ? `bg-gradient-to-r ${item.gradient} shadow-lg` 
-                          : 'bg-white/90 group-hover:bg-white/95'
+                          ? `bg-gradient-to-r ${item.gradient} shadow-md` 
+                          : 'bg-neutral-100 group-hover:bg-neutral-200/80'
                       ) : ''
                     }`}
                     style={hasTheme ? {
