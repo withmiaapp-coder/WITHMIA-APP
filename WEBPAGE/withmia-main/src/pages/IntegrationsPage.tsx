@@ -17,13 +17,11 @@ import {
   ExternalLink,
   Zap,
   RefreshCw,
-  Bell,
   Bot,
   Link2,
   BarChart3,
   Clock,
   Shield,
-  Globe,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════
@@ -104,21 +102,6 @@ const channels = [
     desc: "API REST para conectar cualquier sistema externo con webhooks bidireccionales.",
     badge: "Desarrolladores",
   },
-];
-
-const integrations = [
-  { name: "AgendaPro", desc: "Citas y reservas automáticas sincronizadas con tu calendario profesional.", icon: CalendarCheck, tag: "Productividad", color: "#3B82F6" },
-  { name: "Calendly", desc: "Reuniones automáticas con links de agendamiento directo desde el chat.", icon: CalendarDays, tag: "Productividad", color: "#006BFF" },
-  { name: "Google Calendar", desc: "Sincronización bidireccional de eventos, recordatorios y disponibilidad.", icon: Calendar, tag: "Productividad", color: "#4285F4" },
-  { name: "Outlook", desc: "Microsoft Calendar integrado para gestionar agenda desde cualquier canal.", icon: Mail, tag: "Productividad", color: "#0078D4" },
-  { name: "Reservo", desc: "Sistema de reservas online conectado directamente a tus canales.", icon: CalendarRange, tag: "Productividad", color: "#10B981" },
-  { name: "Dentalink", desc: "Gestión de pacientes para clínicas dentales con recordatorios automáticos.", icon: Stethoscope, tag: "Salud", color: "#22D3EE" },
-  { name: "Medilink", desc: "Plataforma médica integrada para agendar, confirmar y recordar citas.", icon: Stethoscope, tag: "Salud", color: "#F43F5E" },
-  { name: "Shopify", desc: "Sincroniza productos, pedidos y notificaciones de tu tienda Shopify.", icon: ShoppingCart, tag: "E-commerce", color: "#96BF48" },
-  { name: "WooCommerce", desc: "Conecta tu tienda WordPress con alertas de pedidos y seguimiento.", icon: Code2, tag: "E-commerce", color: "#9B5C8F" },
-  { name: "MercadoLibre", desc: "Gestiona preguntas y ventas de MercadoLibre desde tu inbox unificado.", icon: ShoppingCart, tag: "E-commerce", color: "#FFE600" },
-  { name: "API REST", desc: "Endpoints personalizados y webhooks para integraciones a medida.", icon: Webhook, tag: "Desarrollo", color: "#F59E0B" },
-  { name: "MySQL", desc: "Conecta bases de datos para consultas automáticas y actualización de registros.", icon: Database, tag: "Desarrollo", color: "#00758F" },
 ];
 
 /* ═══════════════════════════════════════════
@@ -490,310 +473,269 @@ const IntegrationsPage = () => {
         </section>
 
         {/* ══════════════════════════════════════
-            INTEGRACIONES — Clean table layout
+            INTEGRACIONES — Premium expanded showcase
             ══════════════════════════════════════ */}
-        <section ref={ecoRef} className="py-16 md:py-24 px-4 relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] max-w-xl h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[150px] pointer-events-none" />
+        <section className="py-8 md:py-12 px-4 relative overflow-hidden">
 
           <div className="max-w-6xl mx-auto relative">
-            {/* Header */}
-            <Reveal className="text-center mb-8 md:mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500/15 to-amber-500/15 border border-violet-500/20 text-xs text-violet-300 font-semibold mb-5 backdrop-blur-sm">
-                <Sparkles className="w-3.5 h-3.5" />
-                Ecosistema completo
-              </div>
-              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight leading-[1.15] mb-4">
-                Tu stack completo,{" "}
-                <span className="text-gradient">conectado</span>
-              </h2>
-              <p className="text-[14px] md:text-[15px] text-white/35 max-w-lg mx-auto leading-relaxed">
-                Canales de mensajería, agendas, CRMs e integraciones custom
+            {/* Section header */}
+            <Reveal className="text-center mb-16">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/50 mb-5">Ecosistema de integraciones</p>
+              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight leading-[1.12] mb-5">
+                Cada herramienta que necesitas,{" "}
                 <br className="hidden sm:block" />
-                orquestadas por IA en tiempo real.
+                <span className="text-gradient">lista para conectar</span>
+              </h2>
+              <p className="text-[14px] md:text-[15px] text-white/30 max-w-xl mx-auto leading-relaxed">
+                12 integraciones nativas organizadas por industria. Configuración en minutos,
+                sincronización en tiempo real, orquestadas por IA.
               </p>
             </Reveal>
 
-            {/* ── Desktop Constellation ── */}
-            <div className="relative mb-6">
-              <div
-                className={`hidden md:block relative w-full transition-opacity duration-1000 ${ecoVisible ? "opacity-100" : "opacity-0"}`}
-                style={{ aspectRatio: "700 / 450" }}
-              >
-                {/* SVG Web Layer */}
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 700 450" fill="none" preserveAspectRatio="xMidYMid meet">
-                  <defs>
-                    <radialGradient id="ecoCenter" cx="50%" cy="50%" r="42%">
-                      <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.05" />
-                      <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
-                    </radialGradient>
-                    {pgChNodes.map((ch, i) => (
-                      <linearGradient key={`eg${i}`} id={`ecoG${i}`} x1="350" y1="225" x2={ch.x} y2={ch.y} gradientUnits="userSpaceOnUse">
-                        <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor={ch.color} stopOpacity="0.45" />
-                      </linearGradient>
-                    ))}
-                    <filter id="ecoGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="2" result="blur" />
-                      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                    </filter>
-                  </defs>
-
-                  {/* Background center glow */}
-                  <circle cx="350" cy="225" r="210" fill="url(#ecoCenter)" />
-
-                  {/* Concentric web rings */}
-                  {pgRingPaths.map((d, i) => {
-                    const colors = ['#a78bfa', '#818cf8', '#6366f1', '#c084fc', '#f59e0b'];
-                    return (
-                      <path
-                        key={`pr${i}`}
-                        d={d}
-                        stroke={colors[i]}
-                        strokeWidth={i === 4 ? 0.5 : 0.3}
-                        strokeOpacity={0.03 + i * 0.01}
-                        fill="none"
-                      />
-                    );
-                  })}
-
-                  {/* Radial strands */}
-                  {pgStrandAngles.map((a, i) => (
-                    <line
-                      key={`ps${i}`}
-                      x1={350 + 12 * Math.cos(a)} y1={225 + 12 * Math.sin(a)}
-                      x2={350 + 215 * Math.cos(a)} y2={225 + 215 * Math.sin(a)}
-                      stroke="white"
-                      strokeWidth={i % 4 === 0 ? 0.3 : 0.15}
-                      strokeOpacity={i % 4 === 0 ? 0.05 : 0.025}
-                    />
-                  ))}
-
-                  {/* Knots at intersections */}
-                  {pgKnots.map((k, i) => (
-                    <circle
-                      key={`pk${i}`}
-                      cx={k.x} cy={k.y}
-                      r={i % 5 === 0 ? 1 : 0.6}
-                      fill="white"
-                      fillOpacity={i % 5 === 0 ? 0.07 : 0.025}
-                      style={i % 7 === 0 ? { animation: `ecoPulse ${3 + (i % 4)}s ease-in-out infinite`, animationDelay: `${(i * 0.3) % 5}s` } : undefined}
-                    />
-                  ))}
-
-                  {/* Center pulsing beacon */}
-                  <circle cx="350" cy="225" r="8" fill="#a78bfa" fillOpacity="0.04">
-                    <animate attributeName="r" values="6;12;6" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="fill-opacity" values="0.04;0.08;0.04" dur="3s" repeatCount="indefinite" />
-                  </circle>
-
-                  {/* Center → Channel connection lines */}
-                  {pgChNodes.map((ch, i) => (
-                    <g key={`cl${i}`}>
-                      <line
-                        x1="350" y1="225" x2={ch.x} y2={ch.y}
-                        stroke={ch.color}
-                        strokeWidth={hoveredCh === i ? 2 : 1}
-                        strokeOpacity={hoveredCh === i ? 0.06 : 0.02}
-                        className="transition-all duration-300"
-                      />
-                      <line
-                        x1="350" y1="225" x2={ch.x} y2={ch.y}
-                        stroke={`url(#ecoG${i})`}
-                        strokeWidth={hoveredCh === i ? 1.2 : 0.6}
-                        strokeOpacity={hoveredCh === i ? 0.5 : 0.18}
-                        strokeDasharray="3 4"
-                        className="transition-all duration-300"
-                        style={{ animation: `ecoDash 3.5s linear infinite`, animationDelay: `${i * 0.5}s` }}
-                      />
-                    </g>
-                  ))}
-
-                  {/* Integration → nearest channel curved connections */}
-                  {pgIntNodes.map((node, i) => {
-                    let minD = Infinity, nearest = pgChNodes[0];
-                    pgChNodes.forEach(ch => {
-                      const d = Math.hypot(ch.x - node.x, ch.y - node.y);
-                      if (d < minD) { minD = d; nearest = ch; }
-                    });
-                    const mx = ((node.x + nearest.x) / 2) * 0.88 + 350 * 0.12;
-                    const my = ((node.y + nearest.y) / 2) * 0.88 + 225 * 0.12;
-                    return (
-                      <path
-                        key={`ip${i}`}
-                        d={`M ${node.x.toFixed(1)} ${node.y.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${nearest.x.toFixed(1)} ${nearest.y.toFixed(1)}`}
-                        stroke={node.color}
-                        strokeWidth={hoveredInt === i ? 0.8 : 0.35}
-                        strokeOpacity={hoveredInt === i ? 0.35 : 0.08}
-                        fill="none"
-                        strokeDasharray="2 4"
-                        className="transition-all duration-300"
-                        style={{ animation: `ecoDash 5s linear infinite`, animationDelay: `${i * 0.3}s` }}
-                      />
-                    );
-                  })}
-
-                  {/* Data flow particles along center→channel paths */}
-                  {pgChNodes.map((ch, i) => (
-                    <g key={`fp${i}`}>
-                      <path id={`ef${i}`} d={`M 350 225 L ${ch.x} ${ch.y}`} fill="none" stroke="none" />
-                      <circle r="1.5" fill={ch.color} fillOpacity="0.5">
-                        <animateMotion dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`}>
-                          <mpath href={`#ef${i}`} />
-                        </animateMotion>
-                        <animate attributeName="fill-opacity" values="0;0.5;0.5;0" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
-                        <animate attributeName="r" values="0.5;1.5;1.5;0.5" dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" begin={`${i * 0.8}s`} />
-                      </circle>
-                    </g>
-                  ))}
-                </svg>
-
-                {/* Center hub node (WITHMIA logo) */}
-                <div className="absolute z-20" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
-                  <div className="relative">
-                    <div className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-violet-500/[0.05] to-amber-500/[0.03] animate-pulse" style={{ animationDuration: '4s' }} />
-                    <div className="relative w-[60px] h-[60px] lg:w-[68px] lg:h-[68px] rounded-2xl bg-gradient-to-br from-violet-500/20 via-[#0a0a12] to-amber-500/15 border border-white/[0.12] flex items-center justify-center overflow-hidden">
-                      <video src="/logo-animated.webm" autoPlay loop muted playsInline className="w-[40px] h-[40px] lg:w-[46px] lg:h-[46px] object-contain pointer-events-none" />
-                    </div>
-                    <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-[3px] rounded-full bg-emerald-400/[0.08] border border-emerald-400/20">
-                      <div className="w-[5px] h-[5px] rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-[7px] font-mono text-emerald-400/90 font-bold tracking-wider">LIVE</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Channel nodes (inner ring) */}
-                {pgChNodes.map((ch, i) => (
-                  <div
-                    key={`cn${i}`}
-                    className="absolute z-10 group cursor-default"
-                    style={{ left: `${(ch.x / 700) * 100}%`, top: `${(ch.y / 450) * 100}%`, transform: "translate(-50%, -50%)" }}
-                    onMouseEnter={() => setHoveredCh(i)}
-                    onMouseLeave={() => setHoveredCh(null)}
-                  >
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="relative">
-                        <div
-                          className="absolute -inset-1.5 rounded-xl transition-opacity duration-300"
-                          style={{ background: `radial-gradient(circle, ${ch.color}15, transparent 70%)`, opacity: hoveredCh === i ? 1 : 0 }}
-                        />
-                        <div
-                          className="relative w-[44px] h-[44px] lg:w-[50px] lg:h-[50px] rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                          style={{
-                            backgroundColor: hoveredCh === i ? `${ch.color}18` : `${ch.color}0c`,
-                            border: `1px solid ${hoveredCh === i ? `${ch.color}45` : `${ch.color}15`}`,
-                          }}
-                        >
-                          <img
-                            src={ch.image}
-                            alt={ch.name}
-                            className="w-[19px] h-[19px] lg:w-[22px] lg:h-[22px] object-contain"
-                            style={(ch as any).invert ? { filter: "brightness(0) invert(1)" } : undefined}
-                          />
-                        </div>
-                      </div>
-                      <span className={`text-[9px] font-bold tracking-wide transition-colors duration-200 ${hoveredCh === i ? "text-white/80" : "text-white/35"}`}>
-                        {ch.name}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Integration nodes (outer ring) */}
-                {pgIntNodes.map((node, i) => {
-                  const Icon = node.icon;
-                  const cosA = Math.cos(node.a);
-                  const isLeft = cosA < -0.2;
+            {/* Platform stats strip */}
+            <Reveal delay={60} className="mb-16">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {platformStats.map((stat, i) => {
+                  const Icon = stat.icon;
                   return (
-                    <div
-                      key={`in${i}`}
-                      className={`absolute z-10 group cursor-default transition-all duration-500 ${ecoVisible ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}
-                      style={{
-                        left: `${(node.x / 700) * 100}%`,
-                        top: `${(node.y / 450) * 100}%`,
-                        transform: "translate(-50%, -50%)",
-                        transitionDelay: `${150 + i * 50}ms`,
-                      }}
-                      onMouseEnter={() => setHoveredInt(i)}
-                      onMouseLeave={() => setHoveredInt(null)}
+                    <div key={i} className="text-center p-5 rounded-2xl border border-white/[0.04] bg-white/[0.015] group hover:border-white/[0.08] transition-all duration-500">
+                      <Icon className="w-4 h-4 text-white/15 mx-auto mb-3 group-hover:text-amber-400/50 transition-colors duration-500" />
+                      <p className="text-xl md:text-2xl font-bold text-white/80 font-mono tracking-tight mb-1">{stat.value}</p>
+                      <p className="text-[10px] text-white/20 uppercase tracking-[0.12em] font-medium">{stat.label}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Reveal>
+
+            {/* Category navigation + expanded content */}
+            <div className="grid lg:grid-cols-[280px_1fr] gap-8">
+              {/* Left sidebar — category navigation */}
+              <Reveal className="lg:sticky lg:top-28 lg:self-start">
+                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 scrollbar-none">
+                  {integrationCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setExpandedCat(cat.id)}
+                      className={`group relative flex items-center gap-3.5 px-5 py-4 rounded-xl text-left whitespace-nowrap lg:whitespace-normal transition-all duration-400 shrink-0 lg:shrink ${
+                        expandedCat === cat.id
+                          ? "bg-white/[0.05] border border-white/[0.08]"
+                          : "border border-transparent hover:bg-white/[0.02] hover:border-white/[0.04]"
+                      }`}
                     >
-                      <div className={`flex items-center gap-2 ${isLeft ? "flex-row-reverse" : ""}`}>
-                        <div className="relative">
-                          <div
-                            className="absolute -inset-1 rounded-lg transition-opacity duration-300"
-                            style={{ background: `radial-gradient(circle, ${node.color}12, transparent 70%)`, opacity: hoveredInt === i ? 1 : 0 }}
-                          />
-                          <div
-                            className="relative w-[34px] h-[34px] lg:w-[38px] lg:h-[38px] rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
-                            style={{
-                              backgroundColor: hoveredInt === i ? `${node.color}14` : `${node.color}0a`,
-                              border: `1px solid ${hoveredInt === i ? `${node.color}40` : `${node.color}12`}`,
-                            }}
-                          >
-                            <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" style={{ color: node.color }} />
+                      {/* Active indicator */}
+                      <div
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full transition-all duration-400 ${
+                          expandedCat === cat.id ? "opacity-100" : "opacity-0"
+                        }`}
+                        style={{ backgroundColor: cat.accent }}
+                      />
+
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-400"
+                        style={{
+                          backgroundColor: expandedCat === cat.id ? `${cat.accent}15` : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${expandedCat === cat.id ? `${cat.accent}25` : "rgba(255,255,255,0.05)"}`,
+                        }}
+                      >
+                        <span className="text-[13px]">
+                          {cat.id === "productividad" && "📅"}
+                          {cat.id === "salud" && "🏥"}
+                          {cat.id === "ecommerce" && "🛒"}
+                          {cat.id === "desarrollo" && "⚡"}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className={`text-[13px] font-semibold transition-colors duration-300 ${expandedCat === cat.id ? "text-white" : "text-white/40"}`}>
+                          {cat.label}
+                        </p>
+                        <p className={`text-[10px] transition-colors duration-300 ${expandedCat === cat.id ? "text-white/30" : "text-white/15"}`}>
+                          {cat.items.length} integración{cat.items.length > 1 ? "es" : ""}
+                        </p>
+                      </div>
+
+                      {expandedCat === cat.id && (
+                        <div className="hidden lg:block ml-auto">
+                          <ArrowRight className="w-3.5 h-3.5 text-white/20" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </Reveal>
+
+              {/* Right — expanded integration cards */}
+              <div>
+                {integrationCategories.map((cat) => {
+                  if (cat.id !== expandedCat) return null;
+                  return (
+                    <div key={cat.id}>
+                      {/* Category header */}
+                      <Reveal>
+                        <div className="mb-8">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-1.5 h-6 rounded-full" style={{ background: `linear-gradient(to bottom, ${cat.accent}, transparent)` }} />
+                            <h3 className="text-lg md:text-xl font-bold text-white">{cat.label}</h3>
+                            <div className="flex-1 h-px bg-white/[0.04]" />
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 animate-pulse" style={{ animationDuration: "3s" }} />
+                              <span className="text-[9px] font-mono text-emerald-400/50 uppercase tracking-wider">
+                                {cat.items.length} activas
+                              </span>
+                            </div>
                           </div>
+                          <p className="text-[13px] text-white/25 leading-relaxed pl-[18px]">{cat.description}</p>
                         </div>
-                        <div className={`min-w-0 ${isLeft ? "text-right" : ""}`}>
-                          <p className="text-[10px] font-bold text-white/45 group-hover:text-white/90 whitespace-nowrap transition-colors leading-tight">
-                            {node.name}
-                          </p>
-                          <p className="text-[8px] text-white/15 group-hover:text-white/40 whitespace-nowrap transition-colors">
-                            {pgIntShortDescs[node.name]}
-                          </p>
-                        </div>
+                      </Reveal>
+
+                      {/* Integration cards */}
+                      <div className="space-y-4">
+                        {cat.items.map((item, i) => {
+                          const Icon = item.icon;
+                          return (
+                            <Reveal key={item.name} delay={i * 60}>
+                              <div
+                                className="group relative p-6 rounded-2xl border border-white/[0.05] bg-white/[0.01] hover:bg-white/[0.025] hover:border-white/[0.08] transition-all duration-500"
+                              >
+                                {/* Top accent line on hover */}
+                                <div
+                                  className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                  style={{ background: `linear-gradient(90deg, transparent, ${item.color}30, transparent)` }}
+                                />
+
+                                <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+                                  {/* Icon */}
+                                  <div
+                                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-105"
+                                    style={{
+                                      backgroundColor: `${item.color}0c`,
+                                      border: `1px solid ${item.color}15`,
+                                    }}
+                                  >
+                                    <Icon className="w-5 h-5" style={{ color: `${item.color}bb` }} />
+                                  </div>
+
+                                  {/* Content */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-3">
+                                        <h4 className="text-[15px] font-bold text-white/80 group-hover:text-white transition-colors duration-300">
+                                          {item.name}
+                                        </h4>
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-400/[0.06] border border-emerald-400/10">
+                                          <div className="w-1 h-1 rounded-full bg-emerald-400/60" />
+                                          <span className="text-[8px] text-emerald-400/50 font-medium uppercase tracking-wider">Conectada</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <p className="text-[12px] text-white/25 leading-[1.7] mb-4 group-hover:text-white/35 transition-colors duration-500 max-w-lg">
+                                      {item.desc}
+                                    </p>
+
+                                    {/* Feature pills */}
+                                    <div className="flex flex-wrap gap-2">
+                                      {item.features.map((feat, fi) => (
+                                        <div
+                                          key={fi}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-400 group-hover:bg-white/[0.03]"
+                                          style={{
+                                            backgroundColor: `${item.color}05`,
+                                            border: `1px solid ${item.color}0a`,
+                                          }}
+                                        >
+                                          <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: `${item.color}50` }} />
+                                          <span className="text-[10px] text-white/35 font-medium">{feat}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Right side — connect action */}
+                                  <div className="sm:self-center shrink-0">
+                                    <div className="flex items-center gap-1.5 text-[11px] text-white/15 group-hover:text-amber-400/60 transition-colors duration-300 cursor-pointer">
+                                      <span className="font-medium">Conectar</span>
+                                      <ArrowRight className="w-3.5 h-3.5 -translate-x-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </Reveal>
+                          );
+                        })}
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </div>
 
-              {/* ── Mobile — grouped cards ── */}
-              <div className="md:hidden space-y-4">
-                <div className="flex justify-center gap-2 mb-3">
-                  {channels.map((ch, i) => (
-                    <div
-                      key={i}
-                      className="w-11 h-11 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${ch.color}0c`, border: `1px solid ${ch.color}15` }}
-                    >
-                      <img
-                        src={ch.image}
-                        alt={ch.name}
-                        className="w-4 h-4 object-contain"
-                        style={(ch as any).invert ? { filter: "brightness(0) invert(1)" } : undefined}
-                      />
-                    </div>
-                  ))}
-                </div>
-                {mobileGroups.map((group) => (
-                  <div key={group.label} className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3.5">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-0.5 h-3 rounded-full" style={{ background: `linear-gradient(to bottom, ${group.accent}80, transparent)` }} />
-                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.15em]">{group.label}</span>
-                      </div>
-                      <span className="text-[7px] font-mono text-emerald-400/50">{group.items.length} activos</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {group.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={item.name} className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg border border-white/[0.03] bg-white/[0.01]">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${item.color}0c`, border: `1px solid ${item.color}12` }}>
-                              <Icon className="w-3.5 h-3.5" style={{ color: item.color }} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-semibold text-white/70 truncate">{item.name}</p>
-                              <p className="text-[8px] text-white/20 truncate">{pgIntShortDescs[item.name]}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+            {/* How it works — 3-step flow */}
+            <Reveal delay={80} className="mt-20">
+              <div className="text-center mb-12">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400/40 mb-4">Cómo funciona</p>
+                <h3 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+                  Conecta en <span className="text-gradient">3 pasos</span>
+                </h3>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6 mb-12">
+                {[
+                  { step: "01", title: "Selecciona", desc: "Elige la integración que necesitas desde tu panel de WITHMIA.", icon: Zap },
+                  { step: "02", title: "Autoriza", desc: "Conecta tu cuenta con OAuth o API key. Sin código, sin configuración compleja.", icon: RefreshCw },
+                  { step: "03", title: "Automatiza", desc: "La IA orquesta flujos entre canales e integraciones automáticamente.", icon: Bot },
+                ].map((s, i) => (
+                  <div key={i} className="relative p-6 rounded-2xl border border-white/[0.04] bg-white/[0.01] group hover:border-white/[0.07] transition-all duration-500">
+                    {/* Step number */}
+                    <span className="text-[40px] font-black text-white/[0.03] absolute top-4 right-5 font-mono leading-none select-none">{s.step}</span>
+
+                    <s.icon className="w-5 h-5 text-violet-400/40 mb-4 group-hover:text-violet-400/70 transition-colors duration-500" />
+                    <h4 className="text-[14px] font-bold text-white/70 mb-2 group-hover:text-white transition-colors duration-300">{s.title}</h4>
+                    <p className="text-[12px] text-white/20 leading-[1.7] group-hover:text-white/30 transition-colors duration-500">{s.desc}</p>
+
+                    {/* Connecting line (not last) */}
+                    {i < 2 && (
+                      <div className="hidden md:block absolute top-1/2 -right-3 w-6 h-px bg-white/[0.06]" />
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
+            </Reveal>
+
+            {/* Bottom CTA */}
+            <Reveal delay={100}>
+              <div className="relative rounded-2xl border border-white/[0.05] bg-white/[0.015] p-8 md:p-10 overflow-hidden">
+                {/* Gradient accent */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[300px] h-[200px] bg-amber-500/[0.04] rounded-full blur-[80px] pointer-events-none" />
+
+                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="text-center md:text-left">
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                      ¿No encuentras tu herramienta?
+                    </h3>
+                    <p className="text-[13px] text-white/30 max-w-md">
+                      Desarrollamos integraciones custom para tu negocio. API REST, webhooks bidireccionales y conectores a medida.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                    <a href="/contacto">
+                      <button className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
+                        Solicitar integración
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </a>
+                    <a href="https://app.withmia.com/docs" target="_blank" rel="noopener noreferrer">
+                      <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.08] text-[13px] text-white/50 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
+                        Ver API Docs
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </section>
 
@@ -855,16 +797,6 @@ const IntegrationsPage = () => {
         @keyframes orbit-float {
           0% { transform: translate(-50%, -50%) translateY(0); }
           100% { transform: translate(-50%, -50%) translateY(-8px); }
-        }
-
-        @keyframes ecoDash {
-          from { stroke-dashoffset: 7; }
-          to { stroke-dashoffset: 0; }
-        }
-
-        @keyframes ecoPulse {
-          0%, 100% { opacity: 0.04; transform: scale(1); }
-          50% { opacity: 0.12; transform: scale(1.3); }
         }
 
         @keyframes intg-pipeline-flow {

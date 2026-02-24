@@ -172,6 +172,9 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     return {
       cardBg: 'var(--theme-content-card-bg)',
       cardBorder: 'var(--theme-content-card-border)',
+      // Dropdown needs a SOLID opaque bg, not the translucent card-bg
+      dropdownBg: isDark ? 'var(--theme-sidebar-bg)' : 'var(--theme-content-card-bg)',
+      dropdownBorder: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
       textMuted: 'var(--theme-text-muted)',
@@ -336,7 +339,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
             bottom: window.innerHeight - menuPos.bottom + 8,
             animation: 'slideUpMenu 0.2s ease-out',
             overflow: 'visible',
-            ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
+            ...(t ? { backgroundColor: t.dropdownBg, borderColor: t.dropdownBorder } : {})
           }}
         >
           {/* Lista de opciones */}
@@ -395,7 +398,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                         animation: 'slideInRight 0.2s ease-out',
                         top: helpMenuPos.top,
                         left: helpMenuPos.left,
-                        ...(t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : {})
+                        ...(t ? { backgroundColor: t.dropdownBg, borderColor: t.dropdownBorder } : {})
                       }}
                     >
                       <div className="py-2">
