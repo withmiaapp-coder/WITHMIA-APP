@@ -270,6 +270,7 @@ const HelpCenter = () => {
                 <input
                   type="text"
                   placeholder="Buscar tutoriales..."
+                  aria-label="Buscar tutoriales"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}

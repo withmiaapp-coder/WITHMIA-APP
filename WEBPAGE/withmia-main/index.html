@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/Logo_WITHMIA.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a12" />
     <title>WITHMIA — IA Conversacional Omnicanal para tu Negocio</title>
     <meta name="description" content="Plataforma de IA conversacional omnicanal. Automatiza ventas, atención al cliente y seguimiento en WhatsApp, Instagram, Email y más. Más leads, más conversión, sin aumentar costos." />
 
@@ -24,12 +25,30 @@
 
     <!-- Canonical -->
     <link rel="canonical" href="https://withmia.com" />
+    <link rel="alternate" hreflang="es-CL" href="https://withmia.com" />
 
-    <!-- Google tag (gtag.js) — GA4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8D0NNE2BBH"></script>
+    <!-- Preconnect for GA4 -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+
+    <!-- Google Consent Mode v2 (deny by default) + GA4 -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+
+      // Consent defaults — denied until user accepts cookie banner
+      gtag('consent', 'default', {
+        analytics_storage: (function() {
+          try { return localStorage.getItem('withmia_cookie_consent') === 'granted' ? 'granted' : 'denied'; } catch(e) { return 'denied'; }
+        })(),
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        wait_for_update: 500
+      });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8D0NNE2BBH"></script>
+    <script>
       gtag('js', new Date());
       gtag('config', 'G-8D0NNE2BBH');
     </script>

@@ -1052,21 +1052,21 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
     switch (status) {
       case 'connected':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}>
+            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>
             Conectado
           </span>
         );
       case 'disconnected':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-            <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}>
+            <span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>
             Desconectado
           </span>
         );
       case 'coming_soon':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-slate-100 text-slate-500' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}>
             <Clock className="w-3 h-3" />
             Próximamente
           </span>
@@ -1262,7 +1262,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         {isConnected ? (
                           <button
                             onClick={onDisconnectWhatsApp}
-                            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                           >
                             <X className="w-4 h-4" />
                             Desconectar
@@ -1270,7 +1270,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         ) : (
                           <button
                             onClick={onConnectWhatsApp}
-                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-green-500 hover:bg-green-600' : 'hover:opacity-90'}`}
+                            style={t ? { background: t.accent } : undefined}
                           >
                             <QrCode className="w-4 h-4" />
                             Conectar con QR
@@ -1441,7 +1442,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => { if (confirm('¿Desconectar el widget de chat web?')) disconnectChannel('web-chat'); }}
                               disabled={channelConnecting === 'web-chat'}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                             >
                               <X className="w-4 h-4" />
                               Desconectar
@@ -1884,7 +1885,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => { if (confirm('¿Desconectar el canal de email?')) disconnectChannel('email'); }}
                               disabled={channelConnecting === 'email'}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                             >
                               <X className="w-4 h-4" />
                               Desconectar
@@ -2024,7 +2025,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <button
                           onClick={() => connectChannel('email', '/api/channels/email', emailForm)}
                           disabled={channelConnecting === 'email' || !emailForm.email || !emailForm.imap_password}
-                          className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 disabled:from-red-300 disabled:to-orange-300 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+                          className={`w-full px-6 py-3 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 ${!t ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 disabled:from-red-300 disabled:to-orange-300' : 'disabled:opacity-50 hover:opacity-90'}`}
+                          style={t ? { background: t.accent } : undefined}
                         >
                           {channelConnecting === 'email' ? (
                             <><Loader2 className="w-4 h-4 animate-spin" /> Conectando...</>
@@ -2059,7 +2061,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => { if (confirm('¿Desconectar Instagram?')) disconnectChannel('instagram'); }}
                               disabled={channelConnecting === 'instagram'}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                             >
                               <X className="w-4 h-4" />
                               Desconectar
@@ -2105,7 +2107,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <button
                           onClick={() => openOAuthPopup('instagram')}
                           disabled={channelConnecting === 'instagram'}
-                          className="w-full py-3 px-4 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-pink-200/50"
+                          className={`w-full py-3 px-4 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${!t ? 'bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90 disabled:opacity-50 shadow-md shadow-pink-200/50' : 'disabled:opacity-50 hover:opacity-90'}`}
+                          style={t ? { background: t.accent } : undefined}
                         >
                           {channelConnecting === 'instagram' ? (
                             <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
@@ -2143,7 +2146,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => { if (confirm('¿Desconectar Facebook Messenger?')) disconnectChannel('messenger'); }}
                               disabled={channelConnecting === 'messenger'}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                             >
                               <X className="w-4 h-4" />
                               Desconectar
@@ -2180,7 +2183,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <button
                           onClick={() => openOAuthPopup('messenger')}
                           disabled={channelConnecting === 'messenger'}
-                          className="w-full py-3 px-4 bg-[#1877F2] hover:bg-[#166FE5] disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-200/50"
+                          className={`w-full py-3 px-4 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${!t ? 'bg-[#1877F2] hover:bg-[#166FE5] disabled:opacity-50 shadow-md shadow-blue-200/50' : 'disabled:opacity-50 hover:opacity-90'}`}
+                          style={t ? { background: t.accent } : undefined}
                         >
                           {channelConnecting === 'messenger' ? (
                             <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
@@ -2222,7 +2226,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                             <button
                               onClick={() => { if (confirm('¿Desconectar WhatsApp Cloud API?')) disconnectChannel('whatsapp-api'); }}
                               disabled={channelConnecting === 'whatsapp-api'}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}
                             >
                               <X className="w-4 h-4" />
                               Desconectar
@@ -2269,7 +2273,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         <button
                           onClick={() => openOAuthPopup('whatsapp-cloud')}
                           disabled={channelConnecting === 'whatsapp-api'}
-                          className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20BD5A] disabled:opacity-50 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-green-200/50"
+                          className={`w-full py-3 px-4 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${!t ? 'bg-[#25D366] hover:bg-[#20BD5A] disabled:opacity-50 shadow-md shadow-green-200/50' : 'disabled:opacity-50 hover:opacity-90'}`}
+                          style={t ? { background: t.accent } : undefined}
                         >
                           {channelConnecting === 'whatsapp-api' ? (
                             <><Loader2 className="w-5 h-5 animate-spin" /> Conectando...</>
@@ -2340,9 +2345,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {agendaproLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : agendaproConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'agendapro' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2371,7 +2376,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectAgendapro} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectAgendapro} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -2433,9 +2438,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {dentalinkLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : dentalinkConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'dentalink' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2464,7 +2469,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectDentalink} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectDentalink} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -2526,9 +2531,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {medilinkLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : medilinkConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'medilink' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2557,7 +2562,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectMedilink} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectMedilink} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -2619,9 +2624,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {calendlyLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : calendlyConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'calendly' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2650,7 +2655,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectCalendly} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectCalendly} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -2704,13 +2709,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                   {gcalLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
                   ) : gcalConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}>
+                      <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>
                       Conectado
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>
                       Desconectado
                     </span>
                   )}
@@ -2751,7 +2756,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectGoogleCalendar} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                        <button onClick={disconnectGoogleCalendar} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}>
                           <Unlink className="w-4 h-4" /> Desconectar
                         </button>
                       </div>
@@ -2807,9 +2812,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {outlookLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : outlookConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'outlook' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2838,7 +2843,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectOutlook} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectOutlook} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -2894,9 +2899,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                   {reservoLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : reservoConnected ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Conectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>Desconectado</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                   )}
                   {expandedTool === 'reservo' ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                 </div>
@@ -2925,7 +2930,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </label>
                       </div>
                       <div className="flex justify-end">
-                        <button onClick={disconnectReservo} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                        <button onClick={disconnectReservo} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                       </div>
                     </div>
                   ) : (
@@ -3097,9 +3102,9 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                       </div>
                       <div className="flex items-center gap-3">
                         {productIntegrationsLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : isConnected ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />Conectado</span>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-green-100 text-green-700' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${!t ? 'bg-green-500' : ''}`} style={t ? { background: t.accent } : undefined}></span>Conectado</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full"><span className="w-1.5 h-1.5 bg-red-500 rounded-full" />Desconectado</span>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-red-100 text-red-700' : ''}`} style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: t.textMuted } : undefined}><span className={`w-1.5 h-1.5 rounded-full ${!t ? 'bg-red-500' : ''}`} style={t ? { background: t.textMuted } : undefined}></span>Desconectado</span>
                         )}
                         {isExpanded ? <ChevronDown className="w-5 h-5 text-neutral-400" /> : <ChevronRight className="w-5 h-5 text-neutral-400" />}
                       </div>
@@ -3139,7 +3144,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                 <RefreshCw className={`w-4 h-4 ${syncingProductProvider === prov.id ? 'animate-spin' : ''}`} />
                                 {syncingProductProvider === prov.id ? 'Actualizando...' : 'Actualizar productos'}
                               </button>
-                              <button onClick={() => disconnectProductProvider(prov.id)} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"><Unlink className="w-4 h-4" /> Desconectar</button>
+                              <button onClick={() => disconnectProductProvider(prov.id)} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${!t ? 'bg-red-500 hover:bg-red-600 text-white' : 'border text-red-400 hover:bg-red-500/10'}`} style={t ? { borderColor: 'rgba(239,68,68,0.4)' } : undefined}><Unlink className="w-4 h-4" /> Desconectar</button>
                             </div>
                           </div>
                         ) : (

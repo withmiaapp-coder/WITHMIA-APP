@@ -98,7 +98,11 @@ export const Navigation = () => {
                   onMouseEnter={openProduct}
                   onMouseLeave={closeProduct}
                 >
-                  <button className="flex items-center gap-1 text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200">
+                  <button
+                    className="flex items-center gap-1 text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
+                    aria-expanded={productOpen}
+                    aria-haspopup="true"
+                  >
                     Producto
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${productOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -237,6 +241,7 @@ export const Navigation = () => {
               <button
                 className="lg:hidden p-2 -mr-2"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
               >
                 {mobileMenuOpen ? (
                   <X className="w-6 h-6 text-white" />

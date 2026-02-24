@@ -1861,6 +1861,7 @@ const DocumentationPage = () => {
                   ref={searchRef}
                   type="text"
                   placeholder="Buscar..."
+                  aria-label="Buscar en documentación"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}

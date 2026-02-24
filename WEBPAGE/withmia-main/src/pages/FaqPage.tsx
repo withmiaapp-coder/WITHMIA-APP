@@ -561,6 +561,7 @@ const FaqPage = () => {
                     <input
                       type="text"
                       placeholder="Buscar en preguntas frecuentes..."
+                      aria-label="Buscar preguntas frecuentes"
                       value={faqSearch}
                       onChange={(e) => setFaqSearch(e.target.value)}
                       onFocus={() => setFaqSearchFocused(true)}
@@ -719,6 +720,7 @@ const FaqPage = () => {
                     <input
                       type="text"
                       placeholder="Buscar sugerencias..."
+                      aria-label="Buscar sugerencias"
                       value={suggSearch}
                       onChange={(e) => setSuggSearch(e.target.value)}
                       onFocus={() => setSuggSearchFocused(true)}
