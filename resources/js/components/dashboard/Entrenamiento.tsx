@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import debugLog from '@/utils/debugLogger';
+import { useTheme } from '../../contexts/ThemeContext';
 import { router } from "@inertiajs/react";
 import {
   Building2,
@@ -78,6 +79,24 @@ export default function Entrenamiento({
   company,
   onboardingData: initialOnboarding,
 }: EntrenamientoProps) {
+  const { currentTheme, hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      contentBg: 'var(--theme-content-bg)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : undefined,
+      itemBg: isDark ? 'rgba(255,255,255,0.03)' : undefined,
+    };
+  }, [hasTheme, isDark]);
+
   const [onboardingData, setOnboardingData] = useState<OnboardingData>(
     initialOnboarding || {
       company_name: company?.name || "",
@@ -418,8 +437,8 @@ export default function Entrenamiento({
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-800">Entrenamiento de IA</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Entrenamiento de IA</h1>
+          <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
             Entrena a WITHMIA con información de tu empresa y ejemplos de conversación
           </p>
         </div>
@@ -431,15 +450,15 @@ export default function Entrenamiento({
         <div className="flex justify-center">
           <div className="relative">
             {/* Phone Frame */}
-            <div className="w-[380px] h-[780px] bg-gradient-to-b from-gray-800 to-gray-900 rounded-[3rem] p-2 shadow-2xl">
+            <div className="w-[300px] h-[620px] bg-gradient-to-b from-gray-800 to-gray-900 rounded-[2.5rem] p-1.5 shadow-2xl">
               {/* Phone Inner */}
-              <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden flex flex-col">
+              <div className="w-full h-full bg-white rounded-[2.2rem] overflow-hidden flex flex-col">
                 {/* Status Bar - iPhone style */}
-                <div className="h-12 bg-gradient-to-r from-violet-500 to-purple-500 flex items-end justify-between px-6 pb-1 relative">
+                <div className="h-10 bg-gradient-to-r from-violet-500 to-purple-500 flex items-end justify-between px-5 pb-1 relative">
                   {/* Dynamic Island / Notch */}
-                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-24 h-7 bg-black rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-gray-800 rounded-full mr-2"></div>
-                    <div className="w-2 h-2 bg-gray-700 rounded-full"></div>
+                  <div className="absolute top-1.5 left-1/2 transform -translate-x-1/2 w-20 h-6 bg-black rounded-full flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-gray-800 rounded-full mr-1.5"></div>
+                    <div className="w-1.5 h-1.5 bg-gray-700 rounded-full"></div>
                   </div>
                   {/* Time */}
                   <span className="text-white text-sm font-semibold">
@@ -470,8 +489,8 @@ export default function Entrenamiento({
                 </div>
                 
                 {/* Chat Header */}
-                <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-4 py-3 flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-3 py-2 flex items-center gap-2">
+                  <div className="w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
                     {onboardingData.logo_url ? (
                       <img src={onboardingData.logo_url} alt="Logo" className="w-full h-full object-contain" />
                     ) : (
@@ -479,7 +498,7 @@ export default function Entrenamiento({
                     )}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-base">{onboardingData.assistant_name || "WITHMIA"}</h3>
+                    <h3 className="text-white font-semibold text-sm">{onboardingData.assistant_name || "WITHMIA"}</h3>
                     <p className="text-white/70 text-xs">Entrenamiento activo</p>
                   </div>
                   <div className="ml-auto flex items-center gap-1.5">
@@ -581,11 +600,11 @@ export default function Entrenamiento({
         </div>
 
         {/* Company Information Section */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-lg h-fit">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-6 h-6 text-violet-600" />
-              <h2 className="text-2xl font-bold text-neutral-800">
+        <div className={`rounded-xl p-5 border shadow-lg h-fit ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" style={t ? { color: t.accent } : { color: '#7c3aed' }} />
+              <h2 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
                 Información de tu Empresa
               </h2>
             </div>
@@ -593,14 +612,16 @@ export default function Entrenamiento({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleOpenBotConfig}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-sm ${!t ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'hover:opacity-80'}`}
+                  style={t ? { background: t.inputBg, color: t.textSec } : undefined}
                   title="Configuración del Bot"
                 >
                   <Settings className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setEditingOnboarding(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-sm ${!t ? 'bg-violet-50 text-violet-700 hover:bg-violet-100' : 'hover:opacity-80'}`}
+                  style={t ? { background: t.accentLight, color: t.accent } : undefined}
                 >
                   <Edit2 className="w-4 h-4" />
                   Editar
@@ -610,7 +631,8 @@ export default function Entrenamiento({
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditingOnboarding(false)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-sm ${!t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'hover:opacity-80'}`}
+                  style={t ? { background: t.inputBg, color: t.textSec } : undefined}
                 >
                   <X className="w-4 h-4" />
                   Cancelar
@@ -618,7 +640,8 @@ export default function Entrenamiento({
                 <button
                   onClick={handleSaveOnboarding}
                   disabled={savingOnboarding}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 text-sm ${!t ? 'bg-violet-600 text-white hover:bg-violet-700' : 'text-white'}`}
+                  style={t ? { background: t.accent } : undefined}
                 >
                   {savingOnboarding ? (
                     <Loader className="w-4 h-4 animate-spin" />
@@ -631,15 +654,15 @@ export default function Entrenamiento({
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Company Logo */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 <Image className="w-4 h-4 inline mr-1" />
                 Logo de la Empresa
               </label>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className={`w-14 h-14 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden ${!t ? 'border-gray-300 bg-gray-50' : ''}`} style={t ? { borderColor: t.cardBorder, background: t.inputBg } : undefined}>
                   {onboardingData.logo_url ? (
                     <img 
                       src={onboardingData.logo_url} 
@@ -647,7 +670,7 @@ export default function Entrenamiento({
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <Building2 className="w-8 h-8 text-gray-400" />
+                    <Building2 className="w-8 h-8" style={t ? { color: t.textMuted } : { color: '#9ca3af' }} />
                   )}
                 </div>
                 <div>
@@ -661,7 +684,8 @@ export default function Entrenamiento({
                   <button
                     onClick={() => logoInputRef.current?.click()}
                     disabled={uploadingLogo}
-                    className="flex items-center gap-2 px-3 py-2 bg-violet-50 text-violet-700 rounded-lg hover:bg-violet-100 transition-colors text-sm disabled:opacity-50"
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-sm disabled:opacity-50 ${!t ? 'bg-violet-50 text-violet-700 hover:bg-violet-100' : 'hover:opacity-80'}`}
+                    style={t ? { background: t.accentLight, color: t.accent } : undefined}
                   >
                     {uploadingLogo ? (
                       <Loader className="w-4 h-4 animate-spin" />
@@ -670,14 +694,14 @@ export default function Entrenamiento({
                     )}
                     {onboardingData.logo_url ? 'Cambiar logo' : 'Subir logo'}
                   </button>
-                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, WebP. Máx 2MB</p>
+                  <p className={`text-xs mt-1 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>PNG, JPG, WebP. Máx 2MB</p>
                 </div>
               </div>
             </div>
 
             {/* Assistant Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 <Bot className="w-4 h-4 inline mr-1" />
                 Nombre del Asistente
               </label>
@@ -692,19 +716,20 @@ export default function Entrenamiento({
                     }))
                   }
                   placeholder="Ej: Ana, Sofia, Max..."
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white placeholder-gray-400"
+                  className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm ${!t ? 'border-gray-200 text-gray-900 bg-white placeholder-gray-400' : ''}`}
+                  style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                 />
               ) : (
-                <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
+                <p className={`px-3 py-2 rounded-lg text-sm ${!t ? 'bg-gray-50 text-gray-800' : ''}`} style={t ? { background: t.inputBg, color: t.text } : undefined}>
                   {onboardingData.assistant_name || "WITHMIA"}
                 </p>
               )}
-              <p className="text-xs text-gray-500 mt-1">Este es el nombre con el que tu IA se presentará a tus clientes</p>
+              <p className={`text-xs mt-1 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Este es el nombre con el que tu IA se presentará a tus clientes</p>
             </div>
 
             {/* Company Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 Nombre de la Empresa
               </label>
               {editingOnboarding ? (
@@ -717,10 +742,11 @@ export default function Entrenamiento({
                       company_name: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white"
+                  className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm ${!t ? 'border-gray-200 text-gray-900 bg-white' : ''}`}
+                  style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                 />
               ) : (
-                <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
+                <p className={`px-3 py-2 rounded-lg text-sm ${!t ? 'bg-gray-50 text-gray-800' : ''}`} style={t ? { background: t.inputBg, color: t.text } : undefined}>
                   {onboardingData.company_name || "No especificado"}
                 </p>
               )}
@@ -728,14 +754,14 @@ export default function Entrenamiento({
 
             {/* Website */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 <Globe className="w-4 h-4 inline mr-1" />
                 Sitio Web
               </label>
               {editingOnboarding ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center cursor-pointer text-gray-900 font-medium">
+                    <label className={`flex items-center cursor-pointer font-medium text-sm ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.text } : undefined}>
                       <input
                         type="radio"
                         checked={onboardingData.has_website === true}
@@ -776,18 +802,20 @@ export default function Entrenamiento({
                         }))
                       }
                       placeholder="https://ejemplo.com"
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white placeholder-gray-400"
+                      className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm ${!t ? 'border-gray-200 text-gray-900 bg-white placeholder-gray-400' : ''}`}
+                      style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                     />
                   )}
                 </div>
               ) : (
-                <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-800">
+                <p className={`px-3 py-2 rounded-lg text-sm ${!t ? 'bg-gray-50 text-gray-800' : ''}`} style={t ? { background: t.inputBg, color: t.text } : undefined}>
                   {onboardingData.has_website ? (
                     <a
                       href={onboardingData.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-violet-600 hover:underline"
+                      className="hover:underline"
+                      style={t ? { color: t.accent } : { color: '#7c3aed' }}
                     >
                       {onboardingData.website}
                     </a>
@@ -800,7 +828,7 @@ export default function Entrenamiento({
 
             {/* Company Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 Descripción de la Empresa
               </label>
               {editingOnboarding ? (
@@ -813,10 +841,11 @@ export default function Entrenamiento({
                     }))
                   }
                   rows={3}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-900 bg-white resize-none"
+                  className={`w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 resize-none text-sm ${!t ? 'border-gray-200 text-gray-900 bg-white' : ''}`}
+                  style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                 />
               ) : (
-                <p className="px-4 py-3 bg-gray-50 rounded-lg text-gray-800 whitespace-pre-wrap text-sm">
+                <p className={`px-3 py-2 rounded-lg whitespace-pre-wrap text-sm ${!t ? 'bg-gray-50 text-gray-800' : ''}`} style={t ? { background: t.inputBg, color: t.text } : undefined}>
                   {onboardingData.company_description || "No especificada"}
                 </p>
               )}
@@ -824,12 +853,12 @@ export default function Entrenamiento({
 
             {/* Client Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                 <Users className="w-4 h-4 inline mr-1" />
                 Tipo de Cliente
               </label>
               {editingOnboarding ? (
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     onClick={() =>
                       setOnboardingData((prev) => ({
@@ -837,14 +866,18 @@ export default function Entrenamiento({
                         client_type: "interno",
                       }))
                     }
-                    className={`flex-1 px-4 py-3 border-2 rounded-lg transition-all ${
+                    className={`flex-1 px-3 py-2 border-2 rounded-lg transition-all ${!t ? (
                       onboardingData.client_type === "interno"
                         ? "border-green-500 bg-green-50 text-green-700"
                         : "border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
-                    }`}
+                    ) : ''}`}
+                    style={t ? {
+                      borderColor: onboardingData.client_type === "interno" ? t.accent : t.cardBorder,
+                      background: onboardingData.client_type === "interno" ? t.accentLight : t.inputBg,
+                      color: onboardingData.client_type === "interno" ? t.accent : t.textSec
+                    } : undefined}
                   >
                     <div className="text-center">
-                      <div className="text-xl mb-1"></div>
                       <div className="font-semibold text-sm">Interno</div>
                     </div>
                   </button>
@@ -855,27 +888,32 @@ export default function Entrenamiento({
                         client_type: "externo",
                       }))
                     }
-                    className={`flex-1 px-4 py-3 border-2 rounded-lg transition-all ${
+                    className={`flex-1 px-3 py-2 border-2 rounded-lg transition-all ${!t ? (
                       onboardingData.client_type === "externo"
                         ? "border-orange-500 bg-orange-50 text-orange-700"
                         : "border-gray-200 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50"
-                    }`}
+                    ) : ''}`}
+                    style={t ? {
+                      borderColor: onboardingData.client_type === "externo" ? t.accent : t.cardBorder,
+                      background: onboardingData.client_type === "externo" ? t.accentLight : t.inputBg,
+                      color: onboardingData.client_type === "externo" ? t.accent : t.textSec
+                    } : undefined}
                   >
                     <div className="text-center">
-                      <div className="text-xl mb-1"></div>
                       <div className="font-semibold text-sm">Externo</div>
                     </div>
                   </button>
                 </div>
               ) : (
                 <div
-                  className={`px-4 py-3 rounded-lg text-sm ${
+                  className={`px-3 py-2 rounded-lg text-sm ${!t ? (
                     onboardingData.client_type === "interno"
                       ? "bg-green-50 text-green-700"
                       : onboardingData.client_type === "externo"
                       ? "bg-orange-50 text-orange-700"
                       : "bg-gray-50 text-gray-800"
-                  }`}
+                  ) : ''}`}
+                  style={t ? { background: t.inputBg, color: t.text } : undefined}
                 >
                   {onboardingData.client_type === "interno"
                     ? " Cliente Interno - Para equipos de tu empresa"
@@ -888,12 +926,12 @@ export default function Entrenamiento({
           </div>
 
           {/* Tips Section */}
-          <div className="mt-6 p-4 bg-violet-50 rounded-lg border border-violet-100">
-            <div className="flex items-start gap-3">
-              <MessageCircle className="w-5 h-5 text-violet-600 mt-0.5" />
+          <div className={`mt-4 p-3 rounded-lg border ${!t ? 'bg-violet-50 border-violet-100' : ''}`} style={t ? { background: t.accentLight, borderColor: t.cardBorder } : undefined}>
+            <div className="flex items-start gap-2">
+              <MessageCircle className="w-4 h-4 mt-0.5" style={t ? { color: t.accent } : { color: '#7c3aed' }} />
               <div>
-                <h4 className="font-semibold text-violet-800 text-sm">Consejos de entrenamiento</h4>
-                <ul className="mt-2 text-sm text-violet-700 space-y-1">
+                <h4 className={`font-semibold text-sm ${!t ? 'text-violet-800' : ''}`} style={t ? { color: t.accent } : undefined}>Consejos de entrenamiento</h4>
+                <ul className={`mt-1.5 text-xs space-y-0.5 ${!t ? 'text-violet-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
                   <li>• Proporciona ejemplos de conversaciones típicas</li>
                   <li>• Corrige las respuestas que no sean correctas</li>
                   <li>• Describe cómo debe responder WITHMIA a tus clientes</li>
@@ -907,7 +945,7 @@ export default function Entrenamiento({
       {/* Bot Configuration Modal */}
       {showBotConfig && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+          <div className={`rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden ${!t ? 'bg-white' : ''}`} style={t ? { background: t.cardBg } : undefined}>
             {/* Header */}
             <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-4 flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -936,10 +974,10 @@ export default function Entrenamiento({
                   <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <AlertCircle className="w-8 h-8 text-amber-600" />
                   </div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h4 className={`text-lg font-semibold mb-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.text } : undefined}>
                     Conecta tu WhatsApp primero
                   </h4>
-                  <p className="text-gray-600 mb-6">
+                  <p className={`mb-6 ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                     Para configurar el bot, primero necesitas conectar tu WhatsApp en la sección de Integración.
                   </p>
                   <button
@@ -961,12 +999,12 @@ export default function Entrenamiento({
               ) : (
                 <div className="space-y-4">
                   {/* 1. Palabra clave del cliente */}
-                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">🙋</span>
+                  <div className={`rounded-xl p-3 border ${!t ? 'bg-orange-50 border-orange-100' : ''}`} style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">🙋</span>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-orange-800">Palabra clave del cliente</h4>
-                        <p className="text-xs text-orange-600 mt-0.5 mb-3">
+                        <h4 className={`text-sm font-semibold ${!t ? 'text-orange-800' : ''}`} style={t ? { color: t.text } : undefined}>Palabra clave del cliente</h4>
+                        <p className={`text-xs mt-0.5 mb-2 ${!t ? 'text-orange-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                           Si el cliente escribe esta palabra, te llegará una notificación para que lo atiendas personalmente.
                         </p>
                         <input
@@ -974,7 +1012,8 @@ export default function Entrenamiento({
                           value={botConfig.human_keyword}
                           onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase().slice(0, 50) })}
                           maxLength={50}
-                          className="w-full px-3 py-2.5 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium ${!t ? 'border-orange-200 text-gray-900 bg-white' : ''}`}
+                          style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           placeholder="Ej: HUMANO, AYUDA, AGENTE"
                         />
                       </div>
@@ -982,12 +1021,12 @@ export default function Entrenamiento({
                   </div>
 
                   {/* 2. Tiempo de espera por respuesta humana */}
-                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">⏳</span>
+                  <div className={`rounded-xl p-3 border ${!t ? 'bg-orange-50 border-orange-100' : ''}`} style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">⏳</span>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-orange-800">Tiempo para responder al cliente</h4>
-                        <p className="text-xs text-orange-600 mt-0.5 mb-3">
+                        <h4 className={`text-sm font-semibold ${!t ? 'text-orange-800' : ''}`} style={t ? { color: t.text } : undefined}>Tiempo para responder al cliente</h4>
+                        <p className={`text-xs mt-0.5 mb-2 ${!t ? 'text-orange-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                           Cuando el cliente pide ayuda humana, el bot se pausa este tiempo esperando tu respuesta. Si no respondes, el bot vuelve a atender.
                         </p>
                         <div className="flex items-center gap-3">
@@ -1000,9 +1039,10 @@ export default function Entrenamiento({
                             }}
                             min={60}
                             max={86400}
-                            className="w-32 px-3 py-2.5 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium ${!t ? 'border-orange-200 text-gray-900 bg-white' : ''}`}
+                            style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
-                          <span className="text-sm text-orange-700 font-medium">
+                          <span className={`text-sm font-medium ${!t ? 'text-orange-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
                             segundos = {botConfig.human_block_duration >= 3600 
                               ? `${Math.floor(botConfig.human_block_duration / 3600)}h ${Math.floor((botConfig.human_block_duration % 3600) / 60)}m`
                               : `${Math.floor(botConfig.human_block_duration / 60)} minutos`}
@@ -1013,12 +1053,12 @@ export default function Entrenamiento({
                   </div>
 
                   {/* 3. Pausa cuando tú respondes */}
-                  <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">💬</span>
+                  <div className={`rounded-xl p-3 border ${!t ? 'bg-violet-50 border-violet-100' : ''}`} style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">💬</span>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-violet-800">Pausa cuando tú respondes</h4>
-                        <p className="text-xs text-violet-600 mt-0.5 mb-3">
+                        <h4 className={`text-sm font-semibold ${!t ? 'text-violet-800' : ''}`} style={t ? { color: t.text } : undefined}>Pausa cuando tú respondes</h4>
+                        <p className={`text-xs mt-0.5 mb-2 ${!t ? 'text-violet-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                           Cuando escribes al cliente desde Chatwoot, el bot se pausa este tiempo para que puedas conversar sin interrupciones.
                         </p>
                         <div className="flex items-center gap-3">
@@ -1031,9 +1071,10 @@ export default function Entrenamiento({
                             }}
                             min={60}
                             max={86400}
-                            className="w-32 px-3 py-2.5 text-sm border border-violet-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-violet-200 text-gray-900 bg-white' : ''}`}
+                            style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
-                          <span className="text-sm text-violet-700 font-medium">
+                          <span className={`text-sm font-medium ${!t ? 'text-violet-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
                             segundos = {botConfig.block_duration >= 3600 
                               ? `${Math.floor(botConfig.block_duration / 3600)}h ${Math.floor((botConfig.block_duration % 3600) / 60)}m`
                               : `${Math.floor(botConfig.block_duration / 60)} minutos`}
@@ -1044,12 +1085,12 @@ export default function Entrenamiento({
                   </div>
 
                   {/* 4. Espera mensajes del cliente */}
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">✍️</span>
+                  <div className={`rounded-xl p-3 border ${!t ? 'bg-gray-50 border-gray-200' : ''}`} style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">✍️</span>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-gray-700">Espera mensajes del cliente</h4>
-                        <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                        <h4 className={`text-sm font-semibold ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>Espera mensajes del cliente</h4>
+                        <p className={`text-xs mt-0.5 mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
                           El bot espera estos segundos después de cada mensaje por si el cliente sigue escribiendo, así puede responder todo junto.
                         </p>
                         <div className="flex items-center gap-3">
@@ -1062,9 +1103,10 @@ export default function Entrenamiento({
                             }}
                             min={1}
                             max={60}
-                            className="w-32 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-gray-300 text-gray-900 bg-white' : ''}`}
+                            style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
-                          <span className="text-sm text-gray-600 font-medium">
+                          <span className={`text-sm font-medium ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                             segundos
                           </span>
                         </div>
@@ -1073,12 +1115,12 @@ export default function Entrenamiento({
                   </div>
 
                   {/* 5. Simula que escribe */}
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">💭</span>
+                  <div className={`rounded-xl p-3 border ${!t ? 'bg-gray-50 border-gray-200' : ''}`} style={t ? { background: t.itemBg, borderColor: t.cardBorder } : undefined}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xl">💭</span>
                       <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-gray-700">Simula que escribe</h4>
-                        <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                        <h4 className={`text-sm font-semibold ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>Simula que escribe</h4>
+                        <p className={`text-xs mt-0.5 mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
                           Antes de enviar la respuesta, el bot muestra "escribiendo..." este tiempo para parecer más humano y natural.
                         </p>
                         <div className="flex items-center gap-3">
@@ -1091,9 +1133,10 @@ export default function Entrenamiento({
                             }}
                             min={1}
                             max={30}
-                            className="w-32 px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent text-gray-900 bg-white font-medium"
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-gray-300 text-gray-900 bg-white' : ''}`}
+                            style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
-                          <span className="text-sm text-gray-600 font-medium">
+                          <span className={`text-sm font-medium ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                             segundos
                           </span>
                         </div>
@@ -1106,10 +1149,11 @@ export default function Entrenamiento({
 
             {/* Footer - only show when workflow is configured */}
             {!noWorkflowConfigured && !loadingBotConfig && (
-              <div className="px-5 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
+              <div className={`px-5 py-3 border-t flex justify-end gap-3 flex-shrink-0 ${!t ? 'bg-gray-50 border-gray-200' : ''}`} style={t ? { background: t.contentBg, borderColor: t.cardBorder } : undefined}>
                 <button
                   onClick={() => setShowBotConfig(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                  className={`px-4 py-2 rounded-lg transition-colors ${!t ? 'text-gray-700 hover:bg-gray-200' : 'hover:opacity-80'}`}
+                  style={t ? { color: t.textSec } : undefined}
                 >
                   Cancelar
                 </button>

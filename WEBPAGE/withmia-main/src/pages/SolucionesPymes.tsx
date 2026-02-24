@@ -276,6 +276,43 @@ const SolucionesPymes = () => {
   const [activeTab, setActiveTab] = useState(0);
   const current = useCases[activeTab];
 
+  /* ─── Chat simulation (progressive reveal + loop) ─── */
+  const [visibleMsgs, setVisibleMsgs] = useState(0);
+  const [typingSender, setTypingSender] = useState<"client" | "mia" | null>(null);
+
+  useEffect(() => {
+    setVisibleMsgs(0);
+    setTypingSender(null);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const chat = useCases[activeTab].chat;
+
+    const runSequence = (startDelay: number) => {
+      let delay = startDelay;
+      chat.forEach((msg, i) => {
+        // show typing indicator
+        timers.push(setTimeout(() => setTypingSender(msg.from as "client" | "mia"), delay));
+        // typing duration — MIA types longer than client
+        const typingMs = msg.from === "mia" ? 900 + msg.msg.length * 6 : 500 + msg.msg.length * 4;
+        delay += typingMs;
+        // reveal message
+        timers.push(setTimeout(() => {
+          setTypingSender(null);
+          setVisibleMsgs(i + 1);
+        }, delay));
+        delay += 350; // pause between messages
+      });
+      // after all messages shown, wait then restart
+      timers.push(setTimeout(() => {
+        setVisibleMsgs(0);
+        setTypingSender(null);
+        runSequence(800);
+      }, delay + 3500));
+    };
+
+    runSequence(700);
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [activeTab]);
+
   const counterLeads = useCountUp(40, 1600);
   const counterTime = useCountUp(6, 1400);
   const counterConversion = useCountUp(391, 2000);
@@ -478,172 +515,252 @@ const SolucionesPymes = () => {
         <Heatmap247 />
 
         {/* ══════════════════════════════════════════════════
-            USE CASES — Industry tabs
+            USE CASES — Industry showcase (professional)
             ══════════════════════════════════════════════════ */}
-        <section className="pt-10 pb-14 relative" id="casos">
-          <div className="max-w-6xl mx-auto px-6">
+        <section className="py-20 relative" id="casos">
+          <div className="max-w-7xl mx-auto px-6">
+            {/* Header */}
             <Reveal>
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
-                  <Sparkles className="w-4 h-4" />
-                  Casos de Uso
-                </div>
-                <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-                  Una IA,{" "}
-                  <span className="text-gradient">todas las industrias</span>
+              <div className="text-center mb-14">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400/70 mb-4">Casos de uso</p>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-[1.08] mb-5">
+                  Una IA que se adapta{" "}
+                  <span className="text-gradient">a tu industria</span>
                 </h2>
-                <p className="text-white/35 max-w-xl mx-auto">
-                  Mira cómo WITHMIA conversa con tus clientes en cada rubro.
+                <p className="text-white/35 max-w-lg mx-auto text-[15px] leading-relaxed">
+                  Selecciona tu rubro y mira una conversación real con WITHMIA.
                 </p>
               </div>
             </Reveal>
 
-            {/* Industry tabs */}
-            <Reveal delay={100}>
-              <div className="flex flex-wrap justify-center gap-2 mb-10">
-                {useCases.map((uc, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      i === activeTab
-                        ? "text-white border shadow-lg"
-                        : "bg-white/[0.02] border border-white/[0.06] text-white/40 hover:bg-white/[0.04] hover:text-white/60"
-                    }`}
-                    style={
-                      i === activeTab
-                        ? {
-                            backgroundColor: `${uc.color}12`,
-                            borderColor: `${uc.color}30`,
-                            color: uc.color,
-                            boxShadow: `0 0 25px ${uc.color}10`,
-                          }
-                        : undefined
-                    }
-                  >
-                    <uc.icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{uc.industry}</span>
-                  </button>
-                ))}
+            {/* Industry selector — minimal underline style */}
+            <Reveal delay={80}>
+              <div className="relative mb-12">
+                <div className="flex justify-center">
+                  <div className="inline-flex gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                    {useCases.map((uc, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveTab(i)}
+                        className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-300 ${
+                          i === activeTab
+                            ? "text-white"
+                            : "text-white/30 hover:text-white/55"
+                        }`}
+                      >
+                        {i === activeTab && (
+                          <div
+                            className="absolute inset-0 rounded-xl"
+                            style={{
+                              backgroundColor: `${uc.color}10`,
+                              border: `1px solid ${uc.color}20`,
+                              transition: "all 0.3s ease",
+                            }}
+                          />
+                        )}
+                        <uc.icon className="w-4 h-4 relative z-10" style={i === activeTab ? { color: uc.color } : undefined} />
+                        <span className="relative z-10 hidden md:inline">{uc.industry}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </Reveal>
 
-            {/* Two-column: Chat simulation + Features */}
-            <Reveal delay={150}>
+            {/* Content card */}
+            <Reveal delay={120}>
               <div
                 key={`uc-${activeTab}`}
-                className="grid lg:grid-cols-2 gap-6 items-stretch"
-                style={{ animation: 'fadeInUp 0.4s ease both' }}
+                className="rounded-3xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+                style={{ animation: "fadeInUp 0.45s ease both" }}
               >
-                {/* Left — Chat simulation */}
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
-                  {/* Chat header */}
-                  <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06]" style={{ backgroundColor: `${current.color}08` }}>
+                {/* Top bar — industry name + status */}
+                <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-white/[0.05]">
+                  <div className="flex items-center gap-3">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: `${current.color}15`, border: `1px solid ${current.color}25` }}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
                     >
-                      <current.icon className="w-4 h-4" style={{ color: current.color }} />
+                      <current.icon className="w-[18px] h-[18px]" style={{ color: current.color }} />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-white/80">{current.industry}</p>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[10px] text-white/30">WITHMIA activa</span>
-                      </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white/85">{current.industry}</p>
+                      <p className="text-[11px] text-white/25">{current.tagline}</p>
                     </div>
                   </div>
-
-                  {/* Chat messages */}
-                  <div className="p-4 space-y-3 min-h-[260px]">
-                    {current.chat.map((msg, i) => (
-                      <div
-                        key={`${activeTab}-msg-${i}`}
-                        className={`flex ${msg.from === 'client' ? 'justify-start' : 'justify-end'}`}
-                        style={{ animation: `fadeInUp 0.35s ease ${i * 0.12}s both` }}
-                      >
-                        <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
-                          msg.from === 'client'
-                            ? 'bg-white/[0.06] border border-white/[0.06] text-white/60 rounded-tl-sm'
-                            : 'rounded-tr-sm text-white/80'
-                        }`}
-                          style={msg.from === 'mia' ? {
-                            backgroundColor: `${current.color}12`,
-                            border: `1px solid ${current.color}20`,
-                          } : undefined}
-                        >
-                          {msg.from === 'mia' && (
-                            <div className="flex items-center gap-1 mb-1">
-                              <Sparkles className="w-2.5 h-2.5" style={{ color: current.color }} />
-                              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: `${current.color}90` }}>WITHMIA</span>
-                            </div>
-                          )}
-                          {msg.msg}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Input bar */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-t border-white/[0.06] bg-white/[0.01]">
-                    <div className="flex-1 h-8 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center px-3">
-                      <span className="text-[11px] text-white/20">Escribe un mensaje...</span>
-                    </div>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${current.color}15` }}>
-                      <ArrowRight className="w-3.5 h-3.5" style={{ color: current.color }} />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] text-emerald-400/70 font-medium">En vivo</span>
                   </div>
                 </div>
 
-                {/* Right — Features + Metrics */}
-                <div className="flex flex-col gap-4">
-                  {/* Tagline */}
-                  <div className="px-1">
-                    <p className="text-lg font-semibold text-white/80 mb-1">{current.tagline}</p>
-                    <p className="text-[12px] text-white/25">Lo que WITHMIA hace por ti en {current.industry.toLowerCase()}</p>
-                  </div>
+                {/* Main content — 3 columns */}
+                <div className="grid lg:grid-cols-[1fr_1.2fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-white/[0.05]">
 
-                  {/* Feature pills */}
-                  <div className="space-y-2.5 flex-1">
-                    {current.features.map((feat, i) => (
-                      <div
-                        key={`${activeTab}-feat-${i}`}
-                        className="group flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300"
-                        style={{ animation: `fadeInUp 0.35s ease ${i * 0.1 + 0.15}s both` }}
-                      >
+                  {/* Col 1 — Features */}
+                  <div className="p-6 sm:p-8 flex flex-col justify-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Capacidades</p>
+                    <div className="space-y-4">
+                      {current.features.map((feat, i) => (
                         <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300"
-                          style={{ backgroundColor: `${current.color}10`, border: `1px solid ${current.color}18` }}
+                          key={`${activeTab}-feat-${i}`}
+                          className="flex items-center gap-3"
+                          style={{ animation: `fadeInUp 0.3s ease ${i * 0.08 + 0.1}s both` }}
                         >
-                          <feat.icon className="w-[18px] h-[18px]" style={{ color: current.color }} />
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `${current.color}0a`, border: `1px solid ${current.color}12` }}
+                          >
+                            <feat.icon className="w-4 h-4" style={{ color: `${current.color}aa` }} />
+                          </div>
+                          <span className="text-[13px] text-white/55 font-medium">{feat.label}</span>
                         </div>
-                        <span className="text-sm font-medium text-white/70">{feat.label}</span>
-                        <CheckCircle2 className="w-4 h-4 ml-auto shrink-0" style={{ color: `${current.color}60` }} />
+                      ))}
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="mt-8 pt-6 border-t border-white/[0.05] grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xl font-bold text-gradient leading-none">{current.result}</p>
+                        <p className="text-[10px] text-white/15 mt-1.5 font-medium">resultado</p>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-xl font-bold text-gradient leading-none">{current.result2}</p>
+                        <p className="text-[10px] text-white/15 mt-1.5 font-medium">impacto</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Metrics row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div
-                      className="text-center py-4 rounded-xl border"
-                      style={{
-                        background: `linear-gradient(135deg, ${current.color}08, ${current.color}03)`,
-                        borderColor: `${current.color}18`,
-                      }}
-                    >
-                      <p className="text-xl font-bold text-gradient">{current.result}</p>
-                      <TrendingUp className="w-3.5 h-3.5 mx-auto mt-1" style={{ color: `${current.color}60` }} />
+                  {/* Col 2 — Chat simulation (center, largest) */}
+                  <div className="p-6 sm:p-8 flex flex-col" style={{ backgroundColor: `${current.color}03` }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Conversación en vivo</p>
+                    <div className="space-y-3 flex-1 min-h-[260px]">
+                      {current.chat.slice(0, visibleMsgs).map((msg, i) => (
+                        <div
+                          key={`${activeTab}-msg-${i}`}
+                          className={`flex ${msg.from === "client" ? "justify-start" : "justify-end"}`}
+                          style={{ animation: "fadeInUp 0.3s ease both" }}
+                        >
+                          <div
+                            className={`max-w-[85%] px-4 py-3 text-[13px] leading-relaxed ${
+                              msg.from === "client"
+                                ? "bg-white/[0.05] border border-white/[0.06] text-white/55 rounded-2xl rounded-tl-md"
+                                : "rounded-2xl rounded-tr-md text-white/80"
+                            }`}
+                            style={
+                              msg.from === "mia"
+                                ? {
+                                    backgroundColor: `${current.color}0d`,
+                                    border: `1px solid ${current.color}18`,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {msg.from === "mia" && (
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <Sparkles className="w-3 h-3" style={{ color: current.color }} />
+                                <span
+                                  className="text-[9px] font-bold uppercase tracking-wider"
+                                  style={{ color: `${current.color}80` }}
+                                >
+                                  WITHMIA
+                                </span>
+                              </div>
+                            )}
+                            {msg.msg}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Typing indicator */}
+                      {typingSender && (
+                        <div
+                          className={`flex ${typingSender === "client" ? "justify-start" : "justify-end"}`}
+                          style={{ animation: "fadeInUp 0.2s ease both" }}
+                        >
+                          <div
+                            className={`px-4 py-3 rounded-2xl flex items-center gap-1 ${
+                              typingSender === "client"
+                                ? "bg-white/[0.05] border border-white/[0.06] rounded-tl-md"
+                                : "rounded-tr-md"
+                            }`}
+                            style={
+                              typingSender === "mia"
+                                ? {
+                                    backgroundColor: `${current.color}0d`,
+                                    border: `1px solid ${current.color}18`,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {typingSender === "mia" && (
+                              <Sparkles className="w-3 h-3 mr-1.5" style={{ color: current.color }} />
+                            )}
+                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "0ms" }} />
+                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "150ms" }} />
+                            <span className="typing-dot w-1.5 h-1.5 rounded-full bg-white/30" style={{ animationDelay: "300ms" }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div
-                      className="text-center py-4 rounded-xl border"
-                      style={{
-                        background: `linear-gradient(135deg, ${current.color}08, ${current.color}03)`,
-                        borderColor: `${current.color}18`,
-                      }}
-                    >
-                      <p className="text-xl font-bold text-gradient">{current.result2}</p>
-                      <Zap className="w-3.5 h-3.5 mx-auto mt-1" style={{ color: `${current.color}60` }} />
+
+                    {/* Input */}
+                    <div className="flex items-center gap-2 mt-5 pt-4 border-t border-white/[0.04]">
+                      <div className="flex-1 h-9 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3.5">
+                        <span className="text-[11px] text-white/15">Escribe un mensaje...</span>
+                      </div>
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${current.color}12`, border: `1px solid ${current.color}20` }}
+                      >
+                        <ArrowRight className="w-4 h-4" style={{ color: current.color }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Col 3 — Summary / why this matters */}
+                  <div className="p-6 sm:p-8 flex flex-col justify-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Por qué importa</p>
+
+                    <div className="space-y-5">
+                      <div className="flex items-start gap-3" style={{ animation: "fadeInUp 0.3s ease 0.15s both" }}>
+                        <div className="w-6 h-6 rounded-md bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <Zap className="w-3 h-3 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-semibold text-white/65">Respuesta instantánea</p>
+                          <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">Tu cliente recibe atención en segundos, no en horas.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3" style={{ animation: "fadeInUp 0.3s ease 0.25s both" }}>
+                        <div className="w-6 h-6 rounded-md bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <Target className="w-3 h-3 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-semibold text-white/65">Contexto del negocio</p>
+                          <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">WITHMIA conoce tus servicios, precios y disponibilidad real.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3" style={{ animation: "fadeInUp 0.3s ease 0.35s both" }}>
+                        <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <Shield className="w-3 h-3 text-violet-400" />
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-semibold text-white/65">Escala a humano</p>
+                          <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">Si algo se complica, WITHMIA transfiere sin perder el hilo.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-white/[0.05]">
+                      <a
+                        href="https://app.withmia.com"
+                        className="group inline-flex items-center gap-2 text-[13px] font-semibold transition-colors duration-300"
+                        style={{ color: `${current.color}90` }}
+                      >
+                        Probar en mi negocio
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-200" />
+                      </a>
                     </div>
                   </div>
                 </div>
