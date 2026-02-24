@@ -320,7 +320,7 @@ const SolucionesPymes = () => {
             ══════════════════════════════════════════════════ */}
         <section className="relative">
           <div className="max-w-7xl mx-auto px-6 pt-28 pb-10">
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div className="grid lg:grid-cols-2 gap-2 items-center">
               {/* Left — Copy */}
               <Reveal>
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-950/30 mb-8">
@@ -384,7 +384,7 @@ const SolucionesPymes = () => {
 
               {/* Right — Phone mockup with lost lead (compact) */}
               <Reveal delay={200}>
-                <div className="flex justify-center lg:justify-end">
+                <div className="flex justify-center">
                   <div className="relative w-[220px] sm:w-[240px]">
                     {/* Phone frame */}
                     <div className="relative rounded-[2rem] border-[2.5px] border-white/[0.12] bg-[#0c0c14] shadow-[0_0_60px_rgba(0,0,0,0.5),inset_0_0_20px_rgba(0,0,0,0.3)] overflow-hidden">

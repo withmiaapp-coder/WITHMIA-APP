@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Package,
   Plus,
@@ -21,6 +21,7 @@ import {
   DollarSign,
   GripVertical,
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ====== TYPES ======
 interface Product {
@@ -130,6 +131,24 @@ export default function ProductsSection({ user, company }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Theme
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      contentBg: 'var(--theme-content-bg)',
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      inputBg: 'var(--theme-input-bg)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
+
   // ====== LOAD DATA ======
   const loadProducts = useCallback(async () => {
     try {
@@ -217,8 +236,8 @@ export default function ProductsSection({ user, company }: Props) {
   // ====== LOADING ======
   if (loading) {
     return (
-      <div className="min-h-[700px] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-neutral-400">
+      <div className="min-h-[700px] flex items-center justify-center" style={t ? { backgroundColor: t.contentBg } : undefined}>
+        <div className="flex items-center gap-3" style={t ? { color: t.textMuted } : undefined}>
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="text-sm">Cargando productos...</span>
         </div>
@@ -228,9 +247,9 @@ export default function ProductsSection({ user, company }: Props) {
 
   // ====== RENDER ======
   return (
-    <div className="min-h-[700px] flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="min-h-[700px] flex flex-col" style={{ height: 'calc(100vh - 56px)', ...(t ? { backgroundColor: t.contentBg } : {}) }}>
       {/* Header */}
-      <div className="px-6 py-3 bg-white border-b border-slate-200 flex-shrink-0">
+      <div className={`px-6 py-3 border-b flex-shrink-0 ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
@@ -238,12 +257,12 @@ export default function ProductsSection({ user, company }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-neutral-800">Productos</h1>
-                <span className="px-2 py-0.5 bg-slate-100 rounded-full text-[11px] font-semibold text-neutral-500">
+                <h1 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Productos</h1>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${!t ? 'bg-slate-100 text-neutral-500' : ''}`} style={t ? { backgroundColor: t.itemBg, color: t.textMuted } : undefined}>
                   {totalProducts}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400">Catálogo de productos y servicios para WITHMIA</p>
+              <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Catálogo de productos y servicios para WITHMIA</p>
             </div>
           </div>
 
@@ -251,14 +270,16 @@ export default function ProductsSection({ user, company }: Props) {
             <button
               onClick={() => loadProducts()}
               disabled={loadingProducts}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
+              className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${!t ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}
+              style={t ? { color: t.textMuted } : undefined}
             >
               <RefreshCw className={`w-4 h-4 ${loadingProducts ? 'animate-spin' : ''}`} />
             </button>
 
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-xs font-medium"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${!t ? 'bg-orange-500 text-white hover:bg-orange-600' : ''}`}
+              style={t ? { backgroundColor: t.accent, color: '#fff' } : undefined}
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Nuevo producto</span>
@@ -269,13 +290,14 @@ export default function ProductsSection({ user, company }: Props) {
         {/* Search & Filters */}
         <div className="flex items-center gap-2 mt-2.5">
           <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-neutral-300 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={t ? { color: t.textMuted } : undefined} />
             <input
               type="text"
               placeholder="Buscar productos..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm text-neutral-700 placeholder:text-neutral-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-400 outline-none"
+              className={`w-full pl-9 pr-3 py-1.5 border rounded-lg text-sm outline-none ${!t ? 'border-slate-200 text-neutral-700 placeholder:text-neutral-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-400' : 'placeholder:opacity-50'}`}
+              style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
             />
           </div>
 
@@ -283,7 +305,8 @@ export default function ProductsSection({ user, company }: Props) {
             <select
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
-              className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-neutral-600 bg-white focus:border-orange-400 outline-none min-w-[130px]"
+              className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
+              style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
             >
               <option value="">Todas las categorías</option>
               {categories.map(cat => (
@@ -295,7 +318,8 @@ export default function ProductsSection({ user, company }: Props) {
           <select
             value={selectedProvider}
             onChange={e => setSelectedProvider(e.target.value)}
-            className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-neutral-600 bg-white focus:border-orange-400 outline-none min-w-[130px]"
+            className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
+            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
           >
             <option value="">Todos los orígenes</option>
             <option value="manual">Manual</option>
@@ -305,16 +329,18 @@ export default function ProductsSection({ user, company }: Props) {
             <option value="custom_api">API Personalizada</option>
           </select>
 
-          <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
+          <div className={`flex items-center gap-0.5 rounded-lg p-0.5 ${!t ? 'bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? (!t ? 'bg-white text-neutral-800 shadow-sm' : 'shadow-sm') : (!t ? 'text-neutral-400 hover:text-neutral-600' : '')}`}
+              style={t ? (viewMode === 'grid' ? { backgroundColor: t.cardBg, color: t.text } : { color: t.textMuted }) : undefined}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-neutral-800 shadow-sm' : 'text-neutral-400 hover:text-neutral-600'}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? (!t ? 'bg-white text-neutral-800 shadow-sm' : 'shadow-sm') : (!t ? 'text-neutral-400 hover:text-neutral-600' : '')}`}
+              style={t ? (viewMode === 'list' ? { backgroundColor: t.cardBg, color: t.text } : { color: t.textMuted }) : undefined}
             >
               <List className="w-3.5 h-3.5" />
             </button>
@@ -377,7 +403,7 @@ export default function ProductsSection({ user, company }: Props) {
 
         {loadingProducts && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-orange-400" />
+            <Loader2 className="w-6 h-6 animate-spin" style={t ? { color: t.accent } : undefined} />
           </div>
         )}
       </div>
@@ -420,6 +446,15 @@ function ProductCard({ product, onClick, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)', cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)', textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)', itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
   const firstImage = product.images?.[0];
   const stock = getStockLabel(product.stock_status);
   const providerConfig = PROVIDER_CONFIG[product.provider] || PROVIDER_CONFIG.manual;
@@ -429,15 +464,16 @@ function ProductCard({ product, onClick, onEdit, onDelete }: {
   return (
     <div
       onClick={onClick}
-      className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all cursor-pointer group"
+      className={`border rounded-xl overflow-hidden hover:shadow-lg transition-all cursor-pointer group ${!t ? 'bg-white border-slate-200 hover:border-orange-200' : ''}`}
+      style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
     >
       {/* Image */}
-      <div className="relative aspect-square bg-slate-50 overflow-hidden">
+      <div className={`relative aspect-square overflow-hidden ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
         {firstImage ? (
           <img src={firstImage} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-10 h-10 text-slate-200" />
+            <Package className="w-10 h-10" style={t ? { color: t.textMuted } : undefined} />
           </div>
         )}
 
@@ -469,17 +505,17 @@ function ProductCard({ product, onClick, onEdit, onDelete }: {
 
       {/* Info */}
       <div className="p-2.5">
-        <h4 className="text-[12px] font-semibold text-neutral-800 leading-tight line-clamp-2 mb-1">{product.name}</h4>
+        <h4 className={`text-[12px] font-semibold leading-tight line-clamp-2 mb-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{product.name}</h4>
 
         {product.category && (
-          <p className="text-[10px] text-neutral-400 mb-1.5 truncate">{product.category}</p>
+          <p className={`text-[10px] mb-1.5 truncate ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{product.category}</p>
         )}
 
         <div className="flex items-end justify-between gap-1">
           <div>
-            <p className="text-[14px] font-bold text-neutral-900">{formatPrice(product.price, product.currency)}</p>
+            <p className={`text-[14px] font-bold ${!t ? 'text-neutral-900' : ''}`} style={t ? { color: t.text } : undefined}>{formatPrice(product.price, product.currency)}</p>
             {hasDiscount && (
-              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(product.compare_at_price, product.currency)}</p>
+              <p className={`text-[10px] line-through ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{formatPrice(product.compare_at_price, product.currency)}</p>
             )}
           </div>
           <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold border ${stock.bg} ${stock.color}`}>
@@ -498,20 +534,30 @@ function ProductListItem({ product, onClick, onEdit, onDelete }: {
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      cardBg: 'var(--theme-content-card-bg)', cardBorder: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)', textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)', itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
   const firstImage = product.images?.[0];
   const stock = getStockLabel(product.stock_status);
   const providerConfig = PROVIDER_CONFIG[product.provider] || PROVIDER_CONFIG.manual;
 
   return (
     <div onClick={onClick}
-      className="flex items-center gap-3 px-3 py-2.5 bg-white border border-slate-100 rounded-lg hover:bg-slate-50 hover:border-orange-200 transition-all cursor-pointer group">
+      className={`flex items-center gap-3 px-3 py-2.5 border rounded-lg transition-all cursor-pointer group ${!t ? 'bg-white border-slate-100 hover:bg-slate-50 hover:border-orange-200' : ''}`}
+      style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
       {/* Thumbnail */}
-      <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-50 flex-shrink-0">
+      <div className={`w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
         {firstImage ? (
           <img src={firstImage} alt="" className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-5 h-5 text-slate-200" />
+            <Package className="w-5 h-5" style={t ? { color: t.textMuted } : undefined} />
           </div>
         )}
       </div>
@@ -519,10 +565,10 @@ function ProductListItem({ product, onClick, onEdit, onDelete }: {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-medium text-neutral-800 truncate">{product.name}</h4>
+          <h4 className={`text-sm font-medium truncate ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{product.name}</h4>
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: providerConfig.color }} title={providerConfig.name} />
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+        <div className={`flex items-center gap-2 text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
           {product.category && <span>{product.category}</span>}
           {product.sku && <span>SKU: {product.sku}</span>}
         </div>
@@ -530,7 +576,7 @@ function ProductListItem({ product, onClick, onEdit, onDelete }: {
 
       {/* Price */}
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-bold text-neutral-800">{formatPrice(product.price, product.currency)}</p>
+        <p className={`text-sm font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{formatPrice(product.price, product.currency)}</p>
       </div>
 
       {/* Stock */}
@@ -541,8 +587,8 @@ function ProductListItem({ product, onClick, onEdit, onDelete }: {
       {/* Actions */}
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
         <button onClick={e => { e.stopPropagation(); onEdit(); }}
-          className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors">
-          <Edit3 className="w-3.5 h-3.5 text-neutral-500" />
+          className={`p-1.5 rounded-lg transition-colors ${!t ? 'hover:bg-slate-200' : ''}`}>
+          <Edit3 className="w-3.5 h-3.5" style={t ? { color: t.textMuted } : undefined} />
         </button>
         <button onClick={e => { e.stopPropagation(); onDelete(); }}
           className="p-1.5 hover:bg-red-50 rounded-lg transition-colors">
@@ -558,6 +604,14 @@ function EmptyState({ hasFilters, onCreateProduct }: {
   hasFilters: boolean;
   onCreateProduct: () => void;
 }) {
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      text: 'var(--theme-text-primary)', textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)', accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme, isDark]);
   return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center mb-5">
@@ -565,18 +619,19 @@ function EmptyState({ hasFilters, onCreateProduct }: {
       </div>
       {hasFilters ? (
         <>
-          <h3 className="text-lg font-semibold text-neutral-700 mb-1">No se encontraron productos</h3>
-          <p className="text-sm text-neutral-400 text-center max-w-sm">Intenta con otros filtros o términos de búsqueda</p>
+          <h3 className={`text-lg font-semibold mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>No se encontraron productos</h3>
+          <p className={`text-sm text-center max-w-sm ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Intenta con otros filtros o términos de búsqueda</p>
         </>
       ) : (
         <>
-          <h3 className="text-lg font-semibold text-neutral-700 mb-1">Tu catálogo está vacío</h3>
-          <p className="text-sm text-neutral-400 text-center max-w-sm mb-5">
+          <h3 className={`text-lg font-semibold mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Tu catálogo está vacío</h3>
+          <p className={`text-sm text-center max-w-sm mb-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             Agrega productos para que WITHMIA pueda responder preguntas sobre precios, disponibilidad y características.
             También puedes conectar tiendas desde la sección de Integraciones.
           </p>
           <button onClick={onCreateProduct}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl text-sm font-semibold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-200">
+            className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-all shadow-lg ${!t ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-orange-200' : ''}`}
+            style={t ? { backgroundColor: t.accent } : undefined}>
             <Plus className="w-4 h-4" />
             Crear producto
           </button>
@@ -611,6 +666,16 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
   const [dragOver, setDragOver] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'pricing' | 'media'>('general');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      contentBg: 'var(--theme-content-bg)', cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)', text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)', textMuted: 'var(--theme-text-muted)',
+      accent: 'var(--theme-accent)', inputBg: 'var(--theme-input-bg)', itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
 
   const addImage = () => {
     if (imageUrl.trim() && !images.includes(imageUrl.trim())) {
@@ -712,7 +777,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className={`rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
+        style={t ? { backgroundColor: t.cardBg } : undefined}>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
 
           {/* Header */}
@@ -724,17 +790,17 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                   {product ? <Edit3 className="w-5 h-5 text-white" /> : <Plus className="w-5 h-5 text-white" />}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-neutral-800">{product ? 'Editar producto' : 'Nuevo producto'}</h3>
-                  <p className="text-xs text-neutral-400">Completa la información de tu producto</p>
+                  <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{product ? 'Editar producto' : 'Nuevo producto'}</h3>
+                  <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Completa la información de tu producto</p>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                <X className="w-5 h-5 text-neutral-400" />
+              <button type="button" onClick={onClose} className={`p-2 rounded-xl transition-colors ${!t ? 'hover:bg-slate-100' : ''}`}>
+                <X className="w-5 h-5" style={t ? { color: t.textMuted } : undefined} />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+            <div className={`flex gap-1 rounded-xl p-1 ${!t ? 'bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
@@ -742,9 +808,10 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 justify-center ${
                     activeTab === tab.id
-                      ? 'bg-white text-neutral-800 shadow-sm'
-                      : 'text-neutral-400 hover:text-neutral-600'
+                      ? (!t ? 'bg-white text-neutral-800 shadow-sm' : 'shadow-sm')
+                      : (!t ? 'text-neutral-400 hover:text-neutral-600' : '')
                   }`}
+                  style={t ? (activeTab === tab.id ? { backgroundColor: t.cardBg, color: t.text } : { color: t.textMuted }) : undefined}
                 >
                   <tab.icon className="w-3.5 h-3.5" />
                   {tab.label}
@@ -764,43 +831,48 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
               <div className="space-y-4">
                 {/* Name */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Nombre del producto *</label>
+                  <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Nombre del producto *</label>
                   <input type="text" placeholder="Ej: Camiseta Premium 100% algodón" value={name} onChange={e => setName(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-neutral-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none"
+                    className={`w-full px-4 py-3 border rounded-xl text-sm font-medium transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                     autoFocus required />
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Descripción</label>
+                  <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Descripción</label>
                   <textarea placeholder="Describe tu producto en detalle. WITHMIA usará esta info para responder preguntas de tus clientes." value={description} onChange={e => setDescription(e.target.value)}
                     rows={4}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 resize-none transition-all outline-none" />
+                    className={`w-full px-4 py-3 border rounded-xl text-sm resize-none transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                 </div>
 
                 {/* Category + Brand */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Categoría</label>
+                    <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Categoría</label>
                     <input type="text" placeholder="Ej: Electrónica" value={category} onChange={e => setCategory(e.target.value)}
                       list="category-list"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                      className={`w-full px-4 py-3 border rounded-xl text-sm transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                      style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     <datalist id="category-list">
                       {categories.map(c => <option key={c} value={c} />)}
                     </datalist>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">Marca</label>
+                    <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Marca</label>
                     <input type="text" placeholder="Opcional" value={brand} onChange={e => setBrand(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                      className={`w-full px-4 py-3 border rounded-xl text-sm transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                      style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                   </div>
                 </div>
 
                 {/* URL */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">URL del producto <span className="text-neutral-300 normal-case font-normal">(opcional)</span></label>
+                  <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>URL del producto <span className={`normal-case font-normal ${!t ? 'text-neutral-300' : ''}`}>(opcional)</span></label>
                   <input type="url" placeholder="https://... (opcional)" value={url} onChange={e => setUrl(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                    className={`w-full px-4 py-3 border rounded-xl text-sm transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                 </div>
               </div>
             )}
@@ -809,26 +881,30 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
             {activeTab === 'pricing' && (
               <div className="space-y-4">
                 {/* Price section */}
-                <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-xl">
+                <div className={`p-4 border rounded-xl ${!t ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/60' : ''}`}
+                  style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
                   <div className="flex items-center gap-2 mb-3">
                     <DollarSign className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Precio</span>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${!t ? 'text-emerald-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Precio</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Precio</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Precio</label>
                       <input type="number" step="0.01" min="0" placeholder="0" value={price} onChange={e => setPrice(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm font-semibold text-neutral-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" />
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-800 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Precio anterior</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Precio anterior</label>
                       <input type="number" step="0.01" min="0" placeholder="Opcional" value={comparePrice} onChange={e => setComparePrice(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm text-neutral-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all" />
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-emerald-600 uppercase mb-1 block">Moneda</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Moneda</label>
                       <select value={currency} onChange={e => setCurrency(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-emerald-200 rounded-lg text-sm font-semibold text-neutral-700 focus:border-emerald-400 outline-none transition-all">
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-700 focus:border-emerald-400' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                         <option value="CLP">CLP</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -843,30 +919,34 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                 </div>
 
                 {/* Stock section */}
-                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/60 rounded-xl">
+                <div className={`p-4 border rounded-xl ${!t ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/60' : ''}`}
+                  style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
                   <div className="flex items-center gap-2 mb-3">
                     <Box className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Inventario</span>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${!t ? 'text-blue-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Inventario</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">Cantidad</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Cantidad</label>
                       <input type="number" min="0" placeholder="0" value={stockQty} onChange={e => setStockQty(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm font-semibold text-neutral-800 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-800 focus:border-blue-400 focus:ring-2 focus:ring-blue-100' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">Estado</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Estado</label>
                       <select value={stockStatus} onChange={e => setStockStatus(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm text-neutral-700 focus:border-blue-400 outline-none transition-all">
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-700 focus:border-blue-400' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
                         <option value="in_stock">En stock</option>
                         <option value="out_of_stock">Agotado</option>
                         <option value="on_backorder">Por encargo</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-semibold text-blue-600 uppercase mb-1 block">SKU</label>
+                      <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>SKU</label>
                       <input type="text" placeholder="Opcional" value={sku} onChange={e => setSku(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-blue-200 rounded-lg text-sm text-neutral-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                        className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-700 focus:border-blue-400 focus:ring-2 focus:ring-blue-100' : ''}`}
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     </div>
                   </div>
                 </div>
@@ -885,8 +965,9 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                   className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
                     dragOver
                       ? 'border-orange-400 bg-orange-50 scale-[1.02]'
-                      : 'border-slate-200 bg-slate-50/50 hover:border-orange-300 hover:bg-orange-50/30'
+                      : (!t ? 'border-slate-200 bg-slate-50/50 hover:border-orange-300 hover:bg-orange-50/30' : '')
                   }`}
+                  style={!dragOver && t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}
                 >
                   <input
                     ref={fileInputRef}
@@ -899,7 +980,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                   {uploadingImage ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
-                      <p className="text-sm font-medium text-neutral-600">Subiendo imagen...</p>
+                      <p className={`text-sm font-medium ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Subiendo imagen...</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3">
@@ -907,8 +988,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                         <Upload className="w-7 h-7 text-orange-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-neutral-700">Arrastra imágenes aquí</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">o haz clic para seleccionar archivos</p>
+                        <p className={`text-sm font-semibold ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Arrastra imágenes aquí</p>
+                        <p className={`text-xs mt-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>o haz clic para seleccionar archivos</p>
                       </div>
                       <p className="text-[10px] text-neutral-300 uppercase font-medium tracking-wider">PNG, JPG, WEBP — máx 5MB</p>
                     </div>
@@ -917,11 +998,12 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
 
                 {/* URL input */}
                 <div>
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 block">O agrega por URL</label>
+                  <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>O agrega por URL</label>
                   <div className="flex gap-2">
                     <input type="url" placeholder="https://ejemplo.com/imagen.jpg" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addImage())}
-                      className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300 transition-all outline-none" />
+                      className={`flex-1 px-4 py-2.5 border rounded-xl text-sm transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
+                      style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     <button type="button" onClick={addImage} disabled={!imageUrl.trim()}
                       className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 disabled:cursor-not-allowed">
                       <Plus className="w-4 h-4" />
@@ -934,11 +1016,12 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                 {images.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">{images.length} imagen{images.length !== 1 ? 'es' : ''}</p>
+                      <p className={`text-xs font-semibold uppercase tracking-wider ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{images.length} imagen{images.length !== 1 ? 'es' : ''}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       {images.map((img, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-200 group hover:border-orange-300 transition-all">
+                        <div key={idx} className={`relative aspect-square rounded-xl overflow-hidden border-2 group transition-all ${!t ? 'border-slate-200 hover:border-orange-300' : ''}`}
+                          style={t ? { borderColor: t.cardBorder } : undefined}>
                           <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
                           {idx === 0 && (
                             <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-orange-500 text-white rounded-md text-[9px] font-bold uppercase">
@@ -961,15 +1044,18 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between bg-slate-50/80 flex-shrink-0">
+          <div className={`border-t px-6 py-4 flex items-center justify-between flex-shrink-0 ${!t ? 'border-slate-100 bg-slate-50/80' : ''}`}
+            style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
             <div className="flex items-center gap-1.5">
               {['general', 'pricing', 'media'].map((tab, i) => (
-                <div key={tab} className={`w-2 h-2 rounded-full transition-all ${activeTab === tab ? 'bg-orange-500 w-6' : 'bg-slate-300'}`} />
+                <div key={tab} className={`w-2 h-2 rounded-full transition-all ${activeTab === tab ? 'bg-orange-500 w-6' : (!t ? 'bg-slate-300' : '')}`}
+                  style={activeTab !== tab && t ? { backgroundColor: t.textMuted } : undefined} />
               ))}
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={onClose}
-                className="px-5 py-2.5 text-sm font-medium text-neutral-500 hover:bg-slate-100 rounded-xl transition-colors">
+                className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-colors ${!t ? 'text-neutral-500 hover:bg-slate-100' : ''}`}
+                style={t ? { color: t.textSec } : undefined}>
                 Cancelar
               </button>
               <button type="submit" disabled={!name.trim() || submitting}
@@ -998,16 +1084,27 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
   const discountPct = hasDiscount ? Math.round((1 - (product.price || 0) / product.compare_at_price!) * 100) : 0;
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const images = product.images || [];
+  const { hasTheme, isDark } = useTheme();
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      contentBg: 'var(--theme-content-bg)', cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: 'var(--theme-content-card-border)', text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)', textMuted: 'var(--theme-text-muted)',
+      itemBg: 'var(--theme-item-bg)',
+    };
+  }, [hasTheme, isDark]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
+        style={t ? { backgroundColor: t.cardBg } : undefined}>
         {/* Color header */}
         <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${providerConfig.color}, ${providerConfig.color}88)` }} />
 
         {/* Image carousel */}
         {images.length > 0 && (
-          <div className="relative aspect-video bg-slate-50 overflow-hidden">
+          <div className={`relative aspect-video overflow-hidden ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
             <img src={images[currentImageIdx]} alt={product.name} className="w-full h-full object-contain" />
             {images.length > 1 && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
@@ -1040,13 +1137,13 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
             </div>
           )}
 
-          <h3 className="text-[17px] font-bold text-neutral-900 leading-snug mb-3">{product.name}</h3>
+          <h3 className={`text-[17px] font-bold leading-snug mb-3 ${!t ? 'text-neutral-900' : ''}`} style={t ? { color: t.text } : undefined}>{product.name}</h3>
 
           {/* Price */}
           <div className="flex items-end gap-2 mb-4">
-            <span className="text-2xl font-black text-neutral-900">{formatPrice(product.price, product.currency)}</span>
+            <span className={`text-2xl font-black ${!t ? 'text-neutral-900' : ''}`} style={t ? { color: t.text } : undefined}>{formatPrice(product.price, product.currency)}</span>
             {hasDiscount && (
-              <span className="text-sm text-neutral-400 line-through mb-0.5">{formatPrice(product.compare_at_price, product.currency)}</span>
+              <span className={`text-sm line-through mb-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>{formatPrice(product.compare_at_price, product.currency)}</span>
             )}
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border mb-0.5 ${stock.bg} ${stock.color}`}>
               {stock.label}
@@ -1056,53 +1153,54 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
 
           {/* Description */}
           {product.description && (
-            <p className="text-sm text-neutral-500 leading-relaxed mb-4 whitespace-pre-line">{product.description}</p>
+            <p className={`text-sm leading-relaxed mb-4 whitespace-pre-line ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>{product.description}</p>
           )}
 
           {/* Details grid */}
           <div className="space-y-2">
             {product.category && (
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                  <Tag className="w-3.5 h-3.5 text-neutral-400" />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                  <Tag className="w-3.5 h-3.5" style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">Categoría</p>
-                  <p className="text-[12px] text-neutral-700">{product.category}</p>
+                  <p className={`text-[10px] uppercase font-semibold ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Categoría</p>
+                  <p className={`text-[12px] ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>{product.category}</p>
                 </div>
               </div>
             )}
 
             {product.brand && (
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                  <Box className="w-3.5 h-3.5 text-neutral-400" />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                  <Box className="w-3.5 h-3.5" style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">Marca</p>
-                  <p className="text-[12px] text-neutral-700">{product.brand}</p>
+                  <p className={`text-[10px] uppercase font-semibold ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Marca</p>
+                  <p className={`text-[12px] ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>{product.brand}</p>
                 </div>
               </div>
             )}
 
             {product.sku && (
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                  <Database className="w-3.5 h-3.5 text-neutral-400" />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${!t ? 'bg-slate-50' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
+                  <Database className="w-3.5 h-3.5" style={t ? { color: t.textMuted } : undefined} />
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-400 uppercase font-semibold">SKU</p>
-                  <p className="text-[12px] text-neutral-700 font-mono">{product.sku}</p>
+                  <p className={`text-[10px] uppercase font-semibold ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>SKU</p>
+                  <p className={`text-[12px] font-mono ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>{product.sku}</p>
                 </div>
               </div>
             )}
 
             {product.attributes && Object.keys(product.attributes).length > 0 && (
-              <div className="pt-2 border-t border-slate-100">
-                <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-1.5">Atributos</p>
+              <div className={`pt-2 border-t ${!t ? 'border-slate-100' : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
+                <p className={`text-[10px] uppercase font-semibold mb-1.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Atributos</p>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(product.attributes).map(([key, val]) => (
-                    <span key={key} className="px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-full text-[10px] text-neutral-600">
+                    <span key={key} className={`px-2 py-0.5 border rounded-full text-[10px] ${!t ? 'bg-slate-50 border-slate-200 text-neutral-600' : ''}`}
+                      style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder, color: t.textSec } : undefined}>
                       <span className="font-semibold">{key}:</span> {val}
                     </span>
                   ))}
@@ -1113,14 +1211,16 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
         </div>
 
         {/* Actions */}
-        <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between bg-slate-50/60 flex-shrink-0">
+        <div className={`border-t px-5 py-3 flex items-center justify-between flex-shrink-0 ${!t ? 'border-slate-100 bg-slate-50/60' : ''}`}
+          style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
           <div className="flex gap-1">
             <button onClick={onDelete}
               className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[12px] font-medium px-3 py-1.5 hover:bg-red-50 rounded-lg transition-all">
               <Trash2 className="w-3.5 h-3.5" /> Eliminar
             </button>
             <button onClick={onEdit}
-              className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-700 text-[12px] font-medium px-3 py-1.5 hover:bg-slate-100 rounded-lg transition-all">
+              className={`flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg transition-all ${!t ? 'text-neutral-500 hover:text-neutral-700 hover:bg-slate-100' : ''}`}
+              style={t ? { color: t.textSec } : undefined}>
               <Edit3 className="w-3.5 h-3.5" /> Editar
             </button>
           </div>
