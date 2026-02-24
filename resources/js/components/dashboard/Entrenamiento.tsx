@@ -452,7 +452,7 @@ export default function Entrenamiento({
             {/* Phone Frame */}
             <div className="w-[300px] h-[620px] bg-gradient-to-b from-gray-800 to-gray-900 rounded-[2.5rem] p-1.5 shadow-2xl">
               {/* Phone Inner */}
-              <div className="w-full h-full bg-white rounded-[2.2rem] overflow-hidden flex flex-col">
+              <div className={`w-full h-full rounded-[2.2rem] overflow-hidden flex flex-col ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
                 {/* Status Bar - iPhone style */}
                 <div className="h-10 bg-gradient-to-r from-violet-500 to-purple-500 flex items-end justify-between px-5 pb-1 relative">
                   {/* Dynamic Island / Notch */}
@@ -490,7 +490,7 @@ export default function Entrenamiento({
                 
                 {/* Chat Header */}
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-3 py-2 flex items-center gap-2">
-                  <div className="w-12 h-12 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                  <div className={`w-12 h-12 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden ${isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-gray-50'}`}>
                     {onboardingData.logo_url ? (
                       <img src={onboardingData.logo_url} alt="Logo" className="w-full h-full object-contain" />
                     ) : (
@@ -508,20 +508,20 @@ export default function Entrenamiento({
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+                <div className={`flex-1 overflow-y-auto p-3 space-y-3 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
                   {/* Welcome message - only show after data is loaded */}
                   {dataLoaded ? (
                     <div className="flex justify-start">
-                      <div className="max-w-[85%] rounded-2xl px-3 py-2 bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md">
+                      <div className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-sm rounded-bl-md ${isDark ? 'bg-gray-800 text-gray-200 border border-gray-700' : 'bg-white text-gray-800 border border-gray-100'}`}>
                         <p className="text-sm whitespace-pre-wrap">{welcomeContent}</p>
-                        <p className="text-[10px] mt-1 text-gray-400">
+                        <p className={`text-[10px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                           {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="flex justify-start">
-                      <div className="max-w-[85%] rounded-2xl px-3 py-2 bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md">
+                      <div className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-sm rounded-bl-md ${isDark ? 'bg-gray-800 text-gray-200 border border-gray-700' : 'bg-white text-gray-800 border border-gray-100'}`}>
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
                           <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
@@ -540,11 +540,11 @@ export default function Entrenamiento({
                         className={`max-w-[85%] rounded-2xl px-3 py-2 ${
                           msg.role === "user"
                             ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-br-md"
-                            : "bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md"
+                            : isDark ? "bg-gray-800 text-gray-200 shadow-sm border border-gray-700 rounded-bl-md" : "bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md"
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-[10px] mt-1 ${msg.role === "user" ? "text-white/60" : "text-gray-400"}`}>
+                        <p className={`text-[10px] mt-1 ${msg.role === "user" ? "text-white/60" : isDark ? "text-gray-500" : "text-gray-400"}`}>
                           {msg.timestamp.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
@@ -552,7 +552,7 @@ export default function Entrenamiento({
                   ))}
                   {isTyping && (
                     <div className="flex justify-start">
-                      <div className="bg-white text-gray-800 shadow-sm border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                      <div className={`shadow-sm rounded-2xl rounded-bl-md px-4 py-3 ${isDark ? 'bg-gray-800 text-gray-200 border border-gray-700' : 'bg-white text-gray-800 border border-gray-100'}`}>
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
                           <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
@@ -565,7 +565,7 @@ export default function Entrenamiento({
                 </div>
 
                 {/* Input Area */}
-                <div className="p-3 bg-white border-t border-gray-100">
+                <div className={`p-3 border-t ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-100'}`}>
                   <div className="flex items-center gap-2">
                     <input
                       ref={inputRef}
@@ -574,7 +574,7 @@ export default function Entrenamiento({
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
                       placeholder="Escribe para entrenar..."
-                      className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 focus:bg-white"
+                      className={`flex-1 px-4 py-2.5 border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${isDark ? 'bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-500 focus:bg-gray-800' : 'bg-gray-100 border-gray-200 text-gray-800 placeholder-gray-500 focus:bg-white'}`}
                     />
                     <button
                       onClick={handleSendMessage}
@@ -587,8 +587,8 @@ export default function Entrenamiento({
                 </div>
 
                 {/* Home Indicator */}
-                <div className="h-8 bg-white flex items-center justify-center">
-                  <div className="w-36 h-1.5 bg-gray-300 rounded-full"></div>
+                <div className={`h-8 flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+                  <div className={`w-36 h-1.5 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
                 </div>
               </div>
             </div>
