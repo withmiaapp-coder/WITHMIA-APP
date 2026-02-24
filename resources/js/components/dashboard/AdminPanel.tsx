@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import {
     Shield,
@@ -20,6 +20,7 @@ import {
     HelpCircle,
     Clock
 } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface User {
     id: number;
@@ -67,29 +68,31 @@ interface HealthData {
 type AdminView = 'dashboard' | 'users' | 'companies';
 
 // Skeleton components para loading elegante
-const SkeletonCard = () => (
-    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm animate-pulse">
+const SkeletonCard = ({ themed }: { themed?: any }) => (
+    <div className={`rounded-xl p-6 border shadow-sm animate-pulse ${!themed ? 'bg-white border-slate-200' : ''}`}
+        style={themed ? { backgroundColor: themed.cardBg, borderColor: themed.cardBorder } : undefined}>
         <div className="flex items-center gap-4">
-            <div className="p-3 bg-slate-200 rounded-xl w-12 h-12"></div>
+            <div className="p-3 rounded-xl w-12 h-12" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
             <div>
-                <div className="h-8 bg-slate-200 rounded w-16 mb-2"></div>
-                <div className="h-4 bg-slate-100 rounded w-24"></div>
+                <div className="h-8 rounded w-16 mb-2" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
+                <div className="h-4 rounded w-24" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
             </div>
         </div>
     </div>
 );
 
-const SkeletonTable = () => (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse">
-        <div className="p-4 border-b border-slate-200">
-            <div className="h-6 bg-slate-200 rounded w-32"></div>
+const SkeletonTable = ({ themed }: { themed?: any }) => (
+    <div className={`rounded-xl border overflow-hidden animate-pulse ${!themed ? 'bg-white border-slate-200' : ''}`}
+        style={themed ? { backgroundColor: themed.cardBg, borderColor: themed.cardBorder } : undefined}>
+        <div className="p-4 border-b" style={themed ? { borderColor: themed.cardBorder } : undefined}>
+            <div className="h-6 rounded w-32" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
         </div>
         {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="p-4 border-b border-slate-100 flex gap-4">
-                <div className="h-4 bg-slate-100 rounded w-1/4"></div>
-                <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                <div className="h-4 bg-slate-100 rounded w-1/6"></div>
-                <div className="h-4 bg-slate-100 rounded w-1/6"></div>
+            <div key={i} className="p-4 border-b flex gap-4" style={themed ? { borderColor: themed.cardBorder } : undefined}>
+                <div className="h-4 rounded w-1/4" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
+                <div className="h-4 rounded w-1/3" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
+                <div className="h-4 rounded w-1/6" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
+                <div className="h-4 rounded w-1/6" style={themed ? { backgroundColor: themed.itemBg } : undefined}></div>
             </div>
         ))}
     </div>
@@ -105,6 +108,17 @@ export default function AdminPanel() {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [selectedRole, setSelectedRole] = useState('');
+    const { hasTheme, isDark } = useTheme();
+    const t = useMemo(() => {
+        if (!hasTheme) return null;
+        return {
+            contentBg: 'var(--theme-content-bg)', cardBg: 'var(--theme-content-card-bg)',
+            cardBorder: 'var(--theme-content-card-border)', text: 'var(--theme-text-primary)',
+            textSec: 'var(--theme-text-secondary)', textMuted: 'var(--theme-text-muted)',
+            accent: 'var(--theme-accent)', accentLight: 'var(--theme-accent-light)',
+            inputBg: 'var(--theme-input-bg)', itemBg: 'var(--theme-item-bg)',
+        };
+    }, [hasTheme, isDark]);
 
     const fetchStats = async () => {
         setLoading(true);
@@ -251,58 +265,62 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div 
                     onClick={() => setView('users')}
-                    className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                    className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-all cursor-pointer ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl">
                             <Users className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <p className="text-3xl font-bold text-neutral-800">{stats?.total_users || 0}</p>
-                            <p className="text-sm text-neutral-500">Usuarios totales</p>
+                            <p className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{stats?.total_users || 0}</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Usuarios totales</p>
                         </div>
                     </div>
                 </div>
 
                 <div 
                     onClick={() => setView('companies')}
-                    className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                    className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-all cursor-pointer ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
                 >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl">
                             <Building2 className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <p className="text-3xl font-bold text-neutral-800">{stats?.total_companies || 0}</p>
-                            <p className="text-sm text-neutral-500">Empresas</p>
+                            <p className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{stats?.total_companies || 0}</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Empresas</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-gradient-to-r from-purple-500 to-violet-500 rounded-xl">
                             <Activity className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <p className="text-3xl font-bold text-neutral-800">
+                            <p className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
                                 {health ? `${health.summary.healthy}/${health.summary.total}` : '...'}
                             </p>
-                            <p className="text-sm text-neutral-500">Servicios sanos</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Servicios sanos</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl">
                             <CheckCircle2 className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                            <p className="text-3xl font-bold text-neutral-800">
+                            <p className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>
                                 {stats?.users.filter(u => u.onboarding_completed).length || 0}
                             </p>
-                            <p className="text-sm text-neutral-500">Onboarding completo</p>
+                            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Onboarding completo</p>
                         </div>
                     </div>
                 </div>
@@ -311,41 +329,44 @@ export default function AdminPanel() {
             {/* Quick Actions & Services */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Quick Actions */}
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-neutral-800 mb-4">Acciones Rápidas</h3>
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+                    <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Acciones Rápidas</h3>
                     <div className="space-y-2">
                         <button
                             onClick={() => setView('users')}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors text-left"
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
                             <Users className="h-5 w-5 text-blue-500" />
-                            <span className="font-medium text-neutral-700">Gestionar Usuarios</span>
+                            <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Gestionar Usuarios</span>
                         </button>
                         <button
                             onClick={() => setView('companies')}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors text-left"
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
                             <Building2 className="h-5 w-5 text-emerald-500" />
-                            <span className="font-medium text-neutral-700">Gestionar Empresas</span>
+                            <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Gestionar Empresas</span>
                         </button>
                         <button
                             onClick={() => { fetchStats(); fetchHealth(); }}
-                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors text-left"
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
                             <RefreshCw className="h-5 w-5 text-purple-500" />
-                            <span className="font-medium text-neutral-700">Actualizar Datos</span>
+                            <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Actualizar Datos</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Services Status — Real Health Checks */}
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-neutral-800">Estado de Servicios</h3>
+                        <h3 className={`text-lg font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Estado de Servicios</h3>
                         <button
                             onClick={fetchHealth}
                             disabled={healthLoading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${!t ? 'text-neutral-600 bg-slate-100 hover:bg-slate-200' : ''}`}
+                            style={t ? { backgroundColor: t.itemBg, color: t.textSec } : undefined}
                         >
                             <RefreshCw className={`h-3 w-3 ${healthLoading ? 'animate-spin' : ''}`} />
                             {healthLoading ? 'Verificando...' : 'Verificar'}
@@ -353,7 +374,7 @@ export default function AdminPanel() {
                     </div>
 
                     {health?.summary && (
-                        <div className="flex items-center gap-2 mb-4 text-xs text-neutral-500">
+                        <div className={`flex items-center gap-2 mb-4 text-xs ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                             <Clock className="h-3 w-3" />
                             <span>Verificado: {new Date(health.summary.checked_at).toLocaleTimeString('es-CL')}</span>
                             <span className="text-neutral-300">|</span>
@@ -366,16 +387,17 @@ export default function AdminPanel() {
                             const meta = serviceIcons[service.name] || { icon: Server, color: 'from-gray-500 to-gray-600' };
                             const IconComp = meta.icon;
                             return (
-                                <div key={service.name} className={`flex items-center gap-3 p-3 rounded-lg border ${getStatusBg(service.status)}`}>
+                                <div key={service.name} className={`flex items-center gap-3 p-3 rounded-lg border ${!t ? getStatusBg(service.status) : ''}`}
+                                    style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
                                     <div className={`p-2 bg-gradient-to-r ${meta.color} rounded-lg`}>
                                         <IconComp className="h-4 w-4 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <p className="text-sm font-medium text-neutral-700">{service.name}</p>
+                                            <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>{service.name}</p>
                                             {getStatusIcon(service.status)}
                                         </div>
-                                        <p className="text-xs text-neutral-500 truncate">{service.details}</p>
+                                        <p className={`text-xs truncate ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{service.details}</p>
                                     </div>
                                     <div className="text-right flex-shrink-0 flex items-center gap-2">
                                         {service.name === 'Qdrant' && service.status === 'warning' && (
@@ -412,18 +434,20 @@ export default function AdminPanel() {
 
             {/* Recent Users & Companies */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-neutral-800 mb-4">Usuarios Recientes</h3>
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+                    <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Usuarios Recientes</h3>
                     <div className="space-y-3">
                         {stats?.users.slice(0, 5).map((user) => (
-                            <div key={user.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div key={user.id} className={`flex items-center justify-between p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
+                                style={t ? { backgroundColor: t.itemBg } : undefined}>
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium text-sm">
                                         {user.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-neutral-800 text-sm">{user.name}</p>
-                                        <p className="text-xs text-neutral-500">{user.email}</p>
+                                        <p className={`font-medium text-sm ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{user.name}</p>
+                                        <p className={`text-xs ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{user.email}</p>
                                     </div>
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
@@ -439,18 +463,20 @@ export default function AdminPanel() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-neutral-800 mb-4">Empresas Recientes</h3>
+                <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+                    <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Empresas Recientes</h3>
                     <div className="space-y-3">
                         {stats?.companies.slice(0, 5).map((company) => (
-                            <div key={company.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div key={company.id} className={`flex items-center justify-between p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
+                                style={t ? { backgroundColor: t.itemBg } : undefined}>
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center text-white font-medium text-sm">
                                         {company.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="font-medium text-neutral-800 text-sm">{company.name}</p>
-                                        <p className="text-xs text-neutral-500">{company.slug}</p>
+                                        <p className={`font-medium text-sm ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{company.name}</p>
+                                        <p className={`text-xs ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{company.slug}</p>
                                     </div>
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
@@ -473,74 +499,81 @@ export default function AdminPanel() {
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => setView('dashboard')}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-slate-100' : ''}`}
                 >
-                    <ArrowLeft className="h-5 w-5 text-neutral-600" />
+                    <ArrowLeft className="h-5 w-5" style={t ? { color: t.textSec } : undefined} />
                 </button>
                 <div>
-                    <h2 className="text-2xl font-bold text-neutral-800">Gestión de Usuarios</h2>
-                    <p className="text-neutral-500">Administra los usuarios del sistema</p>
+                    <h2 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Gestión de Usuarios</h2>
+                    <p style={t ? { color: t.textMuted } : undefined} className={!t ? 'text-neutral-500' : ''}>Administra los usuarios del sistema</p>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <p className="text-2xl font-bold text-neutral-800">{stats?.total_users || 0}</p>
-                    <p className="text-sm text-neutral-500">Total</p>
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+                    <p className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{stats?.total_users || 0}</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Total</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-amber-600">{stats?.users.filter(u => u.role === 'superadmin').length || 0}</p>
-                    <p className="text-sm text-neutral-500">Super Admins</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Super Admins</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-purple-600">{stats?.users.filter(u => u.role === 'admin').length || 0}</p>
-                    <p className="text-sm text-neutral-500">Admins</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Admins</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-blue-600">{stats?.users.filter(u => u.role === 'agent').length || 0}</p>
-                    <p className="text-sm text-neutral-500">Agentes</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Agentes</p>
                 </div>
             </div>
 
             {/* Search */}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5" style={t ? { color: t.textMuted } : undefined} />
                 <input
                     type="text"
                     placeholder="Buscar usuarios..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border ${!t ? 'border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent' : 'placeholder:opacity-50'}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
 
             {/* Users List */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className={`rounded-xl border shadow-sm overflow-hidden ${!t ? 'bg-white border-slate-200' : ''}`}
+                style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-slate-50 border-b border-slate-200">
+                        <thead className={`border-b ${!t ? 'bg-slate-50 border-slate-200' : ''}`}
+                            style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
                             <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase">Usuario</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase">Email</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase">Rol</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase">Empresa</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase">Fecha</th>
-                                <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-500 uppercase">Acciones</th>
+                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Usuario</th>
+                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Email</th>
+                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Rol</th>
+                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Empresa</th>
+                                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Fecha</th>
+                                <th className={`px-6 py-4 text-right text-xs font-semibold uppercase ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className={`divide-y ${!t ? 'divide-slate-100' : ''}`} style={t ? { borderColor: t.cardBorder } : undefined}>
                             {filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-slate-50">
+                                <tr key={user.id} className={!t ? 'hover:bg-slate-50' : ''}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium">
                                                 {user.name.charAt(0).toUpperCase()}
                                             </div>
-                                            <span className="font-medium text-neutral-800">{user.name}</span>
+                                            <span className={`font-medium ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{user.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-neutral-600">{user.email}</td>
+                                    <td className="px-6 py-4" style={t ? { color: t.textSec } : undefined}>{user.email}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                             user.role === 'superadmin' ? 'bg-amber-100 text-amber-700' :
@@ -551,8 +584,8 @@ export default function AdminPanel() {
                                             {user.role === 'superadmin' ? 'Super Admin' : user.role}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-neutral-600">{user.company_slug || '-'}</td>
-                                    <td className="px-6 py-4 text-neutral-500 text-sm">{formatDate(user.created_at)}</td>
+                                    <td className="px-6 py-4" style={t ? { color: t.textSec } : undefined}>{user.company_slug || '-'}</td>
+                                    <td className={`px-6 py-4 text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{formatDate(user.created_at)}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
                                             <button
@@ -584,13 +617,15 @@ export default function AdminPanel() {
             {/* Edit Role Modal */}
             {editingUser && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Editar Rol</h3>
-                        <p className="text-neutral-600 mb-4">Usuario: <strong>{editingUser.name}</strong></p>
+                    <div className={`rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl ${!t ? 'bg-white' : ''}`}
+                        style={t ? { backgroundColor: t.cardBg } : undefined}>
+                        <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Editar Rol</h3>
+                        <p className={`mb-4 ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Usuario: <strong>{editingUser.name}</strong></p>
                         <select
                             value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value)}
-                            className="w-full p-3 rounded-lg border border-slate-200 mb-4"
+                            className={`w-full p-3 rounded-lg border mb-4 ${!t ? 'border-slate-200' : ''}`}
+                            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                         >
                             <option value="agent">Agente</option>
                             <option value="admin">Admin</option>
@@ -599,7 +634,8 @@ export default function AdminPanel() {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setEditingUser(null)}
-                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                                className={`flex-1 px-4 py-2 border rounded-lg ${!t ? 'border-slate-200 hover:bg-slate-50' : ''}`}
+                                style={t ? { borderColor: t.cardBorder, color: t.textSec } : undefined}
                             >
                                 Cancelar
                             </button>
@@ -623,43 +659,48 @@ export default function AdminPanel() {
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => setView('dashboard')}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-slate-100' : ''}`}
                 >
-                    <ArrowLeft className="h-5 w-5 text-neutral-600" />
+                    <ArrowLeft className="h-5 w-5" style={t ? { color: t.textSec } : undefined} />
                 </button>
                 <div>
-                    <h2 className="text-2xl font-bold text-neutral-800">Gestión de Empresas</h2>
-                    <p className="text-neutral-500">Administra las empresas registradas</p>
+                    <h2 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Gestión de Empresas</h2>
+                    <p style={t ? { color: t.textMuted } : undefined} className={!t ? 'text-neutral-500' : ''}>Administra las empresas registradas</p>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <p className="text-2xl font-bold text-neutral-800">{stats?.total_companies || 0}</p>
-                    <p className="text-sm text-neutral-500">Total</p>
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+                    <p className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{stats?.total_companies || 0}</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Total</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-green-600">{stats?.companies.filter(c => c.is_active).length || 0}</p>
-                    <p className="text-sm text-neutral-500">Activas</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Activas</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-blue-600">{stats?.companies.filter(c => c.chatwoot_inbox_id).length || 0}</p>
-                    <p className="text-sm text-neutral-500">Con Chatwoot</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Con Chatwoot</p>
                 </div>
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
+                    style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <p className="text-2xl font-bold text-gray-600">{stats?.companies.filter(c => !c.is_active).length || 0}</p>
-                    <p className="text-sm text-neutral-500">Inactivas</p>
+                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Inactivas</p>
                 </div>
             </div>
 
             {/* Search */}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5" style={t ? { color: t.textMuted } : undefined} />
                 <input
                     type="text"
                     placeholder="Buscar empresas..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border ${!t ? 'border-slate-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent' : 'placeholder:opacity-50'}`}
+                    style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -668,15 +709,16 @@ export default function AdminPanel() {
             {/* Companies Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredCompanies.map((company) => (
-                    <div key={company.id} className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={company.id} className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow ${!t ? 'bg-white border-slate-200' : ''}`}
+                        style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center text-white font-bold text-lg">
                                     {company.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-neutral-800">{company.name}</h3>
-                                    <p className="text-sm text-neutral-500">{company.slug}</p>
+                                    <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{company.name}</h3>
+                                    <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{company.slug}</p>
                                 </div>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -685,9 +727,9 @@ export default function AdminPanel() {
                                 {company.is_active ? 'Activa' : 'Inactiva'}
                             </span>
                         </div>
-                        <div className="space-y-2 text-sm text-neutral-600">
+                        <div className={`space-y-2 text-sm ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
                             <div className="flex items-center gap-2">
-                                <span className="text-neutral-400">Creada:</span>
+                                <span style={t ? { color: t.textMuted } : undefined} className={!t ? 'text-neutral-400' : ''}>Creada:</span>
                                 <span>{formatDate(company.created_at)}</span>
                             </div>
                             {company.chatwoot_inbox_id && (
@@ -705,31 +747,31 @@ export default function AdminPanel() {
 
     if (loading) {
         return (
-            <div className="h-full overflow-y-auto p-8">
+            <div className="h-full overflow-y-auto p-8" style={t ? { backgroundColor: t.contentBg } : undefined}>
                 <div className="max-w-7xl mx-auto">
                     {/* Header Skeleton */}
                     <div className="mb-8 flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                            <div className="p-4 bg-slate-200 rounded-xl w-18 h-18 animate-pulse"></div>
+                            <div className="p-4 rounded-xl w-18 h-18 animate-pulse" style={t ? { backgroundColor: t.itemBg } : undefined}></div>
                             <div>
-                                <div className="h-10 bg-slate-200 rounded w-72 mb-2 animate-pulse"></div>
-                                <div className="h-5 bg-slate-100 rounded w-56 animate-pulse"></div>
+                                <div className="h-10 rounded w-72 mb-2 animate-pulse" style={t ? { backgroundColor: t.itemBg } : undefined}></div>
+                                <div className="h-5 rounded w-56 animate-pulse" style={t ? { backgroundColor: t.itemBg } : undefined}></div>
                             </div>
                         </div>
                     </div>
 
                     {/* Stats Skeleton */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <SkeletonCard />
-                        <SkeletonCard />
-                        <SkeletonCard />
-                        <SkeletonCard />
+                        <SkeletonCard themed={t} />
+                        <SkeletonCard themed={t} />
+                        <SkeletonCard themed={t} />
+                        <SkeletonCard themed={t} />
                     </div>
 
                     {/* Content Skeleton */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <SkeletonTable />
-                        <SkeletonTable />
+                        <SkeletonTable themed={t} />
+                        <SkeletonTable themed={t} />
                     </div>
                 </div>
             </div>
@@ -737,7 +779,8 @@ export default function AdminPanel() {
     }
 
     return (
-        <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+        <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
+            style={t ? { backgroundColor: t.contentBg } : undefined}>
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 {view === 'dashboard' && (
@@ -748,14 +791,15 @@ export default function AdminPanel() {
                                     <Shield className="w-10 h-10 text-white" />
                                 </div>
                                 <div>
-                                    <h1 className="text-4xl font-bold text-neutral-800">Panel de Administración</h1>
-                                    <p className="text-lg text-neutral-500">Gestiona usuarios, empresas y servicios</p>
+                                    <h1 className={`text-4xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Panel de Administración</h1>
+                                    <p className={`text-lg ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Gestiona usuarios, empresas y servicios</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => { fetchStats(); fetchHealth(); }}
                                 disabled={loading || healthLoading}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors"
+                                className={`flex items-center gap-2 px-4 py-2 text-white border rounded-lg transition-colors ${!t ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : ''}`}
+                                style={t ? { backgroundColor: t.accent, borderColor: t.accent } : undefined}
                             >
                                 <RefreshCw className={`h-4 w-4 ${(loading || healthLoading) ? 'animate-spin' : ''}`} />
                                 Actualizar
