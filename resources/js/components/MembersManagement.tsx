@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import axios from 'axios';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Users,
   UserCog,
@@ -80,6 +81,24 @@ const DEFAULT_AGENT_PERMISSIONS: Record<string, boolean> = {
 };
 
 const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }) => {
+  const { currentTheme, hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      modalBg: 'var(--theme-content-card-bg)',
+      border: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      hoverBg: isDark ? 'rgba(255,255,255,0.05)' : undefined,
+      expandedBg: isDark ? 'rgba(255,255,255,0.03)' : undefined,
+      inputBg: 'var(--theme-content-bg)',
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+    };
+  }, [hasTheme, isDark]);
+
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,21 +253,21 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-scale-in">
+      <div className={`rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-scale-in ${!t ? 'bg-white' : ''}`} style={t ? { background: t.modalBg, color: t.text } : undefined}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        <div className={`p-6 border-b flex-shrink-0 ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg">
                 <UserCog className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">Administrar Miembros</h2>
-                <p className="text-sm text-gray-500">Gestiona roles y permisos de tu equipo</p>
+                <h2 className={`text-xl font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>Administrar Miembros</h2>
+                <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>Gestiona roles y permisos de tu equipo</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-gray-500" />
+            <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-gray-100' : 'hover:opacity-80'}`} style={t ? { color: t.textMuted } : undefined}>
+              <X className={`w-5 h-5 ${!t ? 'text-gray-500' : ''}`} />
             </button>
           </div>
         </div>
@@ -271,12 +290,12 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+              <Loader2 className="w-8 h-8 animate-spin" style={t ? { color: t.accent } : { color: '#a855f7' }} />
             </div>
           ) : members.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No hay miembros en tu empresa</p>
+              <Users className="w-12 h-12 mx-auto mb-3" style={t ? { color: t.textMuted } : { color: '#9ca3af' }} />
+              <p style={t ? { color: t.textSec } : { color: '#4b5563' }}>No hay miembros en tu empresa</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -290,12 +309,11 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                 const isEditable = !isSelf && !isSuperAdmin;
                 
                 return (
-                  <div key={member.id} className={`border rounded-xl overflow-hidden ${isSelf ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200'}`}>
+                  <div key={member.id} className={`border rounded-xl overflow-hidden ${!t ? (isSelf ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200') : ''}`} style={t ? { borderColor: isSelf ? t.accent : t.border, background: isSelf ? (isDark ? 'rgba(255,255,255,0.03)' : undefined) : undefined } : undefined}>
                     {/* Member Header */}
                     <div 
-                      className={`p-4 flex items-center justify-between ${isEditable ? 'cursor-pointer hover:bg-gray-50' : ''} transition-colors ${
-                        isExpanded ? 'bg-gray-50' : ''
-                      }`}
+                      className={`p-4 flex items-center justify-between ${isEditable ? 'cursor-pointer' : ''} transition-colors`}
+                      style={t ? { background: isExpanded ? t.expandedBg : undefined } : undefined}
                       onClick={() => isEditable && setExpandedMember(isExpanded ? null : member.id)}
                     >
                       <div className="flex items-center space-x-4">
@@ -307,22 +325,22 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <p className="font-medium text-gray-800">{member.name}</p>
+                            <p className={`font-medium ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>{member.name}</p>
                             {isSuperAdmin && <Crown className="w-4 h-4 text-amber-500" />}
                             {isCurrentAdmin && !isSuperAdmin && <Crown className="w-4 h-4 text-purple-500" />}
-                            {isSelf && <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">Tú</span>}
+                            {isSelf && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${!t ? 'bg-purple-100 text-purple-600' : ''}`} style={t ? { background: t.accentLight, color: t.accent } : undefined}>Tú</span>}
                           </div>
-                          <p className="text-sm text-gray-500">{member.email}</p>
+                          <p className={`text-sm ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textSec } : undefined}>{member.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${!t ? (
                           isSuperAdmin
                             ? 'bg-amber-100 text-amber-700'
                             : isCurrentAdmin 
                               ? 'bg-purple-100 text-purple-700' 
                               : 'bg-emerald-100 text-emerald-700'
-                        }`}>
+                        ) : ''}`} style={t ? { background: t.accentLight, color: t.accent } : undefined}>
                           {isSuperAdmin ? 'Super Admin' : isCurrentAdmin ? 'Administrador' : 'Agente'}
                         </span>
                         {hasChanges(member.id) && (
@@ -332,9 +350,9 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                         )}
                         {isEditable && (
                           isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-gray-400" />
+                            <ChevronUp className="w-5 h-5" style={t ? { color: t.textMuted } : { color: '#9ca3af' }} />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                            <ChevronDown className="w-5 h-5" style={t ? { color: t.textMuted } : { color: '#9ca3af' }} />
                           )
                         )}
                       </div>
@@ -342,21 +360,26 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
 
                     {/* Expanded Content */}
                     {isExpanded && isEditable && (
-                      <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+                      <div className={`p-4 border-t ${!t ? 'border-gray-200 bg-gray-50/50' : ''}`} style={t ? { borderColor: t.border, background: t.expandedBg } : undefined}>
                         {/* Role Toggle */}
                         <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+                          <label className={`block text-sm font-medium mb-2 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>Rol</label>
                           <div className="flex space-x-3">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (effectiveRole !== 'admin') toggleRole(member.id);
                               }}
-                              className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
+                              className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${!t ? (
                                 effectiveRole === 'admin'
                                   ? 'border-purple-500 bg-purple-50 text-purple-700'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
-                              }`}
+                              ) : ''}`}
+                              style={t ? {
+                                borderColor: effectiveRole === 'admin' ? t.accent : t.border,
+                                background: effectiveRole === 'admin' ? t.accentLight : t.inputBg,
+                                color: effectiveRole === 'admin' ? t.accent : t.textSec
+                              } : undefined}
                             >
                               <div className="flex items-center justify-center space-x-2">
                                 <Crown className="w-4 h-4" />
@@ -368,11 +391,16 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                                 e.stopPropagation();
                                 if (effectiveRole !== 'agent') toggleRole(member.id);
                               }}
-                              className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
+                              className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${!t ? (
                                 effectiveRole === 'agent'
                                   ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                                   : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-300'
-                              }`}
+                              ) : ''}`}
+                              style={t ? {
+                                borderColor: effectiveRole === 'agent' ? t.accent : t.border,
+                                background: effectiveRole === 'agent' ? t.accentLight : t.inputBg,
+                                color: effectiveRole === 'agent' ? t.accent : t.textSec
+                              } : undefined}
                             >
                               <div className="flex items-center justify-center space-x-2">
                                 <User className="w-4 h-4" />
@@ -385,13 +413,13 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                         {/* Permissions - Solo mostrar si es agente */}
                         {effectiveRole === 'agent' && (
                           <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                            <label className={`block text-sm font-medium mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                               Permisos personalizados
                             </label>
                             <div className="space-y-4">
                               {Object.entries(PERMISSION_GROUPS).map(([groupName, permissions]) => (
                                 <div key={groupName}>
-                                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                  <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                                     {groupName}
                                   </p>
                                   <div className="grid grid-cols-2 gap-2">
@@ -402,22 +430,26 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                                           e.stopPropagation();
                                           togglePermission(member.id, perm.key);
                                         }}
-                                        className={`p-2 rounded-lg border text-left transition-all ${
+                                        className={`p-2 rounded-lg border text-left transition-all ${!t ? (
                                           effectivePermissions[perm.key]
                                             ? 'border-emerald-300 bg-emerald-50'
                                             : 'border-gray-200 bg-white hover:border-gray-300'
-                                        }`}
+                                        ) : ''}`}
+                                        style={t ? {
+                                          borderColor: effectivePermissions[perm.key] ? t.accent : t.border,
+                                          background: effectivePermissions[perm.key] ? t.accentLight : t.inputBg
+                                        } : undefined}
                                       >
                                         <div className="flex items-center space-x-2">
                                           {effectivePermissions[perm.key] ? (
-                                            <Eye className="w-4 h-4 text-emerald-600" />
+                                            <Eye className="w-4 h-4" style={t ? { color: t.accent } : { color: '#059669' }} />
                                           ) : (
-                                            <EyeOff className="w-4 h-4 text-gray-400" />
+                                            <EyeOff className="w-4 h-4" style={t ? { color: t.textMuted } : { color: '#9ca3af' }} />
                                           )}
                                           <div>
-                                            <p className={`text-sm font-medium ${
+                                            <p className={`text-sm font-medium ${!t ? (
                                               effectivePermissions[perm.key] ? 'text-emerald-700' : 'text-gray-600'
-                                            }`}>
+                                            ) : ''}`} style={t ? { color: effectivePermissions[perm.key] ? t.accent : t.textSec } : undefined}>
                                               {perm.label}
                                             </p>
                                           </div>
@@ -432,15 +464,15 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                         )}
 
                         {isCurrentAdmin && (
-                          <div className="mb-6 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                            <p className="text-sm text-purple-700">
+                          <div className={`mb-6 p-3 border rounded-lg ${!t ? 'bg-purple-50 border-purple-200' : ''}`} style={t ? { background: t.accentLight, borderColor: t.border } : undefined}>
+                            <p className={`text-sm ${!t ? 'text-purple-700' : ''}`} style={t ? { color: t.accent } : undefined}>
                               <strong>Los administradores tienen acceso completo</strong> a todas las funciones y secciones del panel.
                             </p>
                           </div>
                         )}
 
                         {/* Actions */}
-                        <div className="flex justify-between pt-4 border-t border-gray-200">
+                        <div className={`flex justify-between pt-4 border-t ${!t ? 'border-gray-200' : ''}`} style={t ? { borderColor: t.border } : undefined}>
                           {/* Delete Button */}
                           <div>
                             {deleteConfirm === member.id ? (
@@ -465,7 +497,8 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                                     e.stopPropagation();
                                     setDeleteConfirm(null);
                                   }}
-                                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                                  className={`px-3 py-1 rounded-lg text-sm ${!t ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'hover:opacity-80'}`}
+                                  style={t ? { background: t.inputBg, color: t.textSec } : undefined}
                                 >
                                   Cancelar
                                 </button>
@@ -476,7 +509,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
                                   e.stopPropagation();
                                   setDeleteConfirm(member.id);
                                 }}
-                                className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center space-x-2"
+                                className={`px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 ${!t ? 'text-red-600 hover:bg-red-50' : 'text-red-400 hover:opacity-80'}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 <span>Eliminar del sistema</span>
