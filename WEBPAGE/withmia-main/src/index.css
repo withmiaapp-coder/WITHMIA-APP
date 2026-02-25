@@ -61,6 +61,11 @@
   }
 }
 
+/* Astro island wrappers must be transparent for layout */
+astro-island {
+  display: contents !important;
+}
+
 @layer base {
   * {
     @apply border-border;

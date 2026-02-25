@@ -61,7 +61,7 @@ const softwareAppJsonLd = JSON.stringify({
     <canvas
       id="hero-particles"
       aria-hidden="true"
-      style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;display:block"
+      style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;display:block"
     ></canvas>
   </div>
 
@@ -143,13 +143,23 @@ const softwareAppJsonLd = JSON.stringify({
       if (particles.length > 0) draw();
     }
 
+    // Retry until hero-section has real dimensions
+    function tryStart() {
+      var wrapper = document.getElementById('hero-section');
+      if (wrapper && wrapper.offsetHeight > 50) {
+        start();
+      } else {
+        setTimeout(tryStart, 100);
+      }
+    }
+
     // Use requestAnimationFrame to wait for first layout paint
     requestAnimationFrame(function() {
-      requestAnimationFrame(start);
+      requestAnimationFrame(tryStart);
     });
     // Also restart when full load (images/fonts)
     window.addEventListener('load', function() {
-      requestAnimationFrame(start);
+      requestAnimationFrame(tryStart);
     });
     // Resize handler
     window.addEventListener('resize', start);

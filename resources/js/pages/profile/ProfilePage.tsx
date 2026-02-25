@@ -83,6 +83,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  const [coverError, setCoverError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,6 +172,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       if (response.data.success) {
         setProfile(prev => ({ ...prev, avatar: response.data.data.avatar_url }));
         setOriginalProfile(prev => ({ ...prev, avatar: response.data.data.avatar_url }));
+        setAvatarError(false);
       }
     } catch (err: unknown) {
       setError('Error al subir la imagen');
@@ -199,6 +202,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       if (response.data.success) {
         setProfile(prev => ({ ...prev, cover_photo: response.data.data.cover_url }));
         setOriginalProfile(prev => ({ ...prev, cover_photo: response.data.data.cover_url }));
+        setCoverError(false);
       }
     } catch (err: unknown) {
       setError('Error al subir la portada');
@@ -310,12 +314,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           <div className="relative">
             {/* Cover Photo / Banner */}
             <div className="relative group/cover h-40 overflow-hidden">
-              {profile.cover_photo ? (
+              {profile.cover_photo && !coverError ? (
                 <img
                   src={profile.cover_photo}
                   alt="Portada"
                   className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  onError={() => setCoverError(true)}
                 />
               ) : (
                 <div
@@ -355,12 +359,12 @@ export default function ProfilePage({ user }: ProfilePageProps) {
                   className="w-24 h-24 rounded-2xl shadow-lg border-4 overflow-hidden flex items-center justify-center"
                   style={t ? { background: t.cardBg, borderColor: t.cardBg } : { background: '#fff', borderColor: '#fff' }}
                 >
-                  {profile.avatar ? (
+                  {profile.avatar && !avatarError ? (
                     <img 
                       src={profile.avatar} 
                       alt={profile.name}
                       className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      onError={() => setAvatarError(true)}
                     />
                   ) : (
                     <div

@@ -23,6 +23,36 @@ Route::get('/img-proxy', [ImageProxyController::class, 'proxy'])
     ->middleware('throttle:120,1')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
+// Serve user-uploaded files (avatars, covers) from storage
+Route::get('/uploads/{path}', function (string $path) {
+    $fullPath = storage_path('app/public/' . $path);
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+    $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->where('path', '.*')
+  ->middleware('throttle:300,1')
+  ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Fallback for old storage/ URLs (avatar/cover photos uploaded before /uploads route)
+Route::get('/storage/{path}', function (string $path) {
+    $fullPath = storage_path('app/public/' . $path);
+    if (!file_exists($fullPath)) {
+        abort(404);
+    }
+    $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->where('path', '.*')
+  ->middleware('throttle:300,1')
+  ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
 // ============================================================================
 // 2. BROADCASTING
 // ============================================================================

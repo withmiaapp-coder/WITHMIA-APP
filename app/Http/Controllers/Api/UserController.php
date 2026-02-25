@@ -122,7 +122,7 @@ class UserController extends Controller
 
             $file = $request->file('avatar');
             $path = $file->store("avatars/{$user->id}", 'public');
-            $url = asset("storage/{$path}");
+            $url = url("/uploads/{$path}");
 
             $user->avatar = $url;
             $user->save();
@@ -158,7 +158,7 @@ class UserController extends Controller
 
             $file = $request->file('cover');
             $path = $file->store("covers/{$user->id}", 'public');
-            $url = asset("storage/{$path}");
+            $url = url("/uploads/{$path}");
 
             $user->cover_photo = $url;
             $user->save();
