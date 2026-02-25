@@ -37,7 +37,6 @@ export default defineConfig({
         output: {
           manualChunks: {
             'react-vendor': ['react', 'react-dom'],
-            'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
           },
         },
       },

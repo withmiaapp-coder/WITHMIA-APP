@@ -5099,8 +5099,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
         >
           <div 
             className={`rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden ${!t ? 'bg-white' : ''}`}
-            style={t ? { background: t.panelBg } : undefined}
-            style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+            style={t ? { background: 'var(--theme-content-bg)', transform: 'translateZ(0)', backfaceVisibility: 'hidden' } : { transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
           >
             <div className={`p-4 border-b flex items-center justify-between ${!t ? 'border-gray-200 bg-gray-50' : ''}`} style={t ? { borderColor: t.headerBorder, background: t.headerBg } : undefined}>
               <h3 className={`text-lg font-semibold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Multimedia compartida</h3>
@@ -5117,10 +5116,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 onClick={() => setMediaFilter('all')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   mediaFilter === 'all' 
-                    ? 'bg-gray-800 text-white' 
+                    ? (!t ? 'bg-gray-800 text-white' : 'text-white') 
                     : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
-                style={mediaFilter !== 'all' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                style={mediaFilter === 'all' && t ? { background: t.accent } : (mediaFilter !== 'all' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)}
               >
                 Todo
               </button>
@@ -5128,10 +5127,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 onClick={() => setMediaFilter('images')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'images' 
-                    ? 'bg-gray-800 text-white' 
+                    ? (!t ? 'bg-gray-800 text-white' : 'text-white') 
                     : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
-                style={mediaFilter !== 'images' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                style={mediaFilter === 'images' && t ? { background: t.accent } : (mediaFilter !== 'images' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)}
               >
                 <span>Imágenes</span>
               </button>
@@ -5139,10 +5138,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 onClick={() => setMediaFilter('files')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'files' 
-                    ? 'bg-gray-800 text-white' 
+                    ? (!t ? 'bg-gray-800 text-white' : 'text-white') 
                     : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
-                style={mediaFilter !== 'files' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                style={mediaFilter === 'files' && t ? { background: t.accent } : (mediaFilter !== 'files' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)}
               >
                 <span>Archivos</span>
               </button>
@@ -5150,10 +5149,10 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 onClick={() => setMediaFilter('links')}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
                   mediaFilter === 'links' 
-                    ? 'bg-gray-800 text-white' 
+                    ? (!t ? 'bg-gray-800 text-white' : 'text-white') 
                     : !t ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : ''
                 }`}
-                style={mediaFilter !== 'links' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                style={mediaFilter === 'links' && t ? { background: t.accent } : (mediaFilter !== 'links' && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)}
               >
                 <FileText className="w-4 h-4" />
                 <span>Enlaces</span>
@@ -5170,7 +5169,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     <>
                       {/* Sección Imágenes */}
                       <div className="mb-6">
-                        <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
+                        <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Imágenes ({images.length})</h4>
                         {images.length > 0 ? (
                           <div className="grid grid-cols-4 gap-3">
                             {images.map((img, idx) => {
@@ -5211,7 +5210,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             })}
                           </div>
                         ) : (
-                          <p className="text-gray-400 text-sm">No hay imágenes</p>
+                          <p className={`text-sm ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>No hay imágenes</p>
                         )}
                       </div>
                       
@@ -5220,7 +5219,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         const videos = files.filter(f => f.file_category === 'video');
                         return videos.length > 0 ? (
                           <div className="mb-6">
-                            <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
+                            <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Videos ({videos.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {videos.map((file, idx) => {
                                 const proxyUrl = resolveAttachmentUrl(file);
@@ -5250,7 +5249,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         const audios = files.filter(f => f.file_category === 'audio');
                         return audios.length > 0 ? (
                           <div className="mb-6">
-                            <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
+                            <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Audios ({audios.length})</h4>
                             <div className="space-y-3">
                               {audios.map((file, idx) => {
                                 const proxyUrl = resolveAttachmentUrl(file);
@@ -5280,7 +5279,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         const pdfs = files.filter(f => f.file_category === 'pdf');
                         return pdfs.length > 0 ? (
                           <div className="mb-6">
-                            <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
+                            <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>PDFs ({pdfs.length})</h4>
                             <div className="grid grid-cols-2 gap-4">
                               {pdfs.map((file, idx) => {
                                 const proxyUrl = resolveAttachmentUrl(file);
@@ -5316,7 +5315,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                         const otherFiles = files.filter(f => !['video', 'audio', 'pdf'].includes(f.file_category || ""));
                         return otherFiles.length > 0 ? (
                           <div className="mb-6">
-                            <h4 className="font-semibold text-gray-700 mb-3">Otros archivos ({otherFiles.length})</h4>
+                            <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Otros archivos ({otherFiles.length})</h4>
                             <div className="space-y-2">
                               {otherFiles.map((file, idx) => {
                                 const proxyUrl = resolveAttachmentUrl(file);
@@ -5359,14 +5358,14 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Mensaje si no hay archivos */}
                       {files.length === 0 && (
                         <div className="mb-6">
-                          <h4 className="font-semibold text-gray-700 mb-3">Archivos (0)</h4>
-                          <p className="text-gray-400 text-sm">No hay archivos</p>
+                          <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Archivos (0)</h4>
+                          <p className={`text-sm ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>No hay archivos</p>
                         </div>
                       )}
                       
                       {/* Sección Enlaces */}
                       <div>
-                        <h4 className="font-semibold text-gray-700 mb-3">Enlaces ({links.length})</h4>
+                        <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Enlaces ({links.length})</h4>
                         {links.length > 0 ? (
                           <div className="space-y-2">
                             {links.map((link, idx) => (
@@ -5383,7 +5382,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                             ))}
                           </div>
                         ) : (
-                          <p className="text-gray-400 text-sm">No hay enlaces</p>
+                          <p className={`text-sm ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>No hay enlaces</p>
                         )}
                       </div>
                     </>
@@ -5394,7 +5393,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 if (mediaFilter === 'images') {
                   return (
                     <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Imágenes ({images.length})</h4>
+                      <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Imágenes ({images.length})</h4>
                       <div className="grid grid-cols-4 gap-3">
                         {images.map((img, idx) => {
                           const proxyUrl = resolveAttachmentUrl(img);
@@ -5448,7 +5447,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Videos */}
                       {videos.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-700 mb-3">Videos ({videos.length})</h4>
+                          <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Videos ({videos.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {videos.map((file, idx) => {
                               const proxyUrl = resolveAttachmentUrl(file);
@@ -5468,7 +5467,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Audios */}
                       {audios.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-700 mb-3">Audios ({audios.length})</h4>
+                          <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Audios ({audios.length})</h4>
                           <div className="space-y-3">
                             {audios.map((file, idx) => {
                               const proxyUrl = resolveAttachmentUrl(file);
@@ -5486,7 +5485,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* PDFs */}
                       {pdfs.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-700 mb-3">PDFs ({pdfs.length})</h4>
+                          <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>PDFs ({pdfs.length})</h4>
                           <div className="grid grid-cols-2 gap-4">
                             {pdfs.map((file, idx) => {
                               const proxyUrl = resolveAttachmentUrl(file);
@@ -5511,7 +5510,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       {/* Otros archivos */}
                       {otherFiles.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-700 mb-3">Otros ({otherFiles.length})</h4>
+                          <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Otros ({otherFiles.length})</h4>
                           <div className="space-y-2">
                             {otherFiles.map((file, idx) => {
                               const proxyUrl = resolveAttachmentUrl(file);
@@ -5530,7 +5529,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                       )}
                       
                       {files.length === 0 && (
-                        <p className="text-gray-400 text-sm">No hay archivos</p>
+                        <p className={`text-sm ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>No hay archivos</p>
                       )}
                     </div>
                   );
@@ -5539,7 +5538,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                 if (mediaFilter === 'links') {
                   return (
                     <div>
-                      <h4 className="font-semibold text-gray-700 mb-3">Enlaces ({links.length})</h4>
+                      <h4 className={`font-semibold mb-3 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Enlaces ({links.length})</h4>
                       <div className="space-y-2">
                         {links.map((link, idx) => (
                           <a 

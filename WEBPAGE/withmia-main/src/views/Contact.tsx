@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { trackFormSubmit, trackCTAClick } from "@/lib/analytics";
 import { useScrollReveal } from "@/hooks/useAnimations";
 import {
@@ -119,8 +119,7 @@ const Contact = () => {
 
     trackFormSubmit("contact", { interest: selectedInterest || "none" });
 
-    toast({
-      title: "Mensaje enviado",
+    toast.success("Mensaje enviado", {
       description: "Nos pondremos en contacto contigo pronto.",
     });
     form.reset();

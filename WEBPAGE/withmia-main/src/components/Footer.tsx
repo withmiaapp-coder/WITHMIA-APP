@@ -37,27 +37,27 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <Link to="/plataforma" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/plataforma" className="text-white/55 hover:text-white transition-colors">
                     Plataforma
                   </Link>
                 </li>
                 <li>
-                  <Link to="/pymes" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/pymes" className="text-white/55 hover:text-white transition-colors">
                     PYMEs
                   </Link>
                 </li>
                 <li>
-                  <Link to="/precios" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/precios" className="text-white/55 hover:text-white transition-colors">
                     Precios
                   </Link>
                 </li>
                 <li>
-                  <Link to="/integraciones" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/integraciones" className="text-white/55 hover:text-white transition-colors">
                     Integraciones
                   </Link>
                 </li>
                 <li>
-                  <Link to="/api" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/api" className="text-white/55 hover:text-white transition-colors">
                     API
                   </Link>
                 </li>
@@ -71,27 +71,27 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <Link to="/nosotros" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/nosotros" className="text-white/55 hover:text-white transition-colors">
                     Nosotros
                   </Link>
                 </li>
                 <li>
-                  <Link to="/contacto" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/contacto" className="text-white/55 hover:text-white transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link to="/inversores" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/inversores" className="text-white/55 hover:text-white transition-colors">
                     Financiamiento e Inversión
                   </Link>
                 </li>
                 <li>
-                  <Link to="/privacidad" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/privacidad" className="text-white/55 hover:text-white transition-colors">
                     Políticas de Privacidad
                   </Link>
                 </li>
                 <li>
-                  <Link to="/terminos" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/terminos" className="text-white/55 hover:text-white transition-colors">
                     Términos y Condiciones
                   </Link>
                 </li>
@@ -105,27 +105,27 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <Link to="/ayuda" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/ayuda" className="text-white/55 hover:text-white transition-colors">
                     Centro de Ayuda
                   </Link>
                 </li>
                 <li>
-                  <Link to="/soporte" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/soporte" className="text-white/55 hover:text-white transition-colors">
                     Contactar Soporte
                   </Link>
                 </li>
                 <li>
-                  <Link to="/docs" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/docs" className="text-white/55 hover:text-white transition-colors">
                     Documentación
                   </Link>
                 </li>
                 <li>
-                  <Link to="/faq" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/faq" className="text-white/55 hover:text-white transition-colors">
                     Preguntas Frecuentes
                   </Link>
                 </li>
                 <li>
-                  <Link to="/comunidad" className="text-white/40 hover:text-white transition-colors">
+                  <Link to="/comunidad" className="text-white/55 hover:text-white transition-colors">
                     Comunidad
                   </Link>
                 </li>
@@ -139,22 +139,22 @@ export const Footer = () => {
               </h4>
               <ul className="space-y-3 text-sm">
                 <li>
-                  <a href="https://www.facebook.com/automatiza.withmia" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors flex items-center gap-2">
+                  <a href="https://www.facebook.com/automatiza.withmia" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
                     <Facebook className="w-4 h-4" /> Facebook
                   </a>
                 </li>
                 <li>
-                  <a href="https://www.youtube.com/@withyou-withmia" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors flex items-center gap-2">
+                  <a href="https://www.youtube.com/@withyou-withmia" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
                     <Youtube className="w-4 h-4" /> YouTube
                   </a>
                 </li>
                 <li>
-                  <a href="https://www.instagram.com/automatiza_withmia/" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors flex items-center gap-2">
+                  <a href="https://www.instagram.com/automatiza_withmia/" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
                     <Instagram className="w-4 h-4" /> Instagram
                   </a>
                 </li>
                 <li>
-                  <a href="https://www.linkedin.com/company/withmia" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white transition-colors flex items-center gap-2">
+                  <a href="https://www.linkedin.com/company/withmia" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
                     <Linkedin className="w-4 h-4" /> LinkedIn
                   </a>
                 </li>
