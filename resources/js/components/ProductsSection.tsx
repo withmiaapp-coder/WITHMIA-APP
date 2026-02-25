@@ -22,6 +22,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { ThemedSelect } from './ui/ThemedSelect';
 
 // ====== TYPES ======
 interface Product {
@@ -302,32 +303,29 @@ export default function ProductsSection({ user, company }: Props) {
           </div>
 
           {categories.length > 0 && (
-            <select
+            <ThemedSelect
               value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
-              style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec, colorScheme: isDark ? 'dark' : undefined } : undefined}
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              onChange={setSelectedCategory}
+              options={[{ value: '', label: 'Todas las categorías' }, ...categories.map(cat => ({ value: cat, label: cat }))]}
+              triggerClassName={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
+              triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
+            />
           )}
 
-          <select
+          <ThemedSelect
             value={selectedProvider}
-            onChange={e => setSelectedProvider(e.target.value)}
-            className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
-            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec, colorScheme: isDark ? 'dark' : undefined } : undefined}
-          >
-            <option value="">Todos los orígenes</option>
-            <option value="manual">Manual</option>
-            <option value="woocommerce">WooCommerce</option>
-            <option value="shopify">Shopify</option>
-            <option value="mercadolibre">MercadoLibre</option>
-            <option value="custom_api">API Personalizada</option>
-          </select>
+            onChange={setSelectedProvider}
+            options={[
+              { value: '', label: 'Todos los orígenes' },
+              { value: 'manual', label: 'Manual' },
+              { value: 'woocommerce', label: 'WooCommerce' },
+              { value: 'shopify', label: 'Shopify' },
+              { value: 'mercadolibre', label: 'MercadoLibre' },
+              { value: 'custom_api', label: 'API Personalizada' },
+            ]}
+            triggerClassName={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
+            triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
+          />
 
           <div className={`flex items-center gap-0.5 rounded-lg p-0.5 ${!t ? 'bg-slate-100' : ''}`} style={t ? { backgroundColor: t.itemBg } : undefined}>
             <button
@@ -902,18 +900,22 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                     </div>
                     <div>
                       <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Moneda</label>
-                      <select value={currency} onChange={e => setCurrency(e.target.value)}
-                        className={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-700 focus:border-emerald-400' : ''}`}
-                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text, colorScheme: isDark ? 'dark' : undefined } : undefined}>
-                        <option value="CLP">CLP</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="ARS">ARS</option>
-                        <option value="MXN">MXN</option>
-                        <option value="BRL">BRL</option>
-                        <option value="COP">COP</option>
-                        <option value="PEN">PEN</option>
-                      </select>
+                      <ThemedSelect
+                        value={currency}
+                        onChange={setCurrency}
+                        options={[
+                          { value: 'CLP', label: 'CLP' },
+                          { value: 'USD', label: 'USD' },
+                          { value: 'EUR', label: 'EUR' },
+                          { value: 'ARS', label: 'ARS' },
+                          { value: 'MXN', label: 'MXN' },
+                          { value: 'BRL', label: 'BRL' },
+                          { value: 'COP', label: 'COP' },
+                          { value: 'PEN', label: 'PEN' },
+                        ]}
+                        triggerClassName={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-700 focus:border-emerald-400' : ''}`}
+                        triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                      />
                     </div>
                   </div>
                 </div>
@@ -934,13 +936,17 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                     </div>
                     <div>
                       <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Estado</label>
-                      <select value={stockStatus} onChange={e => setStockStatus(e.target.value)}
-                        className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-700 focus:border-blue-400' : ''}`}
-                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text, colorScheme: isDark ? 'dark' : undefined } : undefined}>
-                        <option value="in_stock">En stock</option>
-                        <option value="out_of_stock">Agotado</option>
-                        <option value="on_backorder">Por encargo</option>
-                      </select>
+                      <ThemedSelect
+                        value={stockStatus}
+                        onChange={setStockStatus}
+                        options={[
+                          { value: 'in_stock', label: 'En stock' },
+                          { value: 'out_of_stock', label: 'Agotado' },
+                          { value: 'on_backorder', label: 'Por encargo' },
+                        ]}
+                        triggerClassName={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-700 focus:border-blue-400' : ''}`}
+                        triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                      />
                     </div>
                     <div>
                       <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>SKU</label>

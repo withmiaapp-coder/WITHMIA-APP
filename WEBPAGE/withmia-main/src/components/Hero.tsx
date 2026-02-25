@@ -1,5 +1,4 @@
 import { ArrowRight, CalendarCheck } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
@@ -11,116 +10,6 @@ const channels: { name: string; icon: string; size: number; margin?: number; mar
   { name: "Web", icon: "/icons/web-new.webp", size: 24, invert: true },
   { name: "API", icon: "/icons/api-final.webp", size: 24, marginLeft: -4 },
 ];
-
-/* ── Particle canvas ── */
-function ParticleCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Respect reduced motion preference
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let animId = 0;
-    let running = true;
-    type P = { x: number; y: number; vx: number; vy: number; r: number; o: number; color: string };
-    let particles: P[] = [];
-
-    const colors = ["255,200,60","255,160,40","200,140,255","100,200,255","255,255,255"];
-
-    function resize() {
-      // Use clientWidth/Height which reflect CSS layout dimensions
-      let w = canvas!.clientWidth;
-      let h = canvas!.clientHeight;
-      // Fallback: use viewport if CSS dimensions not yet computed
-      if (w < 10 || h < 10) {
-        w = window.innerWidth;
-        h = window.innerHeight;
-      }
-      if (w < 10 || h < 10) return false;
-      canvas!.width = w;
-      canvas!.height = h;
-      // Reinit particles for new size
-      const count = Math.floor((w * h) / 6000);
-      particles = [];
-      for (let i = 0; i < count; i++) {
-        particles.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: -Math.random() * 0.6 - 0.1,
-          r: Math.random() * 2 + 0.5,
-          o: Math.random() * 0.6 + 0.2,
-          color: colors[Math.floor(Math.random() * colors.length)],
-        });
-      }
-      return true;
-    }
-
-    function draw() {
-      if (!running) return;
-      const W = canvas!.width;
-      const H = canvas!.height;
-      ctx!.clearRect(0, 0, W, H);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.o += (Math.random() - 0.5) * 0.02;
-        p.o = Math.max(0.1, Math.min(0.8, p.o));
-        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
-        if (p.x < -10) p.x = W + 10;
-        if (p.x > W + 10) p.x = -10;
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${p.color},${p.o})`;
-        ctx!.fill();
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${p.color},${p.o * 0.15})`;
-        ctx!.fill();
-      }
-      animId = requestAnimationFrame(draw);
-    }
-
-    function start() {
-      if (!running || animId) return;
-      if (resize()) {
-        draw();
-      }
-    }
-
-    // Try immediately
-    start();
-    // Retry after short delays in case layout isn't ready yet (Astro hydration)
-    const t1 = setTimeout(start, 50);
-    const t2 = setTimeout(start, 200);
-    const t3 = setTimeout(start, 500);
-
-    const onResize = () => { resize(); };
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      running = false;
-      cancelAnimationFrame(animId);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      window.removeEventListener("resize", onResize);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none z-[2]"
-      aria-hidden="true"
-    />
-  );
-}
 
 export const Hero = () => {
   return (
@@ -139,8 +28,12 @@ export const Hero = () => {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background" />
       </div>
 
-      {/* Animated particles */}
-      <ParticleCanvas />
+      {/* Animated particles — rendered via standalone <script> in index.astro */}
+      <canvas
+        id="hero-particles"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}
+        aria-hidden="true"
+      />
 
       <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4">
         {/* Tagline badge */}

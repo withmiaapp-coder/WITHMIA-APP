@@ -41,6 +41,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { ThemedSelect } from './ui/ThemedSelect';
 
 interface IntegrationInfo {
   id: number;
@@ -1202,17 +1203,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                                     <p className="font-medium text-neutral-600">Días de historial a importar</p>
                                   </div>
                                 </div>
-                                <select
-                                  value={localSettings.daysLimitImportMessages}
-                                  onChange={(e) => handleSettingChange('daysLimitImportMessages', parseInt(e.target.value))}
-                                  className={`px-3 py-2 border rounded-lg text-sm font-medium ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:ring-purple-500' : ''} focus:outline-none focus:ring-2 focus:border-transparent`} style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text, '--tw-ring-color': t.accent } as React.CSSProperties : undefined}
-                                >
-                                  <option value={3}>3 días ⚡ Rápido</option>
-                                  <option value={7}>7 días</option>
-                                  <option value={14}>14 días</option>
-                                  <option value={30}>30 días</option>
-                                  <option value={60}>60 días ⏳ Lento</option>
-                                </select>
+                                <ThemedSelect
+                                  value={String(localSettings.daysLimitImportMessages)}
+                                  onChange={(val) => handleSettingChange('daysLimitImportMessages', parseInt(val))}
+                                  options={[
+                                    { value: '3', label: '3 días ⚡ Rápido' },
+                                    { value: '7', label: '7 días' },
+                                    { value: '14', label: '14 días' },
+                                    { value: '30', label: '30 días' },
+                                    { value: '60', label: '60 días ⏳ Lento' },
+                                  ]}
+                                  triggerClassName={`px-3 py-2 border rounded-lg text-sm font-medium ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700' : ''}`}
+                                  triggerStyle={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                                />
                               </div>
                             </div>
                           )}
@@ -1592,17 +1595,19 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           {/* Language */}
                           <div>
                             <label className={`block text-sm font-medium mb-1 ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Idioma</label>
-                            <select
+                            <ThemedSelect
                               value={widgetConfig.language}
-                              onChange={(e) => setWidgetConfig(p => ({ ...p, language: e.target.value }))}
-                              className="w-full max-w-xs px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
-                            >
-                              <option value="es">Español</option>
-                              <option value="en">English</option>
-                              <option value="pt">Português</option>
-                              <option value="fr">Français</option>
-                              <option value="de">Deutsch</option>
-                            </select>
+                              onChange={(val) => setWidgetConfig(p => ({ ...p, language: val }))}
+                              options={[
+                                { value: 'es', label: 'Español' },
+                                { value: 'en', label: 'English' },
+                                { value: 'pt', label: 'Português' },
+                                { value: 'fr', label: 'Français' },
+                                { value: 'de', label: 'Deutsch' },
+                              ]}
+                              triggerClassName={`w-full max-w-xs px-3 py-2 border rounded-lg text-sm ${!t ? 'border-neutral-300' : ''}`}
+                              triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                            />
                           </div>
 
                           {/* Chat With Us Text */}

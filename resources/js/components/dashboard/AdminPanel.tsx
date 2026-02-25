@@ -21,6 +21,7 @@ import {
     Clock
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ThemedSelect } from '../ui/ThemedSelect';
 
 interface User {
     id: number;
@@ -628,16 +629,17 @@ export default function AdminPanel() {
                         style={t ? { backgroundColor: 'var(--theme-content-bg)' } : undefined}>
                         <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Editar Rol</h3>
                         <p className={`mb-4 ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Usuario: <strong>{editingUser.name}</strong></p>
-                        <select
+                        <ThemedSelect
                             value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value)}
-                            className={`w-full p-3 rounded-lg border mb-4 ${!t ? 'border-slate-200' : ''}`}
-                            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
-                        >
-                            <option value="agent">Agente</option>
-                            <option value="admin">Admin</option>
-                            <option value="superadmin">Super Admin</option>
-                        </select>
+                            onChange={setSelectedRole}
+                            options={[
+                                { value: 'agent', label: 'Agente' },
+                                { value: 'admin', label: 'Admin' },
+                                { value: 'superadmin', label: 'Super Admin' },
+                            ]}
+                            triggerClassName={`w-full p-3 rounded-lg border mb-4 ${!t ? 'border-slate-200' : ''}`}
+                            triggerStyle={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
+                        />
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setEditingUser(null)}

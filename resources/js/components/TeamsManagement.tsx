@@ -27,6 +27,7 @@ import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitati
 import type { Agent } from '@/types/chatwoot';
 import { usePermissions } from '../hooks/usePermissions';
 import { useTheme } from '../contexts/ThemeContext';
+import { ThemedSelect } from './ui/ThemedSelect';
 import MembersManagement from './MembersManagement';
 
 // Modal para crear/editar equipo
@@ -504,32 +505,32 @@ const InviteMemberModal: React.FC<{
                 <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                   Rol
                 </label>
-                <select
+                <ThemedSelect
                   value={role}
-                  onChange={(e) => setRole(e.target.value as 'agent' | 'administrator')}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
-                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
-                >
-                  <option value="agent">Agente</option>
-                  <option value="administrator">Administrador</option>
-                </select>
+                  onChange={(val) => setRole(val as 'agent' | 'administrator')}
+                  options={[
+                    { value: 'agent', label: 'Agente' },
+                    { value: 'administrator', label: 'Administrador' },
+                  ]}
+                  triggerClassName={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
+                  triggerStyle={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
+                />
               </div>
 
               <div>
                 <label className={`block text-sm font-medium mb-1.5 ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>
                   Equipo <span className={`text-xs font-normal ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>(opc.)</span>
                 </label>
-                <select
-                  value={teamId || ''}
-                  onChange={(e) => setTeamId(e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
-                  style={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
-                >
-                  <option value="">Sin equipo</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
-                  ))}
-                </select>
+                <ThemedSelect
+                  value={teamId ? String(teamId) : ''}
+                  onChange={(val) => setTeamId(val ? parseInt(val) : undefined)}
+                  options={[
+                    { value: '', label: 'Sin equipo' },
+                    ...teams.map(team => ({ value: String(team.id), label: team.name })),
+                  ]}
+                  triggerClassName={`w-full px-3 py-2.5 border rounded-xl focus:ring-2 transition-all text-sm ${!t ? 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white' : ''}`}
+                  triggerStyle={t ? { background: t.inputBg, borderColor: t.inputBorder, color: t.text } : undefined}
+                />
               </div>
             </div>
 
