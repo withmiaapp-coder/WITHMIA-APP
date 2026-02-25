@@ -1646,7 +1646,7 @@ function CreateEventModal({ initialDate, onSubmit, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()} style={t ? { backgroundColor: t.cardBg } : undefined}>
+      <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()} style={t ? { backgroundColor: 'var(--theme-content-bg)' } : undefined}>
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-5">
@@ -1751,7 +1751,7 @@ function SettingsPanel({ integration, calendars, selectedCalendar, onSelectCalen
   }, [hasTheme, isDark]);
 
   return (
-    <div className={`absolute top-0 right-0 w-72 h-full border-l shadow-xl z-20 overflow-y-auto ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
+    <div className={`absolute top-0 right-0 w-72 h-full border-l shadow-xl z-20 overflow-y-auto ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: 'var(--theme-content-bg)', borderColor: t.cardBorder } : undefined}>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className={`font-bold text-sm ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Configuración</h3>
