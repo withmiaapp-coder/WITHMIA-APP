@@ -946,9 +946,9 @@ export default function Entrenamiento({
       {/* Bot Configuration Modal */}
       {showBotConfig && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden ${!t ? 'bg-white' : ''}`} style={t ? { background: t.cardBg } : undefined}>
+          <div className={`rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden ${!t ? 'bg-white' : ''}`} style={t ? { background: 'var(--theme-content-bg)' } : undefined}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-4 flex-shrink-0">
+            <div className={`${!t ? 'bg-gradient-to-r from-violet-600 to-purple-600' : ''} px-5 py-4 flex-shrink-0`} style={t ? { background: t.accent } : undefined}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Settings className="w-5 h-5 text-white" />
@@ -967,7 +967,7 @@ export default function Entrenamiento({
             <div className="p-5 overflow-y-auto flex-1">
               {loadingBotConfig ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader className="w-8 h-8 animate-spin text-violet-600" />
+                  <Loader className={`w-8 h-8 animate-spin ${!t ? 'text-violet-600' : ''}`} style={t ? { color: t.accent } : undefined} />
                 </div>
               ) : noWorkflowConfigured ? (
                 /* No workflow configured - show integration message */
@@ -991,7 +991,8 @@ export default function Entrenamiento({
                       const urlSlug = currentPath.match(/\/dashboard\/([^/?]+)/)?.[1] || slug;
                       window.location.href = `/dashboard/${urlSlug}?section=integracion`;
                     }}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
+                    className={`inline-flex items-center gap-2 px-6 py-3 text-white font-medium rounded-lg transition-all shadow-lg ${!t ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700' : 'hover:opacity-90'}`}
+                    style={t ? { background: t.accent } : undefined}
                   >
                     <Link2 className="w-5 h-5" />
                     Ir a Integración
@@ -1013,7 +1014,7 @@ export default function Entrenamiento({
                           value={botConfig.human_keyword}
                           onChange={(e) => setBotConfig({ ...botConfig, human_keyword: e.target.value.toUpperCase().slice(0, 50) })}
                           maxLength={50}
-                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium ${!t ? 'border-orange-200 text-gray-900 bg-white' : ''}`}
+                          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent font-medium ${!t ? 'focus:ring-orange-500 border-orange-200 text-gray-900 bg-white' : ''}`}
                           style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           placeholder="Ej: HUMANO, AYUDA, AGENTE"
                         />
@@ -1040,7 +1041,7 @@ export default function Entrenamiento({
                             }}
                             min={60}
                             max={86400}
-                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-medium ${!t ? 'border-orange-200 text-gray-900 bg-white' : ''}`}
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent font-medium ${!t ? 'focus:ring-orange-500 border-orange-200 text-gray-900 bg-white' : ''}`}
                             style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                           <span className={`text-sm font-medium ${!t ? 'text-orange-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
@@ -1072,7 +1073,7 @@ export default function Entrenamiento({
                             }}
                             min={60}
                             max={86400}
-                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-violet-200 text-gray-900 bg-white' : ''}`}
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent font-medium ${!t ? 'focus:ring-violet-500 border-violet-200 text-gray-900 bg-white' : ''}`}
                             style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                           <span className={`text-sm font-medium ${!t ? 'text-violet-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
@@ -1104,7 +1105,7 @@ export default function Entrenamiento({
                             }}
                             min={1}
                             max={60}
-                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-gray-300 text-gray-900 bg-white' : ''}`}
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent font-medium ${!t ? 'focus:ring-violet-500 border-gray-300 text-gray-900 bg-white' : ''}`}
                             style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                           <span className={`text-sm font-medium ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
@@ -1134,7 +1135,7 @@ export default function Entrenamiento({
                             }}
                             min={1}
                             max={30}
-                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent font-medium ${!t ? 'border-gray-300 text-gray-900 bg-white' : ''}`}
+                            className={`w-32 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:border-transparent font-medium ${!t ? 'focus:ring-violet-500 border-gray-300 text-gray-900 bg-white' : ''}`}
                             style={t ? { background: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}
                           />
                           <span className={`text-sm font-medium ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
@@ -1161,7 +1162,8 @@ export default function Entrenamiento({
                 <button
                   onClick={handleSaveBotConfig}
                   disabled={savingBotConfig || loadingBotConfig}
-                  className="flex items-center gap-2 px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-2 px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${!t ? 'bg-violet-600 hover:bg-violet-700' : 'hover:opacity-90'}`}
+                  style={t ? { background: t.accent } : undefined}
                 >
                   {savingBotConfig ? (
                     <Loader className="w-4 h-4 animate-spin" />

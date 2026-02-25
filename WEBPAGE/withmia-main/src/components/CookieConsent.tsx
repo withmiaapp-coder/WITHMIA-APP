@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Shield, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 
 const CONSENT_KEY = "withmia_cookie_consent";
 

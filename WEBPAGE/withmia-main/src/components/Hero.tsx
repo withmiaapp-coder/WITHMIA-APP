@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
 const channels: { name: string; icon: string; size: number; margin?: number; marginLeft?: number; invert?: boolean }[] = [

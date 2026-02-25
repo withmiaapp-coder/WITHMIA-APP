@@ -20,7 +20,7 @@ import {
   Clock,
   BadgeCheck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
 /* ═══════════════════════════════════════════════════════════

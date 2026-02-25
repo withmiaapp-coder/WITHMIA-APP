@@ -1,7 +1,7 @@
 import logo from "@/assets/logo-withmia.png";
 import { Menu, X, ChevronDown, Bot, Plug, BarChart3, Code, Sparkles, MessageCircle, Users, Inbox, Zap } from "lucide-react";
 import { useState, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
 const menuItems = [

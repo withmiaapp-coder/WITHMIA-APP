@@ -1,6 +1,6 @@
 import logo from "@/assets/logo-withmia.png";
 import { Instagram, Linkedin, Youtube, Facebook } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();

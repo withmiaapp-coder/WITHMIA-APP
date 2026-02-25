@@ -1,6 +1,6 @@
 import { BarChart3, Users, TrendingUp, Activity, Sparkles, MessageSquare, Zap, Clock, Shield, ArrowUpRight, ArrowRight, CalendarCheck } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
 const features = [
