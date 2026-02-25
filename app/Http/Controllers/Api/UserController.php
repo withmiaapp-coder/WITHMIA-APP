@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\UserMedia;
 
 class UserController extends Controller
@@ -122,17 +123,30 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('avatar');
+            $contents = file_get_contents($file->getRealPath());
 
-            // Store in database
-            UserMedia::updateOrCreate(
-                ['user_id' => $user->id, 'type' => 'avatar'],
-                [
+            // Store in database — use upsert for PostgreSQL bytea compatibility
+            $existing = UserMedia::where('user_id', $user->id)->where('type', 'avatar')->first();
+            if ($existing) {
+                DB::table('user_media')->where('id', $existing->id)->update([
                     'filename' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
                     'size' => $file->getSize(),
-                    'data' => $file->getContent(),
-                ]
-            );
+                    'data' => $contents,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('user_media')->insert([
+                    'user_id' => $user->id,
+                    'type' => 'avatar',
+                    'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'data' => $contents,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             $url = url("/user-media/{$user->id}/avatar") . '?v=' . time();
             $user->avatar = $url;
@@ -145,11 +159,15 @@ class UserController extends Controller
                 'data' => ['avatar_url' => $url],
             ]);
         } catch (\Throwable $e) {
-            Log::error('Error uploading avatar', ['error' => $e->getMessage()]);
+            Log::error('Error uploading avatar', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
+            ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al subir la imagen',
+                'message' => 'Error al subir la imagen: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -168,17 +186,30 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('cover');
+            $contents = file_get_contents($file->getRealPath());
 
-            // Store in database
-            UserMedia::updateOrCreate(
-                ['user_id' => $user->id, 'type' => 'cover'],
-                [
+            // Store in database — use upsert for PostgreSQL bytea compatibility
+            $existing = UserMedia::where('user_id', $user->id)->where('type', 'cover')->first();
+            if ($existing) {
+                DB::table('user_media')->where('id', $existing->id)->update([
                     'filename' => $file->getClientOriginalName(),
                     'mime_type' => $file->getMimeType(),
                     'size' => $file->getSize(),
-                    'data' => $file->getContent(),
-                ]
-            );
+                    'data' => $contents,
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('user_media')->insert([
+                    'user_id' => $user->id,
+                    'type' => 'cover',
+                    'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'data' => $contents,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             $url = url("/user-media/{$user->id}/cover") . '?v=' . time();
             $user->cover_photo = $url;

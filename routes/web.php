@@ -29,7 +29,8 @@ Route::get('/user-media/{userId}/{type}', function (int $userId, string $type) {
         abort(404);
     }
 
-    $media = \App\Models\UserMedia::where('user_id', $userId)
+    $media = \Illuminate\Support\Facades\DB::table('user_media')
+        ->where('user_id', $userId)
         ->where('type', $type)
         ->first();
 
@@ -38,7 +39,7 @@ Route::get('/user-media/{userId}/{type}', function (int $userId, string $type) {
     }
 
     $data = $media->data;
-    // PostgreSQL bytea: if returned as resource stream, read it
+    // PostgreSQL bytea: PDO may return as resource stream
     if (is_resource($data)) {
         $data = stream_get_contents($data);
     }
@@ -47,7 +48,6 @@ Route::get('/user-media/{userId}/{type}', function (int $userId, string $type) {
         'Content-Type' => $media->mime_type,
         'Content-Length' => $media->size,
         'Cache-Control' => 'public, max-age=86400',
-        'ETag' => md5($media->updated_at->timestamp . $media->id),
     ]);
 })->where('userId', '[0-9]+')
   ->where('type', 'avatar|cover')
