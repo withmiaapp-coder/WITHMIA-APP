@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, type ReactNode } from "react";
+﻿﻿import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   Heatmap247,
 } from "@/components/pymes/PymesSections";
@@ -80,7 +80,7 @@ const painPoints = [
   },
   {
     label: "Tu negocio duerme mientras tus clientes compran",
-    headline: "Atenci�n\n100% manual",
+    headline: "Atención\n100% manual",
     description: "Son las 11pm, un cliente quiere reservar. Tu teléfono está en silencio. A las 8am ya reservó con otro. As→ todos los días.",
     icon: PhoneOff, color: "#a78bfa",
     stat: "6h", statLabel: "respuesta promedio sin IA",
@@ -94,7 +94,7 @@ const painPoints = [
 
 const milestones = [
   { day: "Día 1", title: "Todo listo para operar", description: "Cuenta creada, canales conectados, dashboard activo. Ya eres omnicanal.", highlight: "10 min", icon: Rocket, status: "completed" as const },
-  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y pol�ticas. WITHMIA aprende tu negocio.", highlight: "Sin código", icon: Zap, status: "completed" as const },
+  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y políticas. WITHMIA aprende tu negocio.", highlight: "Sin código", icon: Zap, status: "completed" as const },
   { day: "Semana 1", title: "Primeras conversaciones reales", description: "WITHMIA responde clientes reales. Tú supervisas y afinas el tono.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
   { day: "Semana 2", title: "Automatización al 80%", description: "Resuelve la mayoría sola. Solo escala lo que realmente necesita a un humano.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
   { day: "Semana 3", title: "Flujos avanzados", description: "Agendamiento, seguimientos post-venta y campañas automáticas activas.", highlight: "Avanzado", icon: Users, status: "upcoming" as const },
@@ -456,7 +456,7 @@ const SolucionesPymes = () => {
                   <span className="text-gradient">a tu industria</span>
                 </h2>
                 <p className="text-white/35 max-w-lg mx-auto text-[15px] leading-relaxed">
-                  Selecciona tu rubro y mira una conversaci�n real con WITHMIA.
+                  Selecciona tu rubro y mira una conversación real con WITHMIA.
                 </p>
               </div>
             </Reveal>
@@ -714,7 +714,7 @@ const SolucionesPymes = () => {
                   <span className="text-[11px] font-semibold text-red-400/90 uppercase tracking-widest">Alerta de realidad</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white leading-[1.1] mb-5">
-                  Si tu negocio atiende as�,{" "}
+                  Si tu negocio atiende así,{" "}
                   <br className="hidden sm:block" />
                   <span className="relative inline-block">
                     <span className="text-red-400">ya estás perdiendo clientes</span>
@@ -722,7 +722,7 @@ const SolucionesPymes = () => {
                   </span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
-                  No es opini�n, son datos. Mientras lees esto, alguien te escribi→ y nadie contestá.{" "}
+                  No es opinión, son datos. Mientras lees esto, alguien te escribi→ y nadie contestá.{" "}
                   <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
                 </p>
               </div>
@@ -741,7 +741,7 @@ const SolucionesPymes = () => {
                 const verdict = count === 0
                   ? { text: "Selecciona los que aplican a tu negocio", color: "text-white/25", bg: "" }
                   : count <= 2
-                  ? { text: `${count}/6 → Podr�a ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
+                  ? { text: `${count}/6 → Podría ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
                   : count <= 4
                   ? { text: `${count}/6 → Tu competencia que automatizó te está quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
                   : { text: `${count}/6 → Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
@@ -755,8 +755,8 @@ const SolucionesPymes = () => {
                             <Target className="w-4 h-4 text-red-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white/80">Diagn�stico r�pido</p>
-                            <p className="text-[11px] text-white/25">¿Cuántos de estos s�ntomas tiene tu negocio?</p>
+                            <p className="text-sm font-semibold text-white/80">Diagnóstico rápido</p>
+                            <p className="text-[11px] text-white/25">¿Cuántos de estos síntomas tiene tu negocio?</p>
                           </div>
                         </div>
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${

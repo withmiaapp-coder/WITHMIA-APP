@@ -403,12 +403,13 @@ function NotificationsTab({ t }: { t: any }) {
     desktopNotifications: true,
   });
   const [saved, setSaved] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [permission, setPermission] = useState<NotificationPermission>(
+    () => ('Notification' in window ? Notification.permission : 'granted')
+  );
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('notificationSettings');
     if (savedSettings) setSettings(JSON.parse(savedSettings));
-    if ('Notification' in window) setPermission(Notification.permission);
   }, []);
 
   const handleToggle = (key: keyof NotificationSettings) => {
