@@ -376,52 +376,79 @@ export const Pricing = () => {
 
       {/* ═══════════ TEAM SIZE CALCULATOR ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
-        <div ref={calc.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${calc.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-7 md:p-9">
-            <div className="text-center mb-6">
-              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-2">Calculadora</p>
-              <h3 className="text-lg font-bold text-white">¿Cuánto pagarás con tu equipo?</h3>
-            </div>
+        <div ref={calc.ref} className={`max-w-3xl mx-auto transition-all duration-700 ${calc.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400/60 mb-2">Calculadora</p>
+            <h3 className="text-xl md:text-2xl font-bold text-white">Calcula el costo de tu equipo</h3>
+          </div>
 
-            <div className="text-center mb-6">
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="text-sm text-white/30 font-medium self-start mt-3">$</span>
-                <span className="text-5xl md:text-6xl font-extrabold text-white tracking-tight tabular-nums">
-                  <AnimatedPrice value={totalPrice} />
-                </span>
-                <span className="text-sm text-white/20 ml-1">USD/mes</span>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+            {/* Slider section */}
+            <div className="p-6 md:p-8">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-white/50 font-medium">Miembros del equipo</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setTeamSize(Math.max(1, teamSize - 1))}
+                    className="w-8 h-8 rounded-lg border border-white/[0.1] bg-white/[0.04] flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-colors text-lg leading-none"
+                  >−</button>
+                  <span className="w-16 text-center text-lg font-bold text-white tabular-nums">{teamSize}</span>
+                  <button
+                    onClick={() => setTeamSize(Math.min(20, teamSize + 1))}
+                    className="w-8 h-8 rounded-lg border border-white/[0.1] bg-white/[0.04] flex items-center justify-center text-white/40 hover:text-white hover:border-white/20 transition-colors text-lg leading-none"
+                  >+</button>
+                </div>
               </div>
-              <p className="text-[13px] text-white/20 mt-2">
-                {teamSize === 1
-                  ? `$${pricing.base}/mes — 1 usuario incluido`
-                  : `$${pricing.base} base + ${teamSize - 1} × $${pricing.perMember} extra`}
-              </p>
-              {isAnnual && annualSavings > 0 && (
-                <p className="inline-flex items-center gap-1.5 text-[12px] text-emerald-400 mt-2 bg-emerald-400/[0.06] px-3 py-1 rounded-full">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  Ahorras ${annualSavings} USD al año
-                </p>
-              )}
-            </div>
 
-            <div className="max-w-md mx-auto">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[13px] text-white/40 font-medium">Tamaño del equipo</span>
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-white bg-white/[0.06] px-3 py-1.5 rounded-lg">
-                  <Users className="w-3.5 h-3.5 text-amber-400" />
-                  {teamSize} {teamSize === 1 ? "usuario" : "usuarios"}
-                </span>
-              </div>
               <div className="relative h-2 rounded-full bg-white/[0.06]">
-                <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-150" style={{ width: `${sliderPct}%` }} />
+                <div className="absolute top-0 left-0 h-full rounded-full bg-amber-500 transition-all duration-150" style={{ width: `${sliderPct}%` }} />
                 <input type="range" min={1} max={20} value={teamSize} onChange={(e) => setTeamSize(Number(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                 <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white border-2 border-amber-400 pointer-events-none transition-all duration-150" style={{ left: `calc(${sliderPct}% - 10px)` }} />
               </div>
-              <div className="flex justify-between mt-2 text-[10px] text-white/15 font-mono">
-                <span>1</span><span>5</span><span>10</span><span>15</span><span>20+</span>
+              <div className="flex justify-between mt-2 text-[10px] text-white/20 font-mono">
+                <span>1</span><span>5</span><span>10</span><span>15</span><span>20</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-white/[0.06]" />
+
+            {/* Breakdown */}
+            <div className="p-6 md:p-8 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/40">Plan base (1 usuario incluido)</span>
+                <span className="text-white/70 font-medium tabular-nums">${pricing.base}</span>
+              </div>
+              {teamSize > 1 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/40">{teamSize - 1} miembro{teamSize > 2 ? "s" : ""} adicional{teamSize > 2 ? "es" : ""} × ${pricing.perMember}</span>
+                  <span className="text-white/70 font-medium tabular-nums">${(teamSize - 1) * pricing.perMember}</span>
+                </div>
+              )}
+              {isAnnual && annualSavings > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-emerald-400/70">Descuento anual (−17%)</span>
+                  <span className="text-emerald-400 font-medium tabular-nums">−${annualSavings}/año</span>
+                </div>
+              )}
+
+              <div className="border-t border-white/[0.06] pt-3 flex items-end justify-between">
+                <span className="text-sm font-semibold text-white/60">Total mensual</span>
+                <div className="text-right">
+                  <span className="text-3xl font-bold text-white tabular-nums">
+                    $<AnimatedPrice value={totalPrice} />
+                  </span>
+                  <span className="text-sm text-white/30 ml-1">USD/mes</span>
+                </div>
               </div>
             </div>
           </div>
+
+          {teamSize >= 15 && (
+            <p className="text-center text-xs text-white/25 mt-3">
+              ¿Más de 20 usuarios? <Link to="/contacto" className="text-amber-400/60 hover:text-amber-400 underline underline-offset-2">Contáctanos para planes Enterprise</Link>
+            </p>
+          )}
         </div>
       </div>
 

@@ -377,7 +377,7 @@ export default function SupportTickets() {
                                         <select
                                             value={newCategory}
                                             onChange={(e) => setNewCategory(e.target.value)}
-                                            className={`w-full h-9 px-3 text-sm rounded-lg border focus:outline-none focus:ring-2 ${!th ? 'border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 focus:ring-blue-500/30' : ''}`}
+                                            className={`w-full h-9 px-3 text-sm rounded-lg border focus:outline-none ${!th ? 'focus:ring-2 border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 focus:ring-blue-500/30' : 'focus:ring-0'}`}
                                             style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                                         >
                                             {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
@@ -393,7 +393,7 @@ export default function SupportTickets() {
                                             value={newSubject}
                                             onChange={(e) => setNewSubject(e.target.value)}
                                             placeholder="Describe brevemente el problema"
-                                            className={`w-full h-9 px-3 text-sm rounded-lg border focus:outline-none focus:ring-2 ${!th ? 'border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : ''}`}
+                                            className={`w-full h-9 px-3 text-sm rounded-lg border focus:outline-none ${!th ? 'focus:ring-2 border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : 'focus:ring-0'}`}
                                             style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                                         />
                                     </div>
@@ -407,7 +407,7 @@ export default function SupportTickets() {
                                             onChange={(e) => setNewDescription(e.target.value)}
                                             placeholder="Explica el problema con todo el detalle posible..."
                                             rows={6}
-                                            className={`w-full px-3 py-2 text-sm rounded-lg border resize-none focus:outline-none focus:ring-2 ${!th ? 'border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : ''}`}
+                                            className={`w-full px-3 py-2 text-sm rounded-lg border resize-none focus:outline-none ${!th ? 'focus:ring-2 border-neutral-300 dark:border-white/[0.1] bg-white dark:bg-white/[0.03] text-neutral-900 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : 'focus:ring-0'}`}
                                             style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                                         />
                                     </div>
@@ -585,7 +585,7 @@ export default function SupportTickets() {
                                                 }
                                             }}
                                             rows={2}
-                                            className={`flex-1 resize-none rounded-lg border p-3 text-sm focus:outline-none focus:ring-2 ${!th ? 'border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-neutral-800 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : ''}`}
+                                            className={`flex-1 resize-none rounded-lg border p-3 text-sm focus:outline-none ${!th ? 'focus:ring-2 border-neutral-300 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-neutral-800 dark:text-white/80 placeholder:text-neutral-400 dark:placeholder:text-white/25 focus:ring-blue-500/30' : 'focus:ring-0'}`}
                                             style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                                         />
                                         <button
