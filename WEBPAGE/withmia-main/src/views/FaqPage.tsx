@@ -676,10 +676,10 @@ const FaqPage = () => {
 
               {/* Need more help? */}
               <div className="mt-5 flex items-center justify-center gap-5 text-[11px] text-white/15">
-                <Link to="/soporte" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
+                <a href="https://app.withmia.com/soporte" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
                   <Headphones className="w-3 h-3" />
                   Contactar Soporte
-                </Link>
+                </a>
                 <span className="text-white/[0.05]">|</span>
                 <Link to="/comunidad" className="flex items-center gap-1.5 hover:text-amber-400/50 transition-colors">
                   <Users className="w-3 h-3" />
@@ -1057,7 +1057,7 @@ const FaqPage = () => {
                 <p className="text-[12px] text-white/20">
                   ¿Necesitas ayuda directa?{" "}
                   <a
-                    href="/soporte"
+                    href="https://app.withmia.com/soporte"
                     className="text-amber-400/50 hover:text-amber-300 transition-colors font-medium"
                   >
                     Crea un ticket de soporte

@@ -1,12 +1,17 @@
 ---
-import Layout from '@/layouts/Layout.astro';
-import Support from '@/views/Support';
+// Redirect to the app — support tickets live in the authenticated app
 ---
 
-<Layout
-  title="Soporte"
-  description="Contacta al equipo de soporte de WITHMIA. Ayuda técnica rápida por chat, email o teléfono. Tiempo de respuesta promedio: 2 horas."
-  path="/soporte"
->
-  <Support client:load />
-</Layout>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0;url=https://app.withmia.com/soporte" />
+    <link rel="canonical" href="https://app.withmia.com/soporte" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Redirigiendo…</title>
+  </head>
+  <body>
+    <p>Redirigiendo a <a href="https://app.withmia.com/soporte">app.withmia.com</a>…</p>
+    <script is:inline>window.location.replace("https://app.withmia.com/soporte");</script>
+  </body>
+</html>

@@ -171,6 +171,16 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
 Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhook'])
     ->middleware('throttle:30,1');
 
+// ============================================================================
+// 5c. SUPPORT TICKETS — authenticated client (sesión web)
+// ============================================================================
+Route::middleware(['web', 'auth'])->prefix('my-tickets')->group(function () {
+    Route::get('/', [SupportTicketController::class, 'myTickets']);
+    Route::post('/', [SupportTicketController::class, 'storeAuthenticated']);
+    Route::get('/{id}', [SupportTicketController::class, 'show']);
+    Route::post('/{id}/reply', [SupportTicketController::class, 'reply']);
+});
+
 Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
     Route::get('/user/permissions', [UserController::class, 'permissions']);
     Route::get('/user/has-permission/{permission}', [UserController::class, 'hasPermission']);

@@ -110,9 +110,9 @@ export const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/soporte" className="text-white/55 hover:text-white transition-colors">
+                  <a href="https://app.withmia.com/soporte" className="text-white/55 hover:text-white transition-colors">
                     Contactar Soporte
-                  </Link>
+                  </a>
                 </li>
                 <li>
                   <Link to="/docs" className="text-white/55 hover:text-white transition-colors">

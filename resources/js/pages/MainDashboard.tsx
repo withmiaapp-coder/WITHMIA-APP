@@ -14,6 +14,7 @@ import SubscriptionPage from './subscription/SubscriptionPage';
 import IntegrationSection from '../components/IntegrationSection';
 import CalendarSection from '../components/CalendarSection';
 import ProductsSection from '../components/ProductsSection';
+import SupportTickets from '../components/SupportTickets';
 import { NotificationBell } from '../components/NotificationBell';
 import NotificationToast from '../components/NotificationToast';
 import { ThemePicker } from '../components/ThemePicker';
@@ -49,7 +50,8 @@ import {
   Settings,
   Package,
   GraduationCap,
-  CreditCard
+  CreditCard,
+  Headphones
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -1224,6 +1226,14 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       count: null,
       permission: 'sidebar.products'
     },
+    // Soporte - visible para todos
+    { 
+      id: 'support', 
+      label: 'Soporte', 
+      icon: Headphones, 
+      count: null,
+      permission: 'sidebar.dashboard'
+    },
     // Admin Panel - SOLO para super-admin (controlado desde el servidor)
     ...(isSuperAdminResolved ? [{
       id: 'admin',
@@ -1532,6 +1542,8 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
               <CalendarSection user={user} company={company} />
             ) : activeSection === 'reports' ? (
               <ProductsSection user={user} company={company} />
+            ) : activeSection === 'support' ? (
+              <SupportTickets />
             ) : activeSection === 'settings' ? (
               <SettingsPage />
             ) : activeSection === 'admin' ? (

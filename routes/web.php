@@ -295,6 +295,7 @@ Route::middleware(['auth', 'superadmin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/companies', [AdminController::class, 'companies'])->name('admin.companies');
+    Route::get('/tickets', [AdminController::class, 'tickets'])->name('admin.tickets');
 
     // API
     Route::get('/api/users', [AdminController::class, 'apiUsers'])->name('admin.api.users');
@@ -304,6 +305,13 @@ Route::middleware(['auth', 'superadmin'])->prefix('admin')->group(function () {
     Route::get('/api/stats', [AdminController::class, 'stats'])->name('admin.api.stats');
     Route::get('/api/health', [AdminController::class, 'health'])->name('admin.api.health');
     Route::post('/api/repair-qdrant', [AdminController::class, 'repairQdrantCollections'])->name('admin.api.repair-qdrant');
+
+    // Tickets API
+    Route::get('/api/tickets', [AdminController::class, 'apiTickets'])->name('admin.api.tickets');
+    Route::get('/api/tickets/{id}', [AdminController::class, 'apiTicketShow'])->name('admin.api.tickets.show');
+    Route::post('/api/tickets/{id}/reply', [AdminController::class, 'apiTicketReply'])->name('admin.api.tickets.reply');
+    Route::patch('/api/tickets/{id}/status', [AdminController::class, 'apiTicketUpdateStatus'])->name('admin.api.tickets.status');
+    Route::patch('/api/tickets/{id}/assign', [AdminController::class, 'apiTicketAssign'])->name('admin.api.tickets.assign');
 });
 
 // ============================================================================

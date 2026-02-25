@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Models\SupportTicket;
+use App\Models\TicketReply;
 use App\Services\UserDeletionService;
 use App\Services\QdrantService;
 use App\Jobs\CreateQdrantCollectionJob;
@@ -408,6 +410,144 @@ class AdminController extends Controller
             'total_companies' => count($results),
             'repaired' => $repaired,
             'results' => $results,
+        ]);
+    }
+
+    // =========================================================================
+    // TICKETS
+    // =========================================================================
+
+    /**
+     * Tickets Management Page (Inertia)
+     */
+    public function tickets(): \Inertia\Response
+    {
+        return inertia('admin/Tickets');
+    }
+
+    /**
+     * API: List all support tickets with pagination & filters
+     */
+    public function apiTickets(Request $request): JsonResponse
+    {
+        $query = SupportTicket::with('assignee:id,name,email')
+            ->withCount('replies');
+
+        // Filters
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+        if ($category = $request->query('category')) {
+            $query->where('category', $category);
+        }
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('email', 'ilike', "%{$search}%")
+                  ->orWhere('name', 'ilike', "%{$search}%")
+                  ->orWhere('subject', 'ilike', "%{$search}%");
+            });
+        }
+
+        $tickets = $query->orderByDesc('created_at')
+            ->limit(200)
+            ->get();
+
+        return response()->json(['tickets' => $tickets]);
+    }
+
+    /**
+     * API: Get single ticket with all replies
+     */
+    public function apiTicketShow(string $id): JsonResponse
+    {
+        $ticket = SupportTicket::with(['replies', 'assignee:id,name,email'])
+            ->findOrFail($id);
+
+        return response()->json(['ticket' => $ticket]);
+    }
+
+    /**
+     * API: Reply to a ticket (admin side)
+     */
+    public function apiTicketReply(Request $request, string $id): JsonResponse
+    {
+        $ticket = SupportTicket::findOrFail($id);
+
+        $validated = $request->validate([
+            'body' => 'required|string|max:10000',
+        ]);
+
+        $user = Auth::user();
+
+        $reply = TicketReply::create([
+            'ticket_id'    => $ticket->id,
+            'author_type'  => 'admin',
+            'author_name'  => $user->name,
+            'author_email' => $user->email,
+            'body'         => $validated['body'],
+        ]);
+
+        // Re-open if closed, mark as waiting on client
+        if ($ticket->status === 'cerrado') {
+            $ticket->update(['status' => 'abierto', 'closed_at' => null]);
+        } elseif ($ticket->status === 'abierto') {
+            $ticket->update(['status' => 'respondido']);
+        }
+
+        $ticket->refresh()->load('replies');
+
+        Log::info('Admin replied to ticket', [
+            'ticket_id' => $ticket->id,
+            'admin'     => $user->email,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'reply'   => $reply,
+            'ticket'  => $ticket,
+        ]);
+    }
+
+    /**
+     * API: Update ticket status
+     */
+    public function apiTicketUpdateStatus(Request $request, string $id): JsonResponse
+    {
+        $ticket = SupportTicket::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:abierto,respondido,en_progreso,cerrado',
+        ]);
+
+        $data = ['status' => $validated['status']];
+
+        if ($validated['status'] === 'cerrado') {
+            $data['closed_at'] = now();
+        } elseif ($ticket->status === 'cerrado') {
+            $data['closed_at'] = null;
+        }
+
+        $ticket->update($data);
+
+        return response()->json(['success' => true, 'ticket' => $ticket->fresh()]);
+    }
+
+    /**
+     * API: Assign ticket to an admin user
+     */
+    public function apiTicketAssign(Request $request, string $id): JsonResponse
+    {
+        $ticket = SupportTicket::findOrFail($id);
+
+        $validated = $request->validate([
+            'assigned_to' => 'nullable|exists:users,id',
+        ]);
+
+        $ticket->update(['assigned_to' => $validated['assigned_to']]);
+
+        return response()->json([
+            'success' => true,
+            'ticket'  => $ticket->fresh()->load('assignee:id,name,email'),
         ]);
     }
 }
