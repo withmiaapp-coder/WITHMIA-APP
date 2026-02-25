@@ -132,13 +132,6 @@ const faqs = [
   { q: "¿Qué pasa con mis datos si cancelo?", a: "Se conservan por 30 días. Puedes exportar todo antes de ese plazo." },
 ];
 
-/* ─── Social proof stats ─── */
-const stats = [
-  { value: "500+", label: "Equipos activos" },
-  { value: "2M+",  label: "Mensajes procesados" },
-  { value: "4.9",  label: "Valoración media", suffix: "/5" },
-  { value: "<2h",  label: "Tiempo de respuesta soporte" },
-];
 
 /* ═══════════════════════════════════════════════════
    HELPER COMPONENTS
@@ -203,7 +196,7 @@ export const Pricing = () => {
 
   const hero       = useScrollReveal();
   const cards      = useScrollReveal();
-  const proofBar   = useScrollReveal();
+
   const calc       = useScrollReveal();
   const comparison = useScrollReveal();
   const features   = useScrollReveal();
@@ -416,25 +409,6 @@ export const Pricing = () => {
         </div>
       </div>
 
-      {/* ═══════════ SOCIAL PROOF BAR ═══════════ */}
-      <div className="px-4 pb-16 md:pb-20">
-        <div ref={proofBar.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${proofBar.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((s, i) => (
-              <div
-                key={s.label}
-                className="text-center py-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]"
-                style={{ opacity: proofBar.isVisible ? 1 : 0, transform: proofBar.isVisible ? "translateY(0)" : "translateY(12px)", transition: `all 0.5s ease ${i * 80}ms` }}
-              >
-                <p className="text-2xl md:text-3xl font-extrabold text-white tabular-nums">
-                  {s.value}{s.suffix && <span className="text-sm text-white/30 font-medium">{s.suffix}</span>}
-                </p>
-                <p className="text-[12px] text-white/30 mt-1">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* ═══════════ TEAM SIZE CALCULATOR ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
