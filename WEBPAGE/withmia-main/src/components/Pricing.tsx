@@ -16,7 +16,7 @@ import {
   GraduationCap,
   Headphones,
   ChevronDown,
-  Star,
+  ChevronRight,
   TrendingUp,
   Clock,
   BadgeCheck,
@@ -24,7 +24,6 @@ import {
   Brain,
   Database,
   Lock,
-  MessageCircle,
   Crown,
   Infinity,
   Building2,
@@ -209,14 +208,9 @@ export const Pricing = () => {
 
       {/* ═══════════ HERO ═══════════ */}
       <div className="relative pt-20 md:pt-28 pb-14 md:pb-18 px-4">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-amber-500/[0.07] via-violet-500/[0.04] to-transparent rounded-full blur-3xl" />
-          <div className="absolute top-20 right-0 w-[400px] h-[400px] bg-violet-500/[0.05] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
-          <div className="absolute top-40 left-0 w-[350px] h-[350px] bg-cyan-500/[0.04] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
-        </div>
 
         <div ref={hero.ref} className={`max-w-3xl mx-auto text-center relative z-10 transition-all duration-700 ${hero.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
+          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-violet-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold mb-6">
             <div className="relative">
               <Sparkles className="w-4 h-4" />
               <Sparkles className="w-4 h-4 absolute inset-0 animate-ping opacity-30" />
@@ -244,11 +238,11 @@ export const Pricing = () => {
 
       {/* ═══════════ BILLING TOGGLE ═══════════ */}
       <div className="flex justify-center mb-10 px-4">
-        <div className="inline-flex items-center p-1 rounded-full bg-white/[0.04] border border-white/[0.06] backdrop-blur-sm">
-          <button onClick={() => setIsAnnual(false)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 ${!isAnnual ? "bg-white/10 text-white shadow-sm" : "text-white/35 hover:text-white/50"}`}>
+        <div className="inline-flex items-center p-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+          <button onClick={() => setIsAnnual(false)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 ${!isAnnual ? "bg-white/10 text-white" : "text-white/35 hover:text-white/50"}`}>
             Mensual
           </button>
-          <button onClick={() => setIsAnnual(true)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 flex items-center gap-2 ${isAnnual ? "bg-white/10 text-white shadow-sm" : "text-white/35 hover:text-white/50"}`}>
+          <button onClick={() => setIsAnnual(true)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 flex items-center gap-2 ${isAnnual ? "bg-white/10 text-white" : "text-white/35 hover:text-white/50"}`}>
             Anual
             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">−17%</span>
           </button>
@@ -258,48 +252,41 @@ export const Pricing = () => {
       {/* ═══════════ TWO PLAN CARDS ═══════════ */}
       <div className="px-4 pb-10 md:pb-14">
         <div ref={cards.ref} className={`max-w-5xl mx-auto transition-all duration-700 delay-100 ${cards.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="grid md:grid-cols-2 gap-6 md:gap-0 items-stretch">
+          <div className="grid md:grid-cols-2 gap-6 items-stretch">
 
             {/* ── FREE ── */}
-            <div className="relative rounded-3xl md:rounded-r-none border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl overflow-hidden flex flex-col">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              <div className="p-7 md:p-9 flex flex-col flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
-                    <MessageCircle className="w-5 h-5 text-white/50" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Plan Gratuito</h3>
-                    <p className="text-[11px] text-white/25">Para explorar la plataforma</p>
-                  </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] flex flex-col">
+              <div className="p-7 flex-1 flex flex-col">
+                <div className="mb-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-1">Gratis</p>
+                  <h3 className="text-xl font-bold text-white">Plan Gratuito</h3>
+                  <p className="text-sm text-white/35 mt-2">Para empezar a explorar</p>
                 </div>
 
-                <div className="mt-6 mb-8">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm text-white/30 font-medium self-start mt-3">$</span>
-                    <span className="text-6xl font-extrabold text-white tracking-tight">0</span>
-                    <span className="text-sm text-white/20 ml-1">/mes</span>
-                  </div>
-                  <p className="text-[13px] text-white/20 mt-1.5">Gratis para siempre · sin límite de tiempo</p>
+                <div className="flex items-end gap-1 mb-6">
+                  <span className="text-4xl font-bold text-white tracking-tight">$0</span>
+                  <span className="text-sm text-white/30 mb-1.5">/mes</span>
                 </div>
 
                 <div className="space-y-3 flex-1">
                   {freePlanFeatures.map((f) => (
-                    <div key={f.label} className="flex items-center gap-3">
+                    <div key={f.label} className="flex items-center gap-2.5">
                       {f.included ? (
-                        <div className="w-5 h-5 rounded-full bg-emerald-400/10 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-emerald-400" /></div>
+                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
                       ) : (
-                        <div className="w-5 h-5 rounded-full bg-white/[0.04] flex items-center justify-center shrink-0"><XIcon className="w-3 h-3 text-white/15" /></div>
+                        <XIcon className="w-4 h-4 text-white/15 shrink-0" />
                       )}
-                      <span className={`text-[13px] ${f.included ? "text-white/60" : "text-white/20 line-through"}`}>{f.label}</span>
+                      <span className={`text-sm ${f.included ? "text-white/70" : "text-white/25"}`}>{f.label}</span>
                     </div>
                   ))}
                 </div>
+              </div>
 
+              <div className="px-7 pb-7">
                 <a
                   href="https://app.withmia.com"
                   onClick={() => trackCTAClick('comenzar_gratis', 'pricing_free', 'https://app.withmia.com')}
-                  className="mt-8 flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/20 hover:bg-white/[0.04] transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-white/[0.1] text-sm font-medium text-white/50 hover:text-white hover:border-white/20 hover:bg-white/[0.04] transition-all"
                 >
                   Comenzar gratis
                   <ArrowRight className="w-4 h-4" />
@@ -308,80 +295,57 @@ export const Pricing = () => {
             </div>
 
             {/* ── PRO ── */}
-            <div className="relative md:scale-[1.03] md:z-10">
-              {/* Glow */}
-              <div className="absolute -inset-[2px] rounded-3xl md:rounded-l-none bg-gradient-to-b from-amber-400/30 via-amber-500/10 to-transparent blur-sm" />
+            <div className="rounded-2xl border-2 border-amber-500/40 bg-white/[0.02] flex flex-col relative">
+              {/* Badge */}
+              <div className="absolute -top-3 left-6">
+                <span className="px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full">
+                  Recomendado
+                </span>
+              </div>
 
-              <div className="relative rounded-3xl md:rounded-l-none border border-amber-500/25 bg-gradient-to-b from-amber-500/[0.04] to-transparent backdrop-blur-xl overflow-hidden flex flex-col">
-                {/* Top shimmer */}
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+              <div className="p-7 flex-1 flex flex-col">
+                <div className="mb-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-400/70 mb-1">Pro</p>
+                  <h3 className="text-xl font-bold text-white">WITHMIA Pro</h3>
+                  <p className="text-sm text-white/35 mt-2">Todo lo que necesitas para escalar</p>
+                </div>
 
-                {/* Popular ribbon */}
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-center py-2 px-4">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-black flex items-center justify-center gap-1.5">
-                    <Star className="w-3.5 h-3.5" fill="currentColor" /> Más popular
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-4xl font-bold text-white tracking-tight tabular-nums">
+                    $<AnimatedPrice value={pricing.base} />
                   </span>
+                  <span className="text-sm text-white/30 mb-1.5">USD/mes</span>
                 </div>
-
-                <div className="p-7 md:p-9 flex flex-col flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
-                      <Crown className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-white">WITHMIA Pro</h3>
-                      <p className="text-[11px] text-white/25">Todo para escalar tu negocio</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 mb-2">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-sm text-white/30 font-medium self-start mt-3">$</span>
-                      <span className="text-6xl font-extrabold text-white tracking-tight tabular-nums">
-                        <AnimatedPrice value={pricing.base} />
-                      </span>
-                      <div className="ml-1 text-left">
-                        <span className="block text-sm text-white/30 font-medium">USD/mes</span>
-                        {isAnnual && <span className="block text-[11px] text-white/15">facturado anualmente</span>}
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-white/20 mt-1.5">
-                      +${pricing.perMember}/mes por miembro adicional
-                    </p>
-                    {isAnnual && (
-                      <p className="inline-flex items-center gap-1.5 text-[12px] text-emerald-400 mt-2 bg-emerald-400/[0.06] px-3 py-1 rounded-full">
-                        <TrendingUp className="w-3.5 h-3.5" />
-                        Ahorras ${(PRICING.monthly.base - PRICING.annual.base) * 12} USD/año
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-3 flex-1 mt-6">
-                    {proPlanFeatures.map((f) => (
-                      <div key={f.label} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-amber-400/15 flex items-center justify-center shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 text-amber-400" />
-                        </div>
-                        <span className="text-[13px] text-white/70 leading-snug">{f.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <a
-                    href="https://app.withmia.com"
-                    onClick={() => trackCTAClick('comenzar_pro', 'pricing_pro', 'https://app.withmia.com')}
-                    className="mt-8 relative flex items-center justify-center gap-2 w-full px-6 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-bold text-black hover:brightness-110 transition-all group/btn overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      Comenzar con Pro
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5" />
-                    </span>
-                  </a>
-                  <p className="text-[11px] text-white/15 text-center mt-3">
-                    Sin tarjeta de crédito · Cancela cuando quieras
+                <p className="text-xs text-white/30 mb-1">
+                  +${pricing.perMember}/mes por miembro adicional
+                </p>
+                {isAnnual && (
+                  <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400 mt-1 mb-4">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    Ahorras ${(PRICING.monthly.base - PRICING.annual.base) * 12} USD/año
                   </p>
+                )}
+                {!isAnnual && <div className="mb-4" />}
+
+                <div className="space-y-3 flex-1">
+                  {proPlanFeatures.map((f) => (
+                    <div key={f.label} className="flex items-center gap-2.5">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-sm text-white/70">{f.label}</span>
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="px-7 pb-7">
+                <a
+                  href="https://app.withmia.com"
+                  onClick={() => trackCTAClick('comenzar_pro', 'pricing_pro', 'https://app.withmia.com')}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-amber-500 text-sm font-semibold text-black hover:bg-amber-400 transition-colors"
+                >
+                  Comenzar con Pro
+                  <ChevronRight className="w-4 h-4" />
+                </a>
               </div>
             </div>
           </div>
@@ -413,7 +377,7 @@ export const Pricing = () => {
       {/* ═══════════ TEAM SIZE CALCULATOR ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
         <div ref={calc.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${calc.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl p-7 md:p-9">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-7 md:p-9">
             <div className="text-center mb-6">
               <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-2">Calculadora</p>
               <h3 className="text-lg font-bold text-white">¿Cuánto pagarás con tu equipo?</h3>
@@ -451,7 +415,7 @@ export const Pricing = () => {
               <div className="relative h-2 rounded-full bg-white/[0.06]">
                 <div className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-150" style={{ width: `${sliderPct}%` }} />
                 <input type="range" min={1} max={20} value={teamSize} onChange={(e) => setTeamSize(Number(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-lg shadow-amber-500/20 border-2 border-amber-400 pointer-events-none transition-all duration-150" style={{ left: `calc(${sliderPct}% - 10px)` }} />
+                <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white border-2 border-amber-400 pointer-events-none transition-all duration-150" style={{ left: `calc(${sliderPct}% - 10px)` }} />
               </div>
               <div className="flex justify-between mt-2 text-[10px] text-white/15 font-mono">
                 <span>1</span><span>5</span><span>10</span><span>15</span><span>20+</span>
@@ -610,14 +574,7 @@ export const Pricing = () => {
       <div className="px-4 pb-20 md:pb-28">
         <div ref={ctaSr.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${ctaSr.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="relative rounded-3xl overflow-hidden">
-            <div className="absolute inset-0">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-violet-500/[0.06] to-cyan-500/[0.04]" />
-              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-500/10 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-violet-500/10 rounded-full blur-3xl" />
-            </div>
-
-            <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
+            <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center bg-white/[0.02]">
 
               {/* Guarantee badge */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-400/[0.08] border border-emerald-400/15 text-[12px] text-emerald-400 font-semibold mb-6">
