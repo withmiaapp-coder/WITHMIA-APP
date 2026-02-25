@@ -1005,7 +1005,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                       className={`flex-1 px-4 py-2.5 border rounded-xl text-sm transition-all outline-none ${!t ? 'bg-slate-50 border-slate-200 text-neutral-700 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-neutral-300' : 'placeholder:opacity-50'}`}
                       style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined} />
                     <button type="button" onClick={addImage} disabled={!imageUrl.trim()}
-                      className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 disabled:cursor-not-allowed">
+                      className={`px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 disabled:cursor-not-allowed ${!t ? 'bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400' : 'disabled:opacity-40 hover:opacity-90'}`}
+                      style={t ? { backgroundColor: t.accent } : undefined}>
                       <Plus className="w-4 h-4" />
                       Agregar
                     </button>
