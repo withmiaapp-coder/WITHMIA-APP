@@ -433,7 +433,7 @@ export default function Entrenamiento({
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center space-x-4 mb-8">
-        <div className="p-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl shadow-lg">
+        <div className={`p-3 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`} style={t ? { background: t.accent } : undefined}>
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -454,7 +454,7 @@ export default function Entrenamiento({
               {/* Phone Inner */}
               <div className={`w-full h-full rounded-[2.2rem] overflow-hidden flex flex-col ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
                 {/* Status Bar - iPhone style */}
-                <div className="h-10 bg-gradient-to-r from-violet-500 to-purple-500 flex items-end justify-between px-5 pb-1 relative">
+                <div className={`h-10 flex items-end justify-between px-5 pb-1 relative ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                   {/* Dynamic Island / Notch */}
                   <div className="absolute top-1.5 left-1/2 transform -translate-x-1/2 w-20 h-6 bg-black rounded-full flex items-center justify-center">
                     <div className="w-2.5 h-2.5 bg-gray-800 rounded-full mr-1.5"></div>
@@ -489,7 +489,7 @@ export default function Entrenamiento({
                 </div>
                 
                 {/* Chat Header */}
-                <div className="bg-gradient-to-r from-violet-500 to-purple-500 px-3 py-2 flex items-center gap-2">
+                <div className={`px-3 py-2 flex items-center gap-2 ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                   <div className={`w-12 h-12 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden ${isDark ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-gray-50'}`}>
                     {onboardingData.logo_url ? (
                       <img src={onboardingData.logo_url} alt="Logo" className="w-full h-full object-contain" />
@@ -539,9 +539,10 @@ export default function Entrenamiento({
                       <div
                         className={`max-w-[85%] rounded-2xl px-3 py-2 ${
                           msg.role === "user"
-                            ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-br-md"
+                            ? `${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''} text-white rounded-br-md`
                             : isDark ? "bg-gray-800 text-gray-200 shadow-sm border border-gray-700 rounded-bl-md" : "bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md"
                         }`}
+                        style={t && msg.role === "user" ? { background: t.accent } : undefined}
                       >
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                         <p className={`text-[10px] mt-1 ${msg.role === "user" ? "text-white/60" : isDark ? "text-gray-500" : "text-gray-400"}`}>
@@ -579,7 +580,8 @@ export default function Entrenamiento({
                     <button
                       onClick={handleSendMessage}
                       disabled={!inputMessage.trim() || isTyping}
-                      className="w-11 h-11 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:shadow-lg transition-all"
+                      className={`w-11 h-11 rounded-full flex items-center justify-center text-white disabled:opacity-50 hover:shadow-lg transition-all ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`}
+                      style={t ? { background: t.accent } : undefined}
                     >
                       <Send className="w-5 h-5" />
                     </button>
