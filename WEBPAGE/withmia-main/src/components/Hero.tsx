@@ -22,34 +22,35 @@ function ParticleCanvas() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animId: number;
-    let particles: { x: number; y: number; vx: number; vy: number; r: number; o: number; color: string }[] = [];
-
     // Respect reduced motion preference
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const colors = [
-      "255,200,60",   // gold
-      "255,160,40",   // amber
-      "200,140,255",  // purple
-      "100,200,255",  // cyan
-      "255,255,255",  // white
-    ];
+    let animId = 0;
+    let running = true;
+    type P = { x: number; y: number; vx: number; vy: number; r: number; o: number; color: string };
+    let particles: P[] = [];
+
+    const colors = ["255,200,60","255,160,40","200,140,255","100,200,255","255,255,255"];
 
     function resize() {
-      canvas!.width = canvas!.offsetWidth;
-      canvas!.height = canvas!.offsetHeight;
-      init();
-    }
-
-    function init() {
-      const count = Math.floor((canvas!.width * canvas!.height) / 6000);
+      // Use clientWidth/Height which reflect CSS layout dimensions
+      let w = canvas!.clientWidth;
+      let h = canvas!.clientHeight;
+      // Fallback: use viewport if CSS dimensions not yet computed
+      if (w < 10 || h < 10) {
+        w = window.innerWidth;
+        h = window.innerHeight;
+      }
+      if (w < 10 || h < 10) return false;
+      canvas!.width = w;
+      canvas!.height = h;
+      // Reinit particles for new size
+      const count = Math.floor((w * h) / 6000);
       particles = [];
       for (let i = 0; i < count; i++) {
         particles.push({
-          x: Math.random() * canvas!.width,
-          y: Math.random() * canvas!.height,
+          x: Math.random() * w,
+          y: Math.random() * h,
           vx: (Math.random() - 0.5) * 0.4,
           vy: -Math.random() * 0.6 - 0.1,
           r: Math.random() * 2 + 0.5,
@@ -57,26 +58,26 @@ function ParticleCanvas() {
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       }
+      return true;
     }
 
     function draw() {
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
+      if (!running) return;
+      const W = canvas!.width;
+      const H = canvas!.height;
+      ctx!.clearRect(0, 0, W, H);
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
         p.o += (Math.random() - 0.5) * 0.02;
         p.o = Math.max(0.1, Math.min(0.8, p.o));
-
-        if (p.y < -10) { p.y = canvas!.height + 10; p.x = Math.random() * canvas!.width; }
-        if (p.x < -10) p.x = canvas!.width + 10;
-        if (p.x > canvas!.width + 10) p.x = -10;
-
+        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx!.fillStyle = `rgba(${p.color},${p.o})`;
         ctx!.fill();
-
-        // subtle glow
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
         ctx!.fillStyle = `rgba(${p.color},${p.o * 0.15})`;
@@ -85,12 +86,30 @@ function ParticleCanvas() {
       animId = requestAnimationFrame(draw);
     }
 
-    resize();
-    draw();
-    window.addEventListener("resize", resize);
+    function start() {
+      if (!running || animId) return;
+      if (resize()) {
+        draw();
+      }
+    }
+
+    // Try immediately
+    start();
+    // Retry after short delays in case layout isn't ready yet (Astro hydration)
+    const t1 = setTimeout(start, 50);
+    const t2 = setTimeout(start, 200);
+    const t3 = setTimeout(start, 500);
+
+    const onResize = () => { resize(); };
+    window.addEventListener("resize", onResize);
+
     return () => {
+      running = false;
       cancelAnimationFrame(animId);
-      window.removeEventListener("resize", resize);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener("resize", onResize);
     };
   }, []);
 

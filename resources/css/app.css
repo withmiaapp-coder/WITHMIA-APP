@@ -300,8 +300,15 @@
 }
 
 /* Native <select> dropdown — dark mode aware */
-.dark select {
+.dark select,
+[data-theme="dark"] select {
     color-scheme: dark;
+}
+
+.dark select option,
+[data-theme="dark"] select option {
+    background-color: #1e1e2e;
+    color: #e0e0e0;
 }
 
 *::-webkit-scrollbar {
