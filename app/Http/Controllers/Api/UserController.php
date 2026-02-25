@@ -123,29 +123,20 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('avatar');
-            $contents = file_get_contents($file->getRealPath());
+            $base64 = base64_encode(file_get_contents($file->getRealPath()));
 
-            // Store in database — use upsert for PostgreSQL bytea compatibility
-            $existing = UserMedia::where('user_id', $user->id)->where('type', 'avatar')->first();
+            // Store in database — use PostgreSQL decode() for reliable bytea storage
+            $existing = DB::table('user_media')->where('user_id', $user->id)->where('type', 'avatar')->first();
             if ($existing) {
-                DB::table('user_media')->where('id', $existing->id)->update([
-                    'filename' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'data' => $contents,
-                    'updated_at' => now(),
-                ]);
+                DB::statement(
+                    "UPDATE user_media SET filename = ?, mime_type = ?, size = ?, data = decode(?, 'base64'), updated_at = ? WHERE id = ?",
+                    [$file->getClientOriginalName(), $file->getMimeType(), $file->getSize(), $base64, now(), $existing->id]
+                );
             } else {
-                DB::table('user_media')->insert([
-                    'user_id' => $user->id,
-                    'type' => 'avatar',
-                    'filename' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'data' => $contents,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                DB::statement(
+                    "INSERT INTO user_media (user_id, type, filename, mime_type, size, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, decode(?, 'base64'), ?, ?)",
+                    [$user->id, 'avatar', $file->getClientOriginalName(), $file->getMimeType(), $file->getSize(), $base64, now(), now()]
+                );
             }
 
             $url = url("/user-media/{$user->id}/avatar") . '?v=' . time();
@@ -186,29 +177,20 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('cover');
-            $contents = file_get_contents($file->getRealPath());
+            $base64 = base64_encode(file_get_contents($file->getRealPath()));
 
-            // Store in database — use upsert for PostgreSQL bytea compatibility
-            $existing = UserMedia::where('user_id', $user->id)->where('type', 'cover')->first();
+            // Store in database — use PostgreSQL decode() for reliable bytea storage
+            $existing = DB::table('user_media')->where('user_id', $user->id)->where('type', 'cover')->first();
             if ($existing) {
-                DB::table('user_media')->where('id', $existing->id)->update([
-                    'filename' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'data' => $contents,
-                    'updated_at' => now(),
-                ]);
+                DB::statement(
+                    "UPDATE user_media SET filename = ?, mime_type = ?, size = ?, data = decode(?, 'base64'), updated_at = ? WHERE id = ?",
+                    [$file->getClientOriginalName(), $file->getMimeType(), $file->getSize(), $base64, now(), $existing->id]
+                );
             } else {
-                DB::table('user_media')->insert([
-                    'user_id' => $user->id,
-                    'type' => 'cover',
-                    'filename' => $file->getClientOriginalName(),
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                    'data' => $contents,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                DB::statement(
+                    "INSERT INTO user_media (user_id, type, filename, mime_type, size, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, decode(?, 'base64'), ?, ?)",
+                    [$user->id, 'cover', $file->getClientOriginalName(), $file->getMimeType(), $file->getSize(), $base64, now(), now()]
+                );
             }
 
             $url = url("/user-media/{$user->id}/cover") . '?v=' . time();

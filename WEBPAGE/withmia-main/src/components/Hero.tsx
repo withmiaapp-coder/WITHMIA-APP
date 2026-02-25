@@ -1,3 +1,4 @@
+import { useRef, useEffect, useCallback } from "react";
 import { ArrowRight, CalendarCheck } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -11,11 +12,113 @@ const channels: { name: string; icon: string; size: number; margin?: number; mar
   { name: "API", icon: "/icons/api-final.webp", size: 24, marginLeft: -4 },
 ];
 
+const COLORS = ['255,200,60', '255,160,40', '200,140,255', '100,200,255', '255,255,255'];
+
+interface Particle {
+  x: number; y: number; vx: number; vy: number;
+  r: number; o: number; c: string;
+}
+
 export const Hero = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const animIdRef = useRef(0);
+
+  const resize = useCallback(() => {
+    const canvas = canvasRef.current;
+    const section = sectionRef.current;
+    if (!canvas || !section) return;
+
+    const w = section.offsetWidth || window.innerWidth;
+    let h = section.offsetHeight;
+    if (h < 100) h = window.innerHeight;
+
+    canvas.width = w;
+    canvas.height = h;
+
+    const count = Math.floor((w * h) / 6000);
+    const arr: Particle[] = [];
+    for (let i = 0; i < count; i++) {
+      arr.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -Math.random() * 0.6 - 0.1,
+        r: Math.random() * 2 + 0.5,
+        o: Math.random() * 0.6 + 0.2,
+        c: COLORS[Math.floor(Math.random() * COLORS.length)],
+      });
+    }
+    particlesRef.current = arr;
+  }, []);
+
+  useEffect(() => {
+    // Respect prefers-reduced-motion
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    function draw() {
+      const W = canvas!.width;
+      const H = canvas!.height;
+      ctx!.clearRect(0, 0, W, H);
+
+      for (const p of particlesRef.current) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.o += (Math.random() - 0.5) * 0.02;
+        if (p.o < 0.1) p.o = 0.1;
+        if (p.o > 0.8) p.o = 0.8;
+        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
+
+        // Particle dot
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(${p.c},${p.o})`;
+        ctx!.fill();
+
+        // Glow halo
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(${p.c},${p.o * 0.15})`;
+        ctx!.fill();
+      }
+
+      animIdRef.current = requestAnimationFrame(draw);
+    }
+
+    function start() {
+      cancelAnimationFrame(animIdRef.current);
+      resize();
+      if (particlesRef.current.length > 0) {
+        animIdRef.current = requestAnimationFrame(draw);
+      }
+    }
+
+    // Start after a short delay to ensure layout is stable
+    const timer = setTimeout(start, 150);
+    window.addEventListener('resize', start);
+
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(animIdRef.current);
+      window.removeEventListener('resize', start);
+    };
+  }, [resize]);
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-10 overflow-hidden">
-      {/* Background image — full bleed */}
-      <div className="absolute inset-0">
+    <section
+      ref={sectionRef}
+      className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-10 overflow-hidden"
+    >
+      {/* Background image — full bleed, z-0 */}
+      <div className="absolute inset-0 z-0">
         <img
           src="/banner-withmia.webp"
           alt="WITHMIA plataforma omnicanal con IA"
@@ -29,6 +132,14 @@ export const Hero = () => {
         {/* Bottom gradient fade into page background */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background" />
       </div>
+
+      {/* Particle canvas — z-[1] between background z-0 and content z-10 */}
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ display: 'block' }}
+      />
 
       <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4">
         {/* Tagline badge */}
