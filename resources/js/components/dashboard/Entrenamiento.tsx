@@ -454,37 +454,37 @@ export default function Entrenamiento({
               {/* Phone Inner */}
               <div className={`w-full h-full rounded-[2.2rem] overflow-hidden flex flex-col ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
                 {/* Status Bar - iPhone style */}
-                <div className={`h-10 flex items-end justify-between px-5 pb-1 relative ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`} style={t ? { background: t.accent } : undefined}>
+                <div className={`h-10 flex items-end justify-between px-4 pb-1 relative ${!t ? 'bg-gradient-to-r from-violet-500 to-purple-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                   {/* Dynamic Island / Notch */}
                   <div className="absolute top-1.5 left-1/2 transform -translate-x-1/2 w-20 h-6 bg-black rounded-full flex items-center justify-center">
                     <div className="w-2.5 h-2.5 bg-gray-800 rounded-full mr-1.5"></div>
                     <div className="w-1.5 h-1.5 bg-gray-700 rounded-full"></div>
                   </div>
                   {/* Time */}
-                  <span className="text-white text-sm font-semibold">
+                  <span className="text-white font-semibold" style={{ fontSize: '10px', lineHeight: '1' }}>
                     {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
                   </span>
                   {/* Status Icons */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     {/* Signal */}
-                    <div className="flex items-end gap-0.5 h-3">
-                      <div className="w-1 h-1 bg-white rounded-sm"></div>
-                      <div className="w-1 h-1.5 bg-white rounded-sm"></div>
-                      <div className="w-1 h-2 bg-white rounded-sm"></div>
-                      <div className="w-1 h-3 bg-white rounded-sm"></div>
+                    <div className="flex items-end gap-px h-2.5">
+                      <div className="w-0.5 h-0.5 bg-white rounded-sm"></div>
+                      <div className="w-0.5 h-1 bg-white rounded-sm"></div>
+                      <div className="w-0.5 h-1.5 bg-white rounded-sm"></div>
+                      <div className="w-0.5 h-2.5 bg-white rounded-sm"></div>
                     </div>
                     {/* WiFi */}
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 18c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm-4.9-2.1l1.4 1.4c1.9-1.9 5.1-1.9 7 0l1.4-1.4c-2.7-2.7-7.1-2.7-9.8 0zM2.8 11.6l1.4 1.4c4.3-4.3 11.3-4.3 15.6 0l1.4-1.4c-5.1-5.1-13.3-5.1-18.4 0z"/>
                     </svg>
                     {/* Battery */}
-                    <div className="flex items-center gap-0.5">
-                      <div className="w-6 h-3 border border-white rounded-sm flex items-center p-0.5">
+                    <div className="flex items-center gap-px">
+                      <div className="w-5 h-2.5 border border-white rounded-sm flex items-center p-px">
                         <div className="w-full h-full bg-green-400 rounded-sm"></div>
                       </div>
-                      <div className="w-0.5 h-1.5 bg-white rounded-r-sm"></div>
+                      <div className="w-px h-1 bg-white rounded-r-sm"></div>
                     </div>
-                    <span className="text-white text-xs font-medium">100%</span>
+                    <span className="text-white font-medium" style={{ fontSize: '9px', lineHeight: '1' }}>100%</span>
                   </div>
                 </div>
                 
