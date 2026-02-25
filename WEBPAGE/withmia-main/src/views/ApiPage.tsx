@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from "react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 import { Reveal, useCountUp } from "@/hooks/useAnimations";
@@ -55,25 +55,67 @@ import {
   Inbox,
   Tag,
   Search,
+  Menu,
+  X,
+  ExternalLink,
+  Headphones,
 } from "lucide-react";
 
-/* ─── Table of Contents ─── */
-const tocSections = [
-  { id: "hero", label: "Introducción" },
-  { id: "quickstart", label: "Inicio Rápido" },
-  { id: "reference", label: "Endpoints" },
-  { id: "capabilities", label: "Capacidades" },
-  { id: "sdks", label: "SDKs" },
-  { id: "webhooks", label: "Webhooks" },
-  { id: "auth", label: "Autenticación" },
-  { id: "errors", label: "Errores" },
-  { id: "limits", label: "Rate Limits" },
-  { id: "pagination", label: "Paginación" },
-  { id: "versioning", label: "Versionado" },
-  { id: "playground", label: "Playground" },
-  { id: "use-cases", label: "Casos de Uso" },
-  { id: "faq", label: "FAQ" },
+/* ─── Sidebar Navigation (docs style) ─── */
+interface ApiNavItem {
+  id: string;
+  label: string;
+  icon?: any;
+  children?: { id: string; label: string }[];
+}
+
+const apiSidebarNav: ApiNavItem[] = [
+  {
+    id: "_s_intro", label: "Introducción", icon: BookOpen,
+    children: [
+      { id: "hero", label: "Vista general" },
+      { id: "quickstart", label: "Inicio rápido" },
+      { id: "auth", label: "Autenticación" },
+    ],
+  },
+  {
+    id: "_s_ref", label: "API Reference", icon: Code,
+    children: [
+      { id: "reference", label: "Endpoints" },
+      { id: "errors", label: "Códigos de error" },
+      { id: "pagination", label: "Paginación y filtros" },
+      { id: "limits", label: "Rate limiting" },
+    ],
+  },
+  {
+    id: "_s_dev", label: "Desarrollo", icon: Terminal,
+    children: [
+      { id: "sdks", label: "SDKs oficiales" },
+      { id: "webhooks", label: "Webhooks" },
+      { id: "playground", label: "Playground" },
+    ],
+  },
+  {
+    id: "_s_features", label: "Características", icon: Layers,
+    children: [
+      { id: "capabilities", label: "Capacidades" },
+      { id: "architecture", label: "Arquitectura" },
+    ],
+  },
+  {
+    id: "_s_resources", label: "Recursos", icon: Sparkles,
+    children: [
+      { id: "use-cases", label: "Casos de uso" },
+      { id: "versioning", label: "Changelog" },
+      { id: "faq", label: "Preguntas frecuentes" },
+    ],
+  },
 ];
+
+/* All section IDs for search */
+const allApiSections: { id: string; label: string; parentLabel: string }[] = apiSidebarNav.flatMap(s =>
+  s.children?.map(c => ({ id: c.id, label: c.label, parentLabel: s.label })) ?? []
+);
 
 /* ─── Data ─── */
 const endpoints = [
@@ -303,6 +345,49 @@ const faqItems = [
   },
 ];
 
+/* Right TOC per section (context-aware) */
+const rightTocMap: Record<string, { id: string; label: string }[]> = {
+  hero: [
+    { id: "hero-heading", label: "WITHMIA API" },
+    { id: "hero-links", label: "Enlaces rápidos" },
+    { id: "hero-metrics", label: "Métricas" },
+  ],
+  quickstart: [
+    { id: "qs-step1", label: "Obtén tu API Key" },
+    { id: "qs-step2", label: "Instala el SDK" },
+    { id: "qs-step3", label: "Envía tu primer mensaje" },
+  ],
+  reference: [
+    { id: "ref-endpoints", label: "Lista de endpoints" },
+    { id: "ref-request", label: "Request ejemplo" },
+    { id: "ref-response", label: "Response ejemplo" },
+  ],
+  auth: [
+    { id: "auth-keys", label: "API Keys" },
+    { id: "auth-scopes", label: "Scopes" },
+    { id: "auth-rotation", label: "Rotación segura" },
+  ],
+  errors: [
+    { id: "err-codes", label: "Status codes" },
+    { id: "err-format", label: "Formato de error" },
+    { id: "err-429", label: "Rate limit excedido" },
+  ],
+  limits: [
+    { id: "lim-plans", label: "Planes" },
+    { id: "lim-backoff", label: "Backoff inteligente" },
+  ],
+  sdks: [
+    { id: "sdk-tabs", label: "Lenguajes" },
+    { id: "sdk-features", label: "Características" },
+  ],
+  webhooks: [
+    { id: "wh-events", label: "Tipos de eventos" },
+    { id: "wh-payload", label: "Payload ejemplo" },
+    { id: "wh-security", label: "Verificación" },
+  ],
+  faq: faqItems.map((f, i) => ({ id: `faq-${i}`, label: f.q.substring(0, 30) + "..." })),
+};
+
 /* ─── Component ─── */
 const ApiPage = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -321,6 +406,14 @@ const ApiPage = () => {
 }`);
   const [playgroundResponse, setPlaygroundResponse] = useState<string | null>(null);
   const [playgroundLoading, setPlaygroundLoading] = useState(false);
+
+  /* ── Docs-style sidebar state ── */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(["_s_intro", "_s_ref"]));
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -349,51 +442,231 @@ const ApiPage = () => {
     }, 800 + Math.random() * 400);
   };
 
+  /* ── ⌘K keyboard shortcut ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        searchRef.current?.blur();
+        setSearchQuery("");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  /* ── Scroll progress ── */
+  useEffect(() => {
+    const onScroll = () => {
+      const total = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      setScrollProgress(total > 0 ? (document.documentElement.scrollTop / total) * 100 : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // TOC scroll spy
   useEffect(() => {
+    const allIds = allApiSections.map(s => s.id);
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             setActiveTocSection(entry.target.id);
+            // Auto-expand parent section
+            for (const nav of apiSidebarNav) {
+              if (nav.children?.some(c => c.id === entry.target.id)) {
+                setExpandedSections(prev => new Set(prev).add(nav.id));
+              }
+            }
           }
         }
       },
       { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
     );
-    tocSections.forEach(({ id }) => {
+    allIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
     return () => observer.disconnect();
   }, []);
 
+  /* ── Navigation helpers ── */
+  const toggleSection = useCallback((id: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const scrollToSection = useCallback((id: string) => {
+    setMobileSidebarOpen(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  /* ── Search ── */
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return allApiSections.filter(s =>
+      s.label.toLowerCase().includes(q) || s.parentLabel.toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [searchQuery]);
+
+  /* ── Right TOC for current section ── */
+  const rightToc = rightTocMap[activeTocSection] || [];
+
   const latency = useCountUp(23, 1200);
   const uptime = useCountUp(99, 1400);
   const requests = useCountUp(1000, 1800);
 
   return (
-    <div className="min-h-screen api-page">
-      <div className="pt-20">
+    <div className="min-h-screen api-page relative">
+      {/* ── Ambient background glows ── */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-amber-500/[0.03] blur-[150px]" />
+        <div className="absolute top-[40%] right-0 w-[500px] h-[500px] rounded-full bg-violet-500/[0.02] blur-[140px]" />
+      </div>
 
-        {/* ── Sticky Table of Contents Sidebar ── */}
-        <nav className="fixed left-0 top-24 z-40 hidden xl:flex flex-col gap-0.5 w-44 pl-4 pr-2 py-3" aria-label="Tabla de contenidos">
-          <span className="text-[9px] font-mono text-white/15 uppercase tracking-[0.2em] mb-2 pl-3">En esta página</span>
-          {tocSections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-              className={`text-[11px] pl-3 py-1 border-l-2 transition-all duration-200 font-medium ${
-                activeTocSection === s.id
-                  ? "text-amber-400/80 border-amber-400/60 bg-amber-400/[0.04]"
-                  : "text-white/20 border-white/[0.04] hover:text-white/40 hover:border-white/[0.12]"
-              }`}
+      {/* ── Scroll Progress Bar ── */}
+      <div className={`fixed top-0 left-0 right-0 z-[60] h-[2px] transition-opacity duration-300 ${scrollProgress > 1 ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="h-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500/50 transition-[width] duration-100" style={{ width: `${scrollProgress}%` }} />
+      </div>
+
+      {/* ══ Three-column Layout ══ */}
+      <div className="pt-24 max-w-[1440px] mx-auto flex min-h-[calc(100vh-96px)] relative z-[1]">
+
+        {/* ═══ LEFT SIDEBAR (docs style) ═══ */}
+        <aside className={`
+          fixed lg:sticky top-24 left-0 z-20
+          w-[260px] h-[calc(100vh-96px)] overflow-y-auto
+          border-r border-white/[0.04] bg-[hsl(var(--background))]/80 lg:bg-transparent backdrop-blur-xl lg:backdrop-blur-none
+          transition-transform duration-300 lg:transition-none shrink-0
+          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
+        `}>
+          <nav className="px-4 py-4">
+            {/* Search */}
+            <div className="relative mb-5">
+              <div className={`flex items-center rounded-lg border transition-colors ${
+                searchFocused ? "border-amber-500/25 bg-white/[0.04]" : "border-white/[0.06] bg-white/[0.02]"
+              }`}>
+                <Search className="ml-3 w-3.5 h-3.5 text-white/20 shrink-0" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder="Buscar..."
+                  aria-label="Buscar en API"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  className="flex-1 pl-2 pr-3 py-1.5 bg-transparent text-[13px] text-white/70 placeholder-white/20 focus:outline-none focus:ring-0 rounded"
+                />
+                <kbd className="hidden sm:inline mr-2 px-1.5 py-0.5 rounded text-[9px] font-mono text-white/15 bg-white/[0.04] border border-white/[0.06]">
+                  ⌘K
+                </kbd>
+              </div>
+
+              {searchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 rounded-xl border border-white/[0.08] bg-[hsl(var(--background))] shadow-2xl shadow-black/40 z-50 overflow-hidden">
+                  {searchResults.map(r => (
+                    <button
+                      key={r.id}
+                      onMouseDown={() => { scrollToSection(r.id); setSearchQuery(""); }}
+                      className="w-full px-4 py-3 text-left hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-0"
+                    >
+                      <p className="text-[13px] text-white/70 font-medium">{r.label}</p>
+                      <p className="text-[10px] text-white/20 mt-0.5">API → {r.parentLabel}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile close button */}
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="lg:hidden absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
             >
-              {s.label}
-            </a>
-          ))}
-        </nav>
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Sidebar sections */}
+            {apiSidebarNav.map(section => {
+              const Icon = section.icon;
+              const isExpanded = expandedSections.has(section.id);
+              const hasActive = section.children?.some(c => c.id === activeTocSection);
+              return (
+                <div key={section.id} className="mb-1">
+                  <button
+                    onClick={() => toggleSection(section.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 ${hasActive ? "text-white/80" : "text-white/40 hover:text-white/60"}`}
+                  >
+                    {Icon && <Icon className={`w-4 h-4 shrink-0 ${hasActive ? "text-amber-400/70" : "text-white/25"}`} />}
+                    <span className="text-[13px] font-medium flex-1">{section.label}</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-white/15 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
+                  </button>
+                  {isExpanded && section.children && (
+                    <div className="ml-4 pl-3 border-l border-white/[0.04] mt-0.5 space-y-0.5">
+                      {section.children.map(child => (
+                        <button
+                          key={child.id}
+                          onClick={() => scrollToSection(child.id)}
+                          className={`w-full text-left px-3 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
+                            activeTocSection === child.id
+                              ? "text-amber-400 bg-amber-500/[0.06] font-medium"
+                              : "text-white/35 hover:text-white/60 hover:bg-white/[0.03]"
+                          }`}
+                        >
+                          {child.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Bottom links */}
+            <div className="mt-6 pt-4 border-t border-white/[0.04] space-y-1">
+              <Link to="/docs" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+                <BookOpen className="w-4 h-4" />
+                Documentación
+                <ExternalLink className="w-3 h-3 ml-auto" />
+              </Link>
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" onClick={() => trackCTAClick("ir_dashboard_api", "api_page")} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-white/30 hover:text-white/50 transition-colors">
+                <Play className="w-4 h-4" />
+                Ir al Dashboard
+                <ExternalLink className="w-3 h-3 ml-auto" />
+              </a>
+            </div>
+          </nav>
+        </aside>
+
+        {mobileSidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-10 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+        )}
+
+        {/* ═══ MAIN CONTENT ═══ */}
+        <div className="flex-1 min-w-0 relative z-[1]">
+
+          {/* Mobile menu toggle + breadcrumb */}
+          <div className="sticky top-[4.5rem] z-10 bg-[hsl(var(--background))]/80 backdrop-blur-lg border-b border-white/[0.04] px-6 py-2.5 lg:hidden">
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/60 transition-colors"
+            >
+              <Menu className="w-4 h-4" />
+              <span>API Reference</span>
+              <ChevronRight className="w-3 h-3 text-white/15" />
+              <span className="text-white/60">{allApiSections.find(s => s.id === activeTocSection)?.label || "Inicio"}</span>
+            </button>
+          </div>
 
         {/* ══════════════════════════════════════════
             HERO — Stripe-style split layout
@@ -406,8 +679,8 @@ const ApiPage = () => {
             <div className="absolute bottom-0 right-[15%] w-[500px] h-[500px] rounded-full bg-violet-500/[0.025] blur-[130px]" />
           </div>
 
-          <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-24 lg:pt-32 lg:pb-28">
-            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-12 lg:gap-20 items-start">
+          <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-20 lg:pt-20 lg:pb-24">
+            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-12 lg:gap-16 items-start">
               {/* Left — Value prop */}
               <Reveal>
                 <div className="lg:sticky lg:top-32">
@@ -675,6 +948,113 @@ const ApiPage = () => {
         </section>
 
         {/* ══════════════════════════════════════════
+            AUTHENTICATION — OAuth 2.0 flow explained
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="auth">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[11px] font-semibold text-emerald-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                    Autenticación
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                    Seguridad de nivel enterprise
+                  </h2>
+                </div>
+                <span className="hidden sm:inline text-[10px] font-mono text-white/15 px-2.5 py-1 rounded-full border border-white/[0.06] bg-white/[0.02]">
+                  OAuth 2.0 + Bearer Token
+                </span>
+              </div>
+            </Reveal>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Left — Explanation */}
+              <Reveal>
+                <div className="space-y-6">
+                  {[
+                    {
+                      step: "1",
+                      title: "Genera tu API Key",
+                      desc: "Desde el dashboard de WITHMIA, genera un token de acceso. Puedes crear múltiples keys con scopes específicos.",
+                      icon: Key,
+                      color: "#f59e0b",
+                    },
+                    {
+                      step: "2",
+                      title: "Incluye el token en cada request",
+                      desc: "Envía el header Authorization: Bearer sk_live_... en todas tus peticiones. Para testing, usa sk_test_... en el sandbox.",
+                      icon: Lock,
+                      color: "#34d399",
+                    },
+                    {
+                      step: "3",
+                      title: "Scopes granulares",
+                      desc: "Asigna permisos por recurso: messages:write, conversations:read, contacts:*, webhooks:manage. Principio de mínimo privilegio.",
+                      icon: Shield,
+                      color: "#a78bfa",
+                    },
+                    {
+                      step: "4",
+                      title: "Rotación segura",
+                      desc: "Rota tokens sin downtime. La API soporta dos tokens activos simultáneamente durante la migración.",
+                      icon: RefreshCw,
+                      color: "#22d3ee",
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 group">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}
+                      >
+                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                      </div>
+                      <div>
+                        <h3 className="text-[14px] font-semibold text-white/70 mb-1">{item.title}</h3>
+                        <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+
+              {/* Right — Code example */}
+              <Reveal delay={100}>
+                <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400/40" />
+                    <span className="text-[10px] font-mono text-white/30">Ejemplo de autenticación</span>
+                  </div>
+                  <div className="p-4">
+                    <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                      <code>
+                        <span className="text-white/20">{"// Tokens con scopes específicos"}</span>{"\n"}
+                        <span className="text-amber-400/60">const</span> <span className="text-white/50">client</span> <span className="text-white/20">=</span> <span className="text-amber-400/60">new</span> <span className="text-cyan-400/60">Withmia</span><span className="text-white/15">({"{"}</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}apiKey</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"sk_live_..."</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}scopes</span><span className="text-white/12">: </span><span className="text-white/15">[</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"messages:write"</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"conversations:read"</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"contacts:read"</span>{"\n"}
+                        <span className="text-white/15">{"  ]"}</span>{"\n"}
+                        <span className="text-white/15">{"}"}</span><span className="text-white/15">);</span>{"\n\n"}
+                        <span className="text-white/20">{"// Headers enviados automáticamente:"}</span>{"\n"}
+                        <span className="text-white/20">{"// Authorization: Bearer sk_live_..."}</span>{"\n"}
+                        <span className="text-white/20">{"// X-Api-Version: 2026-02-01"}</span>{"\n"}
+                        <span className="text-white/20">{"// X-Idempotency-Key: auto-generated"}</span>
+                      </code>
+                    </pre>
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-white/[0.05] bg-white/[0.01] flex items-center gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400/40" />
+                    <span className="text-[9px] text-white/20 font-mono">Tokens nunca se loguean ni se exponen en respuestas</span>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
             API REFERENCE — Stripe-style split pane
             ══════════════════════════════════════════ */}
         <section className="py-24 relative border-t border-white/[0.04]" id="reference">
@@ -795,51 +1175,230 @@ const ApiPage = () => {
         </section>
 
         {/* ══════════════════════════════════════════
-            CAPABILITIES — Minimal feature grid
+            ERROR CODES — Status codes reference
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative" id="capabilities">
+        <section className="py-24 relative border-t border-white/[0.04]" id="errors">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
-              <div className="text-center mb-16">
-                <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Capacidades
-                </p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-white">
-                  Diseñada para escalar
-                </h2>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[11px] font-semibold text-red-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                    Códigos de Error
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                    Respuestas predecibles
+                  </h2>
+                </div>
               </div>
             </Reveal>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.04] rounded-xl overflow-hidden border border-white/[0.06]">
-              {[
-                { icon: Zap, title: "REST API", desc: "CRUD para mensajes, contactos, conversaciones, canales y webhooks. JSON responses.", color: "#f59e0b" },
-                { icon: Webhook, title: "Webhooks", desc: "Eventos push en tiempo real via HTTPS. Firma HMAC-SHA256 en cada payload.", color: "#22d3ee" },
-                { icon: Key, title: "OAuth 2.0", desc: "Tokens de acceso, refresh tokens y scopes granulares por recurso.", color: "#34d399" },
-                { icon: Layers, title: "SDKs oficiales", desc: "Node.js, Python y cURL. Tipados, con retries automáticos y error handling.", color: "#a78bfa" },
-                { icon: Shield, title: "Rate limiting", desc: "1,000 req/min por defecto. Headers informativos. Enterprise: límites custom.", color: "#f43f5e" },
-                { icon: Lock, title: "TLS 1.3", desc: "Cifrado end-to-end. Webhook signatures verificables con tu secret key.", color: "#6366f1" },
-                { icon: Database, title: "Paginación", desc: "Cursor-based pagination en todas las listas. Filtros avanzados por campo.", color: "#f59e0b" },
-                { icon: Clock, title: "Idempotency", desc: "Idempotency keys para requests POST seguros. Zero duplicados garantizado.", color: "#22d3ee" },
-                { icon: Eye, title: "Sandbox", desc: "Entorno de pruebas aislado con datos fake. Sin costo, sin tarjeta de crédito.", color: "#34d399" },
-              ].map((feat, i) => (
-                <Reveal key={i} delay={i * 50}>
-                  <div className="group relative p-6 bg-[#07070f] hover:bg-white/[0.02] transition-all duration-300 h-full">
-                    <div className="flex items-start gap-4">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
-                        style={{ backgroundColor: `${feat.color}0c`, border: `1px solid ${feat.color}18` }}
-                      >
-                        <feat.icon className="w-4 h-4" style={{ color: `${feat.color}bb` }} />
+            <div className="grid lg:grid-cols-[1fr_1fr] gap-8">
+              {/* Left — Status codes table */}
+              <Reveal>
+                <div className="rounded-xl overflow-hidden border border-white/[0.06]">
+                  <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.01]">
+                    <div className="flex items-center gap-2">
+                      <FileJson className="w-3.5 h-3.5 text-white/20" />
+                      <span className="text-[10px] font-mono text-white/30">HTTP Status Codes</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-white/[0.03] bg-white/[0.015]">
+                    {errorCodes.map((err, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group">
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0 ${err.bg}`} style={{ color: err.color }}>
+                          {err.code}
+                        </span>
+                        <span className="text-[11px] font-mono text-white/40 font-medium shrink-0 w-24">{err.label}</span>
+                        <span className="text-[10px] text-white/20 hidden sm:block">{err.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* Right — Error response example */}
+              <Reveal delay={100}>
+                <div className="space-y-6">
+                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400/40" />
+                      <span className="text-[10px] font-mono text-white/30">Formato de error estándar</span>
+                    </div>
+                    <div className="p-4">
+                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                        <code>
+                          <span className="text-white/15">{"{"}</span>{"\n"}
+                          <span className="text-violet-400/50">{"  "}"error"</span><span className="text-white/12">: </span><span className="text-white/15">{"{"}</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"type"</span><span className="text-white/12">: </span><span className="text-red-400/60">"validation_error"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"code"</span><span className="text-white/12">: </span><span className="text-red-400/60">"invalid_phone_number"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"message"</span><span className="text-white/12">: </span><span className="text-cyan-400/60">"El número de teléfono no es válido"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"param"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"to"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"doc_url"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"https://docs.withmia.com/errors/invalid_phone"</span>{"\n"}
+                          <span className="text-white/15">{"  }"}</span>{"\n"}
+                          <span className="text-white/15">{"}"}</span>
+                        </code>
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                      <Ban className="w-3.5 h-3.5 text-violet-400/40" />
+                      <span className="text-[10px] font-mono text-white/30">Rate limit excedido (429)</span>
+                    </div>
+                    <div className="p-4">
+                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                        <code>
+                          <span className="text-white/20">{"// Headers de respuesta"}</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Limit</span><span className="text-white/12">: </span><span className="text-amber-400/60">1000</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Remaining</span><span className="text-white/12">: </span><span className="text-red-400/60">0</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Reset</span><span className="text-white/12">: </span><span className="text-cyan-400/50">1708872000</span>{"\n"}
+                          <span className="text-violet-400/50">Retry-After</span><span className="text-white/12">: </span><span className="text-amber-400/60">30</span>
+                        </code>
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            PAGINATION — Cursor-based filtering
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="pagination">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[11px] font-semibold text-cyan-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                    Paginación y Filtros
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                    Navega datos eficientemente
+                  </h2>
+                </div>
+              </div>
+            </Reveal>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              <Reveal>
+                <div className="space-y-6">
+                  {[
+                    { icon: Database, title: "Cursor-based pagination", desc: "Todas las listas usan paginación por cursor, más eficiente y consistente que offset. El cursor es un token opaco que apunta al siguiente grupo de resultados.", color: "#22d3ee" },
+                    { icon: Filter, title: "Filtros avanzados", desc: "Filtra por cualquier campo: status, channel, tags, fecha, agente asignado. Combina múltiples filtros con operadores AND.", color: "#a78bfa" },
+                    { icon: Search, title: "Búsqueda full-text", desc: "El parámetro q= busca en nombre, email, teléfono y campos personalizados. Soporta búsqueda parcial y normalización de caracteres.", color: "#34d399" },
+                    { icon: ChevronsRight, title: "Ordenamiento", desc: "Ordena resultados por cualquier campo con sort=campo:asc|desc. Por defecto: created_at:desc.", color: "#f59e0b" },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 group">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}>
+                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
                       </div>
                       <div>
-                        <h3 className="text-[14px] font-semibold text-white/70 mb-1.5 group-hover:text-white transition-colors">{feat.title}</h3>
-                        <p className="text-[12px] text-white/25 leading-relaxed">{feat.desc}</p>
+                        <h3 className="text-[14px] font-semibold text-white/70 mb-1">{item.title}</h3>
+                        <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+
+              <Reveal delay={100}>
+                <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                    <Database className="w-3.5 h-3.5 text-cyan-400/40" />
+                    <span className="text-[10px] font-mono text-white/30">Ejemplo de paginación + filtros</span>
+                  </div>
+                  <div className="p-4">
+                    <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                      <code>
+                        <span className="text-white/20">{"// Request con filtros y paginación"}</span>{"\n"}
+                        <span className="text-amber-400/60">GET</span> <span className="text-white/40">/v1/conversations</span>{"\n"}
+                        <span className="text-white/15">{"  "}?status=</span><span className="text-cyan-400/50">open</span>{"\n"}
+                        <span className="text-white/15">{"  "}&channel=</span><span className="text-cyan-400/50">whatsapp</span>{"\n"}
+                        <span className="text-white/15">{"  "}&assigned_to=</span><span className="text-cyan-400/50">agent_5xK</span>{"\n"}
+                        <span className="text-white/15">{"  "}&limit=</span><span className="text-amber-400/60">20</span>{"\n"}
+                        <span className="text-white/15">{"  "}&cursor=</span><span className="text-cyan-400/50">eyJpZCI6MTIzfQ==</span>{"\n"}
+                        <span className="text-white/15">{"  "}&sort=</span><span className="text-cyan-400/50">updated_at:desc</span>{"\n\n"}
+                        <span className="text-white/20">{"// Response"}</span>{"\n"}
+                        <span className="text-white/15">{"{"}</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}"data"</span><span className="text-white/12">: </span><span className="text-white/15">[...]</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}"meta"</span><span className="text-white/12">: </span><span className="text-white/15">{"{"}</span>{"\n"}
+                        <span className="text-violet-400/50">{"    "}"has_more"</span><span className="text-white/12">: </span><span className="text-emerald-400/60">true</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-violet-400/50">{"    "}"next_cursor"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"eyJpZCI6MTQzfQ=="</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-violet-400/50">{"    "}"total"</span><span className="text-white/12">: </span><span className="text-amber-400/60">142</span>{"\n"}
+                        <span className="text-white/15">{"  }"}</span>{"\n"}
+                        <span className="text-white/15">{"}"}</span>
+                      </code>
+                    </pre>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            RATE LIMITING — Plans + limits
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="limits">
+          <div className="max-w-5xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Rate Limiting
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Límites por plan
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  Cada request incluye headers informativos. Escala sin sorpresas.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={80}>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {rateLimits.map((plan, i) => (
+                  <div
+                    key={i}
+                    className={`relative p-6 rounded-xl border transition-all duration-300 hover:-translate-y-1 ${
+                      plan.highlighted
+                        ? "border-amber-400/25 bg-gradient-to-b from-amber-500/[0.04] to-transparent"
+                        : "border-white/[0.06] bg-white/[0.015]"
+                    }`}
+                  >
+                    {plan.highlighted && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/25">
+                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Popular</span>
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-lg mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: `${plan.color}10`, border: `1px solid ${plan.color}20` }}>
+                        <Gauge className="w-4 h-4" style={{ color: plan.color }} />
+                      </div>
+                      <h3 className="text-sm font-bold text-white/80 mb-1">{plan.plan}</h3>
+                      <p className="text-2xl font-bold font-mono mb-1" style={{ color: plan.color }}>{plan.requests}</p>
+                      <p className="text-[10px] text-white/20 mb-3">req/{plan.per}</p>
+                      <div className="text-[10px] text-white/15 mb-3">Burst: {plan.burst}</div>
+                      <div className="pt-3 border-t border-white/[0.05]">
+                        <span className="text-[13px] font-semibold text-white/50">{plan.price}</span>
                       </div>
                     </div>
                   </div>
-                </Reveal>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Reveal>
+
+            <Reveal delay={200}>
+              <div className="mt-8 p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] flex flex-col sm:flex-row items-center gap-3">
+                <Timer className="w-4 h-4 text-amber-400/40 shrink-0" />
+                <p className="text-[12px] text-white/25 text-center sm:text-left">
+                  <span className="text-white/50 font-medium">Backoff inteligente:</span> Los SDKs oficiales implementan retry automático con backoff exponencial. Si excedes el límite, esperan el tiempo indicado en <code className="text-amber-400/50 font-mono text-[10px]">Retry-After</code> y reintentan.
+                </p>
+              </div>
+            </Reveal>
           </div>
         </section>
 
@@ -1023,322 +1582,159 @@ const ApiPage = () => {
         </section>
 
         {/* ══════════════════════════════════════════
-            AUTHENTICATION — OAuth 2.0 flow explained
+            PLAYGROUND — Interactive API tester
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]" id="auth">
-          <div className="max-w-6xl mx-auto px-6">
-            <Reveal>
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[11px] font-semibold text-emerald-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                    Autenticación
-                  </p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
-                    Seguridad de nivel enterprise
-                  </h2>
-                </div>
-                <span className="hidden sm:inline text-[10px] font-mono text-white/15 px-2.5 py-1 rounded-full border border-white/[0.06] bg-white/[0.02]">
-                  OAuth 2.0 + Bearer Token
-                </span>
-              </div>
-            </Reveal>
-
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left — Explanation */}
-              <Reveal>
-                <div className="space-y-6">
-                  {[
-                    {
-                      step: "1",
-                      title: "Genera tu API Key",
-                      desc: "Desde el dashboard de WITHMIA, genera un token de acceso. Puedes crear múltiples keys con scopes específicos.",
-                      icon: Key,
-                      color: "#f59e0b",
-                    },
-                    {
-                      step: "2",
-                      title: "Incluye el token en cada request",
-                      desc: "Envía el header Authorization: Bearer sk_live_... en todas tus peticiones. Para testing, usa sk_test_... en el sandbox.",
-                      icon: Lock,
-                      color: "#34d399",
-                    },
-                    {
-                      step: "3",
-                      title: "Scopes granulares",
-                      desc: "Asigna permisos por recurso: messages:write, conversations:read, contacts:*, webhooks:manage. Principio de mínimo privilegio.",
-                      icon: Shield,
-                      color: "#a78bfa",
-                    },
-                    {
-                      step: "4",
-                      title: "Rotación segura",
-                      desc: "Rota tokens sin downtime. La API soporta dos tokens activos simultáneamente durante la migración.",
-                      icon: RefreshCw,
-                      color: "#22d3ee",
-                    },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-4 group">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}
-                      >
-                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
-                      </div>
-                      <div>
-                        <h3 className="text-[14px] font-semibold text-white/70 mb-1">{item.title}</h3>
-                        <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Reveal>
-
-              {/* Right — Code example */}
-              <Reveal delay={100}>
-                <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
-                    <Lock className="w-3.5 h-3.5 text-emerald-400/40" />
-                    <span className="text-[10px] font-mono text-white/30">Ejemplo de autenticación</span>
-                  </div>
-                  <div className="p-4">
-                    <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
-                      <code>
-                        <span className="text-white/20">{"// Tokens con scopes específicos"}</span>{"\n"}
-                        <span className="text-amber-400/60">const</span> <span className="text-white/50">client</span> <span className="text-white/20">=</span> <span className="text-amber-400/60">new</span> <span className="text-cyan-400/60">Withmia</span><span className="text-white/15">({"{"}</span>{"\n"}
-                        <span className="text-violet-400/50">{"  "}apiKey</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"sk_live_..."</span><span className="text-white/10">,</span>{"\n"}
-                        <span className="text-violet-400/50">{"  "}scopes</span><span className="text-white/12">: </span><span className="text-white/15">[</span>{"\n"}
-                        <span className="text-cyan-400/50">{"    "}"messages:write"</span><span className="text-white/10">,</span>{"\n"}
-                        <span className="text-cyan-400/50">{"    "}"conversations:read"</span><span className="text-white/10">,</span>{"\n"}
-                        <span className="text-cyan-400/50">{"    "}"contacts:read"</span>{"\n"}
-                        <span className="text-white/15">{"  ]"}</span>{"\n"}
-                        <span className="text-white/15">{"}"}</span><span className="text-white/15">);</span>{"\n\n"}
-                        <span className="text-white/20">{"// Headers enviados automáticamente:"}</span>{"\n"}
-                        <span className="text-white/20">{"// Authorization: Bearer sk_live_..."}</span>{"\n"}
-                        <span className="text-white/20">{"// X-Api-Version: 2026-02-01"}</span>{"\n"}
-                        <span className="text-white/20">{"// X-Idempotency-Key: auto-generated"}</span>
-                      </code>
-                    </pre>
-                  </div>
-                  <div className="px-4 py-2.5 border-t border-white/[0.05] bg-white/[0.01] flex items-center gap-2">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400/40" />
-                    <span className="text-[9px] text-white/20 font-mono">Tokens nunca se loguean ni se exponen en respuestas</span>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════
-            ERROR CODES — Status codes reference
-            ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]" id="errors">
-          <div className="max-w-6xl mx-auto px-6">
-            <Reveal>
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[11px] font-semibold text-red-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                    Códigos de Error
-                  </p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
-                    Respuestas predecibles
-                  </h2>
-                </div>
-              </div>
-            </Reveal>
-
-            <div className="grid lg:grid-cols-[1fr_1fr] gap-8">
-              {/* Left — Status codes table */}
-              <Reveal>
-                <div className="rounded-xl overflow-hidden border border-white/[0.06]">
-                  <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.01]">
-                    <div className="flex items-center gap-2">
-                      <FileJson className="w-3.5 h-3.5 text-white/20" />
-                      <span className="text-[10px] font-mono text-white/30">HTTP Status Codes</span>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-white/[0.03] bg-white/[0.015]">
-                    {errorCodes.map((err, i) => (
-                      <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group">
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0 ${err.bg}`} style={{ color: err.color }}>
-                          {err.code}
-                        </span>
-                        <span className="text-[11px] font-mono text-white/40 font-medium shrink-0 w-24">{err.label}</span>
-                        <span className="text-[10px] text-white/20 hidden sm:block">{err.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Reveal>
-
-              {/* Right — Error response example */}
-              <Reveal delay={100}>
-                <div className="space-y-6">
-                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400/40" />
-                      <span className="text-[10px] font-mono text-white/30">Formato de error estándar</span>
-                    </div>
-                    <div className="p-4">
-                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
-                        <code>
-                          <span className="text-white/15">{"{"}</span>{"\n"}
-                          <span className="text-violet-400/50">{"  "}"error"</span><span className="text-white/12">: </span><span className="text-white/15">{"{"}</span>{"\n"}
-                          <span className="text-violet-400/50">{"    "}"type"</span><span className="text-white/12">: </span><span className="text-red-400/60">"validation_error"</span><span className="text-white/10">,</span>{"\n"}
-                          <span className="text-violet-400/50">{"    "}"code"</span><span className="text-white/12">: </span><span className="text-red-400/60">"invalid_phone_number"</span><span className="text-white/10">,</span>{"\n"}
-                          <span className="text-violet-400/50">{"    "}"message"</span><span className="text-white/12">: </span><span className="text-cyan-400/60">"El número de teléfono no es válido"</span><span className="text-white/10">,</span>{"\n"}
-                          <span className="text-violet-400/50">{"    "}"param"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"to"</span><span className="text-white/10">,</span>{"\n"}
-                          <span className="text-violet-400/50">{"    "}"doc_url"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"https://docs.withmia.com/errors/invalid_phone"</span>{"\n"}
-                          <span className="text-white/15">{"  }"}</span>{"\n"}
-                          <span className="text-white/15">{"}"}</span>
-                        </code>
-                      </pre>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
-                      <Ban className="w-3.5 h-3.5 text-violet-400/40" />
-                      <span className="text-[10px] font-mono text-white/30">Rate limit excedido (429)</span>
-                    </div>
-                    <div className="p-4">
-                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
-                        <code>
-                          <span className="text-white/20">{"// Headers de respuesta"}</span>{"\n"}
-                          <span className="text-violet-400/50">X-RateLimit-Limit</span><span className="text-white/12">: </span><span className="text-amber-400/60">1000</span>{"\n"}
-                          <span className="text-violet-400/50">X-RateLimit-Remaining</span><span className="text-white/12">: </span><span className="text-red-400/60">0</span>{"\n"}
-                          <span className="text-violet-400/50">X-RateLimit-Reset</span><span className="text-white/12">: </span><span className="text-cyan-400/50">1708872000</span>{"\n"}
-                          <span className="text-violet-400/50">Retry-After</span><span className="text-white/12">: </span><span className="text-amber-400/60">30</span>
-                        </code>
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════════
-            RATE LIMITING — Plans + limits
-            ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]" id="limits">
+        <section className="py-24 relative border-t border-white/[0.04]" id="playground">
           <div className="max-w-5xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Rate Limiting
+                  API Playground
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                  Límites por plan
+                  Prueba en vivo
                 </h2>
                 <p className="text-white/30 max-w-lg mx-auto text-[15px]">
-                  Cada request incluye headers informativos. Escala sin sorpresas.
+                  Ejecuta requests directamente desde tu navegador. Sandbox mode — sin efectos reales.
                 </p>
               </div>
             </Reveal>
 
             <Reveal delay={80}>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {rateLimits.map((plan, i) => (
-                  <div
-                    key={i}
-                    className={`relative p-6 rounded-xl border transition-all duration-300 hover:-translate-y-1 ${
-                      plan.highlighted
-                        ? "border-amber-400/25 bg-gradient-to-b from-amber-500/[0.04] to-transparent"
-                        : "border-white/[0.06] bg-white/[0.015]"
-                    }`}
-                  >
-                    {plan.highlighted && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/25">
-                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Popular</span>
+              <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                {/* Top bar */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-[9px] h-[9px] rounded-full bg-[#ff5f57]/70" />
+                    <div className="w-[9px] h-[9px] rounded-full bg-[#febc2e]/70" />
+                    <div className="w-[9px] h-[9px] rounded-full bg-[#28c840]/70" />
+                  </div>
+                  <span className="text-[10px] font-mono text-white/20">WITHMIA API Playground</span>
+                  <span className="ml-auto text-[9px] font-mono text-amber-400/40 px-2 py-0.5 rounded bg-amber-400/[0.06] border border-amber-400/15">SANDBOX</span>
+                </div>
+
+                {/* Request builder */}
+                <div className="p-4 border-b border-white/[0.06]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <select
+                      value={playgroundMethod}
+                      onChange={e => setPlaygroundMethod(e.target.value)}
+                      className="text-[11px] font-mono font-bold rounded-md bg-amber-400/[0.1] border border-amber-400/20 text-amber-400 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400/30"
+                    >
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                      <option value="PUT">PUT</option>
+                      <option value="PATCH">PATCH</option>
+                      <option value="DELETE">DELETE</option>
+                    </select>
+                    <div className="flex-1 flex items-center bg-white/[0.02] border border-white/[0.06] rounded-md">
+                      <span className="text-[10px] font-mono text-white/20 pl-3">https://api.withmia.com</span>
+                      <input
+                        type="text"
+                        value={playgroundPath}
+                        onChange={e => setPlaygroundPath(e.target.value)}
+                        className="flex-1 bg-transparent text-[11px] font-mono text-white/60 px-1 py-1.5 focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={handlePlaygroundRun}
+                      disabled={playgroundLoading}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-gradient-to-r from-amber-400 to-orange-500 text-black text-[11px] font-bold font-mono hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {playgroundLoading ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Play className="w-3 h-3" />
+                      )}
+                      Send
+                    </button>
+                  </div>
+
+                  {/* Request body */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[9px] font-mono text-white/15 uppercase tracking-wider">Body</span>
+                    <span className="text-[8px] font-mono text-white/10">application/json</span>
+                  </div>
+                  <textarea
+                    value={playgroundBody}
+                    onChange={e => setPlaygroundBody(e.target.value)}
+                    rows={5}
+                    className="w-full bg-white/[0.02] border border-white/[0.06] rounded-lg text-[11px] font-mono text-white/50 p-3 focus:outline-none focus:ring-1 focus:ring-amber-400/20 resize-none"
+                    spellCheck={false}
+                  />
+                </div>
+
+                {/* Response area */}
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[9px] font-mono text-white/15 uppercase tracking-wider">Response</span>
+                    {playgroundResponse && (
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-400/[0.1] border border-emerald-400/15">
+                        <div className="w-[5px] h-[5px] rounded-full bg-emerald-400/80 api-status-dot" />
+                        <span className="text-[8px] font-mono text-emerald-400/80 font-bold">200 OK</span>
                       </div>
                     )}
-                    <div className="text-center">
-                      <div className="w-10 h-10 rounded-lg mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: `${plan.color}10`, border: `1px solid ${plan.color}20` }}>
-                        <Gauge className="w-4 h-4" style={{ color: plan.color }} />
-                      </div>
-                      <h3 className="text-sm font-bold text-white/80 mb-1">{plan.plan}</h3>
-                      <p className="text-2xl font-bold font-mono mb-1" style={{ color: plan.color }}>{plan.requests}</p>
-                      <p className="text-[10px] text-white/20 mb-3">req/{plan.per}</p>
-                      <div className="text-[10px] text-white/15 mb-3">Burst: {plan.burst}</div>
-                      <div className="pt-3 border-t border-white/[0.05]">
-                        <span className="text-[13px] font-semibold text-white/50">{plan.price}</span>
-                      </div>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </Reveal>
-
-            <Reveal delay={200}>
-              <div className="mt-8 p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] flex flex-col sm:flex-row items-center gap-3">
-                <Timer className="w-4 h-4 text-amber-400/40 shrink-0" />
-                <p className="text-[12px] text-white/25 text-center sm:text-left">
-                  <span className="text-white/50 font-medium">Backoff inteligente:</span> Los SDKs oficiales implementan retry automático con backoff exponencial. Si excedes el límite, esperan el tiempo indicado en <code className="text-amber-400/50 font-mono text-[10px]">Retry-After</code> y reintentan.
-                </p>
+                  <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3 min-h-[120px]">
+                    {playgroundLoading ? (
+                      <div className="flex items-center gap-2 text-white/20">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span className="text-[11px] font-mono">Ejecutando request...</span>
+                      </div>
+                    ) : playgroundResponse ? (
+                      <pre className="text-[11px] font-mono text-emerald-400/50 leading-relaxed overflow-x-auto">
+                        <code>{playgroundResponse}</code>
+                      </pre>
+                    ) : (
+                      <p className="text-[11px] font-mono text-white/15">Presiona "Send" para ejecutar el request</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </Reveal>
           </div>
         </section>
 
         {/* ══════════════════════════════════════════
-            USE CASES — Real integration examples
+            CAPABILITIES — Minimal feature grid
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]" id="use-cases">
+        <section className="py-24 relative" id="capabilities">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">
-                <p className="text-[11px] font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Casos de Uso
+                <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Capacidades
                 </p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                  Integraciones reales
+                <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                  Diseñada para escalar
                 </h2>
-                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
-                  Ejemplos de código listos para copiar. Adapta, conecta y lanza.
-                </p>
               </div>
             </Reveal>
 
-            <div className="space-y-6">
-              {useCases.map((uc, i) => (
-                <Reveal key={i} delay={i * 80}>
-                  <div className="grid lg:grid-cols-[1fr_1.3fr] gap-0 rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/[0.10] transition-all duration-300">
-                    {/* Left — Description */}
-                    <div className="p-6 lg:p-8 bg-white/[0.015] flex flex-col justify-center">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${uc.color}10`, border: `1px solid ${uc.color}20` }}
-                        >
-                          <uc.icon className="w-5 h-5" style={{ color: uc.color }} />
-                        </div>
-                        <h3 className="text-lg font-bold text-white/80">{uc.title}</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.04] rounded-xl overflow-hidden border border-white/[0.06]">
+              {[
+                { icon: Zap, title: "REST API", desc: "CRUD para mensajes, contactos, conversaciones, canales y webhooks. JSON responses.", color: "#f59e0b" },
+                { icon: Webhook, title: "Webhooks", desc: "Eventos push en tiempo real via HTTPS. Firma HMAC-SHA256 en cada payload.", color: "#22d3ee" },
+                { icon: Key, title: "OAuth 2.0", desc: "Tokens de acceso, refresh tokens y scopes granulares por recurso.", color: "#34d399" },
+                { icon: Layers, title: "SDKs oficiales", desc: "Node.js, Python y cURL. Tipados, con retries automáticos y error handling.", color: "#a78bfa" },
+                { icon: Shield, title: "Rate limiting", desc: "1,000 req/min por defecto. Headers informativos. Enterprise: límites custom.", color: "#f43f5e" },
+                { icon: Lock, title: "TLS 1.3", desc: "Cifrado end-to-end. Webhook signatures verificables con tu secret key.", color: "#6366f1" },
+                { icon: Database, title: "Paginación", desc: "Cursor-based pagination en todas las listas. Filtros avanzados por campo.", color: "#f59e0b" },
+                { icon: Clock, title: "Idempotency", desc: "Idempotency keys para requests POST seguros. Zero duplicados garantizado.", color: "#22d3ee" },
+                { icon: Eye, title: "Sandbox", desc: "Entorno de pruebas aislado con datos fake. Sin costo, sin tarjeta de crédito.", color: "#34d399" },
+              ].map((feat, i) => (
+                <Reveal key={i} delay={i * 50}>
+                  <div className="group relative p-6 bg-[#07070f] hover:bg-white/[0.02] transition-all duration-300 h-full">
+                    <div className="flex items-start gap-4">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
+                        style={{ backgroundColor: `${feat.color}0c`, border: `1px solid ${feat.color}18` }}
+                      >
+                        <feat.icon className="w-4 h-4" style={{ color: `${feat.color}bb` }} />
                       </div>
-                      <p className="text-[13px] text-white/30 leading-relaxed">{uc.desc}</p>
-                    </div>
-                    {/* Right — Code */}
-                    <div className="bg-[#0a0a14] border-t lg:border-t-0 lg:border-l border-white/[0.06]">
-                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05]">
-                        <span className="text-[9px] font-mono text-white/20">{uc.title.toLowerCase()}.js</span>
-                        <button
-                          onClick={() => handleCopy(uc.code, `uc-${i}`)}
-                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] transition-all text-white/20 hover:text-white/40"
-                        >
-                          {copied === `uc-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          <span className="text-[8px] font-mono">{copied === `uc-${i}` ? "Copied" : "Copy"}</span>
-                        </button>
-                      </div>
-                      <div className="relative p-4">
-                        <div className="absolute left-0 top-4 bottom-4 w-8 flex flex-col items-end pr-2 select-none pointer-events-none border-r border-white/[0.03]">
-                          {uc.code.split("\n").map((_, j) => (
-                            <span key={j} className="text-[9px] font-mono text-white/[0.07] leading-[1.75] tabular-nums">{j + 1}</span>
-                          ))}
-                        </div>
-                        <pre className="text-[11px] text-white/40 leading-[1.75] font-mono pl-7 overflow-x-auto">
-                          <code>{uc.code}</code>
-                        </pre>
+                      <div>
+                        <h3 className="text-[14px] font-semibold text-white/70 mb-1.5 group-hover:text-white transition-colors">{feat.title}</h3>
+                        <p className="text-[12px] text-white/25 leading-relaxed">{feat.desc}</p>
                       </div>
                     </div>
                   </div>
@@ -1351,7 +1747,7 @@ const ApiPage = () => {
         {/* ══════════════════════════════════════════
             ARCHITECTURE — How it connects
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]">
+        <section className="py-24 relative border-t border-white/[0.04]" id="architecture">
           <div className="max-w-5xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">
@@ -1456,6 +1852,180 @@ const ApiPage = () => {
         </section>
 
         {/* ══════════════════════════════════════════
+            USE CASES — Real integration examples
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="use-cases">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Casos de Uso
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Integraciones reales
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  Ejemplos de código listos para copiar. Adapta, conecta y lanza.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="space-y-6">
+              {useCases.map((uc, i) => (
+                <Reveal key={i} delay={i * 80}>
+                  <div className="grid lg:grid-cols-[1fr_1.3fr] gap-0 rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/[0.10] transition-all duration-300">
+                    {/* Left — Description */}
+                    <div className="p-6 lg:p-8 bg-white/[0.015] flex flex-col justify-center">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `${uc.color}10`, border: `1px solid ${uc.color}20` }}
+                        >
+                          <uc.icon className="w-5 h-5" style={{ color: uc.color }} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white/80">{uc.title}</h3>
+                      </div>
+                      <p className="text-[13px] text-white/30 leading-relaxed">{uc.desc}</p>
+                    </div>
+                    {/* Right — Code */}
+                    <div className="bg-[#0a0a14] border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05]">
+                        <span className="text-[9px] font-mono text-white/20">{uc.title.toLowerCase()}.js</span>
+                        <button
+                          onClick={() => handleCopy(uc.code, `uc-${i}`)}
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] transition-all text-white/20 hover:text-white/40"
+                        >
+                          {copied === `uc-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span className="text-[8px] font-mono">{copied === `uc-${i}` ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                      <div className="relative p-4">
+                        <div className="absolute left-0 top-4 bottom-4 w-8 flex flex-col items-end pr-2 select-none pointer-events-none border-r border-white/[0.03]">
+                          {uc.code.split("\n").map((_, j) => (
+                            <span key={j} className="text-[9px] font-mono text-white/[0.07] leading-[1.75] tabular-nums">{j + 1}</span>
+                          ))}
+                        </div>
+                        <pre className="text-[11px] text-white/40 leading-[1.75] font-mono pl-7 overflow-x-auto">
+                          <code>{uc.code}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            VERSIONING — Changelog
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="versioning">
+          <div className="max-w-5xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Changelog
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Historial de cambios
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  La API usa versionado por fecha. Cada request incluye <code className="text-amber-400/50 font-mono text-[12px]">X-Api-Version</code>.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="space-y-4">
+              {changelog.map((entry, i) => (
+                <Reveal key={i} delay={i * 60}>
+                  <div className="relative pl-8 pb-4">
+                    {/* Timeline line */}
+                    {i < changelog.length - 1 && (
+                      <div className="absolute left-[11px] top-6 bottom-0 w-px bg-white/[0.06]" />
+                    )}
+                    {/* Dot */}
+                    <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full flex items-center justify-center border ${
+                      entry.type === "release" ? "bg-amber-400/15 border-amber-400/30" :
+                      entry.type === "fix" ? "bg-red-400/10 border-red-400/20" :
+                      "bg-emerald-400/10 border-emerald-400/20"
+                    }`}>
+                      {entry.type === "release" ? <Sparkles className="w-3 h-3 text-amber-400/70" /> :
+                       entry.type === "fix" ? <AlertTriangle className="w-3 h-3 text-red-400/60" /> :
+                       <Zap className="w-3 h-3 text-emerald-400/60" />}
+                    </div>
+
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-5 hover:border-white/[0.10] transition-all">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-[14px] font-bold font-mono text-white/70">{entry.version}</span>
+                        <span className="text-[10px] text-white/20">{entry.date}</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          entry.type === "release" ? "bg-amber-400/10 text-amber-400/70 border border-amber-400/20" :
+                          entry.type === "fix" ? "bg-red-400/10 text-red-400/60 border border-red-400/15" :
+                          "bg-emerald-400/10 text-emerald-400/60 border border-emerald-400/15"
+                        }`}>
+                          {entry.type}
+                        </span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {entry.changes.map((c, j) => (
+                          <li key={j} className="flex items-start gap-2 text-[12px] text-white/30">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/30 mt-0.5 shrink-0" />
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            FAQ — Preguntas frecuentes
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="faq">
+          <div className="max-w-4xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  FAQ
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Preguntas frecuentes
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  Todo lo que necesitas saber antes de empezar a integrar.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="space-y-3">
+              {faqItems.map((faq, i) => (
+                <Reveal key={i} delay={i * 40}>
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] overflow-hidden hover:border-white/[0.10] transition-all" id={`faq-${i}`}>
+                    <button
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className="w-full flex items-center justify-between px-6 py-4 text-left"
+                    >
+                      <span className="text-[14px] font-medium text-white/60 pr-4">{faq.q}</span>
+                      <ChevronDown className={`w-4 h-4 text-white/20 shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
+                    </button>
+                    {openFaq === i && (
+                      <div className="px-6 pb-5 border-t border-white/[0.04]">
+                        <p className="text-[13px] text-white/35 leading-relaxed pt-4">{faq.a}</p>
+                      </div>
+                    )}
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
             TRUST — Security & compliance
             ══════════════════════════════════════════ */}
         <Reveal>
@@ -1527,7 +2097,42 @@ const ApiPage = () => {
           </Reveal>
         </section>
 
-      </div>
+        </div>{/* END MAIN CONTENT */}
+
+        {/* ═══ RIGHT TOC SIDEBAR ═══ */}
+        <aside className="hidden xl:block w-[200px] shrink-0 sticky top-24 h-[calc(100vh-96px)] overflow-y-auto py-8 pr-4">
+          <div className="pl-4 border-l border-white/[0.04]">
+            <p className="text-[11px] text-white/25 uppercase tracking-widest font-semibold mb-4">
+              En esta página
+            </p>
+            <nav className="space-y-1">
+              {rightToc.map(t => (
+                <a
+                  key={t.id}
+                  href={`#${t.id}`}
+                  className="block text-[12px] py-1 leading-snug transition-colors text-white/30 hover:text-white/60"
+                >
+                  {t.label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="mt-8 pt-4 border-t border-white/[0.04] space-y-2">
+              <a href="https://app.withmia.com" target="_blank" rel="noopener noreferrer" onClick={() => trackCTAClick("chat_soporte_ia_api", "api_page")} className="flex items-center gap-2 text-[11px] text-white/20 hover:text-amber-400/60 transition-colors">
+                <Sparkles className="w-3 h-3" /> Chat con soporte IA
+              </a>
+              <Link to="/docs" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors">
+                <BookOpen className="w-3 h-3" /> Ver documentación
+              </Link>
+              <Link to="/contacto" className="flex items-center gap-2 text-[11px] text-white/20 hover:text-white/40 transition-colors">
+                <Headphones className="w-3 h-3" /> Contactar soporte
+              </Link>
+            </div>
+          </div>
+        </aside>
+
+      </div>{/* END 3-COL LAYOUT */}
+
       {/* ── Styles ── */}
       <style>{`
         .api-page {

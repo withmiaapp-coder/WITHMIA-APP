@@ -44,7 +44,7 @@ const formSchema = z.object({
 const interests = [
   "Quiero una demo",
   "Tengo preguntas sobre precios",
-  "Necesito soporte técnico",
+  "Quiero integrar WITHMIA a mi negocio",
   "Quiero ser partner",
   "Otro",
 ];
@@ -78,7 +78,7 @@ const contactChannels = [
 
 const reasons = [
   { icon: Clock, text: "Respondemos en < 2 horas" },
-  { icon: Headphones, text: "Soporte en español" },
+  { icon: MessageSquare, text: "Asesoría personalizada" },
   { icon: Shield, text: "Sin compromiso" },
   { icon: Users, text: "+500 equipos confían en nosotros" },
 ];
@@ -486,8 +486,8 @@ const Contact = () => {
                   Estamos aquí para ayudarte
                 </h2>
                 <p className="text-[14px] text-white/40 max-w-md mx-auto mb-8 leading-relaxed">
-                  Ya sea que necesites una demo, soporte técnico o simplemente quieras
-                  conocer más — nuestro equipo está listo.
+                  Ya sea que necesites una demo, resolver dudas sobre la plataforma
+                  o explorar cómo WITHMIA se adapta a tu negocio — estamos listos.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
