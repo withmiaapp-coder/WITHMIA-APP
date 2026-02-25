@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type ReactNode } from "react";
+﻿import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
   Heatmap247,
 } from "@/components/pymes/PymesSections";
@@ -41,51 +41,51 @@ import { Reveal, useCountUp } from "@/hooks/useAnimations";
 /* --- Lost lead timeline simulation --- */
 const lostLeadTimeline = [
   { time: "10:32", message: "Hola! Vi el anuncio, quiero cotizar ??", status: "sent" as const },
-  { time: "10:34", message: "�Tienen disponible para hoy?", status: "sent" as const },
+  { time: "10:34", message: "¿Tienen disponible para hoy?", status: "sent" as const },
   { time: "10:47", message: "Bueno, cuando puedan me avisan...", status: "waiting" as const },
-  { time: "11:58", message: "�Hola? �Alguien ah�? ??", status: "waiting" as const },
-  { time: "13:30", message: "Ya reserv� con otra empresa. Gracias.", status: "lost" as const },
+  { time: "11:58", message: "¿Hola? ¿Alguien ahí? ??", status: "waiting" as const },
+  { time: "13:30", message: "Ya reservó con otra empresa. Gracias.", status: "lost" as const },
 ];
 
-/* --- S�ntomas de operaci�n obsoleta --- */
+/* --- Síntomas de operación obsoleta --- */
 const boomerSymptoms = [
   { text: "Respondes WhatsApp desde tu celular personal", icon: MessageCircle },
-  { text: "Tu 'CRM' es un Excel con 47 pesta�as", icon: BarChart3 },
+  { text: "Tu 'CRM' es un Excel con 47 pestañas", icon: BarChart3 },
   { text: "Los leads del fin de semana se contestan el lunes", icon: Calendar },
-  { text: "Tu equipo copia y pega la misma respuesta 50 veces al d�a", icon: Users },
+  { text: "Tu equipo copia y pega la misma respuesta 50 veces al día", icon: Users },
   { text: "Pagas por anuncios pero nadie contesta los mensajes", icon: DollarSign },
   { text: "Si alguien falta, ese canal queda muerto", icon: PhoneOff },
 ];
 
 const painPoints = [
   {
-    label: "As� se sent�a tu competencia... antes de automatizar",
+    label: "As→ se sentía tu competencia... antes de automatizar",
     headline: "Canales\nfragmentados",
     description: "WhatsApp por un lado, Instagram por otro, el correo olvidado. Tu equipo salta entre 5 apps mientras el cliente se aburre de esperar.",
     icon: MessageCircle, color: "#f59e0b",
     stat: "73%", statLabel: "usa 3+ canales sin integrar",
-    consequences: ["Historial perdido entre canales", "Respuestas duplicadas o contradictorias", "Cero visibilidad de m�tricas"],
+    consequences: ["Historial perdido entre canales", "Respuestas duplicadas o contradictorias", "Cero visibilidad de métricas"],
     oldWay: "?? Cuaderno + WhatsApp personal",
     newWay: "?? Bandeja unificada con IA",
   },
   {
     label: "El ahorro que crees tener te cuesta el triple",
     headline: "Herramientas\nque no escalan",
-    description: "'Para qu� pagar si lo hago yo mismo'. S�, y por eso pierdes 40% de tus leads mientras tu competencia los cierra en 5 segundos.",
+    description: "'Para qué pagar si lo hago yo mismo'. Sí, y por eso pierdes 40% de tus leads mientras tu competencia los cierra en 5 segundos.",
     icon: DollarSign, color: "#f43f5e",
     stat: "$500+", statLabel: "USD/mes en soluciones enterprise",
-    consequences: ["Perder leads = perder plata real", "Tiempo invertido que no escala", "Tu competencia ya automatiz�"],
+    consequences: ["Perder leads = perder plata real", "Tiempo invertido que no escala", "Tu competencia ya automatizó"],
     oldWay: "?? 'Lo hago yo, es gratis'",
     newWay: "?? IA que paga su propio costo",
   },
   {
     label: "Tu negocio duerme mientras tus clientes compran",
     headline: "Atenci�n\n100% manual",
-    description: "Son las 11pm, un cliente quiere reservar. Tu tel�fono est� en silencio. A las 8am ya reserv� con otro. As� todos los d�as.",
+    description: "Son las 11pm, un cliente quiere reservar. Tu teléfono está en silencio. A las 8am ya reservó con otro. As→ todos los días.",
     icon: PhoneOff, color: "#a78bfa",
     stat: "6h", statLabel: "respuesta promedio sin IA",
-    consequences: ["0 respuestas fuera de horario", "Leads fr�os al d�a siguiente", "Cada empleado nuevo = +$800/mes"],
-    oldWay: "?? 'Ma�ana le contesto'",
+    consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Cada empleado nuevo = +$800/mes"],
+    oldWay: "?? 'Mañana le contesto'",
     newWay: "? Respuesta en 5 segundos, 24/7",
   },
 ];
@@ -93,23 +93,23 @@ const painPoints = [
 
 
 const milestones = [
-  { day: "D�a 1", title: "Todo listo para operar", description: "Cuenta creada, canales conectados, dashboard activo. Ya eres omnicanal.", highlight: "10 min", icon: Rocket, status: "completed" as const },
-  { day: "D�a 2-3", title: "Entrena a WITHMIA", description: "Sube cat�logo, FAQs y pol�ticas. WITHMIA aprende tu negocio.", highlight: "Sin c�digo", icon: Zap, status: "completed" as const },
-  { day: "Semana 1", title: "Primeras conversaciones reales", description: "WITHMIA responde clientes reales. T� supervisas y afinas el tono.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
-  { day: "Semana 2", title: "Automatizaci�n al 80%", description: "Resuelve la mayor�a sola. Solo escala lo que realmente necesita a un humano.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
-  { day: "Semana 3", title: "Flujos avanzados", description: "Agendamiento, seguimientos post-venta y campa�as autom�ticas activas.", highlight: "Avanzado", icon: Users, status: "upcoming" as const },
-  { day: "Mes 1", title: "ROI comprobado", description: "Compara tus m�tricas: m�s respuestas, m�s conversiones, menos tiempo perdido.", highlight: "Resultados", icon: BarChart3, status: "upcoming" as const },
+  { day: "Día 1", title: "Todo listo para operar", description: "Cuenta creada, canales conectados, dashboard activo. Ya eres omnicanal.", highlight: "10 min", icon: Rocket, status: "completed" as const },
+  { day: "Día 2-3", title: "Entrena a WITHMIA", description: "Sube catálogo, FAQs y pol�ticas. WITHMIA aprende tu negocio.", highlight: "Sin código", icon: Zap, status: "completed" as const },
+  { day: "Semana 1", title: "Primeras conversaciones reales", description: "WITHMIA responde clientes reales. Tú supervisas y afinas el tono.", highlight: "Supervisado", icon: MessageSquare, status: "completed" as const },
+  { day: "Semana 2", title: "Automatización al 80%", description: "Resuelve la mayoría sola. Solo escala lo que realmente necesita a un humano.", highlight: "80% auto", icon: TrendingUp, status: "current" as const },
+  { day: "Semana 3", title: "Flujos avanzados", description: "Agendamiento, seguimientos post-venta y campañas automáticas activas.", highlight: "Avanzado", icon: Users, status: "upcoming" as const },
+  { day: "Mes 1", title: "ROI comprobado", description: "Compara tus métricas: más respuestas, más conversiones, menos tiempo perdido.", highlight: "Resultados", icon: BarChart3, status: "upcoming" as const },
 ];
 
 const useCases = [
   {
-    industry: "Salud & Odontolog�a", icon: Stethoscope, color: "#34d399",
+    industry: "Salud & Odontología", icon: Stethoscope, color: "#34d399",
     tagline: "Tu recepcionista virtual que nunca descansa",
     chat: [
       { from: "client", msg: "Hola, necesito agendar una limpieza dental ??" },
-      { from: "mia", msg: "�Hola! Tengo hora ma�ana a las 10:00 o 16:30. �Cu�l te acomoda?" },
+      { from: "mia", msg: "¡Hola! Tengo hora mañana a las 10:00 o 16:30. ¿Cuál te acomoda?" },
       { from: "client", msg: "A las 16:30 porfa" },
-      { from: "mia", msg: "? Agendado ma�ana 16:30 con Dra. L�pez. Te env�o direcci�n por WhatsApp." },
+      { from: "mia", msg: "? Agendado mañana 16:30 con Dra. López. Te envío dirección por WhatsApp." },
     ],
     features: [
       { icon: Calendar, label: "Agenda citas 24/7" },
@@ -122,81 +122,81 @@ const useCases = [
     industry: "E-commerce & Retail", icon: ShoppingCart, color: "#a78bfa",
     tagline: "Tu vendedor estrella que atiende a todos a la vez",
     chat: [
-      { from: "client", msg: "�Tienen esta polera en talla M? ??" },
-      { from: "mia", msg: "�S�! Disponible en azul y negro. Por tu historial, te recomiendo la azul." },
+      { from: "client", msg: "¿Tienen esta polera en talla M? ??" },
+      { from: "mia", msg: "¡Sí! Disponible en azul y negro. Por tu historial, te recomiendo la azul." },
       { from: "client", msg: "Dale, quiero la azul" },
-      { from: "mia", msg: "? Agregada al carrito. Total: $19.990 con env�o gratis. Aqu� tu link de pago ??" },
+      { from: "mia", msg: "? Agregada al carrito. Total: $19.990 con envío gratis. Aqué tu link de pago ??" },
     ],
     features: [
       { icon: MessageSquare, label: "Vendedor por WhatsApp" },
       { icon: ShoppingCart, label: "Rescate de carritos" },
       { icon: BarChart3, label: "Tracking de pedidos" },
     ],
-    result: "+45% conversi�n", result2: "-80% consultas",
+    result: "+45% conversión", result2: "-80% consultas",
   },
   {
     industry: "Inmobiliaria", icon: Building2, color: "#22d3ee",
-    tagline: "Filtra leads reales y agenda visitas autom�ticamente",
+    tagline: "Filtra leads reales y agenda visitas automáticamente",
     chat: [
       { from: "client", msg: "Busco depto 2D en Providencia, hasta 120M ??" },
-      { from: "mia", msg: "Tengo 3 opciones que calzan perfecto. �Tienes pre-aprobaci�n hipotecaria?" },
-      { from: "client", msg: "S�, con Banco Estado" },
-      { from: "mia", msg: "? Visita agendada ma�ana 11:00 en Av. Italia. Te env�o fotos y ficha t�cnica ??" },
+      { from: "mia", msg: "Tengo 3 opciones que calzan perfecto. ¿Tienes pre-aprobación hipotecaria?" },
+      { from: "client", msg: "Sí, con Banco Estado" },
+      { from: "mia", msg: "? Visita agendada mañana 11:00 en Av. Italia. Te envío fotos y ficha técnica ??" },
     ],
     features: [
       { icon: Users, label: "Pre-califica leads" },
       { icon: Calendar, label: "Coordina visitas" },
-      { icon: MessageSquare, label: "Cat�logo por chat" },
+      { icon: MessageSquare, label: "Catálogo por chat" },
     ],
-    result: "-70% leads fr�os", result2: "+3x visitas",
+    result: "-70% leads fríos", result2: "+3x visitas",
   },
   {
     industry: "Fitness & Bienestar", icon: Dumbbell, color: "#f59e0b",
-    tagline: "M�s alumnos, menos abandono, cero papeleo",
+    tagline: "Más alumnos, menos abandono, cero papeleo",
     chat: [
-      { from: "client", msg: "�Cu�nto sale el plan mensual del gym? ??" },
-      { from: "mia", msg: "Plan Full $29.990/mes con todas las clases y acceso libre. �Te inscribo?" },
-      { from: "client", msg: "S�, quiero empezar" },
-      { from: "mia", msg: "? Listo! Tu primera clase es ma�ana, Yoga 7:00am. Te env�o link de pago ???" },
+      { from: "client", msg: "¿Cuánto sale el plan mensual del gym? ??" },
+      { from: "mia", msg: "Plan Full $29.990/mes con todas las clases y acceso libre. ¿Te inscribo?" },
+      { from: "client", msg: "Sí, quiero empezar" },
+      { from: "mia", msg: "? Listo! Tu primera clase es mañana, Yoga 7:00am. Te envío link de pago ???" },
     ],
     features: [
-      { icon: Users, label: "Inscripci�n por chat" },
+      { icon: Users, label: "Inscripción por chat" },
       { icon: Calendar, label: "Reserva de clases" },
-      { icon: MessageSquare, label: "Anti-deserci�n" },
+      { icon: MessageSquare, label: "Anti-deserción" },
     ],
-    result: "+35% retenci�n", result2: "24/7 sin staff",
+    result: "+35% retención", result2: "24/7 sin staff",
   },
   {
-    industry: "Educaci�n", icon: GraduationCap, color: "#ec4899",
-    tagline: "Matr�cula llena, secretar�a libre",
+    industry: "Educación", icon: GraduationCap, color: "#ec4899",
+    tagline: "Matrícula llena, secretaría libre",
     chat: [
-      { from: "client", msg: "�Tienen vacantes para tercero b�sico? ??" },
-      { from: "mia", msg: "S�, quedan 4 vacantes. Necesitas formulario + entrevista. �Te los env�o?" },
-      { from: "client", msg: "S�, por favor env�alos" },
-      { from: "mia", msg: "?? Enviados! Entrevista agendada jueves 15:00. Te recordar� el d�a anterior." },
+      { from: "client", msg: "¿Tienen vacantes para tercero básico? ??" },
+      { from: "mia", msg: "Sí, quedan 4 vacantes. Necesitas formulario + entrevista. ¿Te los envío?" },
+      { from: "client", msg: "Sí, por favor envíalos" },
+      { from: "mia", msg: "?? Enviados! Entrevista agendada jueves 15:00. Te recordar→ el día anterior." },
     ],
     features: [
-      { icon: MessageSquare, label: "Admisiones autom�ticas" },
+      { icon: MessageSquare, label: "Admisiones automáticas" },
       { icon: Users, label: "Soporte estudiantil" },
-      { icon: Calendar, label: "Comunicaci�n masiva" },
+      { icon: Calendar, label: "Comunicación masiva" },
     ],
-    result: "+50% admisi�n", result2: "-90% consultas",
+    result: "+50% admisión", result2: "-90% consultas",
   },
   {
-    industry: "Gastronom�a", icon: Utensils, color: "#f97316",
-    tagline: "M�s mesas llenas, menos llamadas perdidas",
+    industry: "Gastronomía", icon: Utensils, color: "#f97316",
+    tagline: "Más mesas llenas, menos llamadas perdidas",
     chat: [
       { from: "client", msg: "Quiero reservar mesa para 4, viernes 21h ??" },
-      { from: "mia", msg: "�Reservado! Mesa junto a la ventana. �Quieres ver el men� del viernes?" },
-      { from: "client", msg: "S�, me interesa verlo" },
+      { from: "mia", msg: "¡Reservado! Mesa junto a la ventana. ¿Quieres ver el menú del viernes?" },
+      { from: "client", msg: "Sí, me interesa verlo" },
       { from: "mia", msg: "??? Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes!" },
     ],
     features: [
       { icon: Calendar, label: "Reservas por WhatsApp" },
-      { icon: ShoppingCart, label: "Pedidos sin comisi�n" },
+      { icon: ShoppingCart, label: "Pedidos sin comisión" },
       { icon: MessageSquare, label: "Feedback inteligente" },
     ],
-    result: "+40% reservas", result2: "0% comisi�n",
+    result: "+40% reservas", result2: "0% comisión",
   },
 ];
 
@@ -250,12 +250,12 @@ const SolucionesPymes = () => {
       <div className="pt-20">
 
         {/* --------------------------------------------------
-            HERO � Aurora mesh, 2-column
+            HERO → Aurora mesh, 2-column
             -------------------------------------------------- */}
         <section className="relative">
           <div className="max-w-7xl mx-auto px-6 pt-28 pb-10">
             <div className="grid lg:grid-cols-2 gap-2 items-center">
-              {/* Left � Copy */}
+              {/* Left → Copy */}
               <Reveal>
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-amber-500/20 bg-amber-950/30 mb-8">
                   <Target className="w-3.5 h-3.5 text-amber-400" />
@@ -267,14 +267,14 @@ const SolucionesPymes = () => {
                   Tu PYME merece
                   <br />
                   <span className="relative">
-                    <span className="text-gradient">atenci�n autom�tica</span>
+                    <span className="text-gradient">atención automática</span>
                     <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full bg-gradient-to-r from-amber-400/60 to-orange-500/0" />
                   </span>
                 </h1>
 
                 <p className="text-lg text-white/45 max-w-lg leading-relaxed mb-10">
-                  WITHMIA automatiza la atenci�n al cliente de tu negocio con IA conversacional.
-                  Responde 24/7, captura cada lead y escala sin contratar m�s personal.
+                  WITHMIA automatiza la atención al cliente de tu negocio con IA conversacional.
+                  Responde 24/7, captura cada lead y escala sin contratar más personal.
                 </p>
 
                 {/* CTA buttons */}
@@ -312,12 +312,12 @@ const SolucionesPymes = () => {
                   <div className="w-px bg-white/[0.06]" />
                   <div>
                     <p className="text-2xl font-bold text-white"><span ref={counterConversion.ref}>{counterConversion.val}</span>%</p>
-                    <p className="text-[11px] text-white/25 uppercase tracking-wider mt-1">M�s conversiones posibles</p>
+                    <p className="text-[11px] text-white/25 uppercase tracking-wider mt-1">Más conversiones posibles</p>
                   </div>
                 </div>
               </Reveal>
 
-              {/* Right � Phone mockup with lost lead (compact) */}
+              {/* Right → Phone mockup with lost lead (compact) */}
               <Reveal delay={200}>
                 <div className="flex justify-center">
                   <div className="relative w-[220px] sm:w-[240px]">
@@ -353,7 +353,7 @@ const SolucionesPymes = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] font-semibold text-white/80">Tu Negocio</p>
-                          <p className="text-[8px] text-white/25">en l�nea</p>
+                          <p className="text-[8px] text-white/25">en línea</p>
                         </div>
                         <div className="flex items-center gap-2 text-white/25">
                           <span className="text-[11px]">??</span>
@@ -403,7 +403,7 @@ const SolucionesPymes = () => {
                           <div className="flex justify-center pt-2" style={{ animation: 'fadeInUp 0.5s ease 1.2s both' }}>
                             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500/[0.08] border border-red-500/12">
                               <Ban className="w-2.5 h-2.5 text-red-400/70" />
-                              <span className="text-[8px] text-red-300/60 font-semibold tracking-wide">NADIE RESPONDI�</span>
+                              <span className="text-[8px] text-red-300/60 font-semibold tracking-wide">NADIE RESPONDIÓ</span>
                             </div>
                           </div>
                         </div>
@@ -443,7 +443,7 @@ const SolucionesPymes = () => {
         <Heatmap247 />
 
         {/* --------------------------------------------------
-            USE CASES � Industry showcase (professional)
+            USE CASES → Industry showcase (professional)
             -------------------------------------------------- */}
         <section className="pt-8 pb-10 relative" id="casos">
           <div className="max-w-7xl mx-auto px-6">
@@ -461,7 +461,7 @@ const SolucionesPymes = () => {
               </div>
             </Reveal>
 
-            {/* Industry selector � minimal underline style */}
+            {/* Industry selector → minimal underline style */}
             <Reveal delay={80}>
               <div className="relative mb-12">
                 <div className="flex justify-center">
@@ -502,7 +502,7 @@ const SolucionesPymes = () => {
                 className="rounded-3xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
                 style={{ animation: "fadeInUp 0.45s ease both" }}
               >
-                {/* Top bar � industry name + status */}
+                {/* Top bar → industry name + status */}
                 <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-white/[0.05]">
                   <div className="flex items-center gap-3">
                     <div
@@ -522,10 +522,10 @@ const SolucionesPymes = () => {
                   </div>
                 </div>
 
-                {/* Main content � 3 columns */}
+                {/* Main content → 3 columns */}
                 <div className="grid lg:grid-cols-[1fr_1.2fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-white/[0.05]">
 
-                  {/* Col 1 � Features */}
+                  {/* Col 1 → Features */}
                   <div className="p-6 sm:p-8 flex flex-col justify-center">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Capacidades</p>
                     <div className="space-y-4">
@@ -559,9 +559,9 @@ const SolucionesPymes = () => {
                     </div>
                   </div>
 
-                  {/* Col 2 � Chat simulation (center, largest) */}
+                  {/* Col 2 → Chat simulation (center, largest) */}
                   <div className="p-6 sm:p-8 flex flex-col" style={{ backgroundColor: `${current.color}03` }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Conversaci�n en vivo</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Conversación en vivo</p>
                     <div className="space-y-3 flex-1 relative">
                       {current.chat.map((msg, i) => (
                         <div
@@ -648,9 +648,9 @@ const SolucionesPymes = () => {
                     </div>
                   </div>
 
-                  {/* Col 3 � Summary / why this matters */}
+                  {/* Col 3 → Summary / why this matters */}
                   <div className="p-6 sm:p-8 flex flex-col justify-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Por qu� importa</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/20 mb-5">Por qué importa</p>
 
                     <div className="space-y-5">
                       <div className="flex items-start gap-3" style={{ animation: "fadeInUp 0.3s ease 0.15s both" }}>
@@ -658,8 +658,8 @@ const SolucionesPymes = () => {
                           <Zap className="w-3 h-3 text-emerald-400" />
                         </div>
                         <div>
-                          <p className="text-[13px] font-semibold text-white/65">Respuesta instant�nea</p>
-                          <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">Tu cliente recibe atenci�n en segundos, no en horas.</p>
+                          <p className="text-[13px] font-semibold text-white/65">Respuesta instantánea</p>
+                          <p className="text-[11px] text-white/25 leading-relaxed mt-0.5">Tu cliente recibe atención en segundos, no en horas.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3" style={{ animation: "fadeInUp 0.3s ease 0.25s both" }}>
@@ -701,7 +701,7 @@ const SolucionesPymes = () => {
         </section>
 
         {/* --------------------------------------------------
-            PROBLEM � Provocative reality-check section
+            PROBLEM → Provocative reality-check section
             -------------------------------------------------- */}
         <section className="pt-8 pb-14 relative" id="problema">
           <div className="max-w-6xl mx-auto px-6 relative">
@@ -717,12 +717,12 @@ const SolucionesPymes = () => {
                   Si tu negocio atiende as�,{" "}
                   <br className="hidden sm:block" />
                   <span className="relative inline-block">
-                    <span className="text-red-400">ya est�s perdiendo clientes</span>
+                    <span className="text-red-400">ya estás perdiendo clientes</span>
                     <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full bg-gradient-to-r from-red-500/60 to-red-500/0" />
                   </span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
-                  No es opini�n, son datos. Mientras lees esto, alguien te escribi� y nadie contest�.{" "}
+                  No es opini�n, son datos. Mientras lees esto, alguien te escribi→ y nadie contestá.{" "}
                   <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
                 </p>
               </div>
@@ -741,10 +741,10 @@ const SolucionesPymes = () => {
                 const verdict = count === 0
                   ? { text: "Selecciona los que aplican a tu negocio", color: "text-white/25", bg: "" }
                   : count <= 2
-                  ? { text: `${count}/6 � Podr�a ser peor, pero est�s dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
+                  ? { text: `${count}/6 → Podr�a ser peor, pero estás dejando plata en la mesa`, color: "text-amber-400/80", bg: "bg-amber-500/[0.04] border-amber-500/15" }
                   : count <= 4
-                  ? { text: `${count}/6 � Tu competencia que automatiz� te est� quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
-                  : { text: `${count}/6 � Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
+                  ? { text: `${count}/6 → Tu competencia que automatizó te está quitando clientes ahora mismo`, color: "text-orange-400/90", bg: "bg-orange-500/[0.04] border-orange-500/15" }
+                  : { text: `${count}/6 → Tu negocio necesita WITHMIA. Urgente.`, color: "text-red-400", bg: "bg-red-500/[0.06] border-red-500/20" };
 
                 return (
                   <div className="max-w-3xl mx-auto">
@@ -756,7 +756,7 @@ const SolucionesPymes = () => {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white/80">Diagn�stico r�pido</p>
-                            <p className="text-[11px] text-white/25">�Cu�ntos de estos s�ntomas tiene tu negocio?</p>
+                            <p className="text-[11px] text-white/25">¿Cuántos de estos s�ntomas tiene tu negocio?</p>
                           </div>
                         </div>
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-300 ${
@@ -828,7 +828,7 @@ const SolucionesPymes = () => {
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
                   <span className="relative flex items-center gap-2">
-                    Comenzar ahora � es gratis
+                    Comenzar ahora → es gratis
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </a>

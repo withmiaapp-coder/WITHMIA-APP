@@ -107,8 +107,25 @@ function NotificationItem({
 // ====== MAIN COMPONENT ======
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-  const { currentPalette } = useTheme();
-  const t = currentPalette;
+  const { hasTheme, isDark } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      textPrimary: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      cardBg: 'var(--theme-content-card-bg)',
+      cardBorder: isDark ? 'var(--theme-content-card-border)' : 'rgba(0,0,0,0.08)',
+      contentBg: 'var(--theme-content-bg)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
+      inputBorder: isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db',
+      subtleBg: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
+      badgeBg: isDark ? 'rgba(255,255,255,0.08)' : 'var(--theme-accent-light)',
+    };
+  }, [hasTheme, isDark]);
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
