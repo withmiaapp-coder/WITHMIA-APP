@@ -23,35 +23,40 @@ Route::get('/img-proxy', [ImageProxyController::class, 'proxy'])
     ->middleware('throttle:120,1')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
-// Serve user-uploaded files (avatars, covers) from storage
-Route::get('/uploads/{path}', function (string $path) {
-    $fullPath = storage_path('app/public/' . $path);
-    if (!file_exists($fullPath)) {
+// Serve user-uploaded media (avatars, covers) from database
+Route::get('/user-media/{userId}/{type}', function (int $userId, string $type) {
+    if (!in_array($type, ['avatar', 'cover'])) {
         abort(404);
     }
-    $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
-    return response()->file($fullPath, [
-        'Content-Type' => $mime,
-        'Cache-Control' => 'public, max-age=31536000, immutable',
+
+    $media = \App\Models\UserMedia::where('user_id', $userId)
+        ->where('type', $type)
+        ->first();
+
+    if (!$media || !$media->data) {
+        abort(404);
+    }
+
+    $data = $media->data;
+    // PostgreSQL bytea: if returned as resource stream, read it
+    if (is_resource($data)) {
+        $data = stream_get_contents($data);
+    }
+
+    return response($data, 200, [
+        'Content-Type' => $media->mime_type,
+        'Content-Length' => $media->size,
+        'Cache-Control' => 'public, max-age=86400',
+        'ETag' => md5($media->updated_at->timestamp . $media->id),
     ]);
-})->where('path', '.*')
+})->where('userId', '[0-9]+')
+  ->where('type', 'avatar|cover')
   ->middleware('throttle:300,1')
   ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
-// Fallback for old storage/ URLs (avatar/cover photos uploaded before /uploads route)
-Route::get('/storage/{path}', function (string $path) {
-    $fullPath = storage_path('app/public/' . $path);
-    if (!file_exists($fullPath)) {
-        abort(404);
-    }
-    $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
-    return response()->file($fullPath, [
-        'Content-Type' => $mime,
-        'Cache-Control' => 'public, max-age=31536000, immutable',
-    ]);
-})->where('path', '.*')
-  ->middleware('throttle:300,1')
-  ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+// Fallback for old /storage/ and /uploads/ URLs (redirect to 404 gracefully)
+Route::get('/storage/{path}', function () { abort(404); })->where('path', '.*');
+Route::get('/uploads/{path}', function () { abort(404); })->where('path', '.*');
 
 // ============================================================================
 // 2. BROADCASTING

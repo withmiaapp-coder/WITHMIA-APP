@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Models\UserMedia;
 
 class UserController extends Controller
 {
@@ -121,9 +122,19 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('avatar');
-            $path = $file->store("avatars/{$user->id}", 'public');
-            $url = url("/uploads/{$path}");
 
+            // Store in database
+            UserMedia::updateOrCreate(
+                ['user_id' => $user->id, 'type' => 'avatar'],
+                [
+                    'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'data' => $file->getContent(),
+                ]
+            );
+
+            $url = url("/user-media/{$user->id}/avatar") . '?v=' . time();
             $user->avatar = $url;
             $user->save();
 
@@ -157,9 +168,19 @@ class UserController extends Controller
             ]);
 
             $file = $request->file('cover');
-            $path = $file->store("covers/{$user->id}", 'public');
-            $url = url("/uploads/{$path}");
 
+            // Store in database
+            UserMedia::updateOrCreate(
+                ['user_id' => $user->id, 'type' => 'cover'],
+                [
+                    'filename' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'data' => $file->getContent(),
+                ]
+            );
+
+            $url = url("/user-media/{$user->id}/cover") . '?v=' . time();
             $user->cover_photo = $url;
             $user->save();
 
