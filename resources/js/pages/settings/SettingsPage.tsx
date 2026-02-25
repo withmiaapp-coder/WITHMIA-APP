@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Settings, Globe, Bell, Shield, Clock, Check, Loader2, Building2,
   Save, ChevronRight, Smartphone, MessageCircle, AlertCircle,
@@ -6,6 +6,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import axios from 'axios';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // ====== TIPOS ======
 interface CompanySettings {
@@ -56,14 +57,15 @@ const TABS: { id: SettingsTab; label: string; icon: LucideIcon; description: str
 ];
 
 // ====== TOGGLE COMPONENT ======
-function Toggle({ enabled, onChange, disabled = false }: { enabled: boolean; onChange: () => void; disabled?: boolean }) {
+function Toggle({ enabled, onChange, disabled = false, t }: { enabled: boolean; onChange: () => void; disabled?: boolean; t?: any }) {
   return (
     <button
       onClick={onChange}
       disabled={disabled}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-orange-500' : 'bg-gray-300'
+        !t ? (enabled ? 'bg-orange-500' : 'bg-gray-300') : ''
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      style={t ? { background: enabled ? t.accent : (t.inputBorder || '#6b7280') } : undefined}
     >
       <span
         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
@@ -76,21 +78,27 @@ function Toggle({ enabled, onChange, disabled = false }: { enabled: boolean; onC
 
 // ====== NOTIFICATION ITEM ======
 function NotificationItem({ 
-  icon: Icon, title, description, enabled, onChange, iconColor = 'text-blue-600', iconBg = 'bg-blue-100' 
+  icon: Icon, title, description, enabled, onChange, iconColor = 'text-blue-600', iconBg = 'bg-blue-100', t 
 }: { 
   icon: LucideIcon; title: string; description: string; enabled: boolean; onChange: () => void;
-  iconColor?: string; iconBg?: string;
+  iconColor?: string; iconBg?: string; t?: any;
 }) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100/80 transition-colors">
-      <div className={`flex-shrink-0 w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
-        <Icon className={`w-5 h-5 ${iconColor}`} />
+    <div
+      className={`flex items-center gap-4 p-4 rounded-xl transition-colors ${!t ? 'bg-gray-50 hover:bg-gray-100/80' : ''}`}
+      style={t ? { background: t.subtleBg, borderRadius: '0.75rem' } : undefined}
+    >
+      <div
+        className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${!t ? iconBg : ''}`}
+        style={t ? { background: t.accentLight || t.badgeBg } : undefined}
+      >
+        <Icon className={`w-5 h-5 ${!t ? iconColor : ''}`} style={t ? { color: t.accent } : undefined} />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
-        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+        <h4 className={`text-sm font-medium ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{title}</h4>
+        <p className={`text-xs mt-0.5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{description}</p>
       </div>
-      <Toggle enabled={enabled} onChange={onChange} />
+      <Toggle enabled={enabled} onChange={onChange} t={t} />
     </div>
   );
 }
@@ -99,18 +107,23 @@ function NotificationItem({
 // ====== MAIN COMPONENT ======
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const { currentPalette } = useTheme();
+  const t = currentPalette;
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-          <p className="text-sm text-gray-500 mt-1">Administra las preferencias de tu cuenta y empresa</p>
+          <h1 className={`text-2xl font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Configuración</h1>
+          <p className={`text-sm mt-1 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Administra las preferencias de tu cuenta y empresa</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-8 bg-gray-100 rounded-xl p-1.5">
+        <div
+          className={`flex gap-2 mb-8 rounded-xl p-1.5 ${!t ? 'bg-gray-100' : ''}`}
+          style={t ? { background: t.subtleBg } : undefined}
+        >
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -119,12 +132,17 @@ export default function SettingsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
+                  !t ? (isActive
                     ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50') : ''
                 }`}
+                style={t ? {
+                  background: isActive ? t.cardBg : 'transparent',
+                  color: isActive ? t.textPrimary : t.textMuted,
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                } : undefined}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-orange-500' : ''}`} />
+                <Icon className={`w-4 h-4 ${!t ? (isActive ? 'text-orange-500' : '') : ''}`} style={t ? { color: isActive ? t.accent : undefined } : undefined} />
                 <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
@@ -132,9 +150,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'general' && <GeneralTab />}
-        {activeTab === 'notifications' && <NotificationsTab />}
-        {activeTab === 'security' && <SecurityTab />}
+        {activeTab === 'general' && <GeneralTab t={t} />}
+        {activeTab === 'notifications' && <NotificationsTab t={t} />}
+        {activeTab === 'security' && <SecurityTab t={t} />}
       </div>
     </div>
   );
@@ -142,7 +160,7 @@ export default function SettingsPage() {
 
 
 // ====== TAB: GENERAL ======
-function GeneralTab() {
+function GeneralTab({ t }: { t: any }) {
   const [settings, setSettings] = useState<CompanySettings>({ timezone: 'UTC', company_name: '' });
   const [originalSettings, setOriginalSettings] = useState<CompanySettings>({ timezone: 'UTC', company_name: '' });
   const [loading, setLoading] = useState(true);
@@ -206,7 +224,7 @@ function GeneralTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+        <Loader2 className={`w-6 h-6 animate-spin ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
       </div>
     );
   }
@@ -228,42 +246,50 @@ function GeneralTab() {
       )}
 
       {/* Company Info */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-orange-500" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-5 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Building2 className={`w-5 h-5 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
           Información de la Empresa
         </h3>
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+          <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             Nombre de la empresa
           </label>
           <input
             type="text"
             value={settings.company_name || ''}
             disabled
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-700 cursor-not-allowed text-sm"
+            className={`w-full px-4 py-3 rounded-xl cursor-not-allowed text-sm ${!t ? 'bg-gray-50 border border-gray-300 text-gray-700' : ''}`}
+            style={t ? { background: t.subtleBg, border: `1px solid ${t.cardBorder}`, color: t.textSec } : undefined}
           />
-          <p className="text-xs text-gray-400 mt-2">
+          <p className={`text-xs mt-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             El nombre de la empresa se configura desde el asistente de entrenamiento
           </p>
         </div>
       </div>
 
       {/* Timezone */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-          <Globe className="w-5 h-5 text-orange-500" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-5 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Globe className={`w-5 h-5 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
           Zona Horaria
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+            <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
               Selecciona tu zona horaria
             </label>
             <select
               value={settings.timezone}
               onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
-              className="w-full px-4 py-3 bg-white border border-gray-400 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm text-gray-900"
+              className={`w-full px-4 py-3 rounded-xl text-sm ${!t ? 'bg-white border border-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900' : ''}`}
+              style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder || t.cardBorder}`, color: t.textPrimary } : undefined}
             >
               {TIMEZONES.map(tz => (
                 <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -271,17 +297,23 @@ function GeneralTab() {
             </select>
           </div>
 
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 flex items-center gap-4 border border-orange-100">
-            <div className="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-orange-600" />
+          <div
+            className={`rounded-xl p-4 flex items-center gap-4 ${!t ? 'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100' : ''}`}
+            style={t ? { background: t.accentLight || t.subtleBg, border: `1px solid ${t.cardBorder}` } : undefined}
+          >
+            <div
+              className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${!t ? 'bg-orange-100' : ''}`}
+              style={t ? { background: t.badgeBg || t.accentLight } : undefined}
+            >
+              <Clock className={`w-6 h-6 ${!t ? 'text-orange-600' : ''}`} style={t ? { color: t.accent } : undefined} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 font-medium">Hora actual en la zona seleccionada</p>
-              <p className="text-2xl font-mono font-bold text-gray-900">{currentTime}</p>
+              <p className={`text-xs font-medium ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Hora actual en la zona seleccionada</p>
+              <p className={`text-2xl font-mono font-bold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{currentTime}</p>
             </div>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             Esta zona horaria se usará para mostrar las fechas y horas de los mensajes,
             conversaciones y otras actividades en tu plataforma.
           </p>
@@ -289,23 +321,27 @@ function GeneralTab() {
       </div>
 
       {/* Language (placeholder) */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-orange-500" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-5 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <MessageCircle className={`w-5 h-5 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
           Idioma
         </h3>
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+          <label className={`block text-xs font-medium uppercase tracking-wider mb-2 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             Idioma de la plataforma
           </label>
           <select
             value="es"
             disabled
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-700 cursor-not-allowed text-sm"
+            className={`w-full px-4 py-3 rounded-xl cursor-not-allowed text-sm ${!t ? 'bg-gray-50 border border-gray-300 text-gray-700' : ''}`}
+            style={t ? { background: t.subtleBg, border: `1px solid ${t.cardBorder}`, color: t.textSec } : undefined}
           >
             <option value="es">🇪🇸 Español</option>
           </select>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className={`text-xs mt-2 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             Más idiomas estarán disponibles próximamente
           </p>
         </div>
@@ -317,10 +353,14 @@ function GeneralTab() {
           onClick={handleSave}
           disabled={saving || !hasChanges}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all text-sm ${
-            hasChanges && !saving
+            !t ? (hasChanges && !saving
               ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-200'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed') : (hasChanges && !saving ? '' : 'cursor-not-allowed')
           }`}
+          style={t ? {
+            background: hasChanges && !saving ? t.accent : t.subtleBg,
+            color: hasChanges && !saving ? '#fff' : t.textMuted,
+          } : undefined}
         >
           {saving ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
@@ -335,7 +375,7 @@ function GeneralTab() {
 
 
 // ====== TAB: NOTIFICATIONS ======
-function NotificationsTab() {
+function NotificationsTab({ t }: { t: any }) {
   const [settings, setSettings] = useState<NotificationSettings>({
     whatsappConnection: true,
     whatsappDisconnection: true,
@@ -400,9 +440,12 @@ function NotificationsTab() {
       )}
 
       {/* WhatsApp */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Smartphone className="w-5 h-5 text-green-600" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Smartphone className={`w-5 h-5 ${!t ? 'text-green-600' : ''}`} style={t ? { color: t.accent } : undefined} />
           WhatsApp
         </h3>
         <div className="space-y-3">
@@ -414,6 +457,7 @@ function NotificationsTab() {
             onChange={() => handleToggle('whatsappConnection')}
             iconColor="text-green-600"
             iconBg="bg-green-100"
+            t={t}
           />
           <NotificationItem
             icon={AlertCircle}
@@ -423,14 +467,18 @@ function NotificationsTab() {
             onChange={() => handleToggle('whatsappDisconnection')}
             iconColor="text-red-600"
             iconBg="bg-red-100"
+            t={t}
           />
         </div>
       </div>
 
       {/* Messages */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-blue-600" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <MessageCircle className={`w-5 h-5 ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.accent } : undefined} />
           Mensajes
         </h3>
         <div className="space-y-3">
@@ -440,6 +488,7 @@ function NotificationsTab() {
             description="Cuando una persona te contacta por primera vez"
             enabled={settings.newLeads}
             onChange={() => handleToggle('newLeads')}
+            t={t}
           />
           <NotificationItem
             icon={MessageCircle}
@@ -447,6 +496,7 @@ function NotificationsTab() {
             description="Recibir notificación de todos los mensajes nuevos"
             enabled={settings.newMessages}
             onChange={() => handleToggle('newMessages')}
+            t={t}
           />
           <NotificationItem
             icon={AlertCircle}
@@ -454,14 +504,18 @@ function NotificationsTab() {
             description="Notificar únicamente cuando te mencionan"
             enabled={settings.mentionsOnly}
             onChange={() => handleToggle('mentionsOnly')}
+            t={t}
           />
         </div>
       </div>
 
       {/* Preferences */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Eye className="w-5 h-5 text-purple-600" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Eye className={`w-5 h-5 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
           Preferencias
         </h3>
         <div className="space-y-3">
@@ -473,6 +527,7 @@ function NotificationsTab() {
             onChange={() => handleToggle('soundEnabled')}
             iconColor="text-purple-600"
             iconBg="bg-purple-100"
+            t={t}
           />
           <NotificationItem
             icon={Bell}
@@ -482,6 +537,7 @@ function NotificationsTab() {
             onChange={() => handleToggle('desktopNotifications')}
             iconColor="text-purple-600"
             iconBg="bg-purple-100"
+            t={t}
           />
         </div>
       </div>
@@ -490,7 +546,8 @@ function NotificationsTab() {
       <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-all shadow-lg shadow-orange-200 text-sm"
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all text-sm ${!t ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-200' : ''}`}
+          style={t ? { background: t.accent, color: '#fff' } : undefined}
         >
           <Save className="w-4 h-4" />
           Guardar preferencias
@@ -502,17 +559,26 @@ function NotificationsTab() {
 
 
 // ====== TAB: SECURITY ======
-function SecurityTab() {
+function SecurityTab({ t }: { t: any }) {
   return (
     <div className="space-y-6">
       {/* Auth method */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-          <Key className="w-5 h-5 text-orange-500" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-5 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Key className={`w-5 h-5 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
           Método de Autenticación
         </h3>
-        <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-          <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-blue-100">
+        <div
+          className={`flex items-center gap-4 p-4 rounded-xl ${!t ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100' : ''}`}
+          style={t ? { background: t.subtleBg, border: `1px solid ${t.cardBorder}` } : undefined}
+        >
+          <div
+            className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${!t ? 'bg-white border border-blue-100' : ''}`}
+            style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+          >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -521,8 +587,8 @@ function SecurityTab() {
             </svg>
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-semibold text-gray-900">Google Sign-In</h4>
-            <p className="text-xs text-gray-500 mt-0.5">Tu cuenta está vinculada con Google. Inicia sesión de forma segura sin contraseña.</p>
+            <h4 className={`text-sm font-semibold ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Google Sign-In</h4>
+            <p className={`text-xs mt-0.5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Tu cuenta está vinculada con Google. Inicia sesión de forma segura sin contraseña.</p>
           </div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold border border-green-200">
             <Check className="w-3.5 h-3.5" />
@@ -532,30 +598,42 @@ function SecurityTab() {
       </div>
 
       {/* Sessions */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900 mb-5 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-orange-500" />
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-gray-200' : ''}`}
+        style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+      >
+        <h3 className={`text-base font-semibold mb-5 flex items-center gap-2 ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+          <Shield className={`w-5 h-5 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
           Sesiones Activas
         </h3>
         <div className="space-y-3">
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-            <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-              <Globe className="w-5 h-5 text-green-600" />
+          <div
+            className={`flex items-center gap-4 p-4 rounded-xl ${!t ? 'bg-gray-50' : ''}`}
+            style={t ? { background: t.subtleBg } : undefined}
+          >
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${!t ? 'bg-green-100' : ''}`}
+              style={t ? { background: t.accentLight || t.badgeBg } : undefined}
+            >
+              <Globe className={`w-5 h-5 ${!t ? 'text-green-600' : ''}`} style={t ? { color: t.accent } : undefined} />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-medium text-gray-900">Sesión actual</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Navegador web · Activa ahora</p>
+              <h4 className={`text-sm font-medium ${!t ? 'text-gray-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Sesión actual</h4>
+              <p className={`text-xs mt-0.5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Navegador web · Activa ahora</p>
             </div>
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-4">
+        <p className={`text-xs mt-4 ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
           Si sospechas de actividad no autorizada, cierra sesión y vuelve a iniciar desde Google.
         </p>
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-white rounded-2xl border border-red-200 p-6 shadow-sm">
+      <div
+        className={`rounded-2xl p-6 shadow-sm ${!t ? 'bg-white border border-red-200' : ''}`}
+        style={t ? { background: t.cardBg, border: '1px solid #ef4444' } : undefined}
+      >
         <h3 className="text-base font-semibold text-red-600 mb-5 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           Zona de Peligro

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import { ArrowRight, CalendarCheck } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -14,111 +14,123 @@ const channels: { name: string; icon: string; size: number; margin?: number; mar
 
 const COLORS = ['255,200,60', '255,160,40', '200,140,255', '100,200,255', '255,255,255'];
 
-interface Particle {
-  x: number; y: number; vx: number; vy: number;
-  r: number; o: number; c: string;
-}
-
 export const Hero = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sectionRef = useRef<HTMLElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
-  const animIdRef = useRef(0);
-
-  const resize = useCallback(() => {
-    const canvas = canvasRef.current;
-    const section = sectionRef.current;
-    if (!canvas || !section) return;
-
-    const w = section.offsetWidth || window.innerWidth;
-    let h = section.offsetHeight;
-    if (h < 100) h = window.innerHeight;
-
-    canvas.width = w;
-    canvas.height = h;
-
-    const count = Math.floor((w * h) / 6000);
-    const arr: Particle[] = [];
-    for (let i = 0; i < count; i++) {
-      arr.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: -Math.random() * 0.6 - 0.1,
-        r: Math.random() * 2 + 0.5,
-        o: Math.random() * 0.6 + 0.2,
-        c: COLORS[Math.floor(Math.random() * COLORS.length)],
-      });
-    }
-    particlesRef.current = arr;
-  }, []);
 
   useEffect(() => {
-    // Respect prefers-reduced-motion
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    console.log('[WITHMIA Particles] useEffect fired');
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('[WITHMIA Particles] Canvas ref is null!');
+      return;
+    }
+
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.error('[WITHMIA Particles] Could not get 2d context!');
+      return;
+    }
+
+    console.log('[WITHMIA Particles] Canvas and context OK');
+
+    interface P { x: number; y: number; vx: number; vy: number; r: number; o: number; c: string; }
+    let particles: P[] = [];
+    let animId = 0;
+
+    function resize() {
+      // Use the canvas parent (the section) for dimensions
+      const parent = canvas!.parentElement;
+      const rect = parent ? parent.getBoundingClientRect() : null;
+      const w = rect ? Math.round(rect.width) : window.innerWidth;
+      let h = rect ? Math.round(rect.height) : window.innerHeight;
+      if (h < 100) h = window.innerHeight;
+
+      // Set canvas resolution to match display size
+      canvas!.width = w;
+      canvas!.height = h;
+
+      console.log(`[WITHMIA Particles] resize: ${w}x${h}, creating ${Math.floor((w * h) / 6000)} particles`);
+
+      const count = Math.floor((w * h) / 8000);
+      particles = [];
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: -Math.random() * 0.6 - 0.1,
+          r: Math.random() * 2 + 0.5,
+          o: Math.random() * 0.5 + 0.15,
+          c: COLORS[Math.floor(Math.random() * COLORS.length)],
+        });
+      }
+    }
 
     function draw() {
       const W = canvas!.width;
       const H = canvas!.height;
       ctx!.clearRect(0, 0, W, H);
 
-      for (const p of particlesRef.current) {
+      for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
         p.o += (Math.random() - 0.5) * 0.02;
         if (p.o < 0.1) p.o = 0.1;
-        if (p.o > 0.8) p.o = 0.8;
+        if (p.o > 0.65) p.o = 0.65;
         if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
         if (p.x < -10) p.x = W + 10;
         if (p.x > W + 10) p.x = -10;
+
+        // Glow halo (drawn first, behind dot)
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(${p.c},${p.o * 0.12})`;
+        ctx!.fill();
 
         // Particle dot
         ctx!.beginPath();
         ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx!.fillStyle = `rgba(${p.c},${p.o})`;
         ctx!.fill();
-
-        // Glow halo
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${p.c},${p.o * 0.15})`;
-        ctx!.fill();
       }
 
-      animIdRef.current = requestAnimationFrame(draw);
+      animId = requestAnimationFrame(draw);
     }
 
     function start() {
-      cancelAnimationFrame(animIdRef.current);
+      cancelAnimationFrame(animId);
       resize();
-      if (particlesRef.current.length > 0) {
-        animIdRef.current = requestAnimationFrame(draw);
+      if (particles.length > 0) {
+        console.log('[WITHMIA Particles] Animation started with', particles.length, 'particles');
+        animId = requestAnimationFrame(draw);
       }
     }
 
-    // Start after a short delay to ensure layout is stable
-    const timer = setTimeout(start, 150);
+    // Use multiple delays as fallback — the first successful one wins
+    const t1 = setTimeout(start, 200);
+    const t2 = setTimeout(() => {
+      // If canvas is still tiny, force a restart
+      if (canvas!.width < 100 || canvas!.height < 100) {
+        console.log('[WITHMIA Particles] Fallback resize triggered');
+        start();
+      }
+    }, 1000);
+
     window.addEventListener('resize', start);
 
     return () => {
-      clearTimeout(timer);
-      cancelAnimationFrame(animIdRef.current);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      cancelAnimationFrame(animId);
       window.removeEventListener('resize', start);
     };
-  }, [resize]);
+  }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-10 overflow-hidden"
-    >
-      {/* Background image — full bleed, z-0 */}
-      <div className="absolute inset-0 z-0">
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-20 pb-10 overflow-hidden">
+      {/* Background image — full bleed */}
+      <div className="absolute inset-0">
         <img
           src="/banner-withmia.webp"
           alt="WITHMIA plataforma omnicanal con IA"
@@ -133,12 +145,20 @@ export const Hero = () => {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background" />
       </div>
 
-      {/* Particle canvas — z-[1] between background z-0 and content z-10 */}
+      {/* Particle canvas — pure inline styles for maximum reliability */}
       <canvas
         ref={canvasRef}
         aria-hidden="true"
-        className="absolute inset-0 z-[1] pointer-events-none"
-        style={{ display: 'block' }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 2,
+          display: 'block',
+        }}
       />
 
       <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4">
