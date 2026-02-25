@@ -5657,10 +5657,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   onClick={() => setShowMediaGallery(!showMediaGallery)}
                   className={`w-full p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center ${
                     showMediaGallery 
-                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg' 
+                      ? (!t ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg' : 'shadow-lg')
                       : !t ? 'bg-white/20 hover:bg-white/30 text-gray-700' : ''
                   }`}
-                  style={!showMediaGallery && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                  style={showMediaGallery && t 
+                    ? { background: t.accent, color: '#fff', boxShadow: `0 4px 12px ${t.accent}40` } 
+                    : (!showMediaGallery && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)
+                  }
                 >
                   <Grid className="w-4 h-4 mr-2" />
                   {showMediaGallery ? 'Ocultar Multimedia' : 'Ver Multimedia Compartida'}
@@ -5676,10 +5679,13 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                   }}
                   className={`w-full p-3 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center ${
                     showNotes 
-                      ? 'bg-gray-700 text-white shadow-md' 
+                      ? (!t ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md' : 'shadow-md')
                       : !t ? 'bg-white/20 hover:bg-white/30 text-gray-700' : ''
                   }`}
-                  style={!showNotes && t ? { background: t.buttonBg, color: t.textPrimary } : undefined}
+                  style={showNotes && t 
+                    ? { background: t.accent, color: '#fff', boxShadow: `0 4px 12px ${t.accent}40` } 
+                    : (!showNotes && t ? { background: t.buttonBg, color: t.textPrimary } : undefined)
+                  }
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   {showNotes ? 'Ocultar Notas' : 'Notas del contacto'}
