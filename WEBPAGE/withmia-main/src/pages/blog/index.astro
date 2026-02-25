@@ -1,0 +1,222 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const categories = [...new Set(posts.map(p => p.data.category))];
+
+const blogJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  name: "Blog WITHMIA",
+  description: "Artículos sobre IA conversacional, WhatsApp Business, automatización de atención al cliente y marketing digital para empresas.",
+  url: "https://withmia.com/blog",
+  publisher: {
+    "@type": "Organization",
+    name: "WITHMIA",
+    logo: { "@type": "ImageObject", url: "https://withmia.com/logos/logo-withmia.png" },
+  },
+  blogPost: posts.map(post => ({
+    "@type": "BlogPosting",
+    headline: post.data.title,
+    description: post.data.description,
+    datePublished: post.data.date.toISOString(),
+    ...(post.data.updatedDate && { dateModified: post.data.updatedDate.toISOString() }),
+    author: { "@type": "Person", name: post.data.author },
+    url: `https://withmia.com/blog/${post.slug}`,
+    ...(post.data.image && { image: `https://withmia.com${post.data.image}` }),
+  })),
+});
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const categoryColors: Record<string, string> = {
+  'IA Conversacional': 'bg-purple-500/15 text-purple-300 border-purple-500/20',
+  'WhatsApp Business': 'bg-green-500/15 text-green-300 border-green-500/20',
+  'Atención al Cliente': 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+  'Automatización': 'bg-amber-500/15 text-amber-300 border-amber-500/20',
+  'Marketing Digital': 'bg-pink-500/15 text-pink-300 border-pink-500/20',
+  'PyMEs': 'bg-orange-500/15 text-orange-300 border-orange-500/20',
+  'Producto': 'bg-cyan-500/15 text-cyan-300 border-cyan-500/20',
+  'Casos de Éxito': 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+};
+---
+
+<Layout
+  title="Blog"
+  description="Artículos sobre IA conversacional, WhatsApp Business, automatización y atención al cliente. Consejos y estrategias para empresas."
+  path="/blog"
+  jsonLd={[blogJsonLd]}
+>
+  <section class="pt-32 pb-20 px-6">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <p class="text-amber-400 text-sm font-semibold tracking-widest uppercase mb-4">Blog</p>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
+          <span class="text-white">Recursos para </span>
+          <span class="bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500 bg-clip-text text-transparent">
+            crecer con IA
+          </span>
+        </h1>
+        <p class="text-white/50 text-lg max-w-2xl mx-auto leading-relaxed">
+          Artículos, guías y estrategias sobre IA conversacional, automatización y atención al cliente para empresas.
+        </p>
+      </div>
+
+      <!-- Category filters -->
+      <div class="flex flex-wrap justify-center gap-2 mb-12">
+        <button
+          data-filter="all"
+          class="blog-filter active px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 bg-amber-500/15 text-amber-300 border-amber-500/30"
+        >
+          Todos
+        </button>
+        {categories.map(cat => (
+          <button
+            data-filter={cat}
+            class:list={[
+              'blog-filter px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 hover:scale-[1.03]',
+              categoryColors[cat] || 'bg-white/5 text-white/60 border-white/10',
+            ]}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <!-- Featured post (latest) -->
+      {posts.length > 0 && (
+        <a
+          href={`/blog/${posts[0].slug}`}
+          class="block mb-12 group"
+          data-category={posts[0].data.category}
+        >
+          <article class="relative rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden hover:border-amber-400/20 hover:bg-white/[0.04] transition-all duration-500">
+            <div class="p-8 sm:p-10 lg:p-12">
+              <div class="flex flex-wrap items-center gap-3 mb-4">
+                <span class:list={[
+                  'px-3 py-1 rounded-full text-xs font-semibold border',
+                  categoryColors[posts[0].data.category] || 'bg-white/5 text-white/60 border-white/10',
+                ]}>
+                  {posts[0].data.category}
+                </span>
+                <span class="text-white/30 text-sm">{formatDate(posts[0].data.date)}</span>
+                {posts[0].data.readingTime && (
+                  <span class="text-white/30 text-sm">· {posts[0].data.readingTime} min de lectura</span>
+                )}
+              </div>
+              <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white group-hover:text-amber-200 transition-colors duration-300 mb-4 leading-tight">
+                {posts[0].data.title}
+              </h2>
+              <p class="text-white/50 text-lg leading-relaxed max-w-3xl mb-6">
+                {posts[0].data.description}
+              </p>
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                  {posts[0].data.author.charAt(0)}
+                </div>
+                <span class="text-white/60 text-sm">{posts[0].data.author}</span>
+              </div>
+            </div>
+            <!-- Decorative gradient -->
+            <div class="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-amber-500/[0.03] to-transparent pointer-events-none" />
+          </article>
+        </a>
+      )}
+
+      <!-- Posts grid -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="blog-grid">
+        {posts.slice(1).map(post => (
+          <a
+            href={`/blog/${post.slug}`}
+            class="blog-card group"
+            data-category={post.data.category}
+          >
+            <article class="h-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 hover:border-white/[0.15] hover:bg-white/[0.04] transition-all duration-300 flex flex-col">
+              <div class="flex items-center gap-2 mb-4">
+                <span class:list={[
+                  'px-2.5 py-0.5 rounded-full text-[11px] font-semibold border',
+                  categoryColors[post.data.category] || 'bg-white/5 text-white/60 border-white/10',
+                ]}>
+                  {post.data.category}
+                </span>
+                {post.data.readingTime && (
+                  <span class="text-white/25 text-xs">{post.data.readingTime} min</span>
+                )}
+              </div>
+              <h3 class="text-lg font-bold text-white group-hover:text-amber-200 transition-colors duration-300 mb-3 leading-snug">
+                {post.data.title}
+              </h3>
+              <p class="text-white/40 text-sm leading-relaxed flex-1 mb-4">
+                {post.data.description}
+              </p>
+              <div class="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+                <span class="text-white/30 text-xs">{formatDate(post.data.date)}</span>
+                <span class="text-amber-400/60 text-xs font-medium group-hover:text-amber-400 transition-colors">
+                  Leer más →
+                </span>
+              </div>
+            </article>
+          </a>
+        ))}
+      </div>
+
+      <!-- Empty state if no posts -->
+      {posts.length === 0 && (
+        <div class="text-center py-20">
+          <p class="text-white/40 text-lg">Próximamente publicaremos nuevos artículos.</p>
+        </div>
+      )}
+
+      <!-- CTA -->
+      <div class="mt-20 text-center">
+        <div class="rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-950/20 to-orange-950/10 p-10 sm:p-14">
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mb-4">
+            ¿Listo para implementar IA en tu negocio?
+          </h2>
+          <p class="text-white/50 mb-8 max-w-lg mx-auto">
+            Prueba WITHMIA gratis por 14 días. Sin tarjeta de crédito, sin compromiso.
+          </p>
+          <a
+            href="https://app.withmia.com"
+            class="inline-flex px-8 py-3.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold shadow-[0_2px_15px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300"
+          >
+            Comenzar Gratis
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Category filter script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const buttons = document.querySelectorAll<HTMLButtonElement>('.blog-filter');
+      const featured = document.querySelector<HTMLAnchorElement>('[data-category]');
+      const cards = document.querySelectorAll<HTMLAnchorElement>('.blog-card');
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.dataset.filter;
+
+          // Update active state
+          buttons.forEach(b => b.classList.remove('active', 'ring-1', 'ring-white/20'));
+          btn.classList.add('active', 'ring-1', 'ring-white/20');
+
+          // Filter cards
+          if (featured) {
+            featured.style.display = (filter === 'all' || featured.dataset.category === filter) ? '' : 'none';
+          }
+          cards.forEach(card => {
+            card.style.display = (filter === 'all' || card.dataset.category === filter) ? '' : 'none';
+          });
+        });
+      });
+    });
+  </script>
+</Layout>

@@ -156,9 +156,10 @@ interface UserMenuDropdownProps {
   onNavigateToProfile?: () => void;
   onNavigateToSettings?: () => void;
   onNavigateToSubscription?: () => void;
+  onNavigateToSupport?: () => void;
 }
 
-function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToProfile, onNavigateToSettings, onNavigateToSubscription }: UserMenuDropdownProps) {
+function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToProfile, onNavigateToSettings, onNavigateToSubscription, onNavigateToSupport }: UserMenuDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showHelpSubmenu, setShowHelpSubmenu] = useState(false);
   const [logoError, setLogoError] = useState(false);
@@ -217,7 +218,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     };
   }, [isOpen]);
 
-  const helpSubmenuItems: Array<{icon: React.ComponentType<{ className?: string }>; label: string; href: string; className: string; isDisabled: boolean}> = [
+  const helpSubmenuItems: Array<{icon: React.ComponentType<{ className?: string }>; label: string; href?: string; onClick?: () => void; className: string; isDisabled: boolean}> = [
     {
       icon: BookOpen,
       label: 'Centro de ayuda',
@@ -228,7 +229,9 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
     {
       icon: MessageCircle,
       label: 'Contactar soporte',
-      href: 'https://withmia.com/soporte',
+      onClick: () => {
+        if (onNavigateToSupport) onNavigateToSupport();
+      },
       className: isDark ? 'text-gray-200 hover:bg-white/5' : 'text-neutral-700 hover:bg-neutral-50',
       isDisabled: false
     },
@@ -416,6 +419,35 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
           <div className="py-2">
             {helpSubmenuItems.map((subItem, subIndex) => {
               const SubIcon = subItem.icon;
+              const isInternal = !!subItem.onClick;
+
+              const content = (
+                <>
+                  <SubIcon 
+                    className="w-4 h-4"
+                    style={t ? { color: t.textMuted } : undefined}
+                  />
+                  <span className="text-sm font-medium">{subItem.label}</span>
+                </>
+              );
+
+              if (isInternal) {
+                return (
+                  <button
+                    key={subIndex}
+                    onClick={() => {
+                      subItem.onClick!();
+                      setIsOpen(false);
+                      setShowHelpSubmenu(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 ${!t ? subItem.className : 'hover:opacity-80'}`}
+                    style={t ? { color: t.textSec } : undefined}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
               return (
                 <a
                   key={subIndex}
@@ -429,11 +461,7 @@ function UserMenuDropdown({ user, isCollapsed, onToggleCollapse, onNavigateToPro
                   className={`w-full flex items-center gap-3 px-4 py-2.5 transition-all duration-150 no-underline ${!t ? subItem.className : 'hover:opacity-80'}`}
                   style={t ? { color: t.textSec } : undefined}
                 >
-                  <SubIcon 
-                    className="w-4 h-4"
-                    style={t ? { color: t.textMuted } : undefined}
-                  />
-                  <span className="text-sm font-medium">{subItem.label}</span>
+                  {content}
                 </a>
               );
             })}
@@ -1426,6 +1454,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
               onNavigateToProfile={() => handleNavigation('profile')}
               onNavigateToSettings={() => handleNavigation('settings')}
               onNavigateToSubscription={() => handleNavigation('subscription')}
+              onNavigateToSupport={() => handleNavigation('support')}
             />
           </div>
 
