@@ -685,7 +685,7 @@ export default function CalendarSection({ user, company }: Props) {
       <div className={`px-6 py-3 border-b flex-shrink-0 ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl">
+            <div className={`p-2 rounded-xl ${!t ? 'bg-gradient-to-br from-rose-500 to-pink-600' : ''}`} style={t ? { background: t.accent } : undefined}>
               <CalendarIcon className="w-5 h-5 text-white" />
             </div>
             <div>
