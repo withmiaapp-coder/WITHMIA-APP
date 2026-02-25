@@ -2253,7 +2253,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           Usa la API oficial de Meta para WhatsApp Business. Conecta tu número verificado sin escanear QR.
                         </p>
 
-                        <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-start gap-2.5">
+                        <div className={`p-3 border rounded-xl text-sm flex items-start gap-2.5 ${!t ? 'bg-emerald-50/60 border-emerald-200 text-emerald-700' : ''}`} style={t ? { background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(236,253,245,0.6)', borderColor: isDark ? 'rgba(16,185,129,0.25)' : 'rgb(167,243,208)', color: isDark ? 'rgb(110,231,183)' : 'rgb(4,120,87)' } : undefined}>
                           <Zap className="w-4 h-4 flex-shrink-0 mt-0.5" />
                           <div className="text-xs space-y-0.5">
                             <p className="font-medium text-sm">¿Cuándo usar WhatsApp Cloud API?</p>
@@ -2264,7 +2264,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                         </div>
 
                         {channelError('whatsapp-api') && channelConnecting === null && (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                          <div className={`p-3 border rounded-lg text-sm flex items-center gap-2 ${!t ? 'bg-red-50 border-red-200 text-red-600' : ''}`} style={t ? { background: isDark ? 'rgba(239,68,68,0.1)' : 'rgb(254,242,242)', borderColor: isDark ? 'rgba(239,68,68,0.3)' : 'rgb(254,202,202)', color: isDark ? 'rgb(252,165,165)' : 'rgb(220,38,38)' } : undefined}>
                             <AlertCircle className="w-4 h-4 flex-shrink-0" />
                             {channelError('whatsapp-api')}
                           </div>
@@ -2286,7 +2286,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                           )}
                         </button>
 
-                        <p className="text-xs text-neutral-400 text-center">
+                        <p className={`text-xs text-center ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                           Se abrirá el registro de WhatsApp Business de Meta
                         </p>
                       </div>

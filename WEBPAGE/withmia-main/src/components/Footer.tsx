@@ -1,4 +1,4 @@
-import logo from "@/assets/logo-withmia.png";
+const logo = "/logo-withmia.webp";
 import { Instagram, Linkedin, Youtube, Facebook } from "lucide-react";
 import { Link } from "@/lib/router";
 

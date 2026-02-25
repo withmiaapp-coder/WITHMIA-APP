@@ -109,10 +109,10 @@ export const Hero = () => {
       {/* Background image — full bleed */}
       <div className="absolute inset-0">
         <img
-          src="/Banner%20web%20withmia.webp"
+          src="/dashboard-preview.webp"
           alt="WITHMIA plataforma omnicanal con IA"
           className="w-full h-full object-cover object-center"
-          fetchPriority="high"
+          fetchpriority="high"
         />
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black/30" />

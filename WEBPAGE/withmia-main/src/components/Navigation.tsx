@@ -1,4 +1,4 @@
-import logo from "@/assets/logo-withmia.png";
+const logo = "/logo-withmia.webp";
 import { Menu, X, ChevronDown, Bot, Plug, BarChart3, Code, Sparkles, MessageCircle, Users, Inbox, Zap } from "lucide-react";
 import { useState, useRef } from "react";
 import { useNavigate, Link } from "@/lib/router";
