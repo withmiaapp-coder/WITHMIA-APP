@@ -40,10 +40,10 @@ import { Reveal, useCountUp } from "@/hooks/useAnimations";
 
 /* --- Lost lead timeline simulation --- */
 const lostLeadTimeline = [
-  { time: "10:32", message: "Hola! Vi el anuncio, quiero cotizar ??", status: "sent" as const },
+  { time: "10:32", message: "Hola! Vi el anuncio, quiero cotizar 🙏", status: "sent" as const },
   { time: "10:34", message: "¿Tienen disponible para hoy?", status: "sent" as const },
   { time: "10:47", message: "Bueno, cuando puedan me avisan...", status: "waiting" as const },
-  { time: "11:58", message: "¿Hola? ¿Alguien ahí? ??", status: "waiting" as const },
+  { time: "11:58", message: "¿Hola? ¿Alguien ahí? 😔", status: "waiting" as const },
   { time: "13:30", message: "Ya reservó con otra empresa. Gracias.", status: "lost" as const },
 ];
 
@@ -65,8 +65,8 @@ const painPoints = [
     icon: MessageCircle, color: "#f59e0b",
     stat: "73%", statLabel: "usa 3+ canales sin integrar",
     consequences: ["Historial perdido entre canales", "Respuestas duplicadas o contradictorias", "Cero visibilidad de métricas"],
-    oldWay: "?? Cuaderno + WhatsApp personal",
-    newWay: "?? Bandeja unificada con IA",
+    oldWay: "📓 Cuaderno + WhatsApp personal",
+    newWay: "🚀 Bandeja unificada con IA",
   },
   {
     label: "El ahorro que crees tener te cuesta el triple",
@@ -75,8 +75,8 @@ const painPoints = [
     icon: DollarSign, color: "#f43f5e",
     stat: "$500+", statLabel: "USD/mes en soluciones enterprise",
     consequences: ["Perder leads = perder plata real", "Tiempo invertido que no escala", "Tu competencia ya automatizó"],
-    oldWay: "?? 'Lo hago yo, es gratis'",
-    newWay: "?? IA que paga su propio costo",
+    oldWay: "💸 'Lo hago yo, es gratis'",
+    newWay: "🤖 IA que paga su propio costo",
   },
   {
     label: "Tu negocio duerme mientras tus clientes compran",
@@ -85,8 +85,8 @@ const painPoints = [
     icon: PhoneOff, color: "#a78bfa",
     stat: "6h", statLabel: "respuesta promedio sin IA",
     consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Cada empleado nuevo = +$800/mes"],
-    oldWay: "?? 'Mañana le contesto'",
-    newWay: "? Respuesta en 5 segundos, 24/7",
+    oldWay: "😴 'Mañana le contesto'",
+    newWay: "⚡ Respuesta en 5 segundos, 24/7",
   },
 ];
 
@@ -106,10 +106,10 @@ const useCases = [
     industry: "Salud & Odontología", icon: Stethoscope, color: "#34d399",
     tagline: "Tu recepcionista virtual que nunca descansa",
     chat: [
-      { from: "client", msg: "Hola, necesito agendar una limpieza dental ??" },
+      { from: "client", msg: "Hola, necesito agendar una limpieza dental 🦷" },
       { from: "mia", msg: "¡Hola! Tengo hora mañana a las 10:00 o 16:30. ¿Cuál te acomoda?" },
       { from: "client", msg: "A las 16:30 porfa" },
-      { from: "mia", msg: "? Agendado mañana 16:30 con Dra. López. Te envío dirección por WhatsApp." },
+      { from: "mia", msg: "✅ Agendado mañana 16:30 con Dra. López. Te envío dirección por WhatsApp." },
     ],
     features: [
       { icon: Calendar, label: "Agenda citas 24/7" },
@@ -122,10 +122,10 @@ const useCases = [
     industry: "E-commerce & Retail", icon: ShoppingCart, color: "#a78bfa",
     tagline: "Tu vendedor estrella que atiende a todos a la vez",
     chat: [
-      { from: "client", msg: "¿Tienen esta polera en talla M? ??" },
+      { from: "client", msg: "¿Tienen esta polera en talla M? 👕" },
       { from: "mia", msg: "¡Sí! Disponible en azul y negro. Por tu historial, te recomiendo la azul." },
       { from: "client", msg: "Dale, quiero la azul" },
-      { from: "mia", msg: "? Agregada al carrito. Total: $19.990 con envío gratis. Aqué tu link de pago ??" },
+      { from: "mia", msg: "✅ Agregada al carrito. Total: $19.990 con envío gratis. Aquí tu link de pago 🔗" },
     ],
     features: [
       { icon: MessageSquare, label: "Vendedor por WhatsApp" },
@@ -138,10 +138,10 @@ const useCases = [
     industry: "Inmobiliaria", icon: Building2, color: "#22d3ee",
     tagline: "Filtra leads reales y agenda visitas automáticamente",
     chat: [
-      { from: "client", msg: "Busco depto 2D en Providencia, hasta 120M ??" },
+      { from: "client", msg: "Busco depto 2D en Providencia, hasta 120M 🏢" },
       { from: "mia", msg: "Tengo 3 opciones que calzan perfecto. ¿Tienes pre-aprobación hipotecaria?" },
       { from: "client", msg: "Sí, con Banco Estado" },
-      { from: "mia", msg: "? Visita agendada mañana 11:00 en Av. Italia. Te envío fotos y ficha técnica ??" },
+      { from: "mia", msg: "✅ Visita agendada mañana 11:00 en Av. Italia. Te envío fotos y ficha técnica 📸" },
     ],
     features: [
       { icon: Users, label: "Pre-califica leads" },
@@ -154,10 +154,10 @@ const useCases = [
     industry: "Fitness & Bienestar", icon: Dumbbell, color: "#f59e0b",
     tagline: "Más alumnos, menos abandono, cero papeleo",
     chat: [
-      { from: "client", msg: "¿Cuánto sale el plan mensual del gym? ??" },
+      { from: "client", msg: "¿Cuánto sale el plan mensual del gym? 💪" },
       { from: "mia", msg: "Plan Full $29.990/mes con todas las clases y acceso libre. ¿Te inscribo?" },
       { from: "client", msg: "Sí, quiero empezar" },
-      { from: "mia", msg: "? Listo! Tu primera clase es mañana, Yoga 7:00am. Te envío link de pago ???" },
+      { from: "mia", msg: "✅ Listo! Tu primera clase es mañana, Yoga 7:00am. Te envío link de pago 🧘‍♀️" },
     ],
     features: [
       { icon: Users, label: "Inscripción por chat" },
@@ -170,10 +170,10 @@ const useCases = [
     industry: "Educación", icon: GraduationCap, color: "#ec4899",
     tagline: "Matrícula llena, secretaría libre",
     chat: [
-      { from: "client", msg: "¿Tienen vacantes para tercero básico? ??" },
+      { from: "client", msg: "¿Tienen vacantes para tercero básico? 🎓" },
       { from: "mia", msg: "Sí, quedan 4 vacantes. Necesitas formulario + entrevista. ¿Te los envío?" },
       { from: "client", msg: "Sí, por favor envíalos" },
-      { from: "mia", msg: "?? Enviados! Entrevista agendada jueves 15:00. Te recordaré el día anterior." },
+      { from: "mia", msg: "📩 Enviados! Entrevista agendada jueves 15:00. Te recordaré el día anterior." },
     ],
     features: [
       { icon: MessageSquare, label: "Admisiones automáticas" },
@@ -186,10 +186,10 @@ const useCases = [
     industry: "Gastronomía", icon: Utensils, color: "#f97316",
     tagline: "Más mesas llenas, menos llamadas perdidas",
     chat: [
-      { from: "client", msg: "Quiero reservar mesa para 4, viernes 21h ??" },
+      { from: "client", msg: "Quiero reservar mesa para 4, viernes 21h 🍽️" },
       { from: "mia", msg: "¡Reservado! Mesa junto a la ventana. ¿Quieres ver el menú del viernes?" },
       { from: "client", msg: "Sí, me interesa verlo" },
-      { from: "mia", msg: "??? Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes!" },
+      { from: "mia", msg: "🍽️ Destacado: Risotto de hongos y Lomo al merlot. Te recuerdo el viernes!" },
     ],
     features: [
       { icon: Calendar, label: "Reservas por WhatsApp" },
@@ -347,17 +347,17 @@ const SolucionesPymes = () => {
 
                       {/* WhatsApp-style chat header */}
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a2e]/80 border-y border-white/[0.04]">
-                        <div className="text-white/30 text-xs">?</div>
+                        <div className="text-white/30 text-xs">←</div>
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-600/15 border border-emerald-500/20 flex items-center justify-center">
-                          <span className="text-[10px]">??</span>
+                          <span className="text-[10px]">🏢</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] font-semibold text-white/80">Tu Negocio</p>
                           <p className="text-[8px] text-white/25">en línea</p>
                         </div>
                         <div className="flex items-center gap-2 text-white/25">
-                          <span className="text-[11px]">??</span>
-                          <span className="text-[11px]">?</span>
+                          <span className="text-[11px]">📹</span>
+                          <span className="text-[11px]">📞</span>
                         </div>
                       </div>
 
@@ -411,12 +411,12 @@ const SolucionesPymes = () => {
 
                       {/* Input bar */}
                       <div className="flex items-center gap-1.5 px-2.5 py-2 bg-[#0c0c14] border-t border-white/[0.04]">
-                        <span className="text-white/15 text-xs">??</span>
+                        <span className="text-white/15 text-xs">😀</span>
                         <div className="flex-1 h-6 rounded-full bg-white/[0.04] border border-white/[0.05] flex items-center px-2.5">
                           <span className="text-[9px] text-white/15">Escribe un mensaje...</span>
                         </div>
                         <div className="w-6 h-6 rounded-full bg-white/[0.04] flex items-center justify-center">
-                          <span className="text-white/15 text-xs">??</span>
+                          <span className="text-white/15 text-xs">🎤</span>
                         </div>
                       </div>
 
