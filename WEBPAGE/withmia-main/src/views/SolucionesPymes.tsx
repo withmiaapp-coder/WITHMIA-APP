@@ -59,7 +59,7 @@ const boomerSymptoms = [
 
 const painPoints = [
   {
-    label: "As→ se sentía tu competencia... antes de automatizar",
+    label: "Así se sentía tu competencia... antes de automatizar",
     headline: "Canales\nfragmentados",
     description: "WhatsApp por un lado, Instagram por otro, el correo olvidado. Tu equipo salta entre 5 apps mientras el cliente se aburre de esperar.",
     icon: MessageCircle, color: "#f59e0b",
@@ -81,7 +81,7 @@ const painPoints = [
   {
     label: "Tu negocio duerme mientras tus clientes compran",
     headline: "Atención\n100% manual",
-    description: "Son las 11pm, un cliente quiere reservar. Tu teléfono está en silencio. A las 8am ya reservó con otro. As→ todos los días.",
+    description: "Son las 11pm, un cliente quiere reservar. Tu teléfono está en silencio. A las 8am ya reservó con otro. Así todos los días.",
     icon: PhoneOff, color: "#a78bfa",
     stat: "6h", statLabel: "respuesta promedio sin IA",
     consequences: ["0 respuestas fuera de horario", "Leads fríos al día siguiente", "Cada empleado nuevo = +$800/mes"],
@@ -173,7 +173,7 @@ const useCases = [
       { from: "client", msg: "¿Tienen vacantes para tercero básico? ??" },
       { from: "mia", msg: "Sí, quedan 4 vacantes. Necesitas formulario + entrevista. ¿Te los envío?" },
       { from: "client", msg: "Sí, por favor envíalos" },
-      { from: "mia", msg: "?? Enviados! Entrevista agendada jueves 15:00. Te recordar→ el día anterior." },
+      { from: "mia", msg: "?? Enviados! Entrevista agendada jueves 15:00. Te recordaré el día anterior." },
     ],
     features: [
       { icon: MessageSquare, label: "Admisiones automáticas" },
@@ -722,7 +722,7 @@ const SolucionesPymes = () => {
                   </span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed max-w-2xl mx-auto">
-                  No es opinión, son datos. Mientras lees esto, alguien te escribi→ y nadie contestá.{" "}
+                  No es opinión, son datos. Mientras lees esto, alguien te escribió y nadie contestó.{" "}
                   <span className="text-red-400/60 font-medium">Ese cliente ya no vuelve.</span>
                 </p>
               </div>
