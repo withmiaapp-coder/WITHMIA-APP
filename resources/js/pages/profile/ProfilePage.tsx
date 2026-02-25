@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   User, Mail, Phone, Building2, Shield, Calendar, Clock,
   Camera, Save, Loader2, Check, AlertCircle, MapPin, Globe,
-  Briefcase, Edit3, X
+  Briefcase, Edit3, X, ImagePlus
 } from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -15,6 +15,7 @@ interface ProfileData {
   phone: string | null;
   phone_country: string;
   avatar: string | null;
+  cover_photo: string | null;
   role: string;
   company_name: string;
   company_slug: string;
@@ -67,6 +68,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
     phone: user.phone || null,
     phone_country: 'CL',
     avatar: null,
+    cover_photo: null,
     role: user.role || 'user',
     company_name: user.company_name || '',
     company_slug: user.company_slug || '',
@@ -80,7 +82,9 @@ export default function ProfilePage({ user }: ProfilePageProps) {
   const [error, setError] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadProfile();
@@ -100,6 +104,7 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           phone: data.phone || null,
           phone_country: data.phone_country || 'CL',
           avatar: data.avatar || null,
+          cover_photo: data.cover_photo || null,
           role: data.role || 'user',
           company_name: data.company?.name || user.company_name || '',
           company_slug: data.company_slug || '',
@@ -170,6 +175,35 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       setError('Error al subir la imagen');
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La portada no puede superar los 10MB');
+      return;
+    }
+
+    try {
+      setCoverUploading(true);
+      const formData = new FormData();
+      formData.append('cover', file);
+
+      const response = await axios.post('/api/user/cover', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.success) {
+        setProfile(prev => ({ ...prev, cover_photo: response.data.data.cover_url }));
+        setOriginalProfile(prev => ({ ...prev, cover_photo: response.data.data.cover_url }));
+      }
+    } catch (err: unknown) {
+      setError('Error al subir la portada');
+    } finally {
+      setCoverUploading(false);
     }
   };
 
@@ -274,10 +308,47 @@ export default function ProfilePage({ user }: ProfilePageProps) {
         >
           {/* Banner + Avatar */}
           <div className="relative">
-            <div
-              className={`h-32 ${!t ? 'bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400' : ''}`}
-              style={t ? { background: `linear-gradient(135deg, ${t.accent}, ${t.accentLight})` } : undefined}
-            />
+            {/* Cover Photo / Banner */}
+            <div className="relative group/cover h-40 overflow-hidden">
+              {profile.cover_photo ? (
+                <img
+                  src={profile.cover_photo}
+                  alt="Portada"
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div
+                  className={`w-full h-full ${!t ? 'bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400' : ''}`}
+                  style={t ? { background: `linear-gradient(135deg, ${t.accent}, ${t.accentLight})` } : undefined}
+                />
+              )}
+              {/* Cover upload overlay */}
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute inset-0 bg-black/0 group-hover/cover:bg-black/30 flex items-center justify-center transition-all opacity-0 group-hover/cover:opacity-100 cursor-pointer"
+              >
+                {coverUploading ? (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-black/50 rounded-lg backdrop-blur-sm">
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    <span className="text-sm text-white font-medium">Subiendo...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-black/50 rounded-lg backdrop-blur-sm">
+                    <ImagePlus className="w-5 h-5 text-white" />
+                    <span className="text-sm text-white font-medium">Cambiar portada</span>
+                  </div>
+                )}
+              </button>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverUpload}
+              />
+            </div>
+            {/* Avatar */}
             <div className="absolute -bottom-12 left-6">
               <div className="relative group">
                 <div

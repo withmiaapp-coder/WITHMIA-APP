@@ -35,6 +35,7 @@ class UserController extends Controller
                     'phone' => $user->phone,
                     'phone_country' => $user->phone_country ?? 'CL',
                     'avatar' => $user->avatar,
+                    'cover_photo' => $user->cover_photo,
                     'role' => $user->role ?? 'user',
                     'company_slug' => $user->company_slug,
                     'company' => $user->company ? [
@@ -138,6 +139,42 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al subir la imagen',
+            ], 500);
+        }
+    }
+
+    public function uploadCover(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'No autenticado'], 401);
+            }
+
+            $request->validate([
+                'cover' => 'required|image|max:10240', // 10MB
+            ]);
+
+            $file = $request->file('cover');
+            $path = $file->store("covers/{$user->id}", 'public');
+            $url = asset("storage/{$path}");
+
+            $user->cover_photo = $url;
+            $user->save();
+
+            Cache::forget("user:profile:{$user->id}");
+
+            return response()->json([
+                'success' => true,
+                'data' => ['cover_url' => $url],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error uploading cover photo', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al subir la portada',
             ], 500);
         }
     }

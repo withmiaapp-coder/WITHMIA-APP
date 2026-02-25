@@ -154,6 +154,7 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/avatar', [UserController::class, 'uploadAvatar']);
+    Route::post('/cover', [UserController::class, 'uploadCover']);
 });
 
 // ============================================================================

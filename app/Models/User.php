@@ -139,6 +139,7 @@ class User extends Authenticatable
         'chatwoot_agent_role',
         'onboarding_completed_at',
         'settings',
+        'cover_photo',
     ];
 
     /**
