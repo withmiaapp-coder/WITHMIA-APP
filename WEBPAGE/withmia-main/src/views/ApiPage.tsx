@@ -40,7 +40,40 @@ import {
   FileJson,
   Ban,
   Timer,
+  Image,
+  BarChart3,
+  Users,
+  Bot,
+  ChevronDown,
+  HelpCircle,
+  History,
+  Filter,
+  ChevronsRight,
+  MessageSquare,
+  Send,
+  Upload,
+  Inbox,
+  Tag,
+  Search,
 } from "lucide-react";
+
+/* ─── Table of Contents ─── */
+const tocSections = [
+  { id: "hero", label: "Introducción" },
+  { id: "quickstart", label: "Inicio Rápido" },
+  { id: "reference", label: "Endpoints" },
+  { id: "capabilities", label: "Capacidades" },
+  { id: "sdks", label: "SDKs" },
+  { id: "webhooks", label: "Webhooks" },
+  { id: "auth", label: "Autenticación" },
+  { id: "errors", label: "Errores" },
+  { id: "limits", label: "Rate Limits" },
+  { id: "pagination", label: "Paginación" },
+  { id: "versioning", label: "Versionado" },
+  { id: "playground", label: "Playground" },
+  { id: "use-cases", label: "Casos de Uso" },
+  { id: "faq", label: "FAQ" },
+];
 
 /* ─── Data ─── */
 const endpoints = [
@@ -52,6 +85,14 @@ const endpoints = [
   { method: "DELETE", path: "/v1/webhooks/:id", desc: "Eliminar un webhook registrado", methodColor: "bg-red-400/[0.12] text-red-400 border-red-400/20", response: `{ "deleted": true, "id": "wh_5qR2" }` },
   { method: "GET", path: "/v1/channels", desc: "Listar canales conectados y estado", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "ch_wa1", "type": "whatsapp", "status": "connected", "phone": "+569..." }] }` },
   { method: "POST", path: "/v1/templates", desc: "Crear plantillas de mensajes HSM", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "tpl_9kM3", "name": "order_confirmed", "status": "pending_review", "language": "es" }` },
+  { method: "POST", path: "/v1/media", desc: "Subir archivos multimedia (imagen, video, documento)", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "med_4jL8", "type": "image/jpeg", "size": 245832, "url": "https://cdn.withmia.com/..." }` },
+  { method: "GET", path: "/v1/analytics", desc: "Métricas de mensajes, conversiones y uso por canal", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "period": "2026-02", "messages_sent": 12450, "delivered": 12103, "read": 9874, "response_rate": "82%" }` },
+  { method: "GET", path: "/v1/teams", desc: "Listar equipos de agentes y sus métricas", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "team_2K", "name": "Soporte", "agents": 8, "avg_response": "2m 34s" }] }` },
+  { method: "POST", path: "/v1/bots", desc: "Crear o configurar un bot de conversación", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "bot_6mN", "name": "Asistente ventas", "status": "active", "triggers": 3, "actions": 7 }` },
+  { method: "POST", path: "/v1/messages/bulk", desc: "Envío masivo a múltiples destinatarios", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "batch_id": "bat_9xQ3", "total": 500, "queued": 500, "estimated_completion": "~45s" }` },
+  { method: "GET", path: "/v1/contacts/:id/history", desc: "Historial completo de interacciones de un contacto", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "type": "message", "direction": "inbound", "text": "Hola...", "at": "2026-02-24T..." }], "total": 47 }` },
+  { method: "PATCH", path: "/v1/conversations/:id/assign", desc: "Asignar conversación a agente o equipo", methodColor: "bg-violet-400/[0.12] text-violet-400 border-violet-400/20", response: `{ "id": "conv_3fR9", "assigned_to": "agent_5xK", "assigned_team": "team_2K", "updated_at": "..." }` },
+  { method: "GET", path: "/v1/tags", desc: "Listar etiquetas disponibles con conteo de uso", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "tag_vip", "name": "VIP", "color": "#f59e0b", "contacts_count": 142 }] }` },
 ];
 
 const sdks = [
@@ -218,6 +259,50 @@ app.post("/webhook", (req, res) => {
   },
 ];
 
+const changelog = [
+  { version: "v1.4.0", date: "Feb 2026", changes: ["Endpoint /v1/messages/bulk para envío masivo", "Soporte para archivos multimedia hasta 50MB", "Nuevo SDK para Go (beta)"], type: "feature" },
+  { version: "v1.3.2", date: "Ene 2026", changes: ["Fix: Rate limit headers inconsistentes en /v1/analytics", "Mejora de latencia en webhooks (p95: 18ms → 12ms)"], type: "fix" },
+  { version: "v1.3.0", date: "Dic 2025", changes: ["Endpoint /v1/bots para configurar chatbots", "Scopes granulares por recurso (OAuth 2.0)", "Paginación cursor-based en todas las listas"], type: "feature" },
+  { version: "v1.2.0", date: "Nov 2025", changes: ["Endpoint /v1/analytics con métricas por canal", "Idempotency keys para POST requests", "Soporte para Instagram DM como canal"], type: "feature" },
+  { version: "v1.1.0", date: "Oct 2025", changes: ["Endpoint /v1/teams para gestión de agentes", "Webhook event: bot.handoff", "Sandbox environment disponible"], type: "feature" },
+  { version: "v1.0.0", date: "Sep 2025", changes: ["Lanzamiento público de la API", "Endpoints core: messages, conversations, contacts, webhooks, channels", "SDKs oficiales: Node.js, Python, cURL"], type: "release" },
+];
+
+const faqItems = [
+  {
+    q: "¿Cuánto cuesta usar la API de WITHMIA?",
+    a: "El plan Sandbox es 100% gratuito con 100 requests/minuto. Los planes pagados empiezan en $49/mes (Starter) con 1,000 req/min. Enterprise tiene límites custom. No se cobra por mensaje individual — solo por plan.",
+  },
+  {
+    q: "¿Qué canales de comunicación soporta la API?",
+    a: "WhatsApp Business, Instagram DM, Facebook Messenger, Email, Webchat y API directa. Todos los canales se manejan con los mismos endpoints — solo cambia el campo 'channel' en el request.",
+  },
+  {
+    q: "¿Cómo manejo los errores y reintentos?",
+    a: "Todos los errores siguen un formato JSON estandarizado con type, code, message, param y doc_url. Los SDKs oficiales implementan retry automático con backoff exponencial. Para errores 429, respetamos el header Retry-After.",
+  },
+  {
+    q: "¿La API soporta envío masivo de mensajes?",
+    a: "Sí, el endpoint POST /v1/messages/bulk permite enviar a múltiples destinatarios en una sola request. Soporta hasta 10,000 destinatarios por batch con templates HSM aprobados por WhatsApp.",
+  },
+  {
+    q: "¿Cómo funciona la autenticación?",
+    a: "Usamos OAuth 2.0 con Bearer tokens. Genera API keys desde el dashboard con scopes granulares (ej: messages:write, contacts:read). Soportamos rotación de tokens sin downtime con dos tokens activos simultáneamente.",
+  },
+  {
+    q: "¿Tienen entorno de testing/sandbox?",
+    a: "Sí. Cada cuenta incluye un sandbox gratuito con datos fake pre-cargados. Usa tokens sk_test_... para sandbox y sk_live_... para producción. El sandbox simula latencia y respuestas reales sin enviar mensajes.",
+  },
+  {
+    q: "¿Qué tan rápida es la API?",
+    a: "P95 latency de 23ms. Los webhooks se entregan en menos de 100ms. Tenemos infraestructura multi-región con 99.9% SLA. Los SDKs incluyen connection pooling y keep-alive para máximo throughput.",
+  },
+  {
+    q: "¿Puedo migrar desde Twilio/Chatwoot/otro proveedor?",
+    a: "Sí. Ofrecemos endpoints de importación de datos (/v1/contacts/import) y guías de migración paso a paso. La API de WITHMIA es compatible con formatos estándar y nuestro equipo ofrece soporte personalizado para migraciones enterprise.",
+  },
+];
+
 /* ─── Component ─── */
 const ApiPage = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -225,6 +310,17 @@ const ApiPage = () => {
   const [copied, setCopied] = useState<string | null>(null);
   const [activeSDK, setActiveSDK] = useState(0);
   const [activeEndpoint, setActiveEndpoint] = useState(0);
+  const [activeTocSection, setActiveTocSection] = useState("hero");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [playgroundMethod, setPlaygroundMethod] = useState("POST");
+  const [playgroundPath, setPlaygroundPath] = useState("/v1/messages");
+  const [playgroundBody, setPlaygroundBody] = useState(`{
+  "channel": "whatsapp",
+  "to": "+56912345678",
+  "text": "Hola desde el playground!"
+}`);
+  const [playgroundResponse, setPlaygroundResponse] = useState<string | null>(null);
+  const [playgroundLoading, setPlaygroundLoading] = useState(false);
 
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -236,6 +332,42 @@ const ApiPage = () => {
     }
   };
 
+  // Simulate API playground
+  const handlePlaygroundRun = () => {
+    setPlaygroundLoading(true);
+    setPlaygroundResponse(null);
+    setTimeout(() => {
+      setPlaygroundResponse(JSON.stringify({
+        id: `msg_${Math.random().toString(36).substring(2, 9)}`,
+        status: "queued",
+        channel: "whatsapp",
+        to: "+56912345678",
+        created_at: new Date().toISOString(),
+        _meta: { sandbox: true, latency_ms: 23 }
+      }, null, 2));
+      setPlaygroundLoading(false);
+    }, 800 + Math.random() * 400);
+  };
+
+  // TOC scroll spy
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveTocSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+    );
+    tocSections.forEach(({ id }) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const latency = useCountUp(23, 1200);
   const uptime = useCountUp(99, 1400);
   const requests = useCountUp(1000, 1800);
@@ -244,10 +376,29 @@ const ApiPage = () => {
     <div className="min-h-screen api-page">
       <div className="pt-20">
 
+        {/* ── Sticky Table of Contents Sidebar ── */}
+        <nav className="fixed left-0 top-24 z-40 hidden xl:flex flex-col gap-0.5 w-44 pl-4 pr-2 py-3" aria-label="Tabla de contenidos">
+          <span className="text-[9px] font-mono text-white/15 uppercase tracking-[0.2em] mb-2 pl-3">En esta página</span>
+          {tocSections.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+              className={`text-[11px] pl-3 py-1 border-l-2 transition-all duration-200 font-medium ${
+                activeTocSection === s.id
+                  ? "text-amber-400/80 border-amber-400/60 bg-amber-400/[0.04]"
+                  : "text-white/20 border-white/[0.04] hover:text-white/40 hover:border-white/[0.12]"
+              }`}
+            >
+              {s.label}
+            </a>
+          ))}
+        </nav>
+
         {/* ══════════════════════════════════════════
             HERO — Stripe-style split layout
             ══════════════════════════════════════════ */}
-        <section className="relative overflow-hidden border-b border-white/[0.04]">
+        <section className="relative overflow-hidden border-b border-white/[0.04]" id="hero">
           {/* Subtle grid bg */}
           <div className="absolute inset-0 pointer-events-none" aria-hidden>
             <div className="absolute inset-0 api-grid-bg opacity-[0.02]" />
@@ -415,7 +566,7 @@ const ApiPage = () => {
         {/* ══════════════════════════════════════════
             QUICKSTART — 3-step numbered guide
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative">
+        <section className="py-24 relative" id="quickstart">
           <div className="max-w-5xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">
@@ -632,14 +783,7 @@ const ApiPage = () => {
                       </div>
                       <div className="rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
                         <pre className="text-[11px] font-mono text-white/35 leading-relaxed overflow-x-auto">
-                          <code>{`{
-  "data": [...],
-  "meta": {
-    "page": 1,
-    "per_page": 20,
-    "total": 142
-  }
-}`}</code>
+                          <code>{endpoints[activeEndpoint].response}</code>
                         </pre>
                       </div>
                     </div>
@@ -653,7 +797,7 @@ const ApiPage = () => {
         {/* ══════════════════════════════════════════
             CAPABILITIES — Minimal feature grid
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative">
+        <section className="py-24 relative" id="capabilities">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="text-center mb-16">
@@ -794,7 +938,7 @@ const ApiPage = () => {
         {/* ══════════════════════════════════════════
             WEBHOOKS — Events list + payload
             ══════════════════════════════════════════ */}
-        <section className="py-24 relative border-t border-white/[0.04]">
+        <section className="py-24 relative border-t border-white/[0.04]" id="webhooks">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal>
               <div className="flex items-end justify-between mb-12">
@@ -966,7 +1110,7 @@ const ApiPage = () => {
                         <span className="text-cyan-400/50">{"    "}"messages:write"</span><span className="text-white/10">,</span>{"\n"}
                         <span className="text-cyan-400/50">{"    "}"conversations:read"</span><span className="text-white/10">,</span>{"\n"}
                         <span className="text-cyan-400/50">{"    "}"contacts:read"</span>{"\n"}
-                        <span className="text-white/15">{"  "]"}</span>{"\n"}
+                        <span className="text-white/15">{"  ]"}</span>{"\n"}
                         <span className="text-white/15">{"}"}</span><span className="text-white/15">);</span>{"\n\n"}
                         <span className="text-white/20">{"// Headers enviados automáticamente:"}</span>{"\n"}
                         <span className="text-white/20">{"// Authorization: Bearer sk_live_..."}</span>{"\n"}

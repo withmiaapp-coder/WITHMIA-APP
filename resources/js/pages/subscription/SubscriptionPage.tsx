@@ -11,6 +11,7 @@ import {
   ExternalLink,
   RefreshCw,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   MessageCircle,
   Bot,
@@ -22,6 +23,8 @@ import {
   X,
   Copy,
   Gift,
+  Lock,
+  HelpCircle,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -83,6 +86,13 @@ const FREE_PLAN_LIMITS = [
   { icon: Headphones, text: 'Soporte prioritario', included: false },
 ];
 
+const FAQ_ITEMS = [
+  { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, puedes cancelar tu suscripción cuando quieras. Mantendrás el acceso hasta el final del período de facturación.' },
+  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) a través de nuestra plataforma de pagos segura.' },
+  { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional por cada miembro extra. El cobro se prorratea según los días restantes del ciclo.' },
+  { q: '¿Hay algún contrato o permanencia mínima?', a: 'No, no hay contratos ni permanencia mínima. Pagas mes a mes o año a año, sin compromiso.' },
+];
+
 /* ═══════════════════════════════════════════
    SUBSCRIPTION PAGE
    ═══════════════════════════════════════════ */
@@ -113,6 +123,8 @@ export default function SubscriptionPage() {
   const [referralCode, setReferralCode] = useState('');
   const [applyingReferral, setApplyingReferral] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [showReferral, setShowReferral] = useState(false);
 
   // Pricing
   const BASE_PRICE_MONTHLY = 18;
@@ -253,280 +265,120 @@ export default function SubscriptionPage() {
   const computedTotal = basePrice + (additionalMembers * perMemberPrice);
 
   return (
-    <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="h-full overflow-y-auto p-6 md:p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+      <div className="max-w-5xl mx-auto space-y-10">
 
-        {/* Header */}
-        <div className="flex items-center space-x-3 mb-2">
-          <div
-            className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : ''}`}
-            style={t ? { background: t.accent } : undefined}
-          >
-            <CreditCard className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Suscripción</h1>
-            <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Gestiona tu plan y método de pago</p>
-          </div>
+        {/* ═══════ HEADER ═══════ */}
+        <div>
+          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+            Planes y facturación
+          </h1>
+          <p className={`text-sm mt-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+            Gestiona tu suscripción, método de pago y facturación.
+          </p>
         </div>
 
-        {/* ────── Current Plan Status ────── */}
+        {/* ═══════ CURRENT PLAN BANNER ═══════ */}
         <div
-          className={`rounded-2xl shadow-sm overflow-hidden ${!t ? 'bg-white border border-slate-200' : ''}`}
+          className={`rounded-xl p-4 flex items-center justify-between flex-wrap gap-4 ${!t ? 'bg-white border border-slate-200' : ''}`}
           style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
         >
-          <div className="p-6">
-            <h2 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Detalles de la suscripción</h2>
+          <div className="flex items-center gap-3">
+            <div
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide ${
+                isActive
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : isTrial
+                    ? 'bg-amber-100 text-amber-700'
+                    : (!t ? 'bg-slate-100 text-slate-600' : '')
+              }`}
+              style={!isActive && !isTrial && t ? { background: t.subtleBg, color: t.textMuted } : undefined}
+            >
+              {isActive ? 'Activo' : isTrial ? 'Trial' : 'Gratis'}
+            </div>
+            <span className={`text-sm font-medium ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+              {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba Gratuita' : 'Plan Gratuito'}
+            </span>
+            {isActive && sub && (
+              <span className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                · ${sub.price} USD/{sub.billing_cycle === 'monthly' ? 'mes' : 'año'}
+              </span>
+            )}
+            {isTrial && billing?.trial_days_remaining != null && (
+              <span className="text-sm text-amber-600 font-medium">
+                · {billing.trial_days_remaining} días restantes
+              </span>
+            )}
+          </div>
+          {isActive && (
+            <button
+              onClick={handleManageSubscription}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${!t ? 'text-indigo-600 hover:bg-indigo-50' : ''}`}
+              style={t ? { color: t.accent } : undefined}
+            >
+              Gestionar <ExternalLink className="w-3 h-3 inline ml-0.5" />
+            </button>
+          )}
+        </div>
 
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                {/* Plan badge */}
-                <div
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${
-                    isActive 
-                      ? 'bg-emerald-100 text-emerald-700' 
-                      : isTrial 
-                        ? 'bg-amber-100 text-amber-700' 
-                        : (!t ? 'bg-slate-100 text-slate-600' : '')
-                  }`}
-                  style={!isActive && !isTrial && t ? { background: t.subtleBg, color: t.textMuted } : undefined}
-                >
-                  {isActive ? 'Activo' : isTrial ? 'Prueba Gratuita' : 'Sin Plan'}
-                </div>
-
-                <div>
-                  <p className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                    {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba Gratuita' : 'Plan Gratuito'}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {isActive && sub ? (
-                      <>
-                        <span className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                          ${sub.price} USD
-                        </span>
-                        <span className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                          /{sub.billing_cycle === 'monthly' ? 'mes' : 'año'}
-                        </span>
-                      </>
-                    ) : isTrial && billing?.trial_days_remaining != null ? (
-                      <div className="flex items-center gap-2 text-amber-600">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                          {billing.trial_days_remaining} días restantes de la prueba gratuita
-                        </span>
-                      </div>
-                    ) : (
-                      <span className={`text-lg font-bold ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>$0 USD</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment method */}
-              {isActive && sub?.payment_info?.last_four && (
-                <div
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3 ${!t ? 'bg-slate-50' : ''}`}
-                  style={t ? { background: t.subtleBg } : undefined}
-                >
-                  <CreditCard className={`w-5 h-5 ${!t ? 'text-slate-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
-                  <div>
-                    <p className={`text-xs ${!t ? 'text-slate-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Método de pago</p>
-                    <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
-                      {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
-                    </p>
-                  </div>
-                </div>
+        {/* ═══════ PLAN SELECTION (when no active sub) ═══════ */}
+        {!isActive && (
+          <>
+            {/* Billing cycle toggle */}
+            <div className="flex items-center justify-center gap-3">
+              <span className={`text-sm font-medium ${!t ? (billingCycle === 'monthly' ? 'text-neutral-800' : 'text-neutral-400') : ''}`}
+                style={t ? { color: billingCycle === 'monthly' ? t.textPrimary : t.textMuted } : undefined}
+              >Mensual</span>
+              <button
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+                className="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
+                style={{ background: billingCycle === 'annual' ? (t ? t.accent : '#6366f1') : (t ? (isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db') : '#d1d5db') }}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+              <span className={`text-sm font-medium ${!t ? (billingCycle === 'annual' ? 'text-neutral-800' : 'text-neutral-400') : ''}`}
+                style={t ? { color: billingCycle === 'annual' ? t.textPrimary : t.textMuted } : undefined}
+              >Anual</span>
+              {billingCycle === 'annual' && (
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  -17%
+                </span>
               )}
             </div>
 
-            {/* Team pricing breakdown */}
-            {isActive && additionalMembers > 0 && (
-              <div
-                className={`mt-4 p-3 rounded-xl ${!t ? 'bg-indigo-50/50 border border-indigo-100' : ''}`}
-                style={t ? { background: t.accentLight || t.subtleBg, border: `1px solid ${t.cardBorder}` } : undefined}
-              >
-                <div className={`flex items-center gap-2 text-sm ${!t ? 'text-indigo-700' : ''}`} style={t ? { color: t.accent } : undefined}>
-                  <Users className="w-4 h-4" />
-                  <span>
-                    Plan base ${basePrice}/mes + {additionalMembers} miembro{additionalMembers > 1 ? 's' : ''} adicional{additionalMembers > 1 ? 'es' : ''} (${additionalMembers * perMemberPrice}/mes) = <strong>${computedTotal}/mes</strong>
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            {isActive && (
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={handleManageSubscription}
-                  className={`text-sm font-medium flex items-center gap-1 ${!t ? 'text-indigo-600 hover:text-indigo-800' : ''}`}
-                  style={t ? { color: t.accent } : undefined}
-                >
-                  Gestionar suscripción <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ────── Referral Code ────── */}
-        <div
-          className={`rounded-2xl shadow-sm p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
-          style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <Gift className={`w-5 h-5 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined} />
-            <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
-              ¿Tienes un código de referido?
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={referralCode}
-              onChange={(e) => setReferralCode(e.target.value)}
-              placeholder="Código de referido"
-              className={`flex-1 px-4 py-2.5 rounded-xl text-sm focus:outline-none ${!t ? 'border border-gray-300 text-gray-900 placeholder:text-gray-400 bg-white focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
-              style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
-            />
-            <button
-              onClick={handleApplyReferral}
-              disabled={applyingReferral || !referralCode.trim()}
-              className={`px-5 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 ${!t ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-white'}`}
-              style={t ? { background: t.accent } : undefined}
-            >
-              {applyingReferral ? <Loader className="w-4 h-4 animate-spin" /> : null}
-              Aplicar
-            </button>
-          </div>
-        </div>
-
-        {/* ────── Plan Selection ────── */}
-        {!isActive && (
-          <>
-            {/* Title */}
-            <div className="text-center space-y-2 pt-4">
-              <h2 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                Escoge el plan perfecto
-              </h2>
-              <p className={`text-sm max-w-lg mx-auto ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                Descubre el plan perfecto para el tamaño y necesidad de tu negocio, te ayudamos en el proceso.
-              </p>
-            </div>
-
-            {/* Billing cycle toggle */}
-            <div className="flex justify-center">
-              <div
-                className={`rounded-full p-1 flex ${!t ? 'bg-slate-100' : ''}`}
-                style={t ? { background: t.subtleBg } : undefined}
-              >
-                <button
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    !t ? (billingCycle === 'monthly'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-neutral-600 hover:text-neutral-800') : ''
-                  }`}
-                  style={t ? {
-                    background: billingCycle === 'monthly' ? t.accent : 'transparent',
-                    color: billingCycle === 'monthly' ? '#fff' : t.textMuted,
-                  } : undefined}
-                >
-                  Mensual
-                </button>
-                <button
-                  onClick={() => setBillingCycle('annual')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    !t ? (billingCycle === 'annual'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-neutral-600 hover:text-neutral-800') : ''
-                  }`}
-                  style={t ? {
-                    background: billingCycle === 'annual' ? t.accent : 'transparent',
-                    color: billingCycle === 'annual' ? '#fff' : t.textMuted,
-                  } : undefined}
-                >
-                  Anual
-                  <span className="ml-1.5 text-xs opacity-80">-17%</span>
-                </button>
-              </div>
-            </div>
-
             {/* Plan Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto items-stretch">
 
               {/* ── Free Plan Card ── */}
               <div
-                className={`relative rounded-2xl p-[2px] ${!t ? 'bg-slate-300' : ''}`}
-                style={t ? { background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)' } : undefined}
+                className={`rounded-2xl flex flex-col ${!t ? 'bg-white border border-slate-200' : ''}`}
+                style={t ? { background: isDark ? 'rgba(0,0,0,0.5)' : '#ffffff', border: `1px solid ${t.cardBorder}` } : undefined}
               >
-                {/* Current badge */}
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <div
-                    className={`px-4 py-1 text-xs font-bold rounded-full shadow-md ${!t ? 'bg-slate-200 text-slate-700' : ''}`}
-                    style={t ? { background: isDark ? 'rgba(255,255,255,0.15)' : '#e2e8f0', color: isDark ? '#e2e8f0' : '#475569' } : undefined}
-                  >
-                    PLAN ACTUAL
-                  </div>
-                </div>
-
-                <div
-                  className={`rounded-[14px] p-8 ${!t ? 'bg-white' : ''}`}
-                  style={t ? { background: isDark ? 'rgba(0,0,0,0.85)' : '#ffffff' } : undefined}
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <p className={`text-xs font-medium uppercase tracking-wider ${!t ? 'text-slate-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Básico</p>
-                      <h3 className={`text-2xl font-bold mt-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>Plan Gratuito</h3>
-                    </div>
-                    <div
-                      className={`p-3 rounded-xl ${!t ? 'bg-slate-100' : ''}`}
-                      style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' } : undefined}
-                    >
-                      <Shield className={`w-6 h-6 ${!t ? 'text-slate-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined} />
-                    </div>
-                  </div>
-
-                  {/* Price */}
+                <div className="p-7 flex-1 flex flex-col">
                   <div className="mb-6">
-                    <div className="flex items-end gap-1">
-                      <span className={`text-4xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>$0</span>
-                      <span className={`text-lg mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>USD/mes</span>
-                    </div>
-                    <p className={`text-sm mt-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>
-                      Para empezar a explorar
-                    </p>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${!t ? 'text-slate-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Gratis</p>
+                    <h3 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>Plan Gratuito</h3>
+                    <p className={`text-sm mt-2 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Para empezar a explorar</p>
                   </div>
 
-                  {/* Features */}
-                  <div className="space-y-3 mb-8">
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Incluye</p>
+                  <div className="flex items-end gap-1 mb-6">
+                    <span className={`text-4xl font-bold tracking-tight ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>$0</span>
+                    <span className={`text-sm mb-1.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>/mes</span>
+                  </div>
+
+                  <div className="space-y-3 flex-1">
                     {FREE_PLAN_LIMITS.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div
-                          className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
-                            item.included
-                              ? (!t ? 'bg-emerald-100' : '')
-                              : (!t ? 'bg-red-100/60' : '')
-                          }`}
-                          style={t ? {
-                            background: item.included
-                              ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.12)')
-                              : (isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)')
-                          } : undefined}
-                        >
-                          {item.included ? (
-                            <Check className="w-3 h-3 text-emerald-600" />
-                          ) : (
-                            <X className="w-3 h-3 text-red-400" />
-                          )}
-                        </div>
+                      <div key={i} className="flex items-center gap-2.5">
+                        {item.included ? (
+                          <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        ) : (
+                          <X className={`w-4 h-4 flex-shrink-0 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: isDark ? '#475569' : '#cbd5e1' } : undefined} />
+                        )}
                         <span
                           className={`text-sm ${
                             item.included
                               ? (!t ? 'text-neutral-700' : '')
-                              : (!t ? 'text-neutral-400 line-through' : 'line-through opacity-45')
+                              : (!t ? 'text-neutral-400' : '')
                           }`}
                           style={t ? { color: item.included ? (isDark ? '#e2e8f0' : '#334155') : (isDark ? '#64748b' : '#94a3b8') } : undefined}
                         >
@@ -535,13 +387,13 @@ export default function SubscriptionPage() {
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  {/* Current plan indicator */}
+                <div className="px-7 pb-7">
                   <div
-                    className={`w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${!t ? 'bg-slate-100 text-slate-500' : ''}`}
+                    className={`w-full py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${!t ? 'bg-slate-100 text-slate-500' : ''}`}
                     style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9', color: isDark ? '#94a3b8' : '#64748b' } : undefined}
                   >
-                    <Check className="w-4 h-4" />
                     Plan actual
                   </div>
                 </div>
@@ -549,142 +401,70 @@ export default function SubscriptionPage() {
 
               {/* ── Pro Plan Card ── */}
               <div
-                className={`relative rounded-2xl p-[2px] shadow-xl ${!t ? 'bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 shadow-indigo-200' : ''}`}
-                style={t ? { background: t.accent, boxShadow: `0 20px 25px -5px color-mix(in srgb, ${t.accent} 20%, transparent)` } : undefined}
+                className={`rounded-2xl flex flex-col relative ${!t ? 'bg-white border-2 border-indigo-500 shadow-lg shadow-indigo-100' : ''}`}
+                style={t ? { background: isDark ? 'rgba(0,0,0,0.5)' : '#ffffff', border: `2px solid ${t.accent}`, boxShadow: `0 10px 40px -10px color-mix(in srgb, ${t.accent} 25%, transparent)` } : undefined}
               >
-                {/* Popular badge */}
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <div className="px-4 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full shadow-md">
-                    RECOMENDADO
-                  </div>
+                {/* Badge */}
+                <div className="absolute -top-3 left-6">
+                  <span className="px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full shadow-sm">
+                    Recomendado
+                  </span>
                 </div>
 
-                <div
-                  className={`rounded-[14px] p-8 ${!t ? 'bg-white' : ''}`}
-                  style={t ? { background: isDark ? 'rgba(0,0,0,0.85)' : '#ffffff' } : undefined}
-                >
-                  {/* Plan header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <p className={`text-xs font-medium uppercase tracking-wider ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>Plan Único</p>
-                      <h3 className={`text-2xl font-bold mt-1 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>WITHMIA Pro</h3>
-                    </div>
-                    <div
-                      className={`p-3 rounded-xl ${!t ? 'bg-indigo-100' : ''}`}
-                      style={t ? { background: t.badgeBg } : undefined}
-                    >
-                      <Crown className={`w-6 h-6 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
+                <div className="p-7 flex-1 flex flex-col">
                   <div className="mb-6">
-                    <div className="flex items-end gap-1">
-                      <span className={`text-4xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>${basePrice}</span>
-                      <span className={`text-lg mb-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>USD/{billingCycle === 'monthly' ? 'mes' : 'mes'}</span>
-                    </div>
-                    {billingCycle === 'annual' && (
-                      <p className="text-sm text-emerald-600 mt-1 font-medium">
-                        Ahorras ${(BASE_PRICE_MONTHLY - BASE_PRICE_ANNUAL) * 12} USD/año
-                      </p>
-                    )}
-                    <div
-                      className={`mt-2 px-3 py-2 rounded-lg ${!t ? 'bg-indigo-50' : ''}`}
-                      style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' } : undefined}
-                    >
-                      <p className={`text-xs ${!t ? 'text-indigo-700' : ''}`} style={t ? { color: t.accent } : undefined}>
-                        <Users className="w-3.5 h-3.5 inline mr-1" />
-                        +${perMemberPrice} USD/{billingCycle === 'monthly' ? 'mes' : 'mes'} por cada miembro adicional del equipo
-                      </p>
-                    </div>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>Pro</p>
+                    <h3 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>WITHMIA Pro</h3>
+                    <p className={`text-sm mt-2 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Todo lo que necesitas para escalar</p>
                   </div>
 
-                  {/* Team calc */}
-                  {teamCount > 1 && (
-                    <div
-                      className={`mb-6 p-3 rounded-xl ${!t ? 'bg-slate-50 border border-slate-100' : ''}`}
-                      style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` } : undefined}
-                    >
-                      <p className={`text-xs mb-1 ${!t ? 'text-slate-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Tu equipo actual ({teamCount} miembros)</p>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <span className={`text-sm ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: isDark ? '#cbd5e1' : '#475569' } : undefined}>Base + {additionalMembers} extra</span>
-                        </div>
-                        <span className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>${computedTotal}/mes</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex items-end gap-1 mb-1">
+                    <span className={`text-4xl font-bold tracking-tight ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>${basePrice}</span>
+                    <span className={`text-sm mb-1.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>USD/mes</span>
+                  </div>
+                  <p className={`text-xs mb-6 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>
+                    +${perMemberPrice}/mes por miembro adicional
+                  </p>
 
-                  {/* Features */}
-                  <div className="space-y-3 mb-8">
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Todo incluido</p>
+                  <div className="space-y-3 flex-1">
                     {PLAN_FEATURES.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div
-                          className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${!t ? 'bg-indigo-100' : ''}`}
-                          style={t ? { background: isDark ? 'rgba(255,255,255,0.1)' : t.badgeBg } : undefined}
-                        >
-                          <Check className={`w-3 h-3 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
-                        </div>
+                      <div key={i} className="flex items-center gap-2.5">
+                        <Check className={`w-4 h-4 flex-shrink-0 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                         <span className={`text-sm ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: isDark ? '#e2e8f0' : '#334155' } : undefined}>{feature.text}</span>
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  {/* Subscribe button */}
+                <div className="px-7 pb-7">
                   <button
                     onClick={handleSubscribe}
                     disabled={subscribing}
-                    className={`w-full py-3.5 text-white rounded-xl font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${!t ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200' : 'shadow-lg'}`}
+                    className={`w-full py-3 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                     style={t ? { background: t.accent } : undefined}
                   >
                     {subscribing ? (
-                      <>
-                        <Loader className="w-4 h-4 animate-spin" />
-                        Procesando...
-                      </>
+                      <><Loader className="w-4 h-4 animate-spin" /> Procesando...</>
                     ) : (
-                      <>
-                        <Zap className="w-4 h-4" />
-                        Suscribirse ahora
-                      </>
+                      <>Comenzar con Pro <ChevronRight className="w-4 h-4" /></>
                     )}
                   </button>
-
-                  {/* Extra costs */}
-                  <div className="mt-4 text-center">
-                    <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>
-                      USD ${basePrice}.00/{billingCycle === 'monthly' ? 'mes' : 'mes'} por el plan base
-                    </p>
-                    <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>
-                      USD ${perMemberPrice}.00/{billingCycle === 'monthly' ? 'mes' : 'mes'} por miembro adicional
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
           </>
         )}
 
-        {/* ────── Active Subscription Management ────── */}
+        {/* ═══════ ACTIVE SUBSCRIPTION DETAILS ═══════ */}
         {isActive && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Current Plan Card */}
+            {/* Plan overview */}
             <div
-              className={`rounded-2xl shadow-sm p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
+              className={`rounded-xl p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
               style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className={`p-2 rounded-lg ${!t ? 'bg-indigo-100' : ''}`}
-                  style={t ? { background: t.badgeBg } : undefined}
-                >
-                  <Crown className={`w-5 h-5 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
-                </div>
-                <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Tu Plan</h3>
-              </div>
-
-              <div className="space-y-3">
+              <h3 className={`text-sm font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Funcionalidades incluidas</h3>
+              <div className="space-y-2.5">
                 {PLAN_FEATURES.slice(0, 5).map((f, i) => (
                   <div key={i} className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
@@ -692,30 +472,31 @@ export default function SubscriptionPage() {
                   </div>
                 ))}
                 <p className={`text-xs font-medium pt-1 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>
-                  + {PLAN_FEATURES.length - 5} beneficios más incluidos
+                  + {PLAN_FEATURES.length - 5} más incluidos
                 </p>
               </div>
+
+              {additionalMembers > 0 && (
+                <div
+                  className={`mt-4 p-3 rounded-lg text-xs ${!t ? 'bg-slate-50 text-slate-600' : ''}`}
+                  style={t ? { background: t.subtleBg, color: t.textSec } : undefined}
+                >
+                  <Users className="w-3.5 h-3.5 inline mr-1" />
+                  Base + {additionalMembers} extra = <strong>${computedTotal}/mes</strong>
+                </div>
+              )}
             </div>
 
-            {/* Payment Method Card */}
+            {/* Payment method */}
             <div
-              className={`rounded-2xl shadow-sm p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
+              className={`rounded-xl p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
               style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className={`p-2 rounded-lg ${!t ? 'bg-slate-100' : ''}`}
-                  style={t ? { background: t.subtleBg } : undefined}
-                >
-                  <CreditCard className={`w-5 h-5 ${!t ? 'text-slate-600' : ''}`} style={t ? { color: t.textMuted } : undefined} />
-                </div>
-                <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Método de Pago</h3>
-              </div>
-
+              <h3 className={`text-sm font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Método de pago</h3>
               {sub?.payment_info?.last_four ? (
                 <div className="space-y-4">
                   <div
-                    className={`flex items-center gap-3 p-3 rounded-xl ${!t ? 'bg-slate-50' : ''}`}
+                    className={`flex items-center gap-3 p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
                     style={t ? { background: t.subtleBg } : undefined}
                   >
                     <div
@@ -724,34 +505,30 @@ export default function SubscriptionPage() {
                     >
                       <CreditCard className="w-4 h-4 text-white" />
                     </div>
-                    <div>
-                      <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
-                        {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
-                      </p>
-                    </div>
+                    <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
+                      {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
+                    </p>
                   </div>
                   <button
                     onClick={handleManageSubscription}
-                    className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!t ? 'border border-gray-300 text-gray-800 hover:bg-gray-50' : ''}`}
+                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!t ? 'border border-gray-200 text-gray-700 hover:bg-gray-50' : ''}`}
                     style={t ? { border: `1px solid ${t.inputBorder}`, color: t.textPrimary, background: 'transparent' } : undefined}
                   >
-                    Cambiar método de pago
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    Cambiar método <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <CreditCard className={`w-10 h-10 mx-auto mb-2 ${!t ? 'text-slate-300' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                <div className="text-center py-6">
+                  <CreditCard className={`w-8 h-8 mx-auto mb-2 ${!t ? 'text-slate-300' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                   <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                    No hay método de pago registrado
+                    Sin método registrado
                   </p>
                   <button
                     onClick={handleSubscribe}
-                    className={`px-5 py-2.5 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2 mx-auto ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                    className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
                     style={t ? { background: t.accent } : undefined}
                   >
-                    <CreditCard className="w-4 h-4" />
-                    Agregar Método de Pago
+                    Agregar método
                   </button>
                 </div>
               )}
@@ -759,14 +536,95 @@ export default function SubscriptionPage() {
           </div>
         )}
 
-        {/* ────── Need Help ────── */}
-        <div
-          className={`rounded-2xl p-6 text-center ${!t ? 'bg-gradient-to-r from-slate-50 to-indigo-50/30 border border-slate-200' : ''}`}
-          style={t ? { background: t.subtleBg, border: `1px solid ${t.cardBorder}` } : undefined}
-        >
-          <p className={`text-sm ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
-            ¿Tienes dudas sobre tu suscripción? Escríbenos a{' '}
-            <a href="mailto:soporte@withmia.com" className={`font-medium hover:underline ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined}>
+        {/* ═══════ TRUST SIGNALS ═══════ */}
+        {!isActive && (
+          <div className="flex flex-wrap items-center justify-center gap-6 py-2">
+            {[
+              { icon: Shield, label: 'Pagos seguros SSL' },
+              { icon: RefreshCw, label: 'Cancela cuando quieras' },
+              { icon: Clock, label: 'Sin contratos' },
+              { icon: Lock, label: 'Datos encriptados' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <item.icon className={`w-4 h-4 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                <span className={`text-xs font-medium ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══════ REFERRAL ═══════ */}
+        <div>
+          <button
+            onClick={() => setShowReferral(!showReferral)}
+            className={`flex items-center gap-2 text-sm font-medium ${!t ? 'text-neutral-600 hover:text-neutral-800' : ''}`}
+            style={t ? { color: t.textSec } : undefined}
+          >
+            <Gift className="w-4 h-4" />
+            ¿Tienes un código de referido?
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showReferral ? 'rotate-180' : ''}`} />
+          </button>
+          {showReferral && (
+            <div className="mt-3 flex gap-3 max-w-md">
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                placeholder="Código de referido"
+                className={`flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-gray-200 text-gray-900 placeholder:text-gray-400 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
+                style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
+              />
+              <button
+                onClick={handleApplyReferral}
+                disabled={applyingReferral || !referralCode.trim()}
+                className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${!t ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-white'}`}
+                style={t ? { background: t.accent } : undefined}
+              >
+                {applyingReferral ? <Loader className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ═══════ FAQ ═══════ */}
+        <div>
+          <h2 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+            Preguntas frecuentes
+          </h2>
+          <div className="space-y-2">
+            {FAQ_ITEMS.map((item, i) => (
+              <div
+                key={i}
+                className={`rounded-xl overflow-hidden transition-colors ${!t ? 'bg-white border border-slate-200' : ''}`}
+                style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+              >
+                <button
+                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{item.q}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${!t ? 'text-neutral-400' : ''} ${faqOpen === i ? 'rotate-180' : ''}`}
+                    style={t ? { color: t.textMuted } : undefined}
+                  />
+                </button>
+                {faqOpen === i && (
+                  <div className="px-5 pb-4">
+                    <p className={`text-sm leading-relaxed ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                      {item.a}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══════ FOOTER ═══════ */}
+        <div className="text-center pb-4">
+          <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+            ¿Necesitas ayuda?{' '}
+            <a href="mailto:soporte@withmia.com" className={`font-medium hover:underline ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>
               soporte@withmia.com
             </a>
           </p>
@@ -777,7 +635,7 @@ export default function SubscriptionPage() {
       {/* Notification Toast */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
-          <div className={`px-6 py-4 rounded-lg shadow-2xl backdrop-blur-md border flex items-center gap-3 ${
+          <div className={`px-5 py-3 rounded-lg shadow-2xl backdrop-blur-md border flex items-center gap-3 ${
             notification.type === 'success'
               ? 'bg-green-50/95 border-green-200 text-green-800'
               : 'bg-red-50/95 border-red-200 text-red-800'
