@@ -1254,14 +1254,6 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       count: null,
       permission: 'sidebar.products'
     },
-    // Soporte - visible para todos
-    { 
-      id: 'support', 
-      label: 'Soporte', 
-      icon: Headphones, 
-      count: null,
-      permission: 'sidebar.dashboard'
-    },
     // Admin Panel - SOLO para super-admin (controlado desde el servidor)
     ...(isSuperAdminResolved ? [{
       id: 'admin',

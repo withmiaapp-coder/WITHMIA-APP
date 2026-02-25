@@ -71,20 +71,47 @@ const proPlanFeatures = [
   { label: "Seguridad empresarial (E2E)" },
 ];
 
-/* ─── Side-by-side comparison rows ─── */
-const comparisonRows = [
-  { feature: "Canales",        free: "WhatsApp",          pro: "WhatsApp, IG, FB, Web, Email" },
-  { feature: "Mensajes IA",    free: "50 / mes",          pro: "Ilimitados" },
-  { feature: "Modelos IA",     free: "Básico",            pro: "GPT-4o, Claude, Gemini" },
-  { feature: "Miembros",       free: "1",                 pro: "Ilimitados (+$10/mes c/u)" },
-  { feature: "Herramientas",   free: "1",                 pro: "Ilimitadas" },
-  { feature: "RAG",            free: false,               pro: true },
-  { feature: "CRM",            free: false,               pro: true },
-  { feature: "Workflows",      free: false,               pro: true },
-  { feature: "Analíticas",     free: false,               pro: true },
-  { feature: "Integraciones",  free: false,               pro: "12+ nativas + API" },
-  { feature: "Cobranzas IA",   free: false,               pro: true },
-  { feature: "Soporte",        free: "Comunidad",         pro: "Prioritario (chat + email)" },
+/* ─── Side-by-side comparison rows (grouped) ─── */
+type ComparisonRow = { feature: string; free: string | boolean; pro: string | boolean };
+type ComparisonGroup = { category: string; icon: typeof Globe; rows: ComparisonRow[] };
+
+const comparisonGroups: ComparisonGroup[] = [
+  {
+    category: "Comunicación",
+    icon: Globe,
+    rows: [
+      { feature: "Canales disponibles",  free: "WhatsApp",   pro: "WhatsApp, IG, FB, Web, Email" },
+      { feature: "Mensajes de IA",       free: "50 / mes",   pro: "Ilimitados" },
+      { feature: "Modelos de IA",        free: "Básico",     pro: "GPT-4o, Claude, Gemini" },
+    ],
+  },
+  {
+    category: "Equipo",
+    icon: Users,
+    rows: [
+      { feature: "Miembros",             free: "1",          pro: "Ilimitados (+$10/mes c/u)" },
+      { feature: "CRM con pipeline",     free: false,        pro: true },
+      { feature: "Analíticas",           free: false,        pro: true },
+    ],
+  },
+  {
+    category: "Automatización",
+    icon: Zap,
+    rows: [
+      { feature: "Herramientas de IA",   free: "1",          pro: "Ilimitadas" },
+      { feature: "Base de conocimiento (RAG)", free: false,   pro: true },
+      { feature: "Workflows",            free: false,        pro: true },
+      { feature: "Cobranzas IA",         free: false,        pro: true },
+    ],
+  },
+  {
+    category: "Plataforma",
+    icon: Layers,
+    rows: [
+      { feature: "Integraciones",        free: false,        pro: "12+ nativas + API" },
+      { feature: "Soporte",              free: "Comunidad",  pro: "Prioritario (chat + email)" },
+    ],
+  },
 ];
 
 /* ─── Detailed features grid ─── */
@@ -170,10 +197,16 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
   );
 }
 
-function CellValue({ val }: { val: string | boolean }) {
-  if (val === true)  return <div className="w-5 h-5 rounded-full bg-amber-400/15 flex items-center justify-center"><Check className="w-3 h-3 text-amber-400" /></div>;
-  if (val === false) return <div className="w-5 h-5 rounded-full bg-white/[0.04] flex items-center justify-center"><XIcon className="w-3 h-3 text-white/15" /></div>;
-  return <span className="text-[13px] text-white/60">{val}</span>;
+function CellValue({ val, highlight = false }: { val: string | boolean; highlight?: boolean }) {
+  if (val === true)  return (
+    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${highlight ? "bg-amber-400/15" : "bg-emerald-400/10"}`}>
+      <Check className={`w-3.5 h-3.5 ${highlight ? "text-amber-400" : "text-emerald-400/70"}`} />
+    </div>
+  );
+  if (val === false) return (
+    <span className="text-[12px] text-white/15 font-medium">—</span>
+  );
+  return <span className={`text-[12.5px] leading-snug ${highlight ? "text-white/70 font-medium" : "text-white/50"}`}>{val}</span>;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -350,26 +383,6 @@ export const Pricing = () => {
             </div>
           </div>
 
-          {/* Enterprise bar */}
-          <div className="mt-6 md:mt-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-violet-400" />
-              </div>
-              <div>
-                <p className="text-[14px] font-semibold text-white/80">¿Más de 20 usuarios?</p>
-                <p className="text-[12px] text-white/30">Planes Enterprise con SLA dedicado y onboarding premium.</p>
-              </div>
-            </div>
-            <Link
-              to="/contacto"
-              onClick={() => trackCTAClick('enterprise_contact', 'pricing_enterprise', '/contacto')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-violet-500/20 text-[13px] font-medium text-violet-400 hover:bg-violet-500/10 transition-all shrink-0"
-            >
-              Hablemos
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -444,11 +457,26 @@ export const Pricing = () => {
             </div>
           </div>
 
-          {teamSize >= 15 && (
-            <p className="text-center text-xs text-white/25 mt-3">
-              ¿Más de 20 usuarios? <Link to="/contacto" className="text-amber-400/60 hover:text-amber-400 underline underline-offset-2">Contáctanos para planes Enterprise</Link>
-            </p>
-          )}
+          {/* Enterprise bar */}
+          <div className="mt-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
+                <Building2 className="w-4 h-4 text-violet-400" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-white/80">¿Más de 20 usuarios?</p>
+                <p className="text-[12px] text-white/30">Planes Enterprise con SLA dedicado y onboarding premium.</p>
+              </div>
+            </div>
+            <Link
+              to="/contacto"
+              onClick={() => trackCTAClick('enterprise_contact', 'pricing_enterprise', '/contacto')}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-violet-500/20 text-[13px] font-medium text-violet-400 hover:bg-violet-500/10 transition-all shrink-0"
+            >
+              Hablemos
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -458,32 +486,87 @@ export const Pricing = () => {
           <div className="text-center mb-10">
             <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Comparación detallada</p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Gratuito vs Pro.{" "}
-              <span className="text-white/40">Punto por punto.</span>
+              Todo lo que incluye cada plan.
             </h2>
+            <p className="text-sm text-white/30 mt-2 max-w-md mx-auto">Compara funcionalidades y elige el que mejor se adapte a tu negocio.</p>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] overflow-hidden bg-white/[0.01]">
-            {/* Header */}
-            <div className="grid grid-cols-[1.2fr,1fr,1fr] gap-0 border-b border-white/[0.08] bg-white/[0.03]">
-              <div className="px-5 py-4 text-[11px] text-white/30 uppercase tracking-wider font-semibold">Funcionalidad</div>
-              <div className="px-4 py-4 text-[11px] text-white/30 uppercase tracking-wider font-semibold text-center">Gratuito</div>
-              <div className="px-4 py-4 text-[11px] text-amber-400/60 uppercase tracking-wider font-semibold text-center flex items-center justify-center gap-1.5">
-                <Crown className="w-3 h-3" /> Pro
+          <div className="rounded-2xl border border-white/[0.06] overflow-hidden">
+            {/* Sticky header with plan names + prices */}
+            <div className="grid grid-cols-[1.4fr,1fr,1fr] gap-0 border-b border-white/[0.08] bg-white/[0.03]">
+              <div className="px-6 py-5" />
+              <div className="px-4 py-5 text-center border-l border-white/[0.04]">
+                <p className="text-[11px] text-white/30 uppercase tracking-wider font-semibold mb-1">Gratuito</p>
+                <p className="text-lg font-bold text-white/60">$0<span className="text-[11px] font-normal text-white/20 ml-0.5">/mes</span></p>
+              </div>
+              <div className="px-4 py-5 text-center bg-amber-500/[0.03] border-l border-amber-500/[0.06]">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Crown className="w-3 h-3 text-amber-400/70" />
+                  <p className="text-[11px] text-amber-400/70 uppercase tracking-wider font-semibold">Pro</p>
+                </div>
+                <p className="text-lg font-bold text-white">$18<span className="text-[11px] font-normal text-white/30 ml-0.5">/mes</span></p>
               </div>
             </div>
-            {/* Rows */}
-            {comparisonRows.map((row, i) => (
-              <div
-                key={row.feature}
-                className="grid grid-cols-[1.2fr,1fr,1fr] gap-0 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
-                style={{ opacity: comparison.isVisible ? 1 : 0, transition: `all 0.4s ease ${i * 40}ms` }}
-              >
-                <div className="px-5 py-3.5 text-[13px] text-white/50 font-medium">{row.feature}</div>
-                <div className="px-4 py-3.5 flex items-center justify-center"><CellValue val={row.free} /></div>
-                <div className="px-4 py-3.5 flex items-center justify-center bg-amber-500/[0.02]"><CellValue val={row.pro} /></div>
+
+            {/* Grouped rows */}
+            {comparisonGroups.map((group, gi) => {
+              const GroupIcon = group.icon;
+              return (
+                <div key={group.category}>
+                  {/* Category header */}
+                  <div className="grid grid-cols-[1.4fr,1fr,1fr] gap-0 border-b border-white/[0.06] bg-white/[0.02]">
+                    <div className="px-6 py-3 flex items-center gap-2.5">
+                      <GroupIcon className="w-3.5 h-3.5 text-white/25" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">{group.category}</span>
+                    </div>
+                    <div className="border-l border-white/[0.04]" />
+                    <div className="bg-amber-500/[0.02] border-l border-amber-500/[0.04]" />
+                  </div>
+                  {/* Feature rows */}
+                  {group.rows.map((row, ri) => {
+                    const globalIdx = comparisonGroups.slice(0, gi).reduce((acc, g) => acc + g.rows.length, 0) + ri;
+                    return (
+                      <div
+                        key={row.feature}
+                        className="grid grid-cols-[1.4fr,1fr,1fr] gap-0 border-b border-white/[0.03] last:border-b-0 hover:bg-white/[0.015] transition-colors"
+                        style={{ opacity: comparison.isVisible ? 1 : 0, transition: `all 0.4s ease ${globalIdx * 40}ms` }}
+                      >
+                        <div className="px-6 py-3.5 text-[13px] text-white/45 font-medium">{row.feature}</div>
+                        <div className="px-4 py-3.5 flex items-center justify-center border-l border-white/[0.04]">
+                          <CellValue val={row.free} />
+                        </div>
+                        <div className="px-4 py-3.5 flex items-center justify-center bg-amber-500/[0.02] border-l border-amber-500/[0.04]">
+                          <CellValue val={row.pro} highlight />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* Bottom CTA row */}
+            <div className="grid grid-cols-[1.4fr,1fr,1fr] gap-0 border-t border-white/[0.06] bg-white/[0.02]">
+              <div className="px-6 py-4" />
+              <div className="px-4 py-4 flex items-center justify-center border-l border-white/[0.04]">
+                <Link
+                  to="/registro"
+                  onClick={() => trackCTAClick('comparison_free', 'pricing_comparison', '/registro')}
+                  className="text-[12px] font-semibold text-white/40 hover:text-white/60 transition-colors"
+                >
+                  Comenzar gratis
+                </Link>
               </div>
-            ))}
+              <div className="px-4 py-4 flex items-center justify-center bg-amber-500/[0.03] border-l border-amber-500/[0.06]">
+                <Link
+                  to="/registro"
+                  onClick={() => trackCTAClick('comparison_pro', 'pricing_comparison', '/registro')}
+                  className="px-5 py-2 rounded-lg bg-amber-500 text-[12px] font-semibold text-black hover:bg-amber-400 transition-colors"
+                >
+                  Comenzar con Pro
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
