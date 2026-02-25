@@ -86,7 +86,7 @@ const MembersManagement: React.FC<MembersManagementProps> = ({ isOpen, onClose }
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      modalBg: isDark ? '#1e1e2e' : '#ffffff',
+      modalBg: 'var(--theme-content-bg)',
       border: isDark ? 'var(--theme-content-card-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',

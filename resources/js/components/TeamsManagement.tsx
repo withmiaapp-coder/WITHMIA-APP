@@ -45,7 +45,7 @@ const TeamModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? '#1e1e2e' : '#ffffff',
+      bg: 'var(--theme-content-bg)',
       border: isDark ? 'var(--theme-glass-border)' : 'var(--theme-content-card-border)',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
@@ -185,7 +185,7 @@ const AddMembersModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? '#1e1e2e' : '#ffffff',
+      bg: 'var(--theme-content-bg)',
       border: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
@@ -349,7 +349,7 @@ const InviteMemberModal: React.FC<{
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
-      bg: isDark ? '#1e1e2e' : '#ffffff',
+      bg: 'var(--theme-content-bg)',
       border: isDark ? 'var(--theme-glass-border)' : '#e5e7eb',
       text: 'var(--theme-text-primary)',
       textSec: 'var(--theme-text-secondary)',
@@ -1119,7 +1119,7 @@ const TeamsManagement: React.FC = () => {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className={`rounded-xl shadow-2xl w-full max-w-sm p-6 animate-scale-in ${!t ? 'bg-white' : ''}`}
-            style={t ? { background: isDark ? '#1e1e2e' : '#ffffff', border: '1px solid', borderColor: isDark ? t.panelBorder : '#e5e7eb' } : undefined}
+            style={t ? { background: 'var(--theme-content-bg)', border: '1px solid', borderColor: isDark ? t.panelBorder : '#e5e7eb' } : undefined}
           >
             <div className="flex items-center space-x-3 mb-4">
               <div className={`p-3 rounded-full ${!t ? 'bg-red-100' : ''}`}

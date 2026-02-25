@@ -25,9 +25,9 @@ const App = () => {
         <BrowserRouter>
           <ErrorBoundary>
             <ScrollToTop />
-            <div id="main-content">
+            <main id="main-content">
               <AppRoutes />
-            </div>
+            </main>
             <CookieConsent />
           </ErrorBoundary>
         </BrowserRouter>

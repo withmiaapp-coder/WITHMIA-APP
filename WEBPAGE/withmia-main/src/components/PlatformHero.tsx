@@ -320,19 +320,15 @@ export const PlatformHero = () => {
                 heroVis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
               }`}
             >
-              <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_hero", "platform_hero")}>
-                <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(245,158,11,0.45)]">
+              <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_hero", "platform_hero")} className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(245,158,11,0.45)]">
                   {/* Shimmer sweep */}
                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                   <span className="relative">Probar gratis 14 días</span>
                   <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
-                </button>
               </a>
-              <Link to="/contacto">
-                <button className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-transparent text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
+              <Link to="/contacto" className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-transparent text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
                   <CalendarCheck className="w-4 h-4 text-white/50" />
                   Solicitar demo
-                </button>
               </Link>
             </div>
 
@@ -594,18 +590,18 @@ export const PlatformHero = () => {
                             </div>
 
                             <div>
-                              <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_modulo", "platform_features")}>
-                                <button
-                                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-                                  style={{
-                                    backgroundColor: `${screen.accent}10`,
-                                    border: `1px solid ${screen.accent}20`,
-                                    color: screen.accent,
-                                  }}
-                                >
+                              <a
+                                href="https://app.withmia.com"
+                                onClick={() => trackCTAClick("probar_modulo", "platform_features")}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                                style={{
+                                  backgroundColor: `${screen.accent}10`,
+                                  border: `1px solid ${screen.accent}20`,
+                                  color: screen.accent,
+                                }}
+                              >
                                   Probar {screen.label.toLowerCase()}
                                   <ArrowRight className="w-3.5 h-3.5" />
-                                </button>
                               </a>
                             </div>
                           </div>

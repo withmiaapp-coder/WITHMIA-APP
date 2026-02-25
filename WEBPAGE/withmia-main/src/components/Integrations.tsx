@@ -151,10 +151,15 @@ export const Integrations = () => {
     return () => obs.disconnect();
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(CURL_TEXT);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(CURL_TEXT);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for insecure contexts
+      setCopied(false);
+    }
   };
 
   return (

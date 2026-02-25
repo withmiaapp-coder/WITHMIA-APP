@@ -112,10 +112,14 @@ const ApiPage = () => {
   const [activeSDK, setActiveSDK] = useState(0);
   const [activeEndpoint, setActiveEndpoint] = useState(0);
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(id);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setCopied(null);
+    }
   };
 
   const latency = useCountUp(23, 1200);

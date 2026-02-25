@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { trackCTAClick } from "@/lib/analytics";
 
-const channels = [
+const channels: { name: string; icon: string; size: number; margin?: number; marginLeft?: number; invert?: boolean }[] = [
   { name: "WhatsApp", icon: "/icons/whatsapp.webp", size: 24 },
   { name: "Instagram", icon: "/icons/instagram-new.webp", size: 24 },
   { name: "Facebook", icon: "/icons/facebook-new.webp", size: 28 },
@@ -24,6 +24,10 @@ function ParticleCanvas() {
 
     let animId: number;
     let particles: { x: number; y: number; vx: number; vy: number; r: number; o: number; color: string }[] = [];
+
+    // Respect reduced motion preference
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
 
     const colors = [
       "255,200,60",   // gold
@@ -108,6 +112,7 @@ export const Hero = () => {
           src="/Banner%20web%20withmia.webp"
           alt="WITHMIA plataforma omnicanal con IA"
           className="w-full h-full object-cover object-center"
+          fetchPriority="high"
         />
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black/30" />
@@ -152,17 +157,13 @@ export const Hero = () => {
           className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
           style={{ animationDelay: "240ms" }}
         >
-          <a href="https://app.withmia.com" onClick={() => trackCTAClick('comenzar_ahora', 'hero', 'https://app.withmia.com')}>
-            <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick('comenzar_ahora', 'hero', 'https://app.withmia.com')} className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
               <ArrowRight className="w-4 h-4" />
               Comenzar ahora
-            </button>
           </a>
-          <Link to="/contacto" onClick={() => trackCTAClick('agenda_demo', 'hero', '/contacto')}>
-            <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
+          <Link to="/contacto" onClick={() => trackCTAClick('agenda_demo', 'hero', '/contacto')} className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
               <CalendarCheck className="w-4 h-4" />
               Agenda una demo
-            </button>
           </Link>
         </div>
 
@@ -189,7 +190,7 @@ export const Hero = () => {
                   height: ch.size,
                   margin: ch.margin ?? 0,
                   marginLeft: ch.marginLeft ?? undefined,
-                  ...((ch as any).invert ? { filter: "brightness(0) invert(1)" } : {}),
+                  ...(ch.invert ? { filter: "brightness(0) invert(1)" } : {}),
                 }}
                 className="transition-all duration-300 hover:scale-110"
               />

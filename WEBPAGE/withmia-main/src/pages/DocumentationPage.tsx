@@ -1467,10 +1467,14 @@ function highlightCode(code: string, lang: string): ReactNode {
 /* ─── Code Block ─── */
 function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
   return (
     <div className="relative group rounded-xl border border-white/[0.06] bg-[#0a0c14] overflow-hidden my-4">
@@ -1491,10 +1495,14 @@ function CodeBlock({ code, lang = "bash" }: { code: string; lang?: string }) {
 function CodeTabs({ tabs }: { tabs: { label: string; lang: string; code: string }[] }) {
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(tabs[active].code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(tabs[active].code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   };
   return (
     <div className="rounded-xl border border-white/[0.06] bg-[#0a0c14] overflow-hidden my-4">

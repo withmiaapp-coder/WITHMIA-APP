@@ -279,18 +279,14 @@ const IntegrationsPage = () => {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                  <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_integraciones", "integrations_page")}>
-                    <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
+                  <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_integraciones", "integrations_page")} className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5">
                       <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                       <span className="relative">Probar gratis 14 días</span>
                       <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
-                    </button>
                   </a>
-                  <Link to="/contacto">
-                    <button className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
+                  <Link to="/contacto" className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
                       Ver documentación API
                       <ExternalLink className="w-3.5 h-3.5 text-white/40" />
-                    </button>
                   </Link>
                 </div>
 
@@ -903,17 +899,13 @@ const IntegrationsPage = () => {
 
                     {/* Right actions */}
                     <div className="flex flex-col gap-3 shrink-0 w-full sm:w-auto">
-                      <Link to="/api">
-                        <button className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
+                      <Link to="/api" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-[13px] transition-all duration-300 hover:-translate-y-0.5">
                           Conoce sobre nuestra API
                           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                        </button>
                       </Link>
-                      <Link to="/docs">
-                        <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/[0.08] text-[13px] text-white/40 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
+                      <Link to="/docs" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/[0.08] text-[13px] text-white/40 font-medium hover:text-white/70 hover:border-white/[0.15] transition-all duration-300">
                           Documentación
                           <ArrowRight className="w-3 h-3" />
-                        </button>
                       </Link>
                     </div>
                   </div>

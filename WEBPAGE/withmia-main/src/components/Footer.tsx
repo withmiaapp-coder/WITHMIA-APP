@@ -28,7 +28,7 @@ export const Footer = () => {
           </div>
 
           {/* Links — 4 columns together */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 flex-1">
+          <nav aria-label="Navegación del pie de página" className="grid grid-cols-2 sm:grid-cols-4 gap-8 flex-1">
             {/* PRODUCTO */}
             <div>
               <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-5">
@@ -159,7 +159,7 @@ export const Footer = () => {
                 </li>
               </ul>
             </div>
-          </div>
+          </nav>
         </div>
       </div>
 
@@ -210,6 +210,15 @@ export const Footer = () => {
               </a>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Copyright */}
+      <div className="border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6 py-4 text-center">
+          <p className="text-xs text-white/25">
+            &copy; {currentYear} WITHMIA. Todos los derechos reservados.
+          </p>
         </div>
       </div>
 

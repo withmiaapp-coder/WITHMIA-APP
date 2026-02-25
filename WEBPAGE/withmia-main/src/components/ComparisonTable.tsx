@@ -287,12 +287,10 @@ export const ComparisonTable = () => {
             <span className="text-[11px] text-white/40 font-medium ml-1">10/10 funcionalidades cubiertas</span>
           </div>
           <div className="block">
-            <a href="https://app.withmia.com" onClick={() => trackCTAClick("empieza_gratis_comparacion", "comparison")}>
-              <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(245,158,11,0.45)]">
+            <a href="https://app.withmia.com" onClick={() => trackCTAClick("empieza_gratis_comparacion", "comparison")} className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(245,158,11,0.45)]">
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 <span className="relative">Empieza gratis — 14 días sin compromiso</span>
                 <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
-              </button>
             </a>
           </div>
         </div>

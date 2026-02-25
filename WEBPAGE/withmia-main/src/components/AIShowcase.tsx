@@ -711,12 +711,10 @@ export const AIShowcase = () => {
           <p className="text-[13px] text-white/30 mb-5">
             Todo este motor trabaja 24/7, sin pausas, sin errores humanos.
           </p>
-          <a href="https://app.withmia.com" onClick={() => trackCTAClick("ver_ia_accion", "ai_showcase")}>
-            <button className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(167,139,250,0.35)]">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick("ver_ia_accion", "ai_showcase")} className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(167,139,250,0.35)]">
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               <span className="relative">Ver la IA en acción</span>
               <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
-            </button>
           </a>
         </Reveal>
       </div>

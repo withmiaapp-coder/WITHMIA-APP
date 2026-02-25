@@ -778,7 +778,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className={`rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
-        style={t ? { backgroundColor: isDark ? '#1e1e2e' : '#ffffff' } : undefined}>
+        style={t ? { backgroundColor: t.contentBg } : undefined}>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
 
           {/* Header */}
@@ -1099,7 +1099,7 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
-        style={t ? { backgroundColor: isDark ? '#1e1e2e' : '#ffffff' } : undefined}>
+        style={t ? { backgroundColor: t.contentBg } : undefined}>
         {/* Color header */}
         <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${providerConfig.color}, ${providerConfig.color}88)` }} />
 

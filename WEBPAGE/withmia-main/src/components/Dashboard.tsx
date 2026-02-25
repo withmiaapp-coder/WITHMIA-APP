@@ -273,17 +273,13 @@ export const Dashboard = () => {
 
         {/* CTA buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-8">
-          <a href="https://app.withmia.com" onClick={() => trackCTAClick("prueba_gratis_dashboard", "dashboard")}>
-            <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
+          <a href="https://app.withmia.com" onClick={() => trackCTAClick("prueba_gratis_dashboard", "dashboard")} className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_35px_rgba(245,158,11,0.5)] hover:-translate-y-0.5 transition-all duration-300">
               <ArrowRight className="w-4 h-4" />
               Prueba gratis
-            </button>
           </a>
-          <Link to="/contacto">
-            <button className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
+          <Link to="/contacto" className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
               <CalendarCheck className="w-4 h-4" />
               Agenda una demo
-            </button>
           </Link>
         </div>
       </div>

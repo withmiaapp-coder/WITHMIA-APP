@@ -88,9 +88,14 @@ export const Testimonials = () => {
 
   /* Auto-rotate */
   useEffect(() => {
-    const timer = setInterval(next, 8000);
+    const timer = setInterval(() => {
+      setActive((prev) => {
+        const nextIdx = (prev + 1) % testimonials.length;
+        return nextIdx;
+      });
+    }, 8000);
     return () => clearInterval(timer);
-  }, [next]);
+  }, []);
 
   return (
     <section className="py-8 md:py-10 px-4 relative overflow-hidden">

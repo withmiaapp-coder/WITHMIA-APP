@@ -27,6 +27,9 @@
     <link rel="canonical" href="https://withmia.com" />
     <link rel="alternate" hreflang="es-CL" href="https://withmia.com" />
 
+    <!-- Preload hero image -->
+    <link rel="preload" as="image" href="/Banner%20web%20withmia.webp" type="image/webp" fetchpriority="high" />
+
     <!-- Preconnect for GA4 -->
     <link rel="preconnect" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
@@ -55,6 +58,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0a12;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:2rem">
+        <div>
+          <h1 style="font-size:1.5rem;margin-bottom:1rem">WITHMIA</h1>
+          <p>Para usar WITHMIA necesitas tener JavaScript habilitado en tu navegador.</p>
+        </div>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

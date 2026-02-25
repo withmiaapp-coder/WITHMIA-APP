@@ -8,7 +8,7 @@
  * 3. dataLayer is also available for future GTM integration
  */
 
-const GA4_ID = "G-8D0NNE2BBH";
+const GA4_ID = import.meta.env.VITE_GA4_ID || "G-8D0NNE2BBH";
 
 // ── Types ──
 interface EventParams {
