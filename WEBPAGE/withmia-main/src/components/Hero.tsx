@@ -20,6 +20,8 @@ export const Hero = () => {
           src="/banner-withmia.webp"
           alt="WITHMIA plataforma omnicanal con IA"
           className="w-full h-full object-cover object-center"
+          width={1920}
+          height={1080}
           fetchpriority="high"
         />
         {/* Dark overlay for text readability */}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import { 
   UserPlus, 
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAgents } from '../hooks/useChatwoot';
 import Portal from './Portal';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Agent {
   id: number;
@@ -44,7 +45,22 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  
+  const { hasTheme } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      dropBg: 'var(--theme-content-bg)',
+      border: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      hoverBg: 'var(--theme-item-bg)',
+      inputBg: 'var(--theme-input-bg)',
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme]);
+
   const { agents, loading: agentsLoading, fetchAgents } = useAgents();
 
   // Calcular posición del dropdown cuando se abre
@@ -142,8 +158,8 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
         <Portal>
           <div 
             ref={dropdownRef}
-            className="fixed w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 animate-fade-in"
-            style={{ top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
+            className={`fixed w-64 rounded-xl shadow-xl border py-2 animate-fade-in ${!t ? 'bg-white border-gray-200' : ''}`}
+            style={t ? { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999, backgroundColor: t.dropBg, borderColor: t.border } : { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
           >
           {/* Barra de búsqueda */}
           <div className="px-3 pb-2">
@@ -152,23 +168,26 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
               placeholder="Buscar agente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 placeholder:text-gray-500"
+              className={`w-full px-3 py-2 text-sm border rounded-lg placeholder:text-gray-500 ${!t ? 'text-gray-900 border-gray-200 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400' : ''}`}
+              style={t ? { backgroundColor: t.inputBg, borderColor: t.border, color: t.text } : undefined}
             />
           </div>
 
-          <div className="border-t border-gray-100"></div>
+          <div className={`border-t ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.border } : undefined}></div>
 
           {/* Opción para quitar asignación */}
           {currentAssignee && (
             <>
               <button
                 onClick={() => handleAssign(null)}
-                className="w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-red-50 transition-colors text-red-600"
+                className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors text-red-600 ${!t ? 'hover:bg-red-50' : ''}`}
+                onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+                onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <X className="w-4 h-4" />
                 <span>Quitar asignación</span>
               </button>
-              <div className="border-t border-gray-100 my-1"></div>
+              <div className={`border-t my-1 ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.border } : undefined}></div>
             </>
           )}
 
@@ -179,7 +198,7 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
                 <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
               </div>
             ) : filteredAgents.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              <div className={`px-4 py-3 text-sm text-center ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 No se encontraron agentes
               </div>
             ) : (
@@ -187,9 +206,9 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
                 <button
                   key={agent.id}
                   onClick={() => handleAssign(agent.id)}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
-                    currentAssignee?.id === agent.id ? 'bg-indigo-50' : ''
-                  }`}
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors ${!t ? (currentAssignee?.id === agent.id ? 'bg-indigo-50 hover:bg-gray-50' : 'hover:bg-gray-50') : ''}`}
+                  onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+                  onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   {/* Avatar */}
                   <div className="relative">
@@ -204,18 +223,18 @@ const AssignAgentDropdown: React.FC<AssignAgentDropdownProps> = ({
                         {agent.name.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${getAvailabilityColor(agent.availability_status)}`}></div>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${!t ? 'border-white' : ''} ${getAvailabilityColor(agent.availability_status)}`} style={t ? { borderColor: t.dropBg } : undefined}></div>
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-800 truncate">{agent.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{agent.email}</p>
+                    <p className={`font-medium truncate ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.text } : undefined}>{agent.name}</p>
+                    <p className={`text-xs truncate ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{agent.email}</p>
                   </div>
 
                   {/* Check si está seleccionado */}
                   {currentAssignee?.id === agent.id && (
-                    <Check className="w-4 h-4 text-indigo-600" />
+                    <Check className="w-4 h-4" style={t ? { color: t.accent } : undefined} />
                   )}
                 </button>
               ))

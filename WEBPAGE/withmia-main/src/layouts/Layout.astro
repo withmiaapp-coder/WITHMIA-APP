@@ -3,7 +3,6 @@ import '@/index.css';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { CookieConsent } from '@/components/CookieConsent';
-import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 
 export interface Props {
@@ -101,6 +100,7 @@ const allJsonLd = breadcrumbJsonLd ? [...jsonLd, breadcrumbJsonLd] : jsonLd;
 
     <!-- Hreflang -->
     <link rel="alternate" hreflang="es-CL" href={canonicalUrl} />
+    <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
 
     <!-- Preload hero image (homepage only) -->
     {path === '/' && (
@@ -149,7 +149,6 @@ const allJsonLd = breadcrumbJsonLd ? [...jsonLd, breadcrumbJsonLd] : jsonLd;
 
     <Footer />
 
-    <Toaster client:idle />
     <SonnerToaster client:idle />
     <CookieConsent client:idle />
 

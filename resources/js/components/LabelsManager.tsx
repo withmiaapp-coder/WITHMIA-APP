@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import { 
   Tag, 
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useLabels } from '../hooks/useChatwoot';
 import Portal from './Portal';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Label {
   id?: number;
@@ -55,7 +56,22 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, openLeft: false });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  
+  const { hasTheme } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      dropBg: 'var(--theme-content-bg)',
+      border: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      hoverBg: 'var(--theme-item-bg)',
+      inputBg: 'var(--theme-input-bg)',
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme]);
+
   const { labels, loading: labelsLoading, fetchLabels, createLabel, deleteLabel } = useLabels();
   const [confirmDeleteLabel, setConfirmDeleteLabel] = useState<number | null>(null);
 
@@ -211,15 +227,16 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
         <Portal>
           <div 
             ref={dropdownRef}
-            className="fixed w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 animate-fade-in"
-            style={{ top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
+            className={`fixed w-72 rounded-xl shadow-xl border py-2 animate-fade-in ${!t ? 'bg-white border-gray-200' : ''}`}
+            style={t ? { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999, backgroundColor: t.dropBg, borderColor: t.border } : { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
           >
           {/* Header */}
           <div className="px-3 pb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-700">Etiquetas</span>
+            <span className={`text-sm font-semibold ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>Etiquetas</span>
             <button
               onClick={() => setShowCreateForm(true)}
-              className="flex items-center space-x-1 text-xs text-violet-600 hover:text-violet-700"
+              className={`flex items-center space-x-1 text-xs ${!t ? 'text-violet-600 hover:text-violet-700' : ''}`}
+              style={t ? { color: t.accent } : undefined}
             >
               <Plus className="w-3 h-3" />
               <span>Nueva</span>
@@ -228,21 +245,22 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
 
           {/* Formulario de crear nueva etiqueta */}
           {showCreateForm && (
-            <div className="px-3 py-2 border-t border-b border-gray-100 bg-gray-50">
+            <div className={`px-3 py-2 border-t border-b ${!t ? 'border-gray-100 bg-gray-50' : ''}`} style={t ? { borderColor: t.border, backgroundColor: t.hoverBg } : undefined}>
               <div className="flex items-center space-x-2 mb-2">
                 <input
                   type="text"
                   placeholder="Nombre de etiqueta"
                   value={newLabelTitle}
                   onChange={(e) => setNewLabelTitle(e.target.value)}
-                  className="flex-1 px-2 py-1.5 text-sm text-gray-900 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-400 placeholder:text-gray-500"
+                  className={`flex-1 px-2 py-1.5 text-sm border rounded-lg placeholder:text-gray-500 ${!t ? 'text-gray-900 border-gray-200 focus:ring-2 focus:ring-violet-400' : ''}`}
+                  style={t ? { backgroundColor: t.inputBg, borderColor: t.border, color: t.text } : undefined}
                   autoFocus
                 />
               </div>
               
               {/* Selector de color */}
               <div className="flex items-center space-x-1 mb-2">
-                <Palette className="w-3 h-3 text-gray-500" />
+                <Palette className={`w-3 h-3 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.textMuted } : undefined} />
                 {colorOptions.map(color => (
                   <button
                     key={color}
@@ -257,7 +275,8 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                 <button
                   onClick={handleCreateLabel}
                   disabled={!newLabelTitle.trim() || loading}
-                  className="flex-1 px-3 py-1.5 bg-violet-600 text-white text-xs rounded-lg hover:bg-violet-700 disabled:opacity-50"
+                  className="flex-1 px-3 py-1.5 text-white text-xs rounded-lg disabled:opacity-50"
+                  style={{ backgroundColor: t ? t.accent : '#7c3aed' }}
                 >
                   Crear
                 </button>
@@ -266,7 +285,8 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                     setShowCreateForm(false);
                     setNewLabelTitle('');
                   }}
-                  className="px-3 py-1.5 bg-gray-200 text-gray-600 text-xs rounded-lg hover:bg-gray-300"
+                  className={`px-3 py-1.5 text-xs rounded-lg ${!t ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : ''}`}
+                  style={t ? { backgroundColor: t.hoverBg, color: t.textSec } : undefined}
                 >
                   Cancelar
                 </button>
@@ -281,7 +301,8 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
               placeholder="Buscar etiqueta..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-400 focus:border-violet-400 placeholder:text-gray-500"
+              className={`w-full px-3 py-2 text-sm border rounded-lg placeholder:text-gray-500 ${!t ? 'text-gray-900 border-gray-200 focus:ring-2 focus:ring-violet-400 focus:border-violet-400' : ''}`}
+              style={t ? { backgroundColor: t.inputBg, borderColor: t.border, color: t.text } : undefined}
             />
           </div>
 
@@ -289,19 +310,19 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
           <div className="max-h-48 overflow-y-auto">
             {labelsLoading ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
+                <Loader2 className="w-5 h-5 animate-spin" style={t ? { color: t.accent } : undefined} />
               </div>
             ) : filteredLabels.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-600 text-center">
+              <div className={`px-4 py-3 text-sm text-center ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>
                 {searchTerm ? 'No se encontraron etiquetas' : 'No hay etiquetas. Crea una nueva.'}
               </div>
             ) : (
               filteredLabels.map((label) => (
                 <div
                   key={label.title}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
-                    selectedLabels.includes(label.title) ? 'bg-violet-50' : ''
-                  }`}
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors ${!t ? (selectedLabels.includes(label.title) ? 'bg-violet-50 hover:bg-gray-50' : 'hover:bg-gray-50') : ''}`}
+                  onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+                  onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   {confirmDeleteLabel === label.id ? (
                     /* Confirmación de eliminar */
@@ -322,7 +343,8 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                             e.stopPropagation();
                             setConfirmDeleteLabel(null);
                           }}
-                          className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded hover:bg-gray-300"
+                          className={`px-2 py-0.5 text-xs rounded ${!t ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : ''}`}
+                          style={t ? { backgroundColor: t.hoverBg, color: t.textSec } : undefined}
                         >
                           No
                         </button>
@@ -342,11 +364,11 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                         />
                         
                         {/* Título */}
-                        <span className="flex-1 text-gray-700 truncate">{label.title}</span>
+                        <span className={`flex-1 truncate ${!t ? 'text-gray-700' : ''}`} style={t ? { color: t.text } : undefined}>{label.title}</span>
 
                         {/* Check si está seleccionada */}
                         {selectedLabels.includes(label.title) && (
-                          <Check className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                          <Check className="w-4 h-4 flex-shrink-0" style={t ? { color: t.accent } : { color: '#7c3aed' }} />
                         )}
                       </button>
 
@@ -356,7 +378,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
                           e.stopPropagation();
                           setConfirmDeleteLabel(label.id || null);
                         }}
-                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                        className={`p-1 rounded transition-colors flex-shrink-0 ${!t ? 'hover:bg-red-100 text-gray-400 hover:text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                         title="Eliminar etiqueta del sistema"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -370,7 +392,7 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
 
           {/* Etiquetas seleccionadas */}
           {selectedLabels.length > 0 && (
-            <div className="px-3 pt-2 border-t border-gray-100">
+            <div className={`px-3 pt-2 border-t ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.border } : undefined}>
               <div className="flex flex-wrap gap-1">
                 {selectedLabels.map(labelTitle => {
                   const label = safeLabels.find((l) => l.title === labelTitle);
@@ -398,11 +420,12 @@ const LabelsManager: React.FC<LabelsManagerProps> = ({
           )}
 
           {/* Botón de guardar */}
-          <div className="px-3 pt-2 border-t border-gray-100 mt-2">
+          <div className={`px-3 pt-2 border-t mt-2 ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.border } : undefined}>
             <button
               onClick={handleClose}
               disabled={loading}
-              className="w-full px-3 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+              className={`w-full px-3 py-2 text-white text-sm rounded-lg disabled:opacity-50 flex items-center justify-center space-x-2 ${!t ? 'bg-violet-600 hover:bg-violet-700' : ''}`}
+              style={t ? { backgroundColor: t.accent } : undefined}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               <span>Guardar cambios</span>

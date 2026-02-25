@@ -4252,8 +4252,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                     <>
                       <div className="fixed inset-0" style={{ zIndex: 99998 }} onClick={() => setShowPriorityMenu(false)} />
                       <div 
-                        className="bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[130px]"
-                        style={{ position: 'fixed', zIndex: 99999, top: priorityMenuPos.top, left: priorityMenuPos.left }}
+                        className={`rounded-lg shadow-xl border py-1 min-w-[130px] ${!t ? 'bg-white border-gray-200' : ''}`}
+                        style={{ position: 'fixed', zIndex: 99999, top: priorityMenuPos.top, left: priorityMenuPos.left, ...(t ? { backgroundColor: 'var(--theme-content-bg)', borderColor: 'var(--theme-content-card-border)' } : {}) }}
                       >
                         {[
                           { value: 'urgent', label: 'Urgente', color: 'text-red-600' },
@@ -4265,9 +4265,11 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
                           <button
                             key={opt.value || 'none'}
                             onClick={() => { handleUpdatePriority(opt.value); setShowPriorityMenu(false); }}
-                            className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center gap-2 ${opt.color} ${
-                              activeConversation.priority === opt.value ? 'bg-gray-100 font-medium' : ''
+                            className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 ${opt.color} ${
+                              !t ? (activeConversation.priority === opt.value ? 'bg-gray-100 font-medium hover:bg-gray-50' : 'hover:bg-gray-50') : (activeConversation.priority === opt.value ? 'font-medium' : '')
                             }`}
+                            onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = 'var(--theme-item-bg)')}
+                            onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
                           >
                             <AlertTriangle className="w-3 h-3" />
                             {opt.label}

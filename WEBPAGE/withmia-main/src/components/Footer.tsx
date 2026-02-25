@@ -1,6 +1,7 @@
-const logo = "/logo-withmia.webp";
 import { Instagram, Linkedin, Youtube, Facebook } from "lucide-react";
 import { Link } from "@/lib/router";
+
+const logo = "/logo-withmia.webp";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -13,13 +14,13 @@ export const Footer = () => {
           {/* Brand column */}
           <div className="space-y-5 lg:max-w-[280px] shrink-0">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="WITHMIA" className="h-8 w-8" />
+              <img src={logo} alt="WITHMIA" className="h-8 w-8" width={32} height={32} />
               <span className="text-lg font-bold text-white">
                 WITH<span className="font-extrabold">MIA</span>
                 <sup className="text-[0.5em] font-normal">®</sup>
               </span>
             </div>
-            <p className="text-sm text-white/40 leading-relaxed">
+            <p className="text-sm text-white/50 leading-relaxed">
               Una plataforma inteligente con IA conversacional que potencia tus ventas y automatiza la atención de tu negocio.
             </p>
             <p className="text-sm font-medium tracking-wide">

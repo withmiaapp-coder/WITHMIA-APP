@@ -1,12 +1,50 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import { Pricing as MainPricing } from '@/components/Pricing';
+
+const jsonLd = [
+  JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "WITHMIA",
+    description: "Plataforma de IA conversacional omnicanal con inbox unificado, chatbots inteligentes y automatización.",
+    url: "https://withmia.com/precios",
+    brand: { "@type": "Brand", name: "WITHMIA" },
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Plan Gratis",
+        price: "0",
+        priceCurrency: "USD",
+        url: "https://withmia.com/precios",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Plan Startup",
+        price: "29",
+        priceCurrency: "USD",
+        url: "https://withmia.com/precios",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "Plan Pro",
+        price: "79",
+        priceCurrency: "USD",
+        url: "https://withmia.com/precios",
+        availability: "https://schema.org/InStock",
+      },
+    ],
+  }),
+];
 ---
 
 <Layout
   title="Precios"
   description="Planes flexibles de WITHMIA. Desde gratis hasta enterprise. IA conversacional, inbox omnicanal y automatización para tu equipo."
   path="/precios"
+  jsonLd={jsonLd}
 >
   <MainPricing client:load />
 </Layout>

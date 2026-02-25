@@ -1,8 +1,9 @@
-const logo = "/logo-withmia.webp";
 import { Menu, X, ChevronDown, Bot, Plug, BarChart3, Code, Sparkles, MessageCircle, Users, Inbox, Zap } from "lucide-react";
-import { useState, useRef } from "react";
-import { useNavigate, Link } from "@/lib/router";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
+
+const logo = "/logo-withmia.webp";
 
 const menuItems = [
   { label: "Precios", path: "/precios" },
@@ -56,7 +57,7 @@ export const Navigation = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const openProduct = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -65,6 +66,20 @@ export const Navigation = () => {
   const closeProduct = () => {
     timeoutRef.current = setTimeout(() => setProductOpen(false), 150);
   };
+  const toggleProduct = () => setProductOpen((v) => !v);
+
+  // Close dropdown on Escape
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setProductOpen(false);
+      setMobileMenuOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 pointer-events-none">
@@ -83,7 +98,7 @@ export const Navigation = () => {
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
               <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
-                <img src={logo} alt="WITHMIA" className="w-9 h-9" />
+                <img src={logo} alt="WITHMIA" className="w-9 h-9" width={36} height={36} />
                 <span className="text-lg font-bold tracking-tight text-white">
                   WITH<span className="font-extrabold">MIA</span>
                   <sup className="text-[0.45em] font-normal ml-0.5">®</sup>
@@ -95,6 +110,7 @@ export const Navigation = () => {
                 {/* Producto dropdown */}
                 <div
                   className="relative"
+                  ref={dropdownRef}
                   onMouseEnter={openProduct}
                   onMouseLeave={closeProduct}
                 >
@@ -102,6 +118,8 @@ export const Navigation = () => {
                     className="flex items-center gap-1 text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
                     aria-expanded={productOpen}
                     aria-haspopup="true"
+                    onClick={toggleProduct}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleProduct(); } }}
                   >
                     Producto
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${productOpen ? 'rotate-180' : ''}`} />
@@ -119,10 +137,11 @@ export const Navigation = () => {
                             </p>
                             <div className="flex-1 flex flex-col justify-center">
                               {productSections.main.items.map((item) => (
-                                <button
+                                <a
                                   key={item.name}
-                                  onClick={() => { setProductOpen(false); navigate(item.path); }}
-                                  className="w-full flex flex-col items-center text-center px-4 py-5 rounded-xl hover:bg-white/[0.04] transition-colors duration-200 group"
+                                  href={item.path}
+                                  onClick={() => setProductOpen(false)}
+                                  className="w-full flex flex-col items-center text-center px-4 py-5 rounded-xl hover:bg-white/[0.04] transition-colors duration-200 group no-underline"
                                 >
                                   {/* Mini app preview */}
                                   <div className="w-full max-w-[200px] h-[72px] rounded-xl bg-white/[0.03] border border-white/[0.07] mb-4 overflow-hidden group-hover:border-white/[0.12] transition-all relative">
@@ -160,7 +179,7 @@ export const Navigation = () => {
                                   </div>
                                   <p className="text-[15px] font-semibold text-white/85 group-hover:text-white transition-colors mb-1.5">{item.name}</p>
                                   <p className="text-xs text-white/30 leading-relaxed max-w-[200px]">{item.desc}</p>
-                                </button>
+                                </a>
                               ))}
                             </div>
                           </div>
@@ -172,10 +191,11 @@ export const Navigation = () => {
                             </p>
                             <div className="space-y-1">
                               {productSections.modules.items.map((item) => (
-                                <button
+                                <a
                                   key={item.name}
-                                  onClick={() => { setProductOpen(false); navigate(item.path); }}
-                                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors duration-200 text-left group"
+                                  href={item.path}
+                                  onClick={() => setProductOpen(false)}
+                                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors duration-200 text-left group no-underline"
                                 >
                                   <item.icon className="w-4 h-4 text-white/40 group-hover:text-white/70 transition-colors mt-0.5 shrink-0" />
                                   <div>
@@ -189,7 +209,7 @@ export const Navigation = () => {
                                     </p>
                                     <p className="text-[11px] text-white/25 mt-0.5">{item.desc}</p>
                                   </div>
-                                </button>
+                                </a>
                               ))}
                             </div>
                           </div>
@@ -212,13 +232,13 @@ export const Navigation = () => {
                 </div>
 
                 {menuItems.map((item) => (
-                  <button
+                  <a
                     key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className="text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
+                    href={item.path}
+                    className="text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200 no-underline"
                   >
                     {item.label}
-                  </button>
+                  </a>
                 ))}
               </div>
 
@@ -258,31 +278,27 @@ export const Navigation = () => {
                 <div className="mb-2">
                   <p className="text-[10px] font-semibold text-white/25 uppercase tracking-[0.2em] px-3 mb-2">Producto</p>
                   {[...productSections.main.items, ...productSections.modules.items].map((item) => (
-                    <button
+                    <a
                       key={item.name}
-                      className="flex items-center gap-3 text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-2.5 px-3 text-left w-full rounded-lg text-sm"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        navigate(item.path);
-                      }}
+                      href={item.path}
+                      className="flex items-center gap-3 text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-2.5 px-3 text-left w-full rounded-lg text-sm no-underline"
+                      onClick={() => setMobileMenuOpen(false)}
                     >
                       <item.icon className="w-4 h-4 text-white/40" />
                       {item.name}
-                    </button>
+                    </a>
                   ))}
                 </div>
                 <div className="border-t border-white/[0.06] my-1" />
                 {menuItems.map((item) => (
-                  <button
+                  <a
                     key={item.path}
-                    className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      navigate(item.path);
-                    }}
+                    href={item.path}
+                    className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg block no-underline"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.label}
-                  </button>
+                  </a>
                 ))}
                 <Link
                   to="/mi-cuenta"

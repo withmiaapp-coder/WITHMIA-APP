@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
 import { 
   CheckCircle2, 
@@ -9,6 +9,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import Portal from './Portal';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ConversationActionsDropdownProps {
   conversationId: number;
@@ -45,6 +46,19 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { hasTheme } = useTheme();
+
+  const t = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      dropBg: 'var(--theme-content-bg)',
+      border: 'var(--theme-content-card-border)',
+      text: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      hoverBg: 'var(--theme-item-bg)',
+      accent: 'var(--theme-accent)',
+    };
+  }, [hasTheme]);
 
   // Calcular posición del dropdown cuando se abre
   useEffect(() => {
@@ -113,25 +127,31 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
         <Portal>
           <div 
             ref={dropdownRef}
-            className="fixed w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-2 animate-fade-in"
-            style={{ top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
+            className={`fixed w-48 rounded-xl shadow-xl border py-2 animate-fade-in ${!t ? 'bg-white border-gray-200' : ''}`}
+            style={t ? { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999, backgroundColor: t.dropBg, borderColor: t.border } : { top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 99999 }}
           >
           {/* Resolver */}
           <button
             onClick={() => handleStatusChange('resolved')}
-            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors ${currentStatus === 'resolved' ? 'bg-green-50' : ''}`}
+            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors ${!t ? (currentStatus === 'resolved' ? 'bg-green-50 hover:bg-gray-50' : 'hover:bg-gray-50') : ''}`}
+            style={t ? { color: t.text } : undefined}
+            onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+            onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span className="text-gray-700">Resolver</span>
+            <span>Resolver</span>
           </button>
 
           {/* Marcar como Pendiente */}
           <button
             onClick={() => handleStatusChange('pending')}
-            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors ${currentStatus === 'pending' ? 'bg-blue-50' : ''}`}
+            className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors ${!t ? (currentStatus === 'pending' ? 'bg-blue-50 hover:bg-gray-50' : 'hover:bg-gray-50') : ''}`}
+            style={t ? { color: t.text } : undefined}
+            onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+            onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <Clock className="w-4 h-4 text-blue-600" />
-            <span className="text-gray-700">Marcar como pendiente</span>
+            <span>Marcar como pendiente</span>
           </button>
 
           {/* Posponer (con submenu) */}
@@ -141,18 +161,23 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
             onMouseLeave={() => setShowSnoozeOptions(false)}
           >
             <button
-              className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between hover:bg-gray-50 transition-colors ${currentStatus === 'snoozed' ? 'bg-purple-50' : ''}`}
+              className={`w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors ${!t ? (currentStatus === 'snoozed' ? 'bg-purple-50 hover:bg-gray-50' : 'hover:bg-gray-50') : ''}`}
+              style={t ? { color: t.text } : undefined}
+              onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+              onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <div className="flex items-center space-x-3">
                 <Pause className="w-4 h-4 text-purple-600" />
-                <span className="text-gray-700">Posponer</span>
+                <span>Posponer</span>
               </div>
-              <ChevronDown className="w-3 h-3 text-gray-400 -rotate-90" />
+              <ChevronDown className={`w-3 h-3 ${!t ? 'text-gray-400' : ''} -rotate-90`} style={t ? { color: t.textSec } : undefined} />
             </button>
 
             {/* Submenu de opciones de posponer */}
             {showSnoozeOptions && (
-              <div className="absolute left-full top-0 ml-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              <div className={`absolute left-full top-0 ml-1 w-32 rounded-lg shadow-lg border py-1 z-50 ${!t ? 'bg-white border-gray-200' : ''}`}
+                style={t ? { backgroundColor: t.dropBg, borderColor: t.border } : undefined}
+              >
                 {snoozeOptions.map((option) => (
                   <button
                     key={option.hours}
@@ -160,7 +185,10 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
                       const snoozedUntil = Math.floor(Date.now() / 1000) + (option.hours * 3600);
                       handleStatusChange('snoozed', snoozedUntil);
                     }}
-                    className="w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-purple-50 transition-colors"
+                    className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${!t ? 'text-gray-700 hover:bg-purple-50' : ''}`}
+                    style={t ? { color: t.text } : undefined}
+                    onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+                    onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     {option.label}
                   </button>
@@ -170,16 +198,19 @@ const ConversationActionsDropdown: React.FC<ConversationActionsDropdownProps> = 
           </div>
 
           {/* Separador */}
-          <div className="border-t border-gray-100 my-1"></div>
+          <div className={`border-t my-1 ${!t ? 'border-gray-100' : ''}`} style={t ? { borderColor: t.border } : undefined}></div>
 
           {/* Reabrir */}
           {currentStatus !== 'open' && (
             <button
               onClick={() => handleStatusChange('open')}
-              className="w-full px-4 py-2 text-left text-sm flex items-center space-x-3 hover:bg-gray-50 transition-colors"
+              className={`w-full px-4 py-2 text-left text-sm flex items-center space-x-3 transition-colors ${!t ? 'hover:bg-gray-50' : ''}`}
+              style={t ? { color: t.text } : undefined}
+              onMouseEnter={e => t && (e.currentTarget.style.backgroundColor = t.hoverBg)}
+              onMouseLeave={e => t && (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <AlertCircle className="w-4 h-4 text-yellow-600" />
-              <span className="text-gray-700">Reabrir</span>
+              <span>Reabrir</span>
             </button>
           )}
           </div>
