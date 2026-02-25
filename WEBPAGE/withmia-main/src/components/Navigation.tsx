@@ -7,6 +7,7 @@ const logo = "/logo-withmia.webp";
 
 const menuItems = [
   { label: "Precios", path: "/precios" },
+  { label: "Blog", path: "/blog" },
   { label: "Nosotros", path: "/nosotros" },
 ];
 

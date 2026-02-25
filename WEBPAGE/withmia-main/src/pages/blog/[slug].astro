@@ -1,0 +1,261 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { getCollection, type CollectionEntry } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+type Props = { post: CollectionEntry<'blog'> };
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+// Get related posts (same category, excluding current)
+const allPosts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const relatedPosts = allPosts
+  .filter(p => p.slug !== post.slug && p.data.category === post.data.category)
+  .slice(0, 3);
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const categoryColors: Record<string, string> = {
+  'IA Conversacional': 'bg-purple-500/15 text-purple-300 border-purple-500/20',
+  'WhatsApp Business': 'bg-green-500/15 text-green-300 border-green-500/20',
+  'Atención al Cliente': 'bg-blue-500/15 text-blue-300 border-blue-500/20',
+  'Automatización': 'bg-amber-500/15 text-amber-300 border-amber-500/20',
+  'Marketing Digital': 'bg-pink-500/15 text-pink-300 border-pink-500/20',
+  'PyMEs': 'bg-orange-500/15 text-orange-300 border-orange-500/20',
+  'Producto': 'bg-cyan-500/15 text-cyan-300 border-cyan-500/20',
+  'Casos de Éxito': 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+};
+
+// BlogPosting JSON-LD
+const blogPostingJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.date.toISOString(),
+  ...(post.data.updatedDate && { dateModified: post.data.updatedDate.toISOString() }),
+  author: {
+    "@type": "Person",
+    name: post.data.author,
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "WITHMIA",
+    logo: { "@type": "ImageObject", url: "https://withmia.com/logos/logo-withmia.png" },
+  },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": `https://withmia.com/blog/${post.slug}`,
+  },
+  ...(post.data.image && { image: `https://withmia.com${post.data.image}` }),
+  wordCount: post.body?.split(/\s+/).length || 0,
+  ...(post.data.readingTime && { timeRequired: `PT${post.data.readingTime}M` }),
+  keywords: post.data.tags.join(', '),
+  articleSection: post.data.category,
+  inLanguage: "es",
+});
+
+// Breadcrumb JSON-LD
+const breadcrumbJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://withmia.com" },
+    { "@type": "ListItem", position: 2, name: "Blog", item: "https://withmia.com/blog" },
+    { "@type": "ListItem", position: 3, name: post.data.title, item: `https://withmia.com/blog/${post.slug}` },
+  ],
+});
+---
+
+<Layout
+  title={post.data.title}
+  description={post.data.description}
+  path={`/blog/${post.slug}`}
+  image={post.data.image ? `https://withmia.com${post.data.image}` : undefined}
+  type="article"
+  jsonLd={[blogPostingJsonLd, breadcrumbJsonLd]}
+>
+  <article class="pt-32 pb-20 px-6">
+    <div class="max-w-3xl mx-auto">
+      <!-- Breadcrumb -->
+      <nav aria-label="Breadcrumb" class="mb-8">
+        <ol class="flex items-center gap-2 text-sm text-white/40">
+          <li><a href="/" class="hover:text-white transition-colors">Inicio</a></li>
+          <li><span class="mx-1">/</span></li>
+          <li><a href="/blog" class="hover:text-white transition-colors">Blog</a></li>
+          <li><span class="mx-1">/</span></li>
+          <li class="text-white/60 truncate max-w-[250px]">{post.data.title}</li>
+        </ol>
+      </nav>
+
+      <!-- Header -->
+      <header class="mb-10">
+        <div class="flex flex-wrap items-center gap-3 mb-5">
+          <span class:list={[
+            'px-3 py-1 rounded-full text-xs font-semibold border',
+            categoryColors[post.data.category] || 'bg-white/5 text-white/60 border-white/10',
+          ]}>
+            {post.data.category}
+          </span>
+          <time datetime={post.data.date.toISOString()} class="text-white/35 text-sm">
+            {formatDate(post.data.date)}
+          </time>
+          {post.data.readingTime && (
+            <span class="text-white/35 text-sm">· {post.data.readingTime} min de lectura</span>
+          )}
+        </div>
+
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-6">
+          {post.data.title}
+        </h1>
+
+        <p class="text-lg text-white/50 leading-relaxed mb-6">
+          {post.data.description}
+        </p>
+
+        <!-- Author -->
+        <div class="flex items-center gap-3 pb-8 border-b border-white/[0.08]">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-sm font-bold">
+            {post.data.author.charAt(0)}
+          </div>
+          <div>
+            <p class="text-white/80 text-sm font-medium">{post.data.author}</p>
+            <p class="text-white/35 text-xs">WITHMIA</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="prose prose-invert prose-lg max-w-none
+        prose-headings:text-white prose-headings:font-bold
+        prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:border-b prose-h2:border-white/[0.06] prose-h2:pb-3
+        prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+        prose-p:text-white/60 prose-p:leading-relaxed
+        prose-a:text-amber-400 prose-a:no-underline hover:prose-a:text-amber-300 hover:prose-a:underline
+        prose-strong:text-white/80
+        prose-li:text-white/60 prose-li:marker:text-amber-400/50
+        prose-blockquote:border-amber-400/30 prose-blockquote:text-white/50 prose-blockquote:italic
+        prose-code:text-amber-300 prose-code:bg-white/[0.06] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-[#0d0d1a] prose-pre:border prose-pre:border-white/[0.08] prose-pre:rounded-xl
+        prose-table:text-sm
+        prose-th:text-white/70 prose-th:font-semibold prose-th:border-white/[0.1] prose-th:p-3
+        prose-td:text-white/50 prose-td:border-white/[0.06] prose-td:p-3
+        prose-hr:border-white/[0.08]
+        prose-img:rounded-xl prose-img:border prose-img:border-white/[0.08]
+      ">
+        <Content />
+      </div>
+
+      <!-- Tags -->
+      {post.data.tags.length > 0 && (
+        <div class="mt-10 pt-8 border-t border-white/[0.08]">
+          <p class="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Etiquetas</p>
+          <div class="flex flex-wrap gap-2">
+            {post.data.tags.map(tag => (
+              <span class="px-3 py-1 rounded-full text-xs text-white/40 bg-white/[0.04] border border-white/[0.08]">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Share -->
+      <div class="mt-8 pt-8 border-t border-white/[0.08]">
+        <p class="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Compartir</p>
+        <div class="flex gap-3">
+          <a
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.data.title)}&url=${encodeURIComponent(`https://withmia.com/blog/${post.slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-4 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/50 text-sm hover:bg-white/[0.08] hover:text-white transition-all"
+            aria-label="Compartir en X (Twitter)"
+          >
+            𝕏 Twitter
+          </a>
+          <a
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://withmia.com/blog/${post.slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-4 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/50 text-sm hover:bg-white/[0.08] hover:text-white transition-all"
+            aria-label="Compartir en LinkedIn"
+          >
+            LinkedIn
+          </a>
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(post.data.title + ' ' + `https://withmia.com/blog/${post.slug}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="px-4 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/50 text-sm hover:bg-white/[0.08] hover:text-white transition-all"
+            aria-label="Compartir por WhatsApp"
+          >
+            WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- Related posts -->
+  {relatedPosts.length > 0 && (
+    <section class="pb-20 px-6">
+      <div class="max-w-6xl mx-auto">
+        <h2 class="text-2xl font-bold text-white mb-8">Artículos Relacionados</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {relatedPosts.map(related => (
+            <a href={`/blog/${related.slug}`} class="group">
+              <article class="h-full rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 hover:border-white/[0.15] hover:bg-white/[0.04] transition-all duration-300 flex flex-col">
+                <div class="flex items-center gap-2 mb-4">
+                  <span class:list={[
+                    'px-2.5 py-0.5 rounded-full text-[11px] font-semibold border',
+                    categoryColors[related.data.category] || 'bg-white/5 text-white/60 border-white/10',
+                  ]}>
+                    {related.data.category}
+                  </span>
+                </div>
+                <h3 class="text-lg font-bold text-white group-hover:text-amber-200 transition-colors duration-300 mb-3 leading-snug">
+                  {related.data.title}
+                </h3>
+                <p class="text-white/40 text-sm leading-relaxed flex-1 mb-4">
+                  {related.data.description}
+                </p>
+                <div class="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+                  <span class="text-white/30 text-xs">{formatDate(related.data.date)}</span>
+                  <span class="text-amber-400/60 text-xs font-medium group-hover:text-amber-400 transition-colors">
+                    Leer más →
+                  </span>
+                </div>
+              </article>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA -->
+  <section class="pb-20 px-6">
+    <div class="max-w-3xl mx-auto">
+      <div class="rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-950/20 to-orange-950/10 p-10 text-center">
+        <h2 class="text-2xl font-bold text-white mb-3">¿Quieres implementar esto en tu negocio?</h2>
+        <p class="text-white/50 mb-6">Prueba WITHMIA gratis por 14 días. Sin tarjeta de crédito.</p>
+        <a
+          href="https://app.withmia.com"
+          class="inline-flex px-8 py-3.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold shadow-[0_2px_15px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_25px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300"
+        >
+          Comenzar Gratis
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -12,7 +12,7 @@ export default defineConfig({
     }),
     sitemap({
       filter: (page) =>
-        !page.includes('/mi-cuenta'),  // Exclude noindex pages
+        !page.includes('/mi-cuenta') && !page.includes('/soporte'),  // Exclude noindex pages
       changefreq: 'weekly',
       priority: 0.7,
       i18n: {
