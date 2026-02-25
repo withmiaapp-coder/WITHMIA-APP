@@ -252,7 +252,7 @@ export default function ProductsSection({ user, company }: Props) {
       <div className={`px-6 py-3 border-b flex-shrink-0 ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl">
+            <div className={`p-2 rounded-xl ${!t ? 'bg-gradient-to-br from-orange-500 to-red-500' : ''}`} style={t ? { background: t.accent } : undefined}>
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -614,8 +614,8 @@ function EmptyState({ hasFilters, onCreateProduct }: {
   }, [hasTheme, isDark]);
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center mb-5">
-        <Package className="w-10 h-10 text-orange-400" />
+      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-5 ${!t ? 'bg-gradient-to-br from-orange-100 to-red-100' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)` } : undefined}>
+        <Package className={`w-10 h-10 ${!t ? 'text-orange-400' : ''}`} style={t ? { color: t.accent } : undefined} />
       </div>
       {hasFilters ? (
         <>
@@ -783,10 +783,10 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
 
           {/* Header */}
           <div className="relative px-6 pt-5 pb-0 flex-shrink-0">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-t-2xl" />
+            <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-2xl ${!t ? 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500' : ''}`} style={t ? { background: t.accent } : undefined} />
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-200/50">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${!t ? 'bg-gradient-to-br from-orange-500 to-red-500 shadow-orange-200/50' : ''}`} style={t ? { background: t.accent } : undefined}>
                   {product ? <Edit3 className="w-5 h-5 text-white" /> : <Plus className="w-5 h-5 text-white" />}
                 </div>
                 <div>
@@ -979,13 +979,13 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                   />
                   {uploadingImage ? (
                     <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
+                      <Loader2 className={`w-10 h-10 animate-spin ${!t ? 'text-orange-400' : ''}`} style={t ? { color: t.accent } : undefined} />
                       <p className={`text-sm font-medium ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Subiendo imagen...</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
-                        <Upload className="w-7 h-7 text-orange-500" />
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${!t ? 'bg-gradient-to-br from-orange-100 to-red-100' : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)` } : undefined}>
+                        <Upload className={`w-7 h-7 ${!t ? 'text-orange-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                       </div>
                       <div>
                         <p className={`text-sm font-semibold ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.text } : undefined}>Arrastra imágenes aquí</p>
@@ -1059,7 +1059,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                 Cancelar
               </button>
               <button type="submit" disabled={!name.trim() || submitting}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-orange-200/50">
+                className={`px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg ${!t ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-orange-200/50' : 'hover:opacity-90'}`}
+                style={t ? { backgroundColor: t.accent } : undefined}>
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {product ? 'Guardar cambios' : 'Crear producto'}
               </button>
