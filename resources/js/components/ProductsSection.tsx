@@ -306,7 +306,7 @@ export default function ProductsSection({ user, company }: Props) {
               value={selectedCategory}
               onChange={e => setSelectedCategory(e.target.value)}
               className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
-              style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
+              style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec, colorScheme: isDark ? 'dark' : undefined } : undefined}
             >
               <option value="">Todas las categorías</option>
               {categories.map(cat => (
@@ -319,7 +319,7 @@ export default function ProductsSection({ user, company }: Props) {
             value={selectedProvider}
             onChange={e => setSelectedProvider(e.target.value)}
             className={`px-3 py-1.5 border rounded-lg text-xs outline-none min-w-[130px] ${!t ? 'border-slate-200 text-neutral-600 bg-white focus:border-orange-400' : ''}`}
-            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec } : undefined}
+            style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.textSec, colorScheme: isDark ? 'dark' : undefined } : undefined}
           >
             <option value="">Todos los orígenes</option>
             <option value="manual">Manual</option>
@@ -904,7 +904,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                       <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Moneda</label>
                       <select value={currency} onChange={e => setCurrency(e.target.value)}
                         className={`w-full px-3 py-2.5 border rounded-lg text-sm font-semibold outline-none transition-all ${!t ? 'bg-white border-emerald-200 text-neutral-700 focus:border-emerald-400' : ''}`}
-                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text, colorScheme: isDark ? 'dark' : undefined } : undefined}>
                         <option value="CLP">CLP</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -936,7 +936,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
                       <label className={`text-[10px] font-semibold uppercase mb-1 block ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>Estado</label>
                       <select value={stockStatus} onChange={e => setStockStatus(e.target.value)}
                         className={`w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition-all ${!t ? 'bg-white border-blue-200 text-neutral-700 focus:border-blue-400' : ''}`}
-                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text } : undefined}>
+                        style={t ? { backgroundColor: t.inputBg, borderColor: t.cardBorder, color: t.text, colorScheme: isDark ? 'dark' : undefined } : undefined}>
                         <option value="in_stock">En stock</option>
                         <option value="out_of_stock">Agotado</option>
                         <option value="on_backorder">Por encargo</option>
