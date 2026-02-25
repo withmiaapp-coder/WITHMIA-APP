@@ -437,7 +437,7 @@ export default function Entrenamiento({
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Entrenamiento de IA</h1>
+          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Entrenamiento de WITH<span className="font-black">MIA</span></h1>
           <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textSec } : undefined}>
             Entrena a WITHMIA con información de tu empresa y ejemplos de conversación
           </p>
