@@ -257,12 +257,12 @@ export default function SubscriptionPage() {
       <div className="max-w-5xl mx-auto space-y-8">
 
         {/* Header */}
-        <div className="flex items-center space-x-4 mb-2">
+        <div className="flex items-center space-x-3 mb-2">
           <div
-            className={`p-4 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : ''}`}
+            className={`p-2.5 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : ''}`}
             style={t ? { background: t.accent } : undefined}
           >
-            <CreditCard className="w-10 h-10 text-white" />
+            <CreditCard className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Suscripción</h1>

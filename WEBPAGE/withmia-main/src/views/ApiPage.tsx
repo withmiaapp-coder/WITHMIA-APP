@@ -28,18 +28,30 @@ import {
   Eye,
   Play,
   Hash,
+  AlertTriangle,
+  XCircle,
+  Gauge,
+  ShoppingCart,
+  CalendarCheck,
+  GraduationCap,
+  Stethoscope,
+  Building2,
+  RefreshCw,
+  FileJson,
+  Ban,
+  Timer,
 } from "lucide-react";
 
 /* ─── Data ─── */
 const endpoints = [
-  { method: "POST", path: "/v1/messages", desc: "Enviar mensaje a cualquier canal conectado", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20" },
-  { method: "GET", path: "/v1/conversations", desc: "Listar conversaciones con filtros y paginación", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20" },
-  { method: "GET", path: "/v1/contacts", desc: "Obtener contactos y datos de perfil", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20" },
-  { method: "POST", path: "/v1/webhooks", desc: "Registrar webhooks para eventos en tiempo real", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20" },
-  { method: "PUT", path: "/v1/contacts/:id", desc: "Actualizar información de un contacto", methodColor: "bg-blue-400/[0.12] text-blue-400 border-blue-400/20" },
-  { method: "DELETE", path: "/v1/webhooks/:id", desc: "Eliminar un webhook registrado", methodColor: "bg-red-400/[0.12] text-red-400 border-red-400/20" },
-  { method: "GET", path: "/v1/channels", desc: "Listar canales conectados y estado", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20" },
-  { method: "POST", path: "/v1/templates", desc: "Crear plantillas de mensajes HSM", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20" },
+  { method: "POST", path: "/v1/messages", desc: "Enviar mensaje a cualquier canal conectado", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "msg_7f3kQ9x", "status": "queued", "channel": "whatsapp", "to": "+569...", "created_at": "2026-02-24T14:32:01Z" }` },
+  { method: "GET", path: "/v1/conversations", desc: "Listar conversaciones con filtros y paginación", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "conv_3fR9", "status": "open", "channel": "whatsapp", "unread": 2 }], "meta": { "total": 142, "page": 1 } }` },
+  { method: "GET", path: "/v1/contacts", desc: "Obtener contactos y datos de perfil", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "ct_8xK2", "name": "María López", "phone": "+569...", "tags": ["vip"] }], "meta": { "total": 831 } }` },
+  { method: "POST", path: "/v1/webhooks", desc: "Registrar webhooks para eventos en tiempo real", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "wh_5qR2", "url": "https://...", "events": ["message.received"], "active": true, "secret": "whsec_..." }` },
+  { method: "PUT", path: "/v1/contacts/:id", desc: "Actualizar información de un contacto", methodColor: "bg-blue-400/[0.12] text-blue-400 border-blue-400/20", response: `{ "id": "ct_8xK2", "name": "María López", "tags": ["vip", "premium"], "updated_at": "2026-02-24T14:35:00Z" }` },
+  { method: "DELETE", path: "/v1/webhooks/:id", desc: "Eliminar un webhook registrado", methodColor: "bg-red-400/[0.12] text-red-400 border-red-400/20", response: `{ "deleted": true, "id": "wh_5qR2" }` },
+  { method: "GET", path: "/v1/channels", desc: "Listar canales conectados y estado", methodColor: "bg-emerald-400/[0.12] text-emerald-400 border-emerald-400/20", response: `{ "data": [{ "id": "ch_wa1", "type": "whatsapp", "status": "connected", "phone": "+569..." }] }` },
+  { method: "POST", path: "/v1/templates", desc: "Crear plantillas de mensajes HSM", methodColor: "bg-amber-400/[0.12] text-amber-400 border-amber-400/20", response: `{ "id": "tpl_9kM3", "name": "order_confirmed", "status": "pending_review", "language": "es" }` },
 ];
 
 const sdks = [
@@ -101,6 +113,111 @@ const webhookEvents = [
   { event: "bot.handoff", desc: "Transferencia bot → agente", color: "#ec4899" },
 ];
 
+const errorCodes = [
+  { code: "200", label: "OK", desc: "Solicitud exitosa", color: "#34d399", bg: "bg-emerald-400/[0.08] border-emerald-400/15" },
+  { code: "201", label: "Created", desc: "Recurso creado correctamente", color: "#34d399", bg: "bg-emerald-400/[0.08] border-emerald-400/15" },
+  { code: "400", label: "Bad Request", desc: "Parámetros inválidos o faltantes en la solicitud", color: "#f59e0b", bg: "bg-amber-400/[0.08] border-amber-400/15" },
+  { code: "401", label: "Unauthorized", desc: "Token de acceso inválido, expirado o ausente", color: "#f43f5e", bg: "bg-red-400/[0.08] border-red-400/15" },
+  { code: "403", label: "Forbidden", desc: "El token no tiene los scopes necesarios para este recurso", color: "#f43f5e", bg: "bg-red-400/[0.08] border-red-400/15" },
+  { code: "404", label: "Not Found", desc: "El recurso solicitado no existe", color: "#f59e0b", bg: "bg-amber-400/[0.08] border-amber-400/15" },
+  { code: "409", label: "Conflict", desc: "Conflicto con el estado actual del recurso (duplicado)", color: "#f59e0b", bg: "bg-amber-400/[0.08] border-amber-400/15" },
+  { code: "422", label: "Unprocessable", desc: "Datos válidos en formato pero semánticamente incorrectos", color: "#f59e0b", bg: "bg-amber-400/[0.08] border-amber-400/15" },
+  { code: "429", label: "Rate Limited", desc: "Se excedió el límite de requests por minuto", color: "#a78bfa", bg: "bg-violet-400/[0.08] border-violet-400/15" },
+  { code: "500", label: "Server Error", desc: "Error interno. Reintentar con backoff exponencial", color: "#f43f5e", bg: "bg-red-400/[0.08] border-red-400/15" },
+];
+
+const rateLimits = [
+  { plan: "Sandbox", requests: "100", per: "minuto", burst: "20/s", price: "Gratis", color: "#34d399", highlighted: false },
+  { plan: "Starter", requests: "1,000", per: "minuto", burst: "50/s", price: "$49/mes", color: "#f59e0b", highlighted: false },
+  { plan: "Growth", requests: "5,000", per: "minuto", burst: "200/s", price: "$149/mes", color: "#a78bfa", highlighted: true },
+  { plan: "Enterprise", requests: "Custom", per: "minuto", burst: "Custom", price: "Contactar", color: "#22d3ee", highlighted: false },
+];
+
+const useCases = [
+  {
+    icon: ShoppingCart,
+    title: "E-commerce",
+    desc: "Confirmaciones de pedido, tracking de envío y soporte post-venta automatizado por WhatsApp.",
+    code: `client.messages.send({
+  channel: "whatsapp",
+  to: order.phone,
+  template: "order_confirmed",
+  variables: {
+    name: order.customer,
+    order_id: order.id,
+    total: order.total
+  }
+});`,
+    color: "#f59e0b",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Agendamiento",
+    desc: "Envía recordatorios automáticos, permite confirmar o reagendar directamente por chat.",
+    code: `client.messages.send({
+  channel: "whatsapp",
+  to: appointment.phone,
+  template: "appointment_reminder",
+  variables: {
+    date: appointment.date,
+    doctor: appointment.professional,
+    link: appointment.reschedule_url
+  }
+});`,
+    color: "#a78bfa",
+  },
+  {
+    icon: Stethoscope,
+    title: "Salud",
+    desc: "Resultados de exámenes, recordatorio de medicamentos y seguimiento post-consulta.",
+    code: `// Webhook: conversation.created
+app.post("/webhook", (req, res) => {
+  const { data } = req.body;
+  if (data.metadata.department === "lab") {
+    client.messages.send({
+      to: data.contact.phone,
+      text: "Sus resultados están listos 📋"
+    });
+  }
+});`,
+    color: "#34d399",
+  },
+  {
+    icon: GraduationCap,
+    title: "Educación",
+    desc: "Proceso de admisión automatizado, envío de documentos y seguimiento de matrículas.",
+    code: `// Automatizar respuesta a consultas
+client.bots.configure({
+  trigger: "admission_inquiry",
+  actions: [
+    { type: "send_template", template: "admission_info" },
+    { type: "collect_data", fields: ["name", "grade", "email"] },
+    { type: "create_contact", assign_to: "admissions" }
+  ]
+});`,
+    color: "#6366f1",
+  },
+  {
+    icon: Building2,
+    title: "Inmobiliaria",
+    desc: "Califica leads automáticamente, agenda visitas y envía fichas de propiedades por WhatsApp.",
+    code: `// Calificar lead y agendar visita
+app.post("/webhook", (req, res) => {
+  const lead = req.body.data;
+  const score = qualifyLead(lead);
+  
+  if (score >= 7) {
+    client.conversations.assign({
+      id: lead.conversation_id,
+      agent: "senior_broker",
+      note: \`Lead calificado: \${score}/10\`
+    });
+  }
+});`,
+    color: "#22d3ee",
+  },
+];
+
 /* ─── Component ─── */
 const ApiPage = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -146,13 +263,13 @@ const ApiPage = () => {
                   {/* Status pill */}
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.02] mb-8">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 api-status-dot" />
-                    <span className="text-[11px] font-mono text-white/35 tracking-wide">Operational</span>
+                    <span className="text-[11px] font-mono text-white/35 tracking-wide">Operativo</span>
                     <span className="text-[10px] font-mono text-white/15">•</span>
                     <span className="text-[11px] font-mono text-white/25">v1.0</span>
                   </div>
 
                   <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-white leading-[1.1] tracking-tight mb-6">
-                    Build with the
+                    Construye con la
                     <br />
                     <span className="text-gradient">WITHMIA API</span>
                   </h1>
@@ -166,9 +283,9 @@ const ApiPage = () => {
                   {/* Quick links — Stripe style */}
                   <div className="space-y-3 mb-12">
                     {[
-                      { label: "Quickstart", desc: "Envía tu primer mensaje en 5 minutos", href: "/docs", icon: Play },
-                      { label: "API Reference", desc: "Documentación completa de endpoints", href: "/docs", icon: BookOpen },
-                      { label: "SDKs & Libraries", desc: "Node.js, Python y cURL", href: "#sdks", icon: Code },
+                      { label: "Inicio rápido", desc: "Envía tu primer mensaje en 5 minutos", href: "/docs", icon: Play },
+                      { label: "Referencia API", desc: "Documentación completa de endpoints", href: "#reference", icon: BookOpen },
+                      { label: "SDKs y librerías", desc: "Node.js, Python y cURL", href: "#sdks", icon: Code },
                     ].map((link, i) => (
                       <a
                         key={i}
@@ -303,7 +420,7 @@ const ApiPage = () => {
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Quickstart
+                  Inicio Rápido
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
                   Integra en 3 pasos
@@ -415,14 +532,14 @@ const ApiPage = () => {
               <div className="flex items-end justify-between mb-12">
                 <div>
                   <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                    API Reference
+                    Referencia API
                   </p>
                   <h2 className="text-3xl sm:text-4xl font-bold text-white">
                     Endpoints
                   </h2>
                 </div>
                 <Link to="/docs" className="hidden sm:flex items-center gap-1.5 text-[12px] font-medium text-amber-400/60 hover:text-amber-300 transition-colors">
-                  Full reference <ArrowRight className="w-3 h-3" />
+                  Referencia completa <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             </Reveal>
@@ -541,7 +658,7 @@ const ApiPage = () => {
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Capabilities
+                  Capacidades
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white">
                   Diseñada para escalar
@@ -591,7 +708,7 @@ const ApiPage = () => {
               <div className="flex items-end justify-between mb-12">
                 <div>
                   <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                    Client Libraries
+                    Librerías Cliente
                   </p>
                   <h2 className="text-3xl sm:text-4xl font-bold text-white">
                     SDKs oficiales
@@ -762,6 +879,332 @@ const ApiPage = () => {
         </section>
 
         {/* ══════════════════════════════════════════
+            AUTHENTICATION — OAuth 2.0 flow explained
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="auth">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[11px] font-semibold text-emerald-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                    Autenticación
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                    Seguridad de nivel enterprise
+                  </h2>
+                </div>
+                <span className="hidden sm:inline text-[10px] font-mono text-white/15 px-2.5 py-1 rounded-full border border-white/[0.06] bg-white/[0.02]">
+                  OAuth 2.0 + Bearer Token
+                </span>
+              </div>
+            </Reveal>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Left — Explanation */}
+              <Reveal>
+                <div className="space-y-6">
+                  {[
+                    {
+                      step: "1",
+                      title: "Genera tu API Key",
+                      desc: "Desde el dashboard de WITHMIA, genera un token de acceso. Puedes crear múltiples keys con scopes específicos.",
+                      icon: Key,
+                      color: "#f59e0b",
+                    },
+                    {
+                      step: "2",
+                      title: "Incluye el token en cada request",
+                      desc: "Envía el header Authorization: Bearer sk_live_... en todas tus peticiones. Para testing, usa sk_test_... en el sandbox.",
+                      icon: Lock,
+                      color: "#34d399",
+                    },
+                    {
+                      step: "3",
+                      title: "Scopes granulares",
+                      desc: "Asigna permisos por recurso: messages:write, conversations:read, contacts:*, webhooks:manage. Principio de mínimo privilegio.",
+                      icon: Shield,
+                      color: "#a78bfa",
+                    },
+                    {
+                      step: "4",
+                      title: "Rotación segura",
+                      desc: "Rota tokens sin downtime. La API soporta dos tokens activos simultáneamente durante la migración.",
+                      icon: RefreshCw,
+                      color: "#22d3ee",
+                    },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 group">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${item.color}10`, border: `1px solid ${item.color}20` }}
+                      >
+                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                      </div>
+                      <div>
+                        <h3 className="text-[14px] font-semibold text-white/70 mb-1">{item.title}</h3>
+                        <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+
+              {/* Right — Code example */}
+              <Reveal delay={100}>
+                <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400/40" />
+                    <span className="text-[10px] font-mono text-white/30">Ejemplo de autenticación</span>
+                  </div>
+                  <div className="p-4">
+                    <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                      <code>
+                        <span className="text-white/20">{"// Tokens con scopes específicos"}</span>{"\n"}
+                        <span className="text-amber-400/60">const</span> <span className="text-white/50">client</span> <span className="text-white/20">=</span> <span className="text-amber-400/60">new</span> <span className="text-cyan-400/60">Withmia</span><span className="text-white/15">({"{"}</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}apiKey</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"sk_live_..."</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-violet-400/50">{"  "}scopes</span><span className="text-white/12">: </span><span className="text-white/15">[</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"messages:write"</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"conversations:read"</span><span className="text-white/10">,</span>{"\n"}
+                        <span className="text-cyan-400/50">{"    "}"contacts:read"</span>{"\n"}
+                        <span className="text-white/15">{"  "]"}</span>{"\n"}
+                        <span className="text-white/15">{"}"}</span><span className="text-white/15">);</span>{"\n\n"}
+                        <span className="text-white/20">{"// Headers enviados automáticamente:"}</span>{"\n"}
+                        <span className="text-white/20">{"// Authorization: Bearer sk_live_..."}</span>{"\n"}
+                        <span className="text-white/20">{"// X-Api-Version: 2026-02-01"}</span>{"\n"}
+                        <span className="text-white/20">{"// X-Idempotency-Key: auto-generated"}</span>
+                      </code>
+                    </pre>
+                  </div>
+                  <div className="px-4 py-2.5 border-t border-white/[0.05] bg-white/[0.01] flex items-center gap-2">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400/40" />
+                    <span className="text-[9px] text-white/20 font-mono">Tokens nunca se loguean ni se exponen en respuestas</span>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            ERROR CODES — Status codes reference
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="errors">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[11px] font-semibold text-red-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                    Códigos de Error
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white">
+                    Respuestas predecibles
+                  </h2>
+                </div>
+              </div>
+            </Reveal>
+
+            <div className="grid lg:grid-cols-[1fr_1fr] gap-8">
+              {/* Left — Status codes table */}
+              <Reveal>
+                <div className="rounded-xl overflow-hidden border border-white/[0.06]">
+                  <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.01]">
+                    <div className="flex items-center gap-2">
+                      <FileJson className="w-3.5 h-3.5 text-white/20" />
+                      <span className="text-[10px] font-mono text-white/30">HTTP Status Codes</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-white/[0.03] bg-white/[0.015]">
+                    {errorCodes.map((err, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-colors group">
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0 ${err.bg}`} style={{ color: err.color }}>
+                          {err.code}
+                        </span>
+                        <span className="text-[11px] font-mono text-white/40 font-medium shrink-0 w-24">{err.label}</span>
+                        <span className="text-[10px] text-white/20 hidden sm:block">{err.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* Right — Error response example */}
+              <Reveal delay={100}>
+                <div className="space-y-6">
+                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400/40" />
+                      <span className="text-[10px] font-mono text-white/30">Formato de error estándar</span>
+                    </div>
+                    <div className="p-4">
+                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                        <code>
+                          <span className="text-white/15">{"{"}</span>{"\n"}
+                          <span className="text-violet-400/50">{"  "}"error"</span><span className="text-white/12">: </span><span className="text-white/15">{"{"}</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"type"</span><span className="text-white/12">: </span><span className="text-red-400/60">"validation_error"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"code"</span><span className="text-white/12">: </span><span className="text-red-400/60">"invalid_phone_number"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"message"</span><span className="text-white/12">: </span><span className="text-cyan-400/60">"El número de teléfono no es válido"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"param"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"to"</span><span className="text-white/10">,</span>{"\n"}
+                          <span className="text-violet-400/50">{"    "}"doc_url"</span><span className="text-white/12">: </span><span className="text-cyan-400/50">"https://docs.withmia.com/errors/invalid_phone"</span>{"\n"}
+                          <span className="text-white/15">{"  }"}</span>{"\n"}
+                          <span className="text-white/15">{"}"}</span>
+                        </code>
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0a0a14]">
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-white/[0.01]">
+                      <Ban className="w-3.5 h-3.5 text-violet-400/40" />
+                      <span className="text-[10px] font-mono text-white/30">Rate limit excedido (429)</span>
+                    </div>
+                    <div className="p-4">
+                      <pre className="text-[11px] font-mono leading-[1.8] overflow-x-auto">
+                        <code>
+                          <span className="text-white/20">{"// Headers de respuesta"}</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Limit</span><span className="text-white/12">: </span><span className="text-amber-400/60">1000</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Remaining</span><span className="text-white/12">: </span><span className="text-red-400/60">0</span>{"\n"}
+                          <span className="text-violet-400/50">X-RateLimit-Reset</span><span className="text-white/12">: </span><span className="text-cyan-400/50">1708872000</span>{"\n"}
+                          <span className="text-violet-400/50">Retry-After</span><span className="text-white/12">: </span><span className="text-amber-400/60">30</span>
+                        </code>
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            RATE LIMITING — Plans + limits
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="limits">
+          <div className="max-w-5xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-amber-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Rate Limiting
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Límites por plan
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  Cada request incluye headers informativos. Escala sin sorpresas.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={80}>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {rateLimits.map((plan, i) => (
+                  <div
+                    key={i}
+                    className={`relative p-6 rounded-xl border transition-all duration-300 hover:-translate-y-1 ${
+                      plan.highlighted
+                        ? "border-amber-400/25 bg-gradient-to-b from-amber-500/[0.04] to-transparent"
+                        : "border-white/[0.06] bg-white/[0.015]"
+                    }`}
+                  >
+                    {plan.highlighted && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/25">
+                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider">Popular</span>
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-lg mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: `${plan.color}10`, border: `1px solid ${plan.color}20` }}>
+                        <Gauge className="w-4 h-4" style={{ color: plan.color }} />
+                      </div>
+                      <h3 className="text-sm font-bold text-white/80 mb-1">{plan.plan}</h3>
+                      <p className="text-2xl font-bold font-mono mb-1" style={{ color: plan.color }}>{plan.requests}</p>
+                      <p className="text-[10px] text-white/20 mb-3">req/{plan.per}</p>
+                      <div className="text-[10px] text-white/15 mb-3">Burst: {plan.burst}</div>
+                      <div className="pt-3 border-t border-white/[0.05]">
+                        <span className="text-[13px] font-semibold text-white/50">{plan.price}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+
+            <Reveal delay={200}>
+              <div className="mt-8 p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] flex flex-col sm:flex-row items-center gap-3">
+                <Timer className="w-4 h-4 text-amber-400/40 shrink-0" />
+                <p className="text-[12px] text-white/25 text-center sm:text-left">
+                  <span className="text-white/50 font-medium">Backoff inteligente:</span> Los SDKs oficiales implementan retry automático con backoff exponencial. Si excedes el límite, esperan el tiempo indicado en <code className="text-amber-400/50 font-mono text-[10px]">Retry-After</code> y reintentan.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
+            USE CASES — Real integration examples
+            ══════════════════════════════════════════ */}
+        <section className="py-24 relative border-t border-white/[0.04]" id="use-cases">
+          <div className="max-w-6xl mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <p className="text-[11px] font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
+                  Casos de Uso
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                  Integraciones reales
+                </h2>
+                <p className="text-white/30 max-w-lg mx-auto text-[15px]">
+                  Ejemplos de código listos para copiar. Adapta, conecta y lanza.
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="space-y-6">
+              {useCases.map((uc, i) => (
+                <Reveal key={i} delay={i * 80}>
+                  <div className="grid lg:grid-cols-[1fr_1.3fr] gap-0 rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/[0.10] transition-all duration-300">
+                    {/* Left — Description */}
+                    <div className="p-6 lg:p-8 bg-white/[0.015] flex flex-col justify-center">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `${uc.color}10`, border: `1px solid ${uc.color}20` }}
+                        >
+                          <uc.icon className="w-5 h-5" style={{ color: uc.color }} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white/80">{uc.title}</h3>
+                      </div>
+                      <p className="text-[13px] text-white/30 leading-relaxed">{uc.desc}</p>
+                    </div>
+                    {/* Right — Code */}
+                    <div className="bg-[#0a0a14] border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05]">
+                        <span className="text-[9px] font-mono text-white/20">{uc.title.toLowerCase()}.js</span>
+                        <button
+                          onClick={() => handleCopy(uc.code, `uc-${i}`)}
+                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] transition-all text-white/20 hover:text-white/40"
+                        >
+                          {copied === `uc-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          <span className="text-[8px] font-mono">{copied === `uc-${i}` ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                      <div className="relative p-4">
+                        <div className="absolute left-0 top-4 bottom-4 w-8 flex flex-col items-end pr-2 select-none pointer-events-none border-r border-white/[0.03]">
+                          {uc.code.split("\n").map((_, j) => (
+                            <span key={j} className="text-[9px] font-mono text-white/[0.07] leading-[1.75] tabular-nums">{j + 1}</span>
+                          ))}
+                        </div>
+                        <pre className="text-[11px] text-white/40 leading-[1.75] font-mono pl-7 overflow-x-auto">
+                          <code>{uc.code}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════
             ARCHITECTURE — How it connects
             ══════════════════════════════════════════ */}
         <section className="py-24 relative border-t border-white/[0.04]">
@@ -769,7 +1212,7 @@ const ApiPage = () => {
             <Reveal>
               <div className="text-center mb-16">
                 <p className="text-[11px] font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3 font-mono">
-                  Architecture
+                  Arquitectura
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
                   Un solo endpoint, múltiples canales
@@ -906,11 +1349,11 @@ const ApiPage = () => {
             <div className="relative max-w-2xl mx-auto px-6 text-center">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/[0.08] bg-white/[0.02] mb-8">
                 <Sparkles className="w-3 h-3 text-amber-400/60" />
-                <span className="text-[10px] font-medium text-white/30">Free to start</span>
+                <span className="text-[10px] font-medium text-white/30">Comienza gratis</span>
               </div>
 
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">
-                Start building today
+                Empieza a construir hoy
               </h2>
               <p className="text-white/30 mb-10 max-w-md mx-auto text-[15px] leading-relaxed">
                 API keys gratuitas. Sandbox incluido. Sin tarjeta de crédito.
@@ -924,7 +1367,7 @@ const ApiPage = () => {
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
                   <span className="relative flex items-center gap-2">
-                    Get API Key
+                    Obtener API Key
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </a>
@@ -933,7 +1376,7 @@ const ApiPage = () => {
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg border border-white/[0.08] text-white/50 hover:text-white/80 hover:border-white/[0.15] text-sm font-medium transition-all duration-300 hover:bg-white/[0.02]"
                 >
                   <BookOpen className="w-4 h-4" />
-                  Documentation
+                  Documentación
                 </a>
               </div>
             </div>
