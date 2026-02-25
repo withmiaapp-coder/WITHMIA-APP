@@ -131,7 +131,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen relative">
-      <main className="pt-20 relative overflow-hidden">
+      <div className="pt-20 relative overflow-hidden">
 
         {/* ════════════════ HERO ════════════════ */}
         <div className="relative pt-16 md:pt-24 pb-14 md:pb-20 px-4">
@@ -528,7 +528,7 @@ const Contact = () => {
           </div>
         </div>
 
-      </main>
+      </div>
     </div>
   );
 };

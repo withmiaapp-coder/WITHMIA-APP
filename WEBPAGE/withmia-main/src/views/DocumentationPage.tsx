@@ -1926,7 +1926,7 @@ const DocumentationPage = () => {
         )}
 
         {/* ═══ MAIN CONTENT ═══ */}
-        <main ref={contentRef} className={`flex-1 min-w-0 px-6 md:px-10 lg:px-16 py-8 md:py-10 transition-all duration-200 ${isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
+        <div ref={contentRef} className={`flex-1 min-w-0 px-6 md:px-10 lg:px-16 py-8 md:py-10 transition-all duration-200 ${isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}>
 
           {/* Breadcrumb + mobile menu toggle */}
           <div className="flex items-center gap-3 mb-6">
@@ -2225,7 +2225,7 @@ const DocumentationPage = () => {
               </div>
             </div>
           </div>
-        </main>
+        </div>
 
         {/* ═══ RIGHT TOC SIDEBAR ═══ */}
         <aside className="hidden xl:block w-[220px] shrink-0 sticky top-24 h-[calc(100vh-96px)] overflow-y-auto py-8 pr-4">

@@ -226,7 +226,7 @@ const IntegrationsPage = () => {
 
   return (
     <div className="min-h-screen">
-      <main>
+      <div>
         {/* ══════════════════════════════════════
             HERO
             ══════════════════════════════════════ */}
@@ -913,7 +913,7 @@ const IntegrationsPage = () => {
         {/* ══════════════════════════════════════
             END — Content sections
             ══════════════════════════════════════ */}
-      </main>
+      </div>
       {/* ── Styles ── */}
       <style>{`
         /* Aurora animated background */

@@ -125,7 +125,7 @@ const ApiPage = () => {
 
   return (
     <div className="min-h-screen api-page">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* ══════════════════════════════════════════
             HERO — Stripe-style split layout
@@ -940,7 +940,7 @@ const ApiPage = () => {
           </Reveal>
         </section>
 
-      </main>
+      </div>
       {/* ── Styles ── */}
       <style>{`
         .api-page {

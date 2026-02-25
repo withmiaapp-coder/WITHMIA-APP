@@ -1,0 +1,13 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import MyAccount from '@/views/MyAccount';
+---
+
+<Layout
+  title="Mi Cuenta"
+  description="Gestiona tu cuenta de WITHMIA. Perfil, suscripción, facturación y configuración."
+  path="/mi-cuenta"
+  noindex={true}
+>
+  <MyAccount client:load />
+</Layout>

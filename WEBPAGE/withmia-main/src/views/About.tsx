@@ -132,7 +132,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen relative">
-      <main className="pt-20 relative overflow-hidden">
+      <div className="pt-20 relative overflow-hidden">
 
         {/* ════════════════ HERO ════════════════ */}
         <div className="relative pt-16 md:pt-24 pb-20 md:pb-28 px-4">
@@ -461,7 +461,7 @@ const About = () => {
           </div>
         </div>
 
-      </main>
+      </div>
     </div>
   );
 };

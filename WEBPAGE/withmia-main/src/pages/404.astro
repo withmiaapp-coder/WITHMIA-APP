@@ -1,0 +1,13 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import NotFound from '@/views/NotFound';
+---
+
+<Layout
+  title="Página no encontrada"
+  description="La página que buscas no existe."
+  path={Astro.url.pathname}
+  noindex={true}
+>
+  <NotFound client:load />
+</Layout>

@@ -1,0 +1,12 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import HelpCenter from '@/views/HelpCenter';
+---
+
+<Layout
+  title="Centro de Ayuda"
+  description="Centro de ayuda de WITHMIA. Guías, tutoriales en video y respuestas rápidas para sacar el máximo provecho de la plataforma."
+  path="/ayuda"
+>
+  <HelpCenter client:load />
+</Layout>

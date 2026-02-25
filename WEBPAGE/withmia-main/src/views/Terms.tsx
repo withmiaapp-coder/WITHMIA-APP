@@ -84,7 +84,7 @@ const Terms = () => {
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-amber-500/[0.025] blur-[150px]" />
         <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] rounded-full bg-violet-500/[0.03] blur-[140px]" />
       </div>
-      <main className="pt-20 relative z-[1]">
+      <div className="pt-20 relative z-[1]">
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
@@ -490,7 +490,7 @@ const Terms = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };

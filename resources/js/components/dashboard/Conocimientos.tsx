@@ -493,7 +493,7 @@ export default function Conocimientos({
     <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex items-center space-x-4">
-        <div className="p-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl shadow-lg">
+        <div className={`p-3 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-cyan-500 to-blue-500' : ''}`} style={t ? { background: t.accent } : undefined}>
           <BookOpen className="w-6 h-6 text-white" />
         </div>
         <div>

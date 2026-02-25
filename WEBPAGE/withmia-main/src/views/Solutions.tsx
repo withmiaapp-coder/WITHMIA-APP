@@ -4,7 +4,7 @@ import { ComparisonTable } from "@/components/ComparisonTable";
 const Solutions = () => {
   return (
     <div className="min-h-screen">
-      <main>
+      <div>
         {/* Hero — Screenshot de la plataforma + features */}
         <PlatformHero />
 
@@ -13,7 +13,7 @@ const Solutions = () => {
 
         {/* Comparativa */}
         <ComparisonTable />
-      </main>
+      </div>
     </div>
   );
 };

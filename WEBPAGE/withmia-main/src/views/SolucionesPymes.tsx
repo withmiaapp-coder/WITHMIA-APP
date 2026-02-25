@@ -247,7 +247,7 @@ const SolucionesPymes = () => {
 
   return (
     <div className="min-h-screen">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* --------------------------------------------------
             HERO � Aurora mesh, 2-column
@@ -846,7 +846,7 @@ const SolucionesPymes = () => {
         </section>
 
 
-      </main>
+      </div>
     </div>
   );
 };

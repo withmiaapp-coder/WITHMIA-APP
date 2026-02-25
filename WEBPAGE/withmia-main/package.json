@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "astro": "astro"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",

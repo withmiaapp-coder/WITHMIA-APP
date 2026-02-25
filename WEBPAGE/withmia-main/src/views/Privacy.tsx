@@ -76,7 +76,7 @@ const Privacy = () => {
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] rounded-full bg-violet-500/[0.03] blur-[150px]" />
         <div className="absolute bottom-1/3 left-0 w-[400px] h-[400px] rounded-full bg-amber-500/[0.02] blur-[120px]" />
       </div>
-      <main className="pt-20 relative z-[1]">
+      <div className="pt-20 relative z-[1]">
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
@@ -527,7 +527,7 @@ const Privacy = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };

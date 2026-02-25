@@ -1,0 +1,12 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { Pricing as MainPricing } from '@/components/Pricing';
+---
+
+<Layout
+  title="Precios"
+  description="Planes flexibles de WITHMIA. Desde gratis hasta enterprise. IA conversacional, inbox omnicanal y automatización para tu equipo."
+  path="/precios"
+>
+  <MainPricing client:load />
+</Layout>

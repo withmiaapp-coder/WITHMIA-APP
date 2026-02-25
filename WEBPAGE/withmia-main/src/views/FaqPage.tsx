@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useRef, type ReactNode } from "react";
 import { Link } from "@/lib/router";
-import { Reveal } from "@/hooks/useAnimations";
 import {
   Search,
   ChevronDown,
@@ -470,7 +469,7 @@ const FaqPage = () => {
   /* ═══════════  RENDER  ═══════════ */
   return (
     <div className="min-h-screen">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* ────────── HERO ────────── */}
         <section className="relative overflow-hidden">
@@ -1070,7 +1069,7 @@ const FaqPage = () => {
           </section>
         )}
 
-      </main>
+      </div>
     </div>
   );
 };

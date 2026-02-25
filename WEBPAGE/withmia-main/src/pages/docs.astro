@@ -1,0 +1,12 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import DocumentationPage from '@/views/DocumentationPage';
+---
+
+<Layout
+  title="Documentación"
+  description="Documentación técnica de WITHMIA. Guías de inicio rápido, referencia de API, webhooks, integraciones y mejores prácticas."
+  path="/docs"
+>
+  <DocumentationPage client:load />
+</Layout>

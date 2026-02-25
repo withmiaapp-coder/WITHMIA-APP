@@ -1,0 +1,16 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import { PlatformHero } from '@/components/PlatformHero';
+import { AIShowcase } from '@/components/AIShowcase';
+import { ComparisonTable } from '@/components/ComparisonTable';
+---
+
+<Layout
+  title="Plataforma"
+  description="Descubre WITHMIA: inbox omnicanal con IA, automatización de ventas, chatbots inteligentes y análisis en tiempo real para tu negocio."
+  path="/plataforma"
+>
+  <PlatformHero client:load />
+  <AIShowcase client:visible />
+  <ComparisonTable client:visible />
+</Layout>

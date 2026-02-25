@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, type ReactNode } from "react";
-import { Reveal } from "@/hooks/useAnimations";
 import {
   ArrowRight,
   Users,
@@ -88,7 +87,7 @@ const Community = () => {
 
   return (
     <div className="min-h-screen">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* ════════════ HERO ════════════ */}
         <section className="relative overflow-hidden">
@@ -354,7 +353,7 @@ const Community = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };

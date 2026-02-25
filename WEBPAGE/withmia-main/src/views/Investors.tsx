@@ -26,7 +26,7 @@ const Investors = () => {
 
   return (
     <div className="min-h-screen bg-[#030507]">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
@@ -468,7 +468,7 @@ const Investors = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };

@@ -323,7 +323,7 @@ const MyAccount = () => {
 
   return (
     <div className="min-h-screen">
-      <main className="pt-20">
+      <div className="pt-20">
 
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
@@ -905,7 +905,7 @@ const MyAccount = () => {
           </div>
         </section>
 
-      </main>
+      </div>
     </div>
   );
 };

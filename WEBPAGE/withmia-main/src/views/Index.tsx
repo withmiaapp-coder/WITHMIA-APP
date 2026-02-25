@@ -13,7 +13,7 @@ const Testimonials = lazy(() => import("@/components/Testimonials").then(mod => 
 const Index = () => {
   return (
     <div className="min-h-screen">
-      <main>
+      <div>
         <Hero />
         <ToolsCarousel />
         <Suspense fallback={<div className="min-h-[600px]" />}>
@@ -37,7 +37,7 @@ const Index = () => {
             <Testimonials />
           </LazyLoadSection>
         </Suspense>
-      </main>
+      </div>
     </div>
   );
 };
