@@ -269,7 +269,7 @@ export default function AdminPanel() {
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
                 >
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl">
+                        <div className={`p-3 rounded-xl ${!t ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                             <Users className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -285,7 +285,7 @@ export default function AdminPanel() {
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}
                 >
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl">
+                        <div className={`p-3 rounded-xl ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                             <Building2 className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -298,7 +298,7 @@ export default function AdminPanel() {
                 <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-purple-500 to-violet-500 rounded-xl">
+                        <div className={`p-3 rounded-xl ${!t ? 'bg-gradient-to-r from-purple-500 to-violet-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                             <Activity className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -313,7 +313,7 @@ export default function AdminPanel() {
                 <div className={`rounded-xl p-6 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl">
+                        <div className={`p-3 rounded-xl ${!t ? 'bg-gradient-to-r from-amber-500 to-orange-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                             <CheckCircle2 className="h-6 w-6 text-white" />
                         </div>
                         <div>
@@ -337,21 +337,21 @@ export default function AdminPanel() {
                             onClick={() => setView('users')}
                             className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
-                            <Users className="h-5 w-5 text-blue-500" />
+                            <Users className={`h-5 w-5 ${!t ? 'text-blue-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                             <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Gestionar Usuarios</span>
                         </button>
                         <button
                             onClick={() => setView('companies')}
                             className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
-                            <Building2 className="h-5 w-5 text-emerald-500" />
+                            <Building2 className={`h-5 w-5 ${!t ? 'text-emerald-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                             <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Gestionar Empresas</span>
                         </button>
                         <button
                             onClick={() => { fetchStats(); fetchHealth(); }}
                             className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${!t ? 'hover:bg-slate-50' : ''}`}
                         >
-                            <RefreshCw className="h-5 w-5 text-purple-500" />
+                            <RefreshCw className={`h-5 w-5 ${!t ? 'text-purple-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                             <span className={`font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>Actualizar Datos</span>
                         </button>
                     </div>
@@ -389,7 +389,7 @@ export default function AdminPanel() {
                             return (
                                 <div key={service.name} className={`flex items-center gap-3 p-3 rounded-lg border ${!t ? getStatusBg(service.status) : ''}`}
                                     style={t ? { backgroundColor: t.itemBg, borderColor: t.cardBorder } : undefined}>
-                                    <div className={`p-2 bg-gradient-to-r ${meta.color} rounded-lg`}>
+                                    <div className={`p-2 rounded-lg ${!t ? `bg-gradient-to-r ${meta.color}` : ''}`} style={t ? { background: t.accent } : undefined}>
                                         <IconComp className="h-4 w-4 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -404,7 +404,8 @@ export default function AdminPanel() {
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); repairQdrant(); }}
                                                 disabled={repairing}
-                                                className="text-xs px-2 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+                                                className={`text-xs px-2 py-1 text-white rounded-md transition-colors disabled:opacity-50 ${!t ? 'bg-purple-600 hover:bg-purple-700' : 'hover:opacity-90'}`}
+                                                style={t ? { backgroundColor: t.accent } : undefined}
                                             >
                                                 {repairing ? 'Reparando...' : 'Reparar'}
                                             </button>
@@ -442,7 +443,7 @@ export default function AdminPanel() {
                             <div key={user.id} className={`flex items-center justify-between p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
                                 style={t ? { backgroundColor: t.itemBg } : undefined}>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium text-sm">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${!t ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                                         {user.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
@@ -450,12 +451,12 @@ export default function AdminPanel() {
                                         <p className={`text-xs ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{user.email}</p>
                                     </div>
                                 </div>
-                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                <span className={`text-xs px-2 py-1 rounded-full ${!t ? (
                                     user.role === 'superadmin' ? 'bg-amber-100 text-amber-700' :
                                     user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                                     user.role === 'agent' ? 'bg-blue-100 text-blue-700' :
                                     'bg-gray-100 text-gray-700'
-                                }`}>
+                                ) : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}>
                                     {user.role === 'superadmin' ? 'Super Admin' : user.role}
                                 </span>
                             </div>
@@ -471,7 +472,7 @@ export default function AdminPanel() {
                             <div key={company.id} className={`flex items-center justify-between p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
                                 style={t ? { backgroundColor: t.itemBg } : undefined}>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center text-white font-medium text-sm">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                                         {company.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
@@ -480,8 +481,12 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
-                                    company.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                                }`}>
+                                    !t ? (company.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700') : ''
+                                }`}
+                                style={t ? {
+                                    backgroundColor: company.is_active ? `color-mix(in srgb, ${t.accent} 15%, transparent)` : `color-mix(in srgb, ${t.textMuted} 15%, transparent)`,
+                                    color: company.is_active ? t.accent : t.textMuted
+                                } : undefined}>
                                     {company.is_active ? 'Activa' : 'Inactiva'}
                                 </span>
                             </div>
@@ -518,17 +523,17 @@ export default function AdminPanel() {
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-amber-600">{stats?.users.filter(u => u.role === 'superadmin').length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-amber-600' : ''}`} style={t ? { color: t.accent } : undefined}>{stats?.users.filter(u => u.role === 'superadmin').length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Super Admins</p>
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-purple-600">{stats?.users.filter(u => u.role === 'admin').length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined}>{stats?.users.filter(u => u.role === 'admin').length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Admins</p>
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-blue-600">{stats?.users.filter(u => u.role === 'agent').length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.accent } : undefined}>{stats?.users.filter(u => u.role === 'agent').length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Agentes</p>
                 </div>
             </div>
@@ -567,7 +572,7 @@ export default function AdminPanel() {
                                 <tr key={user.id} className={!t ? 'hover:bg-slate-50' : ''}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${!t ? 'bg-gradient-to-r from-blue-500 to-indigo-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                                                 {user.name.charAt(0).toUpperCase()}
                                             </div>
                                             <span className={`font-medium ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{user.name}</span>
@@ -575,12 +580,12 @@ export default function AdminPanel() {
                                     </td>
                                     <td className="px-6 py-4" style={t ? { color: t.textSec } : undefined}>{user.email}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${!t ? (
                                             user.role === 'superadmin' ? 'bg-amber-100 text-amber-700' :
                                             user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                                             user.role === 'agent' ? 'bg-blue-100 text-blue-700' :
                                             'bg-gray-100 text-gray-700'
-                                        }`}>
+                                        ) : ''}`} style={t ? { background: `color-mix(in srgb, ${t.accent} 15%, transparent)`, color: t.accent } : undefined}>
                                             {user.role === 'superadmin' ? 'Super Admin' : user.role}
                                         </span>
                                     </td>
@@ -593,14 +598,16 @@ export default function AdminPanel() {
                                                     setEditingUser(user);
                                                     setSelectedRole(user.role);
                                                 }}
-                                                className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
+                                                className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-blue-50 text-blue-600' : ''}`}
+                                                style={t ? { color: t.accent } : undefined}
                                                 title="Editar rol"
                                             >
                                                 <UserCog className="h-4 w-4" />
                                             </button>
                                             <button
                                                 onClick={() => deleteUser(user.id)}
-                                                className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
+                                                className={`p-2 rounded-lg transition-colors ${!t ? 'hover:bg-red-50 text-red-600' : 'opacity-70 hover:opacity-100'}`}
+                                                style={t ? { color: '#ef4444' } : undefined}
                                                 title="Eliminar"
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -618,7 +625,7 @@ export default function AdminPanel() {
             {editingUser && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className={`rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl ${!t ? 'bg-white' : ''}`}
-                        style={t ? { backgroundColor: t.cardBg } : undefined}>
+                        style={t ? { backgroundColor: 'var(--theme-content-bg)' } : undefined}>
                         <h3 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Editar Rol</h3>
                         <p className={`mb-4 ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>Usuario: <strong>{editingUser.name}</strong></p>
                         <select
@@ -641,7 +648,8 @@ export default function AdminPanel() {
                             </button>
                             <button
                                 onClick={() => updateUserRole(editingUser.id, selectedRole)}
-                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                                className={`flex-1 px-4 py-2 text-white rounded-lg ${!t ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                                style={t ? { backgroundColor: t.accent } : undefined}
                             >
                                 Guardar
                             </button>
@@ -678,17 +686,17 @@ export default function AdminPanel() {
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-green-600">{stats?.companies.filter(c => c.is_active).length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-green-600' : ''}`} style={t ? { color: t.accent } : undefined}>{stats?.companies.filter(c => c.is_active).length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Activas</p>
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-blue-600">{stats?.companies.filter(c => c.chatwoot_inbox_id).length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-blue-600' : ''}`} style={t ? { color: t.accent } : undefined}>{stats?.companies.filter(c => c.chatwoot_inbox_id).length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Con Chatwoot</p>
                 </div>
                 <div className={`rounded-xl p-4 border shadow-sm ${!t ? 'bg-white border-slate-200' : ''}`}
                     style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
-                    <p className="text-2xl font-bold text-gray-600">{stats?.companies.filter(c => !c.is_active).length || 0}</p>
+                    <p className={`text-2xl font-bold ${!t ? 'text-gray-600' : ''}`} style={t ? { color: t.textMuted } : undefined}>{stats?.companies.filter(c => !c.is_active).length || 0}</p>
                     <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>Inactivas</p>
                 </div>
             </div>
@@ -713,7 +721,7 @@ export default function AdminPanel() {
                         style={t ? { backgroundColor: t.cardBg, borderColor: t.cardBorder } : undefined}>
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center text-white font-bold text-lg">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${!t ? 'bg-gradient-to-r from-emerald-500 to-green-500' : ''}`} style={t ? { background: t.accent } : undefined}>
                                     {company.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -722,8 +730,12 @@ export default function AdminPanel() {
                                 </div>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                company.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
+                                !t ? (company.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700') : ''
+                            }`}
+                            style={t ? {
+                                backgroundColor: company.is_active ? `color-mix(in srgb, ${t.accent} 15%, transparent)` : `color-mix(in srgb, ${t.textMuted} 15%, transparent)`,
+                                color: company.is_active ? t.accent : t.textMuted
+                            } : undefined}>
                                 {company.is_active ? 'Activa' : 'Inactiva'}
                             </span>
                         </div>
@@ -734,7 +746,7 @@ export default function AdminPanel() {
                             </div>
                             {company.chatwoot_inbox_id && (
                                 <div className="flex items-center gap-2">
-                                    <MessageSquare className="h-4 w-4 text-blue-500" />
+                                    <MessageSquare className={`h-4 w-4 ${!t ? 'text-blue-500' : ''}`} style={t ? { color: t.accent } : undefined} />
                                     <span>Inbox ID: {company.chatwoot_inbox_id}</span>
                                 </div>
                             )}
@@ -787,7 +799,7 @@ export default function AdminPanel() {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
-                                <div className="p-4 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-lg">
+                                <div className={`p-4 rounded-xl shadow-lg ${!t ? 'bg-gradient-to-r from-purple-600 to-indigo-600' : ''}`} style={t ? { background: t.accent } : undefined}>
                                     <Shield className="w-10 h-10 text-white" />
                                 </div>
                                 <div>
