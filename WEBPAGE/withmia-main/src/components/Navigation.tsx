@@ -244,12 +244,12 @@ export const Navigation = () => {
 
               {/* Right side — login + CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <Link
-                  to="/mi-cuenta"
+                <a
+                  href="https://app.withmia.com/mi-cuenta"
                   className="text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
                 >
                   Mi Cuenta
-                </Link>
+                </a>
                 <a href="https://app.withmia.com" onClick={() => trackCTAClick("comenzar_ahora_nav", "navigation")} className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold shadow-[0_2px_12px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300">
                     Comenzar Ahora
                 </a>
@@ -300,13 +300,13 @@ export const Navigation = () => {
                     {item.label}
                   </a>
                 ))}
-                <Link
-                  to="/mi-cuenta"
-                  className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg"
+                <a
+                  href="https://app.withmia.com/mi-cuenta"
+                  className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg block no-underline"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Mi Cuenta
-                </Link>
+                </a>
                 <a
                   href="https://app.withmia.com"
                   onClick={() => trackCTAClick("comenzar_ahora_mobile", "navigation")}

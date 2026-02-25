@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Data\VerifiedQuotes;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,7 @@ class DailyQuoteController extends Controller
 
     /**
      * Build a pool of quotes for today.
-     * Uses Wikipedia for verified dates, then OpenAI for quotes about those people.
+     * Priority: Wikipedia dates + curated quotes DB > Wikipedia + OpenAI > OpenAI-only > static fallback
      */
     private function buildQuotesPool(\Carbon\Carbon $date): ?array
     {
@@ -75,12 +76,23 @@ class DailyQuoteController extends Controller
         $people = $this->fetchWikipediaPeople($monthPadded, $dayPadded);
 
         if (count($people) >= 3) {
-            // Step 2: Use OpenAI to generate quotes for these VERIFIED people
-            $pool = $this->generateQuotesForVerifiedPeople($people, $day, $monthName);
+            // Step 2: Check curated DB first, then OpenAI for the rest
+            $pool = $this->buildQuotesFromVerifiedPeople($people, $day, $monthName);
 
             if ($pool && count($pool) > 0) {
-                Log::info("DailyQuote: Wikipedia+OpenAI success", [
-                    'count' => count($pool),
+                $curatedCount = count(array_filter($pool, fn($q) => ($q['_source'] ?? '') === 'curated'));
+                $aiCount = count($pool) - $curatedCount;
+
+                // Remove internal _source marker
+                $pool = array_map(function ($q) {
+                    unset($q['_source']);
+                    return $q;
+                }, $pool);
+
+                Log::info("DailyQuote: Pool built", [
+                    'total' => count($pool),
+                    'curated' => $curatedCount,
+                    'ai' => $aiCount,
                     'date' => "{$monthPadded}/{$dayPadded}",
                 ]);
                 return $pool;
@@ -219,15 +231,63 @@ class DailyQuoteController extends Controller
     }
 
     /**
-     * Generate quotes for Wikipedia-verified people using OpenAI.
+     * Build quotes from Wikipedia-verified people.
+     * First checks curated database for verified quotes, then uses OpenAI for remaining people.
+     */
+    private function buildQuotesFromVerifiedPeople(array $people, int $day, string $monthName): ?array
+    {
+        $pool = [];
+        $needsOpenAI = [];
+
+        // Step A: Check curated database first (100% reliable quotes)
+        foreach ($people as $person) {
+            $verified = VerifiedQuotes::find($person['name']);
+
+            if ($verified) {
+                $typeLabel = $person['type'] === 'birth' ? 'Nacido' : 'Fallecido';
+                $pool[] = [
+                    'quote' => $verified['quote'],
+                    'author' => $person['name'],
+                    'context' => "{$typeLabel} el {$day} de {$monthName} de {$person['year']}",
+                    'who' => $verified['who'],
+                    '_source' => 'curated',
+                ];
+            } else {
+                $needsOpenAI[] = $person;
+            }
+        }
+
+        // If we already have 5+ curated quotes, return them (no OpenAI needed)
+        if (count($pool) >= 5) {
+            return array_slice($pool, 0, 5);
+        }
+
+        // Step B: Use OpenAI for remaining people (only if we need more quotes)
+        $needed = 5 - count($pool);
+        if (count($needsOpenAI) > 0 && $needed > 0) {
+            $aiQuotes = $this->generateQuotesViaOpenAI(array_slice($needsOpenAI, 0, $needed + 2), $day, $monthName);
+
+            if ($aiQuotes) {
+                foreach ($aiQuotes as $q) {
+                    if (count($pool) >= 5) break;
+                    $q['_source'] = 'ai';
+                    $pool[] = $q;
+                }
+            }
+        }
+
+        return count($pool) > 0 ? $pool : null;
+    }
+
+    /**
+     * Generate quotes via OpenAI for people NOT found in the curated database.
      * Dates come from Wikipedia, OpenAI only provides quotes and bios.
      */
-    private function generateQuotesForVerifiedPeople(array $people, int $day, string $monthName): ?array
+    private function generateQuotesViaOpenAI(array $people, int $day, string $monthName): ?array
     {
         $apiKey = config('services.openai.api_key');
 
-        if (empty($apiKey)) {
-            Log::warning('DailyQuote: OpenAI API key not configured');
+        if (empty($apiKey) || count($people) === 0) {
             return null;
         }
 
@@ -238,29 +298,31 @@ class DailyQuoteController extends Controller
             $peopleList = '';
             foreach ($people as $i => $p) {
                 $typeLabel = $p['type'] === 'birth' ? 'Nacido' : 'Fallecido';
-                $desc = $p['description'] ? " — {$p['description']}" : '';
+                $desc = !empty($p['description']) ? " — {$p['description']}" : '';
                 $num = $i + 1;
                 $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc})\n";
             }
 
-            $prompt = <<<PROMPT
-De la siguiente lista de personajes históricos VERIFICADOS que nacieron o fallecieron el {$day} de {$monthName}, selecciona los 5 más reconocidos mundialmente y proporciona una cita célebre atribuida a cada uno.
+            $count = min(count($people), 5);
 
-PERSONAJES VERIFICADOS (fechas confirmadas por Wikipedia):
+            $prompt = <<<PROMPT
+De los siguientes personajes históricos VERIFICADOS, proporciona una cita célebre bien documentada para cada uno.
+
+PERSONAJES (fechas confirmadas por Wikipedia):
 {$peopleList}
 
-Para cada uno de los 5 seleccionados, responde con:
-- "quote": Una cita célebre conocida de esa persona (en español). Debe ser una frase que comúnmente se le atribuye.
+Para cada uno, responde con:
+- "quote": Una cita célebre REAL y bien documentada de esa persona (en español). Debe ser verificable en libros, discursos o escritos del autor.
 - "author": Su nombre más conocido
-- "context": Exactamente "{Nacido/Fallecido} el {$day} de {$monthName} de {AÑO}" usando EXACTAMENTE el año de la lista
-- "who": Mini biografía de 1-2 líneas sobre quién fue y su contribución principal
+- "context": Exactamente "{Nacido/Fallecido} el {$day} de {$monthName} de {AÑO}" usando EXACTAMENTE el año indicado
+- "who": Mini biografía de 1-2 líneas
 
-REGLAS ESTRICTAS:
-- USA EXACTAMENTE los años proporcionados en la lista, NO los cambies
-- Selecciona personajes variados y reconocidos (ciencia, arte, política, literatura, música)
-- Las citas deben ser frases comúnmente atribuidas a esa persona
+REGLAS:
+- USA EXACTAMENTE los años proporcionados, NO los cambies
+- Las citas deben ser frases REALES y bien documentadas, NO inventadas
+- Si no conoces una cita verificable de alguien, usa una frase de sus obras, discursos o escritos conocidos
 - Todo en español
-- Responde SOLO con un JSON array válido, sin markdown ni explicación adicional
+- Responde SOLO con JSON array válido, máximo {$count} elementos
 
 [{"quote":"...","author":"...","context":"...","who":"..."}]
 PROMPT;
@@ -270,17 +332,15 @@ PROMPT;
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'Eres un experto en citas históricas y biografías. Las fechas de nacimiento y muerte ya fueron verificadas por Wikipedia — NO las modifiques bajo ninguna circunstancia. Tu trabajo es SOLO proporcionar citas famosas y biografías breves para los personajes indicados. Responde SOLO en JSON válido.',
+                        'content' => 'Eres un experto en citas históricas verificables. Solo proporcionas citas que están documentadas en fuentes confiables. Las fechas ya fueron verificadas por Wikipedia — NO las modifiques. Responde SOLO en JSON válido.',
                     ],
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'max_tokens' => 1500,
-                'temperature' => 0.3,
+                'temperature' => 0.2,
             ]);
 
             $content = trim($result->choices[0]->message->content);
-
-            // Clean potential markdown wrapping
             $content = preg_replace('/^```json\s*/i', '', $content);
             $content = preg_replace('/\s*```$/i', '', $content);
             $content = trim($content);
@@ -288,7 +348,7 @@ PROMPT;
             $quotes = json_decode($content, true);
 
             if (!is_array($quotes) || count($quotes) === 0) {
-                Log::warning('DailyQuote: Invalid JSON from OpenAI (verified mode)', ['content' => $content]);
+                Log::warning('DailyQuote: Invalid JSON from OpenAI', ['content' => $content]);
                 return null;
             }
 
@@ -298,19 +358,17 @@ PROMPT;
                 $verifiedLookup[mb_strtolower(trim($p['name']))] = $p;
             }
 
-            // Validate structure and cross-check dates with Wikipedia data
             $validated = [];
             foreach ($quotes as $q) {
                 if (!isset($q['quote'], $q['author'], $q['context'], $q['who'])) {
                     continue;
                 }
 
-                // Try to match this author to a Wikipedia-verified person
+                // ALWAYS override context with Wikipedia-verified date
                 $authorLower = mb_strtolower(trim($q['author']));
                 $matched = $this->findMatchingPerson($authorLower, $verifiedLookup);
 
                 if ($matched) {
-                    // OVERRIDE context with Wikipedia-verified date (guaranteed correct)
                     $typeLabel = $matched['type'] === 'birth' ? 'Nacido' : 'Fallecido';
                     $q['context'] = "{$typeLabel} el {$day} de {$monthName} de {$matched['year']}";
                 }
@@ -325,7 +383,7 @@ PROMPT;
 
             return count($validated) > 0 ? $validated : null;
         } catch (\Exception $e) {
-            Log::error('DailyQuote: OpenAI error (verified mode)', ['error' => $e->getMessage()]);
+            Log::error('DailyQuote: OpenAI error', ['error' => $e->getMessage()]);
             return null;
         }
     }

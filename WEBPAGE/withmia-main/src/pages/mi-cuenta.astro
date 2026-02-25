@@ -1,13 +1,17 @@
 ---
-import Layout from '@/layouts/Layout.astro';
-import MyAccount from '@/views/MyAccount';
+// Redirect to the app — this page no longer lives in the landing site
 ---
 
-<Layout
-  title="Mi Cuenta"
-  description="Gestiona tu cuenta de WITHMIA. Perfil, suscripción, facturación y configuración."
-  path="/mi-cuenta"
-  noindex={true}
->
-  <MyAccount client:load />
-</Layout>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0;url=https://app.withmia.com/mi-cuenta" />
+    <link rel="canonical" href="https://app.withmia.com/mi-cuenta" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Redirigiendo…</title>
+  </head>
+  <body>
+    <p>Redirigiendo a <a href="https://app.withmia.com/mi-cuenta">app.withmia.com</a>…</p>
+    <script is:inline>window.location.replace("https://app.withmia.com/mi-cuenta");</script>
+  </body>
+</html>
