@@ -1127,7 +1127,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 >
                   <div className="flex items-center gap-4">
                     {/* Icon */}
-                    <div className={`p-3 rounded-xl bg-gradient-to-r ${channel.iconBg} shadow-md`}>
+                    <div className={`p-3 rounded-xl shadow-md ${!t ? `bg-gradient-to-r ${channel.iconBg}` : ''}`} style={t ? { background: t.accent } : undefined}>
                       {channel.icon ? (
                         <img 
                           src={channel.icon} 
@@ -2428,7 +2428,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             style={t ? { background: t.cardBg, borderColor: expandedTool === 'dentalink' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'dentalink' ? null : 'dentalink')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #00bcd4, #00bcd4DD)' }}>
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : 'linear-gradient(135deg, #00bcd4, #00bcd4DD)' }}>
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2521,7 +2521,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             style={t ? { background: t.cardBg, borderColor: expandedTool === 'medilink' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'medilink' ? null : 'medilink')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #e91e63, #e91e63DD)' }}>
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : 'linear-gradient(135deg, #e91e63, #e91e63DD)' }}>
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2614,7 +2614,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             style={t ? { background: t.cardBg, borderColor: expandedTool === 'calendly' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'calendly' ? null : 'calendly')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #006BFF, #006BFFDD)' }}>
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : 'linear-gradient(135deg, #006BFF, #006BFFDD)' }}>
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2697,7 +2697,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                 onClick={() => setExpandedTool(expandedTool === 'calendar' ? null : 'calendar')}
               >
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #DC2626, #DC2626DD)' }}>
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : 'linear-gradient(135deg, #DC2626, #DC2626DD)' }}>
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2802,7 +2802,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             style={t ? { background: t.cardBg, borderColor: expandedTool === 'outlook' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'outlook' ? null : 'outlook')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md" style={{ background: 'linear-gradient(135deg, #0078D4, #0078D4DD)' }}>
+                  <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : 'linear-gradient(135deg, #0078D4, #0078D4DD)' }}>
                     <CalendarDays className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2889,7 +2889,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             style={t ? { background: t.cardBg, borderColor: expandedTool === 'reservo' ? t.accent : t.cardBorder } : undefined}>
               <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(expandedTool === 'reservo' ? null : 'reservo')}>
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl shadow-md bg-gradient-to-br from-teal-400 to-teal-600 overflow-hidden flex items-center justify-center">
+                  <div className={`p-3 rounded-xl shadow-md overflow-hidden flex items-center justify-center ${!t ? 'bg-gradient-to-br from-teal-400 to-teal-600' : ''}`} style={t ? { background: t.accent } : undefined}>
                     <img src="/icons/reservo.webp" alt="Reservo" className="w-5 h-auto object-contain brightness-0 invert" />
                   </div>
                   <div>
@@ -3092,7 +3092,7 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => setExpandedTool(isExpanded ? null : prov.id)}>
                       <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl shadow-md" style={{ background: prov.gradient }}>
+                        <div className="p-3 rounded-xl shadow-md" style={{ background: t ? t.accent : prov.gradient }}>
                           <ProvIcon className={`w-5 h-5 ${iconTextColor}`} />
                         </div>
                         <div>

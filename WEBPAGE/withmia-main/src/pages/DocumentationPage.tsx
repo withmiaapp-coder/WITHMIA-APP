@@ -1866,7 +1866,7 @@ const DocumentationPage = () => {
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                  className="flex-1 pl-2 pr-3 py-1.5 bg-transparent text-[13px] text-white/70 placeholder-white/20 focus:outline-none"
+                  className="flex-1 pl-2 pr-3 py-1.5 bg-transparent text-[13px] text-white/70 placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-amber-500/30 rounded"
                 />
                 <kbd className="hidden sm:inline mr-2 px-1.5 py-0.5 rounded text-[9px] font-mono text-white/15 bg-white/[0.04] border border-white/[0.06]">
                   ⌘K

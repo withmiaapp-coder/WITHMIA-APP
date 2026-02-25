@@ -566,7 +566,7 @@ const FaqPage = () => {
                       onChange={(e) => setFaqSearch(e.target.value)}
                       onFocus={() => setFaqSearchFocused(true)}
                       onBlur={() => setFaqSearchFocused(false)}
-                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none"
+                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none focus:ring-1 focus:ring-amber-500/30 rounded-lg"
                     />
                   </div>
 
@@ -725,7 +725,7 @@ const FaqPage = () => {
                       onChange={(e) => setSuggSearch(e.target.value)}
                       onFocus={() => setSuggSearchFocused(true)}
                       onBlur={() => setSuggSearchFocused(false)}
-                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none"
+                      className="w-full pl-11 pr-4 py-3 bg-transparent text-white/80 placeholder-white/20 text-[13px] focus:outline-none focus:ring-1 focus:ring-amber-500/30 rounded-lg"
                     />
                   </div>
                 </div>

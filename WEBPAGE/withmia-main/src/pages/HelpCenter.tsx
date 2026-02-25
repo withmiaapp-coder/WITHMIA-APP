@@ -275,7 +275,7 @@ const HelpCenter = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  className="w-full pl-14 pr-5 py-4 bg-transparent text-white/80 placeholder-white/25 text-[15px] focus:outline-none"
+                  className="w-full pl-14 pr-5 py-4 bg-transparent text-white/80 placeholder-white/25 text-[15px] focus:outline-none focus:ring-1 focus:ring-amber-500/30 rounded-lg"
                 />
               </div>
             </div>

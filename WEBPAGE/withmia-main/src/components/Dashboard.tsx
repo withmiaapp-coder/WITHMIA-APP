@@ -201,7 +201,7 @@ export const Dashboard = () => {
             {/* Screenshot with floating overlays */}
             <div className="relative overflow-hidden max-h-[520px]">
               <img
-                src="/dashboard-preview.png"
+                src="/dashboard-preview.webp"
                 alt="WITHMIA Dashboard"
                 className="w-full h-auto block object-cover object-top"
                 loading="lazy"

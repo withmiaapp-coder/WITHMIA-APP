@@ -37,7 +37,7 @@ const platformScreens = [
     icon: MessageSquare,
     accent: "#22d3ee",
     accentRgb: "34,211,238",
-    image: "/chat.png",
+    image: "/chat.webp",
     url: "app.withmia.com/conversations",
     title: "Bandeja de entrada unificada",
     subtitle: "Todos tus canales. Una sola pantalla.",
@@ -56,7 +56,7 @@ const platformScreens = [
     icon: Brain,
     accent: "#a78bfa",
     accentRgb: "167,139,250",
-    image: "/conocimientos.png",
+    image: "/conocimientos.webp",
     url: "app.withmia.com/knowledge",
     title: "Tu negocio, convertido en inteligencia",
     subtitle: "La IA responde con tus datos, no con genéricos.",
@@ -75,7 +75,7 @@ const platformScreens = [
     icon: Zap,
     accent: "#fbbf24",
     accentRgb: "251,191,36",
-    image: "/entrenamiento.png",
+    image: "/entrenamiento.webp",
     url: "app.withmia.com/training",
     title: "Un asistente con la voz de tu marca",
     subtitle: "Define cómo habla, responde y se comporta.",
@@ -94,7 +94,7 @@ const platformScreens = [
     icon: Plug,
     accent: "#34d399",
     accentRgb: "52,211,153",
-    image: "/integraciones.png",
+    image: "/integraciones.webp",
     url: "app.withmia.com/integrations",
     title: "Conecta tus canales en minutos",
     subtitle: "Sin código. Sin desarrolladores.",
@@ -397,7 +397,7 @@ export const PlatformHero = () => {
               <BrowserFrame url="app.withmia.com" accent="#a78bfa" perspective>
                 <div className="relative overflow-hidden max-h-[520px]">
                   <img
-                    src="/Captura%20de%20pantalla%202026-02-23%20102740.png"
+                    src="/dashboard-preview.webp"
                     alt="WITHMIA — Plataforma de atención al cliente"
                     className="w-full h-auto block object-cover object-top"
                     loading="eager"
