@@ -363,6 +363,7 @@ export const LiveDemo = () => {
                 <img
                   src={scenario.channelIcon}
                   alt={scenario.channel}
+                  loading="lazy"
                   className="w-5 h-5 object-contain"
                   style={scenario.channel === "Web" ? { filter: "brightness(0) invert(1)" } : undefined}
                 />
@@ -470,6 +471,7 @@ export const LiveDemo = () => {
                           <img
                             src="/logo-withmia.webp"
                             alt="WITHMIA"
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </div>

@@ -36,6 +36,38 @@ const fullTitle = title
   ? `${title} | ${SITE_NAME}`
   : `${SITE_NAME} — IA Conversacional Omnicanal para tu Negocio`;
 const canonicalUrl = `${SITE_URL}${path}`;
+
+// ── Breadcrumb JSON-LD (auto-generated for inner pages) ──
+const PAGE_NAMES: Record<string, string> = {
+  '/plataforma': 'Plataforma',
+  '/precios': 'Precios',
+  '/contacto': 'Contacto',
+  '/nosotros': 'Nosotros',
+  '/faq': 'Preguntas Frecuentes',
+  '/api': 'API',
+  '/comunidad': 'Comunidad',
+  '/docs': 'Documentación',
+  '/ayuda': 'Ayuda',
+  '/integraciones': 'Integraciones',
+  '/inversores': 'Inversores',
+  '/pymes': 'Soluciones PyMEs',
+  '/soporte': 'Soporte',
+  '/privacidad': 'Política de Privacidad',
+  '/terminos': 'Términos de Servicio',
+};
+const breadcrumbJsonLd = path && path !== '/'
+  ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Inicio", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: PAGE_NAMES[path] || title || path.slice(1), item: canonicalUrl },
+      ],
+    })
+  : null;
+
+// Merge breadcrumb into jsonLd array
+const allJsonLd = breadcrumbJsonLd ? [...jsonLd, breadcrumbJsonLd] : jsonLd;
 ---
 
 <!doctype html>
@@ -79,17 +111,19 @@ const canonicalUrl = `${SITE_URL}${path}`;
     <link rel="preconnect" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
-    <!-- Google Consent Mode v2 (deny by default) + GA4 -->
+    <!-- Google Consent Mode v2 (deny by default) + GA4 + Google Ads -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      // Check stored consent for both analytics AND ads
+      var _consent = (function() {
+        try { return localStorage.getItem('withmia_cookie_consent') === 'granted'; } catch(e) { return false; }
+      })();
       gtag('consent', 'default', {
-        analytics_storage: (function() {
-          try { return localStorage.getItem('withmia_cookie_consent') === 'granted' ? 'granted' : 'denied'; } catch(e) { return 'denied'; }
-        })(),
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
+        analytics_storage: _consent ? 'granted' : 'denied',
+        ad_storage: _consent ? 'granted' : 'denied',
+        ad_user_data: _consent ? 'granted' : 'denied',
+        ad_personalization: _consent ? 'granted' : 'denied',
         wait_for_update: 500
       });
     </script>
@@ -97,10 +131,12 @@ const canonicalUrl = `${SITE_URL}${path}`;
     <script is:inline>
       gtag('js', new Date());
       gtag('config', 'G-8D0NNE2BBH');
+      // Google Ads — uncomment and replace AW-XXXXXXXXX when you have your Conversion ID:
+      // gtag('config', 'AW-XXXXXXXXX');
     </script>
 
     <!-- JSON-LD Structured Data -->
-    {jsonLd.map((schema) => (
+    {allJsonLd.map((schema) => (
       <script type="application/ld+json" set:html={schema} />
     ))}
   </head>

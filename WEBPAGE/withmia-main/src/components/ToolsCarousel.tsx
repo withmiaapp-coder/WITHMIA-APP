@@ -42,6 +42,7 @@ export const ToolsCarousel = () => {
             <img
               src={tool.logo}
               alt={tool.name}
+              loading="lazy"
               className="w-6 h-6 object-contain group-hover:scale-110 transition-transform duration-300"
               style={tool.name === 'Chat Web' ? { filter: 'brightness(0) invert(1)' } : undefined}
             />

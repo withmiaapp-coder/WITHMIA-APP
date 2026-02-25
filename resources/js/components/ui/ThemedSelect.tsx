@@ -1,3 +1,4 @@
+// ThemedSelect - Custom themed dropdown to replace native <select>
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';

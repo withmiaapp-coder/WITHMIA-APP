@@ -50,92 +50,106 @@ const softwareAppJsonLd = JSON.stringify({
 ---
 
 <Layout path="/" jsonLd={[organizationJsonLd, softwareAppJsonLd]}>
-  <Hero client:load />
+
+  <!--
+    hero-section wraps BOTH the React island AND the canvas.
+    The canvas is a SIBLING of astro-island, never inside React's DOM.
+    This prevents React hydration mismatches.
+  -->
+  <div id="hero-section" style="position:relative">
+    <Hero client:load />
+    <canvas
+      id="hero-particles"
+      aria-hidden="true"
+      style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;display:block"
+    ></canvas>
+  </div>
+
   <ToolsCarousel client:visible />
   <LiveDemo client:visible />
   <Dashboard client:visible />
   <Integrations client:visible />
   <Testimonials client:visible />
+
+  <!--
+    Particle animation — targets #hero-particles canvas (sibling of astro-island).
+    NEVER touches React DOM. Waits for layout via requestAnimationFrame.
+  -->
+  <script is:inline>
+  (function() {
+    var canvas = document.getElementById('hero-particles');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    var colors = ['255,200,60','255,160,40','200,140,255','100,200,255','255,255,255'];
+    var particles = [];
+    var animId = 0;
+
+    function resize() {
+      var wrapper = document.getElementById('hero-section');
+      var w = wrapper ? wrapper.offsetWidth : window.innerWidth;
+      var h = wrapper ? wrapper.offsetHeight : window.innerHeight;
+      if (h < 50) h = window.innerHeight;
+      canvas.width  = w;
+      canvas.height = h;
+      var count = Math.floor((w * h) / 6000);
+      particles = [];
+      for (var i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: -Math.random() * 0.6 - 0.1,
+          r: Math.random() * 2 + 0.5,
+          o: Math.random() * 0.6 + 0.2,
+          c: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+    }
+
+    function draw() {
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.o += (Math.random() - 0.5) * 0.02;
+        if (p.o < 0.1) p.o = 0.1;
+        if (p.o > 0.8) p.o = 0.8;
+        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+        if (p.x < -10) p.x = W + 10;
+        if (p.x > W + 10) p.x = -10;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+        ctx.fillStyle = 'rgba(' + p.c + ',' + p.o + ')';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 3, 0, 6.2832);
+        ctx.fillStyle = 'rgba(' + p.c + ',' + (p.o * 0.15) + ')';
+        ctx.fill();
+      }
+      animId = requestAnimationFrame(draw);
+    }
+
+    function start() {
+      cancelAnimationFrame(animId);
+      animId = 0;
+      resize();
+      if (particles.length > 0) draw();
+    }
+
+    // Use requestAnimationFrame to wait for first layout paint
+    requestAnimationFrame(function() {
+      requestAnimationFrame(start);
+    });
+    // Also restart when full load (images/fonts)
+    window.addEventListener('load', function() {
+      requestAnimationFrame(start);
+    });
+    // Resize handler
+    window.addEventListener('resize', start);
+  })();
+  </script>
 </Layout>
-
-<script>
-// ── Hero particle effect ── standalone, no React dependency ──
-(function initParticles() {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  const canvas = document.getElementById("hero-particles") as HTMLCanvasElement | null;
-  if (!canvas) {
-    // Canvas might not exist yet (hydration pending), retry
-    if (document.readyState !== "complete") {
-      window.addEventListener("load", initParticles, { once: true });
-    }
-    return;
-  }
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  const colors = ["255,200,60","255,160,40","200,140,255","100,200,255","255,255,255"];
-
-  interface P { x: number; y: number; vx: number; vy: number; r: number; o: number; color: string; }
-  let particles: P[] = [];
-  let animId = 0;
-
-  function resize() {
-    const section = canvas!.closest("section") || canvas!.parentElement;
-    const w = section ? section.clientWidth  : window.innerWidth;
-    const h = section ? section.clientHeight : window.innerHeight;
-    if (w < 10 || h < 10) return;
-    canvas!.width  = w;
-    canvas!.height = h;
-    const count = Math.floor((w * h) / 6000);
-    particles = [];
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: -Math.random() * 0.6 - 0.1,
-        r: Math.random() * 2 + 0.5,
-        o: Math.random() * 0.6 + 0.2,
-        color: colors[Math.floor(Math.random() * colors.length)],
-      });
-    }
-  }
-
-  function draw() {
-    const W = canvas!.width;
-    const H = canvas!.height;
-    ctx!.clearRect(0, 0, W, H);
-    for (const p of particles) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.o += (Math.random() - 0.5) * 0.02;
-      p.o = Math.max(0.1, Math.min(0.8, p.o));
-      if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
-      if (p.x < -10) p.x = W + 10;
-      if (p.x > W + 10) p.x = -10;
-      ctx!.beginPath();
-      ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx!.fillStyle = `rgba(${p.color},${p.o})`;
-      ctx!.fill();
-      ctx!.beginPath();
-      ctx!.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
-      ctx!.fillStyle = `rgba(${p.color},${p.o * 0.15})`;
-      ctx!.fill();
-    }
-    animId = requestAnimationFrame(draw);
-  }
-
-  resize();
-  if (canvas!.width > 0 && particles.length > 0) {
-    draw();
-  }
-
-  window.addEventListener("resize", () => {
-    cancelAnimationFrame(animId);
-    resize();
-    if (canvas!.width > 0 && particles.length > 0) draw();
-  });
-})();
-</script>

@@ -28,13 +28,6 @@ export const Hero = () => {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-background" />
       </div>
 
-      {/* Animated particles — rendered via standalone <script> in index.astro */}
-      <canvas
-        id="hero-particles"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4">
         {/* Tagline badge */}
         <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/[0.07] backdrop-blur-md border border-white/[0.12] text-sm text-white/70 animate-fade-in">

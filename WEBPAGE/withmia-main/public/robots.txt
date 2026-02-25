@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://withmia.com/sitemap.xml
+Sitemap: https://withmia.com/sitemap-index.xml

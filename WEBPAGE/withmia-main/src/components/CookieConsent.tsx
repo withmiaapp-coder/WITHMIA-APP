@@ -24,11 +24,14 @@ function storeConsent(status: "granted" | "denied") {
   }
 }
 
-/** Update Google consent mode */
+/** Update Google consent mode — analytics + ads */
 function updateGoogleConsent(granted: boolean) {
   if (typeof window.gtag !== "function") return;
   window.gtag("consent", "update", {
     analytics_storage: granted ? "granted" : "denied",
+    ad_storage: granted ? "granted" : "denied",
+    ad_user_data: granted ? "granted" : "denied",
+    ad_personalization: granted ? "granted" : "denied",
   });
 }
 
@@ -40,11 +43,12 @@ function updateGoogleConsent(granted: boolean) {
 export function initConsentMode() {
   if (typeof window.gtag !== "function") return;
   const stored = getStoredConsent();
+  const granted = stored === "granted";
   window.gtag("consent", "default", {
-    analytics_storage: stored === "granted" ? "granted" : "denied",
-    ad_storage: "denied",
-    ad_user_data: "denied",
-    ad_personalization: "denied",
+    analytics_storage: granted ? "granted" : "denied",
+    ad_storage: granted ? "granted" : "denied",
+    ad_user_data: granted ? "granted" : "denied",
+    ad_personalization: granted ? "granted" : "denied",
     wait_for_update: 500,
   });
 }

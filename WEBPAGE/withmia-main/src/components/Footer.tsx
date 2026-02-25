@@ -202,6 +202,7 @@ export const Footer = () => {
                 <img
                   src="/Logo-Atlantis.webp"
                   alt="Atlantis Producciones"
+                  loading="lazy"
                   className="w-8 h-8 object-contain shrink-0 opacity-70 group-hover:opacity-100 transition-all duration-500"
                 />
                 <span className="text-sm font-medium text-white/40 group-hover:text-amber-100/90 transition-colors duration-500 tracking-wide">

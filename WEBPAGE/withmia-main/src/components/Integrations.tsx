@@ -479,6 +479,7 @@ export const Integrations = () => {
                         <img
                           src={ch.image}
                           alt={ch.name}
+                          loading="lazy"
                           className="w-[19px] h-[19px] lg:w-[22px] lg:h-[22px] object-contain"
                           style={ch.invert ? { filter: "brightness(0) invert(1)" } : undefined}
                         />
@@ -563,6 +564,7 @@ export const Integrations = () => {
                     <img
                       src={ch.image}
                       alt={ch.name}
+                      loading="lazy"
                       className="w-4.5 h-4.5 object-contain"
                       style={ch.invert ? { filter: "brightness(0) invert(1)" } : undefined}
                     />
