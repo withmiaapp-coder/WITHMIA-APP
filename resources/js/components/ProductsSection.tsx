@@ -778,7 +778,7 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className={`rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
-        style={t ? { backgroundColor: t.cardBg } : undefined}>
+        style={t ? { backgroundColor: isDark ? '#1e1e2e' : '#ffffff' } : undefined}>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
 
           {/* Header */}
@@ -1048,8 +1048,8 @@ function ProductFormModal({ product, onSubmit, onClose, categories }: {
             style={t ? { borderColor: t.cardBorder, backgroundColor: t.itemBg } : undefined}>
             <div className="flex items-center gap-1.5">
               {['general', 'pricing', 'media'].map((tab, i) => (
-                <div key={tab} className={`w-2 h-2 rounded-full transition-all ${activeTab === tab ? 'bg-orange-500 w-6' : (!t ? 'bg-slate-300' : '')}`}
-                  style={activeTab !== tab && t ? { backgroundColor: t.textMuted } : undefined} />
+                <div key={tab} className={`w-2 h-2 rounded-full transition-all ${activeTab === tab ? (!t ? 'bg-orange-500' : '') + ' w-6' : (!t ? 'bg-slate-300' : '')}`}
+                  style={activeTab === tab && t ? { backgroundColor: t.accent } : activeTab !== tab && t ? { backgroundColor: t.textMuted } : undefined} />
               ))}
             </div>
             <div className="flex gap-2">
@@ -1099,7 +1099,7 @@ function ProductDetailModal({ product, onClose, onEdit, onDelete }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className={`rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-hidden flex flex-col ${!t ? 'bg-white' : ''}`} onClick={e => e.stopPropagation()}
-        style={t ? { backgroundColor: t.cardBg } : undefined}>
+        style={t ? { backgroundColor: isDark ? '#1e1e2e' : '#ffffff' } : undefined}>
         {/* Color header */}
         <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${providerConfig.color}, ${providerConfig.color}88)` }} />
 
