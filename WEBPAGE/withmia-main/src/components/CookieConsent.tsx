@@ -35,24 +35,6 @@ function updateGoogleConsent(granted: boolean) {
   });
 }
 
-/**
- * Initialize Google consent mode to "denied" by default.
- * Called from index.html BEFORE gtag("config", ...).
- * If user already consented, auto-grant.
- */
-export function initConsentMode() {
-  if (typeof window.gtag !== "function") return;
-  const stored = getStoredConsent();
-  const granted = stored === "granted";
-  window.gtag("consent", "default", {
-    analytics_storage: granted ? "granted" : "denied",
-    ad_storage: granted ? "granted" : "denied",
-    ad_user_data: granted ? "granted" : "denied",
-    ad_personalization: granted ? "granted" : "denied",
-    wait_for_update: 500,
-  });
-}
-
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
