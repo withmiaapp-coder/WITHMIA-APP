@@ -94,16 +94,16 @@ const values = [
 
 const timeline = [
   {
-    period: "2024",
-    title: "Origen en Atlantis",
-    desc: "Nace como proyecto interno para resolver ineficiencias operativas en PYMEs latinoamericanas",
+    period: "Mar 2025",
+    title: "Nace la idea",
+    desc: "Identificamos que las PYMEs perdían ventas por responder tarde y operar con herramientas desconectadas",
     icon: MessageSquare,
     color: "violet",
   },
   {
-    period: "Inicio 2025",
-    title: "Pivote a SaaS",
-    desc: "De agentes manuales a plataforma propietaria No-Code en AWS",
+    period: "Abr – Jun 2025",
+    title: "Desarrollo del MVP",
+    desc: "Construcción de la plataforma propietaria No-Code con IA generativa desplegada en AWS",
     icon: Code2,
     color: "amber",
   },
@@ -219,17 +219,17 @@ const About = () => {
                   </p>
 
                   <p className="text-[15px] text-white/40 leading-relaxed mb-4">
-                    Como fundador técnico, combino 5 años de desarrollo de
-                    software con formación en Economía y Psicología
-                    Organizacional. Esa mezcla me permitió construir la
-                    arquitectura inicial de WITHMIA, diseñar una experiencia
-                    No-Code pensada para usuarios no técnicos y estructurar
-                    un modelo de pricing SaaS rentable desde el día uno
+                    Fundador técnico con 5 años de experiencia en desarrollo
+                    de software, formación en Economía y Psicología
+                    Organizacional. Esa combinación me permitió diseñar
+                    WITHMIA desde cero: arquitectura propia de IA, experiencia
+                    No-Code sin fricción y un modelo SaaS rentable desde el
+                    primer día
                   </p>
                   <p className="text-[15px] text-white/35 leading-relaxed mb-6">
-                    Anteriormente fundé Atlantis Producciones SpA, donde
-                    adquirí experiencia operativa liderando equipos y
-                    gestionando proyectos digitales en el mercado chileno
+                    En marzo de 2025 identifiqué que las PYMEs perdían ventas
+                    por no responder a tiempo y operaban con herramientas
+                    desconectadas. Ahí nació la idea que hoy es WITHMIA
                   </p>
 
                   {/* Skill tags + LinkedIn */}
@@ -294,20 +294,21 @@ const About = () => {
                   Nuestra Historia
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
-                  De una necesidad real a{" "}
-                  <span className="text-gradient">una empresa propia</span>
+                  De una idea clara a{" "}
+                  <span className="text-gradient">una plataforma real</span>
                 </h2>
                 <div className="space-y-4">
                   <p className="text-[15px] text-white/40 leading-relaxed">
-                    En 2024, dentro de Atlantis Producciones, detectamos que
-                    las PYMEs latinoamericanas perdían ventas por no responder
-                    a tiempo y operaban con herramientas desconectadas
+                    En marzo de 2025 identificamos un problema repetido en
+                    las PYMEs latinoamericanas: perdían ventas por no responder
+                    a tiempo, gestionaban clientes desde WhatsApp personal y
+                    operaban con herramientas que no se conectaban entre sí
                   </p>
                   <p className="text-[15px] text-white/35 leading-relaxed">
-                    Construimos un prototipo interno que evolucionó hasta
-                    convertirse en una plataforma SaaS completa. En julio de
-                    2025 constituimos MIA Marketing & Intelligence Artificial
-                    SpA como empresa independiente
+                    En menos de 4 meses construimos una plataforma SaaS
+                    completa con IA generativa, CRM y automatización. En julio
+                    de 2025 constituimos legalmente MIA Marketing &
+                    Intelligence Artificial SpA
                   </p>
                   <p className="text-[15px] text-white/35 leading-relaxed">
                     Hoy operamos con nuestros primeros clientes B2B en Chile,

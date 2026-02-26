@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v8: cache key — only Spanish Wikipedia people
-        $poolKey = "daily_quotes_v8_{$monthDay}";
-        $counterKey = "daily_quotes_v8_ctr_{$monthDay}";
+        // v9: cache key — filter out English-language extracts from ES Wikipedia
+        $poolKey = "daily_quotes_v9_{$monthDay}";
+        $counterKey = "daily_quotes_v9_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -180,6 +180,11 @@ class DailyQuoteController extends Controller
 
                     $extractText = $page['extract'] ?? '';
                     $descText = $page['description'] ?? '';
+
+                    // Skip entries whose extract is in English (ES Wikipedia sometimes returns these)
+                    if ($this->isLikelyEnglish($extractText)) {
+                        continue;
+                    }
 
                     $people[] = [
                         'name' => $cleanName,
@@ -349,6 +354,37 @@ PROMPT;
         ];
 
         return $fallbacks[array_rand($fallbacks)];
+    }
+
+    /**
+     * Detect if text is likely in English rather than Spanish.
+     * Used to filter out ES Wikipedia entries that have English-only extracts.
+     */
+    private function isLikelyEnglish(string $text): bool
+    {
+        if (mb_strlen($text) < 20) {
+            return false;
+        }
+
+        $lower = mb_strtolower($text);
+
+        // English biography patterns that essentially never appear in Spanish text
+        $englishPatterns = [
+            ' was a ', ' was an ', ' was the ',
+            ' is a ', ' is an ', ' is the ',
+            ' born ', ' who was ', ' who is ',
+            ' known for ', ' known as ',
+            ' he was ', ' she was ', ' they were ',
+        ];
+
+        $hits = 0;
+        foreach ($englishPatterns as $pattern) {
+            if (str_contains($lower, $pattern)) {
+                $hits++;
+            }
+        }
+
+        return $hits >= 2;
     }
 
     /**
