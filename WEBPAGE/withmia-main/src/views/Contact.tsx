@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "@/lib/router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -57,22 +57,16 @@ const contactChannels = [
     href: "mailto:contacto@withmia.com",
     desc: "Para consultas generales",
     color: "amber",
+    action: "link" as const,
   },
   {
     icon: MessageSquare,
     title: "WhatsApp",
-    value: "+56 9 XXXX XXXX",
-    href: "https://wa.me/569XXXXXXXX",
-    desc: "Respuesta inmediata",
+    value: "+56 9 4023 3053",
+    href: "https://wa.me/56940233053",
+    desc: "Respuesta directa",
     color: "emerald",
-  },
-  {
-    icon: Calendar,
-    title: "Agendar reunión",
-    value: "Elige un horario",
-    href: "https://cal.com/withmia",
-    desc: "Demo personalizada de 30 min",
-    color: "violet",
+    action: "link" as const,
   },
 ];
 
@@ -90,6 +84,27 @@ const Contact = () => {
   const hero = useScrollReveal();
   const formSection = useScrollReveal();
   const channels = useScrollReveal();
+
+  /* Load Calendly widget script once */
+  useEffect(() => {
+    if (document.getElementById("calendly-css")) return;
+    const link = document.createElement("link");
+    link.id = "calendly-css";
+    link.rel = "stylesheet";
+    link.href = "https://assets.calendly.com/assets/external/widget.css";
+    document.head.appendChild(link);
+
+    const script = document.createElement("script");
+    script.src = "https://assets.calendly.com/assets/external/widget.js";
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
+  const openCalendly = useCallback(() => {
+    if ((window as any).Calendly) {
+      (window as any).Calendly.initPopupWidget({ url: "https://calendly.com/withmia-app/15min" });
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -134,12 +149,6 @@ const Contact = () => {
 
         {/* ════════════════ HERO ════════════════ */}
         <div className="relative pt-16 md:pt-24 pb-14 md:pb-20 px-4">
-          {/* Aurora mesh */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-gradient-to-b from-amber-500/[0.07] via-violet-500/[0.04] to-transparent rounded-full blur-3xl" />
-            <div className="absolute top-20 right-0 w-[350px] h-[350px] bg-violet-500/[0.05] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
-            <div className="absolute top-40 left-0 w-[300px] h-[300px] bg-cyan-500/[0.04] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
-          </div>
 
           <div
             ref={hero.ref}
@@ -148,23 +157,18 @@ const Contact = () => {
             }`}
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
-              <div className="relative">
-                <Sparkles className="w-4 h-4" />
-                <Sparkles className="w-4 h-4 absolute inset-0 animate-ping opacity-30" />
-              </div>
+            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-sm text-white/50 font-semibold mb-6">
+              <Sparkles className="w-4 h-4" />
               Hablemos
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-5">
-              ¿Listo para{" "}
-              <span className="text-gradient">transformar</span>
-              <br />
-              tu atención al cliente?
+              Conversemos sobre{" "}
+              <span className="text-gradient">tu negocio</span>
             </h1>
             <p className="text-base md:text-lg text-white/40 max-w-xl mx-auto leading-relaxed">
-              Cuéntanos sobre tu negocio y te mostraremos cómo WITHMIA puede
-              automatizar y escalar tu operación.
+              Escríbenos, agenda una llamada o manda un WhatsApp.
+              Sin compromiso, sin vendedores agresivos
             </p>
           </div>
         </div>
@@ -180,14 +184,8 @@ const Contact = () => {
             <div className="grid lg:grid-cols-[1fr,380px] gap-8 items-start">
 
               {/* ── Left: Form Card ── */}
-              <div className="relative group order-2 lg:order-1">
-                {/* Ambient glow */}
-                <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-amber-500/15 via-amber-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
-
-                <div className="relative rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl overflow-hidden">
-                  {/* Shimmer top border */}
-                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-
+              <div className="order-2 lg:order-1">
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
                   <div className="p-6 md:p-10">
                     {submitted ? (
                       /* ── Success state ── */
@@ -337,13 +335,10 @@ const Contact = () => {
                             {/* Submit */}
                             <button
                               type="submit"
-                              className="relative flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
+                              className="flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all"
                             >
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                              <span className="relative z-10 flex items-center gap-2">
-                                <Send className="w-4 h-4" />
-                                Enviar mensaje
-                              </span>
+                              <Send className="w-4 h-4" />
+                              Enviar mensaje
                             </button>
 
                             <p className="text-[11px] text-white/15 text-center">
@@ -372,155 +367,109 @@ const Contact = () => {
                     violet: { border: "border-violet-500/15", bg: "bg-violet-500/[0.06]", icon: "text-violet-400", hover: "hover:border-violet-500/25" },
                   };
                   const c = colorMap[ch.color];
-                  return (
+
+                  const isCalendly = ch.action === "calendly";
+
+                  const cardContent = (
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
+                        <Icon className={`w-5 h-5 ${c.icon}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[14px] font-semibold text-white/80 group-hover:text-white transition-colors">
+                            {ch.title}
+                          </h4>
+                          <ExternalLink className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
+                        </div>
+                        <p className={`text-[13px] ${c.icon} font-medium mt-0.5`}>{ch.value}</p>
+                        <p className="text-[11px] text-white/25 mt-0.5">{ch.desc}</p>
+                      </div>
+                    </div>
+                  );
+
+                  const className = `block w-full text-left rounded-2xl border ${c.border} ${c.hover} bg-white/[0.02] p-5 group transition-all duration-300 hover:bg-white/[0.03] cursor-pointer`;
+                  const style = {
+                    opacity: formSection.isVisible ? 1 : 0,
+                    transform: formSection.isVisible ? "translateY(0)" : "translateY(12px)",
+                    transition: `all 0.5s ease ${i * 100 + 200}ms`,
+                  };
+
+                  return isCalendly ? (
+                    <button
+                      key={ch.title}
+                      type="button"
+                      onClick={openCalendly}
+                      className={className}
+                      style={style}
+                    >
+                      {cardContent}
+                    </button>
+                  ) : (
                     <a
                       key={ch.title}
                       href={ch.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`block rounded-2xl border ${c.border} ${c.hover} bg-white/[0.02] p-5 group transition-all duration-300 hover:bg-white/[0.03]`}
-                      style={{
-                        opacity: formSection.isVisible ? 1 : 0,
-                        transform: formSection.isVisible ? "translateY(0)" : "translateY(12px)",
-                        transition: `all 0.5s ease ${i * 100 + 200}ms`,
-                      }}
+                      className={className}
+                      style={style}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
-                          <Icon className={`w-5 h-5 ${c.icon}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-[14px] font-semibold text-white/80 group-hover:text-white transition-colors">
-                              {ch.title}
-                            </h4>
-                            <ExternalLink className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
-                          </div>
-                          <p className={`text-[13px] ${c.icon} font-medium mt-0.5`}>{ch.value}</p>
-                          <p className="text-[11px] text-white/25 mt-0.5">{ch.desc}</p>
-                        </div>
-                      </div>
+                      {cardContent}
                     </a>
                   );
                 })}
 
-                {/* Why contact us */}
+                {/* Session CTA */}
                 <div
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
+                  className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-violet-500/[0.05] via-amber-500/[0.02] to-transparent p-5"
                   style={{
                     opacity: formSection.isVisible ? 1 : 0,
                     transform: formSection.isVisible ? "translateY(0)" : "translateY(12px)",
                     transition: `all 0.5s ease 500ms`,
                   }}
                 >
-                  <p className="text-[11px] text-white/25 uppercase tracking-widest font-semibold mb-4">
-                    ¿Por qué contactarnos?
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <h4 className="text-[14px] font-semibold text-white/90">¿Listo para que tu empresa fluya?</h4>
+                  </div>
+
+                  <p className="text-[13px] text-white/40 leading-relaxed mb-3">
+                    En esta sesión de 15 minutos configuraremos tu acceso a WITHMIA para conectar
+                    tus canales (WhatsApp, Web, RRSS) y centralizar tu operación
                   </p>
-                  <div className="space-y-3">
-                    {reasons.map((r) => {
-                      const Icon = r.icon;
+                  <p className="text-[13px] text-white/40 leading-relaxed mb-4">
+                    No es un simple chat; es el inicio de tu presencia inteligente que trabaja
+                    contigo para vender más y atender mejor, 24/7
+                  </p>
+
+                  <div className="space-y-2 mb-5">
+                    {[
+                      { icon: Shield, text: "Sin compromiso" },
+                      { icon: Clock, text: "Solo 15 minutos" },
+                      { icon: Headphones, text: "100% personalizado" },
+                    ].map((item) => {
+                      const Icon = item.icon;
                       return (
-                        <div key={r.text} className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
-                            <Icon className="w-3.5 h-3.5 text-amber-400/60" />
+                        <div key={item.text} className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center shrink-0">
+                            <Icon className="w-3 h-3 text-violet-400/70" />
                           </div>
-                          <span className="text-[13px] text-white/40">{r.text}</span>
+                          <span className="text-[12px] text-white/35">{item.text}</span>
                         </div>
                       );
                     })}
                   </div>
-                </div>
 
-                {/* Quick CTA */}
-                <div
-                  className="rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.04] to-transparent p-5"
-                  style={{
-                    opacity: formSection.isVisible ? 1 : 0,
-                    transform: formSection.isVisible ? "translateY(0)" : "translateY(12px)",
-                    transition: `all 0.5s ease 600ms`,
-                  }}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center">
-                      <Building2 className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-[14px] font-semibold text-white/80">¿Prefieres empezar ya?</h4>
-                      <p className="text-[11px] text-white/25">Crea tu cuenta en 2 minutos</p>
-                    </div>
-                  </div>
-                  <a
-                    href="https://app.withmia.com"
-                    onClick={() => trackCTAClick("crear_cuenta_sidebar", "contact")}
-                    className="flex items-center justify-center gap-2 w-full px-5 py-2.5 rounded-xl border border-amber-500/20 text-[13px] font-medium text-amber-400 hover:bg-amber-500/10 transition-all group"
+                  <button
+                    type="button"
+                    onClick={openCalendly}
+                    className="flex items-center justify-center gap-2 w-full px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 text-[13px] font-semibold text-white hover:brightness-110 transition-all group"
                   >
-                    Crear cuenta gratis
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ════════════════ BOTTOM CTA ════════════════ */}
-        <div className="px-4 pb-20 md:pb-28">
-          <div
-            ref={channels.ref}
-            className={`max-w-4xl mx-auto transition-all duration-700 ${
-              channels.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-            }`}
-          >
-            <div className="relative rounded-3xl overflow-hidden">
-              {/* Gradient mesh */}
-              <div className="absolute inset-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-violet-500/[0.06] to-cyan-500/[0.04]" />
-                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-violet-500/10 rounded-full blur-3xl" />
-              </div>
-
-              <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center">
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
-
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                  Estamos aquí para ayudarte
-                </h2>
-                <p className="text-[14px] text-white/40 max-w-md mx-auto mb-8 leading-relaxed">
-                  Ya sea que necesites una demo, resolver dudas sobre la plataforma
-                  o explorar cómo WITHMIA se adapta a tu negocio — estamos listos.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <a
-                    href="https://app.withmia.com"
-                    onClick={() => trackCTAClick("probar_gratis_bottom", "contact")}
-                    className="relative flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      Probar gratis
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </span>
-                  </a>
-                  <Link
-                    to="/precios"
-                    className="flex items-center justify-center px-8 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
-                  >
-                    Ver precios
-                  </Link>
-                </div>
-
-                {/* Trust strip */}
-                <div className="flex items-center justify-center gap-6 mt-8 text-white/20 text-[11px]">
-                  <span className="flex items-center gap-1.5">
-                    <Shield className="w-3 h-3" /> Datos seguros
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3 h-3" /> Respuesta en &lt; 2h
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3 h-3" /> +500 equipos activos
-                  </span>
+                    <Calendar className="w-3.5 h-3.5" />
+                    Agendar mi sesión gratis
+                  </button>
                 </div>
               </div>
             </div>

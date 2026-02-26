@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v3: cache key to invalidate after rewrite
-        $poolKey = "daily_quotes_v3_{$monthDay}";
-        $counterKey = "daily_quotes_v3_ctr_{$monthDay}";
+        // v4: cache key to invalidate after who-bio accuracy fix
+        $poolKey = "daily_quotes_v4_{$monthDay}";
+        $counterKey = "daily_quotes_v4_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -224,13 +224,16 @@ class DailyQuoteController extends Controller
         try {
             $client = OpenAI::client($apiKey);
 
-            // Build numbered list for the prompt
+            // Build numbered list for the prompt with Wikipedia context
             $peopleList = '';
             foreach ($people as $i => $p) {
                 $typeLabel = $p['type'] === 'birth' ? 'Nacido' : 'Fallecido';
                 $desc = !empty($p['description']) ? " — {$p['description']}" : '';
                 $num = $i + 1;
-                $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc})\n";
+                // Include truncated Wikipedia extract so OpenAI knows exactly who this person is
+                $extract = !empty($p['extract']) ? mb_substr($p['extract'], 0, 200) : '';
+                $extractLine = $extract ? "\n   Contexto Wikipedia: {$extract}" : '';
+                $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc}){$extractLine}\n";
             }
 
             $prompt = <<<PROMPT
@@ -244,7 +247,10 @@ Para cada personaje seleccionado, responde con:
 - "quote": Una cita célebre REAL y bien documentada de esa persona (en español)
 - "who": Mini biografía de 1-2 líneas en español
 
-REGLAS:
+REGLAS CRÍTICAS:
+- La biografía ("who") debe describir EXACTAMENTE a la persona indicada, NO a un familiar, padre, hijo o persona con nombre similar
+- Usa el "Contexto Wikipedia" proporcionado para verificar la identidad exacta de cada persona
+- Si la persona nació en un año X, la biografía debe reflejar ESE año de nacimiento, no el de otra persona
 - Selecciona SOLO personajes que tengan citas/frases célebres conocidas y documentadas
 - Prefiere científicos, artistas, filósofos, escritores, músicos y líderes famosos mundialmente
 - Evita deportistas, políticos menores o personas poco conocidas mundialmente
