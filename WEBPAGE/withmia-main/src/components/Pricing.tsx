@@ -5,22 +5,16 @@ import {
   X as XIcon,
   Sparkles,
   ArrowRight,
-  MessageSquare,
-  Bot,
-  BarChart3,
   Zap,
   Shield,
   Users,
   Layers,
-  CreditCard,
   ChevronDown,
   ChevronRight,
   TrendingUp,
   Clock,
   BadgeCheck,
   Globe,
-  Brain,
-  Lock,
   Crown,
   Building2,
 } from "lucide-react";
@@ -110,46 +104,6 @@ const comparisonGroups: ComparisonGroup[] = [
   },
 ];
 
-/* ─── Detailed features (grouped by category) ─── */
-type FeatureItem = { icon: typeof Bot; label: string; desc: string };
-type FeatureGroup = { title: string; icon: typeof Bot; features: FeatureItem[] };
-
-const featureGroups: FeatureGroup[] = [
-  {
-    title: "Inteligencia Artificial",
-    icon: Bot,
-    features: [
-      { icon: Bot,          label: "IA conversacional avanzada",  desc: "GPT-4o y Claude con contexto completo del cliente, 24/7." },
-      { icon: MessageSquare, label: "Mensajes ilimitados",         desc: "Sin topes de conversaciones ni chats simultáneos." },
-      { icon: Brain,        label: "Base de conocimiento (RAG)",   desc: "Entrena tu IA con documentos, PDFs y URLs propios." },
-    ],
-  },
-  {
-    title: "Canales y comunicación",
-    icon: Globe,
-    features: [
-      { icon: Globe,        label: "Inbox omnicanal",              desc: "WhatsApp, IG, Messenger, Web y Email en una bandeja." },
-      { icon: CreditCard,   label: "Cobranzas inteligentes",       desc: "Cobros con enlaces de pago y recordatorios automáticos." },
-    ],
-  },
-  {
-    title: "Gestión y equipo",
-    icon: Users,
-    features: [
-      { icon: Users,        label: "CRM con pipeline visual",      desc: "Contactos, etapas de venta y oportunidades en un tablero." },
-      { icon: BarChart3,    label: "Analítica en tiempo real",     desc: "Tiempos de respuesta, rendimiento IA y conversión." },
-      { icon: Zap,          label: "Workflows y automatizaciones", desc: "Reglas, flujos y triggers — sin escribir código." },
-    ],
-  },
-  {
-    title: "Plataforma",
-    icon: Layers,
-    features: [
-      { icon: Layers,       label: "Integraciones + API",           desc: "n8n, Zapier, Slack, Google Calendar, Calendly, WooCommerce y API REST abierta." },
-      { icon: Lock,         label: "Seguridad empresarial",        desc: "Encriptación E2E, backups automáticos y datos protegidos." },
-    ],
-  },
-];
 
 /* ─── FAQs ─── */
 const faqs = [
@@ -236,9 +190,7 @@ export const Pricing = () => {
 
   const calc       = useScrollReveal();
   const comparison = useScrollReveal();
-  const features   = useScrollReveal();
   const faqSr      = useScrollReveal();
-  const ctaSr      = useScrollReveal();
 
   return (
     <section id="precios" className="relative overflow-hidden">
@@ -575,52 +527,6 @@ export const Pricing = () => {
         </div>
       </div>
 
-      {/* ═══════════ FEATURES GRID ═══════════ */}
-      <div className="px-4 pb-20 md:pb-28">
-        <div ref={features.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${features.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="text-center mb-12">
-            <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Todo incluido en Pro</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Cada funcionalidad que necesitas.
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.06] overflow-hidden">
-            {featureGroups.map((group, gi) => {
-              const GroupIcon = group.icon;
-              const baseIdx = featureGroups.slice(0, gi).reduce((acc, g) => acc + g.features.length, 0);
-              return (
-                <div key={group.title}>
-                  {/* Category header */}
-                  <div className={`flex items-center gap-3 px-6 py-3 bg-white/[0.02] ${gi > 0 ? "border-t border-white/[0.06]" : ""}`}>
-                    <GroupIcon className="w-3.5 h-3.5 text-white/25" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-white/35">{group.title}</span>
-                    <span className="text-[10px] text-white/15 ml-auto tabular-nums">{group.features.length}</span>
-                  </div>
-                  {/* Feature rows */}
-                  {group.features.map((f, fi) => {
-                    const Icon = f.icon;
-                    const idx = baseIdx + fi;
-                    return (
-                      <div
-                        key={f.label}
-                        className="group grid grid-cols-[1fr] sm:grid-cols-[1fr,1.2fr] gap-1 sm:gap-6 px-6 py-4 border-t border-white/[0.03] hover:bg-white/[0.015] transition-colors"
-                        style={{ opacity: features.isVisible ? 1 : 0, transition: `all 0.4s ease ${idx * 45}ms` }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="w-4 h-4 text-white/30 group-hover:text-white/50 transition-colors shrink-0" />
-                          <span className="text-[13.5px] font-semibold text-white/75 group-hover:text-white transition-colors">{f.label}</span>
-                        </div>
-                        <p className="text-[12.5px] text-white/30 leading-relaxed sm:text-right pl-7 sm:pl-0">{f.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* ═══════════ FAQ ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
@@ -636,64 +542,6 @@ export const Pricing = () => {
             {faqs.map((f, i) => (
               <FaqItem key={i} q={f.q} a={f.a} index={i} />
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════ BOTTOM CTA ═══════════ */}
-      <div className="px-4 pb-20 md:pb-28">
-        <div ref={ctaSr.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${ctaSr.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="relative rounded-3xl overflow-hidden">
-            <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center bg-white/[0.02]">
-
-              {/* Guarantee badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-400/[0.08] border border-emerald-400/15 text-[12px] text-emerald-400 font-semibold mb-6">
-                <Shield className="w-4 h-4" />
-                Garantía de satisfacción — cancela en cualquier momento
-              </div>
-
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                Comienza hoy. Sin riesgos.
-              </h2>
-              <p className="text-[14px] text-white/40 max-w-md mx-auto mb-8 leading-relaxed">
-                Únete a +500 equipos que automatizan su atención al cliente con IA.
-                Empieza gratis o ve directo a Pro.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a
-                  href="https://app.withmia.com"
-                  onClick={() => trackCTAClick('comenzar_gratis', 'pricing_bottom', 'https://app.withmia.com')}
-                  className="relative flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-bold text-black hover:brightness-110 transition-all group overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  <span className="relative z-10 flex items-center gap-2">
-                    Comenzar gratis
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </a>
-                <Link
-                  to="/contacto"
-                  onClick={() => trackCTAClick('hablar_ventas', 'pricing_bottom', '/contacto')}
-                  className="flex items-center justify-center px-8 py-4 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/20 hover:bg-white/[0.03] transition-all"
-                >
-                  Hablar con ventas
-                </Link>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-white/20 text-[11px]">
-                <span className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> Datos seguros</span>
-                <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> Soporte 24/7</span>
-                <span className="flex items-center gap-1.5"><BadgeCheck className="w-3 h-3" /> +500 equipos activos</span>
-              </div>
-
-              <p className="text-[12px] text-white/15 mt-6">
-                ¿Dudas sobre tu suscripción?{" "}
-                <a href="mailto:soporte@withmia.com" className="text-amber-400/50 hover:text-amber-400 underline underline-offset-2 transition-colors">
-                  soporte@withmia.com
-                </a>
-              </p>
-            </div>
           </div>
         </div>
       </div>

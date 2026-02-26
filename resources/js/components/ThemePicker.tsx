@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Palette, Sun, Moon, Monitor, Check, Pipette, RotateCcw } from 'lucide-react';
 import { useTheme, THEME_PALETTES, type ThemeMode } from '../contexts/ThemeContext';
+import CustomColorPicker from './CustomColorPicker';
 
 const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
   { mode: 'light', label: 'Claro', icon: Sun },
@@ -11,9 +12,9 @@ const MODE_TABS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
 export function ThemePicker() {
   const { themeId, mode, customColor, hasTheme, isDark, setThemeId, setMode, setCustomColor, resetTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const colorInputRef = useRef<HTMLInputElement>(null);
 
   // Close on outside click
   useEffect(() => {
@@ -24,6 +25,7 @@ export function ThemePicker() {
         buttonRef.current && !buttonRef.current.contains(e.target as Node)
       ) {
         setIsOpen(false);
+        setShowCustomPicker(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -82,7 +84,7 @@ export function ThemePicker() {
       {isOpen && (
         <>
           {/* Overlay */}
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={() => { setIsOpen(false); setShowCustomPicker(false); }} />
 
           {/* Panel */}
           <div
@@ -182,9 +184,9 @@ export function ThemePicker() {
                   );
                 })}
 
-                {/* Custom color picker — opens native color dialog */}
+                {/* Custom color picker — toggle inline picker */}
                 <button
-                  onClick={() => colorInputRef.current?.click()}
+                  onClick={() => setShowCustomPicker(!showCustomPicker)}
                   className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
                     themeId === 'custom'
                       ? hasTheme
@@ -220,18 +222,20 @@ export function ThemePicker() {
                   )}
                 </button>
               </div>
-
-              {/* Hidden native color input */}
-              <input
-                ref={colorInputRef}
-                type="color"
-                value={customColor || '#6366f1'}
-                onChange={(e) => setCustomColor(e.target.value)}
-                className="sr-only"
-                aria-hidden="true"
-                tabIndex={-1}
-              />
             </div>
+
+            {/* Custom color picker panel (Canva-style) */}
+            {showCustomPicker && (
+              <>
+                <div className="mx-3 mb-2" style={{ height: 1, background: footerBorder }} />
+                <CustomColorPicker
+                  value={customColor || '#6366f1'}
+                  onChange={(hex) => setCustomColor(hex)}
+                  isDark={isDark}
+                  hasTheme={hasTheme}
+                />
+              </>
+            )}
 
             {/* Footer: Reset + System toggle */}
             <div
