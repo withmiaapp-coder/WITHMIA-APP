@@ -241,6 +241,21 @@ function mixWithWhiteAlpha(hex: string, ratio: number, alpha: number): string {
   return `rgba(${nr}, ${ng}, ${nb}, ${alpha})`;
 }
 
+/**
+ * Mix color towards black and return as rgba with custom alpha.
+ * ratio = how much of original color to keep (0 = pure black, 1 = original).
+ * Used for dark mode chat overlay: dark tint of theme color, not bright/saturated.
+ */
+function mixWithBlackAlpha(hex: string, ratio: number, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(r * ratio);
+  const ng = Math.round(g * ratio);
+  const nb = Math.round(b * ratio);
+  return `rgba(${nr}, ${ng}, ${nb}, ${alpha})`;
+}
+
 function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
   const root = document.documentElement;
 
@@ -381,7 +396,7 @@ function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
     root.style.setProperty('--theme-content-card-bg', 'rgba(255,255,255,0.04)');
     root.style.setProperty('--theme-content-card-border', withAlpha(p, 0.08));
     root.style.setProperty('--theme-content-card-shadow', 'rgba(0,0,0,0.2)');
-    root.style.setProperty('--theme-chat-overlay', withAlpha(p, 0.85));
+    root.style.setProperty('--theme-chat-overlay', mixWithBlackAlpha(p, 0.18, 0.93));
 
     // Text — light on dark
     root.style.setProperty('--theme-text-primary', '#f1f5f9');

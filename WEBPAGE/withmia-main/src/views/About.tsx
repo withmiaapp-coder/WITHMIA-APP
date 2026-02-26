@@ -20,6 +20,7 @@ import {
   Brain,
   LineChart,
   User,
+  Linkedin,
 } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -174,72 +175,73 @@ const About = () => {
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={founder.ref}
-            className={`max-w-5xl mx-auto transition-all duration-700 ${
+            className={`max-w-3xl mx-auto text-center transition-all duration-700 ${
               founder.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            {/* Founder card — single clean block */}
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-              <div className="grid lg:grid-cols-[280px,1fr]">
-                {/* Photo */}
-                <div className="relative aspect-[3/4] lg:aspect-auto bg-white/[0.03]">
-                  {!imgError ? (
-                    <img
-                      src="/images/founder.webp"
-                      alt="Ángel — CEO & Fundador, WITHMIA"
-                      className="w-full h-full object-cover object-[center_15%]"
-                      onError={() => setImgError(true)}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-violet-500/[0.08] via-amber-500/[0.05] to-transparent">
-                      <User className="w-16 h-16 text-white/15" />
-                    </div>
-                  )}
+            {/* Photo */}
+            <div className="relative w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] ring-4 ring-white/[0.03]">
+              {!imgError ? (
+                <img
+                  src="/images/founder.webp"
+                  alt="Ángel Díaz Castro"
+                  className="w-full h-full object-cover object-[center_15%]"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500/[0.08] via-amber-500/[0.05] to-transparent">
+                  <User className="w-12 h-12 text-white/15" />
                 </div>
-
-                {/* Content */}
-                <div className="p-8 md:p-10 flex flex-col justify-center">
-                  <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-2">
-                    Fundador
-                  </p>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
-                    Ángel
-                  </h2>
-                  <p className="text-[13px] text-white/30 mb-6">
-                    CEO & Fundador Técnico
-                  </p>
-
-                  <p className="text-[15px] text-white/40 leading-relaxed mb-6">
-                    Perfil híbrido: 5 años de desarrollo de software independiente,
-                    formación en Economía y Psicología Organizacional. Construyó
-                    el MVP completo de WITHMIA sin equipos externos y fundó
-                    Atlantis Producciones SpA como empresa matriz
-                  </p>
-
-                  {/* Skill tags — compact horizontal */}
-                  <div className="flex flex-wrap gap-2">
-                    {founderSkills.map((skill, i) => {
-                      const Icon = skill.icon;
-                      const c = colorMap[skill.color];
-                      return (
-                        <span
-                          key={skill.title}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${c.bg} border ${c.border} text-[12px] font-medium text-white/50`}
-                          style={{
-                            opacity: founder.isVisible ? 1 : 0,
-                            transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
-                            transition: `all 0.4s ease ${i * 80 + 200}ms`,
-                          }}
-                        >
-                          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-                          {skill.title}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
+
+            {/* Name + role */}
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
+              Ángel Díaz Castro
+            </h2>
+            <p className="text-[14px] text-white/35 mb-5">
+              CEO & Fundador Técnico
+            </p>
+
+            {/* Bio */}
+            <p className="text-[15px] text-white/40 leading-relaxed max-w-xl mx-auto mb-6">
+              Ingeniero de software con 5 años de experiencia, formación en
+              Economía y Psicología Organizacional. Construyó el MVP completo
+              de WITHMIA y fundó Atlantis Producciones SpA
+            </p>
+
+            {/* Skill tags + LinkedIn */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
+              {founderSkills.map((skill, i) => {
+                const Icon = skill.icon;
+                const c = colorMap[skill.color];
+                return (
+                  <span
+                    key={skill.title}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${c.bg} border ${c.border} text-[12px] font-medium text-white/50`}
+                    style={{
+                      opacity: founder.isVisible ? 1 : 0,
+                      transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
+                      transition: `all 0.4s ease ${i * 80 + 200}ms`,
+                    }}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
+                    {skill.title}
+                  </span>
+                );
+              })}
+            </div>
+
+            <a
+              href="https://www.linkedin.com/in/angel-felipe-diaz-castro/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] text-[13px] font-medium text-white/50 hover:text-white/70 transition-all duration-300 group"
+            >
+              <Linkedin className="w-4 h-4 text-[#0A66C2] group-hover:scale-110 transition-transform" />
+              LinkedIn
+              <ArrowRight className="w-3 h-3 text-white/20 group-hover:translate-x-0.5 transition-transform" />
+            </a>
           </div>
         </div>
 
@@ -317,49 +319,44 @@ const About = () => {
               valuesSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <div className="grid lg:grid-cols-[1fr,2fr] gap-12 lg:gap-16 items-start">
-              {/* Left: section header (sticky) */}
-              <div className="lg:sticky lg:top-32">
-                <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
-                  Lo que nos define
-                </p>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Nuestros{" "}
-                  <span className="text-gradient">valores</span>
-                </h2>
-                <p className="text-[14px] text-white/30 leading-relaxed">
-                  Los principios que guían cada línea de código y cada decisión de producto en WITHMIA
-                </p>
-              </div>
+            {/* Centered header */}
+            <div className="text-center mb-14">
+              <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+                Nuestros Valores
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                Los principios que{" "}
+                <span className="text-gradient">nos guían</span>
+              </h2>
+              <p className="text-[14px] text-white/30 max-w-lg mx-auto leading-relaxed">
+                Estos valores fundamentan cada decisión que tomamos y definen
+                cómo interactuamos con nuestros clientes
+              </p>
+            </div>
 
-              {/* Right: value items - editorial list */}
-              <div className="space-y-0 divide-y divide-white/[0.06]">
-                {values.map((v, i) => {
-                  const Icon = v.icon;
-                  const c = colorMap[v.color];
-                  return (
-                    <div
-                      key={v.title}
-                      className="group py-8 first:pt-0 last:pb-0"
-                      style={{
-                        opacity: valuesSection.isVisible ? 1 : 0,
-                        transform: valuesSection.isVisible ? "translateX(0)" : "translateX(20px)",
-                        transition: `all 0.5s ease ${i * 150}ms`,
-                      }}
-                    >
-                      <div className="flex items-start gap-5">
-                        <div className={`w-11 h-11 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300`}>
-                          <Icon className={`w-5 h-5 ${c.icon}`} />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-white mb-2 group-hover:text-gradient transition-colors duration-300">{v.title}</h3>
-                          <p className="text-[14px] text-white/30 leading-relaxed group-hover:text-white/40 transition-colors duration-300">{v.desc}</p>
-                        </div>
-                      </div>
+            {/* Value cards grid */}
+            <div className="grid sm:grid-cols-3 gap-5">
+              {values.map((v, i) => {
+                const Icon = v.icon;
+                const c = colorMap[v.color];
+                return (
+                  <div
+                    key={v.title}
+                    className={`text-center rounded-2xl border ${c.border} bg-white/[0.02] p-8 hover:bg-white/[0.05] transition-all duration-300 group`}
+                    style={{
+                      opacity: valuesSection.isVisible ? 1 : 0,
+                      transform: valuesSection.isVisible ? "translateY(0)" : "translateY(20px)",
+                      transition: `all 0.5s ease ${i * 120}ms`,
+                    }}
+                  >
+                    <div className={`w-12 h-12 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className={`w-5 h-5 ${c.icon}`} />
                     </div>
-                  );
-                })}
-              </div>
+                    <h3 className="text-[16px] font-bold text-white mb-3">{v.title}</h3>
+                    <p className="text-[13px] text-white/30 leading-relaxed group-hover:text-white/40 transition-colors duration-300">{v.desc}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -376,66 +373,72 @@ const About = () => {
               story.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <div className="text-center mb-16">
-              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
-                Nuestra historia
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                De proyecto interno a{" "}
-                <span className="text-gradient">empresa propia</span>
-              </h2>
-              <p className="text-[14px] text-white/30 max-w-xl mx-auto leading-relaxed">
-                Nacimos dentro de Atlantis Producciones. Al validar la
-                oportunidad, creamos una empresa dedicada exclusivamente
-                a resolver este problema
-              </p>
-            </div>
+            {/* Two-column: narrative left + vertical timeline right */}
+            <div className="grid lg:grid-cols-[1fr,1fr] gap-12 lg:gap-16 items-start">
+              {/* Left: narrative */}
+              <div className="lg:sticky lg:top-32">
+                <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+                  Nuestra Historia
+                </p>
+                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
+                  De una necesidad real a{" "}
+                  <span className="text-gradient">una empresa propia</span>
+                </h2>
+                <div className="space-y-4">
+                  <p className="text-[15px] text-white/40 leading-relaxed">
+                    En 2024, dentro de Atlantis Producciones, detectamos que
+                    las PYMEs latinoamericanas perdían ventas por no responder
+                    a tiempo y operaban con herramientas desconectadas
+                  </p>
+                  <p className="text-[15px] text-white/35 leading-relaxed">
+                    Construimos un prototipo interno que evolucionó hasta
+                    convertirse en una plataforma SaaS completa. En julio de
+                    2025 constituimos MIA Marketing & Intelligence Artificial
+                    SpA como empresa independiente
+                  </p>
+                  <p className="text-[15px] text-white/35 leading-relaxed">
+                    Hoy operamos con nuestros primeros clientes B2B en Chile,
+                    enfocados en PYMEs con alto volumen transaccional
+                  </p>
+                </div>
+              </div>
 
-            {/* Timeline - horizontal cards with connecting line */}
-            <div className="relative">
-              {/* Horizontal connecting line (hidden on mobile) */}
-              <div className="hidden lg:block absolute top-[52px] left-0 right-0 h-[1px] bg-gradient-to-r from-violet-500/20 via-amber-500/15 to-cyan-500/10" />
+              {/* Right: vertical timeline */}
+              <div className="relative pl-8">
+                {/* Vertical line */}
+                <div className="absolute left-[15px] top-2 bottom-2 w-[1px] bg-gradient-to-b from-violet-500/20 via-amber-500/15 to-cyan-500/10" />
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {timeline.map((step, i) => {
-                  const Icon = step.icon;
-                  const c = colorMap[step.color];
-                  return (
-                    <div
-                      key={step.period}
-                      className="relative group"
-                      style={{
-                        opacity: story.isVisible ? 1 : 0,
-                        transform: story.isVisible ? "translateY(0)" : "translateY(24px)",
-                        transition: `all 0.6s ease ${i * 120}ms`,
-                      }}
-                    >
-                      {/* Dot on timeline (desktop) */}
-                      <div className="hidden lg:flex justify-center mb-4">
-                        <div className={`w-10 h-10 rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center relative z-10 group-hover:scale-110 transition-transform duration-300`}>
-                          <Icon className={`w-4 h-4 ${c.icon}`} />
+                <div className="space-y-10">
+                  {timeline.map((step, i) => {
+                    const Icon = step.icon;
+                    const c = colorMap[step.color];
+                    return (
+                      <div
+                        key={step.period}
+                        className="relative group"
+                        style={{
+                          opacity: story.isVisible ? 1 : 0,
+                          transform: story.isVisible ? "translateY(0)" : "translateY(16px)",
+                          transition: `all 0.5s ease ${i * 120}ms`,
+                        }}
+                      >
+                        {/* Dot */}
+                        <div className={`absolute -left-8 top-0 w-[31px] h-[31px] rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-300`}>
+                          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
                         </div>
-                      </div>
 
-                      {/* Card */}
-                      <div className={`h-full rounded-2xl border ${c.border} bg-white/[0.02] p-6 hover:bg-white/[0.05] transition-all duration-300`}>
-                        <div className="flex items-center gap-3 mb-3 lg:hidden">
-                          <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}>
-                            <Icon className={`w-4 h-4 ${c.icon}`} />
+                        {/* Content */}
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-[16px] font-bold text-white">{step.title}</h3>
+                            <span className={`text-[11px] font-semibold ${c.icon} opacity-60`}>{step.period}</span>
                           </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider ${c.icon}`}>
-                            {step.period}
-                          </span>
+                          <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
                         </div>
-                        <span className={`hidden lg:block text-[10px] font-bold uppercase tracking-wider ${c.icon} mb-2`}>
-                          {step.period}
-                        </span>
-                        <h3 className="text-[15px] font-bold text-white mb-2">{step.title}</h3>
-                        <p className="text-[12px] text-white/25 leading-relaxed">{step.desc}</p>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
