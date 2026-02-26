@@ -34,20 +34,40 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v9: cache key — filter out English-language extracts from ES Wikipedia
-        $poolKey = "daily_quotes_v9_{$monthDay}";
-        $counterKey = "daily_quotes_v9_ctr_{$monthDay}";
+        // v10: cache key — filter athletes + English extracts, stronger prompt
+        $poolKey = "daily_quotes_v10_{$monthDay}";
+        $counterKey = "daily_quotes_v10_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
         if (!$pool || count($pool) === 0) {
-            $pool = $this->buildQuotesPool($date);
+            // Use a lock to prevent multiple simultaneous pool builds (stampede)
+            $lockKey = "daily_quotes_v10_lock_{$monthDay}";
+            $lock = Cache::lock($lockKey, 30); // 30s max lock
 
-            if ($pool && count($pool) > 0) {
-                $secondsUntilMidnight = (int) now()->diffInSeconds(now()->endOfDay());
-                Cache::put($poolKey, $pool, max($secondsUntilMidnight, 60));
-                Cache::put($counterKey, 0, max($secondsUntilMidnight, 60));
+            if ($lock->get()) {
+                try {
+                    // Double-check after acquiring lock (another request may have built it)
+                    $pool = Cache::get($poolKey);
+                    if (!$pool || count($pool) === 0) {
+                        $pool = $this->buildQuotesPool($date);
+
+                        if ($pool && count($pool) > 0) {
+                            $secondsUntilMidnight = (int) now()->diffInSeconds(now()->endOfDay());
+                            Cache::put($poolKey, $pool, max($secondsUntilMidnight, 60));
+                            Cache::put($counterKey, 0, max($secondsUntilMidnight, 60));
+                        }
+                    }
+                } finally {
+                    $lock->release();
+                }
             } else {
+                // Another request is building the pool — wait briefly then check cache
+                usleep(2_000_000); // 2s
+                $pool = Cache::get($poolKey);
+            }
+
+            if (!$pool || count($pool) === 0) {
                 return response()->json($this->getFallbackQuote());
             }
         }
@@ -186,6 +206,11 @@ class DailyQuoteController extends Controller
                         continue;
                     }
 
+                    // Skip athletes/sports figures — they rarely have quotable phrases
+                    if ($this->isSportsPerson($descText, $extractText)) {
+                        continue;
+                    }
+
                     $people[] = [
                         'name' => $cleanName,
                         'year' => (int) $entry['year'],
@@ -240,11 +265,14 @@ Para cada personaje seleccionado, responde con:
 - "index": El NÚMERO del personaje de la lista (ej: 1, 5, 12)
 - "quote": Una cita célebre REAL y bien documentada de esa persona (en español)
 
-REGLAS:
-- Selecciona SOLO personajes que tengan citas/frases célebres conocidas y documentadas
-- Prefiere científicos, artistas, filósofos, escritores, músicos y líderes famosos mundialmente
-- Evita deportistas, políticos menores o personas poco conocidas mundialmente
-- Las citas deben ser REALES, no inventadas
+REGLAS ESTRICTAS:
+- Selecciona SOLO personajes MUNDIALMENTE FAMOSOS que tengan citas/frases célebres verificables
+- Prefiere: filósofos, científicos, escritores, compositores, pintores, líderes históricos, inventores
+- EXCLUYE COMPLETAMENTE: deportistas, pilotos, futbolistas, atletas, cantantes de géneros urbanos
+- EXCLUYE: personas conocidas principalmente por ser hijos/familiares de alguien famoso
+- EXCLUYE: actores de cine/TV, modelos, influencers, youtubers
+- La persona DEBE tener frases célebres propias documentadas en libros, discursos u obras
+- Las citas deben ser REALES, verificables, NO inventadas
 - Responde SOLO con JSON array válido
 
 [{"index":1,"quote":"..."},{"index":5,"quote":"..."}]
@@ -354,6 +382,45 @@ PROMPT;
         ];
 
         return $fallbacks[array_rand($fallbacks)];
+    }
+
+    /**
+     * Detect if a person is primarily a sports figure based on their Wikipedia description/extract.
+     * Sports figures rarely have quotable phrases suitable for inspirational quotes.
+     */
+    private function isSportsPerson(string $description, string $extract): bool
+    {
+        $combined = mb_strtolower($description . ' ' . $extract);
+
+        $sportsKeywords = [
+            'futbolista', 'footballer', 'soccer player',
+            'piloto', 'racing driver', 'rally driver',
+            'tenista', 'tennis player',
+            'baloncestista', 'basketball player',
+            'boxeador', 'boxer',
+            'ciclista', 'cyclist',
+            'nadador', 'swimmer',
+            'atleta', 'athlete',
+            'jugador de', 'jugadora de',
+            'golfista', 'golfer',
+            'esquiador', 'skier',
+            'corredor', 'runner',
+            'luchador', 'wrestler',
+            'deportista',
+            'automovilismo', 'fórmula 1', 'formula one', 'rallying',
+            'olympic medal', 'medalla olímpica',
+            'world cup', 'copa del mundo',
+            'campeón mundial', 'world champion',
+        ];
+
+        $hits = 0;
+        foreach ($sportsKeywords as $keyword) {
+            if (str_contains($combined, $keyword)) {
+                $hits++;
+            }
+        }
+
+        return $hits >= 1;
     }
 
     /**

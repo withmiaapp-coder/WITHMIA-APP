@@ -286,74 +286,58 @@ const About = () => {
               story.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            {/* Two-column: narrative left + vertical timeline right */}
-            <div className="grid lg:grid-cols-[1fr,1fr] gap-12 lg:gap-16 items-start">
-              {/* Left: narrative */}
-              <div className="lg:sticky lg:top-32">
-                <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
-                  Nuestra Historia
+            {/* Centered narrative */}
+            <div className="text-center mb-16">
+              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+                Nuestra Historia
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
+                De una idea clara a{" "}
+                <span className="text-gradient">una plataforma real</span>
+              </h2>
+              <div className="max-w-2xl mx-auto space-y-4">
+                <p className="text-[15px] text-white/40 leading-relaxed">
+                  En marzo de 2025 identificamos un problema repetido en
+                  las PYMEs latinoamericanas: perdían ventas por no responder
+                  a tiempo, gestionaban clientes desde WhatsApp personal y
+                  operaban con herramientas que no se conectaban entre sí
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
-                  De una idea clara a{" "}
-                  <span className="text-gradient">una plataforma real</span>
-                </h2>
-                <div className="space-y-4">
-                  <p className="text-[15px] text-white/40 leading-relaxed">
-                    En marzo de 2025 identificamos un problema repetido en
-                    las PYMEs latinoamericanas: perdían ventas por no responder
-                    a tiempo, gestionaban clientes desde WhatsApp personal y
-                    operaban con herramientas que no se conectaban entre sí
-                  </p>
-                  <p className="text-[15px] text-white/35 leading-relaxed">
-                    En menos de 4 meses construimos una plataforma SaaS
-                    completa con IA generativa, CRM y automatización. En julio
-                    de 2025 constituimos legalmente MIA Marketing &
-                    Intelligence Artificial SpA
-                  </p>
-                  <p className="text-[15px] text-white/35 leading-relaxed">
-                    Hoy operamos con nuestros primeros clientes B2B en Chile,
-                    enfocados en PYMEs con alto volumen transaccional
-                  </p>
-                </div>
+                <p className="text-[15px] text-white/35 leading-relaxed">
+                  En menos de 4 meses construimos una plataforma SaaS
+                  completa con IA generativa, CRM y automatización. En julio
+                  de 2025 constituimos legalmente MIA Marketing &
+                  Intelligence Artificial SpA
+                </p>
               </div>
+            </div>
 
-              {/* Right: vertical timeline */}
-              <div className="relative pl-8">
-                {/* Vertical line */}
-                <div className="absolute left-[15px] top-2 bottom-2 w-[1px] bg-gradient-to-b from-violet-500/20 via-amber-500/15 to-cyan-500/10" />
-
-                <div className="space-y-10">
-                  {timeline.map((step, i) => {
-                    const Icon = step.icon;
-                    const c = colorMap[step.color];
-                    return (
-                      <div
-                        key={step.period}
-                        className="relative"
-                        style={{
-                          opacity: story.isVisible ? 1 : 0,
-                          transform: story.isVisible ? "translateY(0)" : "translateY(16px)",
-                          transition: `all 0.5s ease ${i * 120}ms`,
-                        }}
-                      >
-                        {/* Dot */}
-                        <div className={`absolute -left-8 top-0 w-[31px] h-[31px] rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center z-10`}>
-                          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-                        </div>
-
-                        {/* Content */}
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
-                            <h3 className="text-[16px] font-bold text-white">{step.title}</h3>
-                            <span className={`text-[11px] font-semibold ${c.icon} opacity-60`}>{step.period}</span>
-                          </div>
-                          <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Horizontal timeline — 4 columns */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-white/[0.06]">
+              {timeline.map((step, i) => {
+                const Icon = step.icon;
+                const c = colorMap[step.color];
+                return (
+                  <div
+                    key={step.period}
+                    className="relative bg-white/[0.02] p-6 md:p-7"
+                    style={{
+                      opacity: story.isVisible ? 1 : 0,
+                      transform: story.isVisible ? "translateY(0)" : "translateY(16px)",
+                      transition: `all 0.5s ease ${i * 100}ms`,
+                    }}
+                  >
+                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
+                    <span className={`text-[11px] font-semibold ${c.icon} opacity-60 block mb-3`}>
+                      {step.period}
+                    </span>
+                    <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center mb-4`}>
+                      <Icon className={`w-4 h-4 ${c.icon}`} />
+                    </div>
+                    <h3 className="text-[14px] font-bold text-white mb-2 tracking-tight">{step.title}</h3>
+                    <p className="text-[12px] text-white/25 leading-relaxed">{step.desc}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

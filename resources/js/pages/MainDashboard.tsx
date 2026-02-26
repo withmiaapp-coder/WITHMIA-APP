@@ -21,7 +21,7 @@ import { ThemePicker } from '../components/ThemePicker';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { GlobalNotificationProvider, useGlobalNotifications } from '../contexts/GlobalNotificationContext';
 import { useConversations, useAgents, useTeams } from "../hooks/useChatwoot";
-import { getDailyQuote, fetchDailyQuote } from '../utils/dailyQuotes';
+import { fetchDailyQuote } from '../utils/dailyQuotes';
 import type { DailyQuote } from '../utils/dailyQuotes';
 import { useReverb } from "../hooks/useReverb";
 import {
@@ -617,10 +617,20 @@ function DashboardClock() {
 function ClockDisplay({ firstName }: { firstName: string }) {
   const { greeting, icon, date } = DashboardClock();
   const { hasTheme, isDark } = useTheme();
-  const [dailyQuote, setDailyQuote] = useState<DailyQuote>(getDailyQuote(date));
-  const [isLoading, setIsLoading] = useState(true);
+  const [dailyQuote, setDailyQuote] = useState<DailyQuote | null>(() => {
+    // Only use cached quote (no random fallback that causes content flash)
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const storedDate = sessionStorage.getItem('withmia_daily_quote_v3_date');
+      const stored = sessionStorage.getItem('withmia_daily_quote_v3');
+      if (storedDate === today && stored) return JSON.parse(stored);
+    } catch {}
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(dailyQuote === null);
 
   useEffect(() => {
+    if (dailyQuote) return; // Already have a cached quote
     let cancelled = false;
     fetchDailyQuote().then((q) => {
       if (!cancelled) {
@@ -630,6 +640,10 @@ function ClockDisplay({ firstName }: { firstName: string }) {
     });
     return () => { cancelled = true; };
   }, []);
+
+  const skeletonColor = hasTheme
+    ? isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'
+    : '#e5e7eb';
 
   return (
     <div className="flex-1 min-w-0">
@@ -646,36 +660,44 @@ function ClockDisplay({ firstName }: { firstName: string }) {
             <span className="text-sm">💡</span>
           </div>
         </div>
-        <div className={`min-w-0 transition-opacity duration-500 ${isLoading ? 'opacity-60' : 'opacity-100'}`}>
-          <p 
-            className="text-[13px] font-medium italic leading-snug" 
-            style={{ 
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-              color: hasTheme ? 'var(--theme-text-primary)' : '#374151',
-            }} 
-            title={dailyQuote.quote}
-          >
-            &ldquo;{dailyQuote.quote}&rdquo;
-          </p>
-          <p 
-            className="text-[11px] font-semibold mt-1"
-            style={{ color: hasTheme ? 'var(--theme-text-secondary)' : '#6b7280' }}
-          >
-            — {dailyQuote.author} <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#d1d5db' }} className="mx-0.5">·</span> <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af' }} className="font-normal">{dailyQuote.context}</span>
-          </p>
-          {dailyQuote.who && (
+        {isLoading ? (
+          <div className="min-w-0 flex-1 animate-pulse space-y-1.5">
+            <div className="h-3.5 rounded-md w-[90%]" style={{ background: skeletonColor }} />
+            <div className="h-3.5 rounded-md w-[70%]" style={{ background: skeletonColor }} />
+            <div className="h-3 rounded-md w-[40%] mt-1" style={{ background: skeletonColor }} />
+          </div>
+        ) : dailyQuote ? (
+          <div className="min-w-0 animate-fade-in">
             <p 
-              className="text-[11px] font-normal mt-0.5 leading-snug" 
+              className="text-[13px] font-medium italic leading-snug" 
               style={{ 
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af',
+                color: hasTheme ? 'var(--theme-text-primary)' : '#374151',
               }} 
-              title={dailyQuote.who}
+              title={dailyQuote.quote}
             >
-              {dailyQuote.who}
+              &ldquo;{dailyQuote.quote}&rdquo;
             </p>
-          )}
-        </div>
+            <p 
+              className="text-[11px] font-semibold mt-1"
+              style={{ color: hasTheme ? 'var(--theme-text-secondary)' : '#6b7280' }}
+            >
+              — {dailyQuote.author} <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#d1d5db' }} className="mx-0.5">·</span> <span style={{ color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af' }} className="font-normal">{dailyQuote.context}</span>
+            </p>
+            {dailyQuote.who && (
+              <p 
+                className="text-[11px] font-normal mt-0.5 leading-snug" 
+                style={{ 
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  color: hasTheme ? 'var(--theme-text-muted)' : '#9ca3af',
+                }} 
+                title={dailyQuote.who}
+              >
+                {dailyQuote.who}
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
