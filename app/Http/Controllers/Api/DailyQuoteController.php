@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v5: cache key — who bio now from Wikipedia, not OpenAI
-        $poolKey = "daily_quotes_v5_{$monthDay}";
-        $counterKey = "daily_quotes_v5_ctr_{$monthDay}";
+        // v6: cache key — all bios from Wikipedia (DB + OpenAI paths)
+        $poolKey = "daily_quotes_v6_{$monthDay}";
+        $counterKey = "daily_quotes_v6_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -95,11 +95,13 @@ class DailyQuoteController extends Controller
 
             if ($verified) {
                 $typeLabel = $person['type'] === 'birth' ? 'Nacido' : 'Fallecido';
+                // ALWAYS use Wikipedia bio — never trust stored bios (they may be wrong)
+                $who = $this->buildWikipediaBio($person);
                 $pool[] = [
                     'quote' => $verified['quote'],
                     'author' => $person['name'],
                     'context' => "{$typeLabel} el {$day} de {$monthName} de {$person['year']}",
-                    'who' => $verified['who'],
+                    'who' => $who,
                 ];
             } else {
                 $needsOpenAI[] = $person;
