@@ -34,8 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        $poolKey = "daily_quotes_pool_{$monthDay}";
-        $counterKey = "daily_quotes_counter_{$monthDay}";
+        // v2: cache key includes version to invalidate old unverified data
+        $poolKey = "daily_quotes_v2_{$monthDay}";
+        $counterKey = "daily_quotes_v2_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
