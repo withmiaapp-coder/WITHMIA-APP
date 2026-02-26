@@ -406,28 +406,17 @@ const About = () => {
               {/* Ground line */}
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-              {/* Floating stars decoration */}
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={`star-${i}`}
-                  className="absolute w-1 h-1 rounded-full bg-white/10"
-                  style={{
-                    left: `${12 + i * 16}%`,
-                    top: `${8 + (i % 3) * 12}%`,
-                    animation: story.isVisible ? `pulse 2s ease-in-out ${i * 0.3}s infinite` : "none",
-                  }}
-                />
-              ))}
-
               {/* Platforms — staggered heights like a platformer game */}
               <div className="flex flex-col md:flex-row items-end gap-4 md:gap-2 lg:gap-3 min-h-[400px] md:min-h-[460px] relative pb-4">
                 {timeline.map((step, i) => {
                   const c = colorMap[step.color];
-                  // Each platform gets progressively taller (character climbing up)
                   const heights = ["h-[220px]", "h-[255px]", "h-[290px]", "h-[325px]", "h-[360px]", "h-[400px]"];
                   const mdHeights = ["md:h-[200px]", "md:h-[235px]", "md:h-[270px]", "md:h-[305px]", "md:h-[345px]", "md:h-[390px]"];
                   const delays = [200, 350, 500, 650, 800, 950];
                   const xpPercent = Math.round(((i + 1) / timeline.length) * 100);
+                  // Levels 0-3 are completed (solid), 4-5 are upcoming (slightly dimmer)
+                  const isCompleted = i <= 3;
+                  const isCurrent = i === 4;
 
                   return (
                     <div
@@ -439,72 +428,97 @@ const About = () => {
                         transition: `all 0.6s cubic-bezier(0.34,1.56,0.64,1) ${delays[i]}ms`,
                       }}
                     >
-                      {/* Character on the last platform */}
-                      {i === timeline.length - 1 && (
+                      {/* Rocket traveling between platform 4 and 5 */}
+                      {isCurrent && (
                         <div
-                          className="flex justify-center mb-3"
+                          className="flex justify-center mb-3 relative"
                           style={{
                             opacity: story.isVisible ? 1 : 0,
                             transform: story.isVisible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.8)",
                             transition: "all 0.5s cubic-bezier(0.34,1.56,0.64,1) 1100ms",
                           }}
                         >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/30 to-amber-500/20 border border-violet-500/20 flex items-center justify-center animate-bounce">
-                            <Rocket className="w-4 h-4 text-violet-400" />
+                          {/* Trail particles behind rocket */}
+                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5 opacity-40">
+                            <div className="w-1 h-1 rounded-full bg-violet-400/60 animate-ping" style={{ animationDuration: "1.5s" }} />
+                            <div className="w-0.5 h-2 rounded-full bg-gradient-to-b from-amber-400/30 to-transparent" />
+                          </div>
+                          {/* Rocket */}
+                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/20 to-amber-500/10 border border-violet-500/15 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-violet-500/5"
+                            style={{ animation: "bounce 2s ease-in-out infinite" }}
+                          >
+                            <Rocket className="w-4.5 h-4.5 text-violet-400" />
                           </div>
                         </div>
                       )}
 
-                      {/* Jump trail dots between platforms (mobile: hidden) */}
+                      {/* Arc trail between platforms (desktop only) */}
                       {i > 0 && (
-                        <div className="hidden md:flex absolute -left-2 top-1/2 flex-col gap-1.5 items-center opacity-20">
-                          <div className="w-1 h-1 rounded-full bg-white" />
-                          <div className="w-0.5 h-0.5 rounded-full bg-white/50" />
+                        <div className="hidden md:block absolute -left-1 bottom-[20%] z-20">
+                          <div className={`flex flex-col gap-1 items-center ${isCompleted ? "opacity-20" : "opacity-10"}`}>
+                            <div className="w-[3px] h-[3px] rounded-full bg-white" />
+                            <div className="w-[2px] h-[2px] rounded-full bg-white/60" />
+                            <div className="w-[1px] h-[1px] rounded-full bg-white/30" />
+                          </div>
                         </div>
                       )}
 
                       {/* The platform block */}
-                      <div className={`${heights[i]} ${mdHeights[i]} rounded-t-2xl relative overflow-hidden group`}>
+                      <div className={`${heights[i]} ${mdHeights[i]} rounded-t-2xl relative overflow-hidden`}>
                         {/* Platform gradient background */}
-                        <div className={`absolute inset-0 bg-gradient-to-t ${c.gradient} opacity-40`} />
-                        <div className="absolute inset-0 bg-white/[0.015] border border-white/[0.06] rounded-t-2xl" />
+                        <div className={`absolute inset-0 bg-gradient-to-t ${c.gradient} ${isCompleted ? "opacity-40" : "opacity-20"}`} />
+                        <div className={`absolute inset-0 ${isCompleted ? "bg-white/[0.02]" : "bg-white/[0.01]"} border ${isCompleted ? "border-white/[0.06]" : "border-white/[0.04] border-dashed"} rounded-t-2xl`} />
 
-                        {/* Platform top edge — the "ground" */}
+                        {/* Platform top edge */}
                         <div className={`absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl bg-gradient-to-r ${
                           step.color === "violet" ? "from-violet-500/50 to-violet-500/10" :
                           step.color === "amber" ? "from-amber-500/50 to-amber-500/10" :
                           step.color === "emerald" ? "from-emerald-500/50 to-emerald-500/10" :
                           "from-cyan-500/50 to-cyan-500/10"
-                        }`} />
+                        } ${!isCompleted ? "opacity-50" : ""}`} />
+
+                        {/* Completed checkmark overlay */}
+                        {isCompleted && (
+                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
+                            <span className="text-[10px] text-emerald-400/60">✓</span>
+                          </div>
+                        )}
+
+                        {/* Lock icon for future levels */}
+                        {!isCompleted && !isCurrent && (
+                          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+                            <Lock className="w-2.5 h-2.5 text-white/15" />
+                          </div>
+                        )}
 
                         {/* Content inside platform */}
-                        <div className="relative z-10 p-5 md:p-6 flex flex-col h-full">
+                        <div className="relative z-10 p-4 md:p-5 flex flex-col h-full">
                           {/* Level badge */}
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-2xl md:text-3xl">{step.emoji}</span>
-                            <span className={`text-[10px] font-bold ${c.icon} uppercase tracking-[0.2em] opacity-60`}>
-                              Nivel {String(i + 1).padStart(2, "0")}
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className={`text-xl md:text-2xl ${!isCompleted && !isCurrent ? "grayscale opacity-50" : ""}`}>{step.emoji}</span>
+                            <span className={`text-[10px] font-bold ${c.icon} uppercase tracking-[0.15em] ${!isCompleted ? "opacity-40" : "opacity-60"}`}>
+                              Lvl {String(i + 1).padStart(2, "0")}
                             </span>
                           </div>
 
                           {/* Period */}
-                          <span className={`text-[12px] font-semibold ${c.icon} mb-2`}>
+                          <span className={`text-[11px] font-semibold ${c.icon} mb-1.5 ${!isCompleted ? "opacity-60" : ""}`}>
                             {step.period}
                           </span>
 
                           {/* Title */}
-                          <h3 className="text-[15px] md:text-[16px] font-bold text-white mb-2 leading-snug">
+                          <h3 className={`text-[14px] md:text-[15px] font-bold text-white mb-1.5 leading-snug ${!isCompleted ? "opacity-60" : ""}`}>
                             {step.title}
                           </h3>
 
                           {/* Description */}
-                          <p className="text-[12px] text-white/25 leading-relaxed mt-auto">
+                          <p className={`text-[11px] leading-relaxed mt-auto ${isCompleted ? "text-white/25" : "text-white/15"}`}>
                             {step.desc}
                           </p>
 
-                          {/* XP bar at bottom */}
-                          <div className="mt-4 flex items-center gap-2">
-                            <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                          {/* XP / progress bar */}
+                          <div className="mt-3 flex items-center gap-2">
+                            <div className="flex-1 h-[3px] rounded-full bg-white/[0.04] overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
                                   step.color === "violet" ? "bg-violet-500/40" :
@@ -513,13 +527,13 @@ const About = () => {
                                   "bg-cyan-500/40"
                                 }`}
                                 style={{
-                                  width: story.isVisible ? `${xpPercent}%` : "0%",
+                                  width: story.isVisible ? (isCompleted ? "100%" : isCurrent ? "35%" : "0%") : "0%",
                                   transition: `width 1s ease ${delays[i] + 400}ms`,
                                 }}
                               />
                             </div>
                             <span className="text-[9px] text-white/15 font-mono">
-                              {xpPercent}%
+                              {isCompleted ? "✓" : isCurrent ? "35%" : "—"}
                             </span>
                           </div>
                         </div>
@@ -529,18 +543,21 @@ const About = () => {
                 })}
               </div>
 
-              {/* Game over — completion message */}
+              {/* Status bar — bottom */}
               <div
-                className="text-center mt-8"
+                className="flex items-center justify-between mt-6 px-2"
                 style={{
                   opacity: story.isVisible ? 1 : 0,
                   transition: "all 0.5s ease 1500ms",
                 }}
               >
-                <span className="inline-flex items-center gap-2 text-[12px] text-white/20 font-mono">
-                  <span className="text-emerald-400/50">▸</span>
-                  Nivel 7 desbloqueándose...
-                  <span className="inline-block w-1.5 h-3 bg-white/15 animate-pulse" />
+                <span className="text-[11px] text-white/15 font-mono">
+                  4/6 completados
+                </span>
+                <span className="inline-flex items-center gap-2 text-[11px] text-white/20 font-mono">
+                  <span className="text-amber-400/50">▸</span>
+                  Siguiente: Lvl 05
+                  <span className="inline-block w-1 h-3 bg-white/15 animate-pulse rounded-sm" />
                 </span>
               </div>
             </div>

@@ -454,11 +454,6 @@
             border: 1px solid rgba(255,255,255,0.06);
         }
 
-        /* Invert Atlantis logo in dark mode */
-        html.dark .atlantis-btn img {
-            filter: invert(1) brightness(0.9);
-        }
-
         /* Laurel logo: ensure transparency, no white bg */
         html.dark .laurel-img {
             filter: brightness(1.3) contrast(1.1);
