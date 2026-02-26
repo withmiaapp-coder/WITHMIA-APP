@@ -357,74 +357,58 @@ const About = () => {
               story.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            {/* Two-column: narrative left + vertical timeline right */}
-            <div className="grid lg:grid-cols-[1fr,1fr] gap-12 lg:gap-16 items-start">
-              {/* Left: narrative */}
-              <div className="lg:sticky lg:top-32">
-                <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
-                  Nuestra Historia
-                </p>
-                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
-                  De una idea clara a{" "}
-                  <span className="text-gradient">una plataforma real</span>
-                </h2>
-                <div className="space-y-4">
-                  <p className="text-[15px] text-white/40 leading-relaxed">
-                    En marzo de 2025 identificamos un problema repetido en
-                    las PYMEs latinoamericanas: perdían ventas por no responder
-                    a tiempo, gestionaban clientes desde WhatsApp personal y
-                    operaban con herramientas que no se conectaban entre sí
-                  </p>
-                  <p className="text-[15px] text-white/35 leading-relaxed">
-                    En menos de 4 meses construimos una plataforma SaaS
-                    completa con IA generativa, CRM y automatización. En julio
-                    de 2025 constituimos legalmente MIA Marketing &
-                    Intelligence Artificial SpA
-                  </p>
-                  <p className="text-[15px] text-white/35 leading-relaxed">
-                    Hoy operamos con nuestros primeros clientes B2B en Chile,
-                    enfocados en PYMEs con alto volumen transaccional
-                  </p>
-                </div>
-              </div>
+            {/* Header */}
+            <div className="text-center mb-14">
+              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+                Nuestra Historia
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                De una idea clara a{" "}
+                <span className="text-gradient">una plataforma real</span>
+              </h2>
+            </div>
 
-              {/* Right: vertical timeline */}
-              <div className="relative pl-8">
-                {/* Vertical line */}
-                <div className="absolute left-[15px] top-2 bottom-2 w-[1px] bg-gradient-to-b from-violet-500/20 via-amber-500/15 to-cyan-500/10" />
+            {/* Milestone cards — stacked, full-width, accent left border */}
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {timeline.map((step, i) => {
+                const Icon = step.icon;
+                const c = colorMap[step.color];
+                const borderColor = step.color === "violet"
+                  ? "border-l-violet-500/40"
+                  : step.color === "amber"
+                  ? "border-l-amber-500/40"
+                  : step.color === "emerald"
+                  ? "border-l-emerald-500/40"
+                  : "border-l-cyan-500/40";
 
-                <div className="space-y-10">
-                  {timeline.map((step, i) => {
-                    const Icon = step.icon;
-                    const c = colorMap[step.color];
-                    return (
-                      <div
-                        key={step.period}
-                        className="relative"
-                        style={{
-                          opacity: story.isVisible ? 1 : 0,
-                          transform: story.isVisible ? "translateY(0)" : "translateY(16px)",
-                          transition: `all 0.5s ease ${i * 120}ms`,
-                        }}
-                      >
-                        {/* Dot */}
-                        <div className={`absolute -left-8 top-0 w-[31px] h-[31px] rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center z-10`}>
-                          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-                        </div>
+                return (
+                  <div
+                    key={step.period}
+                    className={`relative border-l-[3px] ${borderColor} rounded-xl bg-white/[0.02] backdrop-blur-sm px-6 py-5 flex items-start gap-5`}
+                    style={{
+                      opacity: story.isVisible ? 1 : 0,
+                      transform: story.isVisible ? "translateY(0)" : "translateY(14px)",
+                      transition: `all 0.5s ease ${i * 100}ms`,
+                    }}
+                  >
+                    {/* Icon circle */}
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full ${c.bg} border ${c.border} flex items-center justify-center mt-0.5`}>
+                      <Icon className={`w-4 h-4 ${c.icon}`} />
+                    </div>
 
-                        {/* Content */}
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
-                            <h3 className="text-[16px] font-bold text-white">{step.title}</h3>
-                            <span className={`text-[11px] font-semibold ${c.icon} opacity-60`}>{step.period}</span>
-                          </div>
-                          <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
-                        </div>
+                    {/* Text */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1.5">
+                        <h3 className="text-[15px] font-bold text-white">{step.title}</h3>
+                        <span className={`text-[11px] font-semibold ${c.icon} opacity-50 whitespace-nowrap`}>
+                          {step.period}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

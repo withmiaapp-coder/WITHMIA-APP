@@ -15,20 +15,82 @@
             font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
         }
 
+        /* ===== LIGHT / DARK CSS VARIABLES ===== */
+        :root {
+            --bg: #ffffff;
+            --bg-gradient: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
+            --container-bg: rgba(255, 255, 255, 0.95);
+            --container-border: rgba(255, 255, 255, 0.3);
+            --container-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            --panel-bg: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #333333;
+            --text-muted: #666666;
+            --text-faint: #9ca3af;
+            --box-bg: #ffffff;
+            --box-border: rgba(0, 0, 0, 0.05);
+            --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --btn-bg: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            --btn-border: #e0e0e0;
+            --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --btn-text: #000000;
+            --google-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+            --terms-color: #666666;
+            --star-color: inherit;
+            --toggle-bg: rgba(0, 0, 0, 0.06);
+            --toggle-icon-active: #f59e0b;
+            --toggle-icon-inactive: #94a3b8;
+            --border-shimmer: linear-gradient(45deg, rgba(255,215,0,0.6), rgba(255,165,0,0.4), rgba(255,255,0,0.5), rgba(255,215,0,0.6));
+        }
+
+        html.dark {
+            --bg: #0e0f1a;
+            --bg-gradient:
+                radial-gradient(76vw 76vw at 12% 18%, rgba(200,140,255,.12) 0%, rgba(200,140,255,.05) 50%, transparent 70%),
+                radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.18) 0%, transparent 55%),
+                radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.14) 0%, transparent 55%),
+                radial-gradient(35vw 35vw at 85% 8%, rgba(200,140,255,.08) 0%, transparent 55%),
+                radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.10) 0%, transparent 60%),
+                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.08) 0%, transparent 60%);
+            --container-bg: rgba(18, 19, 35, 0.92);
+            --container-border: rgba(255, 255, 255, 0.08);
+            --container-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --panel-bg: transparent;
+            --text-primary: #f0f0f5;
+            --text-secondary: #c8c8d4;
+            --text-muted: #8888a0;
+            --text-faint: #5a5a72;
+            --box-bg: rgba(255, 255, 255, 0.06);
+            --box-border: rgba(255, 255, 255, 0.08);
+            --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --btn-bg: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
+            --btn-border: rgba(255, 255, 255, 0.12);
+            --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --btn-text: #f0f0f5;
+            --google-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            --terms-color: #8888a0;
+            --star-color: inherit;
+            --toggle-bg: rgba(255, 255, 255, 0.08);
+            --toggle-icon-active: #818cf8;
+            --toggle-icon-inactive: #475569;
+            --border-shimmer: linear-gradient(45deg, rgba(139,92,246,0.5), rgba(59,195,255,0.3), rgba(244,226,166,0.4), rgba(139,92,246,0.5));
+        }
+
         /* Fondo base inmediato para evitar flash */
         html {
-            background-color: #fff;
+            background-color: var(--bg);
         }
 
         body {
             font-weight: 350;
             font-family: Arial, sans-serif;
-            background-color: #fff;
-            background-image: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
+            background-color: var(--bg);
+            background-image: var(--bg-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background-color 0.4s ease;
         }
 
         @keyframes gasMovement {
@@ -46,20 +108,21 @@
 
         .login-container {
             position: relative;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--container-bg);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            border: 1px solid var(--container-border);
+            box-shadow: var(--container-shadow);
             border-radius: 30px;
             max-width: 1000px;
             width: 90%; margin: auto;
             overflow: hidden;
             display: flex;
             min-height: 500px;
+            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         .left-panel {
             flex: 1;
-            background: white;
-            color: black;
+            background: var(--panel-bg);
+            color: var(--text-primary);
             padding: 1rem 3rem 1rem 3rem;
             display: flex;
             flex-direction: column;
@@ -67,7 +130,7 @@
         }
         .right-panel {
             flex: 1;
-            background: white;
+            background: var(--panel-bg);
             padding: 1rem 3rem 1rem 3rem;
             display: flex;
             flex-direction: column;
@@ -83,7 +146,7 @@
  left: -2px;
  right: -2px;
  bottom: -2px;
- background: linear-gradient(45deg, rgba(255,215,0,0.6), rgba(255,165,0,0.4), rgba(255,255,0,0.5), rgba(255,215,0,0.6));
+ background: var(--border-shimmer);
  background-size: 300% 300%;
  border-radius: 32px;
  z-index: -1;
@@ -100,15 +163,16 @@
 .exclusive-text {
             font-size: 2.0em;
             text-align: center;
-            color: #000;
+            color: var(--text-primary);
             margin: 8px 0 15px 0;
             font-style: normal;
             line-height: 1.4;
             font-weight: bold;
+            transition: color 0.4s ease;
         }
         .terms-text {
             font-size: 0.65em;
-            color: #666;
+            color: var(--text-muted);
             text-align: center;
             margin: 15px auto 0 auto;
             line-height: 1.4;
@@ -143,22 +207,23 @@
         }
         .atlantis-box {
             display: inline-block;
-            background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: var(--box-bg); box-shadow: var(--box-shadow);
             padding: 6px 10px 6px 10px;
             border-radius: 12px;
             font-size: 1em;
-            color: black;
+            color: var(--text-primary);
             margin-bottom: 0px; margin-top: 8px;
             text-align: center;
+            transition: background 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
         }
 
         /* Botón Atlantis con iluminación */
         .atlantis-btn {
             cursor: pointer;
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            color: #000;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--btn-border);
+            box-shadow: var(--btn-shadow);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -168,7 +233,6 @@
         }
 
         .atlantis-btn:hover {
-            background: linear-gradient(135deg, #ffffff 0%, #f3e8ff 100%);
             border-color: #9f7aea;
             box-shadow: 0 4px 20px rgba(139, 92, 246, 0.35), 0 0 30px rgba(167, 139, 250, 0.2), inset 0 0 20px rgba(196, 181, 253, 0.08);
             transform: translateY(-2px);
@@ -182,12 +246,12 @@
         .atlantis-btn span {
             font-weight: 600;
             letter-spacing: 1px;
-            color: #000;
+            color: var(--btn-text);
             transition: all 0.3s ease;
         }
 
         .atlantis-btn:hover span {
-            color: #000;
+            color: var(--btn-text);
         }
 
         /* Mejorar sombra en marquee */
@@ -198,7 +262,6 @@
         marquee .atlantis-box {
             box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
             margin: 5px 0;
-        }
         }
 
         /* Ajustar límites del marquee */
@@ -233,13 +296,13 @@
             text-align: left !important;
             line-height: 1.4 !important;
             font-size: 0.9em !important;
-            border: 1px solid rgba(0,0,0,0.05) !important;
+            border: 1px solid var(--box-border) !important;
             position: relative;
         }
 
         marquee .atlantis-box strong {
             font-size: 1em;
-            color: #333;
+            color: var(--text-secondary);
             display: block;
             margin-top: 5px;
         }
@@ -331,16 +394,101 @@
             margin-bottom: 0;
         }
 
-        /* Sombra natural para botón de Google */\n        .google-signin-container {\n            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);\n            border-radius: 6px;\n            padding: 2px;\n            transition: box-shadow 0.3s ease;\n        }\n\n        .google-signin-container:hover {\n            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);\n        }
+        /* Sombra natural para botón de Google */
+        .google-signin-container {
+            box-shadow: var(--google-shadow);
+            border-radius: 6px;
+            padding: 2px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .google-signin-container:hover {
+            box-shadow: var(--google-shadow);
+        }
+
+        /* ===== THEME TOGGLE ===== */
+        .theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--toggle-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--container-border);
+            border-radius: 50px;
+            padding: 6px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+        }
+
+        .theme-toggle:hover {
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .theme-toggle-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            color: var(--toggle-icon-inactive);
+        }
+
+        .theme-toggle-btn.active {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--toggle-icon-active);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Google button dark theme override */
+        html.dark .google-signin-container {
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+        }
+
+        /* Invert Atlantis logo in dark mode */
+        html.dark .atlantis-btn img {
+            filter: invert(1);
+        }
+
+        /* Testimonial text color in dark */
+        html.dark marquee .atlantis-box span {
+            color: var(--text-muted);
+        }
+
+        /* Right panel text */
+        html.dark .right-panel p {
+            color: var(--text-secondary);
+        }
 </style>
 </head>
 <body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" id="themeToggle">
+        <button class="theme-toggle-btn active" id="lightBtn" title="Modo Claro" onclick="setTheme('light')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <button class="theme-toggle-btn" id="darkBtn" title="Modo Oscuro" onclick="setTheme('dark')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+    </div>
+
     <div class="login-container">
         <div class="left-panel">
             <center><img src="/laurel-logo.webp" width="250" style="margin-bottom: 0px;"></center>
             <center><div class=atlantis-box style=position:relative;top:-65px;margin-bottom:0px;>Disponible para</div></center>
             <center><div style=margin-top:-60px><div class=atlantis-box style=display:inline-flex;gap:15px;padding:9px;align-items:center><img src=/icons/whatsapp.webp style=width:24px;height:24px title=WhatsApp><img src=/icons/instagram-new.webp style=width:24px;height:24px title=Instagram><img src=/icons/facebook-new.webp style=width:28px;height:28px title=Facebook><img src=/icons/gmail-new.webp style=width:40px;height:40px;margin:-8px title=Gmail><img src=/icons/web-new.webp style=width:24px;height:24px title=Web><img src=/icons/api-final.webp style=width:24px;height:24px;margin-left:-4px title=API></div></div></center>
-<center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300>Cientos de clientes confían en nosotros</p></center>
+<center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300;color:var(--text-secondary)>Cientos de clientes confían en nosotros</p></center>
 <marquee behavior=scroll direction=left scrollamount=6 scrolldelay=0><div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div></marquee>
         </div>
         <div class="right-panel">
@@ -353,7 +501,7 @@
             <source src="/logo-animated.webm" type="video/webm">
             <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA Logo">
         </video>
-        <p class="exclusive-text" style="font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">WITH YOU, WITH<strong style="font-weight: 450;">MIA</strong><sup style="font-size: 0.6em; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">®</sup></p><br>
+        <p class="exclusive-text" style="font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350; color: var(--text-primary);">WITH YOU, WITH<strong style="font-weight: 450;">MIA</strong><sup style="font-size: 0.6em; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">®</sup></p><br>
 
         <div class="google-signin-container">
             <script>
@@ -427,9 +575,72 @@ function parseJwt(token) {
                  data-logo_alignment="left">
             </div>
         </div>
-        <p style="text-align: center; font-size: 0.65em; color: #666; margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros Términos de Servicio y lee nuestra Política de Privacidad.</p><br>
+        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros Términos de Servicio y lee nuestra Política de Privacidad.</p><br>
         </div>
     </div>
+
+    <script>
+        // ===== THEME TOGGLE =====
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            localStorage.setItem('withmia_login_theme', theme);
+            updateToggleButtons(theme);
+            // Update Google Sign-In button theme
+            updateGoogleTheme(theme);
+        }
+
+        function updateToggleButtons(theme) {
+            var lightBtn = document.getElementById('lightBtn');
+            var darkBtn = document.getElementById('darkBtn');
+            if (theme === 'dark') {
+                lightBtn.classList.remove('active');
+                darkBtn.classList.add('active');
+            } else {
+                lightBtn.classList.add('active');
+                darkBtn.classList.remove('active');
+            }
+        }
+
+        function updateGoogleTheme(theme) {
+            // Re-render Google Sign-In button with appropriate theme
+            var container = document.querySelector('.g_id_signin');
+            if (container && window.google && google.accounts && google.accounts.id) {
+                container.setAttribute('data-theme', theme === 'dark' ? 'filled_black' : 'outline');
+                try {
+                    google.accounts.id.renderButton(container, {
+                        type: 'standard',
+                        shape: 'rectangular',
+                        theme: theme === 'dark' ? 'filled_black' : 'outline',
+                        text: 'signin_with',
+                        size: 'large',
+                        logo_alignment: 'left'
+                    });
+                } catch(e) {}
+            }
+        }
+
+        // Initialize theme on load (before render)
+        (function() {
+            var saved = localStorage.getItem('withmia_login_theme');
+            // Respect OS preference if no saved preference
+            if (!saved) {
+                saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (saved === 'dark') {
+                document.documentElement.classList.add('dark');
+            }
+            // Update buttons after DOM is ready
+            document.addEventListener('DOMContentLoaded', function() {
+                updateToggleButtons(saved);
+                // Also update Google button once it loads
+                setTimeout(function() { updateGoogleTheme(saved); }, 1000);
+            });
+        })();
+    </script>
 
     <script>
         // Si ya está autenticado, redirigir directamente sin splash
@@ -446,3 +657,4 @@ function parseJwt(token) {
     </script>
 </body>
 </html>
+
