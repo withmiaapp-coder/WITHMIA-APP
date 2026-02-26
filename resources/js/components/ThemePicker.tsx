@@ -33,18 +33,18 @@ export function ThemePicker() {
   // Only preset palettes (exclude the 'custom' entry)
   const presetPalettes = THEME_PALETTES.filter(p => p.id !== 'custom');
 
-  // Dark-aware popover colors
-  const popoverBg = isDark ? '#1a1f2e' : 'white';
-  const popoverBorder = isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb';
-  const tabBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
-  const tabActiveBg = isDark ? 'rgba(255,255,255,0.12)' : 'white';
-  const tabActiveText = isDark ? '#f1f5f9' : '#1f2937';
-  const tabInactiveText = isDark ? '#94a3b8' : '#6b7280';
-  const resetBg = isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb';
-  const resetHoverBg = isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6';
-  const resetText = isDark ? '#94a3b8' : '#4b5563';
-  const footerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
-  const footerText = isDark ? '#64748b' : '#6b7280';
+  // Dark-aware popover colors — use theme CSS vars when custom theme active
+  const popoverBg = hasTheme ? 'var(--theme-content-bg)' : (isDark ? '#1a1f2e' : 'white');
+  const popoverBorder = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb');
+  const tabBg = hasTheme ? (isDark ? 'rgba(255,255,255,0.06)' : 'var(--theme-accent-light)') : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6');
+  const tabActiveBg = hasTheme ? 'var(--theme-content-card-bg)' : (isDark ? 'rgba(255,255,255,0.12)' : 'white');
+  const tabActiveText = hasTheme ? 'var(--theme-text-primary)' : (isDark ? '#f1f5f9' : '#1f2937');
+  const tabInactiveText = hasTheme ? 'var(--theme-text-muted)' : (isDark ? '#94a3b8' : '#6b7280');
+  const resetBg = hasTheme ? (isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb') : (isDark ? 'rgba(255,255,255,0.06)' : '#f9fafb');
+  const resetHoverBg = hasTheme ? (isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6') : (isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6');
+  const resetText = hasTheme ? 'var(--theme-text-secondary)' : (isDark ? '#94a3b8' : '#4b5563');
+  const footerBorder = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6');
+  const footerText = hasTheme ? 'var(--theme-text-muted)' : (isDark ? '#64748b' : '#6b7280');
 
   return (
     <div className="relative">
@@ -151,11 +151,17 @@ export function ThemePicker() {
                       onClick={() => setThemeId(palette.id)}
                       className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
                         isSelected
-                          ? isDark
-                            ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
-                            : 'ring-2 ring-offset-2 ring-gray-400'
+                          ? hasTheme
+                            ? 'ring-2 ring-offset-2'
+                            : isDark
+                              ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
+                              : 'ring-2 ring-offset-2 ring-gray-400'
                           : ''
                       }`}
+                      style={isSelected && hasTheme ? {
+                        '--tw-ring-color': isDark ? 'rgba(255,255,255,0.4)' : 'var(--theme-accent)',
+                        '--tw-ring-offset-color': 'var(--theme-content-bg)',
+                      } as React.CSSProperties : undefined}
                       title={palette.name}
                       aria-label={palette.name}
                     >
@@ -181,11 +187,17 @@ export function ThemePicker() {
                   onClick={() => colorInputRef.current?.click()}
                   className={`relative w-full aspect-square rounded-full transition-all duration-150 hover:scale-110 ${
                     themeId === 'custom'
-                      ? isDark
-                        ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
-                        : 'ring-2 ring-offset-2 ring-gray-400'
+                      ? hasTheme
+                        ? 'ring-2 ring-offset-2'
+                        : isDark
+                          ? 'ring-2 ring-offset-2 ring-offset-[#1a1f2e] ring-white/40'
+                          : 'ring-2 ring-offset-2 ring-gray-400'
                       : ''
                   }`}
+                  style={themeId === 'custom' && hasTheme ? {
+                    '--tw-ring-color': isDark ? 'rgba(255,255,255,0.4)' : 'var(--theme-accent)',
+                    '--tw-ring-offset-color': 'var(--theme-content-bg)',
+                  } as React.CSSProperties : undefined}
                   title="Color personalizado"
                   aria-label="Color personalizado"
                 >
