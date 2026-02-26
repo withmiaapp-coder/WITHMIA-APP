@@ -104,45 +104,49 @@ const comparisonGroups: ComparisonGroup[] = [
     category: "Plataforma",
     icon: Layers,
     rows: [
-      { feature: "Integraciones",        free: false,        pro: "12+ nativas + API" },
+      { feature: "Integraciones",        free: false,        pro: "n8n, Zapier, Slack + API" },
       { feature: "Soporte",              free: "Comunidad",  pro: "Prioritario (chat + email)" },
     ],
   },
 ];
 
 /* ─── Detailed features (grouped by category) ─── */
-type FeatureItem = { icon: typeof Bot; label: string; desc: string; tag?: string };
-type FeatureGroup = { title: string; features: FeatureItem[] };
+type FeatureItem = { icon: typeof Bot; label: string; desc: string };
+type FeatureGroup = { title: string; icon: typeof Bot; features: FeatureItem[] };
 
 const featureGroups: FeatureGroup[] = [
   {
     title: "Inteligencia Artificial",
+    icon: Bot,
     features: [
-      { icon: Bot,          label: "IA conversacional avanzada",  desc: "GPT-4o y Claude respondiendo 24/7 en todos tus canales con contexto completo del cliente.", tag: "Core" },
-      { icon: MessageSquare, label: "Mensajes ilimitados",         desc: "Sin límite de conversaciones, chats simultáneos ni restricciones de uso." },
-      { icon: Brain,        label: "Base de conocimiento (RAG)",   desc: "Entrena tu IA con documentos, PDFs, URLs y datos propios de tu negocio." },
+      { icon: Bot,          label: "IA conversacional avanzada",  desc: "GPT-4o y Claude con contexto completo del cliente, 24/7." },
+      { icon: MessageSquare, label: "Mensajes ilimitados",         desc: "Sin topes de conversaciones ni chats simultáneos." },
+      { icon: Brain,        label: "Base de conocimiento (RAG)",   desc: "Entrena tu IA con documentos, PDFs y URLs propios." },
     ],
   },
   {
     title: "Canales y comunicación",
+    icon: Globe,
     features: [
-      { icon: Globe,        label: "Inbox omnicanal",              desc: "WhatsApp, Instagram, Messenger, Web y Email unificados en una sola bandeja.", tag: "Popular" },
-      { icon: CreditCard,   label: "Cobranzas inteligentes",       desc: "Cobros automatizados con enlaces de pago y recordatorios por WhatsApp." },
+      { icon: Globe,        label: "Inbox omnicanal",              desc: "WhatsApp, IG, Messenger, Web y Email en una bandeja." },
+      { icon: CreditCard,   label: "Cobranzas inteligentes",       desc: "Cobros con enlaces de pago y recordatorios automáticos." },
     ],
   },
   {
     title: "Gestión y equipo",
+    icon: Users,
     features: [
-      { icon: Users,        label: "CRM con pipeline visual",      desc: "Contactos, etiquetas, etapas de venta y oportunidades en un tablero visual." },
-      { icon: BarChart3,    label: "Analítica en tiempo real",     desc: "Métricas de equipo, tiempos de respuesta, rendimiento IA y conversión." },
-      { icon: Zap,          label: "Workflows y automatizaciones", desc: "Reglas, flujos condicionales y triggers — sin escribir código." },
+      { icon: Users,        label: "CRM con pipeline visual",      desc: "Contactos, etapas de venta y oportunidades en un tablero." },
+      { icon: BarChart3,    label: "Analítica en tiempo real",     desc: "Tiempos de respuesta, rendimiento IA y conversión." },
+      { icon: Zap,          label: "Workflows y automatizaciones", desc: "Reglas, flujos y triggers — sin escribir código." },
     ],
   },
   {
     title: "Plataforma",
+    icon: Layers,
     features: [
-      { icon: Layers,       label: "12+ integraciones + API",      desc: "Conecta Stripe, HubSpot, Sheets, Slack, Zapier y más. API REST abierta." },
-      { icon: Lock,         label: "Seguridad empresarial",        desc: "Encriptación end-to-end, backups automáticos y datos protegidos." },
+      { icon: Layers,       label: "Integraciones + API",           desc: "n8n, Zapier, Slack, Google Calendar, Calendly, WooCommerce y API REST abierta." },
+      { icon: Lock,         label: "Seguridad empresarial",        desc: "Encriptación E2E, backups automáticos y datos protegidos." },
     ],
   },
 ];
@@ -573,54 +577,48 @@ export const Pricing = () => {
 
       {/* ═══════════ FEATURES GRID ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
-        <div ref={features.ref} className={`max-w-5xl mx-auto transition-all duration-700 ${features.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="text-center mb-14">
+        <div ref={features.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${features.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="text-center mb-12">
             <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Todo incluido en Pro</p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Una plataforma completa.{" "}
-              <span className="text-white/40">Sin costos ocultos.</span>
+              Cada funcionalidad que necesitas.
             </h2>
-            <p className="text-sm text-white/30 mt-3 max-w-lg mx-auto">Cada funcionalidad diseñada para que tu equipo venda más y atienda mejor, desde el día uno.</p>
           </div>
 
-          {(() => {
-            let globalIdx = 0;
-            return featureGroups.map((group) => (
-              <div key={group.title} className="mb-10 last:mb-0">
-                {/* Category label */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-px flex-1 bg-white/[0.04]" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20 shrink-0">{group.title}</span>
-                  <div className="h-px flex-1 bg-white/[0.04]" />
-                </div>
-
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {group.features.map((f) => {
+          <div className="rounded-2xl border border-white/[0.06] overflow-hidden">
+            {featureGroups.map((group, gi) => {
+              const GroupIcon = group.icon;
+              const baseIdx = featureGroups.slice(0, gi).reduce((acc, g) => acc + g.features.length, 0);
+              return (
+                <div key={group.title}>
+                  {/* Category header */}
+                  <div className={`flex items-center gap-3 px-6 py-3 bg-white/[0.02] ${gi > 0 ? "border-t border-white/[0.06]" : ""}`}>
+                    <GroupIcon className="w-3.5 h-3.5 text-white/25" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-white/35">{group.title}</span>
+                    <span className="text-[10px] text-white/15 ml-auto tabular-nums">{group.features.length}</span>
+                  </div>
+                  {/* Feature rows */}
+                  {group.features.map((f, fi) => {
                     const Icon = f.icon;
-                    const idx = globalIdx++;
+                    const idx = baseIdx + fi;
                     return (
                       <div
                         key={f.label}
-                        className="group relative rounded-xl border border-white/[0.06] bg-white/[0.015] p-5 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-300"
-                        style={{ opacity: features.isVisible ? 1 : 0, transform: features.isVisible ? "translateY(0)" : "translateY(12px)", transition: `all 0.5s ease ${idx * 50}ms` }}
+                        className="group grid grid-cols-[1fr] sm:grid-cols-[1fr,1.2fr] gap-1 sm:gap-6 px-6 py-4 border-t border-white/[0.03] hover:bg-white/[0.015] transition-colors"
+                        style={{ opacity: features.isVisible ? 1 : 0, transition: `all 0.4s ease ${idx * 45}ms` }}
                       >
-                        {f.tag && (
-                          <span className="absolute top-3 right-3 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400/70 border border-amber-500/15">
-                            {f.tag}
-                          </span>
-                        )}
-                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-3.5 group-hover:border-white/[0.12] transition-colors">
-                          <Icon className="w-4 h-4 text-white/40 group-hover:text-white/60 transition-colors" />
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-white/30 group-hover:text-white/50 transition-colors shrink-0" />
+                          <span className="text-[13.5px] font-semibold text-white/75 group-hover:text-white transition-colors">{f.label}</span>
                         </div>
-                        <h4 className="text-[13.5px] font-semibold text-white/80 leading-tight mb-1.5 group-hover:text-white transition-colors">{f.label}</h4>
-                        <p className="text-[12px] text-white/25 leading-relaxed">{f.desc}</p>
+                        <p className="text-[12.5px] text-white/30 leading-relaxed sm:text-right pl-7 sm:pl-0">{f.desc}</p>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            ));
-          })()}
+              );
+            })}
+          </div>
         </div>
       </div>
 

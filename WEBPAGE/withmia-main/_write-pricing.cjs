@@ -102,7 +102,7 @@ const detailedFeatures = [
   { icon: Zap, label: "Workflows y automatizaciones", desc: "Reglas y flujos sin c\u00f3digo para cualquier proceso" },
   { icon: BarChart3, label: "Anal\u00edtica en tiempo real", desc: "M\u00e9tricas de equipo, rendimiento IA y satisfacci\u00f3n" },
   { icon: Brain, label: "Base de conocimiento (RAG)", desc: "Tu IA entrenada con tus documentos y datos" },
-  { icon: Layers, label: "12+ integraciones + API abierta", desc: "Conecta tus herramientas favoritas sin fricci\u00f3n" },
+  { icon: Layers, label: "Integraciones + API abierta", desc: "n8n, Zapier, Slack, Google Calendar, Calendly y más" },
   { icon: CreditCard, label: "Cobranzas inteligentes", desc: "Cobros automatizados por WhatsApp con seguimiento" },
   { icon: Lock, label: "Seguridad empresarial", desc: "Encriptaci\u00f3n end-to-end y datos protegidos" },
   { icon: GraduationCap, label: "Capacitaci\u00f3n incluida", desc: "Onboarding personalizado para todo tu equipo" },
