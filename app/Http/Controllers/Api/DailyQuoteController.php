@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v7: cache key — Spanish-preferred Wikipedia bios
-        $poolKey = "daily_quotes_v7_{$monthDay}";
-        $counterKey = "daily_quotes_v7_ctr_{$monthDay}";
+        // v8: cache key — only Spanish Wikipedia people
+        $poolKey = "daily_quotes_v8_{$monthDay}";
+        $counterKey = "daily_quotes_v8_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -214,11 +214,16 @@ class DailyQuoteController extends Controller
             }
         }
 
-        // Sort by notability: prefer people with Spanish extracts, then by length
+        // Filter: ONLY keep people who have a Spanish extract or description
+        // This guarantees all bios shown to users are in Spanish
+        $people = array_filter($people, function($p) {
+            return !empty(trim($p['extract_es'] ?? '')) || !empty(trim($p['description_es'] ?? ''));
+        });
+        $people = array_values($people); // Re-index
+
+        // Sort by notability (Spanish extract length)
         usort($people, function($a, $b) {
-            $aLen = strlen($a['extract_es'] ?: $a['extract_en']);
-            $bLen = strlen($b['extract_es'] ?: $b['extract_en']);
-            return $bLen - $aLen;
+            return strlen($b['extract_es']) - strlen($a['extract_es']);
         });
 
         return array_slice($people, 0, 30);
@@ -381,38 +386,24 @@ PROMPT;
      */
     private function buildWikipediaBio(array $person): string
     {
-        // ALWAYS prefer Spanish extract over English
+        // ONLY use Spanish Wikipedia data — English-only people are filtered out upstream
         $extractEs = trim($person['extract_es'] ?? '');
-        $extractEn = trim($person['extract_en'] ?? '');
         $descEs = trim($person['description_es'] ?? '');
-        $descEn = trim($person['description_en'] ?? '');
 
-        // Fallback for legacy format (extract/description without language suffix)
-        if (empty($extractEs) && empty($extractEn)) {
+        // Fallback for legacy format
+        if (empty($extractEs)) {
             $extractEs = trim($person['extract'] ?? '');
         }
-        if (empty($descEs) && empty($descEn)) {
+        if (empty($descEs)) {
             $descEs = trim($person['description'] ?? '');
         }
 
-        // 1st priority: Spanish extract
         if (!empty($extractEs)) {
             return $this->truncateToSentences($extractEs);
         }
 
-        // 2nd priority: Spanish description (short but in correct language)
         if (!empty($descEs)) {
             return ucfirst($descEs);
-        }
-
-        // 3rd priority: English extract (better than nothing)
-        if (!empty($extractEn)) {
-            return $this->truncateToSentences($extractEn);
-        }
-
-        // 4th priority: English description
-        if (!empty($descEn)) {
-            return ucfirst($descEn);
         }
 
         return $person['name'];
