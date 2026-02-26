@@ -140,88 +140,65 @@ class DailyQuoteController extends Controller
     }
 
     /**
-     * Fetch births and deaths from BOTH Spanish AND English Wikipedia.
-     * Always fetches both to maximize the pool of notable people.
-     * Deduplicates and sorts by notability (extract length).
+     * Fetch births and deaths from Spanish Wikipedia ONLY.
+     * Sorts by notability (extract length).
      */
     private function fetchAllWikipediaPeople(string $month, string $day): array
     {
         $people = [];
         $seenNames = [];
 
-        $languages = ['es', 'en'];
         $types = ['births', 'deaths'];
 
-        foreach ($languages as $lang) {
-            foreach ($types as $type) {
-                try {
-                    $response = Http::timeout(10)
-                        ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
-                        ->get("https://api.wikimedia.org/feed/v1/wikipedia/{$lang}/onthisday/{$type}/{$month}/{$day}");
+        foreach ($types as $type) {
+            try {
+                $response = Http::timeout(10)
+                    ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
+                    ->get("https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/{$type}/{$month}/{$day}");
 
-                    if (!$response->ok()) continue;
+                if (!$response->ok()) continue;
 
-                    foreach ($response->json($type) ?? [] as $entry) {
-                        $page = $entry['pages'][0] ?? null;
-                        if (!$page || empty($entry['year'])) continue;
+                foreach ($response->json($type) ?? [] as $entry) {
+                    $page = $entry['pages'][0] ?? null;
+                    if (!$page || empty($entry['year'])) continue;
 
-                        $name = $page['titles']['normalized']
-                            ?? $page['titles']['canonical']
-                            ?? $page['title']
-                            ?? null;
+                    $name = $page['titles']['normalized']
+                        ?? $page['titles']['canonical']
+                        ?? $page['title']
+                        ?? null;
 
-                        if (!$name) continue;
+                    if (!$name) continue;
 
-                        $cleanName = str_replace('_', ' ', $name);
-                        $nameLower = mb_strtolower($cleanName);
+                    $cleanName = str_replace('_', ' ', $name);
+                    $nameLower = mb_strtolower($cleanName);
 
-                        // Skip "Anexo:" pages
-                        if (str_starts_with($cleanName, 'Anexo:')) continue;
+                    // Skip "Anexo:" pages
+                    if (str_starts_with($cleanName, 'Anexo:')) continue;
 
-                        $extractText = $page['extract'] ?? '';
-                        $descText = $page['description'] ?? '';
+                    $extractText = $page['extract'] ?? '';
+                    $descText = $page['description'] ?? '';
 
-                        // Deduplicate: store ES and EN extracts separately
-                        if (isset($seenNames[$nameLower])) {
-                            $existingIdx = $seenNames[$nameLower];
-                            if ($lang === 'es') {
-                                $people[$existingIdx]['extract_es'] = $extractText;
-                                $people[$existingIdx]['description_es'] = $descText;
-                            } else {
-                                $people[$existingIdx]['extract_en'] = $extractText;
-                                $people[$existingIdx]['description_en'] = $descText;
-                            }
-                            continue;
-                        }
+                    // Deduplicate
+                    if (isset($seenNames[$nameLower])) continue;
 
-                        $idx = count($people);
-                        $people[$idx] = [
-                            'name' => $cleanName,
-                            'year' => (int) $entry['year'],
-                            'type' => $type === 'births' ? 'birth' : 'death',
-                            'description' => $descText,
-                            'extract' => $extractText,
-                            'extract_es' => $lang === 'es' ? $extractText : '',
-                            'extract_en' => $lang === 'en' ? $extractText : '',
-                            'description_es' => $lang === 'es' ? $descText : '',
-                            'description_en' => $lang === 'en' ? $descText : '',
-                        ];
-                        $seenNames[$nameLower] = $idx;
-                    }
-                } catch (\Exception $e) {
-                    Log::warning("DailyQuote: Wikipedia {$lang}/{$type} error", ['error' => $e->getMessage()]);
+                    $idx = count($people);
+                    $people[$idx] = [
+                        'name' => $cleanName,
+                        'year' => (int) $entry['year'],
+                        'type' => $type === 'births' ? 'birth' : 'death',
+                        'description' => $descText,
+                        'extract' => $extractText,
+                        'extract_es' => $extractText,
+                        'description_es' => $descText,
+                    ];
+                    $seenNames[$nameLower] = $idx;
                 }
+            } catch (\Exception $e) {
+                Log::warning("DailyQuote: Wikipedia es/{$type} error", ['error' => $e->getMessage()]);
             }
         }
 
-        // Filter: ONLY keep people who have a Spanish extract or description
-        // This guarantees all bios shown to users are in Spanish
-        $people = array_filter($people, function($p) {
-            return !empty(trim($p['extract_es'] ?? '')) || !empty(trim($p['description_es'] ?? ''));
-        });
-        $people = array_values($people); // Re-index
-
-        // Sort by notability (Spanish extract length)
+        // Sort by notability (extract length)
         usort($people, function($a, $b) {
             return strlen($b['extract_es']) - strlen($a['extract_es']);
         });

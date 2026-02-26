@@ -67,22 +67,28 @@ const pillars = [
 
 const values = [
   {
-    title: "Servicio al Cliente",
-    desc: "Customer Success enfocado en adopción real, acompañando la migración de procesos manuales a flujos automatizados",
+    title: "Pasión por el impacto",
+    desc: "Nuestro motor es el efecto real que generamos en los negocios y en las personas que los componen. Cada feature existe porque resuelve un dolor concreto.",
     icon: Heart,
     color: "violet",
   },
   {
-    title: "Privacidad de Datos",
-    desc: "Infraestructura en AWS con estándares internacionales. Empresa verificada por el SII con gestión legal y financiera sólida",
-    icon: Shield,
+    title: "Innovación disruptiva",
+    desc: "No seguimos un camino trazado, lo inventamos con tecnología propietaria, valentía y visión a largo plazo. Arquitectura de IA Generativa que evoluciona con feedback real.",
+    icon: Zap,
     color: "amber",
   },
   {
-    title: "Innovación",
-    desc: "Arquitectura propietaria en IA Generativa. Cada mejora nace del feedback real del mercado",
-    icon: Zap,
+    title: "Compromiso total",
+    desc: "Damos todo en la cancha. Somos un equipo que va más allá de lo esperado para asegurar el éxito de nuestros clientes, de principio a fin.",
+    icon: Shield,
     color: "emerald",
+  },
+  {
+    title: "Empatía y cercanía",
+    desc: "Creemos en la humanidad detrás de la tecnología, construyendo relaciones significativas y duraderas con cada cliente que confía en nosotros.",
+    icon: MessageSquare,
+    color: "cyan",
   },
 ];
 
@@ -343,40 +349,38 @@ const About = () => {
             }`}
           >
             {/* Centered header */}
-            <div className="text-center mb-14">
-              <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-[11px] font-medium text-white/40 tracking-wide mb-6">
                 Nuestros Valores
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              </div>
+              <h2 className="text-3xl md:text-[2.5rem] font-bold text-white leading-tight mb-5">
                 Los principios que{" "}
-                <span className="text-gradient">nos guían</span>
+                <span className="text-white/30">nos guían</span>
               </h2>
-              <p className="text-[14px] text-white/30 max-w-lg mx-auto leading-relaxed">
+              <p className="text-[15px] text-white/35 max-w-xl mx-auto leading-relaxed">
                 Estos valores fundamentan cada decisión que tomamos y definen
-                cómo interactuamos con nuestros clientes
+                cómo interactuamos con nuestros clientes, partners y entre nosotros
               </p>
             </div>
 
-            {/* Value cards grid */}
-            <div className="grid sm:grid-cols-3 gap-5">
+            {/* Value cards grid — 4 equal cards */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {values.map((v, i) => {
                 const Icon = v.icon;
-                const c = colorMap[v.color];
                 return (
                   <div
                     key={v.title}
-                    className={`text-center rounded-2xl border ${c.border} bg-white/[0.02] p-8 hover:bg-white/[0.05] transition-all duration-300 group`}
+                    className="text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] p-7 transition-all duration-300 group"
                     style={{
                       opacity: valuesSection.isVisible ? 1 : 0,
-                      transform: valuesSection.isVisible ? "translateY(0)" : "translateY(20px)",
-                      transition: `all 0.5s ease ${i * 120}ms`,
+                      transform: valuesSection.isVisible ? "translateY(0)" : "translateY(16px)",
+                      transition: `all 0.5s ease ${i * 100}ms`,
                     }}
                   >
-                    <div className={`w-12 h-12 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className={`w-5 h-5 ${c.icon}`} />
-                    </div>
-                    <h3 className="text-[16px] font-bold text-white mb-3">{v.title}</h3>
-                    <p className="text-[13px] text-white/30 leading-relaxed group-hover:text-white/40 transition-colors duration-300">{v.desc}</p>
+                    <Icon className="w-5 h-5 text-white/25 mx-auto mb-5 group-hover:text-white/40 transition-colors duration-300" />
+                    <h3 className="text-[15px] font-bold text-white mb-3">{v.title}</h3>
+                    <p className="text-[13px] text-white/25 leading-[1.7] group-hover:text-white/35 transition-colors duration-300">{v.desc}</p>
+                    <div className="w-8 h-px bg-white/[0.08] mx-auto mt-6" />
                   </div>
                 );
               })}
