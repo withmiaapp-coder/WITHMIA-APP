@@ -53,7 +53,7 @@ const PRICING = {
 const freePlanFeatures = [
   { included: true, label: "1 canal (WhatsApp)" },
   { included: true, label: "1 herramienta conectada" },
-  { included: true, label: "50 mensajes IA / mes" },
+  { included: true, label: "500 mensajes IA / mes" },
   { included: true, label: "Asistente IA b\u00e1sico" },
   { included: false, label: "M\u00faltiples miembros" },
   { included: false, label: "GPT-4o / Claude" },
@@ -129,7 +129,7 @@ const comparisonColumns = [
 const faqs = [
   {
     q: "\u00bfQu\u00e9 incluye el Plan Gratuito?",
-    a: "Incluye WhatsApp como canal, 1 herramienta conectada, 50 mensajes IA al mes y un asistente b\u00e1sico. Ideal para probar la plataforma sin compromiso.",
+    a: "Incluye WhatsApp como canal, 1 herramienta conectada, 500 mensajes IA al mes y un asistente básico. Ideal para probar la plataforma sin compromiso.",
   },
   {
     q: "\u00bfNecesito tarjeta de cr\u00e9dito para comenzar?",

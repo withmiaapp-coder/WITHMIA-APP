@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import debugLog from '@/utils/debugLogger';
+import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Filter, 
   X, 
@@ -46,6 +47,29 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   conversations,
   currentUserId = 1
 }) => {
+  const { hasTheme, isDark } = useTheme();
+  const th = useMemo(() => {
+    if (!hasTheme) return null;
+    return {
+      accent: 'var(--theme-accent)',
+      accentLight: 'var(--theme-accent-light)',
+      textPrimary: 'var(--theme-text-primary)',
+      textSec: 'var(--theme-text-secondary)',
+      textMuted: 'var(--theme-text-muted)',
+      cardBg: isDark ? 'rgba(0,0,0,0.85)' : '#ffffff',
+      panelBg: isDark ? 'rgba(0,0,0,0.92)' : '#ffffff',
+      sidePanelBg: isDark ? 'rgba(0,0,0,0.78)' : '#f9fafb',
+      border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
+      borderSubtle: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+      inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
+      inputBorder: isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db',
+      hoverBg: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
+      subtleBg: isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6',
+      badgeBg: isDark ? 'rgba(255,255,255,0.08)' : 'var(--theme-accent-light)',
+      badgeText: isDark ? 'var(--theme-text-secondary)' : 'var(--theme-accent)',
+    };
+  }, [hasTheme, isDark]);
+
   const [filters, setFilters] = useState<FilterConfig>({
     dateRange: 'all',
     status: [],
@@ -182,18 +206,33 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+      <div
+        className={`rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300 ${!th ? 'bg-white' : ''}`}
+        style={th ? { background: th.panelBg, border: `1px solid ${th.border}` } : undefined}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-gray-300 bg-white">
+        <div
+          className={`p-4 border-b ${!th ? 'border-gray-300 bg-white' : ''}`}
+          style={th ? { borderColor: th.border, background: th.panelBg } : undefined}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gray-900 rounded-lg">
+              <div
+                className={`p-2 rounded-lg ${!th ? 'bg-gray-900' : ''}`}
+                style={th ? { background: th.accent } : undefined}
+              >
                 <Filter className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Filtros Avanzados</h2>
+                <h2
+                  className={`text-xl font-bold ${!th ? 'text-gray-900' : ''}`}
+                  style={th ? { color: th.textPrimary } : undefined}
+                >Filtros Avanzados</h2>
                 {activeFiltersCount > 0 && (
-                  <p className="text-sm text-gray-600">
+                  <p
+                    className={`text-sm ${!th ? 'text-gray-600' : ''}`}
+                    style={th ? { color: th.textSec } : undefined}
+                  >
                     {activeFiltersCount} filtro{activeFiltersCount !== 1 ? 's' : ''} activo{activeFiltersCount !== 1 ? 's' : ''}
                   </p>
                 )}
@@ -201,9 +240,10 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className={`p-2 rounded-lg transition-colors ${!th ? 'hover:bg-gray-100' : ''}`}
+              style={th ? { color: th.textMuted } : undefined}
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className={`w-5 h-5 ${!th ? 'text-gray-500' : ''}`} />
             </button>
           </div>
         </div>
@@ -213,29 +253,49 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             
             {/* Rango de Fechas */}
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div
+              className={`rounded-xl overflow-hidden ${!th ? 'border border-gray-200' : ''}`}
+              style={th ? { border: `1px solid ${th.border}` } : undefined}
+            >
               <button
                 onClick={() => toggleSection('date')}
-                className="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                className={`w-full p-4 flex items-center justify-between transition-colors ${!th ? 'bg-gray-50 hover:bg-gray-100' : ''}`}
+                style={th ? { background: th.subtleBg } : undefined}
               >
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-gray-600" />
-                  <span className="font-semibold text-gray-900">Rango de Fechas</span>
+                  <Calendar
+                    className={`w-5 h-5 ${!th ? 'text-gray-600' : ''}`}
+                    style={th ? { color: th.textSec } : undefined}
+                  />
+                  <span
+                    className={`font-semibold ${!th ? 'text-gray-900' : ''}`}
+                    style={th ? { color: th.textPrimary } : undefined}
+                  >Rango de Fechas</span>
                 </div>
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedSections.date ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-5 h-5 transition-transform ${expandedSections.date ? 'rotate-180' : ''} ${!th ? 'text-gray-400' : ''}`}
+                  style={th ? { color: th.textMuted } : undefined}
+                />
               </button>
               
               {expandedSections.date && (
                 <div className="p-4 space-y-2">
                   {(['all', 'today', 'week', 'month', 'custom'] as const).map((range) => (
-                    <label key={range} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
+                    <label
+                      key={range}
+                      className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${!th ? 'hover:bg-gray-50' : ''}`}
+                    >
                       <input
                         type="radio"
                         checked={filters.dateRange === range}
                         onChange={() => handleDateRangeChange(range)}
-                        className="w-4 h-4 text-gray-900"
+                        className="w-4 h-4"
+                        style={th ? { accentColor: th.accent } : undefined}
                       />
-                      <span className="text-gray-700">
+                      <span
+                        className={!th ? 'text-gray-700' : ''}
+                        style={th ? { color: th.textSec } : undefined}
+                      >
                         {range === 'all' && 'Todas las fechas'}
                         {range === 'today' && 'Hoy'}
                         {range === 'week' && 'Última semana'}
@@ -246,23 +306,34 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   ))}
                   
                   {filters.dateRange === 'custom' && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
+                    <div
+                      className={`mt-3 p-3 rounded-lg space-y-2 ${!th ? 'bg-gray-50' : ''}`}
+                      style={th ? { background: th.subtleBg } : undefined}
+                    >
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                        <label
+                          className={`block text-sm font-medium mb-1 ${!th ? 'text-gray-700' : ''}`}
+                          style={th ? { color: th.textSec } : undefined}
+                        >Desde</label>
                         <input
                           type="date"
                           value={filters.customDateFrom || ''}
                           onChange={(e) => setFilters(prev => ({ ...prev, customDateFrom: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+                          className={`w-full px-3 py-2 rounded-lg focus:outline-none ${!th ? 'border border-gray-300 focus:ring-2 focus:ring-gray-400' : 'border'}`}
+                          style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                        <label
+                          className={`block text-sm font-medium mb-1 ${!th ? 'text-gray-700' : ''}`}
+                          style={th ? { color: th.textSec } : undefined}
+                        >Hasta</label>
                         <input
                           type="date"
                           value={filters.customDateTo || ''}
                           onChange={(e) => setFilters(prev => ({ ...prev, customDateTo: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+                          className={`w-full px-3 py-2 rounded-lg focus:outline-none ${!th ? 'border border-gray-300 focus:ring-2 focus:ring-gray-400' : 'border'}`}
+                          style={th ? { background: th.inputBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                         />
                       </div>
                     </div>
@@ -273,34 +344,57 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
             {/* Etiquetas */}
             {availableLabels.length > 0 && (
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div
+                className={`rounded-xl overflow-hidden ${!th ? 'border border-gray-200' : ''}`}
+                style={th ? { border: `1px solid ${th.border}` } : undefined}
+              >
                 <button
                   onClick={() => toggleSection('labels')}
-                  className="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                  className={`w-full p-4 flex items-center justify-between transition-colors ${!th ? 'bg-gray-50 hover:bg-gray-100' : ''}`}
+                  style={th ? { background: th.subtleBg } : undefined}
                 >
                   <div className="flex items-center space-x-3">
-                    <Tag className="w-5 h-5 text-gray-600" />
-                    <span className="font-semibold text-gray-900">Etiquetas</span>
+                    <Tag
+                      className={`w-5 h-5 ${!th ? 'text-gray-600' : ''}`}
+                      style={th ? { color: th.textSec } : undefined}
+                    />
+                    <span
+                      className={`font-semibold ${!th ? 'text-gray-900' : ''}`}
+                      style={th ? { color: th.textPrimary } : undefined}
+                    >Etiquetas</span>
                     {filters.labels.length > 0 && (
-                      <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-full">
+                      <span
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${!th ? 'bg-gray-200 text-gray-700' : ''}`}
+                        style={th ? { background: th.badgeBg, color: th.badgeText } : undefined}
+                      >
                         {filters.labels.length}
                       </span>
                     )}
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedSections.labels ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${expandedSections.labels ? 'rotate-180' : ''} ${!th ? 'text-gray-400' : ''}`}
+                    style={th ? { color: th.textMuted } : undefined}
+                  />
                 </button>
                 
                 {expandedSections.labels && (
                   <div className="p-4 space-y-2 max-h-48 overflow-y-auto">
                     {availableLabels.map((label) => (
-                      <label key={label} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
+                      <label
+                        key={label}
+                        className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${!th ? 'hover:bg-gray-50' : ''}`}
+                      >
                         <input
                           type="checkbox"
                           checked={filters.labels.includes(label)}
                           onChange={() => toggleLabel(label)}
-                          className="w-4 h-4 text-gray-900 rounded"
+                          className="w-4 h-4 rounded"
+                          style={th ? { accentColor: th.accent } : undefined}
                         />
-                        <span className="text-gray-700">#{label}</span>
+                        <span
+                          className={!th ? 'text-gray-700' : ''}
+                          style={th ? { color: th.textSec } : undefined}
+                        >#{label}</span>
                       </label>
                     ))}
                   </div>
@@ -310,17 +404,29 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           </div>
 
           {/* Panel Derecho - Filtros Guardados */}
-          <div className="w-80 border-l border-gray-200 bg-gray-50 p-4 space-y-4">
+          <div
+            className={`w-80 border-l p-4 space-y-4 ${!th ? 'border-gray-200 bg-gray-50' : ''}`}
+            style={th ? { borderColor: th.border, background: th.sidePanelBg } : undefined}
+          >
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900 flex items-center">
-                  <Star className="w-4 h-4 mr-2 text-gray-500" />
+                <h3
+                  className={`font-semibold flex items-center ${!th ? 'text-gray-900' : ''}`}
+                  style={th ? { color: th.textPrimary } : undefined}
+                >
+                  <Star
+                    className={`w-4 h-4 mr-2 ${!th ? 'text-gray-500' : ''}`}
+                    style={th ? { color: th.textMuted } : undefined}
+                  />
                   Filtros Guardados
                 </h3>
               </div>
 
               {savedFilters.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">
+                <p
+                  className={`text-sm text-center py-8 ${!th ? 'text-gray-500' : ''}`}
+                  style={th ? { color: th.textMuted } : undefined}
+                >
                   No hay filtros guardados
                 </p>
               ) : (
@@ -328,24 +434,32 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   {savedFilters.map((filter) => (
                     <div
                       key={filter.id}
-                      className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-400 transition-colors"
+                      className={`p-3 rounded-lg transition-colors ${!th ? 'bg-white border border-gray-200 hover:border-gray-400' : ''}`}
+                      style={th ? { background: th.inputBg, border: `1px solid ${th.borderSubtle}` } : undefined}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <button
                           onClick={() => handleLoadFilter(filter)}
-                          className="flex-1 text-left font-medium text-gray-900 hover:text-gray-600 transition-colors"
+                          className={`flex-1 text-left font-medium transition-colors ${!th ? 'text-gray-900 hover:text-gray-600' : ''}`}
+                          style={th ? { color: th.textPrimary } : undefined}
                         >
                           {filter.name}
                         </button>
                         <button
                           onClick={() => handleDeleteFilter(filter.id)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          className={`p-1 rounded transition-colors ${!th ? 'hover:bg-gray-100' : ''}`}
                           title="Eliminar"
                         >
-                          <Trash2 className="w-4 h-4 text-gray-500" />
+                          <Trash2
+                            className={`w-4 h-4 ${!th ? 'text-gray-500' : ''}`}
+                            style={th ? { color: th.textMuted } : undefined}
+                          />
                         </button>
                       </div>
-                      <div className="text-xs text-gray-500 space-y-1">
+                      <div
+                        className={`text-xs space-y-1 ${!th ? 'text-gray-500' : ''}`}
+                        style={th ? { color: th.textMuted } : undefined}
+                      >
                         {filter.config.status.length > 0 && (
                           <div>• {filter.config.status.length} estado(s)</div>
                         )}
@@ -364,26 +478,32 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
             <button
               onClick={() => setShowSaveDialog(!showSaveDialog)}
-              className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2"
+              className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${!th ? 'bg-gray-900 text-white hover:bg-gray-800' : 'text-white'}`}
+              style={th ? { background: th.accent } : undefined}
             >
               <Save className="w-4 h-4" />
               <span>Guardar Filtro Actual</span>
             </button>
 
             {showSaveDialog && (
-              <div className="p-3 bg-white border border-gray-300 rounded-lg">
+              <div
+                className={`p-3 rounded-lg ${!th ? 'bg-white border border-gray-300' : ''}`}
+                style={th ? { background: th.inputBg, border: `1px solid ${th.border}` } : undefined}
+              >
                 <input
                   type="text"
                   value={filterName}
                   onChange={(e) => setFilterName(e.target.value)}
                   placeholder="Nombre del filtro..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 mb-2"
+                  className={`w-full px-3 py-2 rounded-lg focus:outline-none mb-2 ${!th ? 'border border-gray-300 focus:ring-2 focus:ring-gray-400' : 'border'}`}
+                  style={th ? { background: th.subtleBg, borderColor: th.inputBorder, color: th.textPrimary } : undefined}
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveFilter()}
                 />
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSaveFilter}
-                    className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors"
+                    className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${!th ? 'bg-gray-900 text-white hover:bg-gray-800' : 'text-white'}`}
+                    style={th ? { background: th.accent } : undefined}
                   >
                     Guardar
                   </button>
@@ -392,7 +512,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                       setShowSaveDialog(false);
                       setFilterName('');
                     }}
-                    className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                    className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${!th ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : ''}`}
+                    style={th ? { background: th.subtleBg, color: th.textSec } : undefined}
                   >
                     Cancelar
                   </button>
@@ -403,23 +524,29 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+        <div
+          className={`p-4 border-t flex items-center justify-between ${!th ? 'border-gray-200 bg-gray-50' : ''}`}
+          style={th ? { borderColor: th.border, background: th.sidePanelBg } : undefined}
+        >
           <button
             onClick={handleReset}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+            className={`px-4 py-2 rounded-lg transition-colors ${!th ? 'text-gray-700 hover:bg-gray-200' : ''}`}
+            style={th ? { color: th.textSec } : undefined}
           >
             Limpiar Todo
           </button>
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              className={`px-4 py-2 rounded-lg transition-colors ${!th ? 'text-gray-700 hover:bg-gray-200' : ''}`}
+              style={th ? { color: th.textSec } : undefined}
             >
               Cancelar
             </button>
             <button
               onClick={handleApply}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all shadow-lg"
+              className={`px-6 py-2 rounded-lg transition-all shadow-lg ${!th ? 'bg-gray-900 text-white hover:bg-gray-800' : 'text-white'}`}
+              style={th ? { background: th.accent } : undefined}
             >
               Aplicar Filtros
             </button>

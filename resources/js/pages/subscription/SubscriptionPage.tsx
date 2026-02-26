@@ -77,7 +77,7 @@ const PLAN_FEATURES = [
 const FREE_PLAN_LIMITS = [
   { icon: Globe, text: 'Solo WhatsApp como canal', included: true },
   { icon: Zap, text: '1 herramienta conectada', included: true },
-  { icon: MessageCircle, text: 'Límite de 50 mensajes/mes', included: true },
+  { icon: MessageCircle, text: 'Límite de 500 mensajes/mes', included: true },
   { icon: Bot, text: 'Asistente IA básico', included: true },
   { icon: Users, text: 'Múltiples miembros de equipo', included: false },
   { icon: Sparkles, text: 'Modelos IA avanzados', included: false },

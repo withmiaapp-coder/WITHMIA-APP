@@ -13,8 +13,6 @@ import {
   Users,
   Layers,
   CreditCard,
-  GraduationCap,
-  Headphones,
   ChevronDown,
   ChevronRight,
   TrendingUp,
@@ -22,10 +20,8 @@ import {
   BadgeCheck,
   Globe,
   Brain,
-  Database,
   Lock,
   Crown,
-  Infinity,
   Building2,
 } from "lucide-react";
 import { Link } from "@/lib/router";
@@ -48,7 +44,7 @@ const PRICING = {
 const freePlanFeatures = [
   { included: true,  label: "1 canal (WhatsApp)" },
   { included: true,  label: "1 herramienta conectada" },
-  { included: true,  label: "50 mensajes IA / mes" },
+  { included: true,  label: "500 mensajes IA / mes" },
   { included: true,  label: "Asistente IA básico" },
   { included: false, label: "Múltiples miembros" },
   { included: false, label: "GPT-4o / Claude" },
@@ -81,7 +77,7 @@ const comparisonGroups: ComparisonGroup[] = [
     icon: Globe,
     rows: [
       { feature: "Canales disponibles",  free: "WhatsApp",   pro: "WhatsApp, IG, FB, Web, Email" },
-      { feature: "Mensajes de IA",       free: "50 / mes",   pro: "Ilimitados" },
+      { feature: "Mensajes de IA",       free: "500 / mes",  pro: "Ilimitados" },
       { feature: "Modelos de IA",        free: "Básico",     pro: "GPT-4o, Claude, Gemini" },
     ],
   },
@@ -114,41 +110,46 @@ const comparisonGroups: ComparisonGroup[] = [
   },
 ];
 
-/* ─── Detailed features grid ─── */
-const detailedFeatures = [
-  { icon: Bot,          label: "IA conversacional avanzada",       desc: "GPT-4o y Claude respondiendo 24/7 en todos tus canales" },
-  { icon: MessageSquare,label: "Conversaciones ilimitadas",        desc: "Sin límite de mensajes o chats activos simultáneos" },
-  { icon: Globe,        label: "Omnicanal unificado",              desc: "WhatsApp, Instagram, Messenger, Web y Email en un inbox" },
-  { icon: Users,        label: "CRM con pipeline visual",          desc: "Gestiona contactos, etiquetas y oportunidades de venta" },
-  { icon: Zap,          label: "Workflows y automatizaciones",     desc: "Reglas, flujos y triggers sin escribir código" },
-  { icon: BarChart3,    label: "Analítica en tiempo real",         desc: "Métricas de equipo, tiempos de respuesta y rendimiento IA" },
-  { icon: Brain,        label: "Base de conocimiento (RAG)",       desc: "Entrena tu IA con documentos, PDFs y URLs propios" },
-  { icon: Layers,       label: "12+ integraciones + API abierta",  desc: "Conecta Stripe, HubSpot, Sheets, Slack y más" },
-  { icon: CreditCard,   label: "Cobranzas inteligentes",           desc: "Cobros automatizados con recordatorios por WhatsApp" },
-  { icon: Lock,         label: "Seguridad empresarial",            desc: "Encriptación end-to-end, backups y datos protegidos" },
-  { icon: GraduationCap,label: "Onboarding incluido",              desc: "Capacitación personalizada para tu equipo" },
-  { icon: Headphones,   label: "Soporte prioritario",              desc: "Respuesta rápida vía chat y email dedicado" },
-];
+/* ─── Detailed features (grouped by category) ─── */
+type FeatureItem = { icon: typeof Bot; label: string; desc: string; tag?: string };
+type FeatureGroup = { title: string; features: FeatureItem[] };
 
-/* ─── Market comparison ─── */
-const marketComparisons = [
-  { name: "ChatGPT Plus",  price: 20, per: "/usuario/mes", channels: false, crm: false, auto: false, omni: false },
-  { name: "ChatGPT Team",  price: 25, per: "/usuario/mes", channels: false, crm: false, auto: false, omni: false },
-  { name: "Intercom",      price: 39, per: "/asiento/mes",  channels: true,  crm: false, auto: true,  omni: false },
-  { name: "Zendesk Suite", price: 55, per: "/agente/mes",   channels: true,  crm: false, auto: true,  omni: false },
-  { name: "WITHMIA Pro",   price: 18, per: "/mes",          channels: true,  crm: true,  auto: true,  omni: true, highlight: true },
-];
-
-const marketColumns = [
-  { key: "channels" as const, label: "Canales" },
-  { key: "crm"      as const, label: "CRM" },
-  { key: "auto"     as const, label: "Automatizaciones" },
-  { key: "omni"     as const, label: "Omnicanal" },
+const featureGroups: FeatureGroup[] = [
+  {
+    title: "Inteligencia Artificial",
+    features: [
+      { icon: Bot,          label: "IA conversacional avanzada",  desc: "GPT-4o y Claude respondiendo 24/7 en todos tus canales con contexto completo del cliente.", tag: "Core" },
+      { icon: MessageSquare, label: "Mensajes ilimitados",         desc: "Sin límite de conversaciones, chats simultáneos ni restricciones de uso." },
+      { icon: Brain,        label: "Base de conocimiento (RAG)",   desc: "Entrena tu IA con documentos, PDFs, URLs y datos propios de tu negocio." },
+    ],
+  },
+  {
+    title: "Canales y comunicación",
+    features: [
+      { icon: Globe,        label: "Inbox omnicanal",              desc: "WhatsApp, Instagram, Messenger, Web y Email unificados en una sola bandeja.", tag: "Popular" },
+      { icon: CreditCard,   label: "Cobranzas inteligentes",       desc: "Cobros automatizados con enlaces de pago y recordatorios por WhatsApp." },
+    ],
+  },
+  {
+    title: "Gestión y equipo",
+    features: [
+      { icon: Users,        label: "CRM con pipeline visual",      desc: "Contactos, etiquetas, etapas de venta y oportunidades en un tablero visual." },
+      { icon: BarChart3,    label: "Analítica en tiempo real",     desc: "Métricas de equipo, tiempos de respuesta, rendimiento IA y conversión." },
+      { icon: Zap,          label: "Workflows y automatizaciones", desc: "Reglas, flujos condicionales y triggers — sin escribir código." },
+    ],
+  },
+  {
+    title: "Plataforma",
+    features: [
+      { icon: Layers,       label: "12+ integraciones + API",      desc: "Conecta Stripe, HubSpot, Sheets, Slack, Zapier y más. API REST abierta." },
+      { icon: Lock,         label: "Seguridad empresarial",        desc: "Encriptación end-to-end, backups automáticos y datos protegidos." },
+    ],
+  },
 ];
 
 /* ─── FAQs ─── */
 const faqs = [
-  { q: "¿Qué incluye el Plan Gratuito?", a: "Acceso a WhatsApp como canal, 1 herramienta, 50 mensajes IA al mes y un asistente básico. Ideal para probar la plataforma sin compromiso." },
+  { q: "¿Qué incluye el Plan Gratuito?", a: "Acceso a WhatsApp como canal, 1 herramienta, 500 mensajes IA al mes y un asistente básico. Ideal para probar la plataforma sin compromiso." },
   { q: "¿Necesito tarjeta de crédito para empezar?", a: "No. Creas tu cuenta gratis sin tarjeta. Solo la necesitarás si decides activar WITHMIA Pro." },
   { q: "¿Qué incluye el primer usuario de Pro?", a: "El precio base ($18/mes o $15/mes anual) incluye 1 usuario con acceso completo: IA avanzada, todos los canales, CRM, automatizaciones, RAG y más." },
   { q: "¿Cómo agrego usuarios adicionales?", a: "Cada miembro extra cuesta $10/mes (mensual) o $8/mes (anual). Los agregas o quitas al instante desde el dashboard." },
@@ -232,7 +233,6 @@ export const Pricing = () => {
   const calc       = useScrollReveal();
   const comparison = useScrollReveal();
   const features   = useScrollReveal();
-  const market     = useScrollReveal();
   const faqSr      = useScrollReveal();
   const ctaSr      = useScrollReveal();
 
@@ -574,91 +574,53 @@ export const Pricing = () => {
       {/* ═══════════ FEATURES GRID ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
         <div ref={features.ref} className={`max-w-5xl mx-auto transition-all duration-700 ${features.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="text-center mb-12">
+          <div className="text-center mb-14">
             <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Todo incluido en Pro</p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
-              Cada funcionalidad.{" "}
+              Una plataforma completa.{" "}
               <span className="text-white/40">Sin costos ocultos.</span>
             </h2>
+            <p className="text-sm text-white/30 mt-3 max-w-lg mx-auto">Cada funcionalidad diseñada para que tu equipo venda más y atienda mejor, desde el día uno.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {detailedFeatures.map((f, i) => {
-              const Icon = f.icon;
-              return (
-                <div
-                  key={f.label}
-                  className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:border-amber-500/20 hover:bg-amber-500/[0.02] transition-all duration-300"
-                  style={{ opacity: features.isVisible ? 1 : 0, transform: features.isVisible ? "translateY(0)" : "translateY(12px)", transition: `all 0.5s ease ${i * 50}ms` }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/10 flex items-center justify-center shrink-0 group-hover:border-amber-500/25 transition-colors">
-                      <Icon className="w-4 h-4 text-amber-400/70 group-hover:text-amber-400 transition-colors" />
-                    </div>
-                    <div>
-                      <h4 className="text-[13px] font-semibold text-white/80 leading-tight mb-1 group-hover:text-white transition-colors">{f.label}</h4>
-                      <p className="text-[12px] text-white/25 leading-relaxed">{f.desc}</p>
-                    </div>
-                  </div>
+          {(() => {
+            let globalIdx = 0;
+            return featureGroups.map((group) => (
+              <div key={group.title} className="mb-10 last:mb-0">
+                {/* Category label */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px flex-1 bg-white/[0.04]" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20 shrink-0">{group.title}</span>
+                  <div className="h-px flex-1 bg-white/[0.04]" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
-      {/* ═══════════ MARKET COMPARISON ═══════════ */}
-      <div className="px-4 pb-20 md:pb-28">
-        <div ref={market.ref} className={`max-w-4xl mx-auto transition-all duration-700 ${market.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="text-center mb-12">
-            <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Vs. el mercado</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">
-              ¿Por qué WITHMIA?{" "}
-              <span className="text-white/40">Compara y decide.</span>
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.06] overflow-hidden bg-white/[0.01]">
-            <div className="hidden md:grid grid-cols-[1.5fr,0.7fr,repeat(4,0.7fr)] gap-0 border-b border-white/[0.06] bg-white/[0.02]">
-              <div className="px-6 py-4 text-[11px] text-white/30 uppercase tracking-wider font-semibold">Plataforma</div>
-              <div className="px-4 py-4 text-[11px] text-white/30 uppercase tracking-wider font-semibold text-center">Precio</div>
-              {marketColumns.map((col) => (
-                <div key={col.key} className="px-4 py-4 text-[11px] text-white/30 uppercase tracking-wider font-semibold text-center">{col.label}</div>
-              ))}
-            </div>
-            {marketComparisons.map((c, i) => (
-              <div
-                key={c.name}
-                className={`grid grid-cols-1 md:grid-cols-[1.5fr,0.7fr,repeat(4,0.7fr)] gap-0 border-b border-white/[0.04] last:border-0 transition-colors ${c.highlight ? "bg-amber-500/[0.04] border-l-2 border-l-amber-400" : "hover:bg-white/[0.02]"}`}
-                style={{ opacity: market.isVisible ? 1 : 0, transform: market.isVisible ? "translateX(0)" : "translateX(-12px)", transition: `all 0.4s ease ${i * 80}ms` }}
-              >
-                <div className="px-6 py-4 flex items-center gap-3">
-                  {c.highlight && <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 hidden md:block" />}
-                  <span className={`text-[14px] font-semibold ${c.highlight ? "text-amber-400" : "text-white/60"}`}>{c.name}</span>
-                  {c.highlight && <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/20 hidden md:inline">Tú</span>}
-                </div>
-                <div className="px-6 md:px-4 py-2 md:py-4 flex items-center md:justify-center">
-                  <span className="md:hidden text-[11px] text-white/20 mr-2">Precio:</span>
-                  <span className={`text-[15px] font-bold tabular-nums ${c.highlight ? "text-amber-400" : "text-white/50"}`}>${c.price}</span>
-                  <span className="text-[10px] text-white/20 ml-1">{c.per}</span>
-                </div>
-                {marketColumns.map((col) => (
-                  <div key={col.key} className="px-6 md:px-4 py-2 md:py-4 flex items-center md:justify-center">
-                    <span className="md:hidden text-[11px] text-white/20 mr-2">{col.label}:</span>
-                    {c[col.key] ? (
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${c.highlight ? "bg-amber-400/15" : "bg-emerald-400/10"}`}>
-                        <Check className={`w-3 h-3 ${c.highlight ? "text-amber-400" : "text-emerald-400"}`} />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {group.features.map((f) => {
+                    const Icon = f.icon;
+                    const idx = globalIdx++;
+                    return (
+                      <div
+                        key={f.label}
+                        className="group relative rounded-xl border border-white/[0.06] bg-white/[0.015] p-5 hover:border-white/[0.12] hover:bg-white/[0.03] transition-all duration-300"
+                        style={{ opacity: features.isVisible ? 1 : 0, transform: features.isVisible ? "translateY(0)" : "translateY(12px)", transition: `all 0.5s ease ${idx * 50}ms` }}
+                      >
+                        {f.tag && (
+                          <span className="absolute top-3 right-3 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400/70 border border-amber-500/15">
+                            {f.tag}
+                          </span>
+                        )}
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mb-3.5 group-hover:border-white/[0.12] transition-colors">
+                          <Icon className="w-4 h-4 text-white/40 group-hover:text-white/60 transition-colors" />
+                        </div>
+                        <h4 className="text-[13.5px] font-semibold text-white/80 leading-tight mb-1.5 group-hover:text-white transition-colors">{f.label}</h4>
+                        <p className="text-[12px] text-white/25 leading-relaxed">{f.desc}</p>
                       </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full bg-white/[0.04] flex items-center justify-center">
-                        <div className="w-2 h-[1.5px] bg-white/15 rounded-full" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            ));
+          })()}
         </div>
       </div>
 
