@@ -22,21 +22,21 @@ class DailyQuoteController extends Controller
     /**
      * Get a daily inspirational quote.
      *
-     * Strategy (in order of reliability):
-     * 1. Wikipedia "On this day" API → verified dates → OpenAI for quotes only
-     * 2. OpenAI-only fallback (less reliable dates)
-     * 3. Static fallback quotes
-     *
-     * Caches a pool of quotes per day and rotates them across requests.
+     * Strategy:
+     * 1. Fetch ALL births/deaths from Wikipedia (ES + EN always)
+     * 2. Check curated quotes DB for verified quotes
+     * 3. Send remaining Wikipedia-verified people to OpenAI (index-based)
+     * 4. OpenAI only provides quotes/bios — dates ALWAYS come from Wikipedia
+     * 5. Static fallback if everything fails
      */
     public function __invoke(Request $request): JsonResponse
     {
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v2: cache key includes version to invalidate old unverified data
-        $poolKey = "daily_quotes_v2_{$monthDay}";
-        $counterKey = "daily_quotes_v2_ctr_{$monthDay}";
+        // v3: cache key to invalidate after rewrite
+        $poolKey = "daily_quotes_v3_{$monthDay}";
+        $counterKey = "daily_quotes_v3_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -62,8 +62,7 @@ class DailyQuoteController extends Controller
     }
 
     /**
-     * Build a pool of quotes for today.
-     * Priority: Wikipedia dates + curated quotes DB > Wikipedia + OpenAI > OpenAI-only > static fallback
+     * Build a pool of quotes for today using Wikipedia-verified people.
      */
     private function buildQuotesPool(\Carbon\Carbon $date): ?array
     {
@@ -73,174 +72,24 @@ class DailyQuoteController extends Controller
         $dayPadded = $date->format('d');
         $monthName = self::MONTH_NAMES[$month];
 
-        // Step 1: Get verified births/deaths from Wikipedia
-        $people = $this->fetchWikipediaPeople($monthPadded, $dayPadded);
+        // Step 1: Get ALL births/deaths from BOTH Spanish AND English Wikipedia
+        $people = $this->fetchAllWikipediaPeople($monthPadded, $dayPadded);
 
-        if (count($people) >= 1) {
-            // Step 2: Check curated DB first, then OpenAI for the rest
-            $pool = $this->buildQuotesFromVerifiedPeople($people, $day, $monthName);
-
-            if ($pool && count($pool) > 0) {
-                $curatedCount = count(array_filter($pool, fn($q) => ($q['_source'] ?? '') === 'curated'));
-                $aiCount = count($pool) - $curatedCount;
-
-                // Remove internal _source marker
-                $pool = array_map(function ($q) {
-                    unset($q['_source']);
-                    return $q;
-                }, $pool);
-
-                Log::info("DailyQuote: Pool built", [
-                    'total' => count($pool),
-                    'curated' => $curatedCount,
-                    'ai' => $aiCount,
-                    'date' => "{$monthPadded}/{$dayPadded}",
-                ]);
-                return $pool;
-            }
-        }
-
-        // Step 3: Fallback to OpenAI-only (less reliable dates but better than nothing)
-        Log::info("DailyQuote: Wikipedia insufficient, falling back to OpenAI-only", [
-            'wikipedia_people' => count($people),
+        Log::info('DailyQuote: Wikipedia returned people', [
+            'count' => count($people),
             'date' => "{$monthPadded}/{$dayPadded}",
+            'sample' => array_map(fn($p) => $p['name'], array_slice($people, 0, 5)),
         ]);
 
-        return $this->generateQuotesPoolOpenAI($day, $monthName);
-    }
-
-    /**
-     * Fetch verified births and deaths from Wikipedia's "On this day" REST API.
-     * Returns an array of people with verified names, years, and type.
-     */
-    private function fetchWikipediaPeople(string $month, string $day): array
-    {
-        $people = [];
-
-        try {
-            // Try Spanish Wikipedia first for births
-            $birthsResponse = Http::timeout(8)
-                ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
-                ->get("https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/births/{$month}/{$day}");
-
-            if ($birthsResponse->ok()) {
-                foreach ($birthsResponse->json('births') ?? [] as $entry) {
-                    $page = $entry['pages'][0] ?? null;
-                    if ($page && !empty($entry['year'])) {
-                        $name = $page['titles']['normalized']
-                            ?? $page['titles']['canonical']
-                            ?? $page['title']
-                            ?? null;
-
-                        if ($name) {
-                            $people[] = [
-                                'name' => str_replace('_', ' ', $name),
-                                'year' => (int) $entry['year'],
-                                'type' => 'birth',
-                                'description' => $page['description'] ?? '',
-                                'extract' => $page['extract'] ?? '',
-                            ];
-                        }
-                    }
-                }
-            }
-
-            // Fetch deaths
-            $deathsResponse = Http::timeout(8)
-                ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
-                ->get("https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/deaths/{$month}/{$day}");
-
-            if ($deathsResponse->ok()) {
-                foreach ($deathsResponse->json('deaths') ?? [] as $entry) {
-                    $page = $entry['pages'][0] ?? null;
-                    if ($page && !empty($entry['year'])) {
-                        $name = $page['titles']['normalized']
-                            ?? $page['titles']['canonical']
-                            ?? $page['title']
-                            ?? null;
-
-                        if ($name) {
-                            $people[] = [
-                                'name' => str_replace('_', ' ', $name),
-                                'year' => (int) $entry['year'],
-                                'type' => 'death',
-                                'description' => $page['description'] ?? '',
-                                'extract' => $page['extract'] ?? '',
-                            ];
-                        }
-                    }
-                }
-            }
-
-            // If Spanish Wikipedia returns few results, try English
-            if (count($people) < 5) {
-                $this->supplementFromEnglishWikipedia($people, $month, $day);
-            }
-        } catch (\Exception $e) {
-            Log::warning('DailyQuote: Wikipedia API error', ['error' => $e->getMessage()]);
+        if (count($people) === 0) {
+            Log::warning('DailyQuote: Wikipedia returned 0 people, using static fallback');
+            return null;
         }
 
-        // Sort by extract length (longer = more notable) and pick top 10
-        usort($people, fn($a, $b) => strlen($b['extract']) - strlen($a['extract']));
-
-        return array_slice($people, 0, 10);
-    }
-
-    /**
-     * Supplement people list from English Wikipedia if Spanish returns few results.
-     */
-    private function supplementFromEnglishWikipedia(array &$people, string $month, string $day): void
-    {
-        $existingNames = array_map(fn($p) => mb_strtolower($p['name']), $people);
-
-        try {
-            foreach (['births', 'deaths'] as $type) {
-                $response = Http::timeout(8)
-                    ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
-                    ->get("https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/{$type}/{$month}/{$day}");
-
-                if ($response->ok()) {
-                    foreach ($response->json($type) ?? [] as $entry) {
-                        $page = $entry['pages'][0] ?? null;
-                        if ($page && !empty($entry['year'])) {
-                            $name = $page['titles']['normalized']
-                                ?? $page['titles']['canonical']
-                                ?? $page['title']
-                                ?? null;
-
-                            if ($name) {
-                                $cleanName = str_replace('_', ' ', $name);
-                                // Avoid duplicates
-                                if (!in_array(mb_strtolower($cleanName), $existingNames, true)) {
-                                    $people[] = [
-                                        'name' => $cleanName,
-                                        'year' => (int) $entry['year'],
-                                        'type' => $type === 'births' ? 'birth' : 'death',
-                                        'description' => $page['description'] ?? '',
-                                        'extract' => $page['extract'] ?? '',
-                                    ];
-                                    $existingNames[] = mb_strtolower($cleanName);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently fail — this is supplementary
-        }
-    }
-
-    /**
-     * Build quotes from Wikipedia-verified people.
-     * First checks curated database for verified quotes, then uses OpenAI for remaining people.
-     */
-    private function buildQuotesFromVerifiedPeople(array $people, int $day, string $monthName): ?array
-    {
+        // Step 2: Check curated database first
         $pool = [];
         $needsOpenAI = [];
 
-        // Step A: Check curated database first (100% reliable quotes)
         foreach ($people as $person) {
             $verified = VerifiedQuotes::find($person['name']);
 
@@ -251,40 +100,120 @@ class DailyQuoteController extends Controller
                     'author' => $person['name'],
                     'context' => "{$typeLabel} el {$day} de {$monthName} de {$person['year']}",
                     'who' => $verified['who'],
-                    '_source' => 'curated',
                 ];
             } else {
                 $needsOpenAI[] = $person;
             }
         }
 
-        // If we already have 5+ curated quotes, return them (no OpenAI needed)
         if (count($pool) >= 5) {
+            Log::info("DailyQuote: All curated", ['count' => count($pool)]);
             return array_slice($pool, 0, 5);
         }
 
-        // Step B: Use OpenAI for remaining people (only if we need more quotes)
+        // Step 3: Use OpenAI for remaining people (index-based matching)
         $needed = 5 - count($pool);
         if (count($needsOpenAI) > 0 && $needed > 0) {
-            $aiQuotes = $this->generateQuotesViaOpenAI(array_slice($needsOpenAI, 0, $needed + 2), $day, $monthName);
+            // Send up to 20 people so OpenAI can pick the most notable/quotable ones
+            $candidates = array_slice($needsOpenAI, 0, 20);
+            $aiQuotes = $this->generateQuotesForPeople($candidates, $day, $monthName, $needed + 2);
 
             if ($aiQuotes) {
                 foreach ($aiQuotes as $q) {
                     if (count($pool) >= 5) break;
-                    $q['_source'] = 'ai';
                     $pool[] = $q;
                 }
             }
         }
 
-        return count($pool) > 0 ? $pool : null;
+        if (count($pool) > 0) {
+            Log::info('DailyQuote: Pool built', [
+                'total' => count($pool),
+                'date' => "{$monthPadded}/{$dayPadded}",
+            ]);
+            return $pool;
+        }
+
+        return null;
     }
 
     /**
-     * Generate quotes via OpenAI for people NOT found in the curated database.
-     * Dates come from Wikipedia, OpenAI only provides quotes and bios.
+     * Fetch births and deaths from BOTH Spanish AND English Wikipedia.
+     * Always fetches both to maximize the pool of notable people.
+     * Deduplicates and sorts by notability (extract length).
      */
-    private function generateQuotesViaOpenAI(array $people, int $day, string $monthName): ?array
+    private function fetchAllWikipediaPeople(string $month, string $day): array
+    {
+        $people = [];
+        $seenNames = [];
+
+        $languages = ['es', 'en'];
+        $types = ['births', 'deaths'];
+
+        foreach ($languages as $lang) {
+            foreach ($types as $type) {
+                try {
+                    $response = Http::timeout(10)
+                        ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
+                        ->get("https://api.wikimedia.org/feed/v1/wikipedia/{$lang}/onthisday/{$type}/{$month}/{$day}");
+
+                    if (!$response->ok()) continue;
+
+                    foreach ($response->json($type) ?? [] as $entry) {
+                        $page = $entry['pages'][0] ?? null;
+                        if (!$page || empty($entry['year'])) continue;
+
+                        $name = $page['titles']['normalized']
+                            ?? $page['titles']['canonical']
+                            ?? $page['title']
+                            ?? null;
+
+                        if (!$name) continue;
+
+                        $cleanName = str_replace('_', ' ', $name);
+                        $nameLower = mb_strtolower($cleanName);
+
+                        // Skip "Anexo:" pages
+                        if (str_starts_with($cleanName, 'Anexo:')) continue;
+
+                        // Deduplicate
+                        if (isset($seenNames[$nameLower])) {
+                            $existingIdx = $seenNames[$nameLower];
+                            if (strlen($page['extract'] ?? '') > strlen($people[$existingIdx]['extract'])) {
+                                $people[$existingIdx]['extract'] = $page['extract'] ?? '';
+                                $people[$existingIdx]['description'] = $page['description'] ?? $people[$existingIdx]['description'];
+                            }
+                            continue;
+                        }
+
+                        $idx = count($people);
+                        $people[$idx] = [
+                            'name' => $cleanName,
+                            'year' => (int) $entry['year'],
+                            'type' => $type === 'births' ? 'birth' : 'death',
+                            'description' => $page['description'] ?? '',
+                            'extract' => $page['extract'] ?? '',
+                        ];
+                        $seenNames[$nameLower] = $idx;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("DailyQuote: Wikipedia {$lang}/{$type} error", ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        // Sort by extract length (longer = more notable) and return top 30
+        usort($people, fn($a, $b) => strlen($b['extract']) - strlen($a['extract']));
+
+        return array_slice($people, 0, 30);
+    }
+
+    /**
+     * Generate quotes via OpenAI for Wikipedia-verified people.
+     * Uses INDEX-BASED matching to avoid name mismatch issues.
+     * Dates ALWAYS come from Wikipedia — OpenAI only provides quotes and bios.
+     */
+    private function generateQuotesForPeople(array $people, int $day, string $monthName, int $needed): ?array
     {
         $apiKey = config('services.openai.api_key');
 
@@ -295,7 +224,7 @@ class DailyQuoteController extends Controller
         try {
             $client = OpenAI::client($apiKey);
 
-            // Build verified people list for the prompt
+            // Build numbered list for the prompt
             $peopleList = '';
             foreach ($people as $i => $p) {
                 $typeLabel = $p['type'] === 'birth' ? 'Nacido' : 'Fallecido';
@@ -304,28 +233,25 @@ class DailyQuoteController extends Controller
                 $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc})\n";
             }
 
-            $count = min(count($people), 5);
-
             $prompt = <<<PROMPT
-De los siguientes personajes históricos VERIFICADOS, proporciona una cita célebre bien documentada para cada uno.
+De la siguiente lista de personajes históricos, selecciona los {$needed} MÁS NOTABLES y CITABLES (que tengan frases célebres conocidas) y proporciona una cita célebre bien documentada para cada uno.
 
-PERSONAJES (fechas confirmadas por Wikipedia):
+LISTA DE PERSONAJES (fechas verificadas por Wikipedia para el {$day} de {$monthName}):
 {$peopleList}
 
-Para cada uno, responde con:
-- "quote": Una cita célebre REAL y bien documentada de esa persona (en español). Debe ser verificable en libros, discursos o escritos del autor.
-- "author": Su nombre más conocido
-- "context": Exactamente "{Nacido/Fallecido} el {$day} de {$monthName} de {AÑO}" usando EXACTAMENTE el año indicado
-- "who": Mini biografía de 1-2 líneas
+Para cada personaje seleccionado, responde con:
+- "index": El NÚMERO del personaje de la lista (ej: 1, 5, 12)
+- "quote": Una cita célebre REAL y bien documentada de esa persona (en español)
+- "who": Mini biografía de 1-2 líneas en español
 
 REGLAS:
-- USA EXACTAMENTE los años proporcionados, NO los cambies
-- Las citas deben ser frases REALES y bien documentadas, NO inventadas
-- Si no conoces una cita verificable de alguien, usa una frase de sus obras, discursos o escritos conocidos
-- Todo en español
-- Responde SOLO con JSON array válido, máximo {$count} elementos
+- Selecciona SOLO personajes que tengan citas/frases célebres conocidas y documentadas
+- Prefiere científicos, artistas, filósofos, escritores, músicos y líderes famosos mundialmente
+- Evita deportistas, políticos menores o personas poco conocidas mundialmente
+- Las citas deben ser REALES, no inventadas
+- Responde SOLO con JSON array válido
 
-[{"quote":"...","author":"...","context":"...","who":"..."}]
+[{"index":1,"quote":"...","who":"..."},{"index":5,"quote":"...","who":"..."}]
 PROMPT;
 
             $result = $client->chat()->create([
@@ -333,7 +259,7 @@ PROMPT;
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'Eres un experto en citas históricas verificables. Solo proporcionas citas que están documentadas en fuentes confiables. Las fechas ya fueron verificadas por Wikipedia — NO las modifiques. Responde SOLO en JSON válido.',
+                        'content' => 'Eres un experto en citas históricas verificables. Solo proporcionas citas documentadas en fuentes confiables. Responde SOLO en JSON válido.',
                     ],
                     ['role' => 'user', 'content' => $prompt],
                 ],
@@ -349,197 +275,43 @@ PROMPT;
             $quotes = json_decode($content, true);
 
             if (!is_array($quotes) || count($quotes) === 0) {
-                Log::warning('DailyQuote: Invalid JSON from OpenAI', ['content' => $content]);
+                Log::warning('DailyQuote: Invalid JSON from OpenAI', ['content' => substr($content, 0, 300)]);
                 return null;
-            }
-
-            // Build a lookup of verified people by name (lowercase)
-            $verifiedLookup = [];
-            foreach ($people as $p) {
-                $verifiedLookup[mb_strtolower(trim($p['name']))] = $p;
             }
 
             $validated = [];
             foreach ($quotes as $q) {
-                if (!isset($q['quote'], $q['author'], $q['context'], $q['who'])) {
+                if (!isset($q['index'], $q['quote'], $q['who'])) {
                     continue;
                 }
 
-                // ALWAYS override context with Wikipedia-verified date
-                $authorLower = mb_strtolower(trim($q['author']));
-                $matched = $this->findMatchingPerson($authorLower, $verifiedLookup);
-
-                if ($matched) {
-                    $typeLabel = $matched['type'] === 'birth' ? 'Nacido' : 'Fallecido';
-                    $q['context'] = "{$typeLabel} el {$day} de {$monthName} de {$matched['year']}";
-
-                    $validated[] = [
-                        'quote' => $q['quote'],
-                        'author' => $q['author'],
-                        'context' => $q['context'],
-                        'who' => $q['who'],
-                    ];
-                } else {
-                    // Person not matched to Wikipedia data — discard to prevent wrong dates
-                    Log::info('DailyQuote: Discarding unmatched person from OpenAI', [
-                        'author' => $q['author'],
-                    ]);
+                // INDEX-BASED lookup: map back to Wikipedia-verified person
+                $idx = (int) $q['index'] - 1; // Prompt uses 1-based
+                if ($idx < 0 || $idx >= count($people)) {
+                    Log::info('DailyQuote: Invalid index from OpenAI', ['index' => $q['index']]);
+                    continue;
                 }
+
+                $person = $people[$idx];
+                $typeLabel = $person['type'] === 'birth' ? 'Nacido' : 'Fallecido';
+
+                $validated[] = [
+                    'quote' => $q['quote'],
+                    'author' => $person['name'], // Wikipedia's name, not OpenAI's
+                    'context' => "{$typeLabel} el {$day} de {$monthName} de {$person['year']}", // Wikipedia date
+                    'who' => $q['who'],
+                ];
             }
+
+            Log::info('DailyQuote: OpenAI quotes generated', [
+                'requested' => $needed,
+                'ai_returned' => count($quotes),
+                'validated' => count($validated),
+            ]);
 
             return count($validated) > 0 ? $validated : null;
         } catch (\Exception $e) {
             Log::error('DailyQuote: OpenAI error', ['error' => $e->getMessage()]);
-            return null;
-        }
-    }
-
-    /**
-     * Find a matching person in the verified lookup by fuzzy name matching.
-     */
-    private function findMatchingPerson(string $authorLower, array $verifiedLookup): ?array
-    {
-        // Exact match
-        if (isset($verifiedLookup[$authorLower])) {
-            return $verifiedLookup[$authorLower];
-        }
-
-        // Partial match: check if author name is contained in or contains a verified name
-        foreach ($verifiedLookup as $verifiedName => $person) {
-            // Check substring match in both directions
-            if (mb_strlen($authorLower) >= 4 && mb_strlen($verifiedName) >= 4) {
-                if (str_contains($verifiedName, $authorLower) || str_contains($authorLower, $verifiedName)) {
-                    return $person;
-                }
-            }
-
-            // Check last name match (common case: "Einstein" vs "Albert Einstein")
-            $authorParts = explode(' ', $authorLower);
-            $verifiedParts = explode(' ', $verifiedName);
-
-            $authorLastName = end($authorParts);
-            $verifiedLastName = end($verifiedParts);
-
-            if (mb_strlen($authorLastName) >= 4 && $authorLastName === $verifiedLastName) {
-                return $person;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Fallback: Generate quotes using OpenAI, then VERIFY every person against Wikipedia.
-     * Used when Wikipedia API initially returned 0 people.
-     * Any person not confirmed by Wikipedia is discarded to prevent hallucinated dates.
-     */
-    private function generateQuotesPoolOpenAI(int $day, string $monthName): ?array
-    {
-        $apiKey = config('services.openai.api_key');
-
-        if (empty($apiKey)) {
-            return null;
-        }
-
-        try {
-            $client = OpenAI::client($apiKey);
-
-            $month = array_search($monthName, self::MONTH_NAMES);
-            $monthPadded = str_pad((string) $month, 2, '0', STR_PAD_LEFT);
-            $dayPadded = str_pad((string) $day, 2, '0', STR_PAD_LEFT);
-
-            $prompt = <<<PROMPT
-Hoy es {$day} de {$monthName}. Necesito información sobre 8 personajes históricos DIFERENTES que nacieron o fallecieron este mismo día ({$day} de {$monthName}) a lo largo de la historia.
-
-Para cada uno, dame:
-1. Una cita célebre REAL de esa persona (no inventada)
-2. Su nombre completo tal como aparece en Wikipedia
-3. Si nació o falleció este día, y el año exacto
-4. Una mini biografía de 1-2 líneas
-
-IMPORTANTE:
-- Solo incluye personas que REALMENTE nacieron o murieron el {$day} de {$monthName}. Verifica las fechas.
-- Incluye variedad: científicos, artistas, filósofos, líderes, escritores, músicos.
-- Todo en español.
-
-Responde SOLO con JSON array válido:
-[{"quote":"...","author":"...","type":"birth|death","year":1879,"who":"..."}]
-PROMPT;
-
-            $result = $client->chat()->create([
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => 'Eres un historiador experto en efemérides. Verifica las fechas antes de responder. Responde SOLO en JSON válido.',
-                    ],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-                'max_tokens' => 1500,
-                'temperature' => 0.3,
-            ]);
-
-            $content = trim($result->choices[0]->message->content);
-            $content = preg_replace('/^```json\s*/i', '', $content);
-            $content = preg_replace('/\s*```$/i', '', $content);
-            $content = trim($content);
-
-            $quotes = json_decode($content, true);
-
-            if (!is_array($quotes) || count($quotes) === 0) {
-                Log::warning('DailyQuote: Invalid JSON from OpenAI (fallback mode)', ['content' => $content]);
-                return null;
-            }
-
-            // CROSS-VERIFY every person against Wikipedia to prevent hallucinated dates
-            $wikiPeople = $this->fetchWikipediaPeople($monthPadded, $dayPadded);
-            $wikiNames = array_map(fn($p) => mb_strtolower(trim($p['name'])), $wikiPeople);
-
-            // Build a lookup for Wikipedia-verified data
-            $wikiLookup = [];
-            foreach ($wikiPeople as $p) {
-                $wikiLookup[mb_strtolower(trim($p['name']))] = $p;
-            }
-
-            $validated = [];
-            foreach ($quotes as $q) {
-                if (!isset($q['quote'], $q['author'], $q['who'])) {
-                    continue;
-                }
-
-                $authorLower = mb_strtolower(trim($q['author']));
-                $matched = $this->findMatchingPerson($authorLower, $wikiLookup);
-
-                if ($matched) {
-                    // Person confirmed by Wikipedia — use Wikipedia's verified date
-                    $typeLabel = $matched['type'] === 'birth' ? 'Nacido' : 'Fallecido';
-                    $validated[] = [
-                        'quote' => $q['quote'],
-                        'author' => $q['author'],
-                        'context' => "{$typeLabel} el {$day} de {$monthName} de {$matched['year']}",
-                        'who' => $q['who'],
-                    ];
-                } else {
-                    // Person NOT found in Wikipedia for this date — DISCARD (likely hallucinated)
-                    Log::info('DailyQuote: Discarding unverified person from OpenAI', [
-                        'author' => $q['author'],
-                        'date' => "{$day} de {$monthName}",
-                    ]);
-                }
-            }
-
-            if (count($validated) > 0) {
-                Log::info('DailyQuote: OpenAI fallback with Wikipedia verification', [
-                    'openai_returned' => count($quotes),
-                    'verified' => count($validated),
-                    'discarded' => count($quotes) - count($validated),
-                ]);
-                return array_slice($validated, 0, 5);
-            }
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('DailyQuote: OpenAI error (fallback mode)', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -583,14 +355,5 @@ PROMPT;
         ];
 
         return $fallbacks[array_rand($fallbacks)];
-    }
-
-    /**
-     * Format date in Spanish.
-     */
-    private function formatSpanishDate(\Carbon\Carbon $date): string
-    {
-        $days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        return $days[$date->dayOfWeek] . ', ' . $date->day . ' de ' . self::MONTH_NAMES[$date->month] . ' de ' . $date->year;
     }
 }

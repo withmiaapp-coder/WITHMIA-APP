@@ -16,9 +16,9 @@ export interface DailyQuote {
   who?: string;
 }
 
-// v2: changed keys to bust client cache after fixing date verification
-const STORAGE_KEY = 'withmia_daily_quote_v2';
-const STORAGE_DATE_KEY = 'withmia_daily_quote_v2_date';
+// v3: changed keys to bust client cache after controller rewrite
+const STORAGE_KEY = 'withmia_daily_quote_v3';
+const STORAGE_DATE_KEY = 'withmia_daily_quote_v3_date';
 
 /** Fallback quotes in case the API is unavailable */
 const FALLBACKS: DailyQuote[] = [

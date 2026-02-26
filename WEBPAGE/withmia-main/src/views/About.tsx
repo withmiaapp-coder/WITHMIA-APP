@@ -1,64 +1,33 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
-  Zap,
-  Heart,
   ArrowRight,
   Shield,
   Clock,
   BadgeCheck,
   Code2,
-  MessageSquare,
-  BarChart3,
-  TrendingUp,
+  Heart,
   Building2,
   MapPin,
   FileCheck,
   CalendarDays,
+  Zap,
   Timer,
   Workflow,
   Lock,
+  MessageSquare,
+  TrendingUp,
+  BarChart3,
+  Brain,
+  LineChart,
+  User,
 } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 import { useScrollReveal } from "@/hooks/useAnimations";
 
-/* ─── Animated counter ─── */
-function useCountUp(target: number, duration = 1800, start = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min((now - t0) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * ease));
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration, start]);
-  return val;
-}
-
-const values = [
-  {
-    title: "Cercanía",
-    desc: "Entendemos los desafíos de las PYMEs en LATAM porque nacimos dentro de una. No somos una solución genérica: construimos para y con el mercado hispanohablante.",
-    icon: Heart,
-    color: "violet",
-  },
-  {
-    title: "Excelencia Técnica",
-    desc: "100% del código es propietario. Desde la latencia de la IA hasta la arquitectura en AWS, cada detalle está optimizado para rendimiento real.",
-    icon: Code2,
-    color: "amber",
-  },
-  {
-    title: "Transparencia",
-    desc: "Empresa constituida, verificada por el SII y con facturación electrónica. Comunicamos abiertamente nuestros avances, retos y visión.",
-    icon: Shield,
-    color: "emerald",
-  },
-];
+/* ═══════════════════════════════════════════════════════════
+   Data
+   ═══════════════════════════════════════════════════════════ */
 
 const colorMap: Record<string, { border: string; bg: string; icon: string; gradient: string }> = {
   violet: { border: "border-violet-500/15", bg: "bg-violet-500/10", icon: "text-violet-400", gradient: "from-violet-500/25 via-violet-500/5 to-transparent" },
@@ -67,6 +36,27 @@ const colorMap: Record<string, { border: string; bg: string; icon: string; gradi
   cyan: { border: "border-cyan-500/15", bg: "bg-cyan-500/10", icon: "text-cyan-400", gradient: "from-cyan-500/25 via-cyan-500/5 to-transparent" },
 };
 
+const founderSkills = [
+  {
+    icon: Code2,
+    title: "Desarrollo Full-Stack",
+    desc: "5 años construyendo software de forma independiente. Desarrolló el MVP completo de WITHMIA sin depender de terceros.",
+    color: "violet",
+  },
+  {
+    icon: Brain,
+    title: "Diseño UX conductual",
+    desc: "Psicología Organizacional aplicada para diseñar una experiencia No-Code que elimina fricción en usuarios no técnicos.",
+    color: "amber",
+  },
+  {
+    icon: LineChart,
+    title: "Estrategia financiera",
+    desc: "Formación en Economía para estructurar pricing SaaS con Unit Economics positivos desde el día uno.",
+    color: "emerald",
+  },
+];
+
 const pillars = [
   { icon: Zap, label: "Ejecución real", desc: "La IA no solo responde: descuenta stock, bloquea horarios y cobra — en tiempo real", color: "violet" },
   { icon: Workflow, label: "No-Code", desc: "Despliega IA avanzada sin equipo técnico, en menos de 1 hora", color: "amber" },
@@ -74,43 +64,61 @@ const pillars = [
   { icon: Lock, label: "IP propia", desc: "Código 100% propietario con prompts adaptados a LATAM", color: "emerald" },
 ];
 
+const values = [
+  {
+    title: "Cercanía",
+    desc: "Nacimos dentro de una PYME latinoamericana. Construimos para y con el mercado hispanohablante, no somos una solución genérica importada.",
+    icon: Heart,
+    color: "violet",
+  },
+  {
+    title: "Excelencia Técnica",
+    desc: "Código 100% propietario, arquitectura en AWS, cada detalle optimizado para rendimiento real en producción.",
+    icon: Code2,
+    color: "amber",
+  },
+  {
+    title: "Transparencia",
+    desc: "Empresa constituida y verificada por el SII con facturación electrónica. Comunicamos abiertamente avances, retos y visión.",
+    icon: Shield,
+    color: "emerald",
+  },
+];
+
 const timeline = [
   {
     period: "2024",
     title: "Origen en Atlantis Producciones",
-    desc: "WITHMIA nace como proyecto interno dentro de Atlantis Producciones SpA, una agencia de servicios digitales. El equipo detectó que la ineficiencia operativa y la fragmentación digital eran problemas críticos generalizados en las PYMEs latinoamericanas.",
+    desc: "WITHMIA nace como proyecto interno en Atlantis Producciones SpA al detectar que la fragmentación digital era un problema generalizado en PYMEs de LATAM.",
     icon: MessageSquare,
     color: "violet",
   },
   {
     period: "Principios de 2025",
     title: "Pivote a plataforma SaaS",
-    desc: "Se realiza un pivote tecnológico: de servicios basados en agentes manuales a una plataforma SaaS propietaria. Se desarrolla una arquitectura modular No-Code alojada en AWS.",
+    desc: "De servicios manuales a plataforma propietaria. Se desarrolla arquitectura modular No-Code alojada en AWS.",
     icon: Code2,
     color: "amber",
   },
   {
     period: "7 julio 2025",
     title: "Constitución legal",
-    desc: "Se constituye MIA Marketing & Intelligence Artificial SpA como entidad independiente en Providencia, Santiago. El proyecto se separa de la empresa matriz para escalar con dedicación exclusiva.",
+    desc: "Se constituye MIA Marketing & Intelligence Artificial SpA como entidad independiente en Providencia, Santiago.",
     icon: FileCheck,
     color: "emerald",
   },
   {
     period: "Julio 2025 – Hoy",
     title: "Operación y crecimiento",
-    desc: "Inicio formal de actividades ante el SII. Lanzamiento de la plataforma con modelo Product-Led Growth y precios Pay-as-you-grow. Primeros clientes en Chile con foco B2B.",
+    desc: "Inicio de actividades ante el SII. Modelo Product-Led Growth con precios Pay-as-you-grow. Primeros clientes B2B en Chile.",
     icon: TrendingUp,
     color: "cyan",
   },
 ];
 
-const stats = [
-  { value: 6, suffix: "", label: "Canales integrados" },
-  { value: 10, suffix: "+", label: "Integraciones" },
-  { value: 99, suffix: "%", label: "Uptime" },
-  { value: 24, suffix: "/7", label: "Soporte" },
-];
+/* ═══════════════════════════════════════════════════════════
+   Component
+   ═══════════════════════════════════════════════════════════ */
 
 const About = () => {
   useEffect(() => {
@@ -118,30 +126,24 @@ const About = () => {
   }, []);
 
   const hero = useScrollReveal();
+  const founder = useScrollReveal();
   const mission = useScrollReveal();
   const valuesSection = useScrollReveal();
   const story = useScrollReveal();
   const backed = useScrollReveal();
   const ctaSection = useScrollReveal();
-  const statsSection = useScrollReveal();
 
-  const stat0 = useCountUp(stats[0].value, 1200, statsSection.isVisible);
-  const stat1 = useCountUp(stats[1].value, 1400, statsSection.isVisible);
-  const stat2 = useCountUp(stats[2].value, 1600, statsSection.isVisible);
-  const stat3 = useCountUp(stats[3].value, 1000, statsSection.isVisible);
-  const statValues = [stat0, stat1, stat2, stat3];
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div className="min-h-screen relative">
       <div className="pt-20 relative overflow-hidden">
 
         {/* ════════════════ HERO ════════════════ */}
-        <div className="relative pt-16 md:pt-24 pb-20 md:pb-28 px-4">
+        <div className="relative pt-16 md:pt-24 pb-16 md:pb-24 px-4">
           {/* Aurora mesh */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-violet-500/[0.08] via-amber-500/[0.04] to-transparent rounded-full blur-3xl" />
-            <div className="absolute top-20 right-0 w-[400px] h-[400px] bg-amber-500/[0.05] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
-            <div className="absolute top-40 left-0 w-[350px] h-[350px] bg-violet-500/[0.04] rounded-full blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-violet-500/[0.07] via-amber-500/[0.03] to-transparent rounded-full blur-3xl" />
           </div>
 
           <div
@@ -150,50 +152,143 @@ const About = () => {
               hero.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            {/* Badge */}
             <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-[12px] text-white/50 font-semibold backdrop-blur-sm mb-6">
               <Building2 className="w-3.5 h-3.5 text-white/30" />
-              Santiago, Chile · Desde 2025
+              Santiago, Chile · Desde 2024
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">
-              IA conversacional para
-              <br />
+              IA conversacional para{" "}
               <span className="text-gradient">empresas reales</span>
             </h1>
 
-            <p className="text-base md:text-lg text-white/40 max-w-2xl mx-auto leading-relaxed mb-10">
-              Plataforma SaaS de comunicación inteligente que combina IA generativa,
-              CRM, cobranzas y automatización omnicanal en un solo lugar. Diseñada
-              para PYMEs con alto volumen de mensajes que necesitan responder
-              rápido y vender más — sin equipo técnico.
+            <p className="text-base md:text-lg text-white/40 max-w-2xl mx-auto leading-relaxed">
+              Plataforma SaaS que unifica IA generativa, CRM, cobranzas y
+              automatización omnicanal. Diseñada para PYMEs que necesitan
+              responder rápido, vender más y operar sin equipo técnico.
             </p>
+          </div>
+        </div>
 
-            {/* Stats strip */}
-            <div
-              ref={statsSection.ref}
-              className="inline-flex items-center gap-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm overflow-hidden"
-            >
-              {stats.map((s, i) => (
-                <div
-                  key={s.label}
-                  className={`px-6 md:px-8 py-4 ${i < stats.length - 1 ? "border-r border-white/[0.06]" : ""}`}
-                >
-                  <div className="text-2xl md:text-3xl font-bold text-white tabular-nums">
-                    {statValues[i]}{s.suffix}
+        {/* ════════════════ FUNDADOR ════════════════ */}
+        <div className="px-4 pb-20 md:pb-28">
+          <div
+            ref={founder.ref}
+            className={`max-w-5xl mx-auto transition-all duration-700 ${
+              founder.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}
+          >
+            <div className="text-center mb-12">
+              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-3">
+                Liderazgo
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">
+                Quién está detrás
+              </h2>
+            </div>
+
+            <div className="grid lg:grid-cols-[320px,1fr] gap-10 items-start">
+              {/* Photo column */}
+              <div className="flex flex-col items-center lg:items-start">
+                <div className="relative w-[280px] h-[340px] rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.03]">
+                  {/* TODO: Reemplazar /images/founder.webp con tu foto real */}
+                  {!imgError ? (
+                    <img
+                      src="/images/founder.webp"
+                      alt="Fundador & CEO de WITHMIA"
+                      className="w-full h-full object-cover"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-violet-500/[0.08] via-amber-500/[0.05] to-transparent">
+                      <User className="w-16 h-16 text-white/15" />
+                      <span className="text-[11px] text-white/20 font-medium">Foto próximamente</span>
+                    </div>
+                  )}
+                  {/* Gradient overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    {/* TODO: Reemplazar con tu nombre completo */}
+                    <p className="text-white font-bold text-lg">Ángel</p>
+                    <p className="text-white/60 text-[13px]">CEO & Fundador Técnico</p>
                   </div>
-                  <div className="text-[11px] text-white/25 font-medium mt-0.5">{s.label}</div>
                 </div>
-              ))}
+
+                {/* Quick facts under photo */}
+                <div className="mt-4 w-[280px] space-y-2">
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <Code2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                    <span className="text-[12px] text-white/40">5 años desarrollando software</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <Brain className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="text-[12px] text-white/40">Economía + Psicología Organizacional</span>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="text-[12px] text-white/40">Ex-líder en Atlantis Producciones</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bio column */}
+              <div>
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-white mb-4">
+                    Perfil híbrido: técnico + negocio
+                  </h3>
+                  <p className="text-[15px] text-white/40 leading-relaxed mb-4">
+                    Como CEO y fundador técnico, aporto una dualidad poco común:
+                    5 años de experiencia programando soluciones de forma independiente
+                    combinados con formación académica en Economía y Psicología
+                    Organizacional.
+                  </p>
+                  <p className="text-[15px] text-white/35 leading-relaxed">
+                    Puedo escribir código para corregir un bug crítico en la mañana
+                    y cerrar una venta corporativa en la tarde. Esta autonomía reduce
+                    drásticamente el time-to-market y el burn rate inicial. Mi experiencia
+                    previa liderando PYMEs digitales en Atlantis Producciones me dio
+                    la resiliencia operativa para pivotar rápido ante el feedback del
+                    mercado — transformando una idea de agencia en una empresa de
+                    tecnología constituida y validada.
+                  </p>
+                </div>
+
+                {/* Capability cards */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {founderSkills.map((skill, i) => {
+                    const Icon = skill.icon;
+                    const c = colorMap[skill.color];
+                    return (
+                      <div
+                        key={skill.title}
+                        className={`relative p-5 rounded-2xl border ${c.border} bg-white/[0.02] overflow-hidden group hover:bg-white/[0.04] transition-all duration-300`}
+                        style={{
+                          opacity: founder.isVisible ? 1 : 0,
+                          transform: founder.isVisible ? "translateY(0)" : "translateY(12px)",
+                          transition: `all 0.5s ease ${i * 100 + 300}ms`,
+                        }}
+                      >
+                        <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
+                        <div className={`w-9 h-9 rounded-lg ${c.bg} flex items-center justify-center mb-3`}>
+                          <Icon className={`w-4 h-4 ${c.icon}`} />
+                        </div>
+                        <h4 className="text-[13px] font-semibold text-white mb-1.5">{skill.title}</h4>
+                        <p className="text-[11px] text-white/25 leading-relaxed">{skill.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ════════════════ MISIÓN ════════════════ */}
+        {/* ════════════════ MISIÓN + PILARES ════════════════ */}
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={mission.ref}
-            className={`max-w-6xl mx-auto transition-all duration-700 ${
+            className={`max-w-5xl mx-auto transition-all duration-700 ${
               mission.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
@@ -208,14 +303,13 @@ const About = () => {
                   <span className="text-gradient">digitalización desconectada</span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed mb-5">
-                  Las PYMEs en Latinoamérica gestionan sus clientes con WhatsApp personal,
+                  Las PYMEs en Latinoamérica gestionan clientes con WhatsApp personal,
                   Excel y herramientas que no se hablan entre sí. Pierden ventas por no
                   responder a tiempo y operan con procesos manuales que no escalan.
                 </p>
                 <p className="text-[15px] text-white/35 leading-relaxed">
-                  WITHMIA resuelve esto con una plataforma unificada: IA que responde,
-                  ejecuta y cobra en todos los canales — mientras el equipo se enfoca
-                  en lo que importa.
+                  WITHMIA unifica todo: IA que responde, ejecuta y cobra en todos
+                  los canales — mientras el equipo se enfoca en lo que importa.
                 </p>
               </div>
 
@@ -234,9 +328,8 @@ const About = () => {
                         transition: `all 0.5s ease ${i * 100 + 200}ms`,
                       }}
                     >
-                      {/* Top gradient line */}
                       <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
-                      <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center mb-4 transition-colors`}>
+                      <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center mb-4`}>
                         <Icon className={`w-5 h-5 ${c.icon}`} />
                       </div>
                       <h3 className="text-sm font-semibold text-white mb-1.5">{item.label}</h3>
@@ -251,50 +344,45 @@ const About = () => {
 
         {/* ════════════════ VALORES ════════════════ */}
         <div className="relative px-4 pb-20 md:pb-28">
-          {/* Subtle mesh */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-br from-violet-500/[0.04] via-amber-500/[0.03] to-transparent rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-br from-violet-500/[0.04] via-amber-500/[0.02] to-transparent rounded-full blur-3xl" />
           </div>
 
           <div
             ref={valuesSection.ref}
-            className={`max-w-6xl mx-auto relative z-10 transition-all duration-700 ${
+            className={`max-w-5xl mx-auto relative z-10 transition-all duration-700 ${
               valuesSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <div className="text-center mb-14">
+            <div className="text-center mb-12">
               <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.2em] font-semibold mb-3">
                 Lo que nos define
               </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-white">
                 Nuestros valores
               </h2>
-              <p className="text-[15px] text-white/30 max-w-xl mx-auto leading-relaxed">
-                Principios que guían cada línea de código y cada decisión de producto.
-              </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-5">
               {values.map((v, i) => {
                 const Icon = v.icon;
                 const c = colorMap[v.color];
                 return (
                   <div
                     key={v.title}
-                    className={`relative rounded-2xl border ${c.border} bg-white/[0.02] p-8 overflow-hidden group hover:bg-white/[0.04] transition-all duration-300`}
+                    className={`relative rounded-2xl border ${c.border} bg-white/[0.02] p-7 overflow-hidden group hover:bg-white/[0.04] transition-all duration-300`}
                     style={{
                       opacity: valuesSection.isVisible ? 1 : 0,
                       transform: valuesSection.isVisible ? "translateY(0)" : "translateY(16px)",
                       transition: `all 0.5s ease ${i * 120}ms`,
                     }}
                   >
-                    {/* Top shimmer border */}
                     <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
-                    <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center mb-5`}>
-                      <Icon className={`w-6 h-6 ${c.icon}`} />
+                    <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center mb-5`}>
+                      <Icon className={`w-5 h-5 ${c.icon}`} />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-3">{v.title}</h3>
-                    <p className="text-[14px] text-white/35 leading-relaxed">{v.desc}</p>
+                    <h3 className="text-lg font-bold text-white mb-2">{v.title}</h3>
+                    <p className="text-[13px] text-white/30 leading-relaxed">{v.desc}</p>
                   </div>
                 );
               })}
@@ -302,7 +390,7 @@ const About = () => {
           </div>
         </div>
 
-        {/* ════════════════ NUESTRA HISTORIA ════════════════ */}
+        {/* ════════════════ HISTORIA ════════════════ */}
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={story.ref}
@@ -320,17 +408,16 @@ const About = () => {
               </h2>
               <p className="text-[15px] text-white/35 max-w-2xl mx-auto leading-relaxed">
                 WITHMIA nació dentro de una agencia digital en Santiago. Al validar
-                que el problema que resolvíamos era generalizado, decidimos crear
-                una empresa dedicada exclusivamente a esta misión.
+                que el problema era generalizado, creamos una empresa dedicada
+                exclusivamente a esta misión.
               </p>
             </div>
 
             {/* Timeline */}
             <div className="relative">
-              {/* Vertical line */}
               <div className="absolute left-6 md:left-8 top-0 bottom-0 w-[1px] bg-gradient-to-b from-violet-500/20 via-amber-500/15 to-cyan-500/10" />
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {timeline.map((step, i) => {
                   const Icon = step.icon;
                   const c = colorMap[step.color];
@@ -344,17 +431,16 @@ const About = () => {
                         transition: `all 0.5s ease ${i * 150}ms`,
                       }}
                     >
-                      {/* Timeline dot */}
-                      <div className={`relative z-10 w-12 h-12 md:w-16 md:h-16 rounded-2xl ${c.bg} border ${c.border} flex items-center justify-center shrink-0`}>
-                        <Icon className={`w-5 h-5 md:w-6 md:h-6 ${c.icon}`} />
+                      <div className={`relative z-10 w-12 h-12 md:w-14 md:h-14 rounded-2xl ${c.bg} border ${c.border} flex items-center justify-center shrink-0`}>
+                        <Icon className={`w-5 h-5 ${c.icon}`} />
                       </div>
 
-                      <div className={`flex-1 p-6 rounded-2xl border ${c.border} bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300`}>
+                      <div className={`flex-1 p-5 rounded-2xl border ${c.border} bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-300`}>
                         <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider">
                           {step.period}
                         </span>
-                        <h3 className="text-lg font-semibold text-white mt-1 mb-2">{step.title}</h3>
-                        <p className="text-[14px] text-white/35 leading-relaxed">{step.desc}</p>
+                        <h3 className="text-base font-semibold text-white mt-1 mb-1.5">{step.title}</h3>
+                        <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
                       </div>
                     </div>
                   );
@@ -397,34 +483,22 @@ const About = () => {
 
               {/* Detail rows */}
               <div className="divide-y divide-white/[0.04]">
-                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
-                  <div className="flex items-center gap-2 text-white/25">
-                    <FileCheck className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider">RUT</span>
+                {[
+                  { icon: FileCheck, label: "RUT", value: "78.199.687-4", mono: true },
+                  { icon: BarChart3, label: "Actividad", value: "Consultoría de informática y gestión de instalaciones informáticas" },
+                  { icon: MapPin, label: "Domicilio", value: "Antonio Bellet 193, Of. 1210, Providencia, Santiago" },
+                  { icon: CalendarDays, label: "Inicio actividades", value: "14 de julio de 2025" },
+                ].map((row) => (
+                  <div key={row.label} className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                    <div className="flex items-center gap-2 text-white/25">
+                      <row.icon className="w-3.5 h-3.5" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider">{row.label}</span>
+                    </div>
+                    <span className={`text-[14px] text-white/60 ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
                   </div>
-                  <span className="text-[14px] text-white/60 font-mono">78.199.687-4</span>
-                </div>
-                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
-                  <div className="flex items-center gap-2 text-white/25">
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider">Actividad</span>
-                  </div>
-                  <span className="text-[14px] text-white/60">Consultoría de informática y gestión de instalaciones informáticas</span>
-                </div>
-                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
-                  <div className="flex items-center gap-2 text-white/25">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider">Domicilio</span>
-                  </div>
-                  <span className="text-[14px] text-white/60">Antonio Bellet 193, Of. 1210, Providencia, Santiago</span>
-                </div>
-                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
-                  <div className="flex items-center gap-2 text-white/25">
-                    <CalendarDays className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider">Inicio actividades</span>
-                  </div>
-                  <span className="text-[14px] text-white/60">14 de julio de 2025</span>
-                </div>
+                ))}
+
+                {/* SII verification row */}
                 <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
                   <div className="flex items-center gap-2 text-white/25">
                     <Shield className="w-3.5 h-3.5" />
@@ -459,7 +533,7 @@ const About = () => {
           </div>
         </div>
 
-        {/* ════════════════ BOTTOM CTA ════════════════ */}
+        {/* ════════════════ CTA ════════════════ */}
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={ctaSection.ref}
@@ -468,11 +542,9 @@ const About = () => {
             }`}
           >
             <div className="relative rounded-3xl overflow-hidden">
-              {/* Gradient mesh */}
               <div className="absolute inset-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-violet-500/[0.06] to-cyan-500/[0.04]" />
-                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-amber-500/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-violet-500/10 rounded-full blur-3xl" />
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-violet-500/[0.06] to-transparent" />
+                <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-amber-500/10 rounded-full blur-3xl" />
               </div>
 
               <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center">
@@ -507,7 +579,6 @@ const About = () => {
                   </Link>
                 </div>
 
-                {/* Trust strip */}
                 <div className="flex items-center justify-center gap-6 mt-8 text-white/20 text-[11px]">
                   <span className="flex items-center gap-1.5">
                     <Shield className="w-3 h-3" /> Datos seguros
