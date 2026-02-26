@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v6: cache key — all bios from Wikipedia (DB + OpenAI paths)
-        $poolKey = "daily_quotes_v6_{$monthDay}";
-        $counterKey = "daily_quotes_v6_ctr_{$monthDay}";
+        // v7: cache key — Spanish-preferred Wikipedia bios
+        $poolKey = "daily_quotes_v7_{$monthDay}";
+        $counterKey = "daily_quotes_v7_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -178,12 +178,18 @@ class DailyQuoteController extends Controller
                         // Skip "Anexo:" pages
                         if (str_starts_with($cleanName, 'Anexo:')) continue;
 
-                        // Deduplicate
+                        $extractText = $page['extract'] ?? '';
+                        $descText = $page['description'] ?? '';
+
+                        // Deduplicate: store ES and EN extracts separately
                         if (isset($seenNames[$nameLower])) {
                             $existingIdx = $seenNames[$nameLower];
-                            if (strlen($page['extract'] ?? '') > strlen($people[$existingIdx]['extract'])) {
-                                $people[$existingIdx]['extract'] = $page['extract'] ?? '';
-                                $people[$existingIdx]['description'] = $page['description'] ?? $people[$existingIdx]['description'];
+                            if ($lang === 'es') {
+                                $people[$existingIdx]['extract_es'] = $extractText;
+                                $people[$existingIdx]['description_es'] = $descText;
+                            } else {
+                                $people[$existingIdx]['extract_en'] = $extractText;
+                                $people[$existingIdx]['description_en'] = $descText;
                             }
                             continue;
                         }
@@ -193,8 +199,12 @@ class DailyQuoteController extends Controller
                             'name' => $cleanName,
                             'year' => (int) $entry['year'],
                             'type' => $type === 'births' ? 'birth' : 'death',
-                            'description' => $page['description'] ?? '',
-                            'extract' => $page['extract'] ?? '',
+                            'description' => $descText,
+                            'extract' => $extractText,
+                            'extract_es' => $lang === 'es' ? $extractText : '',
+                            'extract_en' => $lang === 'en' ? $extractText : '',
+                            'description_es' => $lang === 'es' ? $descText : '',
+                            'description_en' => $lang === 'en' ? $descText : '',
                         ];
                         $seenNames[$nameLower] = $idx;
                     }
@@ -204,8 +214,12 @@ class DailyQuoteController extends Controller
             }
         }
 
-        // Sort by extract length (longer = more notable) and return top 30
-        usort($people, fn($a, $b) => strlen($b['extract']) - strlen($a['extract']));
+        // Sort by notability: prefer people with Spanish extracts, then by length
+        usort($people, function($a, $b) {
+            $aLen = strlen($a['extract_es'] ?: $a['extract_en']);
+            $bLen = strlen($b['extract_es'] ?: $b['extract_en']);
+            return $bLen - $aLen;
+        });
 
         return array_slice($people, 0, 30);
     }
@@ -367,24 +381,53 @@ PROMPT;
      */
     private function buildWikipediaBio(array $person): string
     {
-        $extract = trim($person['extract'] ?? '');
-        $description = trim($person['description'] ?? '');
+        // ALWAYS prefer Spanish extract over English
+        $extractEs = trim($person['extract_es'] ?? '');
+        $extractEn = trim($person['extract_en'] ?? '');
+        $descEs = trim($person['description_es'] ?? '');
+        $descEn = trim($person['description_en'] ?? '');
 
-        if (!empty($extract)) {
-            // Use first 1-2 sentences from Wikipedia extract (max ~200 chars)
-            // Split by period followed by space or end of string
-            $sentences = preg_split('/(?<=\.)\s+/', $extract, 3);
-            $bio = $sentences[0] ?? '';
-            if (isset($sentences[1]) && mb_strlen($bio . ' ' . $sentences[1]) <= 220) {
-                $bio .= ' ' . $sentences[1];
-            }
-            return mb_strlen($bio) > 0 ? $bio : ($description ?: $person['name']);
+        // Fallback for legacy format (extract/description without language suffix)
+        if (empty($extractEs) && empty($extractEn)) {
+            $extractEs = trim($person['extract'] ?? '');
+        }
+        if (empty($descEs) && empty($descEn)) {
+            $descEs = trim($person['description'] ?? '');
         }
 
-        if (!empty($description)) {
-            return ucfirst($description);
+        // 1st priority: Spanish extract
+        if (!empty($extractEs)) {
+            return $this->truncateToSentences($extractEs);
+        }
+
+        // 2nd priority: Spanish description (short but in correct language)
+        if (!empty($descEs)) {
+            return ucfirst($descEs);
+        }
+
+        // 3rd priority: English extract (better than nothing)
+        if (!empty($extractEn)) {
+            return $this->truncateToSentences($extractEn);
+        }
+
+        // 4th priority: English description
+        if (!empty($descEn)) {
+            return ucfirst($descEn);
         }
 
         return $person['name'];
+    }
+
+    /**
+     * Truncate text to first 1-2 sentences (max ~220 chars).
+     */
+    private function truncateToSentences(string $text): string
+    {
+        $sentences = preg_split('/(?<=\.)\s+/', $text, 3);
+        $bio = $sentences[0] ?? '';
+        if (isset($sentences[1]) && mb_strlen($bio . ' ' . $sentences[1]) <= 220) {
+            $bio .= ' ' . $sentences[1];
+        }
+        return mb_strlen($bio) > 0 ? $bio : $text;
     }
 }
