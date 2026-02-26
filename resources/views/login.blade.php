@@ -594,7 +594,7 @@ function parseJwt(token) {
                  data-logo_alignment="left">
             </div>
         </div>
-        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros Términos de Servicio y lee nuestra Política de Privacidad.</p><br>
+        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros <a href="https://withmia.com/terminos/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Términos de Servicio</a> y lee nuestra <a href="https://withmia.com/privacidad/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Política de Privacidad</a>.</p><br>
         </div>
     </div>
 
