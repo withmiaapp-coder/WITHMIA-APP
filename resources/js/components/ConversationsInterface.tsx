@@ -193,6 +193,7 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       dropdownHover: isDark ? 'var(--theme-sidebar-hover)' : 'var(--theme-sidebar-hover)',
       // Chat area
       chatBg: isDark ? 'var(--theme-content-bg)' : 'var(--theme-content-bg)',
+      chatBgOverlay: isDark ? 'var(--theme-chat-overlay)' : 'var(--theme-chat-overlay)',
       chatHeaderBg: isDark ? 'var(--theme-header-bg)' : 'var(--theme-header-bg)',
       chatHeaderBorder: isDark ? 'var(--theme-header-border)' : 'var(--theme-header-border)',
       // Dividers
@@ -4317,8 +4318,8 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
               className="flex-1 flex flex-col min-h-0 relative"
               style={{
                 backgroundImage: isDark 
-                  ? (t ? `linear-gradient(${t.chatBg}, ${t.chatBg}), url(/fondo.webp)` : 'linear-gradient(rgba(17,24,39,0.92), rgba(17,24,39,0.92)), url(/fondo.webp)')
-                  : (t ? `linear-gradient(${t.chatBg}, ${t.chatBg}), url(/fondo.webp)` : 'linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(/fondo.webp)'),
+                  ? (t ? `linear-gradient(${t.chatBgOverlay}, ${t.chatBgOverlay}), url(/fondo.webp)` : 'linear-gradient(rgba(17,24,39,0.92), rgba(17,24,39,0.92)), url(/fondo.webp)')
+                  : (t ? `linear-gradient(${t.chatBgOverlay}, ${t.chatBgOverlay}), url(/fondo.webp)` : 'linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url(/fondo.webp)'),
                 backgroundSize: 'cover, cover',
                 backgroundPosition: 'center, center',
                 backgroundRepeat: 'no-repeat, no-repeat',

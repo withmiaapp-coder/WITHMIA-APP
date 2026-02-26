@@ -227,6 +227,20 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * Mix color towards white (like mixWithWhite) but return as rgba with custom alpha.
+ * Used for semi-transparent overlays that preserve the theme tint.
+ */
+function mixWithWhiteAlpha(hex: string, ratio: number, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.round(255 + (r - 255) * ratio);
+  const ng = Math.round(255 + (g - 255) * ratio);
+  const nb = Math.round(255 + (b - 255) * ratio);
+  return `rgba(${nr}, ${ng}, ${nb}, ${alpha})`;
+}
+
 function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
   const root = document.documentElement;
 
@@ -247,7 +261,7 @@ function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
     '--theme-icon-inactive', '--theme-icon-inactive-bg',
     // Content area
     '--theme-content-bg', '--theme-content-card-bg', '--theme-content-card-border',
-    '--theme-content-card-shadow',
+    '--theme-content-card-shadow', '--theme-chat-overlay',
     // Text
     '--theme-text-primary', '--theme-text-secondary', '--theme-text-muted',
     // Active nav gradient
@@ -294,6 +308,7 @@ function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
       root.style.setProperty('--theme-content-card-bg', 'rgba(255,255,255,0.04)');
       root.style.setProperty('--theme-content-card-border', 'rgba(255,255,255,0.06)');
       root.style.setProperty('--theme-content-card-shadow', 'rgba(0,0,0,0.2)');
+      root.style.setProperty('--theme-chat-overlay', 'rgba(17,24,39,0.92)');
       // Text
       root.style.setProperty('--theme-text-primary', '#f1f5f9');
       root.style.setProperty('--theme-text-secondary', '#94a3b8');
@@ -366,6 +381,7 @@ function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
     root.style.setProperty('--theme-content-card-bg', 'rgba(255,255,255,0.04)');
     root.style.setProperty('--theme-content-card-border', withAlpha(p, 0.08));
     root.style.setProperty('--theme-content-card-shadow', 'rgba(0,0,0,0.2)');
+    root.style.setProperty('--theme-chat-overlay', withAlpha(p, 0.85));
 
     // Text — light on dark
     root.style.setProperty('--theme-text-primary', '#f1f5f9');
@@ -447,6 +463,7 @@ function applyThemeColors(theme: ThemeColors | null, isDark: boolean) {
   root.style.setProperty('--theme-content-card-bg', 'rgba(255, 255, 255, 0.7)');
   root.style.setProperty('--theme-content-card-border', mixWithWhite(p, 0.12));
   root.style.setProperty('--theme-content-card-shadow', withAlpha(p, 0.06));
+  root.style.setProperty('--theme-chat-overlay', mixWithWhiteAlpha(p, 0.03, 0.82));
 
   // ═══════════════════════════════════════════════════════════
   // TEXT LEVELS
