@@ -1,21 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Rocket,
-  Users,
-  Heart,
-  Globe,
   Zap,
-  Target,
+  Heart,
   ArrowRight,
-  Sparkles,
   Shield,
   Clock,
   BadgeCheck,
   Code2,
   MessageSquare,
   BarChart3,
-  Layers,
   TrendingUp,
+  Building2,
+  MapPin,
+  FileCheck,
+  CalendarDays,
+  Timer,
+  Workflow,
+  Lock,
 } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -41,19 +42,19 @@ function useCountUp(target: number, duration = 1800, start = false) {
 const values = [
   {
     title: "Cercanía",
-    desc: "Entendemos los desafíos de las empresas en LATAM porque somos parte de este ecosistema. No somos una solución genérica: construimos para y con nuestra comunidad.",
+    desc: "Entendemos los desafíos de las PYMEs en LATAM porque nacimos dentro de una. No somos una solución genérica: construimos para y con el mercado hispanohablante.",
     icon: Heart,
     color: "violet",
   },
   {
     title: "Excelencia Técnica",
-    desc: "Cada línea de código importa. Desde la latencia de nuestra IA hasta la experiencia de usuario, buscamos la excelencia en cada detalle técnico.",
+    desc: "100% del código es propietario. Desde la latencia de la IA hasta la arquitectura en AWS, cada detalle está optimizado para rendimiento real.",
     icon: Code2,
     color: "amber",
   },
   {
     title: "Transparencia",
-    desc: "Creemos en relaciones honestas con nuestros clientes, inversores y equipo. Comunicamos abiertamente nuestros avances, retos y visión.",
+    desc: "Empresa constituida, verificada por el SII y con facturación electrónica. Comunicamos abiertamente nuestros avances, retos y visión.",
     icon: Shield,
     color: "emerald",
   },
@@ -67,48 +68,48 @@ const colorMap: Record<string, { border: string; bg: string; icon: string; gradi
 };
 
 const pillars = [
-  { icon: Rocket, label: "Innovación", desc: "IA conversacional de última generación adaptada al mercado LATAM", color: "violet" },
-  { icon: Users, label: "Accesibilidad", desc: "Herramientas enterprise al alcance de cualquier empresa", color: "amber" },
-  { icon: Globe, label: "Impacto", desc: "Transformando la comunicación empresarial en toda Latinoamérica", color: "cyan" },
-  { icon: Target, label: "Enfoque", desc: "Soluciones pensadas para las necesidades reales de las PYMEs", color: "emerald" },
+  { icon: Zap, label: "Ejecución real", desc: "La IA no solo responde: descuenta stock, bloquea horarios y cobra — en tiempo real", color: "violet" },
+  { icon: Workflow, label: "No-Code", desc: "Despliega IA avanzada sin equipo técnico, en menos de 1 hora", color: "amber" },
+  { icon: Timer, label: "Golden Window", desc: "Respuesta en <5 min para maximizar conversión de ventas", color: "cyan" },
+  { icon: Lock, label: "IP propia", desc: "Código 100% propietario con prompts adaptados a LATAM", color: "emerald" },
 ];
 
 const timeline = [
   {
-    period: "El inicio",
-    title: "Identificar el problema",
-    desc: "Vimos cómo las PYMEs en Chile y LATAM perdían clientes por no poder responder a tiempo o gestionar múltiples canales.",
+    period: "2024",
+    title: "Origen en Atlantis Producciones",
+    desc: "WITHMIA nace como proyecto interno dentro de Atlantis Producciones SpA, una agencia de servicios digitales. El equipo detectó que la ineficiencia operativa y la fragmentación digital eran problemas críticos generalizados en las PYMEs latinoamericanas.",
     icon: MessageSquare,
     color: "violet",
   },
   {
-    period: "La construcción",
-    title: "Desarrollar la solución",
-    desc: "Construimos una plataforma omnicanal con IA conversacional propia, diseñada desde cero para el mercado hispanohablante.",
+    period: "Principios de 2025",
+    title: "Pivote a plataforma SaaS",
+    desc: "Se realiza un pivote tecnológico: de servicios basados en agentes manuales a una plataforma SaaS propietaria. Se desarrolla una arquitectura modular No-Code alojada en AWS.",
     icon: Code2,
     color: "amber",
   },
   {
-    period: "El crecimiento",
-    title: "Validar con el mercado",
-    desc: "Empresas reales comenzaron a usar WITHMIA, validando nuestro enfoque. Cada feedback nos hizo mejores.",
-    icon: BarChart3,
+    period: "7 julio 2025",
+    title: "Constitución legal",
+    desc: "Se constituye MIA Marketing & Intelligence Artificial SpA como entidad independiente en Providencia, Santiago. El proyecto se separa de la empresa matriz para escalar con dedicación exclusiva.",
+    icon: FileCheck,
     color: "emerald",
   },
   {
-    period: "Hoy",
-    title: "Escalar el impacto",
-    desc: "Levantamiento de fondos y aceleración para llevar WITHMIA a toda Latinoamérica.",
+    period: "Julio 2025 – Hoy",
+    title: "Operación y crecimiento",
+    desc: "Inicio formal de actividades ante el SII. Lanzamiento de la plataforma con modelo Product-Led Growth y precios Pay-as-you-grow. Primeros clientes en Chile con foco B2B.",
     icon: TrendingUp,
     color: "cyan",
   },
 ];
 
 const stats = [
-  { value: 500, suffix: "+", label: "Equipos activos" },
-  { value: 6, suffix: "", label: "Canales conectados" },
-  { value: 12, suffix: "+", label: "Integraciones nativas" },
-  { value: 99, suffix: "%", label: "Uptime garantizado" },
+  { value: 6, suffix: "", label: "Canales integrados" },
+  { value: 10, suffix: "+", label: "Integraciones" },
+  { value: 99, suffix: "%", label: "Uptime" },
+  { value: 24, suffix: "/7", label: "Soporte" },
 ];
 
 const About = () => {
@@ -124,10 +125,10 @@ const About = () => {
   const ctaSection = useScrollReveal();
   const statsSection = useScrollReveal();
 
-  const stat0 = useCountUp(stats[0].value, 1800, statsSection.isVisible);
-  const stat1 = useCountUp(stats[1].value, 1200, statsSection.isVisible);
-  const stat2 = useCountUp(stats[2].value, 1400, statsSection.isVisible);
-  const stat3 = useCountUp(stats[3].value, 1600, statsSection.isVisible);
+  const stat0 = useCountUp(stats[0].value, 1200, statsSection.isVisible);
+  const stat1 = useCountUp(stats[1].value, 1400, statsSection.isVisible);
+  const stat2 = useCountUp(stats[2].value, 1600, statsSection.isVisible);
+  const stat3 = useCountUp(stats[3].value, 1000, statsSection.isVisible);
   const statValues = [stat0, stat1, stat2, stat3];
 
   return (
@@ -150,24 +151,22 @@ const About = () => {
             }`}
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-amber-500/10 border border-violet-500/15 text-sm text-violet-400 font-semibold backdrop-blur-sm mb-6">
-              <div className="relative">
-                <Heart className="w-4 h-4" />
-                <Heart className="w-4 h-4 absolute inset-0 animate-ping opacity-30" />
-              </div>
-              Nosotros
+            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-[12px] text-white/50 font-semibold backdrop-blur-sm mb-6">
+              <Building2 className="w-3.5 h-3.5 text-white/30" />
+              Santiago, Chile · Desde 2025
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">
-              Construimos el futuro de la
+              IA conversacional para
               <br />
-              <span className="text-gradient">comunicación empresarial</span>
+              <span className="text-gradient">empresas reales</span>
             </h1>
 
             <p className="text-base md:text-lg text-white/40 max-w-2xl mx-auto leading-relaxed mb-10">
-              Somos un equipo apasionado por la tecnología y la inteligencia artificial,
-              enfocados en democratizar herramientas de comunicación avanzadas para
-              empresas de todos los tamaños en Latinoamérica.
+              Plataforma SaaS de comunicación inteligente que combina IA generativa,
+              CRM, cobranzas y automatización omnicanal en un solo lugar. Diseñada
+              para PYMEs con alto volumen de mensajes que necesitan responder
+              rápido y vender más — sin equipo técnico.
             </p>
 
             {/* Stats strip */}
@@ -205,19 +204,18 @@ const About = () => {
                   Nuestra misión
                 </p>
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 leading-tight">
-                  Que cada empresa pueda comunicarse{" "}
-                  <span className="text-gradient">como las grandes</span>
+                  Eliminar la{" "}
+                  <span className="text-gradient">digitalización desconectada</span>
                 </h2>
                 <p className="text-[15px] text-white/40 leading-relaxed mb-5">
-                  En WITHMIA creemos que la tecnología de comunicación inteligente no debería
-                  ser un privilegio de las grandes corporaciones. Nuestra misión es empoderar
-                  a PYMEs y empresas en crecimiento con herramientas de IA conversacional
-                  que transformen cómo se conectan con sus clientes.
+                  Las PYMEs en Latinoamérica gestionan sus clientes con WhatsApp personal,
+                  Excel y herramientas que no se hablan entre sí. Pierden ventas por no
+                  responder a tiempo y operan con procesos manuales que no escalan.
                 </p>
                 <p className="text-[15px] text-white/35 leading-relaxed">
-                  Cada interacción cuenta. Cada mensaje es una oportunidad. Y con la IA adecuada,
-                  cada empresa puede ofrecer una experiencia excepcional a sus clientes,
-                  sin importar su tamaño.
+                  WITHMIA resuelve esto con una plataforma unificada: IA que responde,
+                  ejecuta y cobra en todos los canales — mientras el equipo se enfoca
+                  en lo que importa.
                 </p>
               </div>
 
@@ -268,9 +266,12 @@ const About = () => {
               <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.2em] font-semibold mb-3">
                 Lo que nos define
               </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                 Nuestros valores
               </h2>
+              <p className="text-[15px] text-white/30 max-w-xl mx-auto leading-relaxed">
+                Principios que guían cada línea de código y cada decisión de producto.
+              </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
@@ -314,12 +315,13 @@ const About = () => {
                 Nuestra historia
               </p>
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                De una idea a una{" "}
-                <span className="text-gradient">plataforma</span>
+                De proyecto interno a{" "}
+                <span className="text-gradient">empresa propia</span>
               </h2>
               <p className="text-[15px] text-white/35 max-w-2xl mx-auto leading-relaxed">
-                WITHMIA nació de una necesidad real: las empresas en Latinoamérica
-                necesitan comunicarse mejor con sus clientes.
+                WITHMIA nació dentro de una agencia digital en Santiago. Al validar
+                que el problema que resolvíamos era generalizado, decidimos crear
+                una empresa dedicada exclusivamente a esta misión.
               </p>
             </div>
 
@@ -362,37 +364,98 @@ const About = () => {
           </div>
         </div>
 
-        {/* ════════════════ BACKED BY ════════════════ */}
+        {/* ════════════════ EMPRESA ════════════════ */}
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={backed.ref}
-            className={`max-w-5xl mx-auto text-center transition-all duration-700 ${
+            className={`max-w-4xl mx-auto transition-all duration-700 ${
               backed.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <p className="text-[11px] text-white/25 uppercase tracking-[0.2em] font-semibold mb-6">
-              Desarrollado por
-            </p>
-            <a
-              href="https://atlantisproducciones.cl"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-5 px-8 py-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm hover:border-amber-500/25 hover:bg-amber-500/[0.03] transition-all duration-300 group"
-            >
-              <img
-                src="/Logo-Atlantis.webp"
-                alt="Atlantis Producciones"
-                className="w-12 h-12 object-contain opacity-60 group-hover:opacity-100 transition-all duration-300"
-              />
-              <div className="text-left">
-                <p className="text-base font-semibold text-white/70 group-hover:text-white transition-colors">
-                  Atlantis Producciones
-                </p>
-                <p className="text-[12px] text-white/25 group-hover:text-white/40 transition-colors">
-                  Innovación tecnológica desde Chile
-                </p>
+            <div className="text-center mb-10">
+              <p className="text-[11px] text-white/25 uppercase tracking-[0.2em] font-semibold mb-3">
+                Información corporativa
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">
+                La empresa detrás de WITHMIA
+              </h2>
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              {/* Company header */}
+              <div className="px-8 py-6 border-b border-white/[0.05]">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
+                    <Building2 className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">MIA Marketing & Intelligence Artificial SpA</h3>
+                    <p className="text-[13px] text-white/30 mt-0.5">Sociedad por Acciones · Chile</p>
+                  </div>
+                </div>
               </div>
-            </a>
+
+              {/* Detail rows */}
+              <div className="divide-y divide-white/[0.04]">
+                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                  <div className="flex items-center gap-2 text-white/25">
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">RUT</span>
+                  </div>
+                  <span className="text-[14px] text-white/60 font-mono">78.199.687-4</span>
+                </div>
+                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                  <div className="flex items-center gap-2 text-white/25">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">Actividad</span>
+                  </div>
+                  <span className="text-[14px] text-white/60">Consultoría de informática y gestión de instalaciones informáticas</span>
+                </div>
+                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                  <div className="flex items-center gap-2 text-white/25">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">Domicilio</span>
+                  </div>
+                  <span className="text-[14px] text-white/60">Antonio Bellet 193, Of. 1210, Providencia, Santiago</span>
+                </div>
+                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                  <div className="flex items-center gap-2 text-white/25">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">Inicio actividades</span>
+                  </div>
+                  <span className="text-[14px] text-white/60">14 de julio de 2025</span>
+                </div>
+                <div className="grid grid-cols-[auto,1fr] gap-4 px-8 py-4 items-center">
+                  <div className="flex items-center gap-2 text-white/25">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">Verificación SII</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-400/10 border border-emerald-400/15 text-[11px] font-semibold text-emerald-400">
+                      <BadgeCheck className="w-3 h-3" />
+                      Verificada
+                    </span>
+                    <span className="text-[12px] text-white/25">21 julio 2025</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-4 bg-white/[0.01] border-t border-white/[0.05] flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                <p className="text-[11px] text-white/20 leading-relaxed">
+                  Autorizada para emitir facturas electrónicas y documentos tributarios. Infraestructura en AWS.
+                </p>
+                <a
+                  href="https://atlantisproducciones.cl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-[11px] text-white/30 hover:text-white/50 transition-colors"
+                >
+                  <img src="/Logo-Atlantis.webp" alt="Atlantis" className="w-4 h-4 object-contain opacity-40" />
+                  Originada en Atlantis Producciones
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -416,11 +479,11 @@ const About = () => {
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
 
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                  ¿Listo para transformar tu comunicación?
+                  Prueba WITHMIA gratis
                 </h2>
                 <p className="text-[14px] text-white/40 max-w-md mx-auto mb-8 leading-relaxed">
-                  Únete a las empresas que ya confían en WITHMIA para conectar
-                  con sus clientes de forma inteligente.
+                  Crea tu cuenta en 2 minutos, sin tarjeta de crédito.
+                  Conecta tu primer canal y deja que la IA trabaje por ti.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -453,7 +516,7 @@ const About = () => {
                     <Clock className="w-3 h-3" /> Soporte 24/7
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <BadgeCheck className="w-3 h-3" /> +500 equipos activos
+                    <BadgeCheck className="w-3 h-3" /> Sin tarjeta requerida
                   </span>
                 </div>
               </div>

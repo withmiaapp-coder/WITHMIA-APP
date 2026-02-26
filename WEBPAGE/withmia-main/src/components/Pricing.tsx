@@ -105,16 +105,62 @@ const comparisonGroups: ComparisonGroup[] = [
 ];
 
 
-/* ─── FAQs ─── */
-const faqs = [
-  { q: "¿Qué incluye el Plan Gratuito?", a: "Acceso a WhatsApp como canal, 1 herramienta, 500 mensajes IA al mes y un asistente básico. Ideal para probar la plataforma sin compromiso." },
-  { q: "¿Necesito tarjeta de crédito para empezar?", a: "No. Creas tu cuenta gratis sin tarjeta. Solo la necesitarás si decides activar WITHMIA Pro." },
-  { q: "¿Qué incluye el primer usuario de Pro?", a: "El precio base ($18/mes o $15/mes anual) incluye 1 usuario con acceso completo: IA avanzada, todos los canales, CRM, automatizaciones, RAG y más." },
-  { q: "¿Cómo agrego usuarios adicionales?", a: "Cada miembro extra cuesta $10/mes (mensual) o $8/mes (anual). Los agregas o quitas al instante desde el dashboard." },
-  { q: "¿Puedo pasar de Gratuito a Pro?", a: "Sí, actualiza en cualquier momento desde tu dashboard. Tu historial y configuración se mantienen intactos." },
-  { q: "¿Puedo cancelar en cualquier momento?", a: "Sí. Sin contratos. Si cancelas, mantienes acceso hasta el final del período y luego pasas al plan gratuito." },
-  { q: "¿Hay planes Enterprise?", a: "Para equipos de más de 20 usuarios ofrecemos precios especiales, SLA dedicado y onboarding premium. Contáctanos." },
-  { q: "¿Qué pasa con mis datos si cancelo?", a: "Se conservan por 30 días. Puedes exportar todo antes de ese plazo." },
+/* ─── FAQs (grouped by theme) ─── */
+type FaqCategory = { label: string; items: { q: string; a: string }[] };
+
+const faqCategories: FaqCategory[] = [
+  {
+    label: "Empezar",
+    items: [
+      {
+        q: "¿Qué incluye el Plan Gratuito?",
+        a: "1 canal de WhatsApp, 1 asistente IA básico, hasta 500 mensajes IA al mes y acceso al inbox. Ideal para validar WITHMIA con clientes reales antes de escalar.",
+      },
+      {
+        q: "¿Necesito tarjeta de crédito?",
+        a: "No. Creas tu cuenta en menos de 2 minutos, sin tarjeta ni compromisos. Solo la necesitarás si decides activar Pro.",
+      },
+    ],
+  },
+  {
+    label: "Plan Pro",
+    items: [
+      {
+        q: "¿Qué obtengo al activar Pro?",
+        a: "IA avanzada (GPT-4o / Claude) con mensajes ilimitados, todos los canales (WhatsApp, IG, Messenger, web, email), CRM con pipeline, automatizaciones, base de conocimiento (RAG), analítica y acceso completo a la API.",
+      },
+      {
+        q: "¿Cómo funciona el cobro por usuarios?",
+        a: "Pro incluye 1 usuario. Cada miembro adicional cuesta $10/mes (mensual) o $8/mes (anual). Agrégalos o quítalos al instante desde tu dashboard — el cobro se ajusta de forma proporcional.",
+      },
+    ],
+  },
+  {
+    label: "Cambios y cancelación",
+    items: [
+      {
+        q: "¿Puedo cambiar de plan en cualquier momento?",
+        a: "Sí. Sube o baja entre Gratuito y Pro desde tu dashboard sin perder historial, contactos ni configuración.",
+      },
+      {
+        q: "¿Puedo cancelar cuando quiera?",
+        a: "Sin contratos ni penalizaciones. Si cancelas, mantienes acceso completo hasta el final del período pagado y luego tu cuenta baja automáticamente al plan gratuito.",
+      },
+      {
+        q: "¿Qué pasa con mis datos si cancelo?",
+        a: "Se conservan 30 días. En ese período puedes exportar conversaciones, contactos y archivos. Después se eliminan de forma permanente y segura.",
+      },
+    ],
+  },
+  {
+    label: "Enterprise",
+    items: [
+      {
+        q: "¿Ofrecen planes para equipos grandes?",
+        a: "Sí. A partir de 20 usuarios ofrecemos precios por volumen, SLA dedicado, onboarding asistido e integraciones a medida. Escríbenos a ventas@withmia.com.",
+      },
+    ],
+  },
 ];
 
 
@@ -141,16 +187,22 @@ function AnimatedPrice({ value, duration = 500 }: { value: number; duration?: nu
   return <>{display}</>;
 }
 
-function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
+function FaqItem({ q, a, index, totalBefore }: { q: string; a: string; index: number; totalBefore: number }) {
   const [open, setOpen] = useState(false);
+  const num = String(totalBefore + index + 1).padStart(2, "0");
   return (
-    <div className="border-b border-white/[0.06] last:border-0" style={{ animationDelay: `${index * 60}ms` }}>
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between py-5 px-1 text-left group">
-        <span className="text-[15px] font-medium text-white/80 group-hover:text-white transition-colors pr-4">{q}</span>
-        <ChevronDown className={`w-4 h-4 text-white/30 shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-amber-400" : ""}`} />
+    <div className="border-b border-white/[0.05] last:border-0">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-4 py-5 px-1 text-left group">
+        <span className="text-[11px] tabular-nums text-white/15 font-mono select-none shrink-0">{num}</span>
+        <span className="text-[14.5px] font-medium text-white/75 group-hover:text-white transition-colors flex-1 pr-2">{q}</span>
+        <div className={`w-6 h-6 rounded-full border shrink-0 flex items-center justify-center transition-all duration-300 ${open ? "border-amber-400/40 bg-amber-400/10 rotate-180" : "border-white/10 group-hover:border-white/20"}`}>
+          <ChevronDown className={`w-3 h-3 transition-colors duration-300 ${open ? "text-amber-400" : "text-white/30"}`} />
+        </div>
       </button>
-      <div className={`overflow-hidden transition-all duration-300 ${open ? "max-h-48 opacity-100 pb-5" : "max-h-0 opacity-0"}`}>
-        <p className="text-[13px] text-white/40 leading-relaxed px-1">{a}</p>
+      <div className={`grid transition-all duration-300 ease-in-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="overflow-hidden">
+          <p className="text-[13px] text-white/40 leading-[1.7] pb-5 pl-[calc(0.25rem+11px+1rem)] pr-8">{a}</p>
+        </div>
       </div>
     </div>
   );
@@ -531,18 +583,44 @@ export const Pricing = () => {
       {/* ═══════════ FAQ ═══════════ */}
       <div className="px-4 pb-20 md:pb-28">
         <div ref={faqSr.ref} className={`max-w-2xl mx-auto transition-all duration-700 ${faqSr.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          {/* Header */}
           <div className="text-center mb-10">
-            <p className="text-[11px] text-cyan-400/60 uppercase tracking-[0.2em] font-semibold mb-3">Preguntas frecuentes</p>
+            <p className="text-[11px] text-white/25 uppercase tracking-[0.2em] font-semibold mb-3">Preguntas frecuentes</p>
             <h2 className="text-2xl md:text-3xl font-bold text-white">
-              ¿Tienes dudas?{" "}
-              <span className="text-white/40">Te respondemos.</span>
+              Resuelve tus dudas
             </h2>
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] px-6 md:px-8">
-            {faqs.map((f, i) => (
-              <FaqItem key={i} q={f.q} a={f.a} index={i} />
-            ))}
+
+          {/* Category groups */}
+          <div className="space-y-6">
+            {faqCategories.map((cat, ci) => {
+              const totalBefore = faqCategories.slice(0, ci).reduce((acc, c) => acc + c.items.length, 0);
+              return (
+                <div key={cat.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.01] overflow-hidden">
+                  {/* Category label */}
+                  <div className="px-6 md:px-8 pt-5 pb-1 flex items-center gap-2">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.15em] text-white/20">{cat.label}</span>
+                    <span className="text-[10px] text-white/10 tabular-nums">({cat.items.length})</span>
+                  </div>
+                  {/* Items */}
+                  <div className="px-6 md:px-8">
+                    {cat.items.map((f, i) => (
+                      <FaqItem key={i} q={f.q} a={f.a} index={i} totalBefore={totalBefore} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Footer */}
+          <p className="text-center text-[12px] text-white/20 mt-8">
+            ¿No encuentras lo que buscas?{" "}
+            <a href="mailto:soporte@withmia.com" className="text-white/40 hover:text-white underline underline-offset-2 transition-colors">
+              soporte@withmia.com
+            </a>
+          </p>
         </div>
       </div>
 

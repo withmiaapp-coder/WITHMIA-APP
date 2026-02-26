@@ -75,7 +75,7 @@ class DailyQuoteController extends Controller
         // Step 1: Get verified births/deaths from Wikipedia
         $people = $this->fetchWikipediaPeople($monthPadded, $dayPadded);
 
-        if (count($people) >= 3) {
+        if (count($people) >= 1) {
             // Step 2: Check curated DB first, then OpenAI for the rest
             $pool = $this->buildQuotesFromVerifiedPeople($people, $day, $monthName);
 
@@ -371,14 +371,19 @@ PROMPT;
                 if ($matched) {
                     $typeLabel = $matched['type'] === 'birth' ? 'Nacido' : 'Fallecido';
                     $q['context'] = "{$typeLabel} el {$day} de {$monthName} de {$matched['year']}";
-                }
 
-                $validated[] = [
-                    'quote' => $q['quote'],
-                    'author' => $q['author'],
-                    'context' => $q['context'],
-                    'who' => $q['who'],
-                ];
+                    $validated[] = [
+                        'quote' => $q['quote'],
+                        'author' => $q['author'],
+                        'context' => $q['context'],
+                        'who' => $q['who'],
+                    ];
+                } else {
+                    // Person not matched to Wikipedia data — discard to prevent wrong dates
+                    Log::info('DailyQuote: Discarding unmatched person from OpenAI', [
+                        'author' => $q['author'],
+                    ]);
+                }
             }
 
             return count($validated) > 0 ? $validated : null;
@@ -423,8 +428,9 @@ PROMPT;
     }
 
     /**
-     * Fallback: Generate quotes using OpenAI only (original method, less reliable dates).
-     * Used when Wikipedia API is unavailable.
+     * Fallback: Generate quotes using OpenAI, then VERIFY every person against Wikipedia.
+     * Used when Wikipedia API initially returned 0 people.
+     * Any person not confirmed by Wikipedia is discarded to prevent hallucinated dates.
      */
     private function generateQuotesPoolOpenAI(int $day, string $monthName): ?array
     {
@@ -437,13 +443,17 @@ PROMPT;
         try {
             $client = OpenAI::client($apiKey);
 
+            $month = array_search($monthName, self::MONTH_NAMES);
+            $monthPadded = str_pad((string) $month, 2, '0', STR_PAD_LEFT);
+            $dayPadded = str_pad((string) $day, 2, '0', STR_PAD_LEFT);
+
             $prompt = <<<PROMPT
-Hoy es {$day} de {$monthName}. Necesito información sobre 5 personajes históricos DIFERENTES que nacieron o fallecieron este mismo día ({$day} de {$monthName}) a lo largo de la historia.
+Hoy es {$day} de {$monthName}. Necesito información sobre 8 personajes históricos DIFERENTES que nacieron o fallecieron este mismo día ({$day} de {$monthName}) a lo largo de la historia.
 
 Para cada uno, dame:
 1. Una cita célebre REAL de esa persona (no inventada)
-2. Su nombre completo
-3. Por qué aparece hoy (ej: "Nacido el {$day} de {$monthName} de 1879")
+2. Su nombre completo tal como aparece en Wikipedia
+3. Si nació o falleció este día, y el año exacto
 4. Una mini biografía de 1-2 líneas
 
 IMPORTANTE:
@@ -452,7 +462,7 @@ IMPORTANTE:
 - Todo en español.
 
 Responde SOLO con JSON array válido:
-[{"quote":"...","author":"...","context":"Nacido/Fallecido el...","who":"..."}]
+[{"quote":"...","author":"...","type":"birth|death","year":1879,"who":"..."}]
 PROMPT;
 
             $result = $client->chat()->create([
@@ -480,19 +490,53 @@ PROMPT;
                 return null;
             }
 
+            // CROSS-VERIFY every person against Wikipedia to prevent hallucinated dates
+            $wikiPeople = $this->fetchWikipediaPeople($monthPadded, $dayPadded);
+            $wikiNames = array_map(fn($p) => mb_strtolower(trim($p['name'])), $wikiPeople);
+
+            // Build a lookup for Wikipedia-verified data
+            $wikiLookup = [];
+            foreach ($wikiPeople as $p) {
+                $wikiLookup[mb_strtolower(trim($p['name']))] = $p;
+            }
+
             $validated = [];
             foreach ($quotes as $q) {
-                if (isset($q['quote'], $q['author'], $q['context'], $q['who'])) {
+                if (!isset($q['quote'], $q['author'], $q['who'])) {
+                    continue;
+                }
+
+                $authorLower = mb_strtolower(trim($q['author']));
+                $matched = $this->findMatchingPerson($authorLower, $wikiLookup);
+
+                if ($matched) {
+                    // Person confirmed by Wikipedia — use Wikipedia's verified date
+                    $typeLabel = $matched['type'] === 'birth' ? 'Nacido' : 'Fallecido';
                     $validated[] = [
                         'quote' => $q['quote'],
                         'author' => $q['author'],
-                        'context' => $q['context'],
+                        'context' => "{$typeLabel} el {$day} de {$monthName} de {$matched['year']}",
                         'who' => $q['who'],
                     ];
+                } else {
+                    // Person NOT found in Wikipedia for this date — DISCARD (likely hallucinated)
+                    Log::info('DailyQuote: Discarding unverified person from OpenAI', [
+                        'author' => $q['author'],
+                        'date' => "{$day} de {$monthName}",
+                    ]);
                 }
             }
 
-            return count($validated) > 0 ? $validated : null;
+            if (count($validated) > 0) {
+                Log::info('DailyQuote: OpenAI fallback with Wikipedia verification', [
+                    'openai_returned' => count($quotes),
+                    'verified' => count($validated),
+                    'discarded' => count($quotes) - count($validated),
+                ]);
+                return array_slice($validated, 0, 5);
+            }
+
+            return null;
         } catch (\Exception $e) {
             Log::error('DailyQuote: OpenAI error (fallback mode)', ['error' => $e->getMessage()]);
             return null;
