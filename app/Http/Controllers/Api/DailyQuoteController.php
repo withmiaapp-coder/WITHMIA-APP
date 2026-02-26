@@ -34,9 +34,9 @@ class DailyQuoteController extends Controller
         $date = now();
         $monthDay = $date->format('m-d');
 
-        // v4: cache key to invalidate after who-bio accuracy fix
-        $poolKey = "daily_quotes_v4_{$monthDay}";
-        $counterKey = "daily_quotes_v4_ctr_{$monthDay}";
+        // v5: cache key — who bio now from Wikipedia, not OpenAI
+        $poolKey = "daily_quotes_v5_{$monthDay}";
+        $counterKey = "daily_quotes_v5_ctr_{$monthDay}";
 
         $pool = Cache::get($poolKey);
 
@@ -224,16 +224,13 @@ class DailyQuoteController extends Controller
         try {
             $client = OpenAI::client($apiKey);
 
-            // Build numbered list for the prompt with Wikipedia context
+            // Build numbered list for the prompt
             $peopleList = '';
             foreach ($people as $i => $p) {
                 $typeLabel = $p['type'] === 'birth' ? 'Nacido' : 'Fallecido';
                 $desc = !empty($p['description']) ? " — {$p['description']}" : '';
                 $num = $i + 1;
-                // Include truncated Wikipedia extract so OpenAI knows exactly who this person is
-                $extract = !empty($p['extract']) ? mb_substr($p['extract'], 0, 200) : '';
-                $extractLine = $extract ? "\n   Contexto Wikipedia: {$extract}" : '';
-                $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc}){$extractLine}\n";
+                $peopleList .= "{$num}. {$p['name']} ({$typeLabel} en {$p['year']}{$desc})\n";
             }
 
             $prompt = <<<PROMPT
@@ -245,19 +242,15 @@ LISTA DE PERSONAJES (fechas verificadas por Wikipedia para el {$day} de {$monthN
 Para cada personaje seleccionado, responde con:
 - "index": El NÚMERO del personaje de la lista (ej: 1, 5, 12)
 - "quote": Una cita célebre REAL y bien documentada de esa persona (en español)
-- "who": Mini biografía de 1-2 líneas en español
 
-REGLAS CRÍTICAS:
-- La biografía ("who") debe describir EXACTAMENTE a la persona indicada, NO a un familiar, padre, hijo o persona con nombre similar
-- Usa el "Contexto Wikipedia" proporcionado para verificar la identidad exacta de cada persona
-- Si la persona nació en un año X, la biografía debe reflejar ESE año de nacimiento, no el de otra persona
+REGLAS:
 - Selecciona SOLO personajes que tengan citas/frases célebres conocidas y documentadas
 - Prefiere científicos, artistas, filósofos, escritores, músicos y líderes famosos mundialmente
 - Evita deportistas, políticos menores o personas poco conocidas mundialmente
 - Las citas deben ser REALES, no inventadas
 - Responde SOLO con JSON array válido
 
-[{"index":1,"quote":"...","who":"..."},{"index":5,"quote":"...","who":"..."}]
+[{"index":1,"quote":"..."},{"index":5,"quote":"..."}]
 PROMPT;
 
             $result = $client->chat()->create([
@@ -287,7 +280,7 @@ PROMPT;
 
             $validated = [];
             foreach ($quotes as $q) {
-                if (!isset($q['index'], $q['quote'], $q['who'])) {
+                if (!isset($q['index'], $q['quote'])) {
                     continue;
                 }
 
@@ -301,11 +294,14 @@ PROMPT;
                 $person = $people[$idx];
                 $typeLabel = $person['type'] === 'birth' ? 'Nacido' : 'Fallecido';
 
+                // Build "who" from Wikipedia data — NEVER trust OpenAI for biography
+                $who = $this->buildWikipediaBio($person);
+
                 $validated[] = [
                     'quote' => $q['quote'],
                     'author' => $person['name'], // Wikipedia's name, not OpenAI's
                     'context' => "{$typeLabel} el {$day} de {$monthName} de {$person['year']}", // Wikipedia date
-                    'who' => $q['who'],
+                    'who' => $who,
                 ];
             }
 
@@ -361,5 +357,32 @@ PROMPT;
         ];
 
         return $fallbacks[array_rand($fallbacks)];
+    }
+
+    /**
+     * Build biography text from Wikipedia data — guaranteed accurate.
+     * Never relies on OpenAI for biographical information.
+     */
+    private function buildWikipediaBio(array $person): string
+    {
+        $extract = trim($person['extract'] ?? '');
+        $description = trim($person['description'] ?? '');
+
+        if (!empty($extract)) {
+            // Use first 1-2 sentences from Wikipedia extract (max ~200 chars)
+            // Split by period followed by space or end of string
+            $sentences = preg_split('/(?<=\.)\s+/', $extract, 3);
+            $bio = $sentences[0] ?? '';
+            if (isset($sentences[1]) && mb_strlen($bio . ' ' . $sentences[1]) <= 220) {
+                $bio .= ' ' . $sentences[1];
+            }
+            return mb_strlen($bio) > 0 ? $bio : ($description ?: $person['name']);
+        }
+
+        if (!empty($description)) {
+            return ucfirst($description);
+        }
+
+        return $person['name'];
     }
 }
