@@ -274,72 +274,6 @@ const About = () => {
           </div>
         </div>
 
-        {/* ════════════════ MISIÓN ════════════════ */}
-        <div className="relative px-4 pb-24 md:pb-32">
-          {/* Background accent */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/3 left-0 w-[500px] h-[500px] bg-amber-500/[0.04] rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-3xl" />
-          </div>
-
-          <div
-            ref={mission.ref}
-            className={`max-w-5xl mx-auto relative z-10 transition-all duration-700 ${
-              mission.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-            }`}
-          >
-            {/* Mission statement - big, centered */}
-            <div className="text-center mb-20">
-              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-5">
-                Nuestra misión
-              </p>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-8 max-w-3xl mx-auto">
-                Eliminar la{" "}
-                <span className="text-gradient">digitalización{"\n"}desconectada</span>
-              </h2>
-              <div className="max-w-2xl mx-auto space-y-4">
-                <p className="text-[15px] md:text-base text-white/40 leading-relaxed">
-                  Las PYMEs gestionan clientes con WhatsApp personal, Excel y
-                  herramientas que no se conectan entre sí. Pierden ventas por
-                  no responder a tiempo y operan con procesos que no escalan
-                </p>
-                <p className="text-[15px] md:text-base text-white/50 leading-relaxed font-medium">
-                  WITHMIA unifica IA generativa, CRM, cobranzas y automatización
-                  en una sola plataforma para PYMEs con 5K-50K mensajes mensuales
-                </p>
-              </div>
-            </div>
-
-            {/* Pillar strip - horizontal full-width */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-white/[0.06]">
-              {pillars.map((item, i) => {
-                const Icon = item.icon;
-                const c = colorMap[item.color];
-                return (
-                  <div
-                    key={item.label}
-                    className="relative bg-white/[0.02] p-6 md:p-8"
-                    style={{
-                      opacity: mission.isVisible ? 1 : 0,
-                      transform: mission.isVisible ? "translateY(0)" : "translateY(20px)",
-                      transition: `all 0.6s ease ${i * 80}ms`,
-                    }}
-                  >
-                    {/* Top accent line */}
-                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
-                    
-                    <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center mb-5`}>
-                      <Icon className={`w-5 h-5 ${c.icon}`} />
-                    </div>
-                    <h3 className="text-[14px] font-bold text-white mb-2 tracking-tight">{item.label}</h3>
-                    <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
         {/* ════════════════ HISTORIA ════════════════ */}
         <div className="relative px-4 pb-24 md:pb-32">
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -419,6 +353,72 @@ const About = () => {
                   })}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ════════════════ MISIÓN ════════════════ */}
+        <div className="relative px-4 pb-24 md:pb-32">
+          {/* Background accent */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-1/3 left-0 w-[500px] h-[500px] bg-amber-500/[0.04] rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-3xl" />
+          </div>
+
+          <div
+            ref={mission.ref}
+            className={`max-w-5xl mx-auto relative z-10 transition-all duration-700 ${
+              mission.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}
+          >
+            {/* Mission statement - big, centered */}
+            <div className="text-center mb-20">
+              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-5">
+                Nuestra misión
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-8 max-w-3xl mx-auto">
+                Eliminar la{" "}
+                <span className="text-gradient">digitalización{"\n"}desconectada</span>
+              </h2>
+              <div className="max-w-2xl mx-auto space-y-4">
+                <p className="text-[15px] md:text-base text-white/40 leading-relaxed">
+                  Las PYMEs gestionan clientes con WhatsApp personal, Excel y
+                  herramientas que no se conectan entre sí. Pierden ventas por
+                  no responder a tiempo y operan con procesos que no escalan
+                </p>
+                <p className="text-[15px] md:text-base text-white/50 leading-relaxed font-medium">
+                  WITHMIA unifica IA generativa, CRM, cobranzas y automatización
+                  en una sola plataforma para PYMEs con 5K-50K mensajes mensuales
+                </p>
+              </div>
+            </div>
+
+            {/* Pillar strip - horizontal full-width */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-white/[0.06]">
+              {pillars.map((item, i) => {
+                const Icon = item.icon;
+                const c = colorMap[item.color];
+                return (
+                  <div
+                    key={item.label}
+                    className="relative bg-white/[0.02] p-6 md:p-8"
+                    style={{
+                      opacity: mission.isVisible ? 1 : 0,
+                      transform: mission.isVisible ? "translateY(0)" : "translateY(20px)",
+                      transition: `all 0.6s ease ${i * 80}ms`,
+                    }}
+                  >
+                    {/* Top accent line */}
+                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
+                    
+                    <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center mb-5`}>
+                      <Icon className={`w-5 h-5 ${c.icon}`} />
+                    </div>
+                    <h3 className="text-[14px] font-bold text-white mb-2 tracking-tight">{item.label}</h3>
+                    <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -23,10 +23,10 @@ class DailyQuoteController extends Controller
      * Get a daily inspirational quote.
      *
      * Strategy:
-     * 1. Fetch ALL births/deaths from Wikipedia (ES + EN always)
+     * 1. Fetch births/deaths from Spanish Wikipedia (single API call)
      * 2. Check curated quotes DB for verified quotes
-     * 3. Send remaining Wikipedia-verified people to OpenAI (index-based)
-     * 4. OpenAI only provides quotes/bios — dates ALWAYS come from Wikipedia
+     * 3. Send remaining people to OpenAI for quotes only (index-based)
+     * 4. Bios ALWAYS come from Wikipedia — OpenAI only provides quote text
      * 5. Static fallback if everything fails
      */
     public function __invoke(Request $request): JsonResponse
@@ -72,7 +72,7 @@ class DailyQuoteController extends Controller
         $dayPadded = $date->format('d');
         $monthName = self::MONTH_NAMES[$month];
 
-        // Step 1: Get ALL births/deaths from BOTH Spanish AND English Wikipedia
+        // Step 1: Get births/deaths from Spanish Wikipedia
         $people = $this->fetchAllWikipediaPeople($monthPadded, $dayPadded);
 
         Log::info('DailyQuote: Wikipedia returned people', [
@@ -187,8 +187,6 @@ class DailyQuoteController extends Controller
                         'type' => $type === 'births' ? 'birth' : 'death',
                         'description' => $descText,
                         'extract' => $extractText,
-                        'extract_es' => $extractText,
-                        'description_es' => $descText,
                     ];
                     $seenNames[$nameLower] = true;
                 }
@@ -197,7 +195,7 @@ class DailyQuoteController extends Controller
             Log::error('DailyQuote: Wikipedia API error', ['error' => $e->getMessage()]);
         }
 
-        usort($people, fn($a, $b) => strlen($b['extract_es']) - strlen($a['extract_es']));
+        usort($people, fn($a, $b) => strlen($b['extract']) - strlen($a['extract']));
 
         return array_slice($people, 0, 30);
     }
@@ -205,7 +203,7 @@ class DailyQuoteController extends Controller
     /**
      * Generate quotes via OpenAI for Wikipedia-verified people.
      * Uses INDEX-BASED matching to avoid name mismatch issues.
-     * Dates ALWAYS come from Wikipedia — OpenAI only provides quotes and bios.
+     * Dates and bios ALWAYS come from Wikipedia — OpenAI only provides quote text.
      */
     private function generateQuotesForPeople(array $people, int $day, string $monthName, int $needed): ?array
     {
@@ -359,24 +357,15 @@ PROMPT;
      */
     private function buildWikipediaBio(array $person): string
     {
-        // ONLY use Spanish Wikipedia data — English-only people are filtered out upstream
-        $extractEs = trim($person['extract_es'] ?? '');
-        $descEs = trim($person['description_es'] ?? '');
+        $extract = trim($person['extract'] ?? '');
+        $description = trim($person['description'] ?? '');
 
-        // Fallback for legacy format
-        if (empty($extractEs)) {
-            $extractEs = trim($person['extract'] ?? '');
-        }
-        if (empty($descEs)) {
-            $descEs = trim($person['description'] ?? '');
+        if (!empty($extract)) {
+            return $this->truncateToSentences($extract);
         }
 
-        if (!empty($extractEs)) {
-            return $this->truncateToSentences($extractEs);
-        }
-
-        if (!empty($descEs)) {
-            return ucfirst($descEs);
+        if (!empty($description)) {
+            return ucfirst($description);
         }
 
         return $person['name'];
