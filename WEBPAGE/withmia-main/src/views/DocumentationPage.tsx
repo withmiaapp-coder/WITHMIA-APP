@@ -124,6 +124,13 @@ const sidebarNav: NavItem[] = [
       { id: "sec-audit", label: "Auditoría" },
     ],
   },
+  {
+    id: "_s_changelog", label: "Changelog", icon: Sparkles,
+    children: [
+      { id: "changelog-v101", label: "v1.0.1 — Feb 2026" },
+      { id: "changelog-v100", label: "v1.0.0 — Ene 2026" },
+    ],
+  },
 ];
 
 /* Flat ordered list for prev/next */
@@ -389,6 +396,32 @@ const pages: Record<string, PageMeta> = {
     breadcrumb: ["Docs", "Seguridad", "Auditoría"],
     toc: [{ id: "audit-log", label: "Log de auditoría" }, { id: "retention", label: "Retención" }],
     readTime: "3 min", lastUpdated: "16 Feb 2026",
+  },
+  "changelog-v101": {
+    title: "v1.0.1 — Novedades de Febrero 2026",
+    description: "Personalización visual completa, citas diarias verificadas, selector de color personalizado y mejoras de rendimiento.",
+    breadcrumb: ["Docs", "Changelog", "v1.0.1"],
+    toc: [
+      { id: "theme-system", label: "Sistema de temas y paletas" },
+      { id: "custom-color-picker", label: "Selector de color personalizado" },
+      { id: "daily-quotes", label: "Citas diarias verificadas" },
+      { id: "chat-background", label: "Fondo de chat mejorado" },
+      { id: "themed-components", label: "Componentes tematizados" },
+      { id: "bugfixes-101", label: "Correcciones" },
+    ],
+    readTime: "5 min", lastUpdated: "26 Feb 2026",
+  },
+  "changelog-v100": {
+    title: "v1.0.0 — Lanzamiento Inicial",
+    description: "Primera versión estable de WITHMIA: CRM omnicanal con IA conversacional, inbox unificado y WhatsApp Business.",
+    breadcrumb: ["Docs", "Changelog", "v1.0.0"],
+    toc: [
+      { id: "core-platform", label: "Plataforma core" },
+      { id: "ai-engine", label: "Motor de IA" },
+      { id: "channels-v1", label: "Canales soportados" },
+      { id: "integrations-v1", label: "Integraciones" },
+    ],
+    readTime: "3 min", lastUpdated: "28 Ene 2026",
   },
 };
 
@@ -1362,6 +1395,118 @@ const richContent: Record<string, ContentBlock[]> = {
     ]},
     { type: "callout", variant: "info", title: "Exportar logs", text: "Exporta logs en formato JSON o CSV desde Configuración → Seguridad → Auditoría, o via API para integrar con tu SIEM (Splunk, Datadog, etc.)." },
   ],
+
+  /* ── Changelog v1.0.1 ── */
+  "changelog-v101": [
+    { type: "callout", variant: "tip", title: "Versión actual", text: "v1.0.1 es la versión más reciente de WITHMIA. Desplegada el 26 de febrero de 2026." },
+
+    { type: "heading", id: "theme-system", text: "Sistema de temas y paletas de colores" },
+    { type: "p", text: "Nuevo sistema completo de personalización visual que permite a cada usuario elegir entre 16 paletas de colores prediseñadas o crear un color personalizado. El tema seleccionado se aplica de forma consistente en toda la interfaz: sidebar, barra superior, cards, badges, inputs, botones, modales y más." },
+    { type: "list", items: [
+      "16 paletas prediseñadas — Sunset, Océano, Bosque, Lavanda, Cereza, Turquesa, Coral, Slate, Atén, Vino, Lima, Cielo, Cobre, Menta, Amatista y Carbón",
+      "Modo claro y oscuro — cada paleta genera variantes optimizadas automáticamente",
+      "Más de 40 variables CSS — --theme-primary, --theme-sidebar-bg, --theme-content-bg, --theme-accent, etc.",
+      "Glassmorphism aplicado — efectos de vidrio con backdrop-blur en sidebar, cards y popovers",
+      "Persistencia por usuario — el tema se guarda en localStorage y se restaura al iniciar sesión",
+    ]},
+
+    { type: "heading", id: "custom-color-picker", text: "Selector de color personalizado (estilo Canva)" },
+    { type: "p", text: "Nuevo componente CustomColorPicker que reemplaza el selector nativo del navegador con una experiencia visual tipo Canva. Incluye un cuadrado de saturación/brillo con puntero arrastrable, un slider horizontal de matiz (hue), campo de entrada hexadecimal y vista previa del color en tiempo real." },
+    { type: "list", items: [
+      "Conversión HSV ↔ HEX en tiempo real",
+      "Interacción por drag en el área de saturación/brillo",
+      "Slider de matiz (0°–360°) con degradado arcoíris",
+      "Input hex editable con validación",
+      "Círculo de previsualización del color seleccionado",
+    ]},
+
+    { type: "heading", id: "daily-quotes", text: "Citas diarias con fechas verificadas por Wikipedia" },
+    { type: "p", text: "El sistema de citas diarias ahora verifica todas las fechas de nacimiento y fallecimiento cruzando Wikipedia en español e inglés. Se eliminó la dependencia de OpenAI para fechas (que producía alucinaciones) y se implementó un sistema de matching por índice que garantiza precisión." },
+    { type: "list", items: [
+      "Consulta Wikipedia ES + EN simultáneamente para máxima cobertura",
+      "OpenAI selecciona los personajes más notables, pero NO genera fechas",
+      "Sistema de índice numérico para emparejar personajes sin errores de nombre",
+      "Caché de 24 horas con pool de 6 citas por día",
+      "Fallback a base de datos de citas verificadas (VerifiedQuotes)",
+    ]},
+
+    { type: "heading", id: "chat-background", text: "Fondo de chat mejorado" },
+    { type: "p", text: "El patrón decorativo del fondo de chat (/fondo.webp) ahora es visible en todos los modos de tema. Se implementó una nueva variable CSS --theme-chat-overlay con valores semitransparentes que permiten ver el patrón a través del color de tema." },
+    { type: "list", items: [
+      "Modo oscuro por defecto: rgba(17,24,39,0.92) — gris oscuro al 92% de opacidad",
+      "Modo oscuro con tema: mixWithBlackAlpha al 18% de brillo, 93% opacidad — tinte sutil",
+      "Modo claro con tema: mixWithWhiteAlpha al 3%, 82% opacidad — patrón visible",
+      "Nuevas funciones helper: mixWithBlackAlpha() y mixWithWhiteAlpha() en ThemeContext",
+    ]},
+
+    { type: "heading", id: "themed-components", text: "Componentes tematizados" },
+    { type: "p", text: "Todos los componentes principales de la interfaz ahora respetan la paleta de colores seleccionada:" },
+    { type: "list", items: [
+      "Tickets de soporte — cards, badges de prioridad, estados y acciones",
+      "Filtros avanzados — popover con inputs, selects y botones tematizados",
+      "Campana de notificaciones — popover, badges de no leídas y íconos",
+      "Selector de tema (ThemePicker) — popover integrado en la barra superior",
+      "Página de Ajustes — cards, tabs, toggles y formularios",
+      "Página de Perfil — avatar, campos editables y acciones",
+      "Página de Suscripción — planes, comparativa y checkout",
+      "Interfaz de conversaciones — sidebar, chat area, burbujas y input",
+    ]},
+
+    { type: "heading", id: "bugfixes-101", text: "Correcciones" },
+    { type: "list", items: [
+      "Eliminado anillo blanco de focus visible en inputs del chat",
+      "Eliminado ítem \"Soporte\" duplicado del sidebar",
+      "Corregido contraste insuficiente en modo oscuro con tema aplicado",
+      "Corregido fondo de chat que desaparecía al aplicar tema claro",
+      "Corregida caché persistente de citas diarias con datos antiguos (bump a v3)",
+    ]},
+  ],
+
+  /* ── Changelog v1.0.0 ── */
+  "changelog-v100": [
+    { type: "callout", variant: "info", title: "Lanzamiento inicial", text: "v1.0.0 fue la primera versión estable de WITHMIA, desplegada en enero de 2026." },
+
+    { type: "heading", id: "core-platform", text: "Plataforma core" },
+    { type: "list", items: [
+      "Dashboard principal con métricas en tiempo real",
+      "Inbox omnicanal unificado para todas las conversaciones",
+      "Sistema de asignación automática (round robin, carga mínima)",
+      "Gestión de contactos con CRM integrado",
+      "Sistema de etiquetas y prioridades para conversaciones",
+      "Roles y permisos: Admin, Supervisor, Agente, Viewer",
+      "Soporte multi-workspace con facturación independiente",
+      "Citas diarias inspiracionales en el dashboard",
+    ]},
+
+    { type: "heading", id: "ai-engine", text: "Motor de IA" },
+    { type: "list", items: [
+      "Asistente IA conversacional con OpenAI GPT-4",
+      "Entrenamiento RAG con documentos, PDFs y URLs",
+      "Base de conocimiento con embeddings vectoriales (Qdrant)",
+      "Respuestas sugeridas para agentes en tiempo real",
+      "Flujos automáticos con lógica condicional",
+      "Handoff inteligente de IA a agente humano",
+      "Transcripción de audio con Whisper",
+    ]},
+
+    { type: "heading", id: "channels-v1", text: "Canales soportados" },
+    { type: "list", items: [
+      "WhatsApp Business API (via Evolution API)",
+      "Instagram Direct Messages",
+      "Facebook Messenger",
+      "Chat Web (widget embebible)",
+      "Email (IMAP/SMTP)",
+    ]},
+
+    { type: "heading", id: "integrations-v1", text: "Integraciones" },
+    { type: "list", items: [
+      "n8n — workflows de automatización avanzada",
+      "Google Calendar y Outlook Calendar",
+      "Chatwoot como motor de conversaciones",
+      "Webhooks bidireccionales",
+      "API RESTful completa con SDKs (Node.js, Python, PHP)",
+    ]},
+  ],
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -2140,7 +2285,7 @@ const DocumentationPage = () => {
                 {page.readTime && (
                   <span className="flex items-center gap-1 text-[11px] text-white/20"><Clock className="w-3 h-3" /> {page.readTime} lectura</span>
                 )}
-                <span className="ml-auto px-2 py-0.5 rounded-md text-[10px] font-mono font-medium text-amber-400/60 bg-amber-500/[0.06] border border-amber-500/10">v1.0</span>
+                <span className="ml-auto px-2 py-0.5 rounded-md text-[10px] font-mono font-medium text-amber-400/60 bg-amber-500/[0.06] border border-amber-500/10">v1.0.1</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">{page.title}</h1>
               <p className="text-[15px] text-white/40 leading-relaxed mb-8">{page.description}</p>

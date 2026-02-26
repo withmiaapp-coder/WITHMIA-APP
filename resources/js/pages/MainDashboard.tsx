@@ -1457,7 +1457,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 <p 
                   className={`text-xs font-medium ${!hasTheme ? 'text-neutral-400' : ''}`}
                   style={hasTheme ? { color: 'var(--theme-secondary)', opacity: 0.6 } : undefined}
-                >Versión 1.0.0</p>
+                >Versión 1.0.1</p>
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   className={`p-1 rounded transition-all duration-200 ${!hasTheme ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}

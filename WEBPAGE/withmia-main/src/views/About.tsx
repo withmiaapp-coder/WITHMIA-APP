@@ -159,14 +159,16 @@ const About = () => {
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-6">
-              IA conversacional para{" "}
-              <span className="text-gradient">empresas reales</span>
+              Hecha por y para{" "}
+              <span className="text-gradient">la PYME</span>
             </h1>
 
             <p className="text-base md:text-lg text-white/40 max-w-2xl mx-auto leading-relaxed">
-              Plataforma SaaS que unifica IA generativa, CRM, cobranzas y
-              automatización omnicanal. Diseñada para PYMEs que necesitan
-              responder rápido, vender más y operar sin equipo técnico.
+              En 2026, automatizar tu negocio no debería costarte cientos de
+              dólares al mes. WITHMIA unifica IA conversacional, CRM, cobranzas
+              y atención omnicanal en una sola plataforma pensada para PYMEs
+              que necesitan responder rápido, vender más y crecer sin depender
+              de un equipo técnico ni de presupuestos enterprise
             </p>
           </div>
         </div>
@@ -175,73 +177,94 @@ const About = () => {
         <div className="px-4 pb-20 md:pb-28">
           <div
             ref={founder.ref}
-            className={`max-w-3xl mx-auto text-center transition-all duration-700 ${
+            className={`max-w-5xl mx-auto transition-all duration-700 ${
               founder.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            {/* Photo */}
-            <div className="relative w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-2 border-white/[0.08] bg-white/[0.03] ring-4 ring-white/[0.03]">
-              {!imgError ? (
-                <img
-                  src="/images/founder.webp"
-                  alt="Ángel Díaz Castro"
-                  className="w-full h-full object-cover object-[center_15%]"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500/[0.08] via-amber-500/[0.05] to-transparent">
-                  <User className="w-12 h-12 text-white/15" />
+            {/* Founder card */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="grid lg:grid-cols-[280px,1fr]">
+                {/* Photo */}
+                <div className="relative aspect-[3/4] lg:aspect-auto bg-white/[0.03]">
+                  {!imgError ? (
+                    <img
+                      src="/images/founder.webp"
+                      alt="Ángel Díaz Castro — CEO & Fundador, WITHMIA"
+                      className="w-full h-full object-cover object-[center_15%]"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500/[0.08] via-amber-500/[0.05] to-transparent">
+                      <User className="w-16 h-16 text-white/15" />
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* Content */}
+                <div className="p-8 md:p-10 flex flex-col justify-center">
+                  <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.2em] font-semibold mb-2">
+                    Fundador
+                  </p>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
+                    Ángel Díaz Castro
+                  </h2>
+                  <p className="text-[13px] text-white/30 mb-6">
+                    CEO & Fundador Técnico
+                  </p>
+
+                  <p className="text-[15px] text-white/40 leading-relaxed mb-4">
+                    Como fundador técnico, combino 5 años de desarrollo de
+                    software con formación en Economía y Psicología
+                    Organizacional. Esa mezcla me permitió construir la
+                    arquitectura inicial de WITHMIA, diseñar una experiencia
+                    No-Code pensada para usuarios no técnicos y estructurar
+                    un modelo de pricing SaaS rentable desde el día uno
+                  </p>
+                  <p className="text-[15px] text-white/35 leading-relaxed mb-6">
+                    Anteriormente fundé Atlantis Producciones SpA, donde
+                    adquirí experiencia operativa liderando equipos y
+                    gestionando proyectos digitales en el mercado chileno
+                  </p>
+
+                  {/* Skill tags + LinkedIn */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {founderSkills.map((skill, i) => {
+                      const Icon = skill.icon;
+                      const c = colorMap[skill.color];
+                      return (
+                        <span
+                          key={skill.title}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${c.bg} border ${c.border} text-[12px] font-medium text-white/50`}
+                          style={{
+                            opacity: founder.isVisible ? 1 : 0,
+                            transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
+                            transition: `all 0.4s ease ${i * 80 + 200}ms`,
+                          }}
+                        >
+                          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
+                          {skill.title}
+                        </span>
+                      );
+                    })}
+
+                    <a
+                      href="https://www.linkedin.com/in/angel-felipe-diaz-castro/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] text-[12px] font-medium text-white/50 hover:text-white/70 transition-all duration-300 group"
+                      style={{
+                        opacity: founder.isVisible ? 1 : 0,
+                        transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
+                        transition: "all 0.4s ease 440ms",
+                      }}
+                    >
+                      <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] group-hover:scale-110 transition-transform" />
+                      LinkedIn
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
-
-            {/* Name + role */}
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
-              Ángel Díaz Castro
-            </h2>
-            <p className="text-[14px] text-white/35 mb-5">
-              CEO & Fundador Técnico
-            </p>
-
-            {/* Bio */}
-            <p className="text-[15px] text-white/40 leading-relaxed max-w-xl mx-auto mb-6">
-              Ingeniero de software con 5 años de experiencia, formación en
-              Economía y Psicología Organizacional. Construyó el MVP completo
-              de WITHMIA y fundó Atlantis Producciones SpA
-            </p>
-
-            {/* Skill tags + LinkedIn */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
-              {founderSkills.map((skill, i) => {
-                const Icon = skill.icon;
-                const c = colorMap[skill.color];
-                return (
-                  <span
-                    key={skill.title}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${c.bg} border ${c.border} text-[12px] font-medium text-white/50`}
-                    style={{
-                      opacity: founder.isVisible ? 1 : 0,
-                      transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
-                      transition: `all 0.4s ease ${i * 80 + 200}ms`,
-                    }}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-                    {skill.title}
-                  </span>
-                );
-              })}
-            </div>
-
-            <a
-              href="https://www.linkedin.com/in/angel-felipe-diaz-castro/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] text-[13px] font-medium text-white/50 hover:text-white/70 transition-all duration-300 group"
-            >
-              <Linkedin className="w-4 h-4 text-[#0A66C2] group-hover:scale-110 transition-transform" />
-              LinkedIn
-              <ArrowRight className="w-3 h-3 text-white/20 group-hover:translate-x-0.5 transition-transform" />
-            </a>
           </div>
         </div>
 
