@@ -159,7 +159,7 @@ const About = () => {
               hero.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
             }`}
           >
-            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-[12px] text-white/50 font-semibold backdrop-blur-sm mb-6">
+            <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-[12px] text-white/50 font-semibold mb-6">
               <Building2 className="w-3.5 h-3.5 text-white/30" />
               Santiago, Chile · Desde 2025
             </div>
@@ -257,14 +257,14 @@ const About = () => {
                       href="https://www.linkedin.com/in/angel-felipe-diaz-castro/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] text-[12px] font-medium text-white/50 hover:text-white/70 transition-all duration-300 group"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[12px] font-medium text-white/50 transition-all duration-300"
                       style={{
                         opacity: founder.isVisible ? 1 : 0,
                         transform: founder.isVisible ? "translateY(0)" : "translateY(8px)",
                         transition: "all 0.4s ease 440ms",
                       }}
                     >
-                      <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] group-hover:scale-110 transition-transform" />
+                      <Linkedin className="w-3.5 h-3.5 text-[#0A66C2]" />
                       LinkedIn
                     </a>
                   </div>
@@ -318,7 +318,7 @@ const About = () => {
                 return (
                   <div
                     key={item.label}
-                    className="relative bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-500 p-6 md:p-8 group"
+                    className="relative bg-white/[0.02] p-6 md:p-8"
                     style={{
                       opacity: mission.isVisible ? 1 : 0,
                       transform: mission.isVisible ? "translateY(0)" : "translateY(20px)",
@@ -326,61 +326,13 @@ const About = () => {
                     }}
                   >
                     {/* Top accent line */}
-                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
                     
-                    <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center mb-5`}>
                       <Icon className={`w-5 h-5 ${c.icon}`} />
                     </div>
                     <h3 className="text-[14px] font-bold text-white mb-2 tracking-tight">{item.label}</h3>
-                    <p className="text-[12px] text-white/25 leading-relaxed group-hover:text-white/35 transition-colors duration-300">{item.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ════════════════ VALORES ════════════════ */}
-        <div className="px-4 pb-24 md:pb-32">
-          <div
-            ref={valuesSection.ref}
-            className={`max-w-5xl mx-auto transition-all duration-700 ${
-              valuesSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-            }`}
-          >
-            {/* Centered header */}
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-[11px] font-medium text-white/40 tracking-wide mb-6">
-                Nuestros Valores
-              </div>
-              <h2 className="text-3xl md:text-[2.5rem] font-bold text-white leading-tight mb-5">
-                Los principios que{" "}
-                <span className="text-white/30">nos guían</span>
-              </h2>
-              <p className="text-[15px] text-white/35 max-w-xl mx-auto leading-relaxed">
-                Estos valores fundamentan cada decisión que tomamos y definen
-                cómo interactuamos con nuestros clientes, partners y entre nosotros
-              </p>
-            </div>
-
-            {/* Value cards grid — 4 equal cards */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {values.map((v, i) => {
-                const Icon = v.icon;
-                return (
-                  <div
-                    key={v.title}
-                    className="text-center rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] p-7 transition-all duration-300 group"
-                    style={{
-                      opacity: valuesSection.isVisible ? 1 : 0,
-                      transform: valuesSection.isVisible ? "translateY(0)" : "translateY(16px)",
-                      transition: `all 0.5s ease ${i * 100}ms`,
-                    }}
-                  >
-                    <Icon className="w-5 h-5 text-white/25 mx-auto mb-5 group-hover:text-white/40 transition-colors duration-300" />
-                    <h3 className="text-[15px] font-bold text-white mb-3">{v.title}</h3>
-                    <p className="text-[13px] text-white/25 leading-[1.7] group-hover:text-white/35 transition-colors duration-300">{v.desc}</p>
-                    <div className="w-8 h-px bg-white/[0.08] mx-auto mt-6" />
+                    <p className="text-[12px] text-white/25 leading-relaxed">{item.desc}</p>
                   </div>
                 );
               })}
@@ -442,7 +394,7 @@ const About = () => {
                     return (
                       <div
                         key={step.period}
-                        className="relative group"
+                        className="relative"
                         style={{
                           opacity: story.isVisible ? 1 : 0,
                           transform: story.isVisible ? "translateY(0)" : "translateY(16px)",
@@ -450,7 +402,7 @@ const About = () => {
                         }}
                       >
                         {/* Dot */}
-                        <div className={`absolute -left-8 top-0 w-[31px] h-[31px] rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-300`}>
+                        <div className={`absolute -left-8 top-0 w-[31px] h-[31px] rounded-full ${c.bg} border-2 ${c.border} flex items-center justify-center z-10`}>
                           <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
                         </div>
 
@@ -467,6 +419,56 @@ const About = () => {
                   })}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ════════════════ VALORES ════════════════ */}
+        <div className="px-4 pb-24 md:pb-32">
+          <div
+            ref={valuesSection.ref}
+            className={`max-w-5xl mx-auto transition-all duration-700 ${
+              valuesSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}
+          >
+            {/* Centered header */}
+            <div className="text-center mb-14">
+              <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+                Nuestros Valores
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-4">
+                Los principios que{" "}
+                <span className="text-gradient">nos guían</span>
+              </h2>
+              <p className="text-[14px] text-white/30 max-w-lg mx-auto leading-relaxed">
+                Estos valores fundamentan cada decisión que tomamos y definen
+                cómo interactuamos con nuestros clientes
+              </p>
+            </div>
+
+            {/* Value cards grid — 4 equal cards */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {values.map((v, i) => {
+                const Icon = v.icon;
+                const c = colorMap[v.color];
+                return (
+                  <div
+                    key={v.title}
+                    className={`text-center rounded-2xl border ${c.border} bg-white/[0.02] p-7 transition-all duration-300`}
+                    style={{
+                      opacity: valuesSection.isVisible ? 1 : 0,
+                      transform: valuesSection.isVisible ? "translateY(0)" : "translateY(16px)",
+                      transition: `all 0.5s ease ${i * 100}ms`,
+                    }}
+                  >
+                    <div className={`w-10 h-10 rounded-lg ${c.bg} border ${c.border} flex items-center justify-center mx-auto mb-5`}>
+                      <Icon className={`w-5 h-5 ${c.icon}`} />
+                    </div>
+                    <h3 className="text-[15px] font-bold text-white mb-3">{v.title}</h3>
+                    <p className="text-[13px] text-white/30 leading-[1.7]">{v.desc}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

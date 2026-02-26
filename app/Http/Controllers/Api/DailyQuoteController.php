@@ -140,7 +140,7 @@ class DailyQuoteController extends Controller
     }
 
     /**
-     * Fetch births and deaths from Spanish Wikipedia ONLY.
+     * Fetch births and deaths from Spanish Wikipedia in a SINGLE API call.
      * Sorts by notability (extract length).
      */
     private function fetchAllWikipediaPeople(string $month, string $day): array
@@ -148,17 +148,20 @@ class DailyQuoteController extends Controller
         $people = [];
         $seenNames = [];
 
-        $types = ['births', 'deaths'];
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
+                ->get("https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/all/{$month}/{$day}");
 
-        foreach ($types as $type) {
-            try {
-                $response = Http::timeout(10)
-                    ->withHeaders(['User-Agent' => 'WithMIA/1.0 (https://app.withmia.com)'])
-                    ->get("https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/{$type}/{$month}/{$day}");
+            if (!$response->ok()) {
+                Log::warning('DailyQuote: Wikipedia API failed', ['status' => $response->status()]);
+                return [];
+            }
 
-                if (!$response->ok()) continue;
+            $data = $response->json();
 
-                foreach ($response->json($type) ?? [] as $entry) {
+            foreach (['births', 'deaths'] as $type) {
+                foreach ($data[$type] ?? [] as $entry) {
                     $page = $entry['pages'][0] ?? null;
                     if (!$page || empty($entry['year'])) continue;
 
@@ -172,17 +175,13 @@ class DailyQuoteController extends Controller
                     $cleanName = str_replace('_', ' ', $name);
                     $nameLower = mb_strtolower($cleanName);
 
-                    // Skip "Anexo:" pages
                     if (str_starts_with($cleanName, 'Anexo:')) continue;
+                    if (isset($seenNames[$nameLower])) continue;
 
                     $extractText = $page['extract'] ?? '';
                     $descText = $page['description'] ?? '';
 
-                    // Deduplicate
-                    if (isset($seenNames[$nameLower])) continue;
-
-                    $idx = count($people);
-                    $people[$idx] = [
+                    $people[] = [
                         'name' => $cleanName,
                         'year' => (int) $entry['year'],
                         'type' => $type === 'births' ? 'birth' : 'death',
@@ -191,17 +190,14 @@ class DailyQuoteController extends Controller
                         'extract_es' => $extractText,
                         'description_es' => $descText,
                     ];
-                    $seenNames[$nameLower] = $idx;
+                    $seenNames[$nameLower] = true;
                 }
-            } catch (\Exception $e) {
-                Log::warning("DailyQuote: Wikipedia es/{$type} error", ['error' => $e->getMessage()]);
             }
+        } catch (\Exception $e) {
+            Log::error('DailyQuote: Wikipedia API error', ['error' => $e->getMessage()]);
         }
 
-        // Sort by notability (extract length)
-        usort($people, function($a, $b) {
-            return strlen($b['extract_es']) - strlen($a['extract_es']);
-        });
+        usort($people, fn($a, $b) => strlen($b['extract_es']) - strlen($a['extract_es']));
 
         return array_slice($people, 0, 30);
     }
