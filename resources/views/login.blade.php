@@ -489,6 +489,238 @@
         html.dark .atlantis-box {
             border: 1px solid rgba(255,255,255,0.06);
         }
+
+        /* ===== INTEGRATION HUB SYSTEM ===== */
+        .hub-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 480px;
+            background: linear-gradient(180deg, #060610 0%, #08081a 50%, #060610 100%);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .hub-dot-grid {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 28px 28px;
+            animation: hub-grid-shimmer 8s ease-in-out infinite alternate;
+        }
+        @keyframes hub-grid-shimmer {
+            0% { opacity: 0.45; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.45; }
+        }
+
+        .hub-glow {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hub-glow-1 {
+            top: 40%;
+            left: 30%;
+            width: 300px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(139,92,246,0.06), transparent 70%);
+            animation: hub-glow-drift 12s ease-in-out infinite alternate;
+        }
+        .hub-glow-2 {
+            bottom: 10%;
+            right: 10%;
+            width: 200px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(245,158,11,0.04), transparent 70%);
+            animation: hub-glow-drift 16s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes hub-glow-drift {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15) translate(10px, -10px); }
+            100% { transform: scale(0.9) translate(-10px, 10px); }
+        }
+
+        .hub-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .hub-ring-spin {
+            animation: hub-spin 40s linear infinite;
+            transform-origin: center;
+        }
+        .hub-ring-spin-r {
+            animation: hub-spin 50s linear infinite reverse;
+            transform-origin: center;
+        }
+        @keyframes hub-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hub-flow-line {
+            animation: hub-dash-flow 2s linear infinite;
+        }
+        @keyframes hub-dash-flow {
+            from { stroke-dashoffset: 20; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .hub-center {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+
+        .hub-pulse-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(139,92,246,0.08);
+            animation: hub-pulse-expand 3.5s ease-out infinite;
+        }
+        .hub-pulse-1 { inset: -32px; }
+        .hub-pulse-2 { inset: -56px; animation-delay: 1.5s; border-color: rgba(139,92,246,0.04); }
+        @keyframes hub-pulse-expand {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            70% { opacity: 0.15; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .hub-core-glow {
+            position: absolute;
+            inset: -20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(245,158,11,0.06));
+            filter: blur(16px);
+            animation: hub-breathe 4s ease-in-out infinite;
+        }
+        @keyframes hub-breathe {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.15); }
+        }
+
+        .hub-box {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(139,92,246,0.2), #0a0a15, rgba(245,158,11,0.15));
+            border: 1px solid rgba(255,255,255,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .hub-label {
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .hub-label-name {
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(167,139,250,0.5);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        .hub-label-live {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .hub-live-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(52,211,153,0.7);
+            animation: hub-status-pulse 2s ease-in-out infinite;
+        }
+        .hub-live-text {
+            font-size: 7px;
+            font-family: monospace;
+            color: rgba(52,211,153,0.4);
+        }
+        @keyframes hub-status-pulse {
+            0%, 100% { opacity: 0.6; box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+            50% { opacity: 1; box-shadow: 0 0 6px 2px rgba(52,211,153,0.3); }
+        }
+
+        .hub-node {
+            position: absolute;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            animation: hub-node-pop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes hub-node-pop {
+            from { opacity: 0; transform: translate(-50%,-50%) scale(0.6); }
+            to { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+        }
+
+        .hub-node-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid;
+            transition: all 0.3s ease;
+        }
+        .hub-node-icon:hover {
+            transform: scale(1.1) translateY(-2px);
+        }
+        .hub-node-sm {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+        }
+
+        .hub-node-name {
+            font-size: 8px;
+            font-weight: 700;
+            white-space: nowrap;
+            letter-spacing: 0.04em;
+            color: rgba(255,255,255,0.25);
+        }
+        .hub-node-name-sm {
+            font-size: 7px;
+            color: rgba(255,255,255,0.15);
+        }
+
+        .hub-outer {
+            opacity: 0.6;
+        }
+
+        /* Light mode: invert hub to show on white backgrounds */
+        :root .hub-container {
+            background: linear-gradient(180deg, #060610 0%, #08081a 50%, #060610 100%);
+        }
+
+        /* Responsive: hide hub on very small screens, keep right panel */
+        @media (max-width: 768px) {
+            .hub-container {
+                min-height: 320px;
+            }
+            .hub-node-name { display: none; }
+            .hub-outer { display: none; }
+        }
 </style>
 </head>
 <body>
@@ -504,11 +736,165 @@
 
     <div class="login-container">
         <div class="left-panel">
-            <center><img src="/laurel-logo.ico" width="250" class="laurel-img" style="margin-bottom: 0px;"></center>
-            <center><div class=atlantis-box style=position:relative;top:-65px;margin-bottom:0px;>Disponible para</div></center>
-            <center><div style=margin-top:-60px><div class=atlantis-box style=display:inline-flex;gap:15px;padding:9px;align-items:center><img src=/icons/whatsapp.webp style=width:24px;height:24px title=WhatsApp><img src=/icons/instagram-new.webp style=width:24px;height:24px title=Instagram><img src=/icons/facebook-new.webp style=width:28px;height:28px title=Facebook><img src=/icons/gmail-new.webp style=width:40px;height:40px;margin:-8px title=Gmail><img src=/icons/web-new.webp class=web-icon-img style=width:24px;height:24px title=Web><img src=/icons/api-final.webp style=width:24px;height:24px;margin-left:-4px title=API></div></div></center>
-<center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300;color:var(--text-secondary)>Cientos de clientes confían en nosotros</p></center>
-<marquee behavior=scroll direction=left scrollamount=6 scrolldelay=0><div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div></marquee>
+            <!-- Integration Hub Circular System -->
+            <div class="hub-container">
+                <!-- Dot grid background -->
+                <div class="hub-dot-grid"></div>
+
+                <!-- Ambient glows -->
+                <div class="hub-glow hub-glow-1"></div>
+                <div class="hub-glow hub-glow-2"></div>
+
+                <!-- SVG connections + particles -->
+                <svg class="hub-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <filter id="particle-glow"><feGaussianBlur stdDeviation="2"/></filter>
+                    </defs>
+                    <!-- Orbit rings -->
+                    <circle cx="250" cy="250" r="90" fill="none" stroke="white" stroke-width="0.3" stroke-opacity="0.03" stroke-dasharray="2 8" class="hub-ring-spin"/>
+                    <circle cx="250" cy="250" r="140" fill="none" stroke="white" stroke-width="0.3" stroke-opacity="0.02" stroke-dasharray="3 10" class="hub-ring-spin-r"/>
+                    <circle cx="250" cy="250" r="190" fill="none" stroke="white" stroke-width="0.3" stroke-opacity="0.015" stroke-dasharray="2 12" class="hub-ring-spin"/>
+
+                    <!-- Connection lines + particles for each integration -->
+                    <g class="hub-connections">
+                        <!-- WhatsApp -->
+                        <line x1="250" y1="250" x2="250" y2="100" stroke="#25D366" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="250" y2="100" stroke="#25D366" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:0s"/>
+                        <path id="p0" d="M250,250 L250,100" fill="none"/>
+                        <circle r="2" fill="#25D366" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite"/></circle>
+
+                        <!-- Instagram -->
+                        <line x1="250" y1="250" x2="356" y2="143" stroke="#E4405F" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="356" y2="143" stroke="#E4405F" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:0.3s"/>
+                        <path id="p1" d="M250,250 L356,143" fill="none"/>
+                        <circle r="2" fill="#E4405F" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="0.25s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0.25s"/></circle>
+
+                        <!-- Messenger -->
+                        <line x1="250" y1="250" x2="393" y2="222" stroke="#0084FF" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="393" y2="222" stroke="#0084FF" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:0.6s"/>
+                        <path id="p2" d="M250,250 L393,222" fill="none"/>
+                        <circle r="2" fill="#0084FF" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="0.5s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="0.5s"/></circle>
+
+                        <!-- Google Calendar -->
+                        <line x1="250" y1="250" x2="393" y2="310" stroke="#4285F4" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="393" y2="310" stroke="#4285F4" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:0.9s"/>
+                        <path id="p3" d="M250,250 L393,310" fill="none"/>
+                        <circle r="2" fill="#4285F4" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="0.75s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="0.75s"/></circle>
+
+                        <!-- Email -->
+                        <line x1="250" y1="250" x2="250" y2="400" stroke="#EA4335" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="250" y2="400" stroke="#EA4335" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:1.2s"/>
+                        <path id="p4" d="M250,250 L250,400" fill="none"/>
+                        <circle r="2" fill="#EA4335" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="1s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="1s"/></circle>
+
+                        <!-- MercadoLibre -->
+                        <line x1="250" y1="250" x2="335" y2="393" stroke="#FFE600" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="335" y2="393" stroke="#FFE600" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:1.5s"/>
+                        <path id="p5" d="M250,250 L335,393" fill="none"/>
+                        <circle r="2" fill="#FFE600" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="1.25s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.25s"/></circle>
+
+                        <!-- Outlook -->
+                        <line x1="250" y1="250" x2="165" y2="393" stroke="#0078D4" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="165" y2="393" stroke="#0078D4" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:1.8s"/>
+                        <path id="p6" d="M250,250 L165,393" fill="none"/>
+                        <circle r="2" fill="#0078D4" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="1.5s"><mpath href="#p6"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="1.5s"/></circle>
+
+                        <!-- Reservo -->
+                        <line x1="250" y1="250" x2="80" y2="340" stroke="#10B981" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="80" y2="340" stroke="#10B981" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:2.1s"/>
+                        <path id="p7" d="M250,250 L80,340" fill="none"/>
+                        <circle r="2" fill="#10B981" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="1.75s"><mpath href="#p7"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="1.75s"/></circle>
+
+                        <!-- Shopify -->
+                        <line x1="250" y1="250" x2="80" y2="210" stroke="#96BF48" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="80" y2="210" stroke="#96BF48" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:2.4s"/>
+                        <path id="p8" d="M250,250 L80,210" fill="none"/>
+                        <circle r="2" fill="#96BF48" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="2s"><mpath href="#p8"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="2s"/></circle>
+
+                        <!-- WooCommerce -->
+                        <line x1="250" y1="250" x2="100" y2="140" stroke="#9B5C8F" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="100" y2="140" stroke="#9B5C8F" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:2.7s"/>
+                        <path id="p9" d="M250,250 L100,140" fill="none"/>
+                        <circle r="2" fill="#9B5C8F" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="2.25s"><mpath href="#p9"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="2.25s"/></circle>
+
+                        <!-- Cloud API -->
+                        <line x1="250" y1="250" x2="168" y2="120" stroke="#22D3EE" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="168" y2="120" stroke="#22D3EE" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:3s"/>
+                        <path id="p10" d="M250,250 L168,120" fill="none"/>
+                        <circle r="2" fill="#22D3EE" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="2.5s"><mpath href="#p10"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="2.5s"/></circle>
+
+                        <!-- Chat Web -->
+                        <line x1="250" y1="250" x2="165" y2="310" stroke="#6366F1" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="165" y2="310" stroke="#6366F1" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:3.3s"/>
+                        <path id="p11" d="M250,250 L165,310" fill="none"/>
+                        <circle r="2" fill="#6366F1" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite" begin="2.75s"><mpath href="#p11"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2.5s" repeatCount="indefinite" begin="2.75s"/></circle>
+
+                        <!-- API REST -->
+                        <line x1="250" y1="250" x2="100" y2="270" stroke="#F59E0B" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="100" y2="270" stroke="#F59E0B" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:3.6s"/>
+                        <path id="p12" d="M250,250 L100,270" fill="none"/>
+                        <circle r="2" fill="#F59E0B" fill-opacity="0"><animateMotion dur="2s" repeatCount="indefinite" begin="3s"><mpath href="#p12"/></animateMotion><animate attributeName="fill-opacity" values="0;0.8;0.8;0" dur="2s" repeatCount="indefinite" begin="3s"/></circle>
+
+                        <!-- MySQL -->
+                        <line x1="250" y1="250" x2="175" y2="75" stroke="#00758F" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="175" y2="75" stroke="#00758F" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:3.9s"/>
+
+                        <!-- AgendaPro -->
+                        <line x1="250" y1="250" x2="340" y2="80" stroke="#3B82F6" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="340" y2="80" stroke="#3B82F6" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:4.2s"/>
+
+                        <!-- Calendly -->
+                        <line x1="250" y1="250" x2="410" y2="155" stroke="#006BFF" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="410" y2="155" stroke="#006BFF" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:4.5s"/>
+
+                        <!-- Dentalink -->
+                        <line x1="250" y1="250" x2="420" y2="270" stroke="#22D3EE" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="420" y2="270" stroke="#22D3EE" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:4.8s"/>
+
+                        <!-- Medilink -->
+                        <line x1="250" y1="250" x2="400" y2="370" stroke="#F43F5E" stroke-width="0.6" stroke-opacity="0.08"/>
+                        <line x1="250" y1="250" x2="400" y2="370" stroke="#F43F5E" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6" class="hub-flow-line" style="animation-delay:5.1s"/>
+                    </g>
+                </svg>
+
+                <!-- Center Hub -->
+                <div class="hub-center">
+                    <div class="hub-pulse-ring hub-pulse-1"></div>
+                    <div class="hub-pulse-ring hub-pulse-2"></div>
+                    <div class="hub-core-glow"></div>
+                    <div class="hub-box">
+                        <video autoplay loop muted playsinline style="width:40px;height:40px;object-fit:contain;pointer-events:none">
+                            <source src="/logo-animated.webm" type="video/webm">
+                        </video>
+                    </div>
+                    <div class="hub-label">
+                        <span class="hub-label-name">WITHMIA</span>
+                        <div class="hub-label-live"><span class="hub-live-dot"></span><span class="hub-live-text">LIVE</span></div>
+                    </div>
+                </div>
+
+                <!-- Integration nodes -->
+                <div class="hub-node" style="left:50%;top:14%"><div class="hub-node-icon" style="background:rgba(37,211,102,0.06);border-color:rgba(37,211,102,0.2)"><img src="/icons/whatsapp.webp" style="width:20px;height:20px"></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">WhatsApp</span></div>
+                <div class="hub-node" style="left:72%;top:23%"><div class="hub-node-icon" style="background:rgba(228,64,95,0.06);border-color:rgba(228,64,95,0.2)"><img src="/icons/instagram-new.webp" style="width:20px;height:20px"></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Instagram</span></div>
+                <div class="hub-node" style="left:83%;top:41%"><div class="hub-node-icon" style="background:rgba(0,132,255,0.06);border-color:rgba(0,132,255,0.2)"><img src="/icons/facebook-new.webp" style="width:20px;height:20px"></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Messenger</span></div>
+                <div class="hub-node" style="left:83%;top:60%"><div class="hub-node-icon" style="background:rgba(66,133,244,0.06);border-color:rgba(66,133,244,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Google Calendar</span></div>
+                <div class="hub-node" style="left:50%;top:79%"><div class="hub-node-icon" style="background:rgba(234,67,53,0.06);border-color:rgba(234,67,53,0.2)"><img src="/icons/gmail-new.webp" style="width:22px;height:22px"></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Email</span></div>
+                <div class="hub-node" style="left:68%;top:77%"><div class="hub-node-icon" style="background:rgba(255,230,0,0.06);border-color:rgba(255,230,0,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFE600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">MercadoLibre</span></div>
+                <div class="hub-node" style="left:32%;top:77%"><div class="hub-node-icon" style="background:rgba(0,120,212,0.06);border-color:rgba(0,120,212,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Outlook</span></div>
+                <div class="hub-node" style="left:13%;top:65%"><div class="hub-node-icon" style="background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 16 2 2 4-4"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Reservo</span></div>
+                <div class="hub-node" style="left:13%;top:38%"><div class="hub-node-icon" style="background:rgba(150,191,72,0.06);border-color:rgba(150,191,72,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#96BF48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Shopify</span></div>
+                <div class="hub-node" style="left:17%;top:23%"><div class="hub-node-icon" style="background:rgba(155,92,143,0.06);border-color:rgba(155,92,143,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B5C8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">WooCommerce</span></div>
+                <div class="hub-node" style="left:30%;top:18%"><div class="hub-node-icon" style="background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Cloud API</span></div>
+                <div class="hub-node" style="left:30%;top:60%"><div class="hub-node-icon" style="background:rgba(99,102,241,0.06);border-color:rgba(99,102,241,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">Chat Web</span></div>
+                <div class="hub-node" style="left:17%;top:48%"><div class="hub-node-icon" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><span class="hub-node-name" style="color:rgba(255,255,255,0.3)">API REST</span></div>
+
+                <!-- Outer nodes (extra ring) -->
+                <div class="hub-node hub-outer" style="left:33%;top:8%"><div class="hub-node-icon hub-node-sm" style="background:rgba(0,117,143,0.06);border-color:rgba(0,117,143,0.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00758F" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div><span class="hub-node-name hub-node-name-sm">MySQL</span></div>
+                <div class="hub-node hub-outer" style="left:66%;top:10%"><div class="hub-node-icon hub-node-sm" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="hub-node-name hub-node-name-sm">AgendaPro</span></div>
+                <div class="hub-node hub-outer" style="left:88%;top:28%"><div class="hub-node-icon hub-node-sm" style="background:rgba(0,107,255,0.06);border-color:rgba(0,107,255,0.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#006BFF" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="hub-node-name hub-node-name-sm">Calendly</span></div>
+                <div class="hub-node hub-outer" style="left:90%;top:50%"><div class="hub-node-icon hub-node-sm" style="background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><span class="hub-node-name hub-node-name-sm">Dentalink</span></div>
+                <div class="hub-node hub-outer" style="left:85%;top:72%"><div class="hub-node-icon hub-node-sm" style="background:rgba(244,63,94,0.06);border-color:rgba(244,63,94,0.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><span class="hub-node-name hub-node-name-sm">Medilink</span></div>
+            </div>
         </div>
         <div class="right-panel">
         <p>Desarrollado por</p><br>
