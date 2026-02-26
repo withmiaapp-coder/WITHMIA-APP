@@ -64,29 +64,29 @@ export const NotificationBell: React.FC = () => {
     }));
   };
 
-  // Dark-aware panel colors
-  const panelBg = isDark ? '#1a1f2e' : 'white';
-  const panelBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
-  const headerBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(249,250,251,0.8)';
-  const headerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
-  const headerText = isDark ? '#f1f5f9' : '#1f2937';
-  const headerIconColor = isDark ? '#94a3b8' : '#4b5563';
-  const closeBtnHover = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(229,231,235,0.6)';
-  const actionBg1 = isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff';
-  const actionText1 = isDark ? '#60a5fa' : '#2563eb';
+  // Dark-aware panel colors — use theme CSS vars when a custom theme is active
+  const panelBg = hasTheme ? 'var(--theme-content-bg)' : (isDark ? '#1a1f2e' : 'white');
+  const panelBorder = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb');
+  const headerBg = hasTheme ? 'var(--theme-content-card-bg)' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(249,250,251,0.8)');
+  const headerBorder = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f3f4f6');
+  const headerText = hasTheme ? 'var(--theme-text-primary)' : (isDark ? '#f1f5f9' : '#1f2937');
+  const headerIconColor = hasTheme ? 'var(--theme-text-secondary)' : (isDark ? '#94a3b8' : '#4b5563');
+  const closeBtnHover = hasTheme ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(229,231,235,0.6)');
+  const actionBg1 = hasTheme ? 'var(--theme-accent-light)' : (isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff');
+  const actionText1 = hasTheme ? 'var(--theme-accent)' : (isDark ? '#60a5fa' : '#2563eb');
   const actionBg2 = isDark ? 'rgba(239,68,68,0.1)' : '#fef2f2';
   const actionText2 = isDark ? '#f87171' : '#dc2626';
-  const itemHover = isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb';
-  const unreadBg = isDark ? 'rgba(59,130,246,0.06)' : 'rgba(219,234,254,0.3)';
-  const nameColor = isDark ? '#f1f5f9' : '#111827';
-  const nameReadColor = isDark ? '#94a3b8' : '#4b5563';
-  const messageColor = isDark ? '#94a3b8' : '#4b5563';
-  const timestampColor = isDark ? '#64748b' : '#6b7280';
-  const dividerColor = isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6';
-  const footerBg = isDark ? 'rgba(255,255,255,0.02)' : '#f9fafb';
-  const footerBorder = isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb';
-  const footerText = isDark ? '#64748b' : '#6b7280';
-  const emptyColor = isDark ? '#64748b' : '#9ca3af';
+  const itemHover = hasTheme ? (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)') : (isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb');
+  const unreadBg = hasTheme ? 'var(--theme-accent-light)' : (isDark ? 'rgba(59,130,246,0.06)' : 'rgba(219,234,254,0.3)');
+  const nameColor = hasTheme ? 'var(--theme-text-primary)' : (isDark ? '#f1f5f9' : '#111827');
+  const nameReadColor = hasTheme ? 'var(--theme-text-secondary)' : (isDark ? '#94a3b8' : '#4b5563');
+  const messageColor = hasTheme ? 'var(--theme-text-secondary)' : (isDark ? '#94a3b8' : '#4b5563');
+  const timestampColor = hasTheme ? 'var(--theme-text-muted)' : (isDark ? '#64748b' : '#6b7280');
+  const dividerColor = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6');
+  const footerBg = hasTheme ? 'var(--theme-content-card-bg)' : (isDark ? 'rgba(255,255,255,0.02)' : '#f9fafb');
+  const footerBorder = hasTheme ? 'var(--theme-content-card-border)' : (isDark ? 'rgba(255,255,255,0.06)' : '#e5e7eb');
+  const footerText = hasTheme ? 'var(--theme-text-muted)' : (isDark ? '#64748b' : '#6b7280');
+  const emptyColor = hasTheme ? 'var(--theme-text-muted)' : (isDark ? '#64748b' : '#9ca3af');
 
   return (
     <div className="relative">
