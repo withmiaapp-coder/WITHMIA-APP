@@ -26,6 +26,7 @@ import {
   Layers,
   Rocket,
   Lightbulb,
+  Eye,
 } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -99,7 +100,7 @@ const values = [
 
 const timeline = [
   {
-    period: "2024",
+    period: "2025",
     title: "Origen en Atlantis",
     desc: "Nace como proyecto interno para resolver ineficiencias operativas en PYMEs latinoamericanas",
     icon: Lightbulb,
@@ -161,6 +162,7 @@ const About = () => {
   const brand = useScrollReveal();
   const founder = useScrollReveal();
   const mission = useScrollReveal();
+  const vision = useScrollReveal();
   const valuesSection = useScrollReveal();
   const story = useScrollReveal();
   const backed = useScrollReveal();
@@ -174,10 +176,6 @@ const About = () => {
 
         {/* ════════════════ HERO ════════════════ */}
         <div className="relative pt-16 md:pt-24 pb-20 md:pb-28 px-4">
-          {/* Aurora mesh */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-gradient-to-b from-violet-500/[0.07] via-amber-500/[0.03] to-transparent rounded-full blur-3xl" />
-          </div>
 
           <div
             ref={hero.ref}
@@ -374,9 +372,6 @@ const About = () => {
 
         {/* ════════════════ HISTORIA ════════════════ */}
         <div className="relative px-4 pb-24 md:pb-32 overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-br from-violet-500/[0.03] via-amber-500/[0.02] to-transparent rounded-full blur-3xl" />
-          </div>
 
           <div
             ref={story.ref}
@@ -394,7 +389,7 @@ const About = () => {
                 <span className="text-gradient">una empresa propia</span>
               </h2>
               <p className="text-[14px] text-white/35 leading-relaxed">
-                En 2024, dentro de Atlantis Producciones, detectamos que las PYMEs
+                En 2025, dentro de Atlantis Producciones, detectamos que las PYMEs
                 latinoamericanas perdían ventas por no responder a tiempo y operaban
                 con herramientas desconectadas. Construimos un prototipo interno que
                 evolucionó hasta convertirse en una plataforma SaaS completa
@@ -407,11 +402,11 @@ const About = () => {
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
               {/* Platforms — staggered heights like a platformer game */}
-              <div className="flex flex-col md:flex-row items-end gap-4 md:gap-2 lg:gap-3 min-h-[400px] md:min-h-[460px] relative pb-4">
+              <div className="flex flex-col md:flex-row items-end gap-4 md:gap-2 lg:gap-3 min-h-[440px] md:min-h-[520px] relative pb-4">
                 {timeline.map((step, i) => {
                   const c = colorMap[step.color];
-                  const heights = ["h-[220px]", "h-[255px]", "h-[290px]", "h-[325px]", "h-[360px]", "h-[400px]"];
-                  const mdHeights = ["md:h-[200px]", "md:h-[235px]", "md:h-[270px]", "md:h-[305px]", "md:h-[345px]", "md:h-[390px]"];
+                  const heights = ["h-[280px]", "h-[310px]", "h-[340px]", "h-[370px]", "h-[400px]", "h-[440px]"];
+                  const mdHeights = ["md:h-[290px]", "md:h-[320px]", "md:h-[350px]", "md:h-[380px]", "md:h-[420px]", "md:h-[460px]"];
                   const delays = [200, 350, 500, 650, 800, 950];
                   const xpPercent = Math.round(((i + 1) / timeline.length) * 100);
                   // Levels 0-3 are completed (solid), 4-5 are upcoming (slightly dimmer)
@@ -444,7 +439,7 @@ const About = () => {
                             <div className="w-0.5 h-2 rounded-full bg-gradient-to-b from-amber-400/30 to-transparent" />
                           </div>
                           {/* Rocket */}
-                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/20 to-amber-500/10 border border-violet-500/15 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-violet-500/5"
+                          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/20 to-amber-500/10 border border-violet-500/15 flex items-center justify-center"
                             style={{ animation: "bounce 2s ease-in-out infinite" }}
                           >
                             <Rocket className="w-4.5 h-4.5 text-violet-400" />
@@ -566,11 +561,6 @@ const About = () => {
 
         {/* ════════════════ MISIÓN ════════════════ */}
         <div className="relative px-4 pb-24 md:pb-32">
-          {/* Background accent */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/3 left-0 w-[500px] h-[500px] bg-amber-500/[0.04] rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-3xl" />
-          </div>
 
           <div
             ref={mission.ref}
@@ -630,6 +620,63 @@ const About = () => {
           </div>
         </div>
 
+        {/* ════════════════ VISIÓN ════════════════ */}
+        <div className="relative px-4 pb-24 md:pb-32">
+
+          <div
+            ref={vision.ref}
+            className={`max-w-5xl mx-auto relative z-10 transition-all duration-700 ${
+              vision.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}
+          >
+            <div className="text-center mb-20">
+              <p className="text-[11px] text-cyan-400/60 uppercase tracking-[0.25em] font-semibold mb-5">
+                Nuestra Visión
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-8 max-w-3xl mx-auto">
+                La plataforma de IA para{" "}
+                <span className="text-gradient">toda Latinoamérica</span>
+              </h2>
+              <p className="text-[16px] md:text-[17px] text-white/50 leading-relaxed max-w-2xl mx-auto font-medium mb-6">
+                Convertirnos en la plataforma de referencia en LATAM donde
+                cualquier negocio — grande o pequeño — pueda operar con
+                inteligencia artificial desde el día uno
+              </p>
+            </div>
+
+            {/* Three pillars of the vision */}
+            <div className="grid md:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-white/[0.06]">
+              <div className="relative bg-white/[0.02] p-7 md:p-8">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-500/25 via-cyan-500/5 to-transparent" />
+                <span className="text-2xl mb-4 block">🌎</span>
+                <h3 className="text-[14px] font-bold text-white mb-2">Sin fronteras</h3>
+                <p className="text-[12px] text-white/30 leading-relaxed">
+                  Diseñado para el mercado de habla hispana, desde Santiago
+                  hasta Ciudad de México
+                </p>
+              </div>
+              <div className="relative bg-white/[0.02] p-7 md:p-8">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500/25 via-violet-500/5 to-transparent" />
+                <span className="text-2xl mb-4 block">🔓</span>
+                <h3 className="text-[14px] font-bold text-white mb-2">Sin barreras</h3>
+                <p className="text-[12px] text-white/30 leading-relaxed">
+                  No importa el tamaño, el rubro ni la experiencia técnica.
+                  Si tienes clientes, WITHMIA es para ti
+                </p>
+              </div>
+              <div className="relative bg-white/[0.02] p-7 md:p-8">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/25 via-amber-500/5 to-transparent" />
+                <span className="text-2xl mb-4 block">⚡</span>
+                <h3 className="text-[14px] font-bold text-white mb-2">Desde el día uno</h3>
+                <p className="text-[12px] text-white/30 leading-relaxed">
+                  IA operativa en menos de una hora, sin equipos técnicos
+                  ni integraciones complejas
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ════════════════ VALORES ════════════════ */}
         <div className="px-4 pb-24 md:pb-32">
           <div
@@ -638,41 +685,56 @@ const About = () => {
               valuesSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            {/* Centered header */}
-            <div className="text-center mb-14">
-              <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <p className="text-[11px] text-violet-400/60 uppercase tracking-[0.25em] font-semibold mb-5">
                 Nuestros Valores
               </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-4">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-6 max-w-3xl mx-auto">
                 Los principios que{" "}
                 <span className="text-gradient">nos guían</span>
               </h2>
-              <p className="text-[14px] text-white/30 max-w-lg mx-auto leading-relaxed">
+              <p className="text-[15px] text-white/35 max-w-xl mx-auto leading-relaxed">
                 Estos valores fundamentan cada decisión que tomamos y definen
                 cómo interactuamos con nuestros clientes
               </p>
             </div>
 
-            {/* Value cards grid — 4 equal cards */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 2×2 grid — larger cards, left-aligned content */}
+            <div className="grid md:grid-cols-2 gap-5">
               {values.map((v, i) => {
                 const Icon = v.icon;
                 const c = colorMap[v.color];
                 return (
                   <div
                     key={v.title}
-                    className={`text-center rounded-2xl border ${c.border} bg-white/[0.02] p-7 transition-all duration-300`}
+                    className="relative rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
                     style={{
                       opacity: valuesSection.isVisible ? 1 : 0,
                       transform: valuesSection.isVisible ? "translateY(0)" : "translateY(16px)",
                       transition: `all 0.5s ease ${i * 100}ms`,
                     }}
                   >
-                    <div className={`w-10 h-10 rounded-lg ${c.bg} border ${c.border} flex items-center justify-center mx-auto mb-5`}>
-                      <Icon className={`w-5 h-5 ${c.icon}`} />
+                    {/* Top accent line */}
+                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${c.gradient}`} />
+
+                    <div className="p-7 md:p-8">
+                      {/* Number + icon row */}
+                      <div className="flex items-center justify-between mb-5">
+                        <div className={`w-11 h-11 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center`}>
+                          <Icon className={`w-5 h-5 ${c.icon}`} />
+                        </div>
+                        <span className="text-[40px] font-black text-white/[0.03] leading-none">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="text-[17px] md:text-[18px] font-bold text-white mb-3">{v.title}</h3>
+
+                      {/* Description */}
+                      <p className="text-[13px] text-white/30 leading-[1.8]">{v.desc}</p>
                     </div>
-                    <h3 className="text-[15px] font-bold text-white mb-3">{v.title}</h3>
-                    <p className="text-[13px] text-white/30 leading-[1.7]">{v.desc}</p>
                   </div>
                 );
               })}
@@ -688,151 +750,115 @@ const About = () => {
               backed.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <div className="grid lg:grid-cols-[1fr,1fr] gap-8">
-              {/* Left: company card */}
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-                <div className="px-7 py-5 border-b border-white/[0.05] flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-5">
+                La empresa
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-6 max-w-3xl mx-auto">
+                Constituida,{" "}
+                <span className="text-gradient">verificada y operativa</span>
+              </h2>
+              <p className="text-[15px] text-white/35 max-w-xl mx-auto leading-relaxed">
+                No somos una idea en papel. Somos una empresa legalmente constituida
+                en Chile, verificada por el SII y con infraestructura productiva en AWS
+              </p>
+            </div>
+
+            {/* Company info — single clean card */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden mb-5">
+              {/* Header bar */}
+              <div className="px-8 py-6 border-b border-white/[0.05] flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
                     <Building2 className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <h3 className="text-[15px] font-bold text-white leading-tight">MIA Marketing & Intelligence Artificial SpA</h3>
-                    <p className="text-[11px] text-white/25 mt-0.5">Sociedad por Acciones · Chile</p>
+                    <h3 className="text-[16px] md:text-[17px] font-bold text-white leading-tight">
+                      MIA Marketing & Intelligence Artificial SpA
+                    </h3>
+                    <p className="text-[12px] text-white/25 mt-0.5">Sociedad por Acciones · Chile</p>
                   </div>
                 </div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-400/10 border border-emerald-400/15 text-[12px] font-semibold text-emerald-400 shrink-0 self-start sm:self-center">
+                  <BadgeCheck className="w-3.5 h-3.5" />
+                  Verificada SII
+                </span>
+              </div>
 
-                <div className="p-7 space-y-4">
-                  {[
-                    { icon: FileCheck, label: "RUT", value: "78.199.687-4", mono: true },
-                    { icon: BarChart3, label: "Actividad", value: "Consultoría de informática y gestión de instalaciones informáticas" },
-                    { icon: MapPin, label: "Domicilio", value: "Antonio Bellet 193, Of. 1210, Providencia, Santiago" },
-                    { icon: CalendarDays, label: "Inicio", value: "14 de julio de 2025" },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-start gap-3">
-                      <row.icon className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-[10px] font-semibold text-white/20 uppercase tracking-wider block mb-0.5">{row.label}</span>
-                        <span className={`text-[13px] text-white/50 leading-relaxed ${row.mono ? "font-mono" : ""}`}>{row.value}</span>
-                      </div>
-                    </div>
-                  ))}
+              {/* Data grid */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.03]">
+                {[
+                  { icon: FileCheck, label: "RUT", value: "78.199.687-4", mono: true },
+                  { icon: BarChart3, label: "Actividad", value: "Consultoría de informática y gestión de instalaciones informáticas" },
+                  { icon: MapPin, label: "Domicilio", value: "Antonio Bellet 193, Of. 1210, Providencia, Santiago" },
+                  { icon: CalendarDays, label: "Inicio actividades", value: "14 de julio de 2025" },
+                ].map((row) => (
+                  <div key={row.label} className="bg-[#0a0a1a] p-6">
+                    <row.icon className="w-4 h-4 text-white/15 mb-3" />
+                    <span className="text-[10px] font-semibold text-white/20 uppercase tracking-wider block mb-1.5">
+                      {row.label}
+                    </span>
+                    <span className={`text-[13px] text-white/50 leading-relaxed block ${row.mono ? "font-mono" : ""}`}>
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom row: SII detail + Atlantis origin */}
+            <div className="grid md:grid-cols-2 gap-5">
+              {/* SII Verification */}
+              <div className="rounded-2xl border border-emerald-500/10 bg-white/[0.02] p-7">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center shrink-0">
+                    <Shield className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-[15px] font-bold text-white mb-1">Verificada por el SII</h4>
+                    <p className="text-[11px] text-white/25 mb-3">
+                      Servicio de Impuestos Internos · desde 21 jul 2025
+                    </p>
+                    <p className="text-[12px] text-white/30 leading-relaxed">
+                      Autorizada para emitir facturas electrónicas y documentos
+                      tributarios. Infraestructura alojada en AWS
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Right: verification + origin */}
-              <div className="flex flex-col gap-5">
-                {/* SII Verification */}
-                <div className="flex-1 rounded-2xl border border-emerald-500/10 bg-emerald-500/[0.03] p-7 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-[14px] font-bold text-white">Verificada por el SII</h4>
-                      <p className="text-[11px] text-white/25">Servicio de Impuestos Internos · Chile</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-400/10 border border-emerald-400/15 text-[12px] font-semibold text-emerald-400">
-                      <BadgeCheck className="w-3.5 h-3.5" />
-                      Empresa verificada
-                    </span>
-                    <span className="text-[12px] text-white/25">desde 21 jul 2025</span>
-                  </div>
-                  <p className="text-[12px] text-white/25 leading-relaxed">
-                    Autorizada para emitir facturas electrónicas y documentos
-                    tributarios. Infraestructura alojada en AWS.
+              {/* Atlantis origin */}
+              <a
+                href="https://atlantisproducciones.cl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] p-7 flex items-start gap-4 transition-all duration-300 group"
+              >
+                <img
+                  src="/Logo-Atlantis.webp"
+                  alt="Atlantis Producciones"
+                  className="w-12 h-12 object-contain opacity-40 group-hover:opacity-60 transition-opacity rounded-lg shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-[15px] font-bold text-white/50 group-hover:text-white/70 transition-colors mb-1">
+                    Originada en Atlantis Producciones
+                  </h4>
+                  <p className="text-[11px] text-white/20 mb-3">
+                    Agencia de servicios digitales · Santiago, Chile
+                  </p>
+                  <p className="text-[12px] text-white/30 leading-relaxed">
+                    WITHMIA nació como proyecto interno de Atlantis en 2025,
+                    antes de constituirse como empresa independiente
                   </p>
                 </div>
-
-                {/* Atlantis origin */}
-                <a
-                  href="https://atlantisproducciones.cl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] p-7 flex items-center gap-5 transition-all duration-300 group"
-                >
-                  <img
-                    src="/Logo-Atlantis.webp"
-                    alt="Atlantis Producciones"
-                    className="w-12 h-12 object-contain opacity-40 group-hover:opacity-60 transition-opacity rounded-lg"
-                  />
-                  <div>
-                    <p className="text-[13px] font-semibold text-white/50 group-hover:text-white/70 transition-colors mb-0.5">
-                      Originada en Atlantis Producciones
-                    </p>
-                    <p className="text-[11px] text-white/20">
-                      Agencia de servicios digitales · Santiago, Chile
-                    </p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-white/15 ml-auto shrink-0 group-hover:translate-x-1 transition-transform" />
-                </a>
-              </div>
+                <ArrowRight className="w-4 h-4 text-white/15 shrink-0 mt-1 group-hover:translate-x-1 transition-transform" />
+              </a>
             </div>
           </div>
         </div>
 
-        {/* ════════════════ CTA ════════════════ */}
-        <div className="px-4 pb-20 md:pb-28">
-          <div
-            ref={ctaSection.ref}
-            className={`max-w-4xl mx-auto transition-all duration-700 ${
-              ctaSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-            }`}
-          >
-            <div className="relative rounded-3xl overflow-hidden">
-              <div className="absolute inset-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-violet-500/[0.06] to-transparent" />
-                <div className="absolute top-0 right-0 w-[250px] h-[250px] bg-amber-500/10 rounded-full blur-3xl" />
-              </div>
 
-              <div className="relative border border-white/[0.08] rounded-3xl p-10 md:p-14 text-center">
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
-
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                  Prueba WITHMIA gratis
-                </h2>
-                <p className="text-[14px] text-white/40 max-w-md mx-auto mb-8 leading-relaxed">
-                  Crea tu cuenta en 2 minutos, sin tarjeta de crédito.
-                  Conecta tu primer canal y deja que la IA trabaje por ti.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <a
-                    href="https://app.withmia.com"
-                    onClick={() => trackCTAClick('comenzar_ahora', 'about_cta', 'https://app.withmia.com')}
-                    className="relative flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-[15px] font-semibold text-black hover:brightness-110 transition-all group overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      Comenzar ahora
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </span>
-                  </a>
-                  <Link
-                    to="/contacto"
-                    onClick={() => trackCTAClick('contactar_equipo', 'about_cta', '/contacto')}
-                    className="flex items-center justify-center px-8 py-3.5 rounded-xl border border-white/[0.1] text-[14px] font-medium text-white/60 hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all"
-                  >
-                    Contactar al equipo
-                  </Link>
-                </div>
-
-                <div className="flex items-center justify-center gap-6 mt-8 text-white/20 text-[11px]">
-                  <span className="flex items-center gap-1.5">
-                    <Shield className="w-3 h-3" /> Datos seguros
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3 h-3" /> Soporte 24/7
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <BadgeCheck className="w-3 h-3" /> Sin tarjeta requerida
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>

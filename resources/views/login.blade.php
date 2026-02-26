@@ -46,9 +46,12 @@
         html.dark {
             --bg: #080a14;
             --bg-gradient:
-                radial-gradient(60vw 60vw at 15% 20%, rgba(99,66,174,.15) 0%, transparent 70%),
-                radial-gradient(50vw 50vw at 80% 80%, rgba(30,120,200,.10) 0%, transparent 60%),
-                radial-gradient(35vw 35vw at 50% 50%, rgba(139,92,246,.05) 0%, transparent 55%);
+                radial-gradient(76vw 76vw at 12% 18%, rgba(200,140,255,.12) 0%, rgba(200,140,255,.05) 50%, transparent 70%),
+                radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.18) 0%, transparent 55%),
+                radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.14) 0%, transparent 55%),
+                radial-gradient(35vw 35vw at 85% 8%, rgba(200,140,255,.09) 0%, transparent 55%),
+                radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.12) 0%, transparent 60%),
+                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.08) 0%, transparent 60%);
             --container-bg: rgba(12, 14, 28, 0.85);
             --container-border: rgba(139, 92, 246, 0.12);
             --container-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(139, 92, 246, 0.06);
