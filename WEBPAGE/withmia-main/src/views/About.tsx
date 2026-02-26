@@ -24,6 +24,8 @@ import {
   Sparkles,
   Globe,
   Layers,
+  Rocket,
+  Lightbulb,
 } from "lucide-react";
 import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
@@ -97,18 +99,20 @@ const values = [
 
 const timeline = [
   {
-    period: "Mar 2025",
-    title: "Nace la idea",
-    desc: "Identificamos que las PYMEs perdían ventas por responder tarde y operar con herramientas desconectadas",
-    icon: MessageSquare,
+    period: "2024",
+    title: "Origen en Atlantis",
+    desc: "Nace como proyecto interno para resolver ineficiencias operativas en PYMEs latinoamericanas",
+    icon: Lightbulb,
     color: "violet",
+    emoji: "💡",
   },
   {
-    period: "Abr – Jun 2025",
-    title: "Desarrollo del MVP",
-    desc: "Construcción de la plataforma propietaria No-Code con IA generativa desplegada en AWS",
+    period: "Inicio 2025",
+    title: "Pivote a SaaS",
+    desc: "De agentes manuales a plataforma propietaria No-Code en AWS",
     icon: Code2,
     color: "amber",
+    emoji: "⚡",
   },
   {
     period: "Jul 2025",
@@ -116,6 +120,7 @@ const timeline = [
     desc: "MIA Marketing & Intelligence Artificial SpA se constituye en Providencia, Santiago",
     icon: FileCheck,
     color: "emerald",
+    emoji: "📋",
   },
   {
     period: "2025 – Hoy",
@@ -123,6 +128,23 @@ const timeline = [
     desc: "Primeros clientes B2B en Chile con modelo Product-Led Growth",
     icon: TrendingUp,
     color: "cyan",
+    emoji: "🚀",
+  },
+  {
+    period: "Próximamente",
+    title: "Levantamiento de capital",
+    desc: "Ronda de inversión para acelerar el crecimiento, expandir infraestructura y fortalecer el equipo",
+    icon: BarChart3,
+    color: "violet",
+    emoji: "💰",
+  },
+  {
+    period: "El objetivo",
+    title: "Escalar usuarios",
+    desc: "Multiplicar la base de clientes activos en LATAM y consolidar WITHMIA como referente en MarTech para PYMEs",
+    icon: LineChart,
+    color: "amber",
+    emoji: "📈",
   },
 ];
 
@@ -168,7 +190,7 @@ const About = () => {
               SaaS B2B · MarTech & Automatización · Santiago, Chile
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-5">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.1] mb-5 uppercase">
               With you,{" "}
               <span className="text-gradient">with MIA</span>
             </h1>
@@ -198,10 +220,10 @@ const About = () => {
             {/* Three-column brand breakdown */}
             <div className="grid md:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-white/[0.06]">
               {/* Name meaning */}
-              <div className="relative bg-white/[0.02] p-7 md:p-8">
+              <div className="relative bg-white/[0.02] p-7 md:p-8 flex flex-col">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500/25 via-violet-500/5 to-transparent" />
-                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center mb-5">
-                  <Globe className="w-5 h-5 text-violet-400" />
+                <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mb-5">
+                  <span className="text-[18px] font-black text-violet-400 tracking-tight leading-none">W<span className="text-violet-400/50">+</span>M</span>
                 </div>
                 <h3 className="text-[14px] font-bold text-white mb-2">El nombre</h3>
                 <p className="text-[12px] text-white/30 leading-relaxed">
@@ -212,11 +234,15 @@ const About = () => {
                 </p>
               </div>
 
-              {/* Isotipo */}
-              <div className="relative bg-white/[0.02] p-7 md:p-8">
+              {/* Isotipo — logo in center */}
+              <div className="relative bg-white/[0.02] p-7 md:p-8 flex flex-col items-center text-center">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500/25 via-amber-500/5 to-transparent" />
-                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center mb-5">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
+                <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-5">
+                  <img
+                    src="/logo-withmia.webp"
+                    alt="WITHMIA isotipo — mariposa W+M"
+                    className="w-9 h-9 object-contain"
+                  />
                 </div>
                 <h3 className="text-[14px] font-bold text-white mb-2">El isotipo</h3>
                 <p className="text-[12px] text-white/30 leading-relaxed">
@@ -226,17 +252,18 @@ const About = () => {
                 </p>
               </div>
 
-              {/* Sector */}
-              <div className="relative bg-white/[0.02] p-7 md:p-8">
+              {/* Sector — no nos limitamos */}
+              <div className="relative bg-white/[0.02] p-7 md:p-8 flex flex-col">
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/25 via-emerald-500/5 to-transparent" />
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-5">
-                  <Layers className="w-5 h-5 text-emerald-400" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mb-5">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
                 </div>
-                <h3 className="text-[14px] font-bold text-white mb-2">El sector</h3>
+                <h3 className="text-[14px] font-bold text-white mb-2">No nos limitamos</h3>
                 <p className="text-[12px] text-white/30 leading-relaxed">
-                  Empresa de producto tecnológico escalable en el sector TIC.
-                  Modelo SaaS B2B en la vertical de MarTech y Automatización,
-                  no una agencia
+                  Somos un producto SaaS B2B en la vertical de MarTech y
+                  Automatización, no una agencia. Pero si cualquier persona
+                  quiere experimentar lo que es tener un asistente con IA,{" "}
+                  <span className="text-white/45 font-medium">las puertas están abiertas</span>
                 </p>
               </div>
             </div>
@@ -346,7 +373,7 @@ const About = () => {
         </div>
 
         {/* ════════════════ HISTORIA ════════════════ */}
-        <div className="relative px-4 pb-24 md:pb-32">
+        <div className="relative px-4 pb-24 md:pb-32 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-br from-violet-500/[0.03] via-amber-500/[0.02] to-transparent rounded-full blur-3xl" />
           </div>
@@ -358,57 +385,164 @@ const About = () => {
             }`}
           >
             {/* Header */}
-            <div className="text-center mb-14">
+            <div className="text-center mb-16 max-w-2xl mx-auto">
               <p className="text-[11px] text-amber-400/60 uppercase tracking-[0.25em] font-semibold mb-3">
                 Nuestra Historia
               </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
-                De una idea clara a{" "}
-                <span className="text-gradient">una plataforma real</span>
+              <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-6">
+                De una necesidad real a{" "}
+                <span className="text-gradient">una empresa propia</span>
               </h2>
+              <p className="text-[14px] text-white/35 leading-relaxed">
+                En 2024, dentro de Atlantis Producciones, detectamos que las PYMEs
+                latinoamericanas perdían ventas por no responder a tiempo y operaban
+                con herramientas desconectadas. Construimos un prototipo interno que
+                evolucionó hasta convertirse en una plataforma SaaS completa
+              </p>
             </div>
 
-            {/* Milestone cards — stacked, full-width, accent left border */}
-            <div className="space-y-4 max-w-3xl mx-auto">
-              {timeline.map((step, i) => {
-                const Icon = step.icon;
-                const c = colorMap[step.color];
-                const borderColor = step.color === "violet"
-                  ? "border-l-violet-500/40"
-                  : step.color === "amber"
-                  ? "border-l-amber-500/40"
-                  : step.color === "emerald"
-                  ? "border-l-emerald-500/40"
-                  : "border-l-cyan-500/40";
+            {/* Platformer game — side-scrolling platforms */}
+            <div className="relative">
+              {/* Ground line */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
 
-                return (
-                  <div
-                    key={step.period}
-                    className={`relative border-l-[3px] ${borderColor} rounded-xl bg-white/[0.02] backdrop-blur-sm px-6 py-5 flex items-start gap-5`}
-                    style={{
-                      opacity: story.isVisible ? 1 : 0,
-                      transform: story.isVisible ? "translateY(0)" : "translateY(14px)",
-                      transition: `all 0.5s ease ${i * 100}ms`,
-                    }}
-                  >
-                    {/* Icon circle */}
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full ${c.bg} border ${c.border} flex items-center justify-center mt-0.5`}>
-                      <Icon className={`w-4 h-4 ${c.icon}`} />
-                    </div>
+              {/* Floating stars decoration */}
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={`star-${i}`}
+                  className="absolute w-1 h-1 rounded-full bg-white/10"
+                  style={{
+                    left: `${12 + i * 16}%`,
+                    top: `${8 + (i % 3) * 12}%`,
+                    animation: story.isVisible ? `pulse 2s ease-in-out ${i * 0.3}s infinite` : "none",
+                  }}
+                />
+              ))}
 
-                    {/* Text */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1.5">
-                        <h3 className="text-[15px] font-bold text-white">{step.title}</h3>
-                        <span className={`text-[11px] font-semibold ${c.icon} opacity-50 whitespace-nowrap`}>
-                          {step.period}
-                        </span>
+              {/* Platforms — staggered heights like a platformer game */}
+              <div className="flex flex-col md:flex-row items-end gap-4 md:gap-2 lg:gap-3 min-h-[400px] md:min-h-[460px] relative pb-4">
+                {timeline.map((step, i) => {
+                  const c = colorMap[step.color];
+                  // Each platform gets progressively taller (character climbing up)
+                  const heights = ["h-[220px]", "h-[255px]", "h-[290px]", "h-[325px]", "h-[360px]", "h-[400px]"];
+                  const mdHeights = ["md:h-[200px]", "md:h-[235px]", "md:h-[270px]", "md:h-[305px]", "md:h-[345px]", "md:h-[390px]"];
+                  const delays = [200, 350, 500, 650, 800, 950];
+                  const xpPercent = Math.round(((i + 1) / timeline.length) * 100);
+
+                  return (
+                    <div
+                      key={step.period}
+                      className={`flex-1 flex flex-col justify-end relative w-full`}
+                      style={{
+                        opacity: story.isVisible ? 1 : 0,
+                        transform: story.isVisible ? "translateY(0)" : "translateY(40px)",
+                        transition: `all 0.6s cubic-bezier(0.34,1.56,0.64,1) ${delays[i]}ms`,
+                      }}
+                    >
+                      {/* Character on the last platform */}
+                      {i === timeline.length - 1 && (
+                        <div
+                          className="flex justify-center mb-3"
+                          style={{
+                            opacity: story.isVisible ? 1 : 0,
+                            transform: story.isVisible ? "translateY(0) scale(1)" : "translateY(20px) scale(0.8)",
+                            transition: "all 0.5s cubic-bezier(0.34,1.56,0.64,1) 1100ms",
+                          }}
+                        >
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/30 to-amber-500/20 border border-violet-500/20 flex items-center justify-center animate-bounce">
+                            <Rocket className="w-4 h-4 text-violet-400" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Jump trail dots between platforms (mobile: hidden) */}
+                      {i > 0 && (
+                        <div className="hidden md:flex absolute -left-2 top-1/2 flex-col gap-1.5 items-center opacity-20">
+                          <div className="w-1 h-1 rounded-full bg-white" />
+                          <div className="w-0.5 h-0.5 rounded-full bg-white/50" />
+                        </div>
+                      )}
+
+                      {/* The platform block */}
+                      <div className={`${heights[i]} ${mdHeights[i]} rounded-t-2xl relative overflow-hidden group`}>
+                        {/* Platform gradient background */}
+                        <div className={`absolute inset-0 bg-gradient-to-t ${c.gradient} opacity-40`} />
+                        <div className="absolute inset-0 bg-white/[0.015] border border-white/[0.06] rounded-t-2xl" />
+
+                        {/* Platform top edge — the "ground" */}
+                        <div className={`absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl bg-gradient-to-r ${
+                          step.color === "violet" ? "from-violet-500/50 to-violet-500/10" :
+                          step.color === "amber" ? "from-amber-500/50 to-amber-500/10" :
+                          step.color === "emerald" ? "from-emerald-500/50 to-emerald-500/10" :
+                          "from-cyan-500/50 to-cyan-500/10"
+                        }`} />
+
+                        {/* Content inside platform */}
+                        <div className="relative z-10 p-5 md:p-6 flex flex-col h-full">
+                          {/* Level badge */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="text-2xl md:text-3xl">{step.emoji}</span>
+                            <span className={`text-[10px] font-bold ${c.icon} uppercase tracking-[0.2em] opacity-60`}>
+                              Nivel {String(i + 1).padStart(2, "0")}
+                            </span>
+                          </div>
+
+                          {/* Period */}
+                          <span className={`text-[12px] font-semibold ${c.icon} mb-2`}>
+                            {step.period}
+                          </span>
+
+                          {/* Title */}
+                          <h3 className="text-[15px] md:text-[16px] font-bold text-white mb-2 leading-snug">
+                            {step.title}
+                          </h3>
+
+                          {/* Description */}
+                          <p className="text-[12px] text-white/25 leading-relaxed mt-auto">
+                            {step.desc}
+                          </p>
+
+                          {/* XP bar at bottom */}
+                          <div className="mt-4 flex items-center gap-2">
+                            <div className="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  step.color === "violet" ? "bg-violet-500/40" :
+                                  step.color === "amber" ? "bg-amber-500/40" :
+                                  step.color === "emerald" ? "bg-emerald-500/40" :
+                                  "bg-cyan-500/40"
+                                }`}
+                                style={{
+                                  width: story.isVisible ? `${xpPercent}%` : "0%",
+                                  transition: `width 1s ease ${delays[i] + 400}ms`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-white/15 font-mono">
+                              {xpPercent}%
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[13px] text-white/30 leading-relaxed">{step.desc}</p>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+
+              {/* Game over — completion message */}
+              <div
+                className="text-center mt-8"
+                style={{
+                  opacity: story.isVisible ? 1 : 0,
+                  transition: "all 0.5s ease 1500ms",
+                }}
+              >
+                <span className="inline-flex items-center gap-2 text-[12px] text-white/20 font-mono">
+                  <span className="text-emerald-400/50">▸</span>
+                  Nivel 7 desbloqueándose...
+                  <span className="inline-block w-1.5 h-3 bg-white/15 animate-pulse" />
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -44,36 +44,33 @@
         }
 
         html.dark {
-            --bg: #0e0f1a;
+            --bg: #080a14;
             --bg-gradient:
-                radial-gradient(76vw 76vw at 12% 18%, rgba(200,140,255,.12) 0%, rgba(200,140,255,.05) 50%, transparent 70%),
-                radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.18) 0%, transparent 55%),
-                radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.14) 0%, transparent 55%),
-                radial-gradient(35vw 35vw at 85% 8%, rgba(200,140,255,.08) 0%, transparent 55%),
-                radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.10) 0%, transparent 60%),
-                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.08) 0%, transparent 60%);
-            --container-bg: rgba(18, 19, 35, 0.92);
-            --container-border: rgba(255, 255, 255, 0.08);
-            --container-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+                radial-gradient(60vw 60vw at 15% 20%, rgba(99,66,174,.15) 0%, transparent 70%),
+                radial-gradient(50vw 50vw at 80% 80%, rgba(30,120,200,.10) 0%, transparent 60%),
+                radial-gradient(35vw 35vw at 50% 50%, rgba(139,92,246,.05) 0%, transparent 55%);
+            --container-bg: rgba(12, 14, 28, 0.85);
+            --container-border: rgba(139, 92, 246, 0.12);
+            --container-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(139, 92, 246, 0.06);
             --panel-bg: transparent;
-            --text-primary: #f0f0f5;
-            --text-secondary: #c8c8d4;
-            --text-muted: #8888a0;
-            --text-faint: #5a5a72;
-            --box-bg: rgba(255, 255, 255, 0.06);
-            --box-border: rgba(255, 255, 255, 0.08);
-            --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --btn-bg: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-            --btn-border: rgba(255, 255, 255, 0.12);
-            --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --btn-text: #f0f0f5;
-            --google-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-            --terms-color: #8888a0;
-            --star-color: inherit;
-            --toggle-bg: rgba(255, 255, 255, 0.08);
-            --toggle-icon-active: #818cf8;
+            --text-primary: #eeeef5;
+            --text-secondary: #b8b8cc;
+            --text-muted: #7a7a96;
+            --text-faint: #50506a;
+            --box-bg: rgba(255, 255, 255, 0.04);
+            --box-border: rgba(255, 255, 255, 0.06);
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --btn-bg: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(59,195,255,0.08) 100%);
+            --btn-border: rgba(139, 92, 246, 0.2);
+            --btn-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --btn-text: #eeeef5;
+            --google-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            --terms-color: #7a7a96;
+            --star-color: #f5c518;
+            --toggle-bg: rgba(255, 255, 255, 0.06);
+            --toggle-icon-active: #a78bfa;
             --toggle-icon-inactive: #475569;
-            --border-shimmer: linear-gradient(45deg, rgba(139,92,246,0.5), rgba(59,195,255,0.3), rgba(244,226,166,0.4), rgba(139,92,246,0.5));
+            --border-shimmer: linear-gradient(45deg, rgba(139,92,246,0.4), rgba(59,195,255,0.25), rgba(167,139,250,0.3), rgba(139,92,246,0.4));
         }
 
         /* Fondo base inmediato para evitar flash */
@@ -452,13 +449,19 @@
 
         /* Google button dark theme override */
         html.dark .google-signin-container {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.03);
             border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         /* Invert Atlantis logo in dark mode */
         html.dark .atlantis-btn img {
-            filter: invert(1);
+            filter: invert(1) brightness(0.9);
+        }
+
+        /* Laurel logo: ensure transparency, no white bg */
+        html.dark .laurel-img {
+            filter: brightness(1.3) contrast(1.1);
         }
 
         /* Testimonial text color in dark */
@@ -466,9 +469,22 @@
             color: var(--text-muted);
         }
 
+        /* Testimonial cards dark: subtle glass */
+        html.dark marquee .atlantis-box {
+            background: rgba(255,255,255,0.03) !important;
+            border-color: rgba(255,255,255,0.06) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+            backdrop-filter: blur(8px);
+        }
+
         /* Right panel text */
         html.dark .right-panel p {
             color: var(--text-secondary);
+        }
+
+        /* Dark mode: small boxes (Disponible para, icons row) */
+        html.dark .atlantis-box {
+            border: 1px solid rgba(255,255,255,0.06);
         }
 </style>
 </head>
@@ -485,7 +501,7 @@
 
     <div class="login-container">
         <div class="left-panel">
-            <center><img src="/laurel-logo.webp" width="250" style="margin-bottom: 0px;"></center>
+            <center><img src="/laurel-logo.ico" width="250" class="laurel-img" style="margin-bottom: 0px;"></center>
             <center><div class=atlantis-box style=position:relative;top:-65px;margin-bottom:0px;>Disponible para</div></center>
             <center><div style=margin-top:-60px><div class=atlantis-box style=display:inline-flex;gap:15px;padding:9px;align-items:center><img src=/icons/whatsapp.webp style=width:24px;height:24px title=WhatsApp><img src=/icons/instagram-new.webp style=width:24px;height:24px title=Instagram><img src=/icons/facebook-new.webp style=width:28px;height:28px title=Facebook><img src=/icons/gmail-new.webp style=width:40px;height:40px;margin:-8px title=Gmail><img src=/icons/web-new.webp style=width:24px;height:24px title=Web><img src=/icons/api-final.webp style=width:24px;height:24px;margin-left:-4px title=API></div></div></center>
 <center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300;color:var(--text-secondary)>Cientos de clientes confían en nosotros</p></center>

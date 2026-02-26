@@ -1,10 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
  <meta charset=UTF-8>
- <title>Bienvenido a WITHMIA®</title>
+ <title>Bienvenido a WITHMIAÂ®</title>
     <link rel="icon" href="/logo-withmia.webp?v=2025-withmia" type="image/webp">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
@@ -43,36 +44,33 @@
         }
 
         html.dark {
-            --bg: #0e0f1a;
+            --bg: #080a14;
             --bg-gradient:
-                radial-gradient(76vw 76vw at 12% 18%, rgba(200,140,255,.12) 0%, rgba(200,140,255,.05) 50%, transparent 70%),
-                radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.18) 0%, transparent 55%),
-                radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.14) 0%, transparent 55%),
-                radial-gradient(35vw 35vw at 85% 8%, rgba(200,140,255,.08) 0%, transparent 55%),
-                radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.10) 0%, transparent 60%),
-                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.08) 0%, transparent 60%);
-            --container-bg: rgba(18, 19, 35, 0.92);
-            --container-border: rgba(255, 255, 255, 0.08);
-            --container-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+                radial-gradient(60vw 60vw at 15% 20%, rgba(99,66,174,.15) 0%, transparent 70%),
+                radial-gradient(50vw 50vw at 80% 80%, rgba(30,120,200,.10) 0%, transparent 60%),
+                radial-gradient(35vw 35vw at 50% 50%, rgba(139,92,246,.05) 0%, transparent 55%);
+            --container-bg: rgba(12, 14, 28, 0.85);
+            --container-border: rgba(139, 92, 246, 0.12);
+            --container-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(139, 92, 246, 0.06);
             --panel-bg: transparent;
-            --text-primary: #f0f0f5;
-            --text-secondary: #c8c8d4;
-            --text-muted: #8888a0;
-            --text-faint: #5a5a72;
-            --box-bg: rgba(255, 255, 255, 0.06);
-            --box-border: rgba(255, 255, 255, 0.08);
-            --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --btn-bg: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-            --btn-border: rgba(255, 255, 255, 0.12);
-            --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --btn-text: #f0f0f5;
-            --google-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-            --terms-color: #8888a0;
-            --star-color: inherit;
-            --toggle-bg: rgba(255, 255, 255, 0.08);
-            --toggle-icon-active: #818cf8;
+            --text-primary: #eeeef5;
+            --text-secondary: #b8b8cc;
+            --text-muted: #7a7a96;
+            --text-faint: #50506a;
+            --box-bg: rgba(255, 255, 255, 0.04);
+            --box-border: rgba(255, 255, 255, 0.06);
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --btn-bg: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(59,195,255,0.08) 100%);
+            --btn-border: rgba(139, 92, 246, 0.2);
+            --btn-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --btn-text: #eeeef5;
+            --google-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            --terms-color: #7a7a96;
+            --star-color: #f5c518;
+            --toggle-bg: rgba(255, 255, 255, 0.06);
+            --toggle-icon-active: #a78bfa;
             --toggle-icon-inactive: #475569;
-            --border-shimmer: linear-gradient(45deg, rgba(139,92,246,0.5), rgba(59,195,255,0.3), rgba(244,226,166,0.4), rgba(139,92,246,0.5));
+            --border-shimmer: linear-gradient(45deg, rgba(139,92,246,0.4), rgba(59,195,255,0.25), rgba(167,139,250,0.3), rgba(139,92,246,0.4));
         }
 
         /* Fondo base inmediato para evitar flash */
@@ -216,7 +214,7 @@
             transition: background 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
         }
 
-        /* Botón Atlantis con iluminación */
+        /* BotÃ³n Atlantis con iluminaciÃ³n */
         .atlantis-btn {
             cursor: pointer;
             background: var(--btn-bg);
@@ -263,7 +261,7 @@
             margin: 5px 0;
         }
 
-        /* Ajustar límites del marquee */
+        /* Ajustar lÃ­mites del marquee */
         marquee {
             margin: 0;
             width: 100%;
@@ -279,7 +277,7 @@
             white-space: nowrap;
         }
 
-        /* Ampliar área del marquee balanceado */
+        /* Ampliar Ã¡rea del marquee balanceado */
         marquee {
             margin-left: -2.5rem;
             margin-right: -2.5rem;
@@ -349,7 +347,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Reducir espacio entre título y testimonios */
+        /* Reducir espacio entre tÃ­tulo y testimonios */
         .exclusive-text {
             margin-bottom: 5px !important;
         }
@@ -393,7 +391,7 @@
             margin-bottom: 0;
         }
 
-        /* Sombra natural para botón de Google */
+        /* Sombra natural para botÃ³n de Google */
         .google-signin-container {
             box-shadow: var(--google-shadow);
             border-radius: 6px;
@@ -451,13 +449,19 @@
 
         /* Google button dark theme override */
         html.dark .google-signin-container {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255,255,255,0.03);
             border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         /* Invert Atlantis logo in dark mode */
         html.dark .atlantis-btn img {
-            filter: invert(1);
+            filter: invert(1) brightness(0.9);
+        }
+
+        /* Laurel logo: ensure transparency, no white bg */
+        html.dark .laurel-img {
+            filter: brightness(1.3) contrast(1.1);
         }
 
         /* Testimonial text color in dark */
@@ -465,9 +469,22 @@
             color: var(--text-muted);
         }
 
+        /* Testimonial cards dark: subtle glass */
+        html.dark marquee .atlantis-box {
+            background: rgba(255,255,255,0.03) !important;
+            border-color: rgba(255,255,255,0.06) !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+            backdrop-filter: blur(8px);
+        }
+
         /* Right panel text */
         html.dark .right-panel p {
             color: var(--text-secondary);
+        }
+
+        /* Dark mode: small boxes (Disponible para, icons row) */
+        html.dark .atlantis-box {
+            border: 1px solid rgba(255,255,255,0.06);
         }
 </style>
 </head>
@@ -484,11 +501,11 @@
 
     <div class="login-container">
         <div class="left-panel">
-            <center><img src="/laurel-logo.webp" width="250" style="margin-bottom: 0px;"></center>
+            <center><img src="/laurel-logo.ico" width="250" class="laurel-img" style="margin-bottom: 0px;"></center>
             <center><div class=atlantis-box style=position:relative;top:-65px;margin-bottom:0px;>Disponible para</div></center>
             <center><div style=margin-top:-60px><div class=atlantis-box style=display:inline-flex;gap:15px;padding:9px;align-items:center><img src=/icons/whatsapp.webp style=width:24px;height:24px title=WhatsApp><img src=/icons/instagram-new.webp style=width:24px;height:24px title=Instagram><img src=/icons/facebook-new.webp style=width:28px;height:28px title=Facebook><img src=/icons/gmail-new.webp style=width:40px;height:40px;margin:-8px title=Gmail><img src=/icons/web-new.webp style=width:24px;height:24px title=Web><img src=/icons/api-final.webp style=width:24px;height:24px;margin-left:-4px title=API></div></div></center>
-<center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300;color:var(--text-secondary)>Cientos de clientes confían en nosotros</p></center>
-<marquee behavior=scroll direction=left scrollamount=6 scrolldelay=0><div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡WITHMIA es increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA revolucionó mi empresa.<br>Responde clientes automáticamente<br>y gestiona consultas complejas<br>las 24 horas. Increíble IA.</span><br><strong>María González</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Excelente herramienta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis Martínez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Diseño increíble!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA transformó mis diseños.<br>Optimiza flujos creativos<br>y mejora la comunicación<br>con clientes constantemente.</span><br><strong>Sofía Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Diseñadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡Gestión perfecta!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automáticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>¡RRHH automatizado!</strong>⭐⭐⭐⭐⭐<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>Envía liquidaciones automáticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana López</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div></marquee>
+<center><p class=exclusive-text style=font-size:1.2em;margin-top:10px;font-weight:300;color:var(--text-secondary)>Cientos de clientes confÃ­an en nosotros</p></center>
+<marquee behavior=scroll direction=left scrollamount=6 scrolldelay=0><div class=atlantis-box><strong>Â¡WITHMIA es increÃ­ble!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA revolucionÃ³ mi empresa.<br>Responde clientes automÃ¡ticamente<br>y gestiona consultas complejas<br>las 24 horas. IncreÃ­ble IA.</span><br><strong>MarÃ­a GonzÃ¡lez</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡Excelente herramienta!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis MartÃ­nez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡DiseÃ±o increÃ­ble!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA transformÃ³ mis diseÃ±os.<br>Optimiza flujos creativos<br>y mejora la comunicaciÃ³n<br>con clientes constantemente.</span><br><strong>SofÃ­a Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">DiseÃ±adora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡GestiÃ³n perfecta!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automÃ¡ticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡RRHH automatizado!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>EnvÃ­a liquidaciones automÃ¡ticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana LÃ³pez</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡WITHMIA es increÃ­ble!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA revolucionÃ³ mi empresa.<br>Responde clientes automÃ¡ticamente<br>y gestiona consultas complejas<br>las 24 horas. IncreÃ­ble IA.</span><br><strong>MarÃ­a GonzÃ¡lez</strong><img src="/images/maria-gonzalez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Contadora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡Excelente herramienta!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA automatiza mi negocio.<br>Gestiona clientes perfectamente<br>y optimiza todos mis procesos<br>empresariales diariamente.</span><br><strong>Luis MartÃ­nez</strong><img src="/images/luis-martinez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Empresario</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡DiseÃ±o increÃ­ble!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA transformÃ³ mis diseÃ±os.<br>Optimiza flujos creativos<br>y mejora la comunicaciÃ³n<br>con clientes constantemente.</span><br><strong>SofÃ­a Herrera</strong><img src="/images/sofia-herrera.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">DiseÃ±adora</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡GestiÃ³n perfecta!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA gestiona mis clientes.<br>Agenda citas automÃ¡ticamente<br>y organiza toda mi agenda<br>de manera muy eficiente.</span><br><strong>Carlos Ruiz</strong><img src="/images/carlos-ruiz.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Abogado</span></div>&nbsp;&nbsp;&nbsp;<div class=atlantis-box><strong>Â¡RRHH automatizado!</strong>â­â­â­â­â­<br><span style="font-size:0.7em">WITHMIA gestiona mis RRHH.<br>EnvÃ­a liquidaciones automÃ¡ticamente<br>y organiza procesos de personal<br>de manera muy eficiente.</span><br><strong>Ana LÃ³pez</strong><img src="/images/ana-lopez.webp" style="width:40px;height:40px;border-radius:50%;float:right;margin-top:-25px;margin-right:5px;"> <span style="font-size:0.7em">Consultora</span></div></marquee>
         </div>
         <div class="right-panel">
         <p>Desarrollado por</p><br>
@@ -500,7 +517,7 @@
             <source src="/logo-animated.webm" type="video/webm">
             <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA Logo">
         </video>
-        <p class="exclusive-text" style="font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350; color: var(--text-primary);">WITH YOU, WITH<strong style="font-weight: 450;">MIA</strong><sup style="font-size: 0.6em; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">®</sup></p><br>
+        <p class="exclusive-text" style="font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350; color: var(--text-primary);">WITH YOU, WITH<strong style="font-weight: 450;">MIA</strong><sup style="font-size: 0.6em; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">Â®</sup></p><br>
 
         <div class="google-signin-container">
             <script>
@@ -574,7 +591,7 @@ function parseJwt(token) {
                  data-logo_alignment="left">
             </div>
         </div>
-        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros Términos de Servicio y lee nuestra Política de Privacidad.</p><br>
+        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros TÃ©rminos de Servicio y lee nuestra PolÃ­tica de Privacidad.</p><br>
         </div>
     </div>
 
@@ -642,7 +659,7 @@ function parseJwt(token) {
     </script>
 
     <script>
-        // Si ya está autenticado, redirigir directamente sin splash
+        // Si ya estÃ¡ autenticado, redirigir directamente sin splash
         (function() {
             fetch("/check-session", { credentials: 'include' })
                 .then(function(response) { return response.json(); })

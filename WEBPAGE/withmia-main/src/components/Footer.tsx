@@ -1,4 +1,4 @@
-import { Instagram, Linkedin, Youtube, Facebook } from "lucide-react";
+import { Instagram, Linkedin, Youtube, Facebook, Globe } from "lucide-react";
 import { Link } from "@/lib/router";
 
 const logo = "/logo-withmia.webp";
@@ -125,11 +125,6 @@ export const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/blog" className="text-white/55 hover:text-white transition-colors">
-                    Blog
-                  </Link>
-                </li>
-                <li>
                   <Link to="/comunidad" className="text-white/55 hover:text-white transition-colors">
                     Comunidad
                   </Link>
@@ -162,6 +157,11 @@ export const Footer = () => {
                   <a href="https://www.linkedin.com/company/withmia" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
                     <Linkedin className="w-4 h-4" /> LinkedIn
                   </a>
+                </li>
+                <li>
+                  <Link to="/blog" className="text-white/55 hover:text-white transition-colors flex items-center gap-2">
+                    <Globe className="w-4 h-4" /> Blog
+                  </Link>
                 </li>
               </ul>
             </div>
