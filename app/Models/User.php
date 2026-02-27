@@ -163,6 +163,7 @@ class User extends Authenticatable
             'permissions' => 'array',
             'whatsapp_instance_data' => 'array',
             'onboarding_completed' => 'boolean',
+            'onboarding_completed_at' => 'datetime',
             'onboarding_step' => 'integer',
             'settings' => 'array',
         ];

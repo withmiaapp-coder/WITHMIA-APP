@@ -155,7 +155,6 @@ trait HandlesOnboarding
                 'name' => $user->full_name ?? $user->name ?? 'Mi Empresa',
                 'slug' => $slug ?? Str::random(10),
             ]);
-            $user->update(['company_id' => $company->id]);
         }
         
         return $company;
