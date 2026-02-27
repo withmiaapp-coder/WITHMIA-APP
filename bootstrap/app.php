@@ -75,11 +75,23 @@ return Application::configure(basePath: dirname(__DIR__))
                 ]);
 
                 $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-                return response()->json([
+                $response = response()->json([
                     'success' => false,
                     'error' => config('app.debug') ? $e->getMessage() : 'Server error',
                     'error_class' => config('app.debug') ? get_class($e) : null,
                 ], $status);
+
+                // Ensure CORS headers are present even on error responses
+                $origin = $request->header('Origin');
+                $allowedOrigins = ['https://withmia.com', 'https://www.withmia.com'];
+                if ($origin && in_array($origin, $allowedOrigins)) {
+                    $response->headers->set('Access-Control-Allow-Origin', $origin);
+                    $response->headers->set('Access-Control-Allow-Credentials', 'true');
+                    $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+                    $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization, X-Requested-With');
+                }
+
+                return $response;
             }
             return null; // Non-API: let Laravel handle normally
         });
