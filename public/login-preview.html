@@ -237,8 +237,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 18px;
-            border-radius: 12px;
+            padding: 6px 14px;
+            border-radius: 10px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -913,10 +913,10 @@
             </div>
         </div>
         <div class="right-panel">
-        <p>Desarrollado por</p><br>
+        <p style="font-size: 0.6rem; opacity: 0.5; margin-bottom: 4px;">Desarrollado por</p>
         <div class="atlantis-btn" onclick="window.open('https://atlantisproducciones.cl/', '_blank')">
-            <img src="/Logo-Atlantis.webp" style="height: 22px; margin-right: 10px; vertical-align: middle;">
-            <span style="font-size: 14px;">ATLANTIS PRODUCCIONES</span>
+            <img src="/Logo-Atlantis.webp" style="height: 16px; margin-right: 6px; vertical-align: middle;">
+            <span style="font-size: 11px;">ATLANTIS PRODUCCIONES</span>
         </div>
         <video class="login-logo" autoplay loop muted playsinline>
             <source src="/logo-animated.webm" type="video/webm">
