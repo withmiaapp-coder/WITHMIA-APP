@@ -765,7 +765,7 @@
                     <div class="eco-ring r3"></div>
 
                     <!-- Connection lines SVG -->
-                    <svg class="eco-lines" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid meet">
+                    <svg class="eco-lines" viewBox="0 0 500 400" preserveAspectRatio="none">
                         <defs>
                             <linearGradient id="lg0" x1="250" y1="200" x2="250" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#25D366" stop-opacity="0.7"/></linearGradient>
                             <linearGradient id="lg1" x1="250" y1="200" x2="320" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#E1306C" stop-opacity="0.7"/></linearGradient>
