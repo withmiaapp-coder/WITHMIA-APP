@@ -39,7 +39,7 @@ class WebsiteBookingController extends Controller
                 'errors'  => $ve->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            return $this->errorResponse('validation_unexpected', $e);
+            return $this->bookingErrorResponse('validation_unexpected', $e);
         }
 
         // ── 2. Preparar fecha/hora ──
@@ -214,7 +214,7 @@ class WebsiteBookingController extends Controller
     /**
      * Error response con debug info (temporal para diagnóstico).
      */
-    private function errorResponse(string $step, \Throwable $e): JsonResponse
+    private function bookingErrorResponse(string $step, \Throwable $e): JsonResponse
     {
         Log::error("[WebsiteBooking] Error at {$step}", [
             'class'   => get_class($e),
