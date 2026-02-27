@@ -783,12 +783,12 @@
                         <line x1="250" y1="200" x2="180" y2="155" stroke="url(#lg5)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:3s"/>
                         <!-- Animated particles -->
                         <path id="p0" d="M250 200 L250 120" stroke="none"/><path id="p1" d="M250 200 L320 155" stroke="none"/><path id="p2" d="M250 200 L320 245" stroke="none"/><path id="p3" d="M250 200 L250 280" stroke="none"/><path id="p4" d="M250 200 L180 245" stroke="none"/><path id="p5" d="M250 200 L180 155" stroke="none"/>
-                        <circle r="3" fill="#25D366"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3s" repeatCount="indefinite"/></circle>
-                        <circle r="3" fill="#E1306C"><animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.2s" repeatCount="indefinite" begin="0.8s"/></circle>
-                        <circle r="3" fill="#0084FF"><animateMotion dur="3.4s" repeatCount="indefinite" begin="1.6s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.4s" repeatCount="indefinite" begin="1.6s"/></circle>
-                        <circle r="3" fill="#EA4335"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
-                        <circle r="3" fill="#61DAFB"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
-                        <circle r="3" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
+                        <circle r="3" fill="#25D366" fill-opacity="0"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3s" repeatCount="indefinite"/></circle>
+                        <circle r="3" fill="#E1306C" fill-opacity="0"><animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.2s" repeatCount="indefinite" begin="0.8s"/></circle>
+                        <circle r="3" fill="#0084FF" fill-opacity="0"><animateMotion dur="3.4s" repeatCount="indefinite" begin="1.6s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.4s" repeatCount="indefinite" begin="1.6s"/></circle>
+                        <circle r="3" fill="#EA4335" fill-opacity="0"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
+                        <circle r="3" fill="#61DAFB" fill-opacity="0"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
+                        <circle r="3" fill="#34D399" fill-opacity="0"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
                         <!-- Channel → Integration connection lines -->
                         <line x1="250" y1="120" x2="330" y2="28" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite"/>
                         <line x1="250" y1="120" x2="170" y2="28" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.4s"/>
@@ -802,6 +802,25 @@
                         <line x1="180" y1="245" x2="70" y2="248" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.6s"/>
                         <line x1="180" y1="155" x2="70" y2="152" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4s"/>
                         <line x1="180" y1="155" x2="110" y2="80" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4.4s"/>
+                        <!-- Channel → Integration animated particles -->
+                        <path id="o0" d="M250 120 L330 28" stroke="none"/><path id="o1" d="M250 120 L170 28" stroke="none"/>
+                        <path id="o2" d="M320 155 L390 80" stroke="none"/><path id="o3" d="M320 155 L430 152" stroke="none"/>
+                        <path id="o4" d="M320 245 L430 248" stroke="none"/><path id="o5" d="M320 245 L390 320" stroke="none"/>
+                        <path id="o6" d="M250 280 L330 372" stroke="none"/><path id="o7" d="M250 280 L170 372" stroke="none"/>
+                        <path id="o8" d="M180 245 L110 320" stroke="none"/><path id="o9" d="M180 245 L70 248" stroke="none"/>
+                        <path id="o10" d="M180 155 L70 152" stroke="none"/><path id="o11" d="M180 155 L110 80" stroke="none"/>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.5s" repeatCount="indefinite" begin="0.5s"><mpath href="#o0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.5s" repeatCount="indefinite" begin="0.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.5s" repeatCount="indefinite" begin="1s"><mpath href="#o1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.5s" repeatCount="indefinite" begin="1s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.7s" repeatCount="indefinite" begin="1.5s"><mpath href="#o2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.7s" repeatCount="indefinite" begin="1.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.7s" repeatCount="indefinite" begin="2s"><mpath href="#o3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.7s" repeatCount="indefinite" begin="2s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.9s" repeatCount="indefinite" begin="2.5s"><mpath href="#o4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.9s" repeatCount="indefinite" begin="2.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.9s" repeatCount="indefinite" begin="3s"><mpath href="#o5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.9s" repeatCount="indefinite" begin="3s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.1s" repeatCount="indefinite" begin="3.5s"><mpath href="#o6"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.1s" repeatCount="indefinite" begin="3.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.1s" repeatCount="indefinite" begin="4s"><mpath href="#o7"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.1s" repeatCount="indefinite" begin="4s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.3s" repeatCount="indefinite" begin="4.5s"><mpath href="#o8"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.3s" repeatCount="indefinite" begin="4.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.3s" repeatCount="indefinite" begin="5s"><mpath href="#o9"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.3s" repeatCount="indefinite" begin="5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.5s" repeatCount="indefinite" begin="5.5s"><mpath href="#o10"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.5s" repeatCount="indefinite" begin="5.5s"/></circle>
+                        <circle r="2" fill="#a78bfa" fill-opacity="0"><animateMotion dur="4.5s" repeatCount="indefinite" begin="6s"><mpath href="#o11"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="4.5s" repeatCount="indefinite" begin="6s"/></circle>
                     </svg>
 
                     <!-- Center: WITHMIA logo -->
@@ -843,7 +862,7 @@
 
                     <!-- Integration nodes (outer ring) -->
                     <div class="eco-integ" style="top:7%;left:66%">
-                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h6"/><path d="m9 14 2 2 4-4"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="m9 14 2 2 4-4"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">AgendaPro</span><span class="eco-integ-sub">Citas y reservas</span></div>
                     </div>
                     <div class="eco-integ" style="top:20%;left:78%">
