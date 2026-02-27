@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+<script>
+// Theme init: runs BEFORE any paint to prevent flash of light theme
+(function(){
+    var s = localStorage.getItem('withmia_login_theme');
+    if (!s) s = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    if (s === 'dark') document.documentElement.classList.add('dark');
+})();
+</script>
 <head>
  <meta charset=UTF-8>
  <title>Bienvenido a WITHMIA®</title>
@@ -1012,15 +1020,11 @@ function parseJwt(token) {
             }
         }
 
-        // Initialize theme on load (before render)
+        // Initialize theme toggle buttons (theme class already set by head script)
         (function() {
             var saved = localStorage.getItem('withmia_login_theme');
-            // Respect OS preference if no saved preference
             if (!saved) {
                 saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            if (saved === 'dark') {
-                document.documentElement.classList.add('dark');
             }
             // Update buttons after DOM is ready
             document.addEventListener('DOMContentLoaded', function() {
