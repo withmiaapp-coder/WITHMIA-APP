@@ -830,51 +830,51 @@
                     </div>
 
                     <!-- Integration nodes (outer ring) -->
-                    <div class="eco-integ" style="top:5%;left:63%">
+                    <div class="eco-integ" style="top:5%;left:70%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h6"/><path d="m9 14 2 2 4-4"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">AgendaPro</span><span class="eco-integ-sub">Citas y reservas</span></div>
                     </div>
-                    <div class="eco-integ" style="top:18%;left:72%">
+                    <div class="eco-integ" style="top:18%;left:82%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#006BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Calendly</span><span class="eco-integ-sub">Reuniones automáticas</span></div>
                     </div>
-                    <div class="eco-integ" style="top:38%;left:80%">
+                    <div class="eco-integ" style="top:38%;left:90%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Dentalink</span><span class="eco-integ-sub">Clínicas dentales</span></div>
                     </div>
-                    <div class="eco-integ" style="top:62%;left:80%">
+                    <div class="eco-integ" style="top:62%;left:90%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Google Calendar</span><span class="eco-integ-sub">Agenda sincronizada</span></div>
                     </div>
-                    <div class="eco-integ" style="top:82%;left:72%">
+                    <div class="eco-integ" style="top:82%;left:82%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Medilink</span><span class="eco-integ-sub">Gestión médica</span></div>
                     </div>
-                    <div class="eco-integ" style="top:95%;left:63%">
+                    <div class="eco-integ" style="top:95%;left:70%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FFE600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">MercadoLibre</span><span class="eco-integ-sub">Marketplace</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:95%;left:37%">
+                    <div class="eco-integ left-node" style="top:95%;left:30%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Outlook</span><span class="eco-integ-sub">Microsoft Calendar</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:82%;left:28%">
+                    <div class="eco-integ left-node" style="top:82%;left:18%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Reservo</span><span class="eco-integ-sub">Reservas online</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:62%;left:20%">
+                    <div class="eco-integ left-node" style="top:62%;left:10%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#96BF48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Shopify</span><span class="eco-integ-sub">E-commerce sync</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:38%;left:20%">
+                    <div class="eco-integ left-node" style="top:38%;left:10%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B5C8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">WooCommerce</span><span class="eco-integ-sub">Tienda WordPress</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:18%;left:28%">
+                    <div class="eco-integ left-node" style="top:18%;left:18%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 12c0 4.4-3.6 8-8 8A4.5 4.5 0 0 1 5 15.5c0-6 8-4 8-8.5a3 3 0 1 0-6 0c0 .8.3 1.4.7 2L5 12"/><path d="M17.5 12H22"/><path d="M17.5 12a5 5 0 0 0 0-8"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">API REST</span><span class="eco-integ-sub">Webhooks custom</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:5%;left:37%">
+                    <div class="eco-integ left-node" style="top:5%;left:30%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#00758F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">MySQL</span><span class="eco-integ-sub">Base de datos</span></div>
                     </div>
