@@ -822,7 +822,7 @@ const Contact = () => {
                         {`${dayLabels[(selectedDate.getDay() + 6) % 7]} ${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}`}
                       </h4>
                       <p className="text-[10px] text-white/20 mb-4">Horario Chile (GMT-4)</p>
-                      <div className="space-y-1.5 flex-1 overflow-y-auto pr-1" style={{ maxHeight: '340px' }}>
+                      <div className="booking-slots-scroll space-y-1.5 flex-1 overflow-y-auto pr-1" style={{ maxHeight: '340px' }}>
                         {loadingSlots ? (
                           <div className="flex items-center justify-center py-10">
                             <svg className="w-5 h-5 animate-spin text-violet-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
@@ -877,6 +877,28 @@ const Contact = () => {
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95) translateY(10px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+
+        /* Custom scrollbar for time slots */
+        .booking-slots-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .booking-slots-scroll::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 4px;
+        }
+        .booking-slots-scroll::-webkit-scrollbar-thumb {
+          background: rgba(139, 92, 246, 0.2);
+          border-radius: 4px;
+          transition: background 0.2s;
+        }
+        .booking-slots-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(139, 92, 246, 0.4);
+        }
+        /* Firefox */
+        .booking-slots-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(139, 92, 246, 0.2) rgba(255, 255, 255, 0.02);
+        }
       `}</style>
     </div>
   );
