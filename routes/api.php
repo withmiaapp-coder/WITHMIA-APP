@@ -117,6 +117,10 @@ Route::post('/website/booking', [WebsiteBookingController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('api.website-booking.store');
 
+Route::get('/website/booking/busy', [WebsiteBookingController::class, 'busy'])
+    ->middleware('throttle:30,1')
+    ->name('api.website-booking.busy');
+
 // ============================================================================
 // 3. WEBHOOKS EXTERNOS (protegidos por HMAC/secret, sin auth de usuario)
 // ============================================================================

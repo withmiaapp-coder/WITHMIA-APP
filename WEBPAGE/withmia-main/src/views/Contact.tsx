@@ -97,7 +97,16 @@ const Contact = () => {
   const [bookingName, setBookingName] = useState('');
   const [bookingEmail, setBookingEmail] = useState('');
   const [bookingCompany, setBookingCompany] = useState('');
+  const [bookingMotivo, setBookingMotivo] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const bookingReasons = [
+    'Quiero una demo de WITHMIA',
+    'Consultar sobre precios y planes',
+    'Integrar WITHMIA a mi negocio',
+    'Automatizar WhatsApp / canales',
+    'Otro',
+  ];
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const dayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -110,7 +119,9 @@ const Contact = () => {
   const prevMonth = () => { if (canGoPrev) setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1)); };
   const nextMonth = () => { setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1)); };
 
-  const timeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'];
+  const timeSlots = ['09:00', '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45', '12:00', '12:15', '12:30', '12:45', '14:00', '14:15', '14:30', '14:45', '15:00', '15:15', '15:30', '15:45', '16:00', '16:15', '16:30', '16:45', '17:00', '17:15', '17:30', '17:45'];
+  const [busySlots, setBusySlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const openScheduleModal = () => {
     setSelectedDate(null);
@@ -119,6 +130,7 @@ const Contact = () => {
     setBookingName('');
     setBookingEmail('');
     setBookingCompany('');
+    setBookingMotivo('');
     setCalMonth(new Date());
     setShowScheduleModal(true);
   };
@@ -141,29 +153,66 @@ const Contact = () => {
     return () => { document.body.style.overflow = ''; };
   }, [showScheduleModal]);
 
+  const [bookingLoading, setBookingLoading] = useState(false);
+
+  /* Fetch busy slots when a date is selected */
+  useEffect(() => {
+    if (!selectedDate) return;
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const apiUrl = import.meta.env.VITE_API_URL || "https://app.withmia.com";
+    setLoadingSlots(true);
+    setBusySlots([]);
+    fetch(`${apiUrl}/api/website/booking/busy?date=${dateStr}`, {
+      headers: { Accept: 'application/json' },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.busy_slots) setBusySlots(data.busy_slots);
+      })
+      .catch(() => { /* silently fail — show all slots */ })
+      .finally(() => setLoadingSlots(false));
+  }, [selectedDate]);
+
   async function onBookingSubmit() {
     if (!selectedDate || !selectedTime || !bookingName || !bookingEmail) return;
-    const payload = {
-      type: 'booking',
-      name: bookingName,
-      email: bookingEmail,
-      company: bookingCompany,
-      date: selectedDate.toISOString().split('T')[0],
-      time: selectedTime,
-      interest: 'Sesión introductoria 15 min',
-      message: `Solicitud de agendamiento: ${selectedDate.toLocaleDateString('es-CL')} a las ${selectedTime} hrs`,
-    };
+
+    setBookingLoading(true);
+    const motivoText = bookingMotivo || 'Sesión introductoria';
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || "https://app.withmia.com";
-      await fetch(`${apiUrl}/api/contact`, {
+      const res = await fetch(`${apiUrl}/api/website/booking`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          name: bookingName,
+          email: bookingEmail,
+          company: bookingCompany || undefined,
+          motivo: motivoText,
+          date: dateStr,
+          time: selectedTime,
+        }),
       });
-    } catch {}
-    trackFormSubmit("booking", { date: payload.date, time: selectedTime });
-    toast.success("¡Sesión agendada!", { description: `${selectedDate.toLocaleDateString('es-CL')} a las ${selectedTime} hrs` });
-    setBookingStep('done');
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error("Error al agendar", { description: data.message || "Intenta nuevamente" });
+        setBookingLoading(false);
+        return;
+      }
+
+      trackFormSubmit("booking", { date: dateStr, time: selectedTime });
+      toast.success("¡Sesión agendada!", {
+        description: `${selectedDate.toLocaleDateString('es-CL')} a las ${selectedTime} hrs`,
+      });
+      setBookingStep('done');
+    } catch {
+      toast.error("Error de conexión", { description: "No se pudo conectar con el servidor" });
+    } finally {
+      setBookingLoading(false);
+    }
   }
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -573,7 +622,7 @@ const Contact = () => {
                   {selectedTime && ` · ${selectedTime} hrs`}
                 </p>
                 <p className="text-[13px] text-white/25 mt-2 mb-8">
-                  Recibirás un correo de confirmación con el link de Google Meet
+                    Recibirás una invitación con los detalles de la reunión en tu correo.
                 </p>
                 <button
                   type="button"
@@ -717,17 +766,45 @@ const Contact = () => {
                             className="w-full h-10 px-3 rounded-lg bg-white/[0.03] border border-white/[0.08] text-white text-[13px] placeholder:text-white/15 focus:border-violet-500/30 focus:outline-none transition-colors"
                           />
                         </div>
+                        <div>
+                          <label className="text-[11px] text-white/30 font-medium mb-1 block">Motivo de la reunión *</label>
+                          <div className="flex flex-wrap gap-1.5 mb-1">
+                            {bookingReasons.map((reason) => (
+                              <button
+                                key={reason}
+                                type="button"
+                                onClick={() => setBookingMotivo(bookingMotivo === reason ? '' : reason)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-150 ${
+                                  bookingMotivo === reason
+                                    ? 'border-violet-500/30 bg-violet-500/10 text-violet-400'
+                                    : 'border-white/[0.06] text-white/30 hover:border-violet-500/15 hover:text-white/50'
+                                }`}
+                              >
+                                {reason}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="mt-5 space-y-2">
                         <button
                           type="button"
                           onClick={onBookingSubmit}
-                          disabled={!bookingName || !bookingEmail}
+                          disabled={!bookingName || !bookingEmail || !bookingMotivo || bookingLoading}
                           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 text-[13px] font-semibold text-white hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Confirmar agendamiento
+                          {bookingLoading ? (
+                            <>
+                              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                              Agendando…
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Confirmar agendamiento
+                            </>
+                          )}
                         </button>
                         <button
                           type="button"
@@ -746,23 +823,39 @@ const Contact = () => {
                       </h4>
                       <p className="text-[10px] text-white/20 mb-4">Horario Chile (GMT-4)</p>
                       <div className="space-y-1.5 flex-1 overflow-y-auto pr-1" style={{ maxHeight: '340px' }}>
-                        {timeSlots.map((time) => (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => {
-                              setSelectedTime(time);
-                              setBookingStep('confirm');
-                            }}
-                            className={`w-full py-2.5 rounded-lg text-[13px] font-medium border transition-all duration-150 ${
-                              selectedTime === time
-                                ? "border-violet-500/30 bg-violet-500/10 text-violet-400"
-                                : "border-white/[0.06] text-white/40 hover:border-violet-500/20 hover:text-white/60 hover:bg-white/[0.03]"
-                            }`}
-                          >
-                            {time}
-                          </button>
-                        ))}
+                        {loadingSlots ? (
+                          <div className="flex items-center justify-center py-10">
+                            <svg className="w-5 h-5 animate-spin text-violet-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                            <span className="ml-2 text-[12px] text-white/30">Cargando disponibilidad…</span>
+                          </div>
+                        ) : timeSlots.filter((t) => !busySlots.includes(t)).length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <p className="text-[13px] text-white/30">Sin horarios disponibles</p>
+                            <p className="text-[11px] text-white/15 mt-1">Prueba otro día</p>
+                          </div>
+                        ) : (
+                          timeSlots.map((time) => {
+                            const isBusy = busySlots.includes(time);
+                            if (isBusy) return null;
+                            return (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTime(time);
+                                  setBookingStep('confirm');
+                                }}
+                                className={`w-full py-2.5 rounded-lg text-[13px] font-medium border transition-all duration-150 ${
+                                  selectedTime === time
+                                    ? "border-violet-500/30 bg-violet-500/10 text-violet-400"
+                                    : "border-white/[0.06] text-white/40 hover:border-violet-500/20 hover:text-white/60 hover:bg-white/[0.03]"
+                                }`}
+                              >
+                                {time}
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   ) : (

@@ -18,6 +18,95 @@ use Illuminate\Support\Facades\Mail;
 class WebsiteBookingController extends Controller
 {
     /**
+     * GET /api/website/booking/busy?date=2026-03-02
+     * Returns busy time slots for a given date so the frontend can hide them.
+     */
+    public function busy(Request $request): JsonResponse
+    {
+        $date = $request->query('date');
+        if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return response()->json(['busy_slots' => []], 200);
+        }
+
+        $timezone = 'America/Santiago';
+
+        try {
+            $integration = CalendarIntegration::where('company_id', 1)
+                ->where('provider', 'google')
+                ->where('is_active', true)
+                ->first();
+
+            if (!$integration) {
+                return response()->json(['busy_slots' => []], 200);
+            }
+
+            $accessToken = $integration->getValidAccessToken();
+            if (!$accessToken) {
+                return response()->json(['busy_slots' => []], 200);
+            }
+
+            $calendarId = $integration->selected_calendar_id ?? 'primary';
+
+            // Query events for the full day
+            $timeMin = "{$date}T00:00:00-04:00";
+            $timeMax = "{$date}T23:59:59-04:00";
+
+            $response = Http::withToken($accessToken)
+                ->timeout(10)
+                ->get("https://www.googleapis.com/calendar/v3/calendars/" . urlencode($calendarId) . "/events", [
+                    'timeMin' => $timeMin,
+                    'timeMax' => $timeMax,
+                    'timeZone' => $timezone,
+                    'singleEvents' => 'true',
+                    'orderBy' => 'startTime',
+                    'fields' => 'items(start,end,status)',
+                ]);
+
+            if (!$response->successful()) {
+                return response()->json(['busy_slots' => []], 200);
+            }
+
+            $events = $response->json('items') ?? [];
+            $busySlots = [];
+
+            // All 15-min slots
+            $allSlots = [];
+            foreach (['09','10','11','12','14','15','16','17'] as $h) {
+                foreach (['00','15','30','45'] as $m) {
+                    $allSlots[] = "{$h}:{$m}";
+                }
+            }
+
+            foreach ($events as $event) {
+                if (($event['status'] ?? '') === 'cancelled') continue;
+
+                $start = $event['start']['dateTime'] ?? null;
+                $end = $event['end']['dateTime'] ?? null;
+                if (!$start || !$end) continue;
+
+                $eventStart = strtotime($start);
+                $eventEnd = strtotime($end);
+
+                foreach ($allSlots as $slot) {
+                    $slotStart = strtotime("{$date} {$slot}:00");
+                    $slotEnd = $slotStart + (15 * 60); // 15-min slot
+
+                    // Slot overlaps with event if slot starts before event ends AND slot ends after event starts
+                    if ($slotStart < $eventEnd && $slotEnd > $eventStart) {
+                        $busySlots[] = $slot;
+                    }
+                }
+            }
+
+            return response()->json(['busy_slots' => array_values(array_unique($busySlots))], 200);
+
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] busy() error', ['error' => $e->getMessage()]);
+            return response()->json(['busy_slots' => []], 200);
+        }
+    }
+
+    /**
      * POST /api/website/booking
      */
     public function store(Request $request): JsonResponse
@@ -158,16 +247,13 @@ class WebsiteBookingController extends Controller
                 'attendee' => $validated['email'],
             ]);
 
-            $meetLink = $event['conferenceData']['entryPoints'][0]['uri']
-                ?? $event['hangoutLink']
-                ?? null;
+            // Send styled confirmation email to the visitor
+            $this->sendConfirmationEmail($validated, $date, $time);
 
             return response()->json([
                 'success'   => true,
                 'message'   => 'Sesión agendada exitosamente',
                 'event_id'  => $event['id'] ?? null,
-                'meet_link' => $meetLink,
-                'html_link' => $event['htmlLink'] ?? null,
                 'start'     => $startDateTime,
                 'end'       => $endDateTime,
             ], 201);
@@ -184,16 +270,10 @@ class WebsiteBookingController extends Controller
      */
     private function fallbackResponse(array $data): JsonResponse
     {
+        // Send styled notification email to the team
         try {
-            Mail::raw(
-                "Nueva solicitud de agendamiento desde withmia.com\n\n"
-                . "Nombre: {$data['name']}\n"
-                . "Email: {$data['email']}\n"
-                . (!empty($data['company']) ? "Empresa: {$data['company']}\n" : '')
-                . "Motivo: {$data['motivo']}\n"
-                . "Fecha/Hora: {$data['date']} a las {$data['time']} hrs\n\n"
-                . "⚠️ No se pudo crear el evento automáticamente en Google Calendar.\n"
-                . "Por favor, crear la reunión manualmente y enviar la invitación.",
+            Mail::html(
+                $this->buildTeamEmailHtml($data),
                 function ($message) use ($data) {
                     $message->to('contacto@withmia.com')
                         ->subject("📅 Agendamiento web: {$data['name']} — {$data['date']} {$data['time']}")
@@ -204,11 +284,150 @@ class WebsiteBookingController extends Controller
             Log::error('[WebsiteBooking] Failed to send fallback email', ['error' => $e->getMessage()]);
         }
 
+        // Also send confirmation to the visitor
+        $this->sendConfirmationEmail($data, $data['date'], $data['time']);
+
         return response()->json([
             'success'  => true,
             'message'  => 'Solicitud recibida. Te confirmaremos por email.',
             'fallback' => true,
         ], 201);
+    }
+
+    /**
+     * Send a styled HTML confirmation email to the visitor.
+     */
+    private function sendConfirmationEmail(array $data, string $date, string $time): void
+    {
+        try {
+            $html = $this->buildConfirmationEmailHtml($data, $date, $time);
+            Mail::html($html, function ($message) use ($data, $date, $time) {
+                $message->to($data['email'], $data['name'])
+                    ->subject("✅ Sesión confirmada — {$date} a las {$time} hrs")
+                    ->from(config('mail.from.address'), 'WITHMIA');
+            });
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] Failed to send confirmation email', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * HTML email for the visitor confirming their booking.
+     */
+    private function buildConfirmationEmailHtml(array $data, string $date, string $time): string
+    {
+        $name = htmlspecialchars($data['name']);
+        $motivo = htmlspecialchars($data['motivo']);
+        $company = !empty($data['company']) ? htmlspecialchars($data['company']) : null;
+        $companyRow = $company ? "<tr><td style=\"padding:4px 12px;color:#94a3b8;font-size:13px;\">Empresa</td><td style=\"padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;\">{$company}</td></tr>" : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#0f0a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:520px;margin:0 auto;padding:32px 16px;">
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:32px;">
+    <img src="https://app.withmia.com/icons/logo-withmia.png" alt="WITHMIA" width="140" style="display:inline-block;" />
+  </div>
+
+  <!-- Card -->
+  <div style="background:linear-gradient(135deg,#1a1230 0%,#150e25 100%);border:1px solid rgba(139,92,246,0.15);border-radius:16px;overflow:hidden;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,rgba(139,92,246,0.12) 0%,rgba(16,185,129,0.08) 100%);padding:28px 24px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="width:56px;height:56px;border-radius:14px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2);margin:0 auto 16px;line-height:56px;font-size:28px;">✅</div>
+      <h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0 0 6px;">¡Sesión confirmada!</h1>
+      <p style="color:#94a3b8;font-size:14px;margin:0;">Sesión introductoria WITHMIA · 15 min</p>
+    </div>
+
+    <!-- Details -->
+    <div style="padding:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:4px 12px;color:#94a3b8;font-size:13px;">📅 Fecha</td>
+          <td style="padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;">{$date}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px;color:#94a3b8;font-size:13px;">🕐 Hora</td>
+          <td style="padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;">{$time} hrs (Chile)</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 12px;color:#94a3b8;font-size:13px;">👤 Nombre</td>
+          <td style="padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;">{$name}</td>
+        </tr>
+        {$companyRow}
+        <tr>
+          <td style="padding:4px 12px;color:#94a3b8;font-size:13px;">💬 Motivo</td>
+          <td style="padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;">{$motivo}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Info -->
+    <div style="padding:0 24px 24px;">
+      <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.1);border-radius:10px;padding:14px 16px;">
+        <p style="color:#c4b5fd;font-size:13px;margin:0;line-height:1.5;">
+          📩 Recibirás una invitación de Google Calendar con el enlace de la videollamada. Revisa tu bandeja de entrada.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;margin-top:24px;">
+    <p style="color:#475569;font-size:11px;margin:0;">© WITHMIA · withmia.com</p>
+  </div>
+</div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * HTML email for the WITHMIA team when a booking arrives (fallback or notification).
+     */
+    private function buildTeamEmailHtml(array $data): string
+    {
+        $name = htmlspecialchars($data['name']);
+        $email = htmlspecialchars($data['email']);
+        $motivo = htmlspecialchars($data['motivo']);
+        $company = !empty($data['company']) ? htmlspecialchars($data['company']) : '—';
+        $date = $data['date'];
+        $time = $data['time'];
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#0f0a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:520px;margin:0 auto;padding:32px 16px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <img src="https://app.withmia.com/icons/logo-withmia.png" alt="WITHMIA" width="120" style="display:inline-block;" />
+  </div>
+  <div style="background:#1a1230;border:1px solid rgba(139,92,246,0.15);border-radius:16px;overflow:hidden;">
+    <div style="background:rgba(245,158,11,0.08);padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <h2 style="color:#fbbf24;font-size:16px;margin:0;">📅 Nuevo agendamiento web</h2>
+      <p style="color:#94a3b8;font-size:12px;margin:4px 0 0;">{$date} a las {$time} hrs</p>
+    </div>
+    <div style="padding:20px 24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;width:90px;">Nombre</td><td style="color:#e2e8f0;font-size:13px;font-weight:600;">{$name}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;">Email</td><td style="color:#e2e8f0;font-size:13px;">{$email}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;">Empresa</td><td style="color:#e2e8f0;font-size:13px;">{$company}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;font-size:13px;">Motivo</td><td style="color:#e2e8f0;font-size:13px;">{$motivo}</td></tr>
+      </table>
+    </div>
+    <div style="padding:0 24px 20px;">
+      <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);border-radius:8px;padding:12px;">
+        <p style="color:#fbbf24;font-size:12px;margin:0;">⚠️ No se pudo crear el evento automáticamente. Crear reunión manualmente.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+HTML;
     }
 
     /**
