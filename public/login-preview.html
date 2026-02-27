@@ -676,8 +676,8 @@
         .eco-channel-icon img { width: 22px; height: 22px; object-fit: contain; }
         .eco-channel-name {
             font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
-            color: var(--text-secondary);
-            opacity: 0.7;
+            color: var(--text-primary);
+            opacity: 0.85;
             transition: opacity 0.2s;
         }
         .eco-channel:hover .eco-channel-name { opacity: 1; }
@@ -719,12 +719,12 @@
         .eco-integ-text { display: flex; flex-direction: column; }
         .eco-integ-name {
             font-size: 10px; font-weight: 700; letter-spacing: 0.2px;
-            color: var(--text-muted); opacity: 0.55; line-height: 1.2;
+            color: var(--text-secondary); opacity: 0.85; line-height: 1.2;
             transition: opacity 0.2s, color 0.2s;
         }
-        .eco-integ:hover .eco-integ-name { opacity: 0.85; color: var(--text-primary); }
+        .eco-integ:hover .eco-integ-name { opacity: 1; color: var(--text-primary); }
         .eco-integ-sub {
-            font-size: 7px; color: var(--text-muted); opacity: 0.3;
+            font-size: 7px; color: var(--text-muted); opacity: 0.6;
             white-space: nowrap; margin-top: -1px;
         }
         .eco-integ.left-node { flex-direction: row-reverse; }
@@ -789,6 +789,19 @@
                         <circle r="3" fill="#EA4335"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
                         <circle r="3" fill="#61DAFB"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
                         <circle r="3" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
+                        <!-- Channel → Integration connection lines -->
+                        <line x1="250" y1="120" x2="330" y2="28" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite"/>
+                        <line x1="250" y1="120" x2="170" y2="28" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.4s"/>
+                        <line x1="320" y1="155" x2="390" y2="80" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.8s"/>
+                        <line x1="320" y1="155" x2="430" y2="152" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.2s"/>
+                        <line x1="320" y1="245" x2="430" y2="248" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.6s"/>
+                        <line x1="320" y1="245" x2="390" y2="320" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2s"/>
+                        <line x1="250" y1="280" x2="330" y2="372" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.4s"/>
+                        <line x1="250" y1="280" x2="170" y2="372" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.8s"/>
+                        <line x1="180" y1="245" x2="110" y2="320" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.2s"/>
+                        <line x1="180" y1="245" x2="70" y2="248" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.6s"/>
+                        <line x1="180" y1="155" x2="70" y2="152" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4s"/>
+                        <line x1="180" y1="155" x2="110" y2="80" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4.4s"/>
                     </svg>
 
                     <!-- Center: WITHMIA logo -->
