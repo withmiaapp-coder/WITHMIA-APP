@@ -71,7 +71,7 @@ class WebsiteBookingController extends Controller
 
             // All 15-min slots
             $allSlots = [];
-            foreach (['09','10','11','12','14','15','16','17'] as $h) {
+            foreach (['09','10','11','12','14','15','16','17','18','19'] as $h) {
                 foreach (['00','15','30','45'] as $m) {
                     $allSlots[] = "{$h}:{$m}";
                 }
