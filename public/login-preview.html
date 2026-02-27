@@ -500,191 +500,254 @@
             border: 1px solid rgba(255,255,255,0.06);
         }
 
-        /* ===== ECOSYSTEM HUB (exact replica of withmia.com) ===== */
+        /* ===== ECOSYSTEM HUB v2 — Arc-inspired ===== */
         .left-panel {
             padding: 0 !important;
             overflow: hidden;
             position: relative;
+            background: var(--panel-bg);
         }
-        .ecosystem-section {
+        .eco-section {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
-            padding: 24px 12px 12px;
+            padding: 28px 20px 20px;
             position: relative;
             z-index: 1;
+            gap: 6px;
+        }
+        /* Ambient background orb */
+        .eco-section::before {
+            content: "";
+            position: absolute;
+            width: 260px; height: 260px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, rgba(59,130,246,0.04) 40%, transparent 70%);
+            animation: orbFloat 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        html.dark .eco-section::before {
+            background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(59,130,246,0.06) 40%, transparent 70%);
+        }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.08); }
         }
         .eco-badge {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(245,158,11,0.12));
-            border: 1px solid rgba(139,92,246,0.25);
+            background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.08));
+            border: 1px solid rgba(139,92,246,0.15);
             border-radius: 20px;
-            padding: 4px 14px;
+            padding: 5px 14px;
             font-size: 0.65rem;
             font-weight: 600;
             color: #a78bfa;
-            margin-bottom: 8px;
-            backdrop-filter: blur(8px);
             letter-spacing: 0.3px;
+            backdrop-filter: blur(8px);
+        }
+        html.dark .eco-badge {
+            background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.08));
+            border-color: rgba(139,92,246,0.2);
         }
         .eco-title {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: 800;
             text-align: center;
             color: var(--text-primary);
-            line-height: 1.2;
-            margin: 0 0 2px;
-            letter-spacing: -0.3px;
+            line-height: 1.25;
+            margin: 0;
+            letter-spacing: -0.4px;
         }
         .eco-gradient {
-            background: linear-gradient(135deg, #f59e0b, #ea580c, #f59e0b);
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .eco-hub {
+
+        /* -- Orbit Container -- */
+        .eco-orbit {
             position: relative;
             width: 100%;
             flex: 1;
-            min-height: 340px;
-            aspect-ratio: 3/2;
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .eco-web {
+
+        /* Orbit rings (animated dashed) */
+        .eco-ring {
             position: absolute;
-            inset: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
+            border-radius: 50%;
+            border: 1px dashed rgba(139,92,246,0.1);
+            animation: ringRotate 60s linear infinite;
         }
-        /* Center logo */
+        .eco-ring.r1 { width: 130px; height: 130px; border-color: rgba(139,92,246,0.08); }
+        .eco-ring.r2 { width: 240px; height: 240px; border-color: rgba(139,92,246,0.06); animation-duration: 80s; animation-direction: reverse; }
+        .eco-ring.r3 { width: 350px; height: 350px; border-color: rgba(139,92,246,0.04); animation-duration: 100s; }
+        html.dark .eco-ring.r1 { border-color: rgba(139,92,246,0.12); }
+        html.dark .eco-ring.r2 { border-color: rgba(139,92,246,0.08); }
+        html.dark .eco-ring.r3 { border-color: rgba(139,92,246,0.06); }
+        @keyframes ringRotate { to { transform: rotate(360deg); } }
+
+        /* -- Center Logo -- */
         .eco-center {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: relative;
             z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .eco-center-glow {
+        .eco-center-ring {
             position: absolute;
-            inset: -8px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(245,158,11,0.06));
-            animation: centerPulse 4s ease-in-out infinite;
+            inset: -6px;
+            border-radius: 18px;
+            background: conic-gradient(from 0deg, rgba(139,92,246,0.3), rgba(59,130,246,0.2), rgba(245,158,11,0.2), rgba(139,92,246,0.3));
+            animation: centerSpin 6s linear infinite;
+            filter: blur(1px);
         }
+        @keyframes centerSpin { to { transform: rotate(360deg); } }
         .eco-center-box {
             position: relative;
             width: 56px; height: 56px;
-            border-radius: 16px;
-            background: linear-gradient(145deg, rgba(139,92,246,0.2), rgba(10,10,18,0.95), rgba(245,158,11,0.15));
-            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            background: linear-gradient(145deg, #f8f8fa, #eef0f4);
+            border: 1px solid rgba(0,0,0,0.06);
             display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
             overflow: hidden;
-            box-shadow: 0 0 40px rgba(139,92,246,0.12), 0 0 80px rgba(139,92,246,0.04);
         }
-        .eco-center-box img {
-            width: 36px; height: 36px;
-            border-radius: 8px;
-            object-fit: contain;
+        html.dark .eco-center-box {
+            background: linear-gradient(145deg, rgba(30,30,50,0.95), rgba(15,15,30,0.98));
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 4px 30px rgba(139,92,246,0.1);
         }
+        .eco-center-box img { width: 34px; height: 34px; object-fit: contain; }
         .eco-live {
-            position: absolute;
-            bottom: -9px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; align-items: center;
-            gap: 3px; padding: 2px 8px;
+            margin-top: 6px;
+            display: flex; align-items: center; gap: 4px;
+            padding: 2px 10px;
             border-radius: 10px;
+            background: rgba(52,211,153,0.08);
+            border: 1px solid rgba(52,211,153,0.15);
+        }
+        html.dark .eco-live {
             background: rgba(52,211,153,0.06);
-            border: 1px solid rgba(52,211,153,0.18);
-            box-shadow: 0 0 16px rgba(52,211,153,0.08);
-            white-space: nowrap;
+            border-color: rgba(52,211,153,0.12);
         }
         .eco-live-dot {
-            width: 5px; height: 5px;
-            border-radius: 50%;
+            width: 5px; height: 5px; border-radius: 50%;
             background: #34d399;
             animation: livePulse 2s ease-in-out infinite;
         }
         .eco-live-text {
-            font-size: 7px;
-            font-family: monospace;
-            font-weight: 700;
-            color: rgba(52,211,153,0.9);
-            letter-spacing: 0.5px;
+            font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace;
+            font-weight: 700; color: #34d399; letter-spacing: 0.5px;
         }
-        @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @keyframes centerPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
-        @keyframes hubDashFlow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -14; } }
-        @keyframes ringPulse { 0%,100% { stroke-opacity: 0.04; } 50% { stroke-opacity: 0.08; } }
-        @keyframes networkPulse { 0%,100% { fill-opacity: 0.04; r: 0.7; } 50% { fill-opacity: 0.15; r: 1.4; } }
-        /* Node styles */
-        .eco-node {
+        @keyframes livePulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+        /* -- Channel Nodes (inner ring) -- */
+        .eco-channel {
             position: absolute;
-            display: flex;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
             z-index: 10;
             transform: translate(-50%, -50%);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .eco-node.inner {
-            flex-direction: column;
-            gap: 3px;
+        .eco-channel:hover { transform: translate(-50%, -50%) scale(1.08); }
+        .eco-channel-icon {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.85);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02);
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
         }
-        .eco-node .eco-icon {
+        html.dark .eco-channel-icon {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+            box-shadow: 0 2px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.03);
+        }
+        .eco-channel:hover .eco-channel-icon {
+            box-shadow: 0 4px 20px rgba(139,92,246,0.15), 0 0 0 1px rgba(139,92,246,0.1);
+            border-color: rgba(139,92,246,0.2);
+        }
+        .eco-channel-icon img { width: 22px; height: 22px; object-fit: contain; }
+        .eco-channel-name {
+            font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .eco-channel:hover .eco-channel-name { opacity: 1; }
+
+        /* -- Integration Nodes (outer ring) -- */
+        .eco-integ {
+            position: absolute;
+            display: flex; align-items: center; gap: 6px;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+        }
+        .eco-integ:hover { transform: translate(-50%, -50%) scale(1.06); }
+        .eco-integ-icon {
+            width: 30px; height: 30px;
+            border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(255,255,255,0.6);
+            border: 1px solid rgba(0,0,0,0.04);
+            box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+            transition: all 0.3s ease;
         }
-        .eco-node:hover .eco-icon { transform: scale(1.1); }
-        .eco-node:hover .eco-node-label { color: var(--text-primary); opacity: 1 !important; }
-        .eco-node.inner .eco-icon {
-            width: 44px; height: 44px;
-            border-radius: 12px;
+        html.dark .eco-integ-icon {
+            background: rgba(255,255,255,0.03);
+            border-color: rgba(255,255,255,0.06);
+            box-shadow: 0 1px 8px rgba(0,0,0,0.25);
         }
-        .eco-node .eco-icon img {
-            width: 20px; height: 20px;
-            object-fit: contain;
+        .eco-integ:hover .eco-integ-icon {
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         }
-        .eco-node-label {
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            color: var(--text-muted);
-            white-space: nowrap;
-            transition: color 0.2s, opacity 0.2s;
+        html.dark .eco-integ:hover .eco-integ-icon {
+            background: rgba(255,255,255,0.06);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
         }
-        .eco-node.inner .eco-node-label { text-align: center; }
-        .eco-node-sub {
-            font-size: 8px;
-            color: var(--text-muted);
-            opacity: 0.4;
-            white-space: nowrap;
+        .eco-integ-icon svg { width: 14px; height: 14px; }
+        .eco-integ-icon img { width: 16px; height: 16px; }
+        .eco-integ-text { display: flex; flex-direction: column; }
+        .eco-integ-name {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.2px;
+            color: var(--text-muted); opacity: 0.55; line-height: 1.2;
+            transition: opacity 0.2s, color 0.2s;
         }
-        /* Outer nodes */
-        .eco-node.outer {
-            flex-direction: row;
-            gap: 5px;
+        .eco-integ:hover .eco-integ-name { opacity: 0.85; color: var(--text-primary); }
+        .eco-integ-sub {
+            font-size: 7px; color: var(--text-muted); opacity: 0.3;
+            white-space: nowrap; margin-top: -1px;
         }
-        .eco-node.outer .eco-icon {
-            width: 34px; height: 34px;
-            border-radius: 9px;
+        .eco-integ.left-node { flex-direction: row-reverse; }
+        .eco-integ.left-node .eco-integ-text { text-align: right; }
+
+        /* -- Connection lines (SVG) -- */
+        .eco-lines {
+            position: absolute;
+            inset: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
         }
-        .eco-node.outer .eco-icon svg { width: 14px; height: 14px; }
-        .eco-node.outer .eco-icon img { width: 16px; height: 16px; }
-        .eco-node.outer .eco-text { display: flex; flex-direction: column; }
-        .eco-node.outer .eco-node-label {
-            font-size: 10px;
-            font-weight: 700;
-            opacity: 0.5;
-            line-height: 1.2;
-        }
-        .eco-node.outer .eco-node-sub {
-            font-size: 7px;
-            opacity: 0.3;
-            margin-top: -1px;
-        }
-        .eco-node.outer.left-node { flex-direction: row-reverse; }
-        .eco-node.outer.left-node .eco-text { text-align: right; }
+        @keyframes dashFlow { to { stroke-dashoffset: -16; } }
+        @keyframes particleFade { 0%,100% { fill-opacity: 0; } 30%,70% { fill-opacity: 0.5; } }
 </style>
 </head>
 <body>
@@ -700,95 +763,46 @@
 
     <div class="login-container">
         <div class="left-panel">
-            <div class="ecosystem-section">
+            <div class="eco-section">
                 <div class="eco-badge">✨ Ecosistema completo</div>
                 <h2 class="eco-title">Todas tus herramientas,<br><span class="eco-gradient">una sola plataforma</span></h2>
-                <div class="eco-hub">
-                    <!-- ═══ Spider Web SVG (viewBox 600x400) ═══ -->
-                    <svg class="eco-web" viewBox="0 0 600 400" fill="none" preserveAspectRatio="xMidYMid meet">
+
+                <div class="eco-orbit">
+                    <!-- Animated orbit rings -->
+                    <div class="eco-ring r1"></div>
+                    <div class="eco-ring r2"></div>
+                    <div class="eco-ring r3"></div>
+
+                    <!-- Connection lines SVG -->
+                    <svg class="eco-lines" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid meet">
                         <defs>
-                            <radialGradient id="wCG" cx="50%" cy="50%" r="42%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.06"/><stop offset="60%" stop-color="#7c3aed" stop-opacity="0.02"/><stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
-                            <!-- Channel gradient lines -->
-                            <linearGradient id="cg0" x1="300" y1="200" x2="300" y2="125" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#25D366" stop-opacity="0.5"/></linearGradient>
-                            <linearGradient id="cg1" x1="300" y1="200" x2="365" y2="162.5" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#E1306C" stop-opacity="0.5"/></linearGradient>
-                            <linearGradient id="cg2" x1="300" y1="200" x2="365" y2="237.5" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#0084FF" stop-opacity="0.5"/></linearGradient>
-                            <linearGradient id="cg3" x1="300" y1="200" x2="300" y2="275" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#EA4335" stop-opacity="0.5"/></linearGradient>
-                            <linearGradient id="cg4" x1="300" y1="200" x2="235" y2="237.5" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#61DAFB" stop-opacity="0.5"/></linearGradient>
-                            <linearGradient id="cg5" x1="300" y1="200" x2="235" y2="162.5" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/><stop offset="100%" stop-color="#34D399" stop-opacity="0.5"/></linearGradient>
+                            <linearGradient id="lg0" x1="250" y1="200" x2="250" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#25D366" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg1" x1="250" y1="200" x2="320" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#E1306C" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg2" x1="250" y1="200" x2="320" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#0084FF" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg3" x1="250" y1="200" x2="250" y2="280" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#EA4335" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg4" x1="250" y1="200" x2="180" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#61DAFB" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg5" x1="250" y1="200" x2="180" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#34D399" stop-opacity="0.4"/></linearGradient>
                         </defs>
-                        <!-- Background glow -->
-                        <circle cx="300" cy="200" r="195" fill="url(#wCG)"/>
-                        <!-- Concentric spider-web rings (5 rings, slight wobble) -->
-                        <path d="M 300.0 167.0 L 308.5 168.4 L 316.0 172.3 L 322.1 177.9 L 326.9 184.5 L 330.3 191.9 L 332.0 200.0 L 331.6 208.5 L 328.5 216.5 L 323.1 223.1 L 316.0 227.7 L 308.1 230.3 L 300.0 231.0 L 291.9 230.3 L 284.0 227.7 L 276.9 223.1 L 271.5 216.5 L 268.4 208.5 L 268.0 200.0 L 269.7 191.9 L 273.1 184.5 L 277.9 177.9 L 284.0 172.3 L 291.5 168.4 L 300.0 167.0 Z" stroke="#a78bfa" stroke-width="0.35" stroke-opacity="0.052" fill="none"/>
-                        <path d="M 300.0 140.2 L 315.2 143.4 L 329.1 149.6 L 341.6 158.4 L 352.2 169.9 L 359.3 184.1 L 361.8 200.0 L 359.0 215.8 L 351.8 229.9 L 341.4 241.4 L 329.1 250.4 L 315.2 256.9 L 300.0 260.2 L 284.1 259.3 L 269.1 253.5 L 256.8 243.2 L 248.2 229.9 L 243.4 215.2 L 241.8 200.0 L 243.1 184.8 L 247.8 169.9 L 256.6 156.6 L 269.1 146.5 L 284.2 141.0 L 300.0 140.2 Z" stroke="#818cf8" stroke-width="0.35" stroke-opacity="0.064" fill="none"/>
-                        <path d="M 300.0 112.6 L 322.9 114.4 L 345.3 121.5 L 365.3 134.7 L 380.2 153.7 L 388.2 176.4 L 389.3 200.0 L 384.7 222.7 L 375.7 243.7 L 362.7 262.7 L 345.3 278.5 L 323.9 289.2 L 300.0 292.6 L 276.4 288.2 L 255.3 277.3 L 238.0 262.0 L 224.3 243.7 L 214.4 222.9 L 209.3 200.0 L 210.8 176.1 L 219.8 153.7 L 235.4 135.4 L 255.3 122.7 L 277.3 115.3 L 300.0 112.6 Z" stroke="#6366f1" stroke-width="0.35" stroke-opacity="0.076" fill="none"/>
-                        <path d="M 300.0 73.6 L 333.2 75.9 L 364.2 88.7 L 389.4 110.6 L 407.0 138.2 L 417.4 168.5 L 421.5 200.0 L 419.3 232.0 L 409.5 263.2 L 390.8 290.8 L 364.2 311.3 L 332.7 322.1 L 300.0 323.6 L 268.5 317.4 L 239.2 305.2 L 212.6 287.4 L 190.5 263.2 L 175.9 233.2 L 171.5 200.0 L 177.9 167.3 L 193.0 138.2 L 214.1 114.1 L 239.2 94.8 L 268.0 80.7 L 300.0 73.6 Z" stroke="#c084fc" stroke-width="0.35" stroke-opacity="0.088" fill="none"/>
-                        <path d="M 300.0 30.7 L 343.0 39.4 L 381.3 59.2 L 413.3 86.7 L 439.2 119.7 L 458.1 157.6 L 467.4 200.0 L 464.0 243.9 L 446.6 284.7 L 417.6 317.6 L 381.3 340.8 L 341.5 354.8 L 300.0 360.7 L 257.6 358.1 L 216.3 345.0 L 180.0 320.0 L 153.4 284.7 L 139.4 243.0 L 137.4 200.0 L 145.2 158.5 L 160.8 119.7 L 184.3 84.3 L 216.3 55.0 L 256.1 36.0 L 300.0 30.7 Z" stroke="#f59e0b" stroke-width="0.6" stroke-opacity="0.1" fill="none"/>
-                        <!-- Radial strands (24) -->
-                        <line x1="300.0" y1="185.0" x2="300.0" y2="20.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="303.9" y1="185.5" x2="346.6" y2="26.1" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="307.5" y1="187.0" x2="390.0" y2="44.1" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="310.6" y1="189.4" x2="427.3" y2="72.7" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="313.0" y1="192.5" x2="455.9" y2="110.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="314.5" y1="196.1" x2="473.9" y2="153.4" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="315.0" y1="200.0" x2="480.0" y2="200.0" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="314.5" y1="203.9" x2="473.9" y2="246.6" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="313.0" y1="207.5" x2="455.9" y2="290.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="310.6" y1="210.6" x2="427.3" y2="327.3" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="307.5" y1="213.0" x2="390.0" y2="355.9" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="303.9" y1="214.5" x2="346.6" y2="373.9" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="300.0" y1="215.0" x2="300.0" y2="380.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="296.1" y1="214.5" x2="253.4" y2="373.9" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="292.5" y1="213.0" x2="210.0" y2="355.9" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="289.4" y1="210.6" x2="172.7" y2="327.3" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="287.0" y1="207.5" x2="144.1" y2="290.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="285.5" y1="203.9" x2="126.1" y2="246.6" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="285.0" y1="200.0" x2="120.0" y2="200.0" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="285.5" y1="196.1" x2="126.1" y2="153.4" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="287.0" y1="192.5" x2="144.1" y2="110.0" stroke="white" stroke-width="0.35" stroke-opacity="0.06"/>
-                        <line x1="289.4" y1="189.4" x2="172.7" y2="72.7" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="292.5" y1="187.0" x2="210.0" y2="44.1" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <line x1="296.1" y1="185.5" x2="253.4" y2="26.1" stroke="white" stroke-width="0.2" stroke-opacity="0.03"/>
-                        <!-- Center pulse beacons -->
-                        <circle cx="300" cy="200" r="8" fill="#a78bfa" fill-opacity="0.06" style="animation:centerPulse 3s ease-in-out infinite"/>
-                        <!-- Center → Channel gradient dashed lines -->
-                        <line x1="300" y1="200" x2="300" y2="125" stroke="url(#cg0)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite"/>
-                        <line x1="300" y1="200" x2="365" y2="162.5" stroke="url(#cg1)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite;animation-delay:0.5s"/>
-                        <line x1="300" y1="200" x2="365" y2="237.5" stroke="url(#cg2)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite;animation-delay:1s"/>
-                        <line x1="300" y1="200" x2="300" y2="275" stroke="url(#cg3)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite;animation-delay:1.5s"/>
-                        <line x1="300" y1="200" x2="235" y2="237.5" stroke="url(#cg4)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite;animation-delay:2s"/>
-                        <line x1="300" y1="200" x2="235" y2="162.5" stroke="url(#cg5)" stroke-width="0.7" stroke-opacity="0.2" stroke-dasharray="3 4" style="animation:hubDashFlow 3.5s linear infinite;animation-delay:2.5s"/>
-                        <!-- Integration → nearest Channel curved connections -->
-                        <path d="M 344 35.8 Q 319.4 94.8 300 125" stroke="#3B82F6" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite"/>
-                        <path d="M 420.2 79.8 Q 381.5 130.6 365 162.5" stroke="#006BFF" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:0.35s"/>
-                        <path d="M 464.2 156 Q 400.8 164.1 365 162.5" stroke="#22D3EE" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:0.7s"/>
-                        <path d="M 464.2 244 Q 400.8 235.9 365 237.5" stroke="#4285F4" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:1.05s"/>
-                        <path d="M 420.2 320.2 Q 381.5 269.4 365 237.5" stroke="#F43F5E" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:1.4s"/>
-                        <path d="M 344 364.2 Q 319.4 305.2 300 275" stroke="#FFE600" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:1.75s"/>
-                        <path d="M 256 364.2 Q 280.6 305.2 300 275" stroke="#0078D4" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:2.1s"/>
-                        <path d="M 179.8 320.2 Q 218.5 269.4 235 237.5" stroke="#10B981" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:2.45s"/>
-                        <path d="M 135.8 244 Q 199.2 235.9 235 237.5" stroke="#96BF48" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:2.8s"/>
-                        <path d="M 135.8 156 Q 199.2 164.1 235 162.5" stroke="#9B5C8F" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:3.15s"/>
-                        <path d="M 179.8 79.8 Q 218.5 130.6 235 162.5" stroke="#F59E0B" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:3.5s"/>
-                        <path d="M 256 35.8 Q 280.6 94.8 300 125" stroke="#00758F" stroke-width="0.45" stroke-opacity="0.1" fill="none" stroke-dasharray="2 4" style="animation:hubDashFlow 5s linear infinite;animation-delay:3.85s"/>
-                        <!-- Animated data-flow particles center→channel -->
-                        <path id="f0" d="M 300 200 L 300 125" stroke="none"/>
-                        <path id="f1" d="M 300 200 L 365 162.5" stroke="none"/>
-                        <path id="f2" d="M 300 200 L 365 237.5" stroke="none"/>
-                        <path id="f3" d="M 300 200 L 300 275" stroke="none"/>
-                        <path id="f4" d="M 300 200 L 235 237.5" stroke="none"/>
-                        <path id="f5" d="M 300 200 L 235 162.5" stroke="none"/>
-                        <circle r="1.5" fill="#25D366" fill-opacity="0"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#f0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="2.5s" repeatCount="indefinite"/></circle>
-                        <circle r="1.5" fill="#E1306C" fill-opacity="0"><animateMotion dur="2.8s" repeatCount="indefinite" begin="0.8s"><mpath href="#f1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="2.8s" repeatCount="indefinite" begin="0.8s"/></circle>
-                        <circle r="1.5" fill="#0084FF" fill-opacity="0"><animateMotion dur="3.1s" repeatCount="indefinite" begin="1.6s"><mpath href="#f2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.1s" repeatCount="indefinite" begin="1.6s"/></circle>
-                        <circle r="1.5" fill="#EA4335" fill-opacity="0"><animateMotion dur="3.4s" repeatCount="indefinite" begin="2.4s"><mpath href="#f3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.4s" repeatCount="indefinite" begin="2.4s"/></circle>
-                        <circle r="1.5" fill="#61DAFB" fill-opacity="0"><animateMotion dur="3.7s" repeatCount="indefinite" begin="3.2s"><mpath href="#f4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.7s" repeatCount="indefinite" begin="3.2s"/></circle>
-                        <circle r="1.5" fill="#34D399" fill-opacity="0"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#f5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
+                        <!-- Center → channel lines -->
+                        <line x1="250" y1="200" x2="250" y2="120" stroke="url(#lg0)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite"/>
+                        <line x1="250" y1="200" x2="320" y2="155" stroke="url(#lg1)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:.6s"/>
+                        <line x1="250" y1="200" x2="320" y2="245" stroke="url(#lg2)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.2s"/>
+                        <line x1="250" y1="200" x2="250" y2="280" stroke="url(#lg3)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.8s"/>
+                        <line x1="250" y1="200" x2="180" y2="245" stroke="url(#lg4)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:2.4s"/>
+                        <line x1="250" y1="200" x2="180" y2="155" stroke="url(#lg5)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:3s"/>
+                        <!-- Animated particles -->
+                        <path id="p0" d="M250 200 L250 120" stroke="none"/><path id="p1" d="M250 200 L320 155" stroke="none"/><path id="p2" d="M250 200 L320 245" stroke="none"/><path id="p3" d="M250 200 L250 280" stroke="none"/><path id="p4" d="M250 200 L180 245" stroke="none"/><path id="p5" d="M250 200 L180 155" stroke="none"/>
+                        <circle r="2" fill="#25D366"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3s" repeatCount="indefinite"/></circle>
+                        <circle r="2" fill="#E1306C"><animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.2s" repeatCount="indefinite" begin="0.8s"/></circle>
+                        <circle r="2" fill="#0084FF"><animateMotion dur="3.4s" repeatCount="indefinite" begin="1.6s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.4s" repeatCount="indefinite" begin="1.6s"/></circle>
+                        <circle r="2" fill="#EA4335"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
+                        <circle r="2" fill="#61DAFB"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
+                        <circle r="2" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
                     </svg>
 
-                    <!-- ═══ Center Node (WITHMIA) ═══ -->
+                    <!-- Center: WITHMIA logo -->
                     <div class="eco-center">
-                        <div class="eco-center-glow"></div>
+                        <div class="eco-center-ring"></div>
                         <div class="eco-center-box">
                             <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA">
                         </div>
@@ -798,92 +812,80 @@
                         </div>
                     </div>
 
-                    <!-- ═══ Channel Nodes (inner ring, rounded squares) ═══ -->
-                    <div class="eco-node inner" style="top:31.3%;left:50%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#25D3660c;border:1px solid #25D36615;box-shadow:0 0 10px #25D36605"><img src="/icons/whatsapp.webp"></div>
-                        <span class="eco-node-label">WhatsApp</span>
+                    <!-- Channel nodes (inner ring) -->
+                    <div class="eco-channel" style="top:30%;left:50%">
+                        <div class="eco-channel-icon"><img src="/icons/whatsapp.webp"></div>
+                        <span class="eco-channel-name">WhatsApp</span>
                     </div>
-                    <div class="eco-node inner" style="top:40.6%;left:60.8%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#E1306C0c;border:1px solid #E1306C15;box-shadow:0 0 10px #E1306C05"><img src="/icons/instagram-new.webp"></div>
-                        <span class="eco-node-label">Instagram</span>
+                    <div class="eco-channel" style="top:38.8%;left:64%">
+                        <div class="eco-channel-icon"><img src="/icons/instagram-new.webp"></div>
+                        <span class="eco-channel-name">Instagram</span>
                     </div>
-                    <div class="eco-node inner" style="top:59.4%;left:60.8%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#0084FF0c;border:1px solid #0084FF15;box-shadow:0 0 10px #0084FF05"><img src="/icons/facebook-new.webp"></div>
-                        <span class="eco-node-label">Messenger</span>
+                    <div class="eco-channel" style="top:61.2%;left:64%">
+                        <div class="eco-channel-icon"><img src="/icons/facebook-new.webp"></div>
+                        <span class="eco-channel-name">Messenger</span>
                     </div>
-                    <div class="eco-node inner" style="top:68.8%;left:50%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#EA43350c;border:1px solid #EA433515;box-shadow:0 0 10px #EA433505"><img src="/icons/gmail-new.webp"></div>
-                        <span class="eco-node-label">Email</span>
+                    <div class="eco-channel" style="top:70%;left:50%">
+                        <div class="eco-channel-icon"><img src="/icons/gmail-new.webp"></div>
+                        <span class="eco-channel-name">Email</span>
                     </div>
-                    <div class="eco-node inner" style="top:59.4%;left:39.2%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#61DAFB0c;border:1px solid #61DAFB15;box-shadow:0 0 10px #61DAFB05"><img src="/icons/web-new.webp" style="filter:brightness(0) invert(1)"></div>
-                        <span class="eco-node-label">Chat Web</span>
+                    <div class="eco-channel" style="top:61.2%;left:36%">
+                        <div class="eco-channel-icon"><img src="/icons/web-new.webp"></div>
+                        <span class="eco-channel-name">Chat Web</span>
                     </div>
-                    <div class="eco-node inner" style="top:40.6%;left:39.2%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#34D3990c;border:1px solid #34D39915;box-shadow:0 0 10px #34D39905"><img src="/icons/api-final.webp"></div>
-                        <span class="eco-node-label">Cloud API</span>
+                    <div class="eco-channel" style="top:38.8%;left:36%">
+                        <div class="eco-channel-icon"><img src="/icons/api-final.webp"></div>
+                        <span class="eco-channel-name">Cloud API</span>
                     </div>
 
-                    <!-- ═══ Integration Nodes (outer ring, Lucide SVGs) ═══ -->
-                    <!-- AgendaPro (right, 57.3%, 8.9%) → nearest: WhatsApp -->
-                    <div class="eco-node outer" style="top:8.9%;left:57.3%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#3B82F60a;border:1px solid #3B82F612"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h6"/><path d="m9 14 2 2 4-4"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">AgendaPro</span><span class="eco-node-sub">Citas y reservas</span></div>
+                    <!-- Integration nodes (outer ring) -->
+                    <div class="eco-integ" style="top:7%;left:57%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h6"/><path d="m9 14 2 2 4-4"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">AgendaPro</span><span class="eco-integ-sub">Citas y reservas</span></div>
                     </div>
-                    <!-- Calendly (right, 70%, 19.9%) → nearest: Instagram -->
-                    <div class="eco-node outer" style="top:19.9%;left:70%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#006BFF0a;border:1px solid #006BFF12"><svg viewBox="0 0 24 24" fill="none" stroke="#006BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Calendly</span><span class="eco-node-sub">Reuniones automáticas</span></div>
+                    <div class="eco-integ" style="top:18%;left:72%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#006BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Calendly</span><span class="eco-integ-sub">Reuniones automáticas</span></div>
                     </div>
-                    <!-- Dentalink (right, 77.4%, 39%) → nearest: Instagram -->
-                    <div class="eco-node outer" style="top:39%;left:77.4%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#22D3EE0a;border:1px solid #22D3EE12"><svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><path d="M22 10 A2 2 0 0 0 20 8 A2 2 0 0 0 18 10 A2 2 0 0 0 20 12 A2 2 0 0 0 22 10"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Dentalink</span><span class="eco-node-sub">Clínicas dentales</span></div>
+                    <div class="eco-integ" style="top:38%;left:80%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Dentalink</span><span class="eco-integ-sub">Clínicas dentales</span></div>
                     </div>
-                    <!-- Google Calendar (right, 77.4%, 61%) → nearest: Messenger -->
-                    <div class="eco-node outer" style="top:61%;left:77.4%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#4285F40a;border:1px solid #4285F412"><svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Google Calendar</span><span class="eco-node-sub">Agenda sincronizada</span></div>
+                    <div class="eco-integ" style="top:62%;left:80%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Google Calendar</span><span class="eco-integ-sub">Agenda sincronizada</span></div>
                     </div>
-                    <!-- Medilink (right, 70%, 80%) → nearest: Messenger -->
-                    <div class="eco-node outer" style="top:80%;left:70%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#F43F5E0a;border:1px solid #F43F5E12"><svg viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><path d="M22 10 A2 2 0 0 0 20 8 A2 2 0 0 0 18 10 A2 2 0 0 0 20 12 A2 2 0 0 0 22 10"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Medilink</span><span class="eco-node-sub">Gestión médica</span></div>
+                    <div class="eco-integ" style="top:82%;left:72%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Medilink</span><span class="eco-integ-sub">Gestión médica</span></div>
                     </div>
-                    <!-- MercadoLibre (right, 57.3%, 91%) → nearest: Email -->
-                    <div class="eco-node outer" style="top:91%;left:57.3%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#FFE6000a;border:1px solid #FFE60012"><svg viewBox="0 0 24 24" fill="none" stroke="#FFE600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">MercadoLibre</span><span class="eco-node-sub">Marketplace</span></div>
+                    <div class="eco-integ" style="top:93%;left:57%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FFE600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">MercadoLibre</span><span class="eco-integ-sub">Marketplace</span></div>
                     </div>
-                    <!-- Outlook (left, 42.7%, 91%) → nearest: Email -->
-                    <div class="eco-node outer left-node" style="top:91%;left:42.7%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#0078D40a;border:1px solid #0078D412"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Outlook</span><span class="eco-node-sub">Microsoft Calendar</span></div>
+                    <div class="eco-integ left-node" style="top:93%;left:43%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Outlook</span><span class="eco-integ-sub">Microsoft Calendar</span></div>
                     </div>
-                    <!-- Reservo (left, 30%, 80%) → nearest: Chat Web -->
-                    <div class="eco-node outer left-node" style="top:80%;left:30%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#10B9810a;border:1px solid #10B98112"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Reservo</span><span class="eco-node-sub">Reservas online</span></div>
+                    <div class="eco-integ left-node" style="top:82%;left:28%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Reservo</span><span class="eco-integ-sub">Reservas online</span></div>
                     </div>
-                    <!-- Shopify (left, 22.6%, 61%) → nearest: Chat Web -->
-                    <div class="eco-node outer left-node" style="top:61%;left:22.6%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#96BF480a;border:1px solid #96BF4812"><svg viewBox="0 0 24 24" fill="none" stroke="#96BF48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">Shopify</span><span class="eco-node-sub">E-commerce sync</span></div>
+                    <div class="eco-integ left-node" style="top:62%;left:20%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#96BF48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">Shopify</span><span class="eco-integ-sub">E-commerce sync</span></div>
                     </div>
-                    <!-- WooCommerce (left, 22.6%, 39%) → nearest: Cloud API -->
-                    <div class="eco-node outer left-node" style="top:39%;left:22.6%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#9B5C8F0a;border:1px solid #9B5C8F12"><svg viewBox="0 0 24 24" fill="none" stroke="#9B5C8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">WooCommerce</span><span class="eco-node-sub">Tienda WordPress</span></div>
+                    <div class="eco-integ left-node" style="top:38%;left:20%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B5C8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">WooCommerce</span><span class="eco-integ-sub">Tienda WordPress</span></div>
                     </div>
-                    <!-- API REST (left, 30%, 19.9%) → nearest: Cloud API -->
-                    <div class="eco-node outer left-node" style="top:19.9%;left:30%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#F59E0B0a;border:1px solid #F59E0B12"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 12c0 4.4-3.6 8-8 8A4.5 4.5 0 0 1 5 15.5c0-6 8-4 8-8.5a3 3 0 1 0-6 0c0 .8.3 1.4.7 2L5 12"/><path d="M17.5 12H22"/><path d="M17.5 12a5 5 0 0 0 0-8"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">API REST</span><span class="eco-node-sub">Webhooks custom</span></div>
+                    <div class="eco-integ left-node" style="top:18%;left:28%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 12c0 4.4-3.6 8-8 8A4.5 4.5 0 0 1 5 15.5c0-6 8-4 8-8.5a3 3 0 1 0-6 0c0 .8.3 1.4.7 2L5 12"/><path d="M17.5 12H22"/><path d="M17.5 12a5 5 0 0 0 0-8"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">API REST</span><span class="eco-integ-sub">Webhooks custom</span></div>
                     </div>
-                    <!-- MySQL (left, 42.7%, 8.9%) → nearest: WhatsApp -->
-                    <div class="eco-node outer left-node" style="top:8.9%;left:42.7%;transform:translate(-50%,-50%)">
-                        <div class="eco-icon" style="background:#00758F0a;border:1px solid #00758F12"><svg viewBox="0 0 24 24" fill="none" stroke="#00758F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg></div>
-                        <div class="eco-text"><span class="eco-node-label">MySQL</span><span class="eco-node-sub">Base de datos</span></div>
+                    <div class="eco-integ left-node" style="top:7%;left:43%">
+                        <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#00758F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg></div>
+                        <div class="eco-integ-text"><span class="eco-integ-name">MySQL</span><span class="eco-integ-sub">Base de datos</span></div>
                     </div>
                 </div>
             </div>
