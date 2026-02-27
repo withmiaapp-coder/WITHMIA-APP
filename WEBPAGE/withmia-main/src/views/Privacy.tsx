@@ -90,7 +90,7 @@ const Privacy = () => {
               Política de <span className="text-gradient">Privacidad</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto">
-              Última actualización: 23 de febrero de 2026
+              Última actualización: 26 de febrero de 2026
             </p>
           </div>
         </section>
@@ -224,7 +224,17 @@ const Privacy = () => {
                   <li>Identificadores de sesión y tokens de autenticación</li>
                 </ul>
 
-                <h3 className="text-[15px] font-semibold text-white/70 mt-6 mb-3">2.4 Datos de facturación</h3>
+                <h3 className="text-[15px] font-semibold text-white/70 mt-6 mb-3">2.4 Datos de agendamiento web</h3>
+                <ul className="list-disc list-inside space-y-2 text-white/40">
+                  <li>Nombre completo del solicitante</li>
+                  <li>Dirección de correo electrónico</li>
+                  <li>Nombre de empresa (opcional)</li>
+                  <li>Motivo de la reunión</li>
+                  <li>Fecha y hora seleccionadas</li>
+                  <li>Estos datos se utilizan para crear un evento en Google Calendar con enlace de Google Meet, y para enviar confirmación por correo electrónico</li>
+                </ul>
+
+                <h3 className="text-[15px] font-semibold text-white/70 mt-6 mb-3">2.5 Datos de facturación</h3>
                 <ul className="list-disc list-inside space-y-2 text-white/40">
                   <li>Información de facturación (nombre, dirección, RUT)</li>
                   <li>Los datos de pago (número de tarjeta) son procesados exclusivamente por nuestro proveedor de pagos certificado PCI-DSS. WITHMIA no almacena datos de tarjetas de crédito</li>
@@ -245,6 +255,8 @@ const Privacy = () => {
                 <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
                   <li><strong className="text-white/50">Prestación del Servicio:</strong> Operar, mantener y mejorar la plataforma WITHMIA, incluyendo el procesamiento de mensajes, la gestión de contactos y la ejecución de automatizaciones</li>
                   <li><strong className="text-white/50">Inteligencia artificial:</strong> Entrenar y mejorar los modelos de IA que potencian los asistentes inteligentes, utilizando únicamente datos anonimizados y agregados</li>
+                  <li><strong className="text-white/50">Agendamiento:</strong> Procesar solicitudes de reunión desde el sitio web, crear eventos en Google Calendar y enviar confirmaciones por email al visitante y al equipo de WITHMIA</li>
+                  <li><strong className="text-white/50">Decisiones automatizadas:</strong> WITHMIA utiliza modelos de inteligencia artificial para generar respuestas automáticas en los canales de atención. Estas respuestas son generadas por IA y pueden ser supervisadas por el equipo humano. No se toman decisiones legales o de impacto significativo de forma exclusivamente automatizada</li>
                   <li><strong className="text-white/50">Comunicaciones:</strong> Enviar notificaciones sobre el Servicio, actualizaciones, alertas de seguridad y comunicaciones de soporte</li>
                   <li><strong className="text-white/50">Analítica:</strong> Generar reportes y métricas de rendimiento para los usuarios del Servicio</li>
                   <li><strong className="text-white/50">Seguridad:</strong> Detectar, prevenir y responder a incidentes de seguridad, fraude o actividad maliciosa</li>
@@ -297,7 +309,9 @@ const Privacy = () => {
                       <tr><td className="py-2.5 pr-4">Stripe</td><td className="py-2.5 pr-4">Procesamiento de pagos</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">Meta (WhatsApp/IG)</td><td className="py-2.5 pr-4">API de mensajería</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">OpenAI</td><td className="py-2.5 pr-4">Procesamiento de IA</td><td className="py-2.5">EE.UU.</td></tr>
+                      <tr><td className="py-2.5 pr-4">Google Cloud</td><td className="py-2.5 pr-4">Calendar API y Google Meet (agendamiento)</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">Sentry</td><td className="py-2.5 pr-4">Monitoreo de errores</td><td className="py-2.5">EE.UU.</td></tr>
+                      <tr><td className="py-2.5 pr-4">Qdrant</td><td className="py-2.5 pr-4">Base de datos vectorial (IA/RAG)</td><td className="py-2.5">EE.UU.</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -366,7 +380,7 @@ const Privacy = () => {
                   <h2 className="text-lg font-semibold text-white">7. Derechos de los Usuarios</h2>
                 </div>
                 <p>
-                  De conformidad con la Ley N° 19.628 sobre Protección de la Vida Privada de Chile y normativa aplicable, usted tiene los siguientes derechos:
+                  De conformidad con la Ley N° 19.628 sobre Protección de la Vida Privada de Chile, y en preparación a la Ley N° 21.719 sobre Protección de los Datos Personales (vigente desde diciembre de 2026), usted tiene los siguientes derechos:
                 </p>
                 <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
                   <li><strong className="text-white/50">Acceso:</strong> Solicitar una copia de los datos personales que almacenamos sobre usted</li>
@@ -375,6 +389,7 @@ const Privacy = () => {
                   <li><strong className="text-white/50">Portabilidad:</strong> Exportar sus datos en formato estructurado y legible por máquina (JSON o CSV)</li>
                   <li><strong className="text-white/50">Oposición:</strong> Oponerse al tratamiento de sus datos para fines de marketing o análisis</li>
                   <li><strong className="text-white/50">Restricción:</strong> Solicitar la limitación del tratamiento de sus datos en determinadas circunstancias</li>
+                  <li><strong className="text-white/50">No ser objeto de decisiones automatizadas:</strong> Derecho a no ser evaluado únicamente mediante tratamiento automatizado que produzca efectos jurídicos significativos</li>
                 </ul>
                 <p className="mt-3">
                   Para ejercer estos derechos, envía un correo a{" "}

@@ -804,6 +804,12 @@ const Contact = () => {
                             </>
                           )}
                         </button>
+                        <p className="text-[10px] text-white/15 text-center">
+                          Al agendar, aceptas nuestra{" "}
+                          <Link to="/privacidad" className="text-white/25 hover:text-white/40 underline">
+                            política de privacidad
+                          </Link>
+                        </p>
                         <button
                           type="button"
                           onClick={() => setBookingStep('calendar')}
