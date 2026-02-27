@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\ProductHubController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\ClientPortalController;
+use App\Http\Controllers\Api\WebsiteBookingController;
 
 // ============================================================================
 // 1. HEALTH CHECK (sin auth)
@@ -108,6 +109,13 @@ Route::post('/support-tickets', [SupportTicketController::class, 'store'])
 Route::post('/client-portal', [ClientPortalController::class, 'index'])
     ->middleware('throttle:15,1')
     ->name('api.client-portal');
+
+// ============================================================================
+// 2d. WEBSITE BOOKING (público, throttled, sin auth)
+// ============================================================================
+Route::post('/website/booking', [WebsiteBookingController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('api.website-booking.store');
 
 // ============================================================================
 // 3. WEBHOOKS EXTERNOS (protegidos por HMAC/secret, sin auth de usuario)
