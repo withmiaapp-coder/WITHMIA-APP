@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -58,6 +59,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // CRITICAL: Return proper JSON for ALL API exceptions (prevents empty 500 with Octane/RoadRunner)
         $exceptions->render(function (\Throwable $e, Request $request) {
+            // Let ValidationException pass through to Laravel's default handler (422)
+            if ($e instanceof ValidationException) {
+                return null;
+            }
+
             if ($request->is('api/*') || $request->expectsJson()) {
                 \Illuminate\Support\Facades\Log::error('[WITHMIA] API EXCEPTION', [
                     'class' => get_class($e),
