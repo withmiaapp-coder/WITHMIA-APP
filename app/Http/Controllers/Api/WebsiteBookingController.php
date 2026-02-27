@@ -182,7 +182,9 @@ class WebsiteBookingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error interno al procesar la solicitud',
-                'error' => config('app.debug') ? $e->getMessage() : null,
+                'debug_error' => $e->getMessage(),
+                'debug_class' => get_class($e),
+                'debug_file' => basename($e->getFile()) . ':' . $e->getLine(),
             ], 500);
         }
     }
