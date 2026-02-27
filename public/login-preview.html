@@ -789,26 +789,26 @@
                         <circle r="0.6" fill="#EA4335" fill-opacity="0"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
                         <circle r="0.6" fill="#61DAFB" fill-opacity="0"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
                         <circle r="0.6" fill="#34D399" fill-opacity="0"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
-                        <!-- Channel → Integration connection lines (coords = exact CSS %) -->
-                        <line x1="50" y1="30" x2="66" y2="7" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite"/>
-                        <line x1="50" y1="30" x2="34" y2="7" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.4s"/>
-                        <line x1="64" y1="38.8" x2="78" y2="20" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.8s"/>
-                        <line x1="64" y1="38.8" x2="86" y2="38" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.2s"/>
-                        <line x1="64" y1="61.2" x2="86" y2="62" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.6s"/>
-                        <line x1="64" y1="61.2" x2="78" y2="80" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2s"/>
-                        <line x1="50" y1="70" x2="66" y2="93" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.4s"/>
-                        <line x1="50" y1="70" x2="34" y2="93" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.8s"/>
-                        <line x1="36" y1="61.2" x2="22" y2="80" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.2s"/>
-                        <line x1="36" y1="61.2" x2="14" y2="62" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.6s"/>
-                        <line x1="36" y1="38.8" x2="14" y2="38" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4s"/>
-                        <line x1="36" y1="38.8" x2="22" y2="20" stroke="rgba(139,92,246,0.25)" stroke-width="0.8" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4.4s"/>
-                        <!-- Channel → Integration animated particles -->
-                        <path id="o0" d="M50 30 L66 7" stroke="none"/><path id="o1" d="M50 30 L34 7" stroke="none"/>
-                        <path id="o2" d="M64 38.8 L78 20" stroke="none"/><path id="o3" d="M64 38.8 L86 38" stroke="none"/>
-                        <path id="o4" d="M64 61.2 L86 62" stroke="none"/><path id="o5" d="M64 61.2 L78 80" stroke="none"/>
-                        <path id="o6" d="M50 70 L66 93" stroke="none"/><path id="o7" d="M50 70 L34 93" stroke="none"/>
-                        <path id="o8" d="M36 61.2 L22 80" stroke="none"/><path id="o9" d="M36 61.2 L14 62" stroke="none"/>
-                        <path id="o10" d="M36 38.8 L14 38" stroke="none"/><path id="o11" d="M36 38.8 L22 20" stroke="none"/>
+                        <!-- Channel → Integration lines: endpoints target ICON center (offset ~4% toward icon side) -->
+                        <line x1="50" y1="30" x2="62" y2="7" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite"/>
+                        <line x1="50" y1="30" x2="38" y2="7" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.4s"/>
+                        <line x1="64" y1="38.8" x2="74" y2="20" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:.8s"/>
+                        <line x1="64" y1="38.8" x2="82" y2="38" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.2s"/>
+                        <line x1="64" y1="61.2" x2="82" y2="62" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:1.6s"/>
+                        <line x1="64" y1="61.2" x2="74" y2="80" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2s"/>
+                        <line x1="50" y1="70" x2="62" y2="93" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.4s"/>
+                        <line x1="50" y1="70" x2="38" y2="93" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:2.8s"/>
+                        <line x1="36" y1="61.2" x2="26" y2="80" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.2s"/>
+                        <line x1="36" y1="61.2" x2="18" y2="62" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:3.6s"/>
+                        <line x1="36" y1="38.8" x2="18" y2="38" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4s"/>
+                        <line x1="36" y1="38.8" x2="26" y2="20" stroke="rgba(139,92,246,0.4)" stroke-width="1.2" vector-effect="non-scaling-stroke" stroke-dasharray="3 4" style="animation:dashFlow 5s linear infinite;animation-delay:4.4s"/>
+                        <!-- Channel → Integration animated particles (same icon-targeted endpoints) -->
+                        <path id="o0" d="M50 30 L62 7" stroke="none"/><path id="o1" d="M50 30 L38 7" stroke="none"/>
+                        <path id="o2" d="M64 38.8 L74 20" stroke="none"/><path id="o3" d="M64 38.8 L82 38" stroke="none"/>
+                        <path id="o4" d="M64 61.2 L82 62" stroke="none"/><path id="o5" d="M64 61.2 L74 80" stroke="none"/>
+                        <path id="o6" d="M50 70 L62 93" stroke="none"/><path id="o7" d="M50 70 L38 93" stroke="none"/>
+                        <path id="o8" d="M36 61.2 L26 80" stroke="none"/><path id="o9" d="M36 61.2 L18 62" stroke="none"/>
+                        <path id="o10" d="M36 38.8 L18 38" stroke="none"/><path id="o11" d="M36 38.8 L26 20" stroke="none"/>
                         <circle r="0.4" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.5s" repeatCount="indefinite" begin="0.5s"><mpath href="#o0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.5s" repeatCount="indefinite" begin="0.5s"/></circle>
                         <circle r="0.4" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.5s" repeatCount="indefinite" begin="1s"><mpath href="#o1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.5s" repeatCount="indefinite" begin="1s"/></circle>
                         <circle r="0.4" fill="#a78bfa" fill-opacity="0"><animateMotion dur="3.7s" repeatCount="indefinite" begin="1.5s"><mpath href="#o2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.7;0.7;0" dur="3.7s" repeatCount="indefinite" begin="1.5s"/></circle>
