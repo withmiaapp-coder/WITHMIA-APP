@@ -678,10 +678,8 @@ const Contact = () => {
                       const day = i + 1;
                       const date = new Date(calMonth.getFullYear(), calMonth.getMonth(), day);
                       date.setHours(0, 0, 0, 0);
-                      const dayOfWeek = date.getDay();
-                      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                       const isPast = date < today;
-                      const isDisabled = isPast || isWeekend;
+                      const isDisabled = isPast;
                       const isToday = date.getTime() === today.getTime();
                       const isSelected = selectedDate && selectedDate.getTime() === date.getTime();
 
