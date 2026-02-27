@@ -28,14 +28,24 @@ class WebsiteBookingController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|max:150',
-            'company' => 'nullable|string|max:100',
-            'motivo' => 'required|string|max:200',
-            'date' => 'required|date|after_or_equal:today',
-            'time' => 'required|string|regex:/^\d{2}:\d{2}$/',
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'email' => 'required|email|max:150',
+                'company' => 'nullable|string|max:100',
+                'motivo' => 'required|string|max:200',
+                'date' => 'required|date|after_or_equal:today',
+                'time' => 'required|string|regex:/^\d{2}:\d{2}$/',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errors' => $ve->errors(),
+            ], 422);
+        }
+
+        try {
 
         $timezone = 'America/Santiago';
         $date = $validated['date'];
@@ -160,6 +170,20 @@ class WebsiteBookingController extends Controller
                 'error' => $e->getMessage(),
             ]);
             return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
+        }
+
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] Unexpected exception in store()', [
+                'class' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al procesar la solicitud',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
         }
     }
 
