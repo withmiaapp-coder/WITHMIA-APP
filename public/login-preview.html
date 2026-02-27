@@ -756,7 +756,6 @@
     <div class="login-container">
         <div class="left-panel">
             <div class="eco-section">
-                <div class="eco-badge">✨ Ecosistema completo</div>
                 <h2 class="eco-title">Todas tus herramientas,<br><span class="eco-gradient">una sola plataforma</span></h2>
 
                 <div class="eco-orbit">
