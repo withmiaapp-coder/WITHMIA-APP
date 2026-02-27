@@ -14,45 +14,40 @@ use Illuminate\Support\Facades\Mail;
 /**
  * WebsiteBookingController — Endpoint público para agendar sesiones
  * desde la página web (withmia.com/contacto).
- * 
- * Crea automáticamente un evento en Google Calendar del equipo WITHMIA
- * y envía notificaciones por email al equipo y al visitante.
  */
 class WebsiteBookingController extends Controller
 {
     /**
      * POST /api/website/booking
-     * 
-     * Público, throttled. Recibe datos del formulario de agendamiento del sitio web
-     * y crea un evento en Google Calendar + envía emails de confirmación.
      */
     public function store(Request $request): JsonResponse
     {
+        // ── 1. Validación ──
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:100',
-                'email' => 'required|email|max:150',
+                'name'    => 'required|string|max:100',
+                'email'   => 'required|email|max:150',
                 'company' => 'nullable|string|max:100',
-                'motivo' => 'required|string|max:200',
-                'date' => 'required|date|after_or_equal:today',
-                'time' => 'required|string|regex:/^\d{2}:\d{2}$/',
+                'motivo'  => 'required|string|max:200',
+                'date'    => 'required|date|after_or_equal:today',
+                'time'    => 'required|string|regex:/^\d{2}:\d{2}$/',
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             return response()->json([
                 'success' => false,
                 'message' => 'Datos inválidos',
-                'errors' => $ve->errors(),
+                'errors'  => $ve->errors(),
             ], 422);
+        } catch (\Throwable $e) {
+            return $this->errorResponse('validation_unexpected', $e);
         }
 
-        try {
-
+        // ── 2. Preparar fecha/hora ──
         $timezone = 'America/Santiago';
         $date = $validated['date'];
         $time = $validated['time'];
-
-        // Build ISO start/end times
         $startDateTime = "{$date}T{$time}:00";
+
         $endMinutes = intval(substr($time, 3, 2)) + 15;
         $endHour = intval(substr($time, 0, 2));
         if ($endMinutes >= 60) {
@@ -62,37 +57,49 @@ class WebsiteBookingController extends Controller
         $endTime = str_pad($endHour, 2, '0', STR_PAD_LEFT) . ':' . str_pad($endMinutes, 2, '0', STR_PAD_LEFT);
         $endDateTime = "{$date}T{$endTime}:00";
 
-        // Find WITHMIA's Google Calendar integration (company_id = 1 assumed as the main company)
-        $company = Company::where('id', 1)->first();
-        
+        // ── 3. Buscar Company + Calendar Integration ──
+        try {
+            $company = Company::find(1);
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] DB error fetching company', ['error' => $e->getMessage()]);
+            return $this->fallbackResponse($validated);
+        }
+
         if (!$company) {
             Log::warning('[WebsiteBooking] No company found with id=1');
-            return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
+            return $this->fallbackResponse($validated);
         }
 
-        $integration = CalendarIntegration::where('company_id', $company->id)
-            ->where('provider', 'google')
-            ->where('is_active', true)
-            ->first();
+        try {
+            $integration = CalendarIntegration::where('company_id', $company->id)
+                ->where('provider', 'google')
+                ->where('is_active', true)
+                ->first();
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] DB error fetching integration', ['error' => $e->getMessage()]);
+            return $this->fallbackResponse($validated);
+        }
 
         if (!$integration) {
-            Log::warning('[WebsiteBooking] No active Google Calendar integration for company', [
-                'company_id' => $company->id,
-            ]);
-            return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
+            Log::warning('[WebsiteBooking] No active Google Calendar integration', ['company_id' => $company->id]);
+            return $this->fallbackResponse($validated);
         }
 
-        // Get valid access token
-        $accessToken = $integration->getValidAccessToken();
+        // ── 4. Obtener access token ──
+        try {
+            $accessToken = $integration->getValidAccessToken();
+        } catch (\Throwable $e) {
+            Log::error('[WebsiteBooking] Token error', ['error' => $e->getMessage()]);
+            $accessToken = null;
+        }
+
         if (!$accessToken) {
-            Log::warning('[WebsiteBooking] Google Calendar token expired', [
-                'company_id' => $company->id,
-            ]);
-            return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
+            Log::warning('[WebsiteBooking] No valid access token');
+            return $this->fallbackResponse($validated);
         }
 
-        // Build the event
-        $companyInfo = $validated['company'] ? "Empresa: {$validated['company']}\n" : '';
+        // ── 5. Crear evento en Google Calendar ──
+        $companyInfo = !empty($validated['company']) ? "Empresa: {$validated['company']}\n" : '';
         $description = "Sesión introductoria WITHMIA (15 min)\n\n"
             . "Nombre: {$validated['name']}\n"
             . "Email: {$validated['email']}\n"
@@ -104,7 +111,7 @@ class WebsiteBookingController extends Controller
             'summary' => "Sesión WITHMIA — {$validated['name']}",
             'description' => $description,
             'start' => ['dateTime' => $startDateTime, 'timeZone' => $timezone],
-            'end' => ['dateTime' => $endDateTime, 'timeZone' => $timezone],
+            'end'   => ['dateTime' => $endDateTime, 'timeZone' => $timezone],
             'attendees' => [
                 ['email' => $validated['email'], 'displayName' => $validated['name']],
                 ['email' => 'contacto@withmia.com', 'displayName' => 'WITHMIA'],
@@ -128,9 +135,10 @@ class WebsiteBookingController extends Controller
 
         try {
             $response = Http::withToken($accessToken)
+                ->timeout(15)
                 ->post(
-                    "https://www.googleapis.com/calendar/v3/calendars/" 
-                    . urlencode($calendarId) 
+                    "https://www.googleapis.com/calendar/v3/calendars/"
+                    . urlencode($calendarId)
                     . "/events?sendUpdates=all&conferenceDataVersion=1",
                     $eventBody
                 );
@@ -140,62 +148,42 @@ class WebsiteBookingController extends Controller
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
-                return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
+                return $this->fallbackResponse($validated);
             }
 
             $event = $response->json();
 
-            Log::info('[WebsiteBooking] Event created successfully', [
+            Log::info('[WebsiteBooking] Event created', [
                 'event_id' => $event['id'] ?? null,
                 'attendee' => $validated['email'],
-                'date' => $date,
-                'time' => $time,
             ]);
 
-            $meetLink = $event['conferenceData']['entryPoints'][0]['uri'] ?? 
-                        $event['hangoutLink'] ?? null;
+            $meetLink = $event['conferenceData']['entryPoints'][0]['uri']
+                ?? $event['hangoutLink']
+                ?? null;
 
             return response()->json([
-                'success' => true,
-                'message' => 'Sesión agendada exitosamente',
-                'event_id' => $event['id'] ?? null,
+                'success'   => true,
+                'message'   => 'Sesión agendada exitosamente',
+                'event_id'  => $event['id'] ?? null,
                 'meet_link' => $meetLink,
                 'html_link' => $event['htmlLink'] ?? null,
-                'start' => $startDateTime,
-                'end' => $endDateTime,
+                'start'     => $startDateTime,
+                'end'       => $endDateTime,
             ], 201);
 
         } catch (\Throwable $e) {
-            Log::error('[WebsiteBooking] Exception creating event', [
-                'error' => $e->getMessage(),
-            ]);
-            return $this->fallbackResponse($validated, $startDateTime, $endDateTime, $timezone);
-        }
-
-        } catch (\Throwable $e) {
-            Log::error('[WebsiteBooking] Unexpected exception in store()', [
-                'class' => get_class($e),
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno al procesar la solicitud',
-                'debug_error' => $e->getMessage(),
-                'debug_class' => get_class($e),
-                'debug_file' => basename($e->getFile()) . ':' . $e->getLine(),
-            ], 500);
+            Log::error('[WebsiteBooking] Exception creating event', ['error' => $e->getMessage()]);
+            return $this->fallbackResponse($validated);
         }
     }
 
     /**
-     * Fallback: Si no se puede crear el evento en GCal, guardamos los datos
-     * y notificamos al equipo por email.
+     * Fallback: notifica al equipo por email cuando GCal no funciona.
+     * Siempre retorna 201 success para no bloquear al usuario.
      */
-    private function fallbackResponse(array $data, string $start, string $end, string $timezone): JsonResponse
+    private function fallbackResponse(array $data): JsonResponse
     {
-        // Send notification email to the team
         try {
             Mail::raw(
                 "Nueva solicitud de agendamiento desde withmia.com\n\n"
@@ -217,9 +205,30 @@ class WebsiteBookingController extends Controller
         }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Solicitud recibida. Te confirmaremos por email.',
+            'success'  => true,
+            'message'  => 'Solicitud recibida. Te confirmaremos por email.',
             'fallback' => true,
         ], 201);
+    }
+
+    /**
+     * Error response con debug info (temporal para diagnóstico).
+     */
+    private function errorResponse(string $step, \Throwable $e): JsonResponse
+    {
+        Log::error("[WebsiteBooking] Error at {$step}", [
+            'class'   => get_class($e),
+            'message' => $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine(),
+        ]);
+
+        return response()->json([
+            'success'     => false,
+            'message'     => 'Error interno',
+            'debug_step'  => $step,
+            'debug_error' => $e->getMessage(),
+            'debug_class' => get_class($e),
+        ], 500);
     }
 }
