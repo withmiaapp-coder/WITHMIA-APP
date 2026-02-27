@@ -214,3 +214,26 @@ astro-island {
 }
 
 /* ── Reduced motion ── removed: was blocking carousel and animations for users with Windows reduce-animations setting */
+
+/* ── Custom dark-theme scrollbar (global) ── */
+/* Webkit (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.15) rgba(255, 255, 255, 0.02);
+}

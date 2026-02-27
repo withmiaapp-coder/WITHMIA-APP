@@ -3,8 +3,6 @@ import {
   Search,
   Play,
   Clock,
-  ChevronRight,
-  ArrowRight,
   MessageSquare,
   Settings,
   Bot,
@@ -159,34 +157,6 @@ const videoTutorials = [
   },
 ];
 
-/* ─── FAQ ─── */
-const faqItems = [
-  {
-    q: "¿Cómo empiezo a usar WITHMIA?",
-    a: "Crea tu cuenta gratuita, conecta tu primer canal de mensajería y empieza a recibir conversaciones. Mira nuestro video de primeros pasos para una guía visual completa.",
-  },
-  {
-    q: "¿Cuántos canales puedo conectar?",
-    a: "Depende de tu plan. El plan Starter incluye 1 canal, Professional hasta 5, y Enterprise canales ilimitados.",
-  },
-  {
-    q: "¿La IA de WITHMIA aprende de mis datos?",
-    a: "Sí, puedes entrenar tu asistente de IA con tus propios documentos, preguntas frecuentes y base de conocimiento para dar respuestas personalizadas.",
-  },
-  {
-    q: "¿Puedo integrar WITHMIA con mi CRM?",
-    a: "Sí, WITHMIA se integra con los principales CRMs del mercado además de ofrecer una API REST completa para integraciones personalizadas.",
-  },
-  {
-    q: "¿Cómo funciona la facturación?",
-    a: "Puedes elegir facturación mensual o anual. Los planes anuales tienen un descuento del 20%. Puedes cambiar de plan o cancelar en cualquier momento.",
-  },
-  {
-    q: "¿Mis datos están seguros?",
-    a: "Absolutamente. Usamos cifrado TLS 1.3, autenticación OAuth 2.0, y cumplimos con las normativas de protección de datos de Chile.",
-  },
-];
-
 /* ─── Component ─── */
 const HelpCenter = () => {
   useEffect(() => {
@@ -196,9 +166,87 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeCategory, setActiveCategory] = useState("todos");
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [activeHeroVideo, setActiveHeroVideo] = useState(0);
+
+  /* ── Fetch real title & duration from YouTube for videos that have a youtubeId ── */
+  const [videoMeta, setVideoMeta] = useState<Record<string, { title?: string; duration?: string }>>({});
+
+  useEffect(() => {
+    const videosWithId = videoTutorials.filter((v) => v.youtubeId);
+    if (videosWithId.length === 0) return;
+
+    // 1. Fetch title via oEmbed (no API key required)
+    videosWithId.forEach(async (video) => {
+      try {
+        const res = await fetch(
+          `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${video.youtubeId}&format=json`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setVideoMeta((prev) => ({
+          ...prev,
+          [video.youtubeId!]: { ...prev[video.youtubeId!], title: data.title },
+        }));
+      } catch { /* fallback to hardcoded */ }
+    });
+
+    // 2. Load YouTube IFrame API to detect real duration
+    if ((window as any).YT?.Player) {
+      detectDurations(videosWithId);
+    } else {
+      const prev = (window as any).onYouTubeIframeAPIReady;
+      (window as any).onYouTubeIframeAPIReady = () => {
+        prev?.();
+        detectDurations(videosWithId);
+      };
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+      }
+    }
+
+    function detectDurations(videos: typeof videosWithId) {
+      videos.forEach((video) => {
+        const container = document.createElement("div");
+        container.style.position = "absolute";
+        container.style.width = "1px";
+        container.style.height = "1px";
+        container.style.overflow = "hidden";
+        container.style.opacity = "0";
+        container.style.pointerEvents = "none";
+        document.body.appendChild(container);
+
+        new (window as any).YT.Player(container, {
+          videoId: video.youtubeId,
+          playerVars: { autoplay: 0, controls: 0 },
+          events: {
+            onReady: (event: any) => {
+              const seconds = event.target.getDuration();
+              if (seconds > 0) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                const durationStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+                setVideoMeta((prev) => ({
+                  ...prev,
+                  [video.youtubeId!]: { ...prev[video.youtubeId!], duration: durationStr },
+                }));
+              }
+              event.target.destroy();
+              container.remove();
+            },
+          },
+        });
+      });
+    }
+  }, []);
+
+  /* Helper to get resolved title / duration for a video */
+  const getVideoTitle = (video: (typeof videoTutorials)[number]) =>
+    (video.youtubeId && videoMeta[video.youtubeId]?.title) || video.title;
+  const getVideoDuration = (video: (typeof videoTutorials)[number]) =>
+    (video.youtubeId && videoMeta[video.youtubeId]?.duration) || video.duration;
 
   const featuredVideos = videoTutorials.filter((v) => v.featured);
   const heroVideo = featuredVideos[activeHeroVideo] || featuredVideos[0];
@@ -206,9 +254,10 @@ const HelpCenter = () => {
   const filteredVideos = videoTutorials.filter((v) => {
     const matchesCategory =
       activeCategory === "todos" || v.category === activeCategory;
+    const resolvedTitle = getVideoTitle(v).toLowerCase();
     const matchesSearch =
       !searchQuery ||
-      v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resolvedTitle.includes(searchQuery.toLowerCase()) ||
       v.desc.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -275,7 +324,7 @@ const HelpCenter = () => {
         </section>
 
         {/* ── FEATURED — Player + Playlist ── */}
-        <section className="pb-20">
+        <section className="pb-10">
           <div className="max-w-6xl mx-auto px-6">
             <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-12" />
 
@@ -294,7 +343,7 @@ const HelpCenter = () => {
                     <iframe
                       className="absolute inset-0 w-full h-full"
                       src={`https://www.youtube.com/embed/${heroVideo.youtubeId}?autoplay=1&rel=0`}
-                      title={heroVideo.title}
+                      title={getVideoTitle(heroVideo)}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
@@ -303,7 +352,7 @@ const HelpCenter = () => {
                       {heroVideo.youtubeId ? (
                         <img
                           src={`https://img.youtube.com/vi/${heroVideo.youtubeId}/maxresdefault.jpg`}
-                          alt={heroVideo.title}
+                          alt={getVideoTitle(heroVideo)}
                           className="absolute inset-0 w-full h-full object-cover"
                         />
                       ) : (
@@ -329,7 +378,7 @@ const HelpCenter = () => {
 
                       {/* Duration */}
                       <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm">
-                        <span className="text-[11px] font-mono text-white/60">{heroVideo.duration}</span>
+                        <span className="text-[11px] font-mono text-white/60">{getVideoDuration(heroVideo)}</span>
                       </div>
 
                       {!heroVideo.youtubeId && (
@@ -344,7 +393,7 @@ const HelpCenter = () => {
                 {/* Video title below player */}
                 <div className="p-5 bg-white/[0.02]">
                   <h3 className="text-[15px] font-semibold text-white/85 leading-snug mb-1.5">
-                    {heroVideo.title}
+                    {getVideoTitle(heroVideo)}
                   </h3>
                   <p className="text-[12px] text-white/30 leading-relaxed">
                     {heroVideo.desc}
@@ -390,11 +439,11 @@ const HelpCenter = () => {
                         <div className={`text-[12px] font-medium leading-snug mb-0.5 transition-colors ${
                           activeHeroVideo === idx ? "text-white/90" : "text-white/55"
                         }`}>
-                          {video.title}
+                          {getVideoTitle(video)}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-white/20">
-                            {video.duration}
+                            {getVideoDuration(video)}
                           </span>
                           {!video.youtubeId && (
                             <span className="text-[9px] text-amber-400/40">
@@ -416,40 +465,12 @@ const HelpCenter = () => {
           </div>
         </section>
 
-        {/* ── QUICK LINKS ── */}
-        <section className="pb-16">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { title: "Documentación", desc: "Guías detalladas", icon: FileText, href: "/docs", accent: "amber" },
-                { title: "API Reference", desc: "Endpoints y ejemplos", icon: Code, href: "/api", accent: "violet" },
-                { title: "Integraciones", desc: "Conecta herramientas", icon: Blocks, href: "/integraciones", accent: "cyan" },
-                { title: "Soporte", desc: "Ayuda personal", icon: LifeBuoy, href: "/contacto", accent: "emerald" },
-              ].map((r) => (
-                <a
-                  key={r.title}
-                  href={r.href}
-                  className="group flex items-center gap-3.5 px-5 py-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300"
-                >
-                  <r.icon className={`w-4.5 h-4.5 shrink-0 text-${r.accent}-400/50`} />
-                  <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-white/65 group-hover:text-white/85 transition-colors">
-                      {r.title}
-                    </div>
-                    <div className="text-[10px] text-white/20">{r.desc}</div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── ALL TUTORIALS ── */}
-        <section className="pt-6 pb-20">
+        <section className="pb-20">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-10" />
+            <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-8" />
 
-            <div className="text-center mb-12">
+            <div className="text-center mb-10">
               <p className="text-xs font-semibold text-violet-400/60 uppercase tracking-widest mb-4">
                 Biblioteca completa
               </p>
@@ -500,7 +521,7 @@ const HelpCenter = () => {
                         <iframe
                           className="absolute inset-0 w-full h-full"
                           src={`https://www.youtube.com/embed/${video.youtubeId}?autoplay=1&rel=0`}
-                          title={video.title}
+                          title={getVideoTitle(video)}
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
                         />
@@ -509,7 +530,7 @@ const HelpCenter = () => {
                           {video.youtubeId ? (
                             <img
                               src={`https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`}
-                              alt={video.title}
+                              alt={getVideoTitle(video)}
                               className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-75 transition-opacity duration-300"
                             />
                           ) : (
@@ -538,7 +559,7 @@ const HelpCenter = () => {
 
                           {/* Duration */}
                           <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/70">
-                            <span className="text-[10px] font-mono text-white/55">{video.duration}</span>
+                            <span className="text-[10px] font-mono text-white/55">{getVideoDuration(video)}</span>
                           </div>
 
                           {/* Category */}
@@ -562,7 +583,7 @@ const HelpCenter = () => {
                     {/* Info */}
                     <div className="p-4">
                       <h3 className="text-[13px] font-semibold text-white/70 group-hover:text-white/90 leading-snug mb-1.5 transition-colors">
-                        {video.title}
+                        {getVideoTitle(video)}
                       </h3>
                       <p className="text-[11px] text-white/25 leading-relaxed line-clamp-2">
                         {video.desc}
@@ -591,88 +612,76 @@ const HelpCenter = () => {
           </div>
         </section>
 
-        {/* ── FAQ ── */}
-        <section className="pt-6 pb-20">
-          <div className="max-w-3xl mx-auto px-6">
-            <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-10" />
-
-            <div className="text-center mb-12">
-              <p className="text-xs font-semibold text-cyan-400/60 uppercase tracking-widest mb-4">
-                FAQ
-              </p>
-              <h2 className="text-3xl font-bold text-white mb-4">
-                Preguntas frecuentes
-              </h2>
-            </div>
-
-            <div className="space-y-2.5">
-              {faqItems.map((faq, i) => (
-                <div
-                  key={i}
-                  className={`rounded-xl border overflow-hidden transition-all duration-300 ${
-                    expandedFaq === i
-                      ? "border-amber-500/15 bg-amber-500/[0.03]"
-                      : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]"
-                  }`}
+        {/* ── QUICK LINKS ── */}
+        <section className="pb-12">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { title: "Documentación", desc: "Guías detalladas", icon: FileText, href: "/docs", accent: "amber" },
+                { title: "API Reference", desc: "Endpoints y ejemplos", icon: Code, href: "/api", accent: "violet" },
+                { title: "Integraciones", desc: "Conecta herramientas", icon: Blocks, href: "/integraciones", accent: "cyan" },
+                { title: "Soporte", desc: "Ayuda personal", icon: LifeBuoy, href: "/contacto", accent: "emerald" },
+              ].map((r) => (
+                <a
+                  key={r.title}
+                  href={r.href}
+                  className="group flex items-center gap-3.5 px-5 py-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300"
                 >
-                  <button
-                    onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left"
-                  >
-                    <span className="text-[14px] font-medium text-white/70 pr-4">
-                      {faq.q}
-                    </span>
-                    <ChevronRight
-                      className={`w-4 h-4 shrink-0 transition-all duration-300 ${
-                        expandedFaq === i
-                          ? "rotate-90 text-amber-400/50"
-                          : "text-white/20"
-                      }`}
-                    />
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ${
-                      expandedFaq === i ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-                    }`}
-                  >
-                    <p className="px-5 pb-4 text-[13px] text-white/35 leading-relaxed">
-                      {faq.a}
-                    </p>
+                  <r.icon className={`w-4.5 h-4.5 shrink-0 text-${r.accent}-400/50`} />
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-white/65 group-hover:text-white/85 transition-colors">
+                      {r.title}
+                    </div>
+                    <div className="text-[10px] text-white/20">{r.desc}</div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
         </section>
 
         {/* ── CTA ── */}
-        <section className="py-24">
-          <div className="max-w-3xl mx-auto px-6">
-            <div className="h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent mb-16" />
+        <section className="pb-20">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.03] via-amber-500/[0.02] to-violet-500/[0.02]">
+              {/* Glow accents */}
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/[0.04] rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-violet-500/[0.03] rounded-full blur-3xl pointer-events-none" />
 
-            <div className="text-center">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-5">
-                ¿Necesitas más ayuda?
-              </h2>
-              <p className="text-white/40 mb-10 max-w-xl mx-auto">
-                Nuestro equipo está listo para ayudarte personalmente.
-              </p>
+              <div className="relative px-8 py-12 sm:px-12 sm:py-14 flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                {/* Left — Text */}
+                <div className="flex-1 text-center lg:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/[0.08] border border-amber-500/[0.12] mb-5">
+                    <Headphones className="w-3.5 h-3.5 text-amber-400/70" />
+                    <span className="text-[11px] font-medium text-amber-300/80 tracking-wide uppercase">Soporte dedicado</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 leading-tight">
+                    ¿No encontraste lo que buscabas?
+                  </h2>
+                  <p className="text-white/35 text-sm leading-relaxed max-w-md mx-auto lg:mx-0">
+                    Nuestro equipo de especialistas está disponible para resolver tus dudas y guiarte paso a paso en la configuración de tu plataforma.
+                  </p>
+                </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                  href="/contacto"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold transition-all duration-300 hover:shadow-[0_0_40px_rgba(245,158,11,0.15)] hover:-translate-y-px"
-                >
-                  Contactar soporte
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-                <a
-                  href="/docs"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border border-white/[0.1] text-white/70 hover:text-white hover:border-white/[0.2] font-medium transition-all duration-300"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Ver documentación
-                </a>
+                {/* Right — Actions */}
+                <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+                  <a
+                    href="https://app.withmia.com/dashboard?section=support"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-semibold transition-all duration-300 hover:shadow-[0_0_30px_rgba(245,158,11,0.12)] hover:-translate-y-px"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Contactar soporte
+                  </a>
+                  <a
+                    href="/docs"
+                    className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl border border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white hover:border-white/[0.15] hover:bg-white/[0.04] text-sm font-medium transition-all duration-300"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Ver documentación
+                  </a>
+                </div>
               </div>
             </div>
           </div>

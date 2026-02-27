@@ -1122,6 +1122,7 @@ export const BoldGuarantee = () => (
                   { icon: CheckCircle2, text: "Sin tarjeta requerida" },
                   { icon: Clock, text: "Setup en 10 minutos" },
                   { icon: Headphones, text: "Soporte incluido" },
+                  { icon: Shield, text: "Google Verified App" },
                 ].map((t, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <t.icon className="w-4 h-4 text-emerald-400/60" />

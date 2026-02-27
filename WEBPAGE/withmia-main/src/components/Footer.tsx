@@ -110,7 +110,7 @@ export const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <a href="https://app.withmia.com/soporte" className="text-white/55 hover:text-white transition-colors">
+                  <a href="https://app.withmia.com/dashboard?section=support" target="_blank" rel="noopener noreferrer" className="text-white/55 hover:text-white transition-colors">
                     Contactar Soporte
                   </a>
                 </li>
@@ -215,6 +215,32 @@ export const Footer = () => {
                   Atlantis Producciones
                 </span>
               </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trust & Verification */}
+      <div className="border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6 py-5">
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex items-center gap-2 text-white/25 text-[11px]">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-emerald-400/50" fill="currentColor">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+              </svg>
+              <span>App verificada por Google</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/25 text-[11px]">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-amber-400/50" fill="currentColor">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/>
+              </svg>
+              <span>Cifrado TLS 1.3 + AES-256</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/25 text-[11px]">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-violet-400/50" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              <span>OAuth 2.0 certificado</span>
             </div>
           </div>
         </div>

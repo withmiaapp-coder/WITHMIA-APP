@@ -3,7 +3,7 @@ import { Link } from "@/lib/router";
 import {
   FileText, CheckCircle2, Monitor, UserCog, CreditCard, ShieldAlert,
   Copyright, Lock, Server, Code2, Scale, XCircle, PenLine, Gavel,
-  List, Mail
+  List, Mail, Bot
 } from "lucide-react";
 
 /* ── Section metadata ── */
@@ -17,12 +17,13 @@ const sections = [
   { id: "datos", num: "7", label: "Protección de Datos", icon: Lock, color: "cyan" },
   { id: "sla", num: "8", label: "Nivel de Servicio", icon: Server, color: "amber" },
   { id: "api", num: "9", label: "API y Uso Programático", icon: Code2, color: "violet" },
-  { id: "responsabilidad", num: "10", label: "Limitación de Responsabilidad", icon: Scale, color: "cyan" },
-  { id: "cancelacion", num: "11", label: "Cancelación", icon: XCircle, color: "amber" },
-  { id: "modificaciones", num: "12", label: "Modificaciones", icon: PenLine, color: "emerald" },
-  { id: "ley", num: "13", label: "Ley Aplicable", icon: Gavel, color: "violet" },
-  { id: "generales", num: "14", label: "Disposiciones Generales", icon: List, color: "cyan" },
-  { id: "contacto", num: "15", label: "Contacto", icon: Mail, color: "amber" },
+  { id: "ia", num: "10", label: "Inteligencia Artificial", icon: Bot, color: "emerald" },
+  { id: "responsabilidad", num: "11", label: "Limitación de Responsabilidad", icon: Scale, color: "cyan" },
+  { id: "cancelacion", num: "12", label: "Cancelación", icon: XCircle, color: "amber" },
+  { id: "modificaciones", num: "13", label: "Modificaciones", icon: PenLine, color: "emerald" },
+  { id: "ley", num: "14", label: "Ley Aplicable", icon: Gavel, color: "violet" },
+  { id: "generales", num: "15", label: "Disposiciones Generales", icon: List, color: "cyan" },
+  { id: "contacto", num: "16", label: "Contacto", icon: Mail, color: "amber" },
 ] as const;
 
 const iconColorMap: Record<string, string> = {
@@ -97,7 +98,7 @@ const Terms = () => {
               Términos y <span className="text-gradient">Condiciones</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto">
-              Última actualización: 23 de febrero de 2026
+              Última actualización: 26 de febrero de 2026
             </p>
           </div>
         </section>
@@ -177,7 +178,9 @@ const Terms = () => {
                     <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
                       <li>Gestión unificada de conversaciones multicanal</li>
                       <li>Asistentes de inteligencia artificial personalizables</li>
+                      <li>Base de conocimiento con tecnología RAG (Retrieval-Augmented Generation)</li>
                       <li>Automatización de flujos de trabajo y respuestas</li>
+                      <li>Sistema de agendamiento web con integración a Google Calendar y Google Meet</li>
                       <li>API REST para integraciones programáticas</li>
                       <li>Webhooks para notificaciones en tiempo real</li>
                       <li>Herramientas de analítica y reportería</li>
@@ -227,6 +230,9 @@ const Terms = () => {
                     <p className="mt-3">
                       Los impuestos aplicables (IVA, u otros) serán agregados al precio del plan según la legislación vigente en Chile.
                     </p>
+                    <p className="mt-3">
+                      De acuerdo con la Ley N° 19.496 sobre Protección de los Derechos de los Consumidores, los usuarios que actúen como consumidores finales podrán ejercer el derecho de retracto dentro de los 10 días siguientes a la contratación del servicio, siempre que no se haya utilizado el Servicio de manera sustancial durante dicho período.
+                    </p>
                   </div>
 
                   {/* 5 */}
@@ -248,6 +254,8 @@ const Terms = () => {
                       <li>Violar las políticas de uso de los canales de mensajería integrados (WhatsApp, Meta, etc.)</li>
                       <li>Realizar ingeniería inversa, descompilar o intentar extraer el código fuente del Servicio</li>
                       <li>Sobrecargar intencionalmente la infraestructura del Servicio</li>
+                      <li>Presentar respuestas generadas por IA como asesoría profesional (legal, médica, financiera) sin supervisión humana adecuada</li>
+                      <li>Utilizar los asistentes de IA para suplantar la identidad de personas reales o engañar deliberadamente a los usuarios finales sobre la naturaleza automatizada de las respuestas</li>
                     </ul>
                   </div>
 
@@ -264,6 +272,9 @@ const Terms = () => {
                     </p>
                     <p className="mt-3">
                       Usted retiene todos los derechos sobre los datos y contenidos que cargue o transmita a través del Servicio. Al utilizar WITHMIA, usted otorga una licencia limitada y no exclusiva para procesar dichos datos con el único fin de prestar el Servicio.
+                    </p>
+                    <p className="mt-3">
+                      El contenido generado por los asistentes de inteligencia artificial de WITHMIA (respuestas, resúmenes, sugerencias) se considera una herramienta de asistencia. El usuario es responsable de revisar, validar y aprobar cualquier contenido generado por IA antes de su uso o difusión.
                     </p>
                   </div>
 
@@ -283,11 +294,12 @@ const Terms = () => {
                       , que forma parte integral de estos Términos. WITHMIA se compromete a:
                     </p>
                     <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
-                      <li>Cumplir con la Ley N° 19.628 sobre Protección de la Vida Privada de Chile</li>
+                      <li>Cumplir con la Ley N° 19.628 sobre Protección de la Vida Privada y la Ley N° 21.719 sobre Protección de los Datos Personales (vigente desde diciembre de 2026)</li>
                       <li>Implementar medidas de seguridad técnicas y organizativas adecuadas</li>
                       <li>No compartir datos personales con terceros sin consentimiento, salvo obligación legal</li>
                       <li>Cifrar las comunicaciones mediante TLS 1.3</li>
-                      <li>Permitir a los usuarios ejercer sus derechos de acceso, rectificación y eliminación de datos</li>
+                      <li>Permitir a los usuarios ejercer sus derechos de acceso, rectificación, eliminación y portabilidad de datos</li>
+                      <li>Tratar los datos del sistema de agendamiento web (nombre, email, empresa, motivo) exclusivamente para la creación de eventos en Google Calendar y envío de confirmaciones</li>
                     </ul>
                   </div>
 
@@ -346,12 +358,44 @@ const Terms = () => {
                   </div>
 
                   {/* 10 */}
+                  <div id="ia">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-8 h-8 rounded-lg ${bgColorMap.emerald} flex items-center justify-center shrink-0`}>
+                        <Bot className={`w-4 h-4 ${iconColorMap.emerald}`} />
+                      </div>
+                      <h2 className="text-lg font-semibold text-white">10. Inteligencia Artificial</h2>
+                    </div>
+                    <p>
+                      WITHMIA incorpora modelos de inteligencia artificial para ofrecer asistentes conversacionales, generación de respuestas automáticas, resúmenes y análisis de conversaciones. Al utilizar estas funcionalidades, usted reconoce y acepta que:
+                    </p>
+                    <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
+                      <li><strong className="text-white/50">Sin garantía de exactitud:</strong> Las respuestas generadas por IA son aproximaciones basadas en modelos de lenguaje y pueden contener errores, imprecisiones o información desactualizada. No constituyen asesoría profesional de ningún tipo</li>
+                      <li><strong className="text-white/50">Supervisión humana:</strong> El usuario es responsable de supervisar, revisar y validar el contenido generado por los asistentes de IA antes de que sea entregado a clientes finales</li>
+                      <li><strong className="text-white/50">Base de conocimiento (RAG):</strong> Los documentos que usted cargue a la base de conocimiento son procesados para generar respuestas contextualizadas. Usted es responsable de la veracidad y legalidad del contenido cargado</li>
+                      <li><strong className="text-white/50">Proveedores de IA:</strong> WITHMIA utiliza servicios de inteligencia artificial de terceros (como OpenAI) para el procesamiento de lenguaje natural. Los datos enviados a estos proveedores están sujetos a acuerdos de confidencialidad y no se utilizan para entrenar modelos de terceros</li>
+                      <li><strong className="text-white/50">Mejora continua:</strong> WITHMIA podrá utilizar datos anonimizados y agregados para mejorar la calidad de sus modelos y algoritmos propios, sin revelar información identificable de usuarios o sus clientes</li>
+                      <li><strong className="text-white/50">Limitaciones:</strong> WITHMIA no garantiza la disponibilidad ininterrumpida de los servicios de IA, ya que estos dependen de proveedores externos. En caso de indisponibilidad, las funcionalidades no basadas en IA seguirán operativas</li>
+                    </ul>
+
+                    {/* Callout */}
+                    <div className="mt-6 p-4 rounded-xl border border-amber-500/15 bg-amber-500/[0.04]">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <Bot className="w-4 h-4 text-amber-400" />
+                        <span className="text-[13px] font-semibold text-amber-400">Importante</span>
+                      </div>
+                      <p className="text-[13px] text-white/40 leading-relaxed pl-6">
+                        WITHMIA no será responsable por decisiones tomadas en base a contenido generado por inteligencia artificial. El usuario asume la responsabilidad total sobre el uso y difusión de dicho contenido.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 11 */}
                   <div id="responsabilidad">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.cyan} flex items-center justify-center shrink-0`}>
                         <Scale className={`w-4 h-4 ${iconColorMap.cyan}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">10. Limitación de Responsabilidad</h2>
+                      <h2 className="text-lg font-semibold text-white">11. Limitación de Responsabilidad</h2>
                     </div>
                     <p>
                       En la máxima medida permitida por la legislación chilena aplicable, WITHMIA no será responsable de:
@@ -362,19 +406,21 @@ const Terms = () => {
                       <li>Interrupciones del Servicio causadas por terceros o fuerza mayor</li>
                       <li>Contenido transmitido por los usuarios a través del Servicio</li>
                       <li>Fallos en las plataformas de mensajería de terceros (WhatsApp, Meta, etc.)</li>
+                      <li>Errores, imprecisiones o consecuencias derivadas del contenido generado por inteligencia artificial</li>
+                      <li>Indisponibilidad de servicios de terceros integrados (Google Calendar, OpenAI, etc.)</li>
                     </ul>
                     <p className="mt-3">
                       La responsabilidad total acumulada de WITHMIA no excederá el monto pagado por el usuario durante los últimos 12 meses.
                     </p>
                   </div>
 
-                  {/* 11 */}
+                  {/* 12 */}
                   <div id="cancelacion">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.amber} flex items-center justify-center shrink-0`}>
                         <XCircle className={`w-4 h-4 ${iconColorMap.amber}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">11. Cancelación y Terminación</h2>
+                      <h2 className="text-lg font-semibold text-white">12. Cancelación y Terminación</h2>
                     </div>
                     <p>
                       Usted puede cancelar su cuenta en cualquier momento desde el panel de configuración del Servicio. Al cancelar:
@@ -389,13 +435,13 @@ const Terms = () => {
                     </p>
                   </div>
 
-                  {/* 12 */}
+                  {/* 13 */}
                   <div id="modificaciones">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.emerald} flex items-center justify-center shrink-0`}>
                         <PenLine className={`w-4 h-4 ${iconColorMap.emerald}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">12. Modificaciones a los Términos</h2>
+                      <h2 className="text-lg font-semibold text-white">13. Modificaciones a los Términos</h2>
                     </div>
                     <p>
                       WITHMIA se reserva el derecho de modificar estos Términos en cualquier momento. Las modificaciones entrarán en vigencia tras su publicación en el Servicio. Se notificará a los usuarios registrados mediante correo electrónico con al menos 15 días de anticipación sobre cambios sustanciales.
@@ -405,26 +451,35 @@ const Terms = () => {
                     </p>
                   </div>
 
-                  {/* 13 */}
+                  {/* 14 */}
                   <div id="ley">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.violet} flex items-center justify-center shrink-0`}>
                         <Gavel className={`w-4 h-4 ${iconColorMap.violet}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">13. Ley Aplicable y Jurisdicción</h2>
+                      <h2 className="text-lg font-semibold text-white">14. Ley Aplicable y Jurisdicción</h2>
                     </div>
                     <p>
-                      Estos Términos se regirán e interpretarán de acuerdo con las leyes de la República de Chile. Cualquier controversia derivada de estos Términos o del uso del Servicio será sometida a la jurisdicción de los tribunales ordinarios de Santiago de Chile, renunciando las partes a cualquier otro fuero que pudiere corresponderles.
+                      Estos Términos se regirán e interpretarán de acuerdo con las leyes de la República de Chile, incluyendo pero no limitándose a:
+                    </p>
+                    <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
+                      <li><strong className="text-white/50">Ley N° 19.628:</strong> Sobre Protección de la Vida Privada</li>
+                      <li><strong className="text-white/50">Ley N° 21.719:</strong> Sobre Protección de los Datos Personales (vigente desde diciembre de 2026)</li>
+                      <li><strong className="text-white/50">Ley N° 19.496:</strong> Sobre Protección de los Derechos de los Consumidores</li>
+                      <li><strong className="text-white/50">Ley N° 17.336:</strong> Sobre Propiedad Intelectual</li>
+                    </ul>
+                    <p className="mt-3">
+                      Cualquier controversia derivada de estos Términos o del uso del Servicio será sometida a la jurisdicción de los tribunales ordinarios de Santiago de Chile, renunciando las partes a cualquier otro fuero que pudiere corresponderles.
                     </p>
                   </div>
 
-                  {/* 14 */}
+                  {/* 15 */}
                   <div id="generales">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.cyan} flex items-center justify-center shrink-0`}>
                         <List className={`w-4 h-4 ${iconColorMap.cyan}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">14. Disposiciones Generales</h2>
+                      <h2 className="text-lg font-semibold text-white">15. Disposiciones Generales</h2>
                     </div>
                     <ul className="list-disc list-inside space-y-2 text-white/40">
                       <li><strong className="text-white/50">Cesión:</strong> Usted no podrá ceder ni transferir sus derechos u obligaciones bajo estos Términos sin el consentimiento previo y por escrito de WITHMIA.</li>
@@ -435,13 +490,13 @@ const Terms = () => {
                     </ul>
                   </div>
 
-                  {/* 15 */}
+                  {/* 16 */}
                   <div id="contacto">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-8 h-8 rounded-lg ${bgColorMap.amber} flex items-center justify-center shrink-0`}>
                         <Mail className={`w-4 h-4 ${iconColorMap.amber}`} />
                       </div>
-                      <h2 className="text-lg font-semibold text-white">15. Contacto</h2>
+                      <h2 className="text-lg font-semibold text-white">16. Contacto</h2>
                     </div>
                     <p>
                       Para consultas sobre estos Términos y Condiciones, puede contactarnos a través de:

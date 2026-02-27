@@ -881,28 +881,6 @@ const Contact = () => {
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.95) translateY(10px) } to { opacity: 1; transform: scale(1) translateY(0) } }
-
-        /* Custom scrollbar for time slots */
-        .booking-slots-scroll::-webkit-scrollbar {
-          width: 4px;
-        }
-        .booking-slots-scroll::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 4px;
-        }
-        .booking-slots-scroll::-webkit-scrollbar-thumb {
-          background: rgba(139, 92, 246, 0.2);
-          border-radius: 4px;
-          transition: background 0.2s;
-        }
-        .booking-slots-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(139, 92, 246, 0.4);
-        }
-        /* Firefox */
-        .booking-slots-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(139, 92, 246, 0.2) rgba(255, 255, 255, 0.02);
-        }
       `}</style>
     </div>
   );

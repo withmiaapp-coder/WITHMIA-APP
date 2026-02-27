@@ -426,6 +426,10 @@ export const LiveDemo = () => {
                 <Shield className="w-3 h-3" />
                 <span>SOC 2 Type II</span>
               </div>
+              <div className="flex items-center gap-1.5 text-emerald-400/40 text-[10px]">
+                <Shield className="w-3 h-3" />
+                <span>Google Verified</span>
+              </div>
             </div>
           </div>
 

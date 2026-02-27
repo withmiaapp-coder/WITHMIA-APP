@@ -336,6 +336,7 @@ const Privacy = () => {
                   <li><strong className="text-white/50">Backups:</strong> Copias de seguridad cifradas diarias con retención de 30 días</li>
                   <li><strong className="text-white/50">Pruebas de seguridad:</strong> Evaluaciones de vulnerabilidad periódicas y pentesting anual</li>
                   <li><strong className="text-white/50">Incidentes:</strong> Plan de respuesta a incidentes con notificación a usuarios afectados dentro de 72 horas</li>
+                  <li><strong className="text-white/50">Google Verified App:</strong> WITHMIA es una aplicación verificada por Google Auth Platform, lo que certifica la identidad y legitimidad de nuestro servicio ante Google y sus usuarios</li>
                 </ul>
               </div>
 

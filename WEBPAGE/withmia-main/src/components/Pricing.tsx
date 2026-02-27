@@ -273,6 +273,7 @@ export const Pricing = () => {
             <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-emerald-400/60" />Sin tarjeta requerida</span>
             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-amber-400/60" />Activo en 5 min</span>
             <span className="flex items-center gap-1.5"><BadgeCheck className="w-3.5 h-3.5 text-violet-400/60" />Cancela cuando quieras</span>
+            <span className="flex items-center gap-1.5"><BadgeCheck className="w-3.5 h-3.5 text-emerald-400/60" />Google Verified App</span>
           </div>
         </div>
       </div>
