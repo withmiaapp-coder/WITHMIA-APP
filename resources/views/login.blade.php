@@ -586,15 +586,15 @@
         .eco-ring {
             position: absolute;
             border-radius: 50%;
-            border: 1px dashed rgba(139,92,246,0.1);
+            border: 1.5px dashed rgba(139,92,246,0.22);
             animation: ringRotate 60s linear infinite;
         }
-        .eco-ring.r1 { width: 130px; height: 130px; border-color: rgba(139,92,246,0.08); }
-        .eco-ring.r2 { width: 240px; height: 240px; border-color: rgba(139,92,246,0.06); animation-duration: 80s; animation-direction: reverse; }
-        .eco-ring.r3 { width: 350px; height: 350px; border-color: rgba(139,92,246,0.04); animation-duration: 100s; }
-        html.dark .eco-ring.r1 { border-color: rgba(139,92,246,0.12); }
-        html.dark .eco-ring.r2 { border-color: rgba(139,92,246,0.08); }
-        html.dark .eco-ring.r3 { border-color: rgba(139,92,246,0.06); }
+        .eco-ring.r1 { width: 130px; height: 130px; border-color: rgba(139,92,246,0.28); }
+        .eco-ring.r2 { width: 240px; height: 240px; border-color: rgba(139,92,246,0.20); animation-duration: 80s; animation-direction: reverse; }
+        .eco-ring.r3 { width: 350px; height: 350px; border-color: rgba(139,92,246,0.14); animation-duration: 100s; }
+        html.dark .eco-ring.r1 { border-color: rgba(139,92,246,0.38); }
+        html.dark .eco-ring.r2 { border-color: rgba(139,92,246,0.28); }
+        html.dark .eco-ring.r3 { border-color: rgba(139,92,246,0.20); }
         @keyframes ringRotate { to { transform: rotate(360deg); } }
 
         /* ── Center Logo ── */
@@ -768,28 +768,28 @@
                     <!-- Connection lines SVG -->
                     <svg class="eco-lines" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid meet">
                         <defs>
-                            <linearGradient id="lg0" x1="250" y1="200" x2="250" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#25D366" stop-opacity="0.4"/></linearGradient>
-                            <linearGradient id="lg1" x1="250" y1="200" x2="320" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#E1306C" stop-opacity="0.4"/></linearGradient>
-                            <linearGradient id="lg2" x1="250" y1="200" x2="320" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#0084FF" stop-opacity="0.4"/></linearGradient>
-                            <linearGradient id="lg3" x1="250" y1="200" x2="250" y2="280" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#EA4335" stop-opacity="0.4"/></linearGradient>
-                            <linearGradient id="lg4" x1="250" y1="200" x2="180" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#61DAFB" stop-opacity="0.4"/></linearGradient>
-                            <linearGradient id="lg5" x1="250" y1="200" x2="180" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.25"/><stop offset="100%" stop-color="#34D399" stop-opacity="0.4"/></linearGradient>
+                            <linearGradient id="lg0" x1="250" y1="200" x2="250" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#25D366" stop-opacity="0.7"/></linearGradient>
+                            <linearGradient id="lg1" x1="250" y1="200" x2="320" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#E1306C" stop-opacity="0.7"/></linearGradient>
+                            <linearGradient id="lg2" x1="250" y1="200" x2="320" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#0084FF" stop-opacity="0.7"/></linearGradient>
+                            <linearGradient id="lg3" x1="250" y1="200" x2="250" y2="280" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#EA4335" stop-opacity="0.7"/></linearGradient>
+                            <linearGradient id="lg4" x1="250" y1="200" x2="180" y2="245" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#61DAFB" stop-opacity="0.7"/></linearGradient>
+                            <linearGradient id="lg5" x1="250" y1="200" x2="180" y2="155" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.5"/><stop offset="100%" stop-color="#34D399" stop-opacity="0.7"/></linearGradient>
                         </defs>
                         <!-- Center → channel lines -->
-                        <line x1="250" y1="200" x2="250" y2="120" stroke="url(#lg0)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite"/>
-                        <line x1="250" y1="200" x2="320" y2="155" stroke="url(#lg1)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:.6s"/>
-                        <line x1="250" y1="200" x2="320" y2="245" stroke="url(#lg2)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.2s"/>
-                        <line x1="250" y1="200" x2="250" y2="280" stroke="url(#lg3)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.8s"/>
-                        <line x1="250" y1="200" x2="180" y2="245" stroke="url(#lg4)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:2.4s"/>
-                        <line x1="250" y1="200" x2="180" y2="155" stroke="url(#lg5)" stroke-width="0.8" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:3s"/>
+                        <line x1="250" y1="200" x2="250" y2="120" stroke="url(#lg0)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite"/>
+                        <line x1="250" y1="200" x2="320" y2="155" stroke="url(#lg1)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:.6s"/>
+                        <line x1="250" y1="200" x2="320" y2="245" stroke="url(#lg2)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.2s"/>
+                        <line x1="250" y1="200" x2="250" y2="280" stroke="url(#lg3)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:1.8s"/>
+                        <line x1="250" y1="200" x2="180" y2="245" stroke="url(#lg4)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:2.4s"/>
+                        <line x1="250" y1="200" x2="180" y2="155" stroke="url(#lg5)" stroke-width="1.5" stroke-dasharray="4 5" style="animation:dashFlow 4s linear infinite;animation-delay:3s"/>
                         <!-- Animated particles -->
                         <path id="p0" d="M250 200 L250 120" stroke="none"/><path id="p1" d="M250 200 L320 155" stroke="none"/><path id="p2" d="M250 200 L320 245" stroke="none"/><path id="p3" d="M250 200 L250 280" stroke="none"/><path id="p4" d="M250 200 L180 245" stroke="none"/><path id="p5" d="M250 200 L180 155" stroke="none"/>
-                        <circle r="2" fill="#25D366"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3s" repeatCount="indefinite"/></circle>
-                        <circle r="2" fill="#E1306C"><animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.2s" repeatCount="indefinite" begin="0.8s"/></circle>
-                        <circle r="2" fill="#0084FF"><animateMotion dur="3.4s" repeatCount="indefinite" begin="1.6s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.4s" repeatCount="indefinite" begin="1.6s"/></circle>
-                        <circle r="2" fill="#EA4335"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
-                        <circle r="2" fill="#61DAFB"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
-                        <circle r="2" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.6;0.6;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
+                        <circle r="3" fill="#25D366"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#p0"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3s" repeatCount="indefinite"/></circle>
+                        <circle r="3" fill="#E1306C"><animateMotion dur="3.2s" repeatCount="indefinite" begin="0.8s"><mpath href="#p1"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.2s" repeatCount="indefinite" begin="0.8s"/></circle>
+                        <circle r="3" fill="#0084FF"><animateMotion dur="3.4s" repeatCount="indefinite" begin="1.6s"><mpath href="#p2"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.4s" repeatCount="indefinite" begin="1.6s"/></circle>
+                        <circle r="3" fill="#EA4335"><animateMotion dur="3.6s" repeatCount="indefinite" begin="2.4s"><mpath href="#p3"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.6s" repeatCount="indefinite" begin="2.4s"/></circle>
+                        <circle r="3" fill="#61DAFB"><animateMotion dur="3.8s" repeatCount="indefinite" begin="3.2s"><mpath href="#p4"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="3.8s" repeatCount="indefinite" begin="3.2s"/></circle>
+                        <circle r="3" fill="#34D399"><animateMotion dur="4s" repeatCount="indefinite" begin="4s"><mpath href="#p5"/></animateMotion><animate attributeName="fill-opacity" values="0;0.85;0.85;0" dur="4s" repeatCount="indefinite" begin="4s"/></circle>
                     </svg>
 
                     <!-- Center: WITHMIA logo -->
@@ -830,51 +830,51 @@
                     </div>
 
                     <!-- Integration nodes (outer ring) -->
-                    <div class="eco-integ" style="top:5%;left:70%">
+                    <div class="eco-integ" style="top:7%;left:66%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h6"/><path d="m9 14 2 2 4-4"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">AgendaPro</span><span class="eco-integ-sub">Citas y reservas</span></div>
                     </div>
-                    <div class="eco-integ" style="top:18%;left:82%">
+                    <div class="eco-integ" style="top:20%;left:78%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#006BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Calendly</span><span class="eco-integ-sub">Reuniones automáticas</span></div>
                     </div>
-                    <div class="eco-integ" style="top:38%;left:90%">
+                    <div class="eco-integ" style="top:38%;left:86%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Dentalink</span><span class="eco-integ-sub">Clínicas dentales</span></div>
                     </div>
-                    <div class="eco-integ" style="top:62%;left:90%">
+                    <div class="eco-integ" style="top:62%;left:86%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Google Calendar</span><span class="eco-integ-sub">Agenda sincronizada</span></div>
                     </div>
-                    <div class="eco-integ" style="top:82%;left:82%">
+                    <div class="eco-integ" style="top:80%;left:78%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F43F5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Medilink</span><span class="eco-integ-sub">Gestión médica</span></div>
                     </div>
-                    <div class="eco-integ" style="top:95%;left:70%">
+                    <div class="eco-integ" style="top:93%;left:66%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#FFE600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">MercadoLibre</span><span class="eco-integ-sub">Marketplace</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:95%;left:30%">
+                    <div class="eco-integ left-node" style="top:93%;left:34%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Outlook</span><span class="eco-integ-sub">Microsoft Calendar</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:82%;left:18%">
+                    <div class="eco-integ left-node" style="top:80%;left:22%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Reservo</span><span class="eco-integ-sub">Reservas online</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:62%;left:10%">
+                    <div class="eco-integ left-node" style="top:62%;left:14%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#96BF48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">Shopify</span><span class="eco-integ-sub">E-commerce sync</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:38%;left:10%">
+                    <div class="eco-integ left-node" style="top:38%;left:14%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#9B5C8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">WooCommerce</span><span class="eco-integ-sub">Tienda WordPress</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:18%;left:18%">
+                    <div class="eco-integ left-node" style="top:20%;left:22%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 12c0 4.4-3.6 8-8 8A4.5 4.5 0 0 1 5 15.5c0-6 8-4 8-8.5a3 3 0 1 0-6 0c0 .8.3 1.4.7 2L5 12"/><path d="M17.5 12H22"/><path d="M17.5 12a5 5 0 0 0 0-8"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">API REST</span><span class="eco-integ-sub">Webhooks custom</span></div>
                     </div>
-                    <div class="eco-integ left-node" style="top:5%;left:30%">
+                    <div class="eco-integ left-node" style="top:7%;left:34%">
                         <div class="eco-integ-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#00758F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg></div>
                         <div class="eco-integ-text"><span class="eco-integ-name">MySQL</span><span class="eco-integ-sub">Base de datos</span></div>
                     </div>
