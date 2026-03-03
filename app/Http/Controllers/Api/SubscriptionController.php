@@ -838,8 +838,161 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Código de referido inválido'], 422);
         }
 
+        $user    = $request->user();
+        $company = \App\Models\Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'No se encontró tu empresa'], 404);
+        }
+
+        // Find the referral code
+        $referral = \App\Models\ReferralCode::where('code', $code)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$referral) {
+            return response()->json(['message' => 'Código de referido no encontrado o expirado'], 404);
+        }
+
+        // Cannot use your own referral code
+        if ($referral->company_id === $company->id) {
+            return response()->json(['message' => 'No puedes usar tu propio código de referido'], 422);
+        }
+
+        // Check if already redeemed
+        $alreadyRedeemed = \App\Models\ReferralRedemption::where('referral_code_id', $referral->id)
+            ->where('redeemer_company_id', $company->id)
+            ->exists();
+
+        if ($alreadyRedeemed) {
+            return response()->json(['message' => 'Ya has utilizado este código de referido'], 422);
+        }
+
+        // Check if code can still be redeemed
+        if (!$referral->canRedeem()) {
+            return response()->json(['message' => 'Este código ya alcanzó su límite de usos o ha expirado'], 422);
+        }
+
+        // Redeem
+        $redemption = $referral->redeem($company->id);
+
+        Log::info('Referral code redeemed', [
+            'code'             => $code,
+            'referrer_company' => $referral->company_id,
+            'redeemer_company' => $company->id,
+            'discount_percent' => $redemption->discount_percent,
+            'discount_months'  => $redemption->discount_months,
+        ]);
+
         return response()->json([
-            'message' => 'Código de referido registrado. El descuento se aplicará en tu próxima factura.',
+            'message'          => "¡Código aplicado! Tienes {$redemption->discount_percent}% de descuento por {$redemption->discount_months} meses.",
+            'discount_percent' => $redemption->discount_percent,
+            'discount_months'  => $redemption->discount_months,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/referral-code
+       Get or generate company's own referral code
+       ═══════════════════════════════════════════ */
+
+    public function getReferralCode(Request $request): JsonResponse
+    {
+        $user    = $request->user();
+        $company = \App\Models\Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Company not found'], 404);
+        }
+
+        // Only paid subscribers can have referral codes
+        $subscription = $company->subscriptions()
+            ->where('status', 'active')
+            ->latest()
+            ->first();
+
+        if (!$subscription || strtolower($subscription->plan_name) === 'free' || strtolower($subscription->plan_name) === 'gratis') {
+            return response()->json([
+                'message' => 'Necesitas un plan activo para obtener tu código de referido.',
+            ], 403);
+        }
+
+        // Get or create the referral code
+        $referral = \App\Models\ReferralCode::firstOrCreate(
+            ['company_id' => $company->id],
+            [
+                'code'             => \App\Models\ReferralCode::generateCode('WM-'),
+                'discount_percent' => 10,
+                'discount_months'  => 3,
+                'max_uses'         => 0, // unlimited
+                'is_active'        => true,
+            ]
+        );
+
+        return response()->json([
+            'code'             => $referral->code,
+            'discount_percent' => $referral->discount_percent,
+            'discount_months'  => $referral->discount_months,
+            'times_used'       => $referral->times_used,
+            'is_active'        => $referral->is_active,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/invoices
+       List company's payment history / invoices
+       ═══════════════════════════════════════════ */
+
+    public function invoices(Request $request): JsonResponse
+    {
+        $user    = $request->user();
+        $company = \App\Models\Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'Company not found'], 404);
+        }
+
+        $invoices = \App\Models\Invoice::where('company_id', $company->id)
+            ->orderByDesc('created_at')
+            ->take(50)
+            ->get()
+            ->map(fn ($inv) => [
+                'id'          => $inv->id,
+                'number'      => $inv->invoice_number,
+                'date'        => $inv->created_at->format('Y-m-d'),
+                'concept'     => $inv->concept,
+                'amount'      => $inv->amount,
+                'currency'    => $inv->currency,
+                'status'      => $inv->status,
+                'pdf_url'     => "/api/subscription/invoices/{$inv->id}/pdf",
+            ]);
+
+        return response()->json(['invoices' => $invoices]);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/invoices/{id}/pdf
+       Download invoice as PDF
+       ═══════════════════════════════════════════ */
+
+    public function invoicePdf(Request $request, int $id)
+    {
+        $user    = $request->user();
+        $company = \App\Models\Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            abort(404);
+        }
+
+        $invoice = \App\Models\Invoice::where('id', $id)
+            ->where('company_id', $company->id)
+            ->firstOrFail();
+
+        $pdf = app(\App\Services\InvoiceService::class)->generatePdf($invoice);
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"WITHMIA-{$invoice->invoice_number}.pdf\"",
         ]);
     }
 
@@ -929,6 +1082,22 @@ class SubscriptionController extends Controller
                         'amount_paid'       => $amount,
                     ]),
                 ]);
+
+                // ── Generate invoice ──
+                try {
+                    \App\Models\Invoice::createFromPayment(
+                        companyId: $subscription->company_id,
+                        concept: "Suscripción {$subscription->plan_name} ({$billingCycle})",
+                        amount: (int) $amount,
+                        currency: 'CLP',
+                        paymentMethod: 'flow',
+                        paymentReference: (string) $flowOrder,
+                        subscriptionId: $subscription->id,
+                    );
+                } catch (\Exception $invErr) {
+                    Log::warning('Invoice creation failed', ['error' => $invErr->getMessage()]);
+                }
+
                 Log::info('Flow payment confirmed - subscription activated', [
                     'subscription_id' => $subscription->id,
                     'flow_order'      => $flowOrder,
@@ -1058,6 +1227,23 @@ class SubscriptionController extends Controller
             }
 
             $subscription->update($updateData);
+
+            // ── Generate invoice ──
+            try {
+                $dlCurrency = $data['currency'] ?? ($metadata['currency'] ?? 'USD');
+                $dlAmount   = $data['amount'] ?? ($metadata['amount'] ?? 0);
+                \App\Models\Invoice::createFromPayment(
+                    companyId: $subscription->company_id,
+                    concept: "Suscripción {$subscription->plan_name} ({$billingCycle})",
+                    amount: (int) $dlAmount,
+                    currency: strtoupper($dlCurrency),
+                    paymentMethod: 'dlocal',
+                    paymentReference: (string) $paymentId,
+                    subscriptionId: $subscription->id,
+                );
+            } catch (\Exception $invErr) {
+                Log::warning('Invoice creation failed (dLocal)', ['error' => $invErr->getMessage()]);
+            }
 
             Log::info('dLocal payment confirmed — subscription activated', [
                 'subscription_id' => $subscription->id,
@@ -1753,6 +1939,21 @@ class SubscriptionController extends Controller
                         'payments_count'        => ($subscription->payment_info['payments_count'] ?? 0) + 1,
                     ]),
                 ]);
+
+                // ── Generate invoice ──
+                try {
+                    \App\Models\Invoice::createFromPayment(
+                        companyId: $subscription->company_id,
+                        concept: "Suscripción {$subscription->plan_name} ({$billingCycle})" . ($isFirstPayment ? '' : ' — renovación'),
+                        amount: (int) $amount,
+                        currency: 'CLP',
+                        paymentMethod: 'flow_subscription',
+                        paymentReference: (string) ($flowOrder ?? $subscriptionId),
+                        subscriptionId: $subscription->id,
+                    );
+                } catch (\Exception $invErr) {
+                    Log::warning('Invoice creation failed (Flow subscription)', ['error' => $invErr->getMessage()]);
+                }
 
                 Log::info('Flow subscription payment confirmed', [
                     'subscription_id' => $subscription->id,

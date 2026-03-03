@@ -162,7 +162,7 @@ Route::middleware('throttle:20,1')->prefix('invitation')->group(function () {
 // ============================================================================
 // 5. USUARIO AUTENTICADO (sesión web)
 // ============================================================================
-Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
+Route::middleware(['web', 'auth', 'throttle:api'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/avatar', [UserController::class, 'uploadAvatar']);
@@ -172,7 +172,7 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
 // ============================================================================
 // 5b. SUBSCRIPTION / BILLING (sesión web) — Flow.cl
 // ============================================================================
-Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
+Route::middleware(['web', 'auth', 'throttle:billing'])->prefix('subscription')->group(function () {
     Route::get('/', [SubscriptionController::class, 'index']);
     Route::get('/usage', [SubscriptionController::class, 'usage']);
     Route::get('/plans', [SubscriptionController::class, 'plans']);
@@ -189,6 +189,9 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::post('/cancel', [SubscriptionController::class, 'cancel']);
     Route::post('/portal', [SubscriptionController::class, 'portal']);
     Route::post('/referral', [SubscriptionController::class, 'applyReferral']);
+    Route::get('/referral-code', [SubscriptionController::class, 'getReferralCode']);
+    Route::get('/invoices', [SubscriptionController::class, 'invoices']);
+    Route::get('/invoices/{id}/pdf', [SubscriptionController::class, 'invoicePdf']);
 });
 
 // Flow.cl Webhook — one-time payments (member addon, overage)
@@ -206,7 +209,7 @@ Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhookDlocal']
 // ============================================================================
 // 5c. SUPPORT TICKETS — authenticated client (sesión web)
 // ============================================================================
-Route::middleware(['web', 'auth'])->prefix('my-tickets')->group(function () {
+Route::middleware(['web', 'auth', 'throttle:api'])->prefix('my-tickets')->group(function () {
     Route::get('/', [SupportTicketController::class, 'myTickets']);
     Route::post('/', [SupportTicketController::class, 'storeAuthenticated']);
     Route::get('/{id}', [SupportTicketController::class, 'show']);
@@ -229,7 +232,7 @@ Route::prefix('chatwoot-proxy')->group(function () {
 
 // 6b. CHATWOOT PROXY (auth via RailwayAuthToken)
 // ============================================================================
-Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->prefix('chatwoot-proxy')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true', 'throttle:chatwoot-proxy'])->prefix('chatwoot-proxy')->group(function () {
     // --- Ping: verify auth/middleware (local + staging only) ---
     if (app()->environment('local', 'staging')) {
         Route::get('/ping', function () {
@@ -328,7 +331,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->group(functio
 // ============================================================================
 // 6c. COMMUNICATION CHANNELS + OAUTH (auth via RailwayAuthToken)
 // ============================================================================
-Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->prefix('channels')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true', 'throttle:api'])->prefix('channels')->group(function () {
     Route::get('/', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'index']);
     Route::post('/web-widget', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createWebWidget']);
     Route::post('/email', [\App\Http\Controllers\Api\ChatwootChannelController::class, 'createEmail']);
@@ -346,7 +349,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class . ':true'])->pre
 // ============================================================================
 // 7. CONOCIMIENTOS / RAG (auth via web + RailwayAuthToken)
 // ============================================================================
-Route::middleware(['web', 'railway.auth:true'])->group(function () {
+Route::middleware(['web', 'railway.auth:true', 'throttle:api'])->group(function () {
 
     // Perfil de empresa / onboarding data
     Route::get('/onboarding-data', [CompanyProfileController::class, 'getOnboardingData']);
@@ -380,7 +383,7 @@ Route::middleware(['web', 'railway.auth:true'])->group(function () {
 // ============================================================================
 // 8. COMPANY SETTINGS (timezone, etc.)
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:api'])->group(function () {
     Route::get('/company/settings', [CompanySettingsController::class, 'getSettings']);
     Route::put('/company/settings', [CompanySettingsController::class, 'updateSettings']);
 });
@@ -388,7 +391,7 @@ Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->group(
 // ============================================================================
 // 8b. CALENDAR / GOOGLE CALENDAR INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('calendar')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('calendar')->group(function () {
     // OAuth flow
     Route::get('/google/auth-url', [CalendarController::class, 'getAuthUrl']);
     Route::post('/google/callback', [CalendarController::class, 'handleCallback']);
@@ -420,7 +423,7 @@ Route::middleware('n8n.secret')->prefix('calendar-hub/bot')->group(function () {
 // ============================================================================
 // PRODUCTS — CRUD + Integrations
 // ============================================================================
-Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('products')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('products')->group(function () {
     Route::get('/', [ProductController::class, 'index']);
     Route::post('/', [ProductController::class, 'store']);
     Route::get('/categories', [ProductController::class, 'categories']);
@@ -431,7 +434,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('produ
     Route::post('/upload-image', [ProductController::class, 'uploadImage']);
 });
 
-Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('product-integrations')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('product-integrations')->group(function () {
     Route::get('/status', [ProductIntegrationController::class, 'status']);
     Route::post('/connect', [ProductIntegrationController::class, 'connect']);
     Route::post('/disconnect', [ProductIntegrationController::class, 'disconnect']);
@@ -440,7 +443,7 @@ Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('produ
 });
 
 // Sales — Dashboard endpoints (auth required)
-Route::middleware([\App\Http\Middleware\RailwayAuthToken::class])->prefix('sales')->group(function () {
+Route::middleware([\App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('sales')->group(function () {
     Route::get('/stats', [SaleController::class, 'stats']);
     Route::get('/', [SaleController::class, 'index']);
     Route::patch('/{id}/status', [SaleController::class, 'updateStatus']);
@@ -465,7 +468,7 @@ Route::get('/calendar/google/callback', [CalendarController::class, 'handleCallb
 // ============================================================================
 // 8c. CALENDLY INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('calendly')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('calendly')->group(function () {
     Route::get('/auth-url', [CalendlyController::class, 'getAuthUrl']);
     Route::post('/disconnect', [CalendlyController::class, 'disconnect']);
     Route::get('/status', [CalendlyController::class, 'status']);
@@ -481,7 +484,7 @@ Route::middleware('n8n.secret')->prefix('calendly/bot')->group(function () {
 // ============================================================================
 // 8d. OUTLOOK CALENDAR INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('outlook')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('outlook')->group(function () {
     Route::get('/auth-url', [OutlookCalendarController::class, 'getAuthUrl']);
     Route::post('/disconnect', [OutlookCalendarController::class, 'disconnect']);
     Route::get('/status', [OutlookCalendarController::class, 'status']);
@@ -500,7 +503,7 @@ Route::middleware('n8n.secret')->prefix('outlook/bot')->group(function () {
 // ============================================================================
 // 8e. RESERVO INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('reservo')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('reservo')->group(function () {
     Route::post('/connect', [ReservoController::class, 'connect']);
     Route::post('/disconnect', [ReservoController::class, 'disconnect']);
     Route::get('/status', [ReservoController::class, 'status']);
@@ -518,7 +521,7 @@ Route::middleware('n8n.secret')->prefix('reservo/bot')->group(function () {
 // ============================================================================
 // 8f. AGENDAPRO INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('agendapro')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('agendapro')->group(function () {
     Route::post('/connect', [AgendaProController::class, 'connect']);
     Route::post('/disconnect', [AgendaProController::class, 'disconnect']);
     Route::get('/status', [AgendaProController::class, 'status']);
@@ -537,7 +540,7 @@ Route::middleware('n8n.secret')->prefix('agendapro/bot')->group(function () {
 // ============================================================================
 // 8g. DENTALINK INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('dentalink')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('dentalink')->group(function () {
     Route::post('/connect', [DentalinkController::class, 'connect']);
     Route::post('/disconnect', [DentalinkController::class, 'disconnect']);
     Route::get('/status', [DentalinkController::class, 'status']);
@@ -557,7 +560,7 @@ Route::middleware('n8n.secret')->prefix('dentalink/bot')->group(function () {
 // ============================================================================
 // 8h. MEDILINK INTEGRATION
 // ============================================================================
-Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class])->prefix('medilink')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\RailwayAuthToken::class, 'throttle:integrations'])->prefix('medilink')->group(function () {
     Route::post('/connect', [MedilinkController::class, 'connect']);
     Route::post('/disconnect', [MedilinkController::class, 'disconnect']);
     Route::get('/status', [MedilinkController::class, 'status']);
@@ -577,7 +580,7 @@ Route::middleware('n8n.secret')->prefix('medilink/bot')->group(function () {
 // ============================================================================
 // 9. EVOLUTION API (WhatsApp multi-tenant)
 // ============================================================================
-Route::middleware(['railway.auth:true'])->prefix('evolution-whatsapp')->group(function () {
+Route::middleware(['railway.auth:true', 'throttle:evolution'])->prefix('evolution-whatsapp')->group(function () {
     Route::post('/create', [EvolutionApiController::class, 'createInstance']);
     Route::get('/instances', [EvolutionApiController::class, 'listInstances']);
     Route::post('/connect/{instanceName?}', [EvolutionApiController::class, 'connect']);

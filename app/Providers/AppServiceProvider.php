@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\User;
 use App\Models\WhatsAppInstance;
@@ -27,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRateLimiting();
         // ========== UTF-8 Encoding Configuration ==========
         // Set internal encoding to UTF-8
         if (function_exists('mb_internal_encoding')) {
@@ -86,5 +90,58 @@ class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         WhatsAppInstance::observe(WhatsAppInstanceObserver::class);
         KnowledgeDocument::observe(KnowledgeDocumentObserver::class);
+    }
+
+    /**
+     * Configure rate limiting for API routes.
+     */
+    protected function configureRateLimiting(): void
+    {
+        // ── Global API: 60 req/min per user (or per IP for guests) ──
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by(
+                $request->user()?->id ?: $request->ip()
+            )->response(function () {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Demasiadas solicitudes. Intenta de nuevo en un momento.',
+                ], 429);
+            });
+        });
+
+        // ── Chatwoot Proxy: 120 req/min (high traffic — real-time chat) ──
+        RateLimiter::for('chatwoot-proxy', function (Request $request) {
+            return Limit::perMinute(120)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
+
+        // ── Evolution API: 60 req/min ──
+        RateLimiter::for('evolution', function (Request $request) {
+            return Limit::perMinute(60)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
+
+        // ── Calendar/Products (medium traffic): 60 req/min ──
+        RateLimiter::for('integrations', function (Request $request) {
+            return Limit::perMinute(60)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
+
+        // ── Subscription/Billing (sensitive): 20 req/min ──
+        RateLimiter::for('billing', function (Request $request) {
+            return Limit::perMinute(20)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
+
+        // ── Admin tools: 30 req/min ──
+        RateLimiter::for('admin', function (Request $request) {
+            return Limit::perMinute(30)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
     }
 }

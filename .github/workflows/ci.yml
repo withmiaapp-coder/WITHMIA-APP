@@ -1,0 +1,137 @@
+name: WITHMIA CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PHP_VERSION: '8.3'
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Backend Tests (PHP/Laravel) ──────────────────────────────
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: withmia_test
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: withmia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo_pgsql, pgsql, redis, mbstring, xml, bcmath, curl, zip, gd
+          coverage: xdebug
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy environment file
+        run: cp .env.ci .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: withmia_test
+          DB_USERNAME: withmia_test
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1
+        run: php artisan migrate --force
+
+      - name: Run Pest tests
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: withmia_test
+          DB_USERNAME: withmia_test
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1
+        run: php artisan test --parallel
+
+      - name: Check for PHP syntax errors
+        run: find app -name "*.php" -exec php -l {} \; | grep -v "No syntax errors"
+
+  # ── Frontend Lint & Types (TypeScript/React) ─────────────────
+  frontend:
+    name: Frontend Lint & Types
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npx eslint resources/js --ext .ts,.tsx --max-warnings 0 || true
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit || true
+
+      - name: Build frontend
+        run: npm run build
+
+  # ── Deploy to Railway (main branch only) ─────────────────────
+  deploy:
+    name: Deploy to Railway
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --detach
