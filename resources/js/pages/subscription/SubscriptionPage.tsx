@@ -174,13 +174,18 @@ interface AiUsageStats {
   percentage: number;
   has_reached_limit: boolean;
   period: string;
+  overage_enabled: boolean;
+  overage_messages: number;
+  overage_packs: number;
+  overage_cost_clp: number;
+  overage_price_per_pack: number;
 }
 
 const FAQ_ITEMS = [
   { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, puedes cancelar tu suscripción cuando quieras. Mantendrás el acceso hasta el final del período de facturación.' },
-  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) y otros medios de pago locales a través de Flow.cl, plataforma de pagos regulada en Chile.' },
+  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) y otros medios de pago locales a través de Flow.cl y dLocal, con soporte para pagos internacionales en toda Latinoamérica.' },
   { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional de $10.500/mes (o $107.100/año) por cada miembro extra. El cobro se gestiona automáticamente al invitar desde la sección de equipo.' },
-  { q: '¿Qué pasa si excedo mis mensajes IA?', a: 'El bot dejará de responder automáticamente cuando alcances el límite. Puedes contratar un pack de 1.000 mensajes extras por $5.990 CLP o subir de plan para obtener más capacidad.' },
+  { q: '¿Qué pasa si excedo mis mensajes IA?', a: 'Puedes continuar enviando mensajes — se cobran como packs extra de 1.000 mensajes a $5.990 CLP cada uno. También puedes comprar packs anticipadamente o subir de plan para obtener más capacidad.' },
   { q: '¿Hay algún contrato o permanencia mínima?', a: 'No, no hay contratos ni permanencia mínima. Pagas mes a mes o año a año, sin compromiso.' },
   { q: '¿Los precios incluyen IVA?', a: 'Sí. Todos los precios publicados incluyen IVA (19%).' },
 ];
@@ -553,12 +558,59 @@ export default function SubscriptionPage() {
                     </div>
                     <div className="flex items-center justify-between mt-1.5">
                       <span className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                        {aiUsage.remaining.toLocaleString('es-CL')} restantes
+                        {aiUsage.remaining > 0
+                          ? `${aiUsage.remaining.toLocaleString('es-CL')} restantes`
+                          : aiUsage.overage_enabled
+                            ? `${aiUsage.overage_messages.toLocaleString('es-CL')} msgs de overage`
+                            : 'Sin mensajes restantes'
+                        }
                       </span>
-                      {aiUsage.has_reached_limit && (
+                      {aiUsage.has_reached_limit && !aiUsage.overage_enabled && (
                         <span className="text-xs font-medium text-red-500">Límite alcanzado — el bot no responderá</span>
                       )}
                     </div>
+
+                    {/* Overage info */}
+                    {aiUsage.overage_enabled && aiUsage.overage_messages > 0 && (
+                      <div className={`mt-3 p-3 rounded-lg border ${!t ? 'border-amber-200 bg-amber-50' : 'border-amber-500/20'}`}
+                        style={t ? { background: isDark ? 'rgba(245,158,11,0.08)' : 'rgb(255,251,235)' } : undefined}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-amber-700">
+                              Overage: {aiUsage.overage_packs} pack{aiUsage.overage_packs > 1 ? 's' : ''} extra ({aiUsage.overage_messages.toLocaleString('es-CL')} msgs)
+                            </p>
+                            <p className="text-xs text-amber-600 mt-0.5">
+                              Costo adicional: ${aiUsage.overage_cost_clp.toLocaleString('es-CL')} CLP
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buy overage packs */}
+                    {aiUsage.overage_enabled && aiUsage.percentage >= 80 && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/subscription/purchase-overage', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || '') },
+                              credentials: 'include',
+                              body: JSON.stringify({ packs: 1 }),
+                            });
+                            const data = await res.json();
+                            if (data.checkout_url) window.location.href = data.checkout_url;
+                          } catch { /* ignore */ }
+                        }}
+                        className={`mt-3 w-full py-2 px-4 rounded-lg text-xs font-medium transition-colors ${
+                          !t ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : ''
+                        }`}
+                        style={t ? { background: isDark ? 'rgba(245,158,11,0.15)' : 'rgb(254,243,199)', color: '#92400e' } : undefined}
+                      >
+                        Comprar pack extra — 1.000 msgs por ${aiUsage.overage_price_per_pack?.toLocaleString('es-CL') || '5.990'} CLP
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

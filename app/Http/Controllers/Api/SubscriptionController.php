@@ -9,7 +9,9 @@ use App\Models\Company;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\FlowService;
+use App\Services\DLocalService;
 use App\Services\AiUsageService;
+use App\Services\OverageService;
 use App\Services\ChatwootService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,12 +22,16 @@ use Illuminate\Support\Facades\Mail;
 class SubscriptionController extends Controller
 {
     private FlowService $flow;
+    private DLocalService $dlocal;
     private AiUsageService $aiUsage;
+    private OverageService $overage;
 
-    public function __construct(FlowService $flow, AiUsageService $aiUsage)
+    public function __construct(FlowService $flow, DLocalService $dlocal, AiUsageService $aiUsage, OverageService $overage)
     {
         $this->flow = $flow;
+        $this->dlocal = $dlocal;
         $this->aiUsage = $aiUsage;
+        $this->overage = $overage;
     }
 
     /* ═══════════════════════════════════════════
@@ -542,6 +548,11 @@ class SubscriptionController extends Controller
                 return $this->handleMemberAddonWebhook($status, $optional, $flowOrder, $amount);
             }
 
+            // ─── Overage payment ───
+            if (($optional['type'] ?? null) === 'overage') {
+                return $this->handleFlowOverageWebhook($status, $optional, $flowOrder, $amount);
+            }
+
             // ─── Regular subscription payment ───
             // Find subscription by commerce_order stored in payment_info
             $subscription = null;
@@ -606,6 +617,403 @@ class SubscriptionController extends Controller
             Log::error('Flow webhook error', ['token' => $token, 'error' => $e->getMessage()]);
             return response()->json(['received' => true], 200);
         }
+    }
+
+    /* ═══════════════════════════════════════════
+       POST /api/subscription/checkout-dlocal
+       Create dLocal payment → redirect URL (backup gateway)
+       ═══════════════════════════════════════════ */
+
+    public function checkoutDlocal(Request $request): JsonResponse
+    {
+        $request->validate([
+            'billing_cycle' => 'required|in:monthly,annual',
+            'plan'          => 'nullable|in:pro,business,enterprise',
+        ]);
+
+        $user    = Auth::user();
+        $company = Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'No se encontró la empresa'], 404);
+        }
+
+        if (!$this->dlocal->isConfigured()) {
+            return response()->json(['message' => 'dLocal no está configurado. Contacta soporte.'], 500);
+        }
+
+        // Check existing active subscription
+        $existing = Subscription::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'Ya tienes una suscripción activa.',
+            ], 422);
+        }
+
+        $cycle = $request->billing_cycle;
+        $plan  = $request->input('plan', 'pro');
+
+        $planConfig = config("billing.plans.{$plan}");
+        if (!$planConfig) {
+            return response()->json(['message' => 'Plan no válido'], 422);
+        }
+
+        $amount = $cycle === 'annual'
+            ? (float) $planConfig['price_annual']
+            : (float) $planConfig['price_monthly'];
+
+        $planLabel = strtoupper($planConfig['name']);
+        $cycleLabel = $cycle === 'annual' ? 'Anual' : 'Mensual';
+
+        try {
+            $baseUrl = config('app.url');
+            $successUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.return_url'));
+            $backUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.cancel_url'));
+            $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
+
+            $orderId = "withmia-{$plan}-{$company->id}-{$cycle}-" . time();
+
+            $result = $this->dlocal->createPayment(
+                $orderId,
+                "WITHMIA {$planLabel} ({$cycleLabel})",
+                $amount,
+                config('billing.currency', 'CLP'),
+                $user->email,
+                $successUrl,
+                $backUrl,
+                $notificationUrl,
+                [
+                    'company_id'    => $company->id,
+                    'plan'          => $plan,
+                    'billing_cycle' => $cycle,
+                ]
+            );
+
+            // Save pending subscription
+            Subscription::updateOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'plan_name'            => "WITHMIA {$planLabel}",
+                    'price'                => $amount,
+                    'billing_cycle'        => $cycle,
+                    'max_agents'           => $planConfig['max_members'] ?? 1,
+                    'status'               => 'suspended',
+                    'starts_at'            => now(),
+                    'dlocal_payment_id'    => $result['id'] ?? null,
+                    'payment_info'         => [
+                        'payment_method' => 'dlocal',
+                        'plan'           => $plan,
+                        'cycle'          => $cycle,
+                        'order_id'       => $orderId,
+                    ],
+                ]
+            );
+
+            $checkoutUrl = $result['checkout_url'] ?? null;
+
+            if (!$checkoutUrl) {
+                Log::error('dLocal checkout: no redirect URL', ['result' => $result]);
+                return response()->json(['message' => 'No se obtuvo URL de pago. Contacta soporte.'], 500);
+            }
+
+            return response()->json([
+                'checkout_url' => $checkoutUrl,
+                'payment_id'   => $result['id'] ?? null,
+                'gateway'      => 'dlocal',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('dLocal checkout error', [
+                'company_id' => $company->id,
+                'plan'       => $plan,
+                'cycle'      => $cycle,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Error al iniciar el pago con dLocal.'], 500);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       POST /api/webhooks/dlocal
+       Handle dLocal payment notification webhook
+       ═══════════════════════════════════════════ */
+
+    public function webhookDlocal(Request $request): JsonResponse
+    {
+        $payload = $request->getContent();
+        $signature = $request->header('X-Signature', '');
+
+        // Verify signature if secret is configured
+        if ($this->dlocal->isConfigured() && $signature) {
+            if (!$this->dlocal->verifyWebhookSignature($payload, $signature)) {
+                Log::warning('dLocal webhook: invalid signature');
+                return response()->json(['received' => true], 200);
+            }
+        }
+
+        $data = $request->all();
+        Log::info('dLocal webhook received', ['data' => $data]);
+
+        $paymentId = $data['id'] ?? $data['payment_id'] ?? null;
+        $status = $data['status'] ?? null;
+        $metadata = $data['metadata'] ?? [];
+
+        if (!$paymentId || !$status) {
+            return response()->json(['received' => true], 200);
+        }
+
+        // Handle overage payments
+        if (($metadata['type'] ?? null) === 'overage') {
+            return $this->handleDlocalOverageWebhook($status, $metadata, $paymentId);
+        }
+
+        // Handle subscription payments
+        $companyId = $metadata['company_id'] ?? null;
+        $subscription = null;
+
+        if ($paymentId) {
+            $subscription = Subscription::where('dlocal_payment_id', $paymentId)->first();
+        }
+
+        if (!$subscription && $companyId) {
+            $subscription = Subscription::where('company_id', $companyId)
+                ->where('status', 'suspended')
+                ->latest()
+                ->first();
+        }
+
+        if (!$subscription) {
+            Log::warning('dLocal webhook: subscription not found', compact('paymentId', 'metadata'));
+            return response()->json(['received' => true], 200);
+        }
+
+        $internalStatus = $this->dlocal->mapStatus($status);
+        $billingCycle = $subscription->billing_cycle ?? 'monthly';
+
+        if ($internalStatus === 'active') {
+            $subscription->update([
+                'status'            => 'active',
+                'dlocal_payment_id' => $paymentId,
+                'starts_at'         => now(),
+                'ends_at'           => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
+                'payment_info'      => array_merge($subscription->payment_info ?? [], [
+                    'last_payment_date' => now()->toISOString(),
+                    'dlocal_status'     => $status,
+                    'dlocal_payment_id' => $paymentId,
+                ]),
+            ]);
+            Log::info('dLocal payment confirmed — subscription activated', [
+                'subscription_id' => $subscription->id,
+                'payment_id'      => $paymentId,
+            ]);
+        } elseif ($internalStatus === 'cancelled') {
+            $subscription->update([
+                'status'       => 'cancelled',
+                'payment_info' => array_merge($subscription->payment_info ?? [], [
+                    'last_failed_date' => now()->toISOString(),
+                    'dlocal_status'    => $status,
+                ]),
+            ]);
+            Log::warning('dLocal payment failed/cancelled', [
+                'subscription_id' => $subscription->id,
+                'status'          => $status,
+            ]);
+        }
+
+        return response()->json(['received' => true], 200);
+    }
+
+    /**
+     * Handle dLocal webhook for overage payments.
+     */
+    private function handleDlocalOverageWebhook(string $status, array $metadata, string $paymentId): JsonResponse
+    {
+        $internalStatus = $this->dlocal->mapStatus($status);
+        $companyId = $metadata['company_id'] ?? null;
+
+        if ($internalStatus === 'active' && $companyId) {
+            Log::info('dLocal overage payment confirmed', [
+                'company_id' => $companyId,
+                'payment_id' => $paymentId,
+                'period'     => $metadata['period'] ?? 'unknown',
+                'packs'      => $metadata['packs'] ?? 0,
+            ]);
+        } else {
+            Log::warning('dLocal overage payment failed', [
+                'company_id' => $companyId,
+                'status'     => $status,
+            ]);
+        }
+
+        return response()->json(['received' => true], 200);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/overage
+       Get current overage stats for the company
+       ═══════════════════════════════════════════ */
+
+    public function overageStats(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $company = Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json([
+                'overage_enabled' => false,
+                'overage_messages' => 0,
+                'overage_cost_clp' => 0,
+            ]);
+        }
+
+        return response()->json($this->overage->getOverageStats($company->id));
+    }
+
+    /* ═══════════════════════════════════════════
+       POST /api/subscription/purchase-overage
+       Manually purchase an overage pack
+       ═══════════════════════════════════════════ */
+
+    public function purchaseOverage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'packs' => 'required|integer|min:1|max:10',
+        ]);
+
+        $user    = Auth::user();
+        $company = Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'No se encontró la empresa'], 404);
+        }
+
+        $subscription = Subscription::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$subscription) {
+            return response()->json(['message' => 'Necesitas un plan activo.'], 422);
+        }
+
+        $packs = (int) $request->packs;
+        $pricePerPack = $this->overage->pricePerPack();
+        $totalAmount = $packs * $pricePerPack;
+        $totalMessages = $packs * 1000;
+
+        $orderId = "withmia-overage-{$company->id}-{$packs}pk-" . time();
+        $description = "WITHMIA — {$packs} pack(s) de 1.000 mensajes IA extra";
+
+        try {
+            $baseUrl = config('app.url');
+            $returnUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.return_url'));
+
+            // Prefer dLocal if the subscription uses it, else Flow.cl
+            if ($subscription->dlocal_payment_id && $this->dlocal->isConfigured()) {
+                $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
+                $result = $this->dlocal->createPayment(
+                    $orderId,
+                    $description,
+                    (float) $totalAmount,
+                    config('billing.currency', 'CLP'),
+                    $user->email,
+                    $returnUrl,
+                    $returnUrl,
+                    $notificationUrl,
+                    [
+                        'type'       => 'overage',
+                        'company_id' => $company->id,
+                        'packs'      => $packs,
+                        'messages'   => $totalMessages,
+                        'period'     => now()->format('Y-m'),
+                    ]
+                );
+
+                return response()->json([
+                    'checkout_url' => $result['checkout_url'] ?? null,
+                    'amount'       => $totalAmount,
+                    'packs'        => $packs,
+                    'messages'     => $totalMessages,
+                    'gateway'      => 'dlocal',
+                ]);
+            }
+
+            // Flow.cl
+            if (!$this->flow->isConfigured()) {
+                return response()->json(['message' => 'Sistema de pagos no configurado.'], 500);
+            }
+
+            $confirmUrl = $baseUrl . config('billing.flow.webhook_url');
+            $result = $this->flow->createPayment(
+                $orderId,
+                $description,
+                $totalAmount,
+                $user->email,
+                $confirmUrl,
+                $returnUrl,
+                [
+                    'type'       => 'overage',
+                    'company_id' => $company->id,
+                    'packs'      => $packs,
+                    'messages'   => $totalMessages,
+                    'period'     => now()->format('Y-m'),
+                ]
+            );
+
+            $redirectUrl = null;
+            if (!empty($result['url']) && !empty($result['token'])) {
+                $redirectUrl = $result['url'] . '?token=' . $result['token'];
+            }
+
+            return response()->json([
+                'checkout_url' => $redirectUrl,
+                'amount'       => $totalAmount,
+                'packs'        => $packs,
+                'messages'     => $totalMessages,
+                'gateway'      => 'flow',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Overage purchase error', [
+                'company_id' => $company->id,
+                'packs'      => $packs,
+                'error'      => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Error al procesar el pago.'], 500);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/gateways
+       Available payment gateways
+       ═══════════════════════════════════════════ */
+
+    public function gateways(Request $request): JsonResponse
+    {
+        return response()->json([
+            'gateways' => [
+                [
+                    'id'          => 'flow',
+                    'name'        => 'Flow.cl',
+                    'available'   => $this->flow->isConfigured(),
+                    'currencies'  => ['CLP'],
+                    'countries'   => ['CL'],
+                    'description' => 'Tarjeta de crédito/débito, transferencia bancaria (Chile)',
+                ],
+                [
+                    'id'          => 'dlocal',
+                    'name'        => 'dLocal',
+                    'available'   => $this->dlocal->isConfigured(),
+                    'currencies'  => ['CLP', 'BRL', 'MXN', 'ARS', 'COP', 'PEN', 'UYU', 'USD'],
+                    'countries'   => ['CL', 'BR', 'MX', 'AR', 'CO', 'PE', 'UY', 'US'],
+                    'description' => 'Pagos internacionales LATAM (tarjeta, transferencia, PIX, OXXO, etc.)',
+                ],
+            ],
+            'default' => $this->flow->isConfigured() ? 'flow' : ($this->dlocal->isConfigured() ? 'dlocal' : null),
+        ]);
     }
 
     /* ═══════════════════════════════════════════
@@ -675,6 +1083,39 @@ class SubscriptionController extends Controller
             Log::warning('Member addon payment failed/cancelled', [
                 'company_id' => $companyId,
                 'email'      => $email,
+                'status'     => $status,
+            ]);
+        }
+
+        return response()->json(['received' => true], 200);
+    }
+
+    /**
+     * Handle Flow.cl webhook for overage payments.
+     */
+    private function handleFlowOverageWebhook(int $status, array $optional, ?string $flowOrder, $amount): JsonResponse
+    {
+        $companyId = $optional['company_id'] ?? null;
+
+        if ($status === 2 && $companyId) {
+            // Overage payment confirmed — increase the company's message limit for this period
+            $packs = (int) ($optional['packs'] ?? 1);
+            $extraMessages = $packs * 1000;
+
+            $usage = \App\Models\AiUsage::currentForCompany($companyId);
+            $usage->increment('messages_limit', $extraMessages);
+
+            Log::info('Overage payment confirmed via Flow — limit increased', [
+                'company_id'     => $companyId,
+                'packs'          => $packs,
+                'extra_messages' => $extraMessages,
+                'new_limit'      => $usage->fresh()->messages_limit,
+                'flow_order'     => $flowOrder,
+                'amount'         => $amount,
+            ]);
+        } elseif ($status === 3 || $status === 4) {
+            Log::warning('Overage payment failed/cancelled via Flow', [
+                'company_id' => $companyId,
                 'status'     => $status,
             ]);
         }

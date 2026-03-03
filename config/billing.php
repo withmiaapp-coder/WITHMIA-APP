@@ -112,7 +112,8 @@ return [
 
     'overage' => [
         'price_per_1000' => (int) env('BILLING_OVERAGE_PER_1000', 5990),
-        'enabled' => (bool) env('BILLING_OVERAGE_ENABLED', false),
+        'enabled' => (bool) env('BILLING_OVERAGE_ENABLED', true),
+        'max_extra_messages' => (int) env('BILLING_OVERAGE_MAX_EXTRA', 5000),
     ],
 
     /*

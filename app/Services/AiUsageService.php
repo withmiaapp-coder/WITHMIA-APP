@@ -17,6 +17,7 @@ class AiUsageService
 
     /**
      * Check if a company can send an AI message (hasn't reached limit).
+     * Now overage-aware: if overage billing is enabled, allow up to max overage.
      */
     public function canSendMessage(int $companyId): bool
     {
@@ -24,7 +25,23 @@ class AiUsageService
 
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($companyId) {
             $usage = AiUsage::currentForCompany($companyId);
-            return !$usage->hasReachedLimit();
+
+            // Under plan limit → always OK
+            if (!$usage->hasReachedLimit()) {
+                return true;
+            }
+
+            // Over plan limit — check overage policy
+            $overageEnabled = (bool) config('billing.overage.enabled', false);
+            if (!$overageEnabled) {
+                return false;
+            }
+
+            // Allow up to max overage messages beyond plan limit
+            $maxOverage = (int) config('billing.overage.max_extra_messages', 5000);
+            $overageUsed = max(0, $usage->messages_used - $usage->messages_limit);
+
+            return $overageUsed < $maxOverage;
         });
     }
 
@@ -65,6 +82,11 @@ class AiUsageService
     {
         $usage = AiUsage::currentForCompany($companyId);
 
+        $overageEnabled = (bool) config('billing.overage.enabled', false);
+        $overageMessages = max(0, $usage->messages_used - $usage->messages_limit);
+        $overagePacks = $overageMessages > 0 ? (int) ceil($overageMessages / 1000) : 0;
+        $pricePerPack = (int) config('billing.overage.price_per_1000', 5990);
+
         return [
             'messages_used' => $usage->messages_used,
             'messages_limit' => $usage->messages_limit,
@@ -75,6 +97,12 @@ class AiUsageService
             'tokens_output' => $usage->tokens_output,
             'estimated_cost_usd' => (float) $usage->estimated_cost_usd,
             'period' => now()->format('Y-m'),
+            // Overage info
+            'overage_enabled' => $overageEnabled,
+            'overage_messages' => $overageMessages,
+            'overage_packs' => $overagePacks,
+            'overage_cost_clp' => $overagePacks * $pricePerPack,
+            'overage_price_per_pack' => $pricePerPack,
         ];
     }
 

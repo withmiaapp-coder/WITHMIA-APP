@@ -176,8 +176,12 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::get('/', [SubscriptionController::class, 'index']);
     Route::get('/usage', [SubscriptionController::class, 'usage']);
     Route::get('/plans', [SubscriptionController::class, 'plans']);
+    Route::get('/gateways', [SubscriptionController::class, 'gateways']);
+    Route::get('/overage', [SubscriptionController::class, 'overageStats']);
     Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+    Route::post('/checkout-dlocal', [SubscriptionController::class, 'checkoutDlocal']);
     Route::post('/checkout-member', [SubscriptionController::class, 'checkoutMember']);
+    Route::post('/purchase-overage', [SubscriptionController::class, 'purchaseOverage']);
     Route::get('/callback', [SubscriptionController::class, 'callback']);
     Route::post('/cancel', [SubscriptionController::class, 'cancel']);
     Route::post('/portal', [SubscriptionController::class, 'portal']);
@@ -186,6 +190,10 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
 
 // Flow.cl Webhook (external callback — throttled)
 Route::post('/webhooks/flow', [SubscriptionController::class, 'webhook'])
+    ->middleware('throttle:60,1');
+
+// dLocal Webhook (external callback — throttled)
+Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhookDlocal'])
     ->middleware('throttle:60,1');
 
 // ============================================================================
